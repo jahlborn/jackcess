@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+
+<faqs title="Frequently Asked Questions">
+
+  <part id="general">
+    <title>General</title>
+
+    <faq id="linux">
+      <question>Does this work on Linux/Unix?</question>
+      <answer>
+        <p>Yep, Jackcess is pure Java.  It will work on any
+          Java Virtual Machine (1.4+).</p>
+      </answer>
+    </faq>
+
+    <faq id="formats">
+      <question>What Access formats does it support?</question>
+      <answer>
+        <p>Jackcess currently supports <i>only</i> Access 2000
+          databases.  Access 2003 is not supported.</p>
+      </answer>
+    </faq>
+
+    <faq id="mdbtools">
+      <question>
+        How is this different from
+        <a href="http://mdbtools.sf.net">mdbtools</a>?
+      </question>
+      <answer>
+        <p>
+          We want to give a lot of credit to mdbtools.  They have
+          been around much longer than Jackcess, and, along with
+          <a href="http://jakarta.apache.org/poi">POI</a>,
+          inspired us that a project like this could be done.
+          mdbtools is written in C.  There is a Java port of it,
+          but if you've ever read or used a Java port of a C
+          library, you can appreciate the difference between such
+          a library and one written from scratch in Java.
+        </p>
+        <p>
+          At the time of this writing, mdbtools could only read
+          Access databases.  Jackcess can also write to them.
+          According to their web site, "Write support is currently being
+          worked on and the first cut is expected to be included in the
+          0.6 release."  This status hasn't changed since we first
+          started work on Jackcess.
+        </p>
+        <p>
+          mdbtools supports Access 97 databases, which Jackcess does not.
+          The Java port of mdbtools also includes an implementation of
+          a small subset of the JDBC APIs.  Jackcess does not currently,
+          but a pure Java JDBC driver for Access could certainly be written
+          on top of Jackcess.
+        </p>
+      </answer>
+    </faq>
+
+    <faq id="poi">
+      <question>
+        This looks like a logical addition to
+        <a href="http://jakarta.apache.org/poi">POI</a>.  Why not integrate
+        with that project?
+      </question>
+      <answer>
+        <p>
+          POI is released under
+          <a href="http://www.apache.org/foundation/licence-FAQ.html">The Apache License</a>.
+          Jackcess is released under
+          <a href="http://www.gnu.org/copyleft/lesser.html">The GNU Lesser General Public License</a>.
+          The Apache license allows closed-source and/or commercial forks.
+          The LGPL does not.  If you change or enhance Jackcess, you must contribute
+          your changes back to the project.
+        </p>
+      </answer>
+    </faq>
+
+    <faq id="hms">
+      <question>Who is Health Market Science?</question>
+      <answer>
+        <p>
+          HMS is a small company located in suburban Philadelphia.
+          Using proprietary matching and consolidation software,
+          HMS scientifically manufactures the most comprehensive
+          and accurate healthcare data sets in the market today.
+          <a href="http://www.healthmarketscience.com/careers.htm">We're hiring!</a>
+          HMS is always looking for talented individuals, especially
+          <a href="http://www.healthmarketscience.com/hr_web/active/hms_software_developer.htm">Java developers</a>.
+        </p>
+      </answer>
+    </faq>
+
+    <faq id="bugs">
+      <question>It doesn't work!</question>
+      <answer>
+        <p>
+          Ok, that wasn't a question, but we'll try to respond anyway. :)
+          Jackcess is young, and not that robust yet.  As you might imagine,
+          it's kind of hard to test, simply by its nature.  There are
+          bugs that we are aware of, and certainly many more that we are not.
+          If you find what looks like a bug, please
+          <a href="http://sf.net/tracker/?group_id=134943&amp;atid=731445">report it.</a>
+          Even better, fix it, and
+          <a href="http://sf.net/tracker/?group_id=134943&amp;atid=731447">submit a patch.</a>
+        </p>
+      </answer>
+    </faq>
+
+  </part>
+
+</faqs>

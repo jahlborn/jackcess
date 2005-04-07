@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="javajedi@users.sf.net">Tim McCune</author>
+  </properties>
+  <body>
+    <section name="Jackcess">
+      <p>
+        Jackcess ia a pure Java library for reading from and
+        writing to MS Access databases.  It is not an application.
+        There is no GUI.  It's a library, intended for other
+        developers to use to build Java applications.  Take a look
+        at our <a href="faq.html">Frequently Asked Questions</a>
+        for more info.
+      </p>
+    </section>
+    <section name="Sample code">
+      <p>
+        <ul>
+          <li>Displaying the contents of a table:
+            <pre>Database.open(new File("my.mdb")).getTable("MyTable").display();</pre>
+          </li>
+          <li>Creating a new table and writing data into it:
+            <pre>Database db = Database.create(new File("new.mdb"));
+Column a = new Column();
+a.setName("a");
+a.setSQLType(Types.INTEGER);
+Column b = new Column();
+b.setName("b");
+b.setSQLType(Types.VARCHAR);
+db.createTable("NewTable", Arrays.asList(a, b));
+Table newTable = db.getTable("NewTable");
+newTable.addRow(new Object[] {1, "foo"});</pre>
+          </li>
+          <li>Copying the contents of a JDBC ResultSet (e.g. from an
+external database) into a new table:
+            <pre>Database.open(new File("my.mdb")).copyTable("Imported", resultSet);</pre>
+          </li>
+          <li>Copying the contents of a CSV file into a new table:
+            <pre>Database.open(new File("my.mdb")).importFile("Imported2", new File("my.csv"), ",");</pre>
+          </li>
+        </ul>
+      </p>
+    </section>
+  </body>
+</document>
