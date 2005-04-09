@@ -74,6 +74,16 @@
       </answer>
     </faq>
 
+    <faq id="jdk">
+      <question>What version of the JDK does this require?</question>
+      <answer>
+        <p>
+          Version 1.0 requires JDK 1.4 or higher.  The version in CVS HEAD and future releases
+          will require JDK 1.5 or higher.
+        </p>
+      </answer>
+    </faq>
+
     <faq id="hms">
       <question>Who is Health Market Science?</question>
       <answer>
