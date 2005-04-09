@@ -9,11 +9,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.DataTypes;
-import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.Table;
-
 import junit.framework.TestCase;
 
 /**
@@ -31,25 +26,26 @@ public class DatabaseTest extends TestCase {
   
   private Database create() throws Exception {
     File tmp = File.createTempFile("databaseTest", ".mdb");
-    tmp.deleteOnExit();
+    //tmp.deleteOnExit();
     return Database.create(tmp);
   }
   
   public void testGetColumns() throws Exception {
     List columns = open().getTable("Table1").getColumns();
     assertEquals(9, columns.size());
-    checkColumn(columns, 0, "A", DataTypes.TEXT);
-    checkColumn(columns, 1, "B", DataTypes.TEXT);
-    checkColumn(columns, 2, "C", DataTypes.BYTE);
-    checkColumn(columns, 3, "D", DataTypes.INT);
-    checkColumn(columns, 4, "E", DataTypes.LONG);
-    checkColumn(columns, 5, "F", DataTypes.DOUBLE);
-    checkColumn(columns, 6, "G", DataTypes.SHORT_DATE_TIME);
-    checkColumn(columns, 7, "H", DataTypes.MONEY);
-    checkColumn(columns, 8, "I", DataTypes.BOOLEAN);
+    checkColumn(columns, 0, "A", DataType.TEXT);
+    checkColumn(columns, 1, "B", DataType.TEXT);
+    checkColumn(columns, 2, "C", DataType.BYTE);
+    checkColumn(columns, 3, "D", DataType.INT);
+    checkColumn(columns, 4, "E", DataType.LONG);
+    checkColumn(columns, 5, "F", DataType.DOUBLE);
+    checkColumn(columns, 6, "G", DataType.SHORT_DATE_TIME);
+    checkColumn(columns, 7, "H", DataType.MONEY);
+    checkColumn(columns, 8, "I", DataType.BOOLEAN);
   }
   
-  private void checkColumn(List columns, int columnNumber, String name, byte dataType)
+  private void checkColumn(List columns, int columnNumber, String name,
+      DataType dataType)
   throws Exception {
     Column column = (Column) columns.get(columnNumber);
     assertEquals(name, column.getName());
@@ -130,7 +126,7 @@ public class DatabaseTest extends TestCase {
     Database db = create();
     createTestTable(db);
     int count = 1000;
-    List rows = new ArrayList(count);
+    List<Object[]> rows = new ArrayList<Object[]>(count);
     Object[] row = new Object[9];
     row[0] = "Tim";
     row[1] = "R";
@@ -160,42 +156,42 @@ public class DatabaseTest extends TestCase {
   }
   
   private void createTestTable(Database db) throws Exception {
-    List columns = new ArrayList();
+    List<Column> columns = new ArrayList<Column>();
     Column col = new Column();
     col.setName("A");
-    col.setType(DataTypes.TEXT);
+    col.setType(DataType.TEXT);
     columns.add(col);
     col = new Column();
     col.setName("B");
-    col.setType(DataTypes.TEXT);
+    col.setType(DataType.TEXT);
     columns.add(col);
     col = new Column();
     col.setName("C");
-    col.setType(DataTypes.TEXT);
+    col.setType(DataType.TEXT);
     columns.add(col);
     col = new Column();
     col.setName("D");
-    col.setType(DataTypes.LONG);
+    col.setType(DataType.LONG);
     columns.add(col);
     col = new Column();
     col.setName("E");
-    col.setType(DataTypes.BYTE);
+    col.setType(DataType.BYTE);
     columns.add(col);
     col = new Column();
     col.setName("F");
-    col.setType(DataTypes.DOUBLE);
+    col.setType(DataType.DOUBLE);
     columns.add(col);
     col = new Column();
     col.setName("G");
-    col.setType(DataTypes.FLOAT);
+    col.setType(DataType.FLOAT);
     columns.add(col);
     col = new Column();
     col.setName("H");
-    col.setType(DataTypes.INT);
+    col.setType(DataType.INT);
     columns.add(col);
     col = new Column();
     col.setName("I");
-    col.setType(DataTypes.SHORT_DATE_TIME);
+    col.setType(DataType.SHORT_DATE_TIME);
     columns.add(col);
     db.createTable("test", columns);
   }

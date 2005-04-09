@@ -36,6 +36,9 @@ package com.healthmarketscience.jackcess.scsu;
 public class EndOfInputException
     extends java.lang.Exception
 {
+  
+   private static final long serialVersionUID = 1;
+  
    public EndOfInputException(){
     super("The input string or input byte array ended prematurely");
     }

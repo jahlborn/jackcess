@@ -45,7 +45,7 @@ import org.apache.commons.lang.builder.CompareToBuilder;
  * Access table index
  * @author Tim McCune
  */
-public class Index implements Comparable {
+public class Index implements Comparable<Index> {
   
   /** Max number of columns in an index */
   private static final int MAX_COLUMNS = 10;
@@ -59,68 +59,68 @@ public class Index implements Comparable {
   private static BidiMap CODES = new DualHashBidiMap();
   static {
     //These values are prefixed with a '43'
-    CODES.put(new Character('^'), new Byte((byte) 2));
-    CODES.put(new Character('_'), new Byte((byte) 3));
-    CODES.put(new Character('{'), new Byte((byte) 9));
-    CODES.put(new Character('|'), new Byte((byte) 11));
-    CODES.put(new Character('}'), new Byte((byte) 13));
-    CODES.put(new Character('~'), new Byte((byte) 15));
+    CODES.put('^', (byte) 2);
+    CODES.put('_', (byte) 3);
+    CODES.put('{', (byte) 9);
+    CODES.put('|', (byte) 11);
+    CODES.put('}', (byte) 13);
+    CODES.put('~', (byte) 15);
     
     //These values aren't.
-    CODES.put(new Character(' '), new Byte((byte) 7));
-    CODES.put(new Character('#'), new Byte((byte) 12));
-    CODES.put(new Character('$'), new Byte((byte) 14));
-    CODES.put(new Character('%'), new Byte((byte) 16));
-    CODES.put(new Character('&'), new Byte((byte) 18));
-    CODES.put(new Character('('), new Byte((byte) 20));
-    CODES.put(new Character(')'), new Byte((byte) 22));
-    CODES.put(new Character('*'), new Byte((byte) 24));
-    CODES.put(new Character(','), new Byte((byte) 26));
-    CODES.put(new Character('/'), new Byte((byte) 30));
-    CODES.put(new Character(':'), new Byte((byte) 32));
-    CODES.put(new Character(';'), new Byte((byte) 34));
-    CODES.put(new Character('?'), new Byte((byte) 36));
-    CODES.put(new Character('@'), new Byte((byte) 38));
-    CODES.put(new Character('+'), new Byte((byte) 44));
-    CODES.put(new Character('<'), new Byte((byte) 46));
-    CODES.put(new Character('='), new Byte((byte) 48));
-    CODES.put(new Character('>'), new Byte((byte) 50));
-    CODES.put(new Character('0'), new Byte((byte) 54));
-    CODES.put(new Character('1'), new Byte((byte) 56));
-    CODES.put(new Character('2'), new Byte((byte) 58));
-    CODES.put(new Character('3'), new Byte((byte) 60));
-    CODES.put(new Character('4'), new Byte((byte) 62));
-    CODES.put(new Character('5'), new Byte((byte) 64));
-    CODES.put(new Character('6'), new Byte((byte) 66));
-    CODES.put(new Character('7'), new Byte((byte) 68));
-    CODES.put(new Character('8'), new Byte((byte) 70));
-    CODES.put(new Character('9'), new Byte((byte) 72));
-    CODES.put(new Character('A'), new Byte((byte) 74));
-    CODES.put(new Character('B'), new Byte((byte) 76));
-    CODES.put(new Character('C'), new Byte((byte) 77));
-    CODES.put(new Character('D'), new Byte((byte) 79));
-    CODES.put(new Character('E'), new Byte((byte) 81));
-    CODES.put(new Character('F'), new Byte((byte) 83));
-    CODES.put(new Character('G'), new Byte((byte) 85));
-    CODES.put(new Character('H'), new Byte((byte) 87));
-    CODES.put(new Character('I'), new Byte((byte) 89));
-    CODES.put(new Character('J'), new Byte((byte) 91));
-    CODES.put(new Character('K'), new Byte((byte) 92));
-    CODES.put(new Character('L'), new Byte((byte) 94));
-    CODES.put(new Character('M'), new Byte((byte) 96));
-    CODES.put(new Character('N'), new Byte((byte) 98));
-    CODES.put(new Character('O'), new Byte((byte) 100));
-    CODES.put(new Character('P'), new Byte((byte) 102));
-    CODES.put(new Character('Q'), new Byte((byte) 104));
-    CODES.put(new Character('R'), new Byte((byte) 105));
-    CODES.put(new Character('S'), new Byte((byte) 107));
-    CODES.put(new Character('T'), new Byte((byte) 109));
-    CODES.put(new Character('U'), new Byte((byte) 111));
-    CODES.put(new Character('V'), new Byte((byte) 113));
-    CODES.put(new Character('W'), new Byte((byte) 115));
-    CODES.put(new Character('X'), new Byte((byte) 117));
-    CODES.put(new Character('Y'), new Byte((byte) 118));
-    CODES.put(new Character('Z'), new Byte((byte) 120));
+    CODES.put(' ', (byte) 7);
+    CODES.put('#', (byte) 12);
+    CODES.put('$', (byte) 14);
+    CODES.put('%', (byte) 16);
+    CODES.put('&', (byte) 18);
+    CODES.put('(', (byte) 20);
+    CODES.put(')', (byte) 22);
+    CODES.put('*', (byte) 24);
+    CODES.put(',', (byte) 26);
+    CODES.put('/', (byte) 30);
+    CODES.put(':', (byte) 32);
+    CODES.put(';', (byte) 34);
+    CODES.put('?', (byte) 36);
+    CODES.put('@', (byte) 38);
+    CODES.put('+', (byte) 44);
+    CODES.put('<', (byte) 46);
+    CODES.put('=', (byte) 48);
+    CODES.put('>', (byte) 50);
+    CODES.put('0', (byte) 54);
+    CODES.put('1', (byte) 56);
+    CODES.put('2', (byte) 58);
+    CODES.put('3', (byte) 60);
+    CODES.put('4', (byte) 62);
+    CODES.put('5', (byte) 64);
+    CODES.put('6', (byte) 66);
+    CODES.put('7', (byte) 68);
+    CODES.put('8', (byte) 70);
+    CODES.put('9', (byte) 72);
+    CODES.put('A', (byte) 74);
+    CODES.put('B', (byte) 76);
+    CODES.put('C', (byte) 77);
+    CODES.put('D', (byte) 79);
+    CODES.put('E', (byte) 81);
+    CODES.put('F', (byte) 83);
+    CODES.put('G', (byte) 85);
+    CODES.put('H', (byte) 87);
+    CODES.put('I', (byte) 89);
+    CODES.put('J', (byte) 91);
+    CODES.put('K', (byte) 92);
+    CODES.put('L', (byte) 94);
+    CODES.put('M', (byte) 96);
+    CODES.put('N', (byte) 98);
+    CODES.put('O', (byte) 100);
+    CODES.put('P', (byte) 102);
+    CODES.put('Q', (byte) 104);
+    CODES.put('R', (byte) 105);
+    CODES.put('S', (byte) 107);
+    CODES.put('T', (byte) 109);
+    CODES.put('U', (byte) 111);
+    CODES.put('V', (byte) 113);
+    CODES.put('W', (byte) 115);
+    CODES.put('X', (byte) 117);
+    CODES.put('Y', (byte) 118);
+    CODES.put('Z', (byte) 120);
   }
   
   /** Page number of the index data */
@@ -129,10 +129,9 @@ public class Index implements Comparable {
   /** Number of rows in the index */
   private int _rowCount;
   private JetFormat _format;
-  private List _allColumns;
-  private SortedSet _entries = new TreeSet();
-  /** Map of columns to order (Column -> Byte) */
-  private Map _columns = new LinkedHashMap();
+  private SortedSet<Entry> _entries = new TreeSet<Entry>();
+  /** Map of columns to order */
+  private Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
   private PageChannel _pageChannel;
   /** 0-based index number */
   private int _indexNumber;
@@ -205,10 +204,9 @@ public class Index implements Comparable {
    * @param buffer Buffer to read from
    * @param availableColumns Columns that this index may use
    */
-  public void read(ByteBuffer buffer, List availableColumns)
+  public void read(ByteBuffer buffer, List<Column> availableColumns)
   throws IOException
   {
-    _allColumns = availableColumns;
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = buffer.getShort();
       Byte order = new Byte(buffer.get());
@@ -257,8 +255,7 @@ public class Index implements Comparable {
     return rtn.toString();
   }
   
-  public int compareTo(Object obj) {
-    Index other = (Index) obj;
+  public int compareTo(Index other) {
     if (_indexNumber > other.getIndexNumber()) {
       return 1;
     } else if (_indexNumber < other.getIndexNumber()) {
@@ -271,14 +268,14 @@ public class Index implements Comparable {
   /**
    * A single entry in an index (points to a single row)
    */
-  private class Entry implements Comparable {
+  private class Entry implements Comparable<Entry> {
     
     /** Page number on which the row is stored */
     private int _page;
     /** Row number at which the row is stored */
     private byte _row;
     /** Columns that are indexed */
-    private List _entryColumns = new ArrayList();
+    private List<EntryColumn> _entryColumns = new ArrayList<EntryColumn>();
     
     /**
      * Create a new entry
@@ -351,11 +348,10 @@ public class Index implements Comparable {
       return ("Page = " + _page + ", Row = " + _row + ", Columns = " + _entryColumns + "\n");
     }
     
-    public int compareTo(Object obj) {
-      if (this == obj) {
+    public int compareTo(Entry other) {
+      if (this == other) {
         return 0;
       }
-      Entry other = (Entry) obj;
       Iterator myIter = _entryColumns.iterator();
       Iterator otherIter = other.getEntryColumns().iterator();
       while (myIter.hasNext()) {
@@ -380,7 +376,7 @@ public class Index implements Comparable {
    * A single column value within an index Entry; encapsulates column
    * definition and column value.
    */
-  private class EntryColumn implements Comparable {
+  private class EntryColumn implements Comparable<EntryColumn> {
     
     /** Column definition */
     private Column _column;
@@ -402,7 +398,7 @@ public class Index implements Comparable {
       _column = col;
       byte flag = buffer.get();
       if (flag != (byte) 0) {
-        if (col.getType() == DataTypes.TEXT) {
+        if (col.getType() == DataType.TEXT) {
           StringBuffer sb = new StringBuffer();
           byte b;
           while ( (b = buffer.get()) != (byte) 1) {
@@ -417,7 +413,7 @@ public class Index implements Comparable {
           buffer.get(); //Forward past 0x00
           _value = sb.toString();
         } else {
-          byte[] data = new byte[col.size()];
+          byte[] data = new byte[col.getType().getSize()];
           buffer.get(data);
           _value = (Comparable) col.read(data, ByteOrder.BIG_ENDIAN);
           //ints and shorts are stored in index as value + 2147483648
@@ -439,7 +435,7 @@ public class Index implements Comparable {
      */
     public void write(ByteBuffer buffer) throws IOException {
       buffer.put((byte) 0x7F);
-      if (_column.getType() == DataTypes.TEXT) {
+      if (_column.getType() == DataType.TEXT) {
         String s = (String) _value;
         for (int i = 0; i < s.length(); i++) {
           Byte b = (Byte) CODES.get(new Character(Character.toUpperCase(s.charAt(i))));
@@ -489,7 +485,7 @@ public class Index implements Comparable {
         }
         return rtn;
       } else {
-        return _column.size();
+        return _column.getType().getSize();
       }
     }
     
@@ -497,8 +493,8 @@ public class Index implements Comparable {
       return String.valueOf(_value);
     }
     
-    public int compareTo(Object obj) {
-      return new CompareToBuilder().append(_value, ((EntryColumn) obj).getValue())
+    public int compareTo(EntryColumn other) {
+      return new CompareToBuilder().append(_value, other.getValue())
           .toComparison();
     }
   }

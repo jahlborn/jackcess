@@ -6,10 +6,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.DataTypes;
-import com.healthmarketscience.jackcess.Table;
-
 import junit.framework.TestCase;
 
 /**
@@ -23,12 +19,12 @@ public class TableTest extends TestCase {
   
   public void testCreateRow() throws Exception {
     Table table = new Table();
-    List columns = new ArrayList();
+    List<Column> columns = new ArrayList<Column>();
     Column col = new Column();
-    col.setType(DataTypes.INT);
+    col.setType(DataType.INT);
     columns.add(col);
     col = new Column();
-    col.setType(DataTypes.TEXT);
+    col.setType(DataType.TEXT);
     columns.add(col);
     columns.add(col);
     table.setColumns(columns);

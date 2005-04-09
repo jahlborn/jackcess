@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -74,10 +75,10 @@ public class Table {
   private short _columnCount;
   /** Format of the database that contains this table */
   private JetFormat _format;
-  /** List of columns in this table (Column) */
-  private List _columns = new ArrayList();
-  /** List of indexes on this table (Index) */
-  private List _indexes = new ArrayList();
+  /** List of columns in this table */
+  private List<Column> _columns = new ArrayList<Column>();
+  /** List of indexes on this table */
+  private List<Index> _indexes = new ArrayList<Index>();
   /** Used to read in pages */
   private PageChannel _pageChannel;
   /** Usage map of pages that this table owns */
@@ -99,7 +100,7 @@ public class Table {
    * @param pageNumber Page number of the table definition
    */
   protected Table(ByteBuffer buffer, PageChannel pageChannel, JetFormat format, int pageNumber)
-  throws IOException
+  throws IOException, SQLException
   {
     _buffer = buffer;
     _pageChannel = pageChannel;
@@ -121,7 +122,7 @@ public class Table {
   /**
    * Only called by unit tests
    */
-  void setColumns(List columns) {
+  void setColumns(List<Column> columns) {
     _columns = columns;
   }
   
@@ -141,17 +142,19 @@ public class Table {
   }
   
   /**
-   * @return The next row in this table (Column name (String) -> Column value (Object))
+   * @return The next row in this table (Column name -> Column value)
    */
-  public Map getNextRow() throws IOException {
+  public Map<String, Object> getNextRow() throws IOException {
     return getNextRow(null);
   }
   
   /**
    * @param columnNames Only column names in this collection will be returned
-   * @return The next row in this table (Column name (String) -> Column value (Object))
+   * @return The next row in this table (Column name -> Column value)
    */
-  public Map getNextRow(Collection columnNames) throws IOException {
+  public Map<String, Object> getNextRow(Collection<String> columnNames) 
+  throws IOException
+  {
     if (!positionAtNextRow()) {
       return null;
     }
@@ -161,7 +164,7 @@ public class Table {
           _buffer.limit() - _buffer.position()));
     }
     short columnCount = _buffer.getShort(); //Number of columns in this table
-    Map rtn = new LinkedHashMap(columnCount);
+    Map<String, Object> rtn = new LinkedHashMap<String, Object>(columnCount);
     NullMask nullMask = new NullMask(columnCount);
     _buffer.position(_buffer.limit() - nullMask.byteSize());  //Null mask at end
     nullMask.read(_buffer);
@@ -196,12 +199,12 @@ public class Table {
       Column column = (Column) iter.next();
       boolean isNull = nullMask.isNull(columnNumber);
       Object value = null;
-      if (column.getType() == DataTypes.BOOLEAN) {
+      if (column.getType() == DataType.BOOLEAN) {
         value = new Boolean(!isNull);  //Boolean values are stored in the null mask
       } else if (!isNull) {
-        if (!column.isVariableLength()) {
+        if (!column.getType().isVariableLength()) {
           //Read in fixed length column data
-          columnData = new byte[column.size()];
+          columnData = new byte[column.getType().getSize()];
           _buffer.get(columnData);
         } else {
           //Refer to already-read-in variable length data
@@ -247,7 +250,7 @@ public class Table {
   /**
    * Read the table definition
    */
-  private void readPage() throws IOException {
+  private void readPage() throws IOException, SQLException {
     if (LOG.isDebugEnabled()) {
       _buffer.rewind();
       LOG.debug("Table def block:\n" + ByteUtil.toHexString(_buffer,
@@ -316,9 +319,7 @@ public class Table {
    * Add a single row to this table and write it to disk
    */
   public void addRow(Object[] row) throws IOException {
-    List rows = new ArrayList(1);
-    rows.add(row);
-    addRows(rows);
+    addRows(Collections.singletonList(row));
   }
   
   /**
@@ -429,7 +430,7 @@ public class Table {
     Iterator iter;
     int index = 0;
     Column col;
-    List row = new ArrayList(Arrays.asList(rowArray));
+    List<Object> row = new ArrayList<Object>(Arrays.asList(rowArray));
     
     //Append null for arrays that are too small
     for (int i = rowArray.length; i < _columnCount; i++) {
@@ -438,13 +439,13 @@ public class Table {
     
     for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
       col = (Column) iter.next();
-      if (!col.isVariableLength()) {
+      if (!col.getType().isVariableLength()) {
         //Fixed length column data comes first
         if (row.get(index) != null) {
           buffer.put(col.write(row.get(index)));
         }
       }
-      if (col.getType() == DataTypes.BOOLEAN) {
+      if (col.getType() == DataType.BOOLEAN) {
         if (row.get(index) != null) {
           if (!((Boolean) row.get(index)).booleanValue()) {
             //Booleans are stored in the null mask
@@ -463,7 +464,7 @@ public class Table {
     for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
       col = (Column) iter.next();
       short offset = (short) buffer.position();
-      if (col.isVariableLength()) {
+      if (col.getType().isVariableLength()) {
         if (row.get(index) != null) {
           buffer.put(col.write(row.get(index)));
         }

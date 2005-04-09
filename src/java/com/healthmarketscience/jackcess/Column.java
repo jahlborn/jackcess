@@ -85,7 +85,7 @@ public class Column implements Comparable {
   /** Numeric scale */
   private byte _scale;
   /** Data type */
-  private byte _type;
+  private DataType _type;
   /** Format that the containing database is in */
   private JetFormat _format;
   /** Used to read in LVAL pages */
@@ -111,16 +111,18 @@ public class Column implements Comparable {
    * @param offset Offset in the buffer at which the column definition starts
    * @param format Format that the containing database is in
    */
-  public Column(ByteBuffer buffer, int offset, PageChannel pageChannel, JetFormat format) {
+  public Column(ByteBuffer buffer, int offset, PageChannel pageChannel, JetFormat format)
+  throws SQLException
+  {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));
     }
     _pageChannel = pageChannel;
     _format = format;
-    setType(buffer.get(offset + format.OFFSET_COLUMN_TYPE));
+    setType(DataType.fromByte(buffer.get(offset + format.OFFSET_COLUMN_TYPE)));
     _columnNumber = buffer.getShort(offset + format.OFFSET_COLUMN_NUMBER);
     _columnLength = buffer.getShort(offset + format.OFFSET_COLUMN_LENGTH);
-    if (_type == DataTypes.NUMERIC) {
+    if (_type == DataType.NUMERIC) {
       _precision = buffer.get(offset + format.OFFSET_COLUMN_PRECISION);
       _scale = buffer.get(offset + format.OFFSET_COLUMN_SCALE);
     }
@@ -151,35 +153,29 @@ public class Column implements Comparable {
   /**
    * Also sets the length and the variable length flag, inferred from the type
    */
-  public void setType(byte type) {
+  public void setType(DataType type) {
     _type = type;
     setLength((short) size());
-    switch (type) {
-      case DataTypes.BOOLEAN:
-      case DataTypes.BYTE:
-      case DataTypes.INT:
-      case DataTypes.LONG:
-      case DataTypes.DOUBLE:
-      case DataTypes.FLOAT:
-      case DataTypes.SHORT_DATE_TIME:
-        setVariableLength(false);
-        break;
-      case DataTypes.BINARY:
-      case DataTypes.TEXT:
-        setVariableLength(true);
-        break;
+    if (type == DataType.BOOLEAN || type == DataType.BYTE ||
+        type == DataType.INT || type == DataType.LONG ||
+        type == DataType.DOUBLE || type == DataType.FLOAT ||
+        type == DataType.SHORT_DATE_TIME)
+    {
+      setVariableLength(false);
+    } else if (type == DataType.BINARY || type == DataType.TEXT) {
+      setVariableLength(true);
     }
   }
-  public byte getType() {
+  public DataType getType() {
     return _type;
   }
   
   public int getSQLType() throws SQLException {
-    return DataTypes.toSQLType(_type);      
+    return _type.getSQLType();
   }
   
   public void setSQLType(int type) throws SQLException {
-    setType(DataTypes.fromSQLType(type));
+    setType(DataType.fromSQLType(type));
   }
   
   public boolean isCompressedUnicode() {
@@ -219,82 +215,80 @@ public class Column implements Comparable {
   public Object read(byte[] data, ByteOrder order) throws IOException {
     ByteBuffer buffer = ByteBuffer.wrap(data);
     buffer.order(order);
-    switch (_type) {
-      case DataTypes.BOOLEAN:
-        throw new IOException("Tried to read a boolean from data instead of null mask.");
-      case DataTypes.BYTE:
-        return new Byte(buffer.get());
-      case DataTypes.INT:
-        return new Short(buffer.getShort());
-      case DataTypes.LONG:
-        return new Integer(buffer.getInt());
-      case DataTypes.DOUBLE:
-        return new Double(buffer.getDouble());
-      case DataTypes.FLOAT:
-        return new Float(buffer.getFloat());
-      case DataTypes.SHORT_DATE_TIME:
-        long time = (long) ((buffer.getDouble() - DAYS_BETWEEN_EPOCH_AND_1900) *
-            MILLISECONDS_PER_DAY);
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-        cal.setTimeInMillis(time);
-        //Not sure why we're off by 1...
-        cal.add(Calendar.DATE, 1);
-        return cal.getTime();
-      case DataTypes.BINARY:
-        return data;
-      case DataTypes.TEXT:
-        if (_compressedUnicode) {
-          try {
-            String rtn = new Expand().expand(data);
-            //SCSU expander isn't handling the UTF-8-looking 2-byte combo that
-            //prepends some of these strings.  Rather than dig into that code,
-            //I'm just stripping them off here.  However, this is probably not
-            //a great idea.
-            if (rtn.length() > 2 && (int) rtn.charAt(0) == 255 &&
-                (int) rtn.charAt(1) == 254)
-            {
-              rtn = rtn.substring(2);
-            }
-            //It also isn't handling short strings.
-            if (rtn.length() > 1 && (int) rtn.charAt(1) == 0) {
-              char[] fixed = new char[rtn.length() / 2];
-              for (int i = 0; i < fixed.length; i ++) {
-                fixed[i] = rtn.charAt(i * 2);
-              }
-              rtn = new String(fixed);
-            }
-            return rtn;
-          } catch (IllegalInputException e) {
-            throw new IOException("Can't expand text column");
-          } catch (EndOfInputException e) {
-            throw new IOException("Can't expand text column");
+    if (_type == DataType.BOOLEAN) {
+      throw new IOException("Tried to read a boolean from data instead of null mask.");
+    } else if (_type == DataType.BYTE) {
+      return new Byte(buffer.get());
+    } else if (_type == DataType.INT) {
+      return new Short(buffer.getShort());
+    } else if (_type == DataType.LONG) {
+      return new Integer(buffer.getInt());
+    } else if (_type == DataType.DOUBLE) {
+      return new Double(buffer.getDouble());
+    } else if (_type == DataType.FLOAT) {
+      return new Float(buffer.getFloat());
+    } else if (_type == DataType.SHORT_DATE_TIME) {
+      long time = (long) ((buffer.getDouble() - DAYS_BETWEEN_EPOCH_AND_1900) *
+          MILLISECONDS_PER_DAY);
+      Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+      cal.setTimeInMillis(time);
+      //Not sure why we're off by 1...
+      cal.add(Calendar.DATE, 1);
+      return cal.getTime();
+    } else if (_type == DataType.BINARY) {
+      return data;
+    } else if (_type == DataType.TEXT) {
+      if (_compressedUnicode) {
+        try {
+          String rtn = new Expand().expand(data);
+          //SCSU expander isn't handling the UTF-8-looking 2-byte combo that
+          //prepends some of these strings.  Rather than dig into that code,
+          //I'm just stripping them off here.  However, this is probably not
+          //a great idea.
+          if (rtn.length() > 2 && (int) rtn.charAt(0) == 255 &&
+              (int) rtn.charAt(1) == 254)
+          {
+            rtn = rtn.substring(2);
           }
-        } else {
-          return _format.CHARSET.decode(ByteBuffer.wrap(data)).toString();
+          //It also isn't handling short strings.
+          if (rtn.length() > 1 && (int) rtn.charAt(1) == 0) {
+            char[] fixed = new char[rtn.length() / 2];
+            for (int i = 0; i < fixed.length; i ++) {
+              fixed[i] = rtn.charAt(i * 2);
+            }
+            rtn = new String(fixed);
+          }
+          return rtn;
+        } catch (IllegalInputException e) {
+          throw new IOException("Can't expand text column");
+        } catch (EndOfInputException e) {
+          throw new IOException("Can't expand text column");
         }
-      case DataTypes.MONEY:
-        //XXX
+      } else {
+        return _format.CHARSET.decode(ByteBuffer.wrap(data)).toString();
+      }
+    } else if (_type == DataType.MONEY) {
+      //XXX
+      return null;
+    } else if (_type == DataType.OLE) {
+      if (data.length > 0) {
+        return getLongValue(data);
+      } else {
         return null;
-      case DataTypes.OLE:
-        if (data.length > 0) {
-          return getLongValue(data);
-        } else {
-          return null;
-        }
-      case DataTypes.MEMO:
-        if (data.length > 0) {
-          return _format.CHARSET.decode(ByteBuffer.wrap(getLongValue(data))).toString();
-        } else {
-          return null;
-        }
-      case DataTypes.NUMERIC:
-        //XXX
+      }
+    } else if (_type == DataType.MEMO) {
+      if (data.length > 0) {
+        return _format.CHARSET.decode(ByteBuffer.wrap(getLongValue(data))).toString();
+      } else {
         return null;
-      case DataTypes.UNKNOWN_0D:
-      case DataTypes.GUID:
-        return null;
-      default:
-        throw new IOException("Unrecognized data type: " + _type);
+      }
+    } else if (_type == DataType.NUMERIC) {
+      //XXX
+      return null;
+    } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
+      return null;
+    } else {
+      throw new IOException("Unrecognized data type: " + _type);
     }
   }
   
@@ -402,59 +396,48 @@ public class Column implements Comparable {
    */
   public ByteBuffer write(Object obj, ByteOrder order) throws IOException {
     int size = size();
-    if (_type == DataTypes.OLE || _type == DataTypes.MEMO) {
+    if (_type == DataType.OLE || _type == DataType.MEMO) {
       size += ((byte[]) obj).length;
     }
-    if (_type == DataTypes.TEXT) {
+    if (_type == DataType.TEXT) {
       size = getLength();
     }
     ByteBuffer buffer = ByteBuffer.allocate(size);
     buffer.order(order);
-    switch (_type) {
-      case DataTypes.BOOLEAN:
-        break;
-      case DataTypes.BYTE:
-        buffer.put(((Byte) obj).byteValue());
-        break;
-      case DataTypes.INT:
-        buffer.putShort(((Short) obj).shortValue());
-        break;
-      case DataTypes.LONG:
-        buffer.putInt(((Integer) obj).intValue());
-        break;
-      case DataTypes.DOUBLE:
-        buffer.putDouble(((Double) obj).doubleValue());
-        break;
-      case DataTypes.FLOAT:
-        buffer.putFloat(((Float) obj).floatValue());
-        break;
-      case DataTypes.SHORT_DATE_TIME:
-        Calendar cal = Calendar.getInstance();
-        cal.setTime((Date) obj);
-        long ms = cal.getTimeInMillis();
-        ms += (long) TimeZone.getDefault().getOffset(ms);
-        buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
-            DAYS_BETWEEN_EPOCH_AND_1900);
-        break;
-      case DataTypes.BINARY:
-        buffer.put((byte[]) obj);
-        break;
-      case DataTypes.TEXT:
-        CharSequence text = (CharSequence) obj;
-        int maxChars = size / 2;
-        if (text.length() > maxChars) {
-          text = text.subSequence(0, maxChars);
-        }
-        buffer.put(encodeText(text));
-        break;
-      case DataTypes.OLE:
-        buffer.put(writeLongValue((byte[]) obj));
-        break;
-      case DataTypes.MEMO:
-        buffer.put(writeLongValue(encodeText((CharSequence) obj).array()));
-        break;
-      default:
-        throw new IOException("Unsupported data type: " + _type);
+    if (_type == DataType.BOOLEAN) {
+      //Do nothing
+    } else if (_type == DataType.BYTE) {
+      buffer.put(((Byte) obj).byteValue());
+    } else if (_type == DataType.INT) {
+      buffer.putShort(((Short) obj).shortValue());
+    } else if (_type == DataType.LONG) {
+      buffer.putInt(((Integer) obj).intValue());
+    } else if (_type == DataType.DOUBLE) {
+      buffer.putDouble(((Double) obj).doubleValue());
+    } else if (_type == DataType.FLOAT) {
+      buffer.putFloat(((Float) obj).floatValue());
+    } else if (_type == DataType.SHORT_DATE_TIME) {
+      Calendar cal = Calendar.getInstance();
+      cal.setTime((Date) obj);
+      long ms = cal.getTimeInMillis();
+      ms += (long) TimeZone.getDefault().getOffset(ms);
+      buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
+          DAYS_BETWEEN_EPOCH_AND_1900);
+    } else if (_type == DataType.BINARY) {
+      buffer.put((byte[]) obj);
+    } else if (_type == DataType.TEXT) {
+      CharSequence text = (CharSequence) obj;
+      int maxChars = size / 2;
+      if (text.length() > maxChars) {
+        text = text.subSequence(0, maxChars);
+      }
+      buffer.put(encodeText(text));
+    } else if (_type == DataType.OLE) {
+      buffer.put(writeLongValue((byte[]) obj));
+    } else if (_type == DataType.MEMO) {
+      buffer.put(writeLongValue(encodeText((CharSequence) obj).array()));
+    } else {
+      throw new IOException("Unsupported data type: " + _type);
     }
     buffer.flip();
     return buffer;
@@ -473,44 +456,41 @@ public class Column implements Comparable {
    *    (applies to fixed-width columns)
    */
   public int size() {
-    switch (_type) {
-      case DataTypes.BOOLEAN:
-        return 0;
-      case DataTypes.BYTE:
-        return 1;
-      case DataTypes.INT:
-        return 2;
-      case DataTypes.LONG:
-        return 4;
-      case DataTypes.MONEY:
-      case DataTypes.DOUBLE:
-        return 8;
-      case DataTypes.FLOAT:
-        return 4;
-      case DataTypes.SHORT_DATE_TIME:
-        return 8;
-      case DataTypes.BINARY:
-        return 255;
-      case DataTypes.TEXT:
-        return 50 * 2;
-      case DataTypes.OLE:
-        return _format.SIZE_LONG_VALUE_DEF;
-      case DataTypes.MEMO:
-        return _format.SIZE_LONG_VALUE_DEF;
-      case DataTypes.NUMERIC:
-        throw new IllegalArgumentException("FIX ME");
-      case DataTypes.UNKNOWN_0D:
-      case DataTypes.GUID:
-        throw new IllegalArgumentException("FIX ME");
-      default:
-        throw new IllegalArgumentException("Unrecognized data type: " + _type);
+    if (_type == DataType.BOOLEAN) {
+      return 0;
+    } else if (_type == DataType.BYTE) {
+      return 1;
+    } else if (_type == DataType.INT) {
+      return 2;
+    } else if (_type == DataType.LONG) {
+      return 4;
+    } else if (_type == DataType.MONEY || _type == DataType.DOUBLE) {
+      return 8;
+    } else if (_type == DataType.FLOAT) {
+      return 4;
+    } else if (_type == DataType.SHORT_DATE_TIME) {
+      return 8;
+    } else if (_type == DataType.BINARY) {
+      return 255;
+    } else if (_type == DataType.TEXT) {
+      return 50 * 2;
+    } else if (_type == DataType.OLE) {
+      return _format.SIZE_LONG_VALUE_DEF;
+    } else if (_type == DataType.MEMO) {
+      return _format.SIZE_LONG_VALUE_DEF;
+    } else if (_type == DataType.NUMERIC) {
+      throw new IllegalArgumentException("FIX ME");
+    } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
+      throw new IllegalArgumentException("FIX ME");
+    } else {
+      throw new IllegalArgumentException("Unrecognized data type: " + _type);
     }
   }
   
   public String toString() {
     StringBuffer rtn = new StringBuffer();
     rtn.append("\tName: " + _name);
-    rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type));
+    rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type.getValue()));
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);
     rtn.append("\n\tVariable length: " + _variableLength);

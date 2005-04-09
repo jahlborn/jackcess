@@ -57,8 +57,8 @@ public abstract class UsageMap {
   private short _rowStart;
   /** Format of the database that contains this usage map */
   private JetFormat _format;
-  /** List of page numbers used (Integer) */
-  private List _pageNumbers = new ArrayList();
+  /** List of page numbers used */
+  private List<Integer> _pageNumbers = new ArrayList<Integer>();
   /** Buffer that contains the usage map declaration page */
   private ByteBuffer _dataBuffer;
   /** Used to read in pages */
@@ -125,7 +125,7 @@ public abstract class UsageMap {
     return _rowStart;
   }
   
-  public List getPageNumbers() {
+  public List<Integer> getPageNumbers() {
     return _pageNumbers;
   }
   

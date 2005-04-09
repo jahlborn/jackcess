@@ -75,7 +75,7 @@ public class Database {
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
   
-  private static final Integer ACM = new Integer(1048319);
+  private static final int ACM = 1048319;
   
   /** Free space left in page for new usage map definition pages */
   private static final short USAGE_MAP_DEF_FREE_SPACE = 3940;
@@ -112,16 +112,16 @@ public class Database {
   /** Name of the table that contains system access control entries */
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** System object type for table definitions */
-  private static final Short TYPE_TABLE = new Short((short) 1);
+  private static final Short TYPE_TABLE = (short) 1;
   
   /**
    * All of the reserved words in Access that should be escaped when creating
-   * table or column names (String)
+   * table or column names
    */
-  private static final Set RESERVED_WORDS = new HashSet();
+  private static final Set<String> RESERVED_WORDS = new HashSet<String>();
   static {
     //Yup, there's a lot.
-    RESERVED_WORDS.addAll(Arrays.asList(new String[] {
+    RESERVED_WORDS.addAll(Arrays.asList(
        "add", "all", "alphanumeric", "alter", "and", "any", "application", "as",
        "asc", "assistant", "autoincrement", "avg", "between", "binary", "bit",
        "boolean", "by", "byte", "char", "character", "column", "compactdatabase",
@@ -152,7 +152,7 @@ public class Database {
        "union", "unique", "update", "user", "value", "values", "var", "varp",
        "varbinary", "varchar", "where", "with", "workspace", "xor", "year", "yes",
        "yesno"
-    }));
+    ));
   }
   
   /** Buffer to hold database pages */
@@ -163,9 +163,8 @@ public class Database {
   private JetFormat _format;
   /**
    * Map of table names to page numbers containing their definition
-   * (String -> Integer)
    */
-  private Map _tables = new HashMap();
+  private Map<String, Integer> _tables = new HashMap<String, Integer>();
   /** Reads and writes database pages */
   private PageChannel _pageChannel;
   /** System catalog table */
@@ -177,7 +176,7 @@ public class Database {
    * Open an existing Database
    * @param mdbFile File containing the database
    */
-  public static Database open(File mdbFile) throws IOException {
+  public static Database open(File mdbFile) throws IOException, SQLException {
     return new Database(openChannel(mdbFile));
   }
   
@@ -186,7 +185,7 @@ public class Database {
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
    */
-  public static Database create(File mdbFile) throws IOException {
+  public static Database create(File mdbFile) throws IOException, SQLException {
     FileChannel channel = openChannel(mdbFile);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
@@ -204,7 +203,7 @@ public class Database {
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
    */
-  protected Database(FileChannel channel) throws IOException {
+  protected Database(FileChannel channel) throws IOException, SQLException {
     _format = JetFormat.getFormat(channel);
     _pageChannel = new PageChannel(channel, _format);
     _buffer = _pageChannel.createPageBuffer();
@@ -229,7 +228,7 @@ public class Database {
   /**
    * Read the system catalog
    */
-  private void readSystemCatalog() throws IOException {
+  private void readSystemCatalog() throws IOException, SQLException {
     _pageChannel.readPage(_buffer, PAGE_SYSTEM_CATALOG);
     byte pageType = _buffer.get();
     if (pageType != PageTypes.TABLE_DEF) {
@@ -239,12 +238,12 @@ public class Database {
     _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG);
     Map row;
     while ( (row = _systemCatalog.getNextRow(Arrays.asList(
-        new String[] {COL_NAME, COL_TYPE, COL_ID}))) != null)
+        COL_NAME, COL_TYPE, COL_ID))) != null)
     {
       String name = (String) row.get(COL_NAME);
       if (name != null && TYPE_TABLE.equals(row.get(COL_TYPE))) {
         if (!name.startsWith(PREFIX_SYSTEM)) {
-          _tables.put(row.get(COL_NAME), row.get(COL_ID));
+          _tables.put((String) row.get(COL_NAME), (Integer) row.get(COL_ID));
         } else if (TABLE_SYSTEM_ACES.equals(name)) {
           readAccessControlEntries(((Integer) row.get(COL_ID)).intValue());
         }
@@ -261,7 +260,7 @@ public class Database {
    * Read the system access control entries table
    * @param pageNum Page number of the table def
    */
-  private void readAccessControlEntries(int pageNum) throws IOException {
+  private void readAccessControlEntries(int pageNum) throws IOException, SQLException {
     ByteBuffer buffer = _pageChannel.createPageBuffer();
     _pageChannel.readPage(buffer, pageNum);
     byte pageType = buffer.get();
@@ -283,7 +282,7 @@ public class Database {
    * @param name Table name
    * @return The table, or null if it doesn't exist
    */
-  public Table getTable(String name) throws IOException {
+  public Table getTable(String name) throws IOException, SQLException {
     
     Integer pageNumber = (Integer) _tables.get(name);
     if (pageNumber == null) {
@@ -306,7 +305,7 @@ public class Database {
    * @param columns List of Columns in the table
    */
    //XXX Set up 1-page rollback buffer?
-  public void createTable(String name, List columns) throws IOException {
+  public void createTable(String name, List<Column> columns) throws IOException {
     
     //There is some really bizarre bug in here where tables that start with
     //the letters a-m (only lower case) won't open in Access. :)
@@ -345,7 +344,8 @@ public class Database {
    * @param columns List of Columns in the table
    * @param pageNumber Page number that this table definition will be written to
    */
-  private void writeTableDefinition(ByteBuffer buffer, List columns, int pageNumber)
+  private void writeTableDefinition(ByteBuffer buffer, List<Column> columns,
+      int pageNumber)
   throws IOException {
     //Start writing the tdef
     buffer.put(PageTypes.TABLE_DEF);  //Page type
@@ -395,12 +395,12 @@ public class Database {
     for (iter = columns.iterator(); iter.hasNext(); columnNumber++) {
       Column col = (Column) iter.next();
       int position = buffer.position();
-      buffer.put(col.getType());
+      buffer.put(col.getType().getValue());
       buffer.put((byte) 0x59);  //Unknown
       buffer.put((byte) 0x06);  //Unknown
       buffer.putShort((short) 0); //Unknown
       buffer.putShort(columnNumber);  //Column Number
-      if (col.isVariableLength()) {
+      if (col.getType().isVariableLength()) {
         buffer.putShort(variableOffset++);
       } else {
         buffer.putShort((short) 0);
@@ -409,7 +409,7 @@ public class Database {
       buffer.put((byte) 0x09);  //Unknown
       buffer.put((byte) 0x04);  //Unknown
       buffer.putShort((short) 0); //Unknown
-      if (col.isVariableLength()) { //Variable length
+      if (col.getType().isVariableLength()) { //Variable length
         buffer.put((byte) 0x2);
       } else {
         buffer.put((byte) 0x3);
@@ -421,11 +421,11 @@ public class Database {
       }
       buffer.putInt(0); //Unknown, but always 0.
       //Offset for fixed length columns
-      if (col.isVariableLength()) {
+      if (col.getType().isVariableLength()) {
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
-        fixedOffset += col.size();
+        fixedOffset += col.getType().getSize();
       }
       buffer.putShort(col.getLength()); //Column length
       if (LOG.isDebugEnabled()) {
@@ -542,7 +542,7 @@ public class Database {
    */
   public void copyTable(String name, ResultSet source) throws SQLException, IOException {
     ResultSetMetaData md = source.getMetaData();
-    List columns = new LinkedList();
+    List<Column> columns = new LinkedList<Column>();
     int textCount = 0;
     int totalSize = 0;
     for (int i = 1; i <= md.getColumnCount(); i++) {
@@ -562,23 +562,23 @@ public class Database {
     }
     short textSize = 0;
     if (textCount > 0) {
-      textSize = (short) ((_format.MAX_RECORD_SIZE - totalSize) / textCount);
-      if (textSize > _format.TEXT_FIELD_MAX_LENGTH) {
-        textSize = _format.TEXT_FIELD_MAX_LENGTH;
+      textSize = (short) ((JetFormat.MAX_RECORD_SIZE - totalSize) / textCount);
+      if (textSize > JetFormat.TEXT_FIELD_MAX_LENGTH) {
+        textSize = JetFormat.TEXT_FIELD_MAX_LENGTH;
       }
     }
     for (int i = 1; i <= md.getColumnCount(); i++) {
       Column column = new Column();
       column.setName(escape(md.getColumnName(i)));
-      column.setType(DataTypes.fromSQLType(md.getColumnType(i)));
-      if (column.getType() == DataTypes.TEXT) {
+      column.setType(DataType.fromSQLType(md.getColumnType(i)));
+      if (column.getType() == DataType.TEXT) {
         column.setLength(textSize);
       }
       columns.add(column);
     }
     createTable(escape(name), columns);
     Table table = getTable(escape(name));
-    List rows = new ArrayList();
+    List<Object[]> rows = new ArrayList<Object[]>();
     while (source.next()) {
       Object[] row = new Object[md.getColumnCount()];
       for (int i = 0; i < row.length; i++) {
@@ -601,26 +601,18 @@ public class Database {
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
    */
-  public void importFile(String name, File f,
-                         String delim)
-    throws IOException
+  public void importFile(String name, File f, String delim)
+  throws IOException, SQLException
   {
     BufferedReader in = null;
-    try
-    {
+    try {
       in = new BufferedReader(new FileReader(f));
       importReader(name, in, delim);
-    } 
-    finally
-    {
-      if (in != null)
-      {
-        try
-        {
+    } finally {
+      if (in != null) {
+        try {
           in.close();
-        }
-        catch (IOException ex)
-        {
+        } catch (IOException ex) {
           LOG.warn("Could not close file " + f.getAbsolutePath(), ex);
         }
       }
@@ -634,42 +626,39 @@ public class Database {
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
    */
-  public void importReader(String name, BufferedReader in,
-                           String delim)
-    throws IOException
+  public void importReader(String name, BufferedReader in, String delim)
+  throws IOException, SQLException
   {
     String line = in.readLine();
-    if (line == null || line.trim().length() == 0)
-    {
+    if (line == null || line.trim().length() == 0) {
       return;
     }
 
     String tableName = escape(name);
     int counter = 0;
-    while(getTable(tableName) != null)
-    {
+    while(getTable(tableName) != null) {
       tableName = escape(name + (counter++));
     }
 
-    List columns = new LinkedList();
+    List<Column> columns = new LinkedList<Column>();
     String[] columnNames = line.split(delim);
       
-    short textSize = (short) ((_format.MAX_RECORD_SIZE) / columnNames.length);
-    if (textSize > _format.TEXT_FIELD_MAX_LENGTH) {
-      textSize = _format.TEXT_FIELD_MAX_LENGTH;
+    short textSize = (short) ((JetFormat.MAX_RECORD_SIZE) / columnNames.length);
+    if (textSize > JetFormat.TEXT_FIELD_MAX_LENGTH) {
+      textSize = JetFormat.TEXT_FIELD_MAX_LENGTH;
     }
 
     for (int i = 0; i < columnNames.length; i++) {
       Column column = new Column();
       column.setName(escape(columnNames[i]));
-      column.setType(DataTypes.TEXT);
+      column.setType(DataType.TEXT);
       column.setLength(textSize);
       columns.add(column);
     }
       
     createTable(tableName, columns);
     Table table = getTable(tableName);
-    List rows = new ArrayList();
+    List<String[]> rows = new ArrayList<String[]>();
       
     while ((line = in.readLine()) != null)
     {
