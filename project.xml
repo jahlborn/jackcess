@@ -97,6 +97,6 @@
     <report>maven-javadoc-plugin</report>
     <report>maven-jxr-plugin</report>
     <report>maven-jdepend-plugin</report>
-    <!--<report>maven-statcvs-plugin</report>-->
+    <report>maven-statcvs-plugin</report>
   </reports>
 </project>

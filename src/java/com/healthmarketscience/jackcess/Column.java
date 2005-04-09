@@ -49,7 +49,7 @@ import org.apache.commons.logging.LogFactory;
  * Access database column definition
  * @author Tim McCune
  */
-public class Column implements Comparable {
+public class Column implements Comparable<Column> {
   
   private static final Log LOG = LogFactory.getLog(Column.class);
   
@@ -499,8 +499,7 @@ public class Column implements Comparable {
     return rtn.toString();
   }
   
-  public int compareTo(Object obj) {
-    Column other = (Column) obj;
+  public int compareTo(Column other) {
     if (_columnNumber > other.getColumnNumber()) {
       return 1;
     } else if (_columnNumber < other.getColumnNumber()) {
