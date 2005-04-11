@@ -74,6 +74,32 @@
       </answer>
     </faq>
 
+    <faq id="odbc">
+      <question>
+        I'm using the JDBC/ODBC bridge.  Why should I try Jackcess?
+      </question>
+      <answer>
+        <p>
+          <ul>
+            <li>
+              Portability - With Jackcess, your app has one less dependency on Windows.
+            </li>
+            <li>
+              Speed - We had an app that used the ODBC bridge to write data to an
+              Access database.  When we switched it over to use Jackcess, it was 5 times faster.
+            </li>
+            <li>
+              Stability - With large amounts of data, we found the ODBC brige to be
+              pretty unreliable.
+            </li>
+            <li>
+              Simplicity - With Jackcess, there is no ODBC configuration to set up.
+            </li>
+          </ul>
+        </p>
+      </answer>
+    </faq>
+
     <faq id="jdk">
       <question>What version of the JDK does this require?</question>
       <answer>
