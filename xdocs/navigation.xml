@@ -7,7 +7,7 @@
       <item name="Downloads" href="http://sourceforge.net/project/showfiles.php?group_id=134943"/>
     </menu>
     <menu type="footer">
-      <item name="Works on Linux" img="worksonlinux.png"/>
+      <item name="Works on Linux" img="worksonlinux.png" href="http://www.linux.org"/>
     </menu>
   </body>
 </project>
