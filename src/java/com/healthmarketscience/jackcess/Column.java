@@ -404,18 +404,21 @@ public class Column implements Comparable<Column> {
     }
     ByteBuffer buffer = ByteBuffer.allocate(size);
     buffer.order(order);
+    if (obj instanceof Boolean) {
+      obj = ((Boolean) obj) ? 1 : 0;
+    }
     if (_type == DataType.BOOLEAN) {
       //Do nothing
     } else if (_type == DataType.BYTE) {
-      buffer.put(((Byte) obj).byteValue());
+      buffer.put(((Number) obj).byteValue());
     } else if (_type == DataType.INT) {
-      buffer.putShort(((Short) obj).shortValue());
+      buffer.putShort(((Number) obj).shortValue());
     } else if (_type == DataType.LONG) {
-      buffer.putInt(((Integer) obj).intValue());
+      buffer.putInt(((Number) obj).intValue());
     } else if (_type == DataType.DOUBLE) {
-      buffer.putDouble(((Double) obj).doubleValue());
+      buffer.putDouble(((Number) obj).doubleValue());
     } else if (_type == DataType.FLOAT) {
-      buffer.putFloat(((Float) obj).floatValue());
+      buffer.putFloat(((Number) obj).floatValue());
     } else if (_type == DataType.SHORT_DATE_TIME) {
       Calendar cal = Calendar.getInstance();
       cal.setTime((Date) obj);

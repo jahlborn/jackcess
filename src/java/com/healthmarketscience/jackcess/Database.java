@@ -546,16 +546,24 @@ public class Database {
     int textCount = 0;
     int totalSize = 0;
     for (int i = 1; i <= md.getColumnCount(); i++) {
-      switch (md.getColumnType(i)) {
-        case Types.INTEGER:
-        case Types.FLOAT:
+      DataType accessColumnType = DataType.fromSQLType(md.getColumnType(i));
+      switch (accessColumnType) {
+        case BYTE:
+        case INT:
+        case LONG:
+        case MONEY:
+        case FLOAT:
+        case NUMERIC:
           totalSize += 4;
           break;
-        case Types.DOUBLE:
-        case Types.DATE:
+        case DOUBLE:
+        case SHORT_DATE_TIME:
           totalSize += 8;
           break;
-        case Types.VARCHAR:
+        case BINARY:
+        case TEXT:
+        case OLE:
+        case MEMO:
           textCount++;
           break;
       }

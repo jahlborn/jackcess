@@ -62,6 +62,14 @@ public enum DataType {
         SQL_TYPES.put(type._sqlType, type);
       }
     }
+    SQL_TYPES.put(Types.BIT, BYTE);
+    SQL_TYPES.put(Types.BLOB, OLE);
+    SQL_TYPES.put(Types.BIGINT, LONG);
+    SQL_TYPES.put(Types.CHAR, TEXT);
+    SQL_TYPES.put(Types.DATE, SHORT_DATE_TIME);
+    SQL_TYPES.put(Types.REAL, DOUBLE);
+    SQL_TYPES.put(Types.TIME, SHORT_DATE_TIME);
+    SQL_TYPES.put(Types.VARBINARY, BINARY);
   }
   
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();

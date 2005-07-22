@@ -1,0 +1,3 @@
+Tim McCune - Original author and project founder
+Rob DiMarco - Added ability to import delimited text into new tables
+Mitchell J. Friedman - Added support for additional JDBC data types

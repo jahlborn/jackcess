@@ -110,6 +110,20 @@
       </answer>
     </faq>
 
+    <faq id="dependencies">
+      <question>Why do I get a NoClassDefFoundError?</question>
+      <answer>
+        <p>
+          Probably because you're missing a jar that Jackcess depends on from your
+          classpath.  Take a loook at the <a href="http://jackcess.sourceforge.net/dependencies.html">dependencies list</a>.  The first 3 are required for both building and running
+          and can be found either at the <a href="http://jakarta.apache.org/commons/">
+          Jakarta Commons</a> or the <a href="http://www.ibiblio.org/maven">Ibiblio
+          Maven Repository</a>.  The other 3 are only required for building, in which
+          case, Maven will find them for you.
+        </p>
+      </answer>
+    </faq>
+
     <faq id="hms">
       <question>Who is Health Market Science?</question>
       <answer>
