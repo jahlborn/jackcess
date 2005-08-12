@@ -29,6 +29,15 @@ public class DatabaseTest extends TestCase {
     //tmp.deleteOnExit();
     return Database.create(tmp);
   }
+
+  public void testReadDeletedRows() throws Exception {
+    Table table = Database.open(new File("test/data/delTest.mdb")).getTable("Table");
+    int rows = 0;
+    while (table.getNextRow() != null) {
+      rows++;
+    }
+    assertEquals(2, rows); 
+  }
   
   public void testGetColumns() throws Exception {
     List columns = open().getTable("Table1").getColumns();

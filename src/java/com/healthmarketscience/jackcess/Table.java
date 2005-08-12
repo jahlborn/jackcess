@@ -202,9 +202,9 @@ public class Table {
       if (column.getType() == DataType.BOOLEAN) {
         value = new Boolean(!isNull);  //Boolean values are stored in the null mask
       } else if (!isNull) {
-        if (!column.getType().isVariableLength()) {
+        if (!column.isVariableLength()) {
           //Read in fixed length column data
-          columnData = new byte[column.getType().getSize()];
+          columnData = new byte[column.size()];
           _buffer.get(columnData);
         } else {
           //Refer to already-read-in variable length data
@@ -238,13 +238,18 @@ public class Table {
     }
     _rowStart = _buffer.getShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
         _currentRowInPage * _format.SIZE_ROW_LOCATION);
-    // XXX - Handle overflow pages and deleted rows.
-    _buffer.position(_rowStart);
-    _buffer.limit(_lastRowStart);
-    _rowsLeftOnPage--;
     _currentRowInPage++;
-    _lastRowStart = _rowStart;
-    return true;
+    _rowsLeftOnPage--;
+    if (_rowStart < 0) {
+      // Deleted row.  Skip.
+      return positionAtNextRow();
+    } else {
+      // XXX - Handle overflow pages.
+      _buffer.position(_rowStart);
+      _buffer.limit(_lastRowStart);
+      _lastRowStart = _rowStart;
+      return true;
+    }
   }
 
   /**
@@ -439,7 +444,7 @@ public class Table {
     
     for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
       col = (Column) iter.next();
-      if (!col.getType().isVariableLength()) {
+      if (!col.isVariableLength()) {
         //Fixed length column data comes first
         if (row.get(index) != null) {
           buffer.put(col.write(row.get(index)));
@@ -464,7 +469,7 @@ public class Table {
     for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
       col = (Column) iter.next();
       short offset = (short) buffer.position();
-      if (col.getType().isVariableLength()) {
+      if (col.isVariableLength()) {
         if (row.get(index) != null) {
           buffer.put(col.write(row.get(index)));
         }

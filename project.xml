@@ -3,7 +3,7 @@
   <pomVersion>1</pomVersion>
   <id>jackcess</id>
   <name>Jackcess</name>
-  <currentVersion>1.0</currentVersion>
+  <currentVersion>1.1</currentVersion>
   <organization>
     <name>Health Market Science, Inc.</name>
     <url>http://www.healthmarketscience.com</url>
@@ -18,7 +18,7 @@
   <siteDirectory>/home/groups/j/ja/jackcess/htdocs</siteDirectory>
   <repository>
     <connection>scm:cvs:pserver:anonymous@cvs.sf.net:/cvsroot/jackcess:jackcess</connection>
-    <url>http://cvs.sf.net/viewcvs.py/jackcess/</url>
+    <url>http://cvs.sf.net/viewcvs.py/</url>
   </repository>
   <mailingLists>
     <mailingList>
