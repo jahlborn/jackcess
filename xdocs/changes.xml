@@ -4,6 +4,11 @@
     <author email="tmccune@healthmarketscience.com">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.1.1" date="2005-8-20">
+      <action dev="tmccune" type="fix" issue="1261536">
+        Fixed bug in reading index count from table definition.  Skip overflow rows.
+      </action>
+    </release>
     <release version="1.1" date="2005-8-12">
       <action dev="tmccune" type="update">
         JDK 1.5 upgrades
