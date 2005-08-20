@@ -1,0 +1,24 @@
+<document>
+  <properties>
+    <title>Release notes</title>
+    <author email="tmccune@healthmarketscience.com">Tim McCune</author>
+  </properties>
+  <body>
+    <release version="1.1" date="2005-8-12">
+      <action dev="tmccune" type="update">
+        JDK 1.5 upgrades
+      </action>
+      <action dev="tmccune" type="update">
+        Applied Mitchell Friedman's patch for support of additional JDBC data types.
+      </action>
+      <action dev="tmccune" type="update">
+        Added support for deleted rows.
+      </action>
+    </release>
+    <release version="1.0" date="2005-4-7">
+      <action dev="tmccune" type="add">
+        Initial release
+      </action>
+    </release>
+  </body>
+</document>
