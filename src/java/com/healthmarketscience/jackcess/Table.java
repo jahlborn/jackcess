@@ -243,8 +243,14 @@ public class Table {
     if (_rowStart < 0) {
       // Deleted row.  Skip.
       return positionAtNextRow();
+    } else if ((_rowStart & 0x4000) > 0) {
+      // Overflow page.
+      // FIXME - Currently skipping this.  Need to figure out how to read it.
+      _buffer.position(_rowStart - 0x4000);
+      int overflow = _buffer.getInt();
+      _lastRowStart -= 4;
+      return positionAtNextRow();
     } else {
-      // XXX - Handle overflow pages.
       _buffer.position(_rowStart);
       _buffer.limit(_lastRowStart);
       _lastRowStart = _rowStart;

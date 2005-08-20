@@ -251,7 +251,7 @@ public abstract class JetFormat {
     protected int defineOffsetNumRows() { return 16; }
     protected int defineOffsetTableType() { return 40; }
     protected int defineOffsetNumCols() { return 45; }
-    protected int defineOffsetNumIndexes() { return 47; }
+    protected int defineOffsetNumIndexes() { return 51; }
     protected int defineOffsetOwnedPages() { return 55; }
     protected int defineOffsetFreeSpacePages() { return 59; }
     protected int defineOffsetIndexDefBlock() { return 63; }

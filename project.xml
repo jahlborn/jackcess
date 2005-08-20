@@ -32,7 +32,7 @@
     <developer>
       <name>Tim McCune</name>
       <id>javajedi</id>
-      <email>javajedi at users dot sf dot net</email>
+      <email>javajedi@users.sf.net</email>
       <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
@@ -94,6 +94,7 @@
   </dependencies>
   <reports>
     <report>maven-faq-plugin</report>
+    <report>maven-changes-plugin</report>
     <report>maven-javadoc-plugin</report>
     <report>maven-jxr-plugin</report>
     <report>maven-jdepend-plugin</report>
