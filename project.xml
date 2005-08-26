@@ -18,7 +18,7 @@
   <siteDirectory>/home/groups/j/ja/jackcess/htdocs</siteDirectory>
   <repository>
     <connection>scm:cvs:pserver:anonymous@cvs.sf.net:/cvsroot/jackcess:jackcess</connection>
-    <url>http://cvs.sf.net/viewcvs.py/</url>
+    <url>http://cvs.sf.net/viewcvs.py/jackcess/jackcess</url>
   </repository>
   <mailingLists>
     <mailingList>
