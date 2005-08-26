@@ -194,23 +194,25 @@ public class Table {
     
     //Now read in the fixed length columns and populate the columnData array
     //with the combination of fixed length and variable length data.
-    byte[] columnData;
+    byte[] columnData = null;
     for (Iterator iter = _columns.iterator(); iter.hasNext(); columnNumber++) {
       Column column = (Column) iter.next();
       boolean isNull = nullMask.isNull(columnNumber);
       Object value = null;
       if (column.getType() == DataType.BOOLEAN) {
         value = new Boolean(!isNull);  //Boolean values are stored in the null mask
-      } else if (!isNull) {
+      } else {
         if (!column.isVariableLength()) {
           //Read in fixed length column data
           columnData = new byte[column.size()];
           _buffer.get(columnData);
-        } else {
+        } else if (!isNull) {
           //Refer to already-read-in variable length data
           columnData = varColumnData[varColumnDataIndex--];
         }
-        if (columnNames == null || columnNames.contains(column.getName())) {
+        if (!isNull && columnData != null &&
+            (columnNames == null || columnNames.contains(column.getName())))
+        {
           //Add the value if we are interested in it.
           value = column.read(columnData);
         }
@@ -452,9 +454,7 @@ public class Table {
       col = (Column) iter.next();
       if (!col.isVariableLength()) {
         //Fixed length column data comes first
-        if (row.get(index) != null) {
-          buffer.put(col.write(row.get(index)));
-        }
+        buffer.put(col.write(row.get(index)));
       }
       if (col.getType() == DataType.BOOLEAN) {
         if (row.get(index) != null) {

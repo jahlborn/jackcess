@@ -410,22 +410,26 @@ public class Column implements Comparable<Column> {
     if (_type == DataType.BOOLEAN) {
       //Do nothing
     } else if (_type == DataType.BYTE) {
-      buffer.put(((Number) obj).byteValue());
+      buffer.put(obj != null ? ((Number) obj).byteValue() : (byte) 0);
     } else if (_type == DataType.INT) {
-      buffer.putShort(((Number) obj).shortValue());
+      buffer.putShort(obj != null ? ((Number) obj).shortValue() : (short) 0);
     } else if (_type == DataType.LONG) {
-      buffer.putInt(((Number) obj).intValue());
+      buffer.putInt(obj != null ? ((Number) obj).intValue() : 0);
     } else if (_type == DataType.DOUBLE) {
-      buffer.putDouble(((Number) obj).doubleValue());
+      buffer.putDouble(obj != null ? ((Number) obj).doubleValue() : (double) 0);
     } else if (_type == DataType.FLOAT) {
-      buffer.putFloat(((Number) obj).floatValue());
+      buffer.putFloat(obj != null ? ((Number) obj).floatValue() : (float) 0);
     } else if (_type == DataType.SHORT_DATE_TIME) {
-      Calendar cal = Calendar.getInstance();
-      cal.setTime((Date) obj);
-      long ms = cal.getTimeInMillis();
-      ms += (long) TimeZone.getDefault().getOffset(ms);
-      buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
-          DAYS_BETWEEN_EPOCH_AND_1900);
+      if (obj instanceof Date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime((Date) obj);
+        long ms = cal.getTimeInMillis();
+        ms += (long) TimeZone.getDefault().getOffset(ms);
+        buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
+            DAYS_BETWEEN_EPOCH_AND_1900);
+      } else {
+        buffer.putDouble(0d);
+      }
     } else if (_type == DataType.BINARY) {
       buffer.put((byte[]) obj);
     } else if (_type == DataType.TEXT) {

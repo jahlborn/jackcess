@@ -26,7 +26,7 @@ public class DatabaseTest extends TestCase {
   
   private Database create() throws Exception {
     File tmp = File.createTempFile("databaseTest", ".mdb");
-    //tmp.deleteOnExit();
+    tmp.deleteOnExit();
     return Database.create(tmp);
   }
 
@@ -107,7 +107,7 @@ public class DatabaseTest extends TestCase {
     row[0] = "Tim";
     row[1] = "R";
     row[2] = "McCune";
-    row[3] = new Integer(1234);
+    row[3] = null;
     row[4] = new Byte((byte) 0xad);
     row[5] = new Double(555.66d);
     row[6] = new Float(777.88d);
