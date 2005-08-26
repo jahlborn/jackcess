@@ -4,6 +4,11 @@
     <author email="tmccune@healthmarketscience.com">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.1.2" date="2005-8-26">
+      <action dev="tmccune" type="fix" issue="1273712">
+        Fixed bug where writing null values into fixed-width columns was failing.
+      </action>
+    </release>
     <release version="1.1.1" date="2005-8-20">
       <action dev="tmccune" type="fix" issue="1261536">
         Fixed bug in reading index count from table definition.  Skip overflow rows.
