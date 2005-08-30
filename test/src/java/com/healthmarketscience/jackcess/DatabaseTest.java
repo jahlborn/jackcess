@@ -103,16 +103,8 @@ public class DatabaseTest extends TestCase {
   public void testWriteAndRead() throws Exception {
     Database db = create();
     createTestTable(db);
-    Object[] row = new Object[9];
-    row[0] = "Tim";
-    row[1] = "R";
-    row[2] = "McCune";
+    Object[] row = createTestRow();
     row[3] = null;
-    row[4] = new Byte((byte) 0xad);
-    row[5] = new Double(555.66d);
-    row[6] = new Float(777.88d);
-    row[7] = new Short((short) 999);
-    row[8] = new Date();
     Table table = db.getTable("Test");
     int count = 1000;
     for (int i = 0; i < count; i++) { 
@@ -136,16 +128,7 @@ public class DatabaseTest extends TestCase {
     createTestTable(db);
     int count = 1000;
     List<Object[]> rows = new ArrayList<Object[]>(count);
-    Object[] row = new Object[9];
-    row[0] = "Tim";
-    row[1] = "R";
-    row[2] = "McCune";
-    row[3] = new Integer(1234);
-    row[4] = new Byte((byte) 0xad);
-    row[5] = new Double(555.66d);
-    row[6] = new Float(777.88d);
-    row[7] = new Short((short) 999);
-    row[8] = new Date();
+    Object[] row = createTestRow();
     for (int i = 0; i < count; i++) {
       rows.add(row);
     }
@@ -162,6 +145,57 @@ public class DatabaseTest extends TestCase {
       assertEquals(row[6], readRow.get("G"));
       assertEquals(row[7], readRow.get("H"));
     }
+  }
+
+  public void testDeleteCurrentRow() throws Exception {
+    Database db = create();
+    createTestTable(db);
+    Object[] row = createTestRow();
+    Table table = db.getTable("Test");
+    for (int i = 0; i < 10; i++) {
+      row[3] = i;
+      table.addRow(row);
+    }
+    row[3] = 1974;
+    assertEquals(10, countRows(table));
+    table.reset();
+    table.getNextRow();
+    table.deleteCurrentRow();
+    assertEquals(9, countRows(table));
+    table.reset();
+    table.getNextRow();
+    table.deleteCurrentRow();
+    assertEquals(8, countRows(table));
+    table.reset();
+    for (int i = 0; i < 8; i++) {
+      table.getNextRow();
+    }
+    table.deleteCurrentRow();
+    assertEquals(7, countRows(table));
+    table.addRow(row);
+    assertEquals(8, countRows(table));
+    table.reset();
+    for (int i = 0; i < 3; i++) {
+      table.getNextRow();
+    }
+    table.deleteCurrentRow();
+    assertEquals(7, countRows(table));
+    table.reset();
+    assertEquals(2, table.getNextRow().get("D"));
+  }
+
+  private int countRows(Table table) throws Exception {
+    table.reset();
+    int rtn = 0;
+    while (table.getNextRow() != null) {
+      rtn++;
+    }
+    return rtn;
+  }
+
+  private Object[] createTestRow() {
+    return new Object[] {"Tim", "R", "McCune", 1234, (byte) 0xad, 555.66d,
+        777.88f, (short) 999, new Date()};
   }
   
   private void createTestTable(Database db) throws Exception {

@@ -128,7 +128,11 @@ public abstract class UsageMap {
   public List<Integer> getPageNumbers() {
     return _pageNumbers;
   }
-  
+
+  public Integer getCurrentPageNumber() {
+    return _pageNumbers.get(_currentPageIndex - 1);
+  }
+
   protected void setStartOffset(int startOffset) {
     _startOffset = startOffset;
   }
@@ -166,8 +170,8 @@ public abstract class UsageMap {
    */
   public boolean getNextPage(ByteBuffer buffer) throws IOException {
     if (_pageNumbers.size() > _currentPageIndex) {
-      Integer pageNumber = (Integer) _pageNumbers.get(_currentPageIndex++);
-      _pageChannel.readPage(buffer, pageNumber.intValue());
+      Integer pageNumber = _pageNumbers.get(_currentPageIndex++);
+      _pageChannel.readPage(buffer, pageNumber);
       return true;
     } else {
       return false;

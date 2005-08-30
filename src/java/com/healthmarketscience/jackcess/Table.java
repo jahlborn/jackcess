@@ -139,6 +139,7 @@ public class Table {
   public void reset() {
     _rowsLeftOnPage = 0;
     _ownedPages.reset();
+    _currentRowInPage = 0;
   }
   
   /**
@@ -146,6 +147,19 @@ public class Table {
    */
   public Map<String, Object> getNextRow() throws IOException {
     return getNextRow(null);
+  }
+
+  /**
+   * Delete the current row (retrieved by a call to {@link #getNextRow}).
+   */
+  public void deleteCurrentRow() throws IOException {
+    if (_currentRowInPage == 0) {
+      throw new IllegalStateException("Must call getNextRow first");
+    }
+    int index = _format.OFFSET_DATA_ROW_LOCATION_BLOCK + (_currentRowInPage - 1) *
+        _format.SIZE_ROW_LOCATION + 1;
+    _buffer.put(index, (byte) (_buffer.get(index) | 0xc0));
+    _pageChannel.writePage(_buffer, _ownedPages.getCurrentPageNumber());
   }
   
   /**
@@ -384,6 +398,10 @@ public class Table {
       if (rowCount > 0) {
         rowLocation = dataPage.getShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
             (rowCount - 1) * _format.SIZE_ROW_LOCATION);
+        if (rowLocation < 0) {
+          // Deleted row
+          rowLocation &= ~0xc000;
+        }
       }
       rowLocation -= rowSize;
       dataPage.putShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
