@@ -28,6 +28,8 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
@@ -41,7 +43,6 @@ import java.util.TimeZone;
 import com.healthmarketscience.jackcess.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.scsu.Expand;
 import com.healthmarketscience.jackcess.scsu.IllegalInputException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -283,8 +284,31 @@ public class Column implements Comparable<Column> {
         return null;
       }
     } else if (_type == DataType.NUMERIC) {
-      //XXX
-      return null;
+
+      boolean negate = (buffer.get() != 0);
+
+      byte[] tmpArr = new byte[16];
+      buffer.get(tmpArr);
+
+      if(order != ByteOrder.BIG_ENDIAN) {
+        // fix endianness of each 4 byte segment
+        for(int i = 0; i < 4; ++i) {
+          int idx = i * 4;
+          byte b = tmpArr[idx + 0];
+          tmpArr[idx + 0] = tmpArr[idx + 3];
+          tmpArr[idx + 3] = b;
+          b = tmpArr[idx + 1];
+          tmpArr[idx + 1] = tmpArr[idx + 2];
+          tmpArr[idx + 2] = b;
+        }
+      }
+
+      BigInteger intVal = new BigInteger(tmpArr);
+      if(negate) {
+        intVal = intVal.negate();
+      }
+      return new BigDecimal(intVal, getScale());
+      
     } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
       return null;
     } else {
@@ -296,6 +320,7 @@ public class Column implements Comparable<Column> {
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
    */
+  @SuppressWarnings("fallthrough")
   private byte[] getLongValue(byte[] lvalDefinition) throws IOException {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
@@ -486,7 +511,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.MEMO) {
       return _format.SIZE_LONG_VALUE_DEF;
     } else if (_type == DataType.NUMERIC) {
-      throw new IllegalArgumentException("FIX ME");
+      return 17;
     } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
       throw new IllegalArgumentException("FIX ME");
     } else {

@@ -52,7 +52,7 @@ public enum DataType {
   MEMO((byte) 0x0C, Types.LONGVARCHAR, 12),
   UNKNOWN_0D((byte) 0x0D),
   GUID((byte) 0x0F),
-  NUMERIC((byte) 0x10);
+  NUMERIC((byte) 0x10, Types.NUMERIC, 17);
 
   /** Map of SQL types to Access data types */
   private static Map<Integer, DataType> SQL_TYPES = new HashMap<Integer, DataType>();
