@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,10 +108,22 @@ public class Table {
     _format = format;
     _tableDefPageNumber = pageNumber;
     int nextPage;
-    do {
-      readPage();
-      nextPage = _buffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
-    } while (nextPage > 0);
+		ByteBuffer nextPageBuffer = null;
+		nextPage = _buffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
+		while (nextPage != 0) {
+			if (nextPageBuffer == null) {
+				nextPageBuffer = ByteBuffer.allocate(format.PAGE_SIZE);
+				nextPageBuffer.order(ByteOrder.LITTLE_ENDIAN);
+			}
+			_pageChannel.readPage(nextPageBuffer, nextPage);
+			nextPage = nextPageBuffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
+			ByteBuffer newBuffer = ByteBuffer.allocate(_buffer.capacity() + format.PAGE_SIZE - 8);
+			newBuffer.order(ByteOrder.LITTLE_ENDIAN);
+			newBuffer.put(_buffer);
+			newBuffer.put(nextPageBuffer.array(), 8, format.PAGE_SIZE - 8);
+			_buffer = newBuffer;
+		}
+		readPage();	
   }
   
   /**
