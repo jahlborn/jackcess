@@ -229,13 +229,19 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.FLOAT) {
       return new Float(buffer.getFloat());
     } else if (_type == DataType.SHORT_DATE_TIME) {
-      long time = (long) ((buffer.getDouble() - DAYS_BETWEEN_EPOCH_AND_1900) *
-          MILLISECONDS_PER_DAY);
-      Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-      cal.setTimeInMillis(time);
-      //Not sure why we're off by 1...
-      cal.add(Calendar.DATE, 1);
-      return cal.getTime();
+      // seems access stores dates in the local timezone.  guess you just hope
+      // you read it in the same timezone in which it was written!
+      double dval = buffer.getDouble();
+      dval *= MILLISECONDS_PER_DAY;
+      dval -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
+      long time = (long)dval;
+      TimeZone tz = TimeZone.getDefault();
+      Date date = new Date(time - tz.getRawOffset());
+      if (tz.inDaylightTime(date))
+      {
+        date = new Date(date.getTime() - tz.getDSTSavings());
+      }
+      return date;
     } else if (_type == DataType.BINARY) {
       return data;
     } else if (_type == DataType.TEXT) {
@@ -516,6 +522,8 @@ public class Column implements Comparable<Column> {
       buffer.putFloat(obj != null ? ((Number) obj).floatValue() : (float) 0);
     } else if (_type == DataType.SHORT_DATE_TIME) {
       if (obj instanceof Date) {
+        // seems access stores dates in the local timezone.  guess you just
+        // hope you read it in the same timezone in which it was written!
         Calendar cal = Calendar.getInstance();
         cal.setTime((Date) obj);
         long ms = cal.getTimeInMillis();
