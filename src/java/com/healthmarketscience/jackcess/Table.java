@@ -537,7 +537,7 @@ public class Table {
   }
   
   public String toString() {
-    StringBuffer rtn = new StringBuffer();
+    StringBuilder rtn = new StringBuilder();
     rtn.append("Type: " + _tableType);
     rtn.append("\nRow count: " + _rowCount);
     rtn.append("\nColumn count: " + _columnCount);
@@ -569,7 +569,7 @@ public class Table {
    */
   public String display(long limit) throws IOException {
     reset();
-    StringBuffer rtn = new StringBuffer();
+    StringBuilder rtn = new StringBuilder();
     Iterator iter = _columns.iterator();
     while (iter.hasNext()) {
       Column col = (Column) iter.next();

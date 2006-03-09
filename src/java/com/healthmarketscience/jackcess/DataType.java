@@ -51,7 +51,7 @@ public enum DataType {
   OLE((byte) 0x0B, Types.LONGVARBINARY, 12),
   MEMO((byte) 0x0C, Types.LONGVARCHAR, 12),
   UNKNOWN_0D((byte) 0x0D),
-  GUID((byte) 0x0F),
+  GUID((byte) 0x0F, null, 16),
   NUMERIC((byte) 0x10, Types.NUMERIC, 17);
 
   /** Map of SQL types to Access data types */
@@ -87,17 +87,18 @@ public enum DataType {
   /** SQL type equivalent, or null if none defined */
   private Integer _sqlType;
   
-  DataType(byte value) {
+  private DataType(byte value) {
     _value = value;
   }
   
-  DataType(byte value, int sqlType, int size) {
+  private DataType(byte value, Integer sqlType, Integer size) {
     this(value);
     _sqlType = sqlType;
     _size = size;
   }
   
-  DataType(byte value, int sqlType, int size, boolean variableLength) {
+  private DataType(byte value, Integer sqlType, Integer size,
+                   boolean variableLength) {
     this(value, sqlType, size);
     _variableLength = variableLength;
   }

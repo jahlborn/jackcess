@@ -245,7 +245,7 @@ public class Index implements Comparable<Index> {
   }
   
   public String toString() {
-    StringBuffer rtn = new StringBuffer();
+    StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
     rtn.append("\n\tNumber: " + _indexNumber);
     rtn.append("\n\tPage number: " + _pageNumber);
@@ -399,7 +399,7 @@ public class Index implements Comparable<Index> {
       byte flag = buffer.get();
       if (flag != (byte) 0) {
         if (col.getType() == DataType.TEXT) {
-          StringBuffer sb = new StringBuffer();
+          StringBuilder sb = new StringBuilder();
           byte b;
           while ( (b = buffer.get()) != (byte) 1) {
             if ((int) b == 43) {

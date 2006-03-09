@@ -86,29 +86,49 @@ public final class ByteUtil {
    * @return The display String
    */
   public static String toHexString(ByteBuffer buffer, int offset, int size) {
-    
-    StringBuffer rtn = new StringBuffer();
+    return toHexString(buffer, offset, size, true);
+  }    
+
+  /**
+   * Convert a byte buffer to a hexadecimal string for display
+   * @param buffer Buffer to display, starting at offset 0
+   * @param offset Offset at which to start reading the buffer
+   * @param size Number of bytes to read from the buffer
+   * @param formatted flag indicating if formatting is required
+   * @return The display String
+   */
+  public static String toHexString(ByteBuffer buffer,
+                                   int offset, int size, boolean formatted) {
+
+    StringBuilder rtn = new StringBuilder();
     int position = buffer.position();
     buffer.position(offset);
-       
+
     for (int i = 0; i < size; i++) {
       byte b = buffer.get();
       byte h = (byte) (b & 0xF0);
       h = (byte) (h >>> 4);
-      h = (byte) (h & 0x0F);    
+      h = (byte) (h & 0x0F);
       rtn.append(HEX_CHARS[(int) h]);
-      h = (byte) (b & 0x0F);  
-      rtn.append(HEX_CHARS[(int) h] + " ");
-      if ((i + 1) % 4 == 0) {
+      h = (byte) (b & 0x0F);
+      rtn.append(HEX_CHARS[(int) h]);
+
+      if (formatted == true)
+      {
         rtn.append(" ");
-      }
-      if ((i + 1) % 24 == 0) {
-        rtn.append("\n");
+
+        if ((i + 1) % 4 == 0) {
+          rtn.append(" ");
+        }
+        if ((i + 1) % 24 == 0) {
+          rtn.append("\n");
+        }
       }
     }
-    
+
     buffer.position(position);
     return rtn.toString();
-  }    
+  } 
+
   
 }

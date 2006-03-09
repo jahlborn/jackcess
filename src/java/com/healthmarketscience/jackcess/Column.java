@@ -308,8 +308,30 @@ public class Column implements Comparable<Column> {
         intVal = intVal.negate();
       }
       return new BigDecimal(intVal, getScale());
+
+    } else if (_type == DataType.GUID) {
       
-    } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
+      StringBuilder sb = new StringBuilder(22);
+      sb.append("{");
+      sb.append(ByteUtil.toHexString(buffer, 0, 4,
+                                     false));
+      sb.append("-");
+      sb.append(ByteUtil.toHexString(buffer, 4, 2,
+                                     false));
+      sb.append("-");
+      sb.append(ByteUtil.toHexString(buffer, 6, 2,
+                                     false));
+      sb.append("-");
+      sb.append(ByteUtil.toHexString(buffer, 8, 2,
+                                     false));
+      sb.append("-");
+      sb.append(ByteUtil.toHexString(buffer, 10, 6,
+                                     false));
+      sb.append("}");
+      return (sb.toString());
+      
+    } else if (_type == DataType.UNKNOWN_0D) {
+      
       return null;
     } else {
       throw new IOException("Unrecognized data type: " + _type);
@@ -560,7 +582,9 @@ public class Column implements Comparable<Column> {
       return _format.SIZE_LONG_VALUE_DEF;
     } else if (_type == DataType.NUMERIC) {
       return 17;
-    } else if (_type == DataType.UNKNOWN_0D || _type == DataType.GUID) {
+    } else if (_type == DataType.GUID) {
+      return 16; 
+    } else if (_type == DataType.UNKNOWN_0D) {
       throw new IllegalArgumentException("FIX ME");
     } else {
       throw new IllegalArgumentException("Unrecognized data type: " + _type);
@@ -568,7 +592,7 @@ public class Column implements Comparable<Column> {
   }
   
   public String toString() {
-    StringBuffer rtn = new StringBuffer();
+    StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
     rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type.getValue()));
     rtn.append("\n\tNumber: " + _columnNumber);
