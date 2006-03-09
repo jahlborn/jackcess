@@ -229,13 +229,20 @@ public class Table {
       if (column.getType() == DataType.BOOLEAN) {
         value = new Boolean(!isNull);  //Boolean values are stored in the null mask
       } else {
-        if (!column.isVariableLength()) {
+        if (!column.isVariableLength()) 
+        {
           //Read in fixed length column data
-          columnData = new byte[column.size()];
+          columnData = new byte[column.getLength()];
           _buffer.get(columnData);
-        } else if (!isNull) {
-          //Refer to already-read-in variable length data
-          columnData = varColumnData[varColumnDataIndex--];
+        } 
+        else
+        {
+           if (!isNull) 
+           {
+             //Refer to already-read-in variable length data
+             columnData = varColumnData[varColumnDataIndex];
+           }
+           --varColumnDataIndex;
         }
         if (!isNull && columnData != null &&
             (columnNames == null || columnNames.contains(column.getName())))

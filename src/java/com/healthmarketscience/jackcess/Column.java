@@ -273,13 +273,13 @@ public class Column implements Comparable<Column> {
       return null;
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
-        return getLongValue(data);
+        return getLongBinaryValue(data);
       } else {
         return null;
       }
     } else if (_type == DataType.MEMO) {
       if (data.length > 0) {
-        return _format.CHARSET.decode(ByteBuffer.wrap(getLongValue(data))).toString();
+        return getLongStringValue(data);
       } else {
         return null;
       }
@@ -315,16 +315,21 @@ public class Column implements Comparable<Column> {
       throw new IOException("Unrecognized data type: " + _type);
     }
   }
-  
+
   /**
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
    */
   @SuppressWarnings("fallthrough")
-  private byte[] getLongValue(byte[] lvalDefinition) throws IOException {
+  private byte[] getLongBinaryValue(byte[] lvalDefinition) throws IOException {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
     short length = def.getShort();
+    // bail out gracefully here as we don't understand the format
+    if (length < 0)
+    {
+       return null;
+    }
     byte[] rtn = new byte[length];
     short type = def.getShort();
     switch (type) {
@@ -352,6 +357,49 @@ public class Column implements Comparable<Column> {
         throw new IOException("Unrecognized long value type: " + type);
     }
     return rtn;
+  }
+  
+  /**
+   * @param lvalDefinition Column value that points to an LVAL record
+   * @return The LVAL data
+   */
+  @SuppressWarnings("fallthrough")
+  private String getLongStringValue(byte[] lvalDefinition) throws IOException {
+    ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
+    def.order(ByteOrder.LITTLE_ENDIAN);
+    short length = def.getShort();
+    byte[] rtn = new byte[length];
+    short type = def.getShort();
+    String result;
+    switch (type) {
+      case LONG_VALUE_TYPE_OTHER_PAGE:
+        if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
+          throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
+              " bytes in long value definition, but found " + lvalDefinition.length);
+        }
+        byte rowNum = def.get();
+        int pageNum = ByteUtil.get3ByteInt(def, def.position());
+        ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+        _pageChannel.readPage(lvalPage, pageNum);
+        short offset = lvalPage.getShort(14 +
+            rowNum * _format.SIZE_ROW_LOCATION);
+        lvalPage.position(offset);
+        lvalPage.get(rtn);        
+        result = _format.CHARSET.decode(ByteBuffer.wrap(rtn)).toString();
+        break;
+      case LONG_VALUE_TYPE_THIS_PAGE:
+        rtn = new byte[length-2];
+        def.position(14);
+        def.get(rtn);
+        result = new String(rtn);
+        break;
+      case LONG_VALUE_TYPE_OTHER_PAGES:
+        //XXX
+        return null;
+      default:
+        throw new IOException("Unrecognized long value type: " + type);
+    }
+    return result;
   }
   
   /**
