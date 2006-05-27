@@ -274,7 +274,7 @@ public class Database {
   /**
    * @return The names of all of the user tables (String)
    */
-  public Set getTableNames() {
+  public Set<String> getTableNames() {
     return _tables.keySet();
   }
   
