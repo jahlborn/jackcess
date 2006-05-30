@@ -157,15 +157,7 @@ public class Column implements Comparable<Column> {
   public void setType(DataType type) {
     _type = type;
     setLength((short) size());
-    if (type == DataType.BOOLEAN || type == DataType.BYTE ||
-        type == DataType.INT || type == DataType.LONG ||
-        type == DataType.DOUBLE || type == DataType.FLOAT ||
-        type == DataType.SHORT_DATE_TIME)
-    {
-      setVariableLength(false);
-    } else if (type == DataType.BINARY || type == DataType.TEXT) {
-      setVariableLength(true);
-    }
+		setVariableLength(type.isVariableLength());
   }
   public DataType getType() {
     return _type;

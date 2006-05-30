@@ -129,7 +129,7 @@ public class Table {
   /**
    * @return All of the columns in this table (unmodifiable List)
    */
-  public List getColumns() {
+  public List<Column> getColumns() {
     return Collections.unmodifiableList(_columns);
   }
   /**
@@ -142,7 +142,7 @@ public class Table {
   /**
    * @return All of the Indexes on this table (unmodifiable List)
    */
-  public List getIndexes() {
+  public List<Index> getIndexes() {
     return Collections.unmodifiableList(_indexes);
   }
   
