@@ -221,6 +221,7 @@ public class Expand extends SCSU
     }
 
     /** expand portion of the input that is in single byte mode **/
+    @SuppressWarnings("fallthrough")
     protected String expandSingleByte(byte []in)
         throws IllegalInputException, EndOfInputException
     {
