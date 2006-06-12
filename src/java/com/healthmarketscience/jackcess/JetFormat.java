@@ -27,6 +27,8 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -112,13 +114,23 @@ public abstract class JetFormat {
   public final Charset CHARSET;
   
   public static final JetFormat VERSION_4 = new Jet4Format();
+
+  /**
+   * @return <code>true</code> if the given file could possibly be a database
+   *         file.
+   */
+  public static boolean mayBeMdbFile(File file) throws IOException
+  {
+    // no chance of reading the file format if none of these is true
+    return(file.exists() && file.canRead() && (file.length() >= 1L));
+  }
   
   /**
    * @return The Jet Format represented in the passed-in file
    */
   public static JetFormat getFormat(FileChannel channel) throws IOException {
     ByteBuffer buffer = ByteBuffer.allocate(1);
-    channel.read(buffer, OFFSET_VERSION);
+    int bytesRead = channel.read(buffer, OFFSET_VERSION);
     buffer.flip();
     byte version = buffer.get();
     if (version == CODE_VERSION_4) {
