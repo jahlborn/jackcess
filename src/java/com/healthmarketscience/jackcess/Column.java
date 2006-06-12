@@ -340,7 +340,6 @@ public class Column implements Comparable<Column> {
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
    */
-  @SuppressWarnings("fallthrough")
   private byte[] getLongBinaryValue(byte[] lvalDefinition) throws IOException {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
@@ -368,8 +367,10 @@ public class Column implements Comparable<Column> {
         lvalPage.get(rtn);
         break;
       case LONG_VALUE_TYPE_THIS_PAGE:
+        // FIXME, is this correct?
         def.getLong();  //Skip over lval_dp and unknown
         def.get(rtn);
+        break;
       case LONG_VALUE_TYPE_OTHER_PAGES:
         //XXX
         return null;
@@ -383,7 +384,6 @@ public class Column implements Comparable<Column> {
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
    */
-  @SuppressWarnings("fallthrough")
   private String getLongStringValue(byte[] lvalDefinition) throws IOException {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
