@@ -3,6 +3,7 @@
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -184,6 +185,29 @@ public class DatabaseTest extends TestCase {
     assertEquals(2, table.getNextRow().get("D"));
   }
 
+  public void testReadMemo() throws Exception {
+
+    Database db = Database.open(new File("test/data/test2.mdb"));
+    String tableName = "MSP_PROJECTS";
+    Table table = db.getTable(tableName);
+    Map<String, Object> row = table.getNextRow();
+    assertEquals("Jon Iles this is a a vawesrasoih aksdkl fas dlkjflkasjd flkjaslkdjflkajlksj dfl lkasjdf lkjaskldfj lkas dlk lkjsjdfkl; aslkdf lkasjkldjf lka skldf lka sdkjfl;kasjd falksjdfljaslkdjf laskjdfk jalskjd flkj aslkdjflkjkjasljdflkjas jf;lkasjd fjkas dasdf asd fasdf asdf asdmhf lksaiyudfoi jasodfj902384jsdf9 aw90se fisajldkfj lkasj dlkfslkd jflksjadf as", row.get("PROJ_PROP_AUTHOR"));
+    assertEquals("T", row.get("PROJ_PROP_COMPANY"));
+    assertEquals("Standard", row.get("PROJ_INFO_CAL_NAME"));
+    assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
+  }
+
+  public void testMissingFile() throws Exception {
+    File bogusFile = new File("fooby-dooby.mdb");
+    assertTrue(!bogusFile.exists());
+    try {
+      Database db = Database.open(bogusFile);
+      fail("FileNotFoundException should have been thrown");
+    } catch(FileNotFoundException e) {
+    }
+    assertTrue(!bogusFile.exists());
+  }
+  
   private int countRows(Table table) throws Exception {
     table.reset();
     int rtn = 0;
