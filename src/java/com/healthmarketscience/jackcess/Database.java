@@ -177,8 +177,8 @@ public class Database {
    * @param mdbFile File containing the database
    */
   public static Database open(File mdbFile) throws IOException, SQLException {
-    if(!JetFormat.mayBeMdbFile(mdbFile)) {
-      throw new FileNotFoundException("database file is empty or nonexistent");
+    if(!mdbFile.exists() || !mdbFile.canRead()) {
+      throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
     return new Database(openChannel(mdbFile));
   }

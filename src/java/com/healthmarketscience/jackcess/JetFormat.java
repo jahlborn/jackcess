@@ -116,21 +116,14 @@ public abstract class JetFormat {
   public static final JetFormat VERSION_4 = new Jet4Format();
 
   /**
-   * @return <code>true</code> if the given file could possibly be a database
-   *         file.
-   */
-  public static boolean mayBeMdbFile(File file) throws IOException
-  {
-    // no chance of reading the file format if none of these is true
-    return(file.exists() && file.canRead() && (file.length() >= 1L));
-  }
-  
-  /**
    * @return The Jet Format represented in the passed-in file
    */
   public static JetFormat getFormat(FileChannel channel) throws IOException {
     ByteBuffer buffer = ByteBuffer.allocate(1);
     int bytesRead = channel.read(buffer, OFFSET_VERSION);
+    if(bytesRead < 1) {
+      throw new IOException("Empty database file");
+    }
     buffer.flip();
     byte version = buffer.get();
     if (version == CODE_VERSION_4) {
