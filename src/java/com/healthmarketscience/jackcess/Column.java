@@ -271,7 +271,7 @@ public class Column implements Comparable<Column> {
       return null;
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
-        return getLongBinaryValue(data);
+        return getLongBinaryValue(data, null);
       } else {
         return null;
       }
@@ -338,9 +338,13 @@ public class Column implements Comparable<Column> {
 
   /**
    * @param lvalDefinition Column value that points to an LVAL record
+   * @param outType optional 1 element array for returning the
+   *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
-  private byte[] getLongBinaryValue(byte[] lvalDefinition) throws IOException {
+  private byte[] getLongBinaryValue(byte[] lvalDefinition, short[] outType)
+    throws IOException
+  {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
     short length = def.getShort();
@@ -367,8 +371,8 @@ public class Column implements Comparable<Column> {
         lvalPage.get(rtn);
         break;
       case LONG_VALUE_TYPE_THIS_PAGE:
-        // FIXME, is this correct?
-        def.getLong();  //Skip over lval_dp and unknown
+        def.getInt();  //Skip over lval_dp
+        def.getInt();  //Skip over unknown
         def.get(rtn);
         break;
       case LONG_VALUE_TYPE_OTHER_PAGES:
@@ -376,6 +380,10 @@ public class Column implements Comparable<Column> {
         return null;
       default:
         throw new IOException("Unrecognized long value type: " + type);
+    }
+    if(outType != null) {
+      // return parsed type as well
+      outType[0] = type;
     }
     return rtn;
   }
@@ -385,33 +393,19 @@ public class Column implements Comparable<Column> {
    * @return The LVAL data
    */
   private String getLongStringValue(byte[] lvalDefinition) throws IOException {
-    ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
-    def.order(ByteOrder.LITTLE_ENDIAN);
-    short length = def.getShort();
-    byte[] rtn = new byte[length];
-    short type = def.getShort();
-    String result;
-    switch (type) {
+    short[] type = new short[1];
+    byte[] binData = getLongBinaryValue(lvalDefinition, type);
+    if(binData == null) {
+      return null;
+    }
+    String result = null;
+    switch (type[0]) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
-          throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
-              " bytes in long value definition, but found " + lvalDefinition.length);
-        }
-        byte rowNum = def.get();
-        int pageNum = ByteUtil.get3ByteInt(def, def.position());
-        ByteBuffer lvalPage = _pageChannel.createPageBuffer();
-        _pageChannel.readPage(lvalPage, pageNum);
-        short offset = lvalPage.getShort(14 +
-            rowNum * _format.SIZE_ROW_LOCATION);
-        lvalPage.position(offset);
-        lvalPage.get(rtn);        
-        result = _format.CHARSET.decode(ByteBuffer.wrap(rtn)).toString();
+        result = _format.CHARSET.decode(ByteBuffer.wrap(binData)).toString();
         break;
       case LONG_VALUE_TYPE_THIS_PAGE:
-        rtn = new byte[length-2];
-        def.position(14);
-        def.get(rtn);
-        result = new String(rtn);
+        // ignore the UTF-8-looking 2-byte combo that prepends these strings
+        result = new String(binData, 2, binData.length - 2);
         break;
       case LONG_VALUE_TYPE_OTHER_PAGES:
         //XXX
@@ -421,7 +415,7 @@ public class Column implements Comparable<Column> {
     }
     return result;
   }
-  
+
   /**
    * Write an LVAL column into a ByteBuffer inline (LONG_VALUE_TYPE_THIS_PAGE)
    * @param value Value of the LVAL column
