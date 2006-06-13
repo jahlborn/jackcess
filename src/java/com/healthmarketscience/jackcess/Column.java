@@ -239,32 +239,14 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.TEXT) {
       if (_compressedUnicode) {
         try {
-          String rtn = new Expand().expand(data);
-          //SCSU expander isn't handling the UTF-8-looking 2-byte combo that
-          //prepends some of these strings.  Rather than dig into that code,
-          //I'm just stripping them off here.  However, this is probably not
-          //a great idea.
-          if (rtn.length() > 2 && (int) rtn.charAt(0) == 255 &&
-              (int) rtn.charAt(1) == 254)
-          {
-            rtn = rtn.substring(2);
-          }
-          //It also isn't handling short strings.
-          if (rtn.length() > 1 && (int) rtn.charAt(1) == 0) {
-            char[] fixed = new char[rtn.length() / 2];
-            for (int i = 0; i < fixed.length; i ++) {
-              fixed[i] = rtn.charAt(i * 2);
-            }
-            rtn = new String(fixed);
-          }
-          return rtn;
+          return fixString(new Expand().expand(data));
         } catch (IllegalInputException e) {
           throw new IOException("Can't expand text column");
         } catch (EndOfInputException e) {
           throw new IOException("Can't expand text column");
         }
       } else {
-        return _format.CHARSET.decode(ByteBuffer.wrap(data)).toString();
+        return decodeText(data);
       }
     } else if (_type == DataType.MONEY) {
       //XXX
@@ -401,11 +383,10 @@ public class Column implements Comparable<Column> {
     String result = null;
     switch (type[0]) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        result = _format.CHARSET.decode(ByteBuffer.wrap(binData)).toString();
+        result = decodeText(binData);
         break;
       case LONG_VALUE_TYPE_THIS_PAGE:
-        // ignore the UTF-8-looking 2-byte combo that prepends these strings
-        result = new String(binData, 2, binData.length - 2);
+        result = fixString(new String(binData));
         break;
       case LONG_VALUE_TYPE_OTHER_PAGES:
         //XXX
@@ -483,10 +464,13 @@ public class Column implements Comparable<Column> {
    */
   public ByteBuffer write(Object obj, ByteOrder order) throws IOException {
     int size = size();
-    if (_type == DataType.OLE || _type == DataType.MEMO) {
+    if (_type == DataType.OLE) {
       size += ((byte[]) obj).length;
-    }
-    if (_type == DataType.TEXT) {
+    } else if(_type == DataType.MEMO) {
+      byte[] encodedData = encodeText((CharSequence) obj).array();
+      size += encodedData.length;
+      obj = encodedData;
+    } else if(_type == DataType.TEXT) {
       size = getLength();
     }
     ByteBuffer buffer = ByteBuffer.allocate(size);
@@ -531,7 +515,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.OLE) {
       buffer.put(writeLongValue((byte[]) obj));
     } else if (_type == DataType.MEMO) {
-      buffer.put(writeLongValue(encodeText((CharSequence) obj).array()));
+      buffer.put(writeLongValue((byte[]) obj));
     } else {
       throw new IOException("Unsupported data type: " + _type);
     }
@@ -545,6 +529,39 @@ public class Column implements Comparable<Column> {
    */
   private ByteBuffer encodeText(CharSequence text) {
     return _format.CHARSET.encode(CharBuffer.wrap(text));
+  }
+
+  /**
+   * @param textBytes bytes of text to decode
+   * @return the decoded string
+   */
+  private String decodeText(byte[] textBytes) {
+    return _format.CHARSET.decode(ByteBuffer.wrap(textBytes)).toString();
+  }
+
+  /**
+   * Mucks with a string to handle some weird edge cases.
+   * @param str string to fix
+   * @return new string with whacky cases fixed
+   */
+  private String fixString(String str) {
+    // There is a UTF-8-looking 2-byte combo that prepends some of these
+    // strings.  Rather than dig into that code, I'm just stripping them off
+    // here.  However, this is probably not a great idea.
+    if (str.length() > 2 && (int) str.charAt(0) == 255 &&
+        (int) str.charAt(1) == 254)
+    {
+      str = str.substring(2);
+    }
+    // It also isn't handling short strings.
+    if (str.length() > 1 && (int) str.charAt(1) == 0) {
+      char[] fixed = new char[str.length() / 2];
+      for (int i = 0; i < fixed.length; i ++) {
+        fixed[i] = str.charAt(i * 2);
+      }
+      str = new String(fixed);
+    }
+    return str;
   }
   
   /**
