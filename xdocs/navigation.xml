@@ -5,6 +5,7 @@
   <body>
     <menu name="Jackcess">
       <item name="Downloads" href="http://sourceforge.net/project/showfiles.php?group_id=134943"/>
+      <item name="SourceForge Project" href="http://sourceforge.net/projects/jackcess/"/>
     </menu>
     <menu type="footer">
       <item name="Works on Linux" img="worksonlinux.png" href="http://www.linux.org"/>
