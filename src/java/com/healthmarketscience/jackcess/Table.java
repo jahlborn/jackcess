@@ -375,14 +375,14 @@ public class Table {
    * is much more efficient than calling <code>addRow</code> multiple times.
    * @param rows List of Object[] row values
    */
-  public void addRows(List rows) throws IOException {
+  public void addRows(List<? extends Object[]> rows) throws IOException {
     ByteBuffer dataPage = _pageChannel.createPageBuffer();
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
-    Iterator iter = rows.iterator();
+    Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
       rowData[i] = createRow((Object[]) iter.next());
     }
-    List pageNumbers = _ownedPages.getPageNumbers();
+    List<Integer> pageNumbers = _ownedPages.getPageNumbers();
     int pageNumber;
     int rowSize;
     if (pageNumbers.size() == 0) {
@@ -428,9 +428,9 @@ public class Table {
           rowCount * _format.SIZE_ROW_LOCATION, rowLocation);
       dataPage.position(rowLocation);
       dataPage.put(rowData[i]);
-      iter = _indexes.iterator();
-      while (iter.hasNext()) {
-        Index index = (Index) iter.next();
+      Iterator<Index> indIter = _indexes.iterator();
+      while (indIter.hasNext()) {
+        Index index = (Index) indIter.next();
         index.addRow((Object[]) rows.get(i), pageNumber, (byte) rowCount);
       }
     }
@@ -440,11 +440,11 @@ public class Table {
     ByteBuffer tdefPage = _pageChannel.createPageBuffer();
     _pageChannel.readPage(tdefPage, _tableDefPageNumber);
     tdefPage.putInt(_format.OFFSET_NUM_ROWS, ++_rowCount);
-    iter = _indexes.iterator();
+    Iterator<Index> indIter = _indexes.iterator();
     for (int i = 0; i < _indexes.size(); i++) {
       tdefPage.putInt(_format.OFFSET_INDEX_DEF_BLOCK +
           i * _format.SIZE_INDEX_DEFINITION + 4, _rowCount);
-      Index index = (Index) iter.next();
+      Index index = (Index) indIter.next();
       index.update();
     }
     _pageChannel.writePage(tdefPage, _tableDefPageNumber);

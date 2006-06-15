@@ -48,8 +48,8 @@ public enum DataType {
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
   BINARY((byte) 0x09, Types.BINARY, 255, true),
   TEXT((byte) 0x0A, Types.VARCHAR, 50 * 2, true),
-  OLE((byte) 0x0B, Types.LONGVARBINARY, 12),
-  MEMO((byte) 0x0C, Types.LONGVARCHAR, 12),
+  OLE((byte) 0x0B, Types.LONGVARBINARY, 12, true),
+  MEMO((byte) 0x0C, Types.LONGVARCHAR, 12, true),
   UNKNOWN_0D((byte) 0x0D),
   GUID((byte) 0x0F, null, 16),
   NUMERIC((byte) 0x10, Types.NUMERIC, 17);

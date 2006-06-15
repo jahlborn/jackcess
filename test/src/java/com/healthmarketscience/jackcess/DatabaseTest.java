@@ -67,7 +67,7 @@ public class DatabaseTest extends TestCase {
     assertEquals(1, db.getTableNames().size());
     Table table = db.getTable("Table1");
     
-    Map row = table.getNextRow();
+    Map<String, Object> row = table.getNextRow();
     assertEquals("abcdefg", row.get("A"));
     assertEquals("hijklmnop", row.get("B"));
     assertEquals(new Byte((byte) 2), row.get("C"));
@@ -112,7 +112,7 @@ public class DatabaseTest extends TestCase {
       table.addRow(row);
     }
     for (int i = 0; i < count; i++) {
-      Map readRow = table.getNextRow();
+      Map<String, Object> readRow = table.getNextRow();
       assertEquals(row[0], readRow.get("A"));
       assertEquals(row[1], readRow.get("B"));
       assertEquals(row[2], readRow.get("C"));
@@ -136,7 +136,7 @@ public class DatabaseTest extends TestCase {
     Table table = db.getTable("Test");
     table.addRows(rows);
     for (int i = 0; i < count; i++) {
-      Map readRow = table.getNextRow();
+      Map<String, Object> readRow = table.getNextRow();
       assertEquals(row[0], readRow.get("A"));
       assertEquals(row[1], readRow.get("B"));
       assertEquals(row[2], readRow.get("C"));
@@ -188,13 +188,39 @@ public class DatabaseTest extends TestCase {
   public void testReadMemo() throws Exception {
 
     Database db = Database.open(new File("test/data/test2.mdb"));
-    String tableName = "MSP_PROJECTS";
-    Table table = db.getTable(tableName);
+    Table table = db.getTable("MSP_PROJECTS");
     Map<String, Object> row = table.getNextRow();
     assertEquals("Jon Iles this is a a vawesrasoih aksdkl fas dlkjflkasjd flkjaslkdjflkajlksj dfl lkasjdf lkjaskldfj lkas dlk lkjsjdfkl; aslkdf lkasjkldjf lka skldf lka sdkjfl;kasjd falksjdfljaslkdjf laskjdfk jalskjd flkj aslkdjflkjkjasljdflkjas jf;lkasjd fjkas dasdf asd fasdf asdf asdmhf lksaiyudfoi jasodfj902384jsdf9 aw90se fisajldkfj lkasj dlkfslkd jflksjadf as", row.get("PROJ_PROP_AUTHOR"));
     assertEquals("T", row.get("PROJ_PROP_COMPANY"));
     assertEquals("Standard", row.get("PROJ_INFO_CAL_NAME"));
     assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
+  }
+
+  public void testWriteMemo() throws Exception {
+
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("A");
+    col.setType(DataType.TEXT);
+    columns.add(col);
+    col = new Column();
+    col.setName("B");
+    col.setType(DataType.MEMO);
+    columns.add(col);
+    db.createTable("test", columns);
+
+    String testStr = "This is a test";
+    
+    Table table = db.getTable("Test");
+    table.addRow(new Object[]{testStr, testStr});
+
+    Map<String, Object> row = table.getNextRow();
+
+    assertEquals(testStr, row.get("A"));
+    assertEquals(testStr, row.get("B"));
+    
   }
 
   public void testMissingFile() throws Exception {
