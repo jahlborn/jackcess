@@ -3,7 +3,7 @@
   <pomVersion>1</pomVersion>
   <id>jackcess</id>
   <name>Jackcess</name>
-  <currentVersion>1.1.4</currentVersion>
+  <currentVersion>1.1.5</currentVersion>
   <organization>
     <name>Health Market Science, Inc.</name>
     <url>http://www.healthmarketscience.com</url>
@@ -45,6 +45,7 @@
     </developer>
     <developer>
       <name>Rob Di Marco</name>
+        <ant:pathelement location="${maven.test.dest}"/>
       <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
