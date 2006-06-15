@@ -45,7 +45,6 @@
     </developer>
     <developer>
       <name>Rob Di Marco</name>
-        <ant:pathelement location="${maven.test.dest}"/>
       <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
