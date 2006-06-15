@@ -37,6 +37,13 @@
       <timezone>-5</timezone>
     </developer>
     <developer>
+      <name>James Ahlborn</name>
+      <id>jahlborn</id>
+      <email>jahlborn@users.sf.net</email>
+      <organization>Health Market Science, Inc.</organization>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <name>Rob Di Marco</name>
       <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
