@@ -82,6 +82,8 @@ public class Table {
   private List<Index> _indexes = new ArrayList<Index>();
   /** Used to read in pages */
   private PageChannel _pageChannel;
+  /** Table name as stored in Database */
+  private String _name;
   /** Usage map of pages that this table owns */
   private UsageMap _ownedPages;
   /** Usage map of pages that this table owns with free space on them */
@@ -99,8 +101,9 @@ public class Table {
    * @param pageChannel Page channel to get database pages from
    * @param format Format of the database that contains this table
    * @param pageNumber Page number of the table definition
+	 * @param name Table name
    */
-  protected Table(ByteBuffer buffer, PageChannel pageChannel, JetFormat format, int pageNumber)
+  protected Table(ByteBuffer buffer, PageChannel pageChannel, JetFormat format, int pageNumber, String name)
   throws IOException, SQLException
   {
     _buffer = buffer;
@@ -123,7 +126,15 @@ public class Table {
 			newBuffer.put(nextPageBuffer.array(), 8, format.PAGE_SIZE - 8);
 			_buffer = newBuffer;
 		}
-		readPage();	
+		readPage();
+		_name = name;
+  }
+
+  /**
+   * @return The name of the table
+   */
+  public String getName() {
+    return _name;
   }
   
   /**

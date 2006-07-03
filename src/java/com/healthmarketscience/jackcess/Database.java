@@ -238,7 +238,7 @@ public class Database {
       throw new IOException("Looking for system catalog at page " +
           PAGE_SYSTEM_CATALOG + ", but page type is " + pageType);
     }
-    _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG);
+    _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG, "System Catalog");
     Map row;
     while ( (row = _systemCatalog.getNextRow(Arrays.asList(
         COL_NAME, COL_TYPE, COL_ID))) != null)
@@ -271,7 +271,7 @@ public class Database {
       throw new IOException("Looking for MSysACEs at page " + pageNum +
           ", but page type is " + pageType);
     }
-    _accessControlEntries = new Table(buffer, _pageChannel, _format, pageNum);
+    _accessControlEntries = new Table(buffer, _pageChannel, _format, pageNum, "Access Control Entries");
   }
   
   /**
@@ -298,7 +298,7 @@ public class Database {
       return null;
     } else {
       _pageChannel.readPage(_buffer, pageNumber.intValue());
-      return new Table(_buffer, _pageChannel, _format, pageNumber.intValue());
+      return new Table(_buffer, _pageChannel, _format, pageNumber.intValue(), name);
     }
   }
   
