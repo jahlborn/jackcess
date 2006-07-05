@@ -550,6 +550,7 @@ public class Table {
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("Type: " + _tableType);
+		rtn.append("\nName: " + _name);
     rtn.append("\nRow count: " + _rowCount);
     rtn.append("\nColumn count: " + _columnCount);
     rtn.append("\nIndex count: " + _indexCount);
