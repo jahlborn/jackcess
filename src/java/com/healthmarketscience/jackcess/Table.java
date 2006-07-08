@@ -546,6 +546,10 @@ public class Table {
     }
     return buffer;
   }
+
+  public int getRowCount() {
+    return _rowCount;
+  }
   
   public String toString() {
     StringBuilder rtn = new StringBuilder();
