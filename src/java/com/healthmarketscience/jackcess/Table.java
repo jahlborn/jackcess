@@ -72,6 +72,12 @@ public class Table {
   private short _rowsLeftOnPage = 0;
   /** Offset index in the buffer of the start of the current row */
   private short _rowStart;
+  /** max Number of columns in the table (includes previous deletions) */
+  private short _maxColumnCount;
+  /** max Number of variable columns in the table */
+  private short _varColumnCount;
+  /** Number of fixed columns in the table */
+  private short _fixedColumnCount;
   /** Number of columns in the table */
   private short _columnCount;
   /** Format of the database that contains this table */
@@ -201,22 +207,33 @@ public class Table {
           ":\n" + ByteUtil.toHexString(_buffer, _buffer.position(),
           _buffer.limit() - _buffer.position()));
     }
-    short columnCount = _buffer.getShort(); //Number of columns in this table
+    short columnCount = _buffer.getShort(); //Number of columns in this row
+
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(columnCount);
     NullMask nullMask = new NullMask(columnCount);
     _buffer.position(_buffer.limit() - nullMask.byteSize());  //Null mask at end
     nullMask.read(_buffer);
-    _buffer.position(_buffer.limit() - nullMask.byteSize() - 2);
-    short varColumnCount = _buffer.getShort();  //Number of variable length columns
-    byte[][] varColumnData = new byte[varColumnCount][];  //Holds variable length column data
-    
-    //Read in the offsets of each of the variable length columns
-    short[] varColumnOffsets = new short[varColumnCount];
-    _buffer.position(_buffer.position() - 2 - (varColumnCount * 2) - 2);
-    short lastVarColumnStart = _buffer.getShort();
-    for (short i = 0; i < varColumnCount; i++) {
-      varColumnOffsets[i] = _buffer.getShort();
+
+    short varColumnCount = 0;
+    byte[][] varColumnData = null;
+    short[] varColumnOffsets = null;
+    short lastVarColumnStart = 0;
+    // if table varColumnCount is 0, then row info does not include varcol
+    // info
+    if(_varColumnCount > 0) {
+      _buffer.position(_buffer.limit() - nullMask.byteSize() - 2);
+      varColumnCount = _buffer.getShort();  // actual number of variable length columns in this row
+      varColumnData = new byte[varColumnCount][];  //Holds variable length column data
+
+      //Read in the offsets of each of the variable length columns
+      varColumnOffsets = new short[varColumnCount];
+      _buffer.position(_buffer.position() - 2 - (varColumnCount * 2) - 2);
+      lastVarColumnStart = _buffer.getShort();
+      for (short i = 0; i < varColumnCount; i++) {
+        varColumnOffsets[i] = _buffer.getShort();
+      }
     }
+      
     
     //Read in the actual data for each of the variable length columns
     for (short i = 0; i < varColumnCount; i++) {
@@ -316,6 +333,8 @@ public class Table {
     }
     _rowCount = _buffer.getInt(_format.OFFSET_NUM_ROWS);
     _tableType = _buffer.get(_format.OFFSET_TABLE_TYPE);
+    _maxColumnCount = _buffer.getShort(_format.OFFSET_MAX_COLS);
+    _varColumnCount = _buffer.getShort(_format.OFFSET_NUM_VAR_COLS);
     _columnCount = _buffer.getShort(_format.OFFSET_NUM_COLS);
     _indexCount = _buffer.getInt(_format.OFFSET_NUM_INDEXES);
     
@@ -339,6 +358,9 @@ public class Table {
     for (int i = 0; i < _columnCount; i++) {
       column = new Column(_buffer,
           offset + i * _format.SIZE_COLUMN_HEADER, _pageChannel, _format);
+      if(!column.isVariableLength()) {
+        _fixedColumnCount++;
+      }
       _columns.add(column);
     }
     offset += _columnCount * _format.SIZE_COLUMN_HEADER;
@@ -353,24 +375,37 @@ public class Table {
       offset += nameLength;
     }
     Collections.sort(_columns);
-    
+
+    int idxOffset = _buffer.position();
+    _buffer.position(idxOffset +
+                     (_format.OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
     for (int i = 0; i < _indexCount; i++) {
+      Index index = _indexes.get(i);
       _buffer.getInt(); //Forward past Unknown
-      ((Index) _indexes.get(i)).read(_buffer, _columns);
+      index.setIndexNumber(_buffer.getInt());
+      _buffer.position(_buffer.position() + 15);
+      index.setPrimaryKey(_buffer.get() == 1);
+      _buffer.position(_buffer.position() + 4);
     }
-    for (int i = 0; i < _indexCount; i++) {
-      _buffer.getInt(); //Forward past Unknown
-      ((Index) _indexes.get(i)).setIndexNumber(_buffer.getInt());
-      _buffer.position(_buffer.position() + 20);
-    }
-    Collections.sort(_indexes);
     for (int i = 0; i < _indexCount; i++) {
       byte[] nameBytes = new byte[_buffer.getShort()];
       _buffer.get(nameBytes);
       ((Index) _indexes.get(i)).setName(_format.CHARSET.decode(ByteBuffer.wrap(
           nameBytes)).toString());
     }
+    int idxEndOffset = _buffer.position();
     
+    Collections.sort(_indexes);
+
+    // go back to index column info after sorting
+    _buffer.position(idxOffset);
+    for (int i = 0; i < _indexCount; i++) {
+      _buffer.getInt(); //Forward past Unknown
+      ((Index) _indexes.get(i)).read(_buffer, _columns);
+    }
+
+    // reset to end of index info
+    _buffer.position(idxEndOffset);
   }
   
   /**

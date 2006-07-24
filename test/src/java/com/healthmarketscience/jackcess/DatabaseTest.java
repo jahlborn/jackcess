@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -232,6 +233,20 @@ public class DatabaseTest extends TestCase {
     } catch(FileNotFoundException e) {
     }
     assertTrue(!bogusFile.exists());
+  }
+
+  public void testPrimaryKey() throws Exception {
+    Table table = open().getTable("Table1");
+    Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
+    for(Index index : table.getIndexes()) {
+      System.out.println(index);
+      foundPKs.put(index.getColumns().iterator().next().getName(),
+                   index.isPrimaryKey());
+    }
+    Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
+    expectedPKs.put("A", Boolean.TRUE);
+    expectedPKs.put("B", Boolean.FALSE);
+    assertEquals(expectedPKs, foundPKs);
   }
   
   private int countRows(Table table) throws Exception {

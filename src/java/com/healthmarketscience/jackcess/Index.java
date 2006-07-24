@@ -31,14 +31,17 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.apache.commons.collections.bidimap.DualHashBidiMap;
+
 import org.apache.commons.collections.BidiMap;
+import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import org.apache.commons.lang.builder.CompareToBuilder;
 
 /**
@@ -137,6 +140,8 @@ public class Index implements Comparable<Index> {
   private int _indexNumber;
   /** Index name */
   private String _name;
+  /** is this index a primary key */
+  private boolean _primaryKey;
   
   public Index(int parentPageNumber, PageChannel channel, JetFormat format) {
     _parentPageNumber = parentPageNumber;
@@ -158,11 +163,26 @@ public class Index implements Comparable<Index> {
   public void setName(String name) {
     _name = name;
   }
+
+  public boolean isPrimaryKey() {
+    return _primaryKey;
+  }
+
+  public void setPrimaryKey(boolean newPrimaryKey) {
+    _primaryKey = newPrimaryKey;
+  }
+
+  /**
+   * Returns the Columns for this index (unmodifiable)
+   */
+  public Collection<Column> getColumns() {
+    return Collections.unmodifiableCollection(_columns.keySet());
+  }
   
   public void update() throws IOException {
     _pageChannel.writePage(write(), _pageNumber);
   }
-  
+
   /**
    * Write this index out to a buffer
    */
@@ -249,6 +269,7 @@ public class Index implements Comparable<Index> {
     rtn.append("\tName: " + _name);
     rtn.append("\n\tNumber: " + _indexNumber);
     rtn.append("\n\tPage number: " + _pageNumber);
+    rtn.append("\n\tIs Primary Key: " + _primaryKey);
     rtn.append("\n\tColumns: " + _columns);
     rtn.append("\n\tEntries: " + _entries);
     rtn.append("\n\n");
