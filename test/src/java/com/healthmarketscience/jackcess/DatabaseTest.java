@@ -258,6 +258,35 @@ public class DatabaseTest extends TestCase {
     return rtn;
   }
 
+  public void testReadWithDeletedCols() throws Exception {
+    Table table = Database.open(new File("test/data/delColTest.mdb")).getTable("Table1");
+
+    Map<String, Object> expectedRow0 = new HashMap<String, Object>();
+    expectedRow0.put("id", 0);
+    expectedRow0.put("id2", 2);
+    expectedRow0.put("data", "foo");
+    expectedRow0.put("data2", "foo2");
+
+    Map<String, Object> expectedRow1 = new HashMap<String, Object>();
+    expectedRow1.put("id", 3);
+    expectedRow1.put("id2", 5);
+    expectedRow1.put("data", "bar");
+    expectedRow1.put("data2", "bar2");
+
+    int rowNum = 0;
+    Map<String, Object> row = null;
+    while ((row = table.getNextRow()) != null) {
+      if(rowNum == 0) {
+        assertEquals(expectedRow0, row);
+      } else if(rowNum == 1) {
+        assertEquals(expectedRow1, row);
+      } else if(rowNum >= 2) {
+        fail("should only have 2 rows");
+      }
+      rowNum++;
+    }
+  }
+
   private Object[] createTestRow() {
     return new Object[] {"Tim", "R", "McCune", 1234, (byte) 0xad, 555.66d,
         777.88f, (short) 999, new Date()};

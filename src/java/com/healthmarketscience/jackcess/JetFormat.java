@@ -82,6 +82,8 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_VARIABLE;
   public final int OFFSET_COLUMN_COMPRESSED_UNICODE;
   public final int OFFSET_COLUMN_LENGTH;
+  public final int OFFSET_COLUMN_VARIABLE_TABLE_INDEX;
+  public final int OFFSET_COLUMN_FIXED_DATA_OFFSET;
   
   public final int OFFSET_TABLE_DEF_LOCATION;
   public final int OFFSET_NUM_ROWS_ON_PAGE;
@@ -163,6 +165,8 @@ public abstract class JetFormat {
     OFFSET_COLUMN_VARIABLE = defineOffsetColumnVariable();
     OFFSET_COLUMN_COMPRESSED_UNICODE = defineOffsetColumnCompressedUnicode();
     OFFSET_COLUMN_LENGTH = defineOffsetColumnLength();
+    OFFSET_COLUMN_VARIABLE_TABLE_INDEX = defineOffsetColumnVariableTableIndex();
+    OFFSET_COLUMN_FIXED_DATA_OFFSET = defineOffsetColumnFixedDataOffset();
     
     OFFSET_TABLE_DEF_LOCATION = defineOffsetTableDefLocation();
     OFFSET_NUM_ROWS_ON_PAGE = defineOffsetNumRowsOnPage();
@@ -223,7 +227,9 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnVariable();
   protected abstract int defineOffsetColumnCompressedUnicode();
   protected abstract int defineOffsetColumnLength();
-
+  protected abstract int defineOffsetColumnVariableTableIndex();
+  protected abstract int defineOffsetColumnFixedDataOffset();
+  
   protected abstract int defineOffsetTableDefLocation();
   protected abstract int defineOffsetNumRowsOnPage();
   protected abstract int defineOffsetRowLocationBlock();
@@ -284,6 +290,8 @@ public abstract class JetFormat {
     protected int defineOffsetColumnVariable() { return 15; }
     protected int defineOffsetColumnCompressedUnicode() { return 16; }
     protected int defineOffsetColumnLength() { return 23; }
+    protected int defineOffsetColumnVariableTableIndex() { return 7; }
+    protected int defineOffsetColumnFixedDataOffset() { return 21; }
   
     protected int defineOffsetTableDefLocation() { return 4; }
     protected int defineOffsetNumRowsOnPage() { return 12; }

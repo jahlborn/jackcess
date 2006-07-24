@@ -75,6 +75,8 @@ public class Table {
   /** max Number of columns in the table (includes previous deletions) */
   private short _maxColumnCount;
   /** max Number of variable columns in the table */
+  private short _maxVarColumnCount;
+  /** Number of variable columns in the table */
   private short _varColumnCount;
   /** Number of fixed columns in the table */
   private short _fixedColumnCount;
@@ -208,48 +210,47 @@ public class Table {
           _buffer.limit() - _buffer.position()));
     }
     short columnCount = _buffer.getShort(); //Number of columns in this row
-
+    
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(columnCount);
     NullMask nullMask = new NullMask(columnCount);
     _buffer.position(_buffer.limit() - nullMask.byteSize());  //Null mask at end
     nullMask.read(_buffer);
 
-    short varColumnCount = 0;
+    short rowVarColumnCount = 0;
     byte[][] varColumnData = null;
     short[] varColumnOffsets = null;
     short lastVarColumnStart = 0;
-    // if table varColumnCount is 0, then row info does not include varcol
-    // info
-    if(_varColumnCount > 0) {
+    // if _maxVarColumnCount is 0, then row info does not include varcol info
+    if(_maxVarColumnCount > 0) {
       _buffer.position(_buffer.limit() - nullMask.byteSize() - 2);
-      varColumnCount = _buffer.getShort();  // actual number of variable length columns in this row
-      varColumnData = new byte[varColumnCount][];  //Holds variable length column data
+      rowVarColumnCount = _buffer.getShort();  // number of variable length columns in this row
+      varColumnData = new byte[rowVarColumnCount][];  //Holds variable length column data
 
       //Read in the offsets of each of the variable length columns
-      varColumnOffsets = new short[varColumnCount];
-      _buffer.position(_buffer.position() - 2 - (varColumnCount * 2) - 2);
+      varColumnOffsets = new short[rowVarColumnCount];
+      _buffer.position(_buffer.position() - 2 - (rowVarColumnCount * 2) - 2);
       lastVarColumnStart = _buffer.getShort();
-      for (short i = 0; i < varColumnCount; i++) {
+      for (short i = 0; i < rowVarColumnCount; i++) {
         varColumnOffsets[i] = _buffer.getShort();
       }
     }
       
     
     //Read in the actual data for each of the variable length columns
-    for (short i = 0; i < varColumnCount; i++) {
+    for (short i = 0; i < rowVarColumnCount; i++) {
       _buffer.position(_rowStart + varColumnOffsets[i]);
       varColumnData[i] = new byte[lastVarColumnStart - varColumnOffsets[i]];
       _buffer.get(varColumnData[i]);
       lastVarColumnStart = varColumnOffsets[i];
     }
-    int columnNumber = 0;
-    int varColumnDataIndex = varColumnCount - 1;
-    
-    _buffer.position(_rowStart + 2);  //Move back to the front of the buffer
+
+    // compute start of fixed data
+    int dataStart = _rowStart + 2;
     
     //Now read in the fixed length columns and populate the columnData array
     //with the combination of fixed length and variable length data.
     byte[] columnData = null;
+    int columnNumber = 0;
     for (Iterator iter = _columns.iterator(); iter.hasNext(); columnNumber++) {
       Column column = (Column) iter.next();
       boolean isNull = nullMask.isNull(columnNumber);
@@ -261,16 +262,18 @@ public class Table {
         {
           //Read in fixed length column data
           columnData = new byte[column.getLength()];
+          _buffer.position(dataStart + column.getFixedDataOffset());
           _buffer.get(columnData);
         } 
         else
         {
            if (!isNull) 
            {
-             //Refer to already-read-in variable length data
-             columnData = varColumnData[varColumnDataIndex];
+             // Refer to already-read-in variable length data.  note,
+             // varLenTableIndex is from the *end* of the array...
+             columnData = varColumnData[rowVarColumnCount -
+                                        column.getVarLenTableIndex() - 1];
            }
-           --varColumnDataIndex;
         }
         if (!isNull && columnData != null &&
             (columnNames == null || columnNames.contains(column.getName())))
@@ -334,7 +337,7 @@ public class Table {
     _rowCount = _buffer.getInt(_format.OFFSET_NUM_ROWS);
     _tableType = _buffer.get(_format.OFFSET_TABLE_TYPE);
     _maxColumnCount = _buffer.getShort(_format.OFFSET_MAX_COLS);
-    _varColumnCount = _buffer.getShort(_format.OFFSET_NUM_VAR_COLS);
+    _maxVarColumnCount = _buffer.getShort(_format.OFFSET_NUM_VAR_COLS);
     _columnCount = _buffer.getShort(_format.OFFSET_NUM_COLS);
     _indexCount = _buffer.getInt(_format.OFFSET_NUM_INDEXES);
     
@@ -358,7 +361,9 @@ public class Table {
     for (int i = 0; i < _columnCount; i++) {
       column = new Column(_buffer,
           offset + i * _format.SIZE_COLUMN_HEADER, _pageChannel, _format);
-      if(!column.isVariableLength()) {
+      if(column.isVariableLength()) {
+        _varColumnCount++;
+      } else {
         _fixedColumnCount++;
       }
       _columns.add(column);

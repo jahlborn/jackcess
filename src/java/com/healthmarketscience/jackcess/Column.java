@@ -97,6 +97,10 @@ public class Column implements Comparable<Column> {
   private short _columnNumber;
   /** Column name */
   private String _name;
+  /** the offset of the fixed data in the row */
+  private int _fixedDataOffset;
+  /** the index of the variable length data in the var len offset table */
+  private int _varLenTableIndex;
   
   public Column() {
     this(JetFormat.VERSION_4);
@@ -131,6 +135,12 @@ public class Column implements Comparable<Column> {
         & 1) != 1);
     _compressedUnicode = ((buffer.get(offset +
         format.OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
+
+    if(_variableLength) {
+      _varLenTableIndex = buffer.getShort(offset + format.OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
+    } else {
+      _fixedDataOffset = buffer.getShort(offset + format.OFFSET_COLUMN_FIXED_DATA_OFFSET);
+    }
   }
   
   public String getName() {
@@ -188,6 +198,14 @@ public class Column implements Comparable<Column> {
   }
   public short getLength() {
     return _columnLength;
+  }
+
+  public int getVarLenTableIndex() {
+    return _varLenTableIndex;
+  }
+
+  public int getFixedDataOffset() {
+    return _fixedDataOffset;
   }
   
   /**
