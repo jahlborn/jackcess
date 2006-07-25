@@ -409,8 +409,13 @@ public class Database {
         buffer.putShort((short) 0);
       }
       buffer.putShort(columnNumber); //Column Number again
-      buffer.put((byte) 0x09);  //Unknown
-      buffer.put((byte) 0x04);  //Unknown
+      if(col.getType() == DataType.NUMERIC) {
+        buffer.put((byte) col.getPrecision());  // numeric precision
+        buffer.put((byte) col.getScale());  // numeric scale
+      } else {
+        buffer.put((byte) 0x00); //unused
+        buffer.put((byte) 0x00); //unused
+      }
       buffer.putShort((short) 0); //Unknown
       if (col.getType().isVariableLength()) { //Variable length
         buffer.put((byte) 0x2);

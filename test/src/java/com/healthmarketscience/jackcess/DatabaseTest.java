@@ -4,6 +4,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -242,7 +243,6 @@ public class DatabaseTest extends TestCase {
     Table table = open().getTable("Table1");
     Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
     for(Index index : table.getIndexes()) {
-      System.out.println(index);
       foundPKs.put(index.getColumns().iterator().next().getName(),
                    index.isPrimaryKey());
     }
@@ -303,7 +303,7 @@ public class DatabaseTest extends TestCase {
     Table table = db.getTable("Test");
     table.addRow(new BigDecimal("-2341234.03450"));
     table.addRow(37L);
-    table.addRow(new BigDecimal("10000.45"));
+    table.addRow("10000.45");
 
     table.reset();
 
@@ -323,6 +323,102 @@ public class DatabaseTest extends TestCase {
       table.addRow(new BigDecimal("342523234145343543.3453"));
       fail("ArithmeticException should have been thrown");
     } catch(ArithmeticException e) {
+      // ignored
+    }
+  }
+
+  public void testGUID() throws Exception
+  {
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("A");
+    col.setType(DataType.GUID);
+    columns.add(col);
+    db.createTable("test", columns);
+
+    Table table = db.getTable("Test");
+    table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
+    table.addRow("{32a59f01-aa34-3e29-453f-4523453cd2e6}");
+    table.addRow("{11111111-1111-1111-1111-111111111111}");
+    table.addRow("{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}");
+
+    table.reset();
+
+    List<Object> foundValues = new ArrayList<Object>();
+    Map<String, Object> row = null;
+    while((row = table.getNextRow()) != null) {
+      foundValues.add(row.get("A"));
+    }
+
+    assertEquals(Arrays.asList(
+                     "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
+                     "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
+                     "{11111111-1111-1111-1111-111111111111}",
+                     "{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}"),
+                 foundValues);
+
+    try {
+      table.addRow("3245234");
+      fail("IOException should have been thrown");
+    } catch(IOException e) {
+      // ignored
+    }
+  }
+
+  public void testNumeric() throws Exception
+  {
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("A");
+    col.setType(DataType.NUMERIC);
+    col.setScale((byte)4);
+    col.setPrecision((byte)8);
+    columns.add(col);
+    
+    col = new Column();
+    col.setName("B");
+    col.setType(DataType.NUMERIC);
+    col.setScale((byte)8);
+    col.setPrecision((byte)28);
+    columns.add(col);
+    db.createTable("test", columns);
+
+    Table table = db.getTable("Test");
+    table.addRow(new BigDecimal("-1234.03450"),
+                 new BigDecimal("23923434453436.36234219"));
+    table.addRow(37L, 37L);
+    table.addRow("1000.45", "-3452345321000");
+
+    table.reset();
+
+    List<Object> foundSmallValues = new ArrayList<Object>();
+    List<Object> foundBigValues = new ArrayList<Object>();
+    Map<String, Object> row = null;
+    while((row = table.getNextRow()) != null) {
+      foundSmallValues.add(row.get("A"));
+      foundBigValues.add(row.get("B"));
+    }
+
+    assertEquals(Arrays.asList(
+                     new BigDecimal("-1234.0345"),
+                     new BigDecimal("37.0000"),
+                     new BigDecimal("1000.4500")),
+                 foundSmallValues);
+    assertEquals(Arrays.asList(
+                     new BigDecimal("23923434453436.36234219"),
+                     new BigDecimal("37.00000000"),
+                     new BigDecimal("-3452345321000.00000000")),
+                 foundBigValues);
+
+    try {
+      table.addRow(new BigDecimal("3245234.234"),
+                   new BigDecimal("3245234.234"));
+      fail("IOException should have been thrown");
+    } catch(IOException e) {
       // ignored
     }
   }

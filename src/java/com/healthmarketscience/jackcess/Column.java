@@ -79,12 +79,12 @@ public class Column implements Comparable<Column> {
    */
   private static final short LONG_VALUE_TYPE_OTHER_PAGES = (short) 0x0;
 
-  private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{4})-([\\p{XDigit}]{2})-([\\p{XDigit}]{2})-([\\p{XDigit}]{2})-([\\p{XDigit}]{6})[}]\\s*");
+  private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
 
   /** default precision value for new numeric columns */
   public static final byte DEFAULT_PRECISION = 18;
   /** default scale value for new numeric columns */
-  public static final byte DEFAULT_SCALE = 18;
+  public static final byte DEFAULT_SCALE = 0;
   
   /** For text columns, whether or not they are compressed */ 
   private boolean _compressedUnicode = false;
@@ -812,8 +812,12 @@ public class Column implements Comparable<Column> {
       return BigDecimal.ZERO;
     } else if(value instanceof BigDecimal) {
       return (BigDecimal)value;
-    } else {
+    } else if(value instanceof BigInteger) {
+      return new BigDecimal((BigInteger)value);
+    } else if(value instanceof Number) {
       return new BigDecimal(((Number)value).doubleValue());
+    } else {
+      return new BigDecimal(value.toString());
     }
   }
 
