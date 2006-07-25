@@ -78,8 +78,9 @@ public enum DataType {
       DATA_TYPES.put(type._value, type);
     }
   }
-  
-  private boolean _variableLength = false;
+
+  /** is this a variable length field */
+  private boolean _variableLength;
   /** Internal Access value */
   private byte _value;
   /** Size in bytes */
@@ -88,18 +89,18 @@ public enum DataType {
   private Integer _sqlType;
   
   private DataType(byte value) {
-    _value = value;
+    this(value, null, null);
   }
   
   private DataType(byte value, Integer sqlType, Integer size) {
-    this(value);
-    _sqlType = sqlType;
-    _size = size;
+    this(value, sqlType, size, false);
   }
   
   private DataType(byte value, Integer sqlType, Integer size,
                    boolean variableLength) {
-    this(value, sqlType, size);
+    _value = value;
+    _sqlType = sqlType;
+    _size = size;
     _variableLength = variableLength;
   }
   

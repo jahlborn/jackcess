@@ -27,6 +27,7 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -128,7 +129,25 @@ public final class ByteUtil {
 
     buffer.position(position);
     return rtn.toString();
-  } 
+  }
+
+  /**
+   * Writes a sequence of hexidecimal values into the given buffer, where
+   * every two characters represent one byte value.
+   */
+  public static void writeHexString(ByteBuffer buffer,
+                                    String hexStr)
+    throws IOException
+  {
+    char[] hexChars = hexStr.toCharArray();
+    if((hexChars.length % 2) != 0) {
+      throw new IOException("Hex string length must be even");
+    }
+    for(int i = 0; i < hexChars.length; i += 2) {
+      String tmpStr = new String(hexChars, i, 2);
+      buffer.put((byte)Long.parseLong(tmpStr, 16));
+    }
+  }
 
   
 }

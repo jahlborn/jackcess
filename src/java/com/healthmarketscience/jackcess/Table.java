@@ -416,7 +416,7 @@ public class Table {
   /**
    * Add a single row to this table and write it to disk
    */
-  public void addRow(Object[] row) throws IOException {
+  public void addRow(Object... row) throws IOException {
     addRows(Collections.singletonList(row));
   }
   

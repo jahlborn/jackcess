@@ -4,7 +4,9 @@ package com.healthmarketscience.jackcess;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -216,6 +218,7 @@ public class DatabaseTest extends TestCase {
     
     Table table = db.getTable("Test");
     table.addRow(new Object[]{testStr, testStr});
+    table.reset();
 
     Map<String, Object> row = table.getNextRow();
 
@@ -284,6 +287,43 @@ public class DatabaseTest extends TestCase {
         fail("should only have 2 rows");
       }
       rowNum++;
+    }
+  }
+
+  public void testCurrency() throws Exception {
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("A");
+    col.setType(DataType.MONEY);
+    columns.add(col);
+    db.createTable("test", columns);
+
+    Table table = db.getTable("Test");
+    table.addRow(new BigDecimal("-2341234.03450"));
+    table.addRow(37L);
+    table.addRow(new BigDecimal("10000.45"));
+
+    table.reset();
+
+    List<Object> foundValues = new ArrayList<Object>();
+    Map<String, Object> row = null;
+    while((row = table.getNextRow()) != null) {
+      foundValues.add(row.get("A"));
+    }
+
+    assertEquals(Arrays.asList(
+                     new BigDecimal("-2341234.0345"),
+                     new BigDecimal("37.0000"),
+                     new BigDecimal("10000.4500")),
+                 foundValues);
+
+    try {
+      table.addRow(new BigDecimal("342523234145343543.3453"));
+      fail("ArithmeticException should have been thrown");
+    } catch(ArithmeticException e) {
+      // ignored
     }
   }
 

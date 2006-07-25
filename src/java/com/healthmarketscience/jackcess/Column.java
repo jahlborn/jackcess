@@ -39,6 +39,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.scsu.Expand;
@@ -76,15 +78,22 @@ public class Column implements Comparable<Column> {
    * Long value (LVAL) type that indicates that the value is stored on multiple other pages
    */
   private static final short LONG_VALUE_TYPE_OTHER_PAGES = (short) 0x0;
+
+  private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{4})-([\\p{XDigit}]{2})-([\\p{XDigit}]{2})-([\\p{XDigit}]{2})-([\\p{XDigit}]{6})[}]\\s*");
+
+  /** default precision value for new numeric columns */
+  public static final byte DEFAULT_PRECISION = 18;
+  /** default scale value for new numeric columns */
+  public static final byte DEFAULT_SCALE = 18;
   
   /** For text columns, whether or not they are compressed */ 
   private boolean _compressedUnicode = false;
   /** Whether or not the column is of variable length */
   private boolean _variableLength;
   /** Numeric precision */
-  private byte _precision;
+  private byte _precision = DEFAULT_PRECISION;
   /** Numeric scale */
-  private byte _scale;
+  private byte _scale = DEFAULT_SCALE;
   /** Data type */
   private DataType _type;
   /** Format that the containing database is in */
@@ -189,8 +198,22 @@ public class Column implements Comparable<Column> {
     return _precision;
   }
   
+  public void setPrecision(byte newPrecision) {
+    if((newPrecision < 1) || (newPrecision > 28)) {
+      throw new IllegalArgumentException("Precision must be from 1 to 28 inclusive");
+    }
+    _precision = newPrecision;
+  }
+  
   public byte getScale() {
     return _scale;
+  }
+
+  public void setScale(byte newScale) {
+    if((newScale < 1) || (newScale > 28)) {
+      throw new IllegalArgumentException("Scale must be from 0 to 28 inclusive");
+    }
+    _scale = newScale;
   }
   
   public void setLength(short length) {
@@ -239,19 +262,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.FLOAT) {
       return new Float(buffer.getFloat());
     } else if (_type == DataType.SHORT_DATE_TIME) {
-      // seems access stores dates in the local timezone.  guess you just hope
-      // you read it in the same timezone in which it was written!
-      double dval = buffer.getDouble();
-      dval *= MILLISECONDS_PER_DAY;
-      dval -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
-      long time = (long)dval;
-      TimeZone tz = TimeZone.getDefault();
-      Date date = new Date(time - tz.getRawOffset());
-      if (tz.inDaylightTime(date))
-      {
-        date = new Date(date.getTime() - tz.getDSTSavings());
-      }
-      return date;
+      return readDateValue(buffer);
     } else if (_type == DataType.BINARY) {
       return data;
     } else if (_type == DataType.TEXT) {
@@ -267,69 +278,24 @@ public class Column implements Comparable<Column> {
         return decodeText(data);
       }
     } else if (_type == DataType.MONEY) {
-      //XXX
-      return null;
+      return readCurrencyValue(data);
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
-        return getLongBinaryValue(data, null);
+        return readLongBinaryValue(data, null);
       } else {
         return null;
       }
     } else if (_type == DataType.MEMO) {
       if (data.length > 0) {
-        return getLongStringValue(data);
+        return readLongStringValue(data);
       } else {
         return null;
       }
     } else if (_type == DataType.NUMERIC) {
-
-      boolean negate = (buffer.get() != 0);
-
-      byte[] tmpArr = new byte[16];
-      buffer.get(tmpArr);
-
-      if(order != ByteOrder.BIG_ENDIAN) {
-        // fix endianness of each 4 byte segment
-        for(int i = 0; i < 4; ++i) {
-          int idx = i * 4;
-          byte b = tmpArr[idx + 0];
-          tmpArr[idx + 0] = tmpArr[idx + 3];
-          tmpArr[idx + 3] = b;
-          b = tmpArr[idx + 1];
-          tmpArr[idx + 1] = tmpArr[idx + 2];
-          tmpArr[idx + 2] = b;
-        }
-      }
-
-      BigInteger intVal = new BigInteger(tmpArr);
-      if(negate) {
-        intVal = intVal.negate();
-      }
-      return new BigDecimal(intVal, getScale());
-
+      return readNumericValue(buffer);
     } else if (_type == DataType.GUID) {
-      
-      StringBuilder sb = new StringBuilder(22);
-      sb.append("{");
-      sb.append(ByteUtil.toHexString(buffer, 0, 4,
-                                     false));
-      sb.append("-");
-      sb.append(ByteUtil.toHexString(buffer, 4, 2,
-                                     false));
-      sb.append("-");
-      sb.append(ByteUtil.toHexString(buffer, 6, 2,
-                                     false));
-      sb.append("-");
-      sb.append(ByteUtil.toHexString(buffer, 8, 2,
-                                     false));
-      sb.append("-");
-      sb.append(ByteUtil.toHexString(buffer, 10, 6,
-                                     false));
-      sb.append("}");
-      return (sb.toString());
-      
+      return readGUIDValue(buffer);
     } else if (_type == DataType.UNKNOWN_0D) {
-      
       return null;
     } else {
       throw new IOException("Unrecognized data type: " + _type);
@@ -342,7 +308,7 @@ public class Column implements Comparable<Column> {
    *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
-  private byte[] getLongBinaryValue(byte[] lvalDefinition, short[] outType)
+  private byte[] readLongBinaryValue(byte[] lvalDefinition, short[] outType)
     throws IOException
   {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
@@ -392,9 +358,11 @@ public class Column implements Comparable<Column> {
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
    */
-  private String getLongStringValue(byte[] lvalDefinition) throws IOException {
+  private String readLongStringValue(byte[] lvalDefinition)
+    throws IOException
+  {
     short[] type = new short[1];
-    byte[] binData = getLongBinaryValue(lvalDefinition, type);
+    byte[] binData = readLongBinaryValue(lvalDefinition, type);
     if(binData == null) {
       return null;
     }
@@ -415,6 +383,186 @@ public class Column implements Comparable<Column> {
     return result;
   }
 
+  /**
+   * Decodes "Currency" values.
+   * 
+   * @param lvalDefinition Column value that points to an LVAL record
+   * @return BigDecimal representing the monetary value
+   * @throws IOException if the value cannot be parsed 
+   */
+  private BigDecimal readCurrencyValue(byte[] lvalDefinition)
+    throws IOException
+  {
+    if(lvalDefinition.length != 8) {
+      throw new IOException("Invalid money value.");
+    }
+    
+    ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
+    def.order(ByteOrder.LITTLE_ENDIAN);
+    return new BigDecimal(BigInteger.valueOf(def.getLong(0)), 4);
+  }
+
+  /**
+   * Writes "Currency" values.
+   */
+  private void writeCurrencyValue(ByteBuffer buffer, Object value)
+  {
+    BigDecimal decVal = toBigDecimal(value);
+
+    // adjust scale (this will throw if number has too many decimal places)
+    decVal = decVal.setScale(4);
+    
+    // now, remove scale and convert to long (this will throw if the value is
+    // too big)
+    buffer.putLong(decVal.movePointRight(4).longValueExact());
+  }
+
+  /**
+   * Decodes a NUMERIC field.
+   */
+  private BigDecimal readNumericValue(ByteBuffer buffer)
+  {
+    boolean negate = (buffer.get() != 0);
+
+    byte[] tmpArr = new byte[16];
+    buffer.get(tmpArr);
+
+    if(buffer.order() != ByteOrder.BIG_ENDIAN) {
+      fixNumericByteOrder(tmpArr);
+    }
+
+    BigInteger intVal = new BigInteger(tmpArr);
+    if(negate) {
+      intVal = intVal.negate();
+    }
+    return new BigDecimal(intVal, getScale());
+  }
+
+  /**
+   * Writes a numeric value.
+   */
+  private void writeNumericValue(ByteBuffer buffer, Object value)
+    throws IOException
+  {
+    BigDecimal decVal = toBigDecimal(value);
+
+    boolean negative = (decVal.compareTo(BigDecimal.ZERO) < 0);
+    if(negative) {
+      decVal = decVal.negate();
+    }
+
+    // write sign byte
+    buffer.put(negative ? (byte)1 : (byte)0);
+
+    // adjust scale according to this column type (this will throw if number
+    // has too many decimal places)
+    decVal = decVal.setScale(getScale());
+
+    // check precision
+    if(decVal.precision() > getPrecision()) {
+      throw new IOException("Numeric value is too big for specified precision "
+                            + getPrecision() + ": " + decVal);
+    }
+    
+    // convert to unscaled BigInteger, big-endian bytes
+    byte[] intValBytes = decVal.unscaledValue().toByteArray();
+    if(intValBytes.length > 16) {
+      throw new IOException("Too many bytes for valid BigInteger?");
+    }
+    if(intValBytes.length < 16) {
+      byte[] tmpBytes = new byte[16];
+      System.arraycopy(intValBytes, 0, tmpBytes, (16 - intValBytes.length),
+                       intValBytes.length);
+      intValBytes = tmpBytes;
+    }
+    if(buffer.order() != ByteOrder.BIG_ENDIAN) {
+      fixNumericByteOrder(intValBytes);
+    }
+    buffer.put(intValBytes);
+  }
+
+  /**
+   * Decodes a date value.
+   */
+  private Date readDateValue(ByteBuffer buffer)
+  {
+    // seems access stores dates in the local timezone.  guess you just hope
+    // you read it in the same timezone in which it was written!
+    double dval = buffer.getDouble();
+    dval *= MILLISECONDS_PER_DAY;
+    dval -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
+    long time = (long)dval;
+    TimeZone tz = TimeZone.getDefault();
+    Date date = new Date(time - tz.getRawOffset());
+    if (tz.inDaylightTime(date))
+    {
+      date = new Date(date.getTime() - tz.getDSTSavings());
+    }
+    return date;
+  }
+
+  /**
+   * Writes a date value.
+   */
+  private void writeDateValue(ByteBuffer buffer, Object value)
+  {
+    if(value == null) {
+      buffer.putDouble(0d);
+    } else {
+      // seems access stores dates in the local timezone.  guess you just
+      // hope you read it in the same timezone in which it was written!
+      Calendar cal = Calendar.getInstance();
+      cal.setTime((Date) value);
+      long ms = cal.getTimeInMillis();
+      ms += (long) TimeZone.getDefault().getOffset(ms);
+      buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
+                       DAYS_BETWEEN_EPOCH_AND_1900);
+    }
+  }
+
+  /**
+   * Decodes a GUID value.
+   */
+  private String readGUIDValue(ByteBuffer buffer)
+  {
+    StringBuilder sb = new StringBuilder(22);
+    sb.append("{");
+    sb.append(ByteUtil.toHexString(buffer, 0, 4,
+                                   false));
+    sb.append("-");
+    sb.append(ByteUtil.toHexString(buffer, 4, 2,
+                                   false));
+    sb.append("-");
+    sb.append(ByteUtil.toHexString(buffer, 6, 2,
+                                   false));
+    sb.append("-");
+    sb.append(ByteUtil.toHexString(buffer, 8, 2,
+                                   false));
+    sb.append("-");
+    sb.append(ByteUtil.toHexString(buffer, 10, 6,
+                                   false));
+    sb.append("}");
+    return (sb.toString());
+  }
+
+  /**
+   * Writes a GUID value.
+   */
+  private void writeGUIDValue(ByteBuffer buffer, Object value)
+    throws IOException
+  {
+    Matcher m = GUID_PATTERN.matcher((CharSequence)value);
+    if(m.matches()) {
+      ByteUtil.writeHexString(buffer, m.group(1));
+      ByteUtil.writeHexString(buffer, m.group(2));
+      ByteUtil.writeHexString(buffer, m.group(3));
+      ByteUtil.writeHexString(buffer, m.group(4));
+      ByteUtil.writeHexString(buffer, m.group(5));
+    } else {
+      throw new IOException("Invalid GUID: " + value);
+    }
+  }
+  
   /**
    * Write an LVAL column into a ByteBuffer inline (LONG_VALUE_TYPE_THIS_PAGE)
    * @param value Value of the LVAL column
@@ -509,18 +657,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.FLOAT) {
       buffer.putFloat(obj != null ? ((Number) obj).floatValue() : (float) 0);
     } else if (_type == DataType.SHORT_DATE_TIME) {
-      if (obj instanceof Date) {
-        // seems access stores dates in the local timezone.  guess you just
-        // hope you read it in the same timezone in which it was written!
-        Calendar cal = Calendar.getInstance();
-        cal.setTime((Date) obj);
-        long ms = cal.getTimeInMillis();
-        ms += (long) TimeZone.getDefault().getOffset(ms);
-        buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
-            DAYS_BETWEEN_EPOCH_AND_1900);
-      } else {
-        buffer.putDouble(0d);
-      }
+      writeDateValue(buffer, obj);
     } else if (_type == DataType.BINARY) {
       buffer.put((byte[]) obj);
     } else if (_type == DataType.TEXT) {
@@ -530,10 +667,16 @@ public class Column implements Comparable<Column> {
         text = text.subSequence(0, maxChars);
       }
       buffer.put(encodeText(text));
+    } else if (_type == DataType.MONEY) {
+      writeCurrencyValue(buffer, obj);
     } else if (_type == DataType.OLE) {
       buffer.put(writeLongValue((byte[]) obj));
     } else if (_type == DataType.MEMO) {
       buffer.put(writeLongValue((byte[]) obj));
+    } else if (_type == DataType.NUMERIC) {
+      writeNumericValue(buffer, obj);
+    } else if (_type == DataType.GUID) {
+      writeGUIDValue(buffer, obj);
     } else {
       throw new IOException("Unsupported data type: " + _type);
     }
@@ -656,6 +799,39 @@ public class Column implements Comparable<Column> {
       }
     }
     return rtn;
+  }
+
+  /**
+   * @return an appropriate BigDecimal representation of the given object.
+   *         <code>null</code> is returned as 0 and Numbers are converted
+   *         using their double representation.
+   */
+  private static BigDecimal toBigDecimal(Object value)
+  {
+    if(value == null) {
+      return BigDecimal.ZERO;
+    } else if(value instanceof BigDecimal) {
+      return (BigDecimal)value;
+    } else {
+      return new BigDecimal(((Number)value).doubleValue());
+    }
+  }
+
+  /**
+   * Swaps the bytes of the given numeric in place.
+   */
+  private static void fixNumericByteOrder(byte[] bytes)
+  {
+    // fix endianness of each 4 byte segment
+    for(int i = 0; i < 4; ++i) {
+      int idx = i * 4;
+      byte b = bytes[idx + 0];
+      bytes[idx + 0] = bytes[idx + 3];
+      bytes[idx + 3] = b;
+      b = bytes[idx + 1];
+      bytes[idx + 1] = bytes[idx + 2];
+      bytes[idx + 2] = b;
+    }
   }
   
 }
