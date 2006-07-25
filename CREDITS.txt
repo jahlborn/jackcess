@@ -3,3 +3,4 @@ Rob DiMarco - Added ability to import delimited text into new tables
 Mitchell J. Friedman - Added support for additional JDBC data types
 James Ahlborn - Added support for NUMERIC data type
 Jon Iles - Added support for reading table definitions that span multiple pages
+James Schopp - added support for reading currency columns

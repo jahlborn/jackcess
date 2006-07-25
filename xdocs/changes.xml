@@ -5,12 +5,36 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.5" date="2006-07-25">
+      <action dev="jahlborn" type="update">
+        Add support for currency columns (thanks to James Schopp).
+      </action>
+      <action dev="jahlborn" type="fix">
+        Handle tables with no variable length columns correctly.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Handle reading with deleted columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Read information on primary keys and include in Index.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix some issues around reading indexes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add write support for numeric/GUID columns.
+      </action>
+      <action dev="javajedi" type="update">
+        Added getRowCount(), getName(), updated toString() on Table.
+      </action>
+    </release>
     <release version="1.1.4" date="2006-6-15">
       <action dev="jahlborn" type="fix">
         Missing break in switch condition.
       </action>
       <action dev="jahlborn" type="fix">
-        Fixes to reading/writing MEMO/OLE columns.
+        Fixes
+        to reading/writing MEMO/OLE columns.
       </action>
       <action dev="jahlborn" type="update">
         Made exceptions thrown when opening empty or nonexistent files more
