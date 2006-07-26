@@ -193,7 +193,7 @@ public class Column implements Comparable<Column> {
   public boolean isCompressedUnicode() {
     return _compressedUnicode;
   }
-  
+
   public byte getPrecision() {
     return _precision;
   }
@@ -266,17 +266,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.BINARY) {
       return data;
     } else if (_type == DataType.TEXT) {
-      if (_compressedUnicode) {
-        try {
-          return fixString(new Expand().expand(data));
-        } catch (IllegalInputException e) {
-          throw new IOException("Can't expand text column");
-        } catch (EndOfInputException e) {
-          throw new IOException("Can't expand text column");
-        }
-      } else {
-        return decodeText(data);
-      }
+      return decodeTextValue(data);
     } else if (_type == DataType.MONEY) {
       return readCurrencyValue(data);
     } else if (_type == DataType.OLE) {
@@ -369,10 +359,10 @@ public class Column implements Comparable<Column> {
     String result = null;
     switch (type[0]) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        result = decodeText(binData);
+        result = decodeTextValue(binData);
         break;
       case LONG_VALUE_TYPE_THIS_PAGE:
-        result = fixString(new String(binData));
+        result = decodeTextValue(binData);
         break;
       case LONG_VALUE_TYPE_OTHER_PAGES:
         //XXX
@@ -406,15 +396,22 @@ public class Column implements Comparable<Column> {
    * Writes "Currency" values.
    */
   private void writeCurrencyValue(ByteBuffer buffer, Object value)
+    throws IOException
   {
-    BigDecimal decVal = toBigDecimal(value);
+    try {
+      BigDecimal decVal = toBigDecimal(value);
 
-    // adjust scale (this will throw if number has too many decimal places)
-    decVal = decVal.setScale(4);
+      // adjust scale (will cause the an ArithmeticException if number has too
+      // many decimal places)
+      decVal = decVal.setScale(4);
     
-    // now, remove scale and convert to long (this will throw if the value is
-    // too big)
-    buffer.putLong(decVal.movePointRight(4).longValueExact());
+      // now, remove scale and convert to long (this will throw if the value is
+      // too big)
+      buffer.putLong(decVal.movePointRight(4).longValueExact());
+    } catch(ArithmeticException e) {
+      throw (IOException)
+        new IOException("Currency value out of range").initCause(e);
+    }
   }
 
   /**
@@ -444,41 +441,46 @@ public class Column implements Comparable<Column> {
   private void writeNumericValue(ByteBuffer buffer, Object value)
     throws IOException
   {
-    BigDecimal decVal = toBigDecimal(value);
+    try {
+      BigDecimal decVal = toBigDecimal(value);
 
-    boolean negative = (decVal.compareTo(BigDecimal.ZERO) < 0);
-    if(negative) {
-      decVal = decVal.negate();
-    }
+      boolean negative = (decVal.compareTo(BigDecimal.ZERO) < 0);
+      if(negative) {
+        decVal = decVal.negate();
+      }
 
-    // write sign byte
-    buffer.put(negative ? (byte)1 : (byte)0);
+      // write sign byte
+      buffer.put(negative ? (byte)1 : (byte)0);
 
-    // adjust scale according to this column type (this will throw if number
-    // has too many decimal places)
-    decVal = decVal.setScale(getScale());
+      // adjust scale according to this column type (will cause the an
+      // ArithmeticException if number has too many decimal places)
+      decVal = decVal.setScale(getScale());
 
-    // check precision
-    if(decVal.precision() > getPrecision()) {
-      throw new IOException("Numeric value is too big for specified precision "
-                            + getPrecision() + ": " + decVal);
-    }
+      // check precision
+      if(decVal.precision() > getPrecision()) {
+        throw new IOException("Numeric value is too big for specified precision "
+                              + getPrecision() + ": " + decVal);
+      }
     
-    // convert to unscaled BigInteger, big-endian bytes
-    byte[] intValBytes = decVal.unscaledValue().toByteArray();
-    if(intValBytes.length > 16) {
-      throw new IOException("Too many bytes for valid BigInteger?");
+      // convert to unscaled BigInteger, big-endian bytes
+      byte[] intValBytes = decVal.unscaledValue().toByteArray();
+      if(intValBytes.length > 16) {
+        throw new IOException("Too many bytes for valid BigInteger?");
+      }
+      if(intValBytes.length < 16) {
+        byte[] tmpBytes = new byte[16];
+        System.arraycopy(intValBytes, 0, tmpBytes, (16 - intValBytes.length),
+                         intValBytes.length);
+        intValBytes = tmpBytes;
+      }
+      if(buffer.order() != ByteOrder.BIG_ENDIAN) {
+        fixNumericByteOrder(intValBytes);
+      }
+      buffer.put(intValBytes);
+    } catch(ArithmeticException e) {
+      throw (IOException)
+        new IOException("Numeric value out of range").initCause(e);
     }
-    if(intValBytes.length < 16) {
-      byte[] tmpBytes = new byte[16];
-      System.arraycopy(intValBytes, 0, tmpBytes, (16 - intValBytes.length),
-                       intValBytes.length);
-      intValBytes = tmpBytes;
-    }
-    if(buffer.order() != ByteOrder.BIG_ENDIAN) {
-      fixNumericByteOrder(intValBytes);
-    }
-    buffer.put(intValBytes);
   }
 
   /**
@@ -633,7 +635,7 @@ public class Column implements Comparable<Column> {
     if (_type == DataType.OLE) {
       size += ((byte[]) obj).length;
     } else if(_type == DataType.MEMO) {
-      byte[] encodedData = encodeText((CharSequence) obj).array();
+      byte[] encodedData = encodeUncompressedText((CharSequence) obj).array();
       size += encodedData.length;
       obj = encodedData;
     } else if(_type == DataType.TEXT) {
@@ -661,12 +663,13 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.BINARY) {
       buffer.put((byte[]) obj);
     } else if (_type == DataType.TEXT) {
-      CharSequence text = (CharSequence) obj;
+      CharSequence text = ((obj instanceof CharSequence) ?
+                           (CharSequence)obj : obj.toString());
       int maxChars = size / 2;
       if (text.length() > maxChars) {
-        text = text.subSequence(0, maxChars);
+        throw new IOException("Text is too big for column");
       }
-      buffer.put(encodeText(text));
+      buffer.put(encodeUncompressedText(text));
     } else if (_type == DataType.MONEY) {
       writeCurrencyValue(buffer, obj);
     } else if (_type == DataType.OLE) {
@@ -683,12 +686,95 @@ public class Column implements Comparable<Column> {
     buffer.flip();
     return buffer;
   }
-  
+
+  /**
+   * Decodes a compressed or uncompressed text value.
+   */
+  private String decodeTextValue(byte[] data)
+    throws IOException
+  {
+    try {
+
+      // see if data is compressed.  the 0xFF, 0xFE sequence indicates that
+      // compression is used (sort of, see algorithm below)
+      boolean isCompressed = ((data.length > 1) &&
+                              (data[0] == (byte)0xFF) &&
+                              (data[1] == (byte)0xFE));
+      if(isCompressed) {
+
+        Expand expander = new Expand();
+        
+        // this is a whacky compression combo that switches back and forth
+        // between compressed/uncompressed using a 0x00 byte (starting in
+        // compressed mode)
+        StringBuilder textBuf = new StringBuilder(data.length);
+        // start after two bytes indicating compression use
+        int dataStart = 2;
+        int dataEnd = dataStart;
+        boolean inCompressedMode = true;
+        while(dataEnd < data.length) {
+          if(data[dataEnd] == (byte)0x00) {
+
+            // handle current segment
+            decodeTextSegment(data, dataStart, dataEnd, inCompressedMode,
+                              expander, textBuf);
+            inCompressedMode = !inCompressedMode;
+            ++dataEnd;
+            dataStart = dataEnd;
+            
+          } else {
+            ++dataEnd;
+          }
+        }
+        // handle last segment
+        decodeTextSegment(data, dataStart, dataEnd, inCompressedMode,
+                          expander, textBuf);
+
+        return textBuf.toString();
+        
+      } else {
+        return decodeUncompressedText(data);
+      }
+      
+    } catch (IllegalInputException e) {
+      throw (IOException)
+        new IOException("Can't expand text column").initCause(e);
+    } catch (EndOfInputException e) {
+      throw (IOException)
+        new IOException("Can't expand text column").initCause(e);
+    }
+  }
+
+  /**
+   * Decodes a segnment of a text value into the given buffer according to the
+   * given status of the segment (compressed/uncompressed).
+   */
+  private void decodeTextSegment(byte[] data, int dataStart, int dataEnd,
+                                 boolean inCompressedMode, Expand expander,
+                                 StringBuilder textBuf)
+    throws IllegalInputException, EndOfInputException
+  {
+    if(dataEnd <= dataStart) {
+      // no data
+      return;
+    }
+    int dataLength = dataEnd - dataStart;
+    if(inCompressedMode) {
+      // handle compressed data
+      byte[] tmpData = new byte[dataLength];
+      System.arraycopy(data, dataStart, tmpData, 0, dataLength);
+      textBuf.append(expander.expand(tmpData));
+    } else {
+      // handle uncompressed data
+      textBuf.append(decodeUncompressedText(data, dataStart, dataLength));
+    }
+  }
+
   /**
    * @param text Text to encode
    * @return A buffer with the text encoded
    */
-  private ByteBuffer encodeText(CharSequence text) {
+  private ByteBuffer encodeUncompressedText(CharSequence text) {
     return _format.CHARSET.encode(CharBuffer.wrap(text));
   }
 
@@ -696,34 +782,19 @@ public class Column implements Comparable<Column> {
    * @param textBytes bytes of text to decode
    * @return the decoded string
    */
-  private String decodeText(byte[] textBytes) {
-    return _format.CHARSET.decode(ByteBuffer.wrap(textBytes)).toString();
+  private String decodeUncompressedText(byte[] textBytes) {
+    return decodeUncompressedText(textBytes, 0, textBytes.length).toString();
   }
-
+  
   /**
-   * Mucks with a string to handle some weird edge cases.
-   * @param str string to fix
-   * @return new string with whacky cases fixed
+   * @param textBytes bytes of text to decode
+   * @return the decoded string
    */
-  private String fixString(String str) {
-    // There is a UTF-8-looking 2-byte combo that prepends some of these
-    // strings.  Rather than dig into that code, I'm just stripping them off
-    // here.  However, this is probably not a great idea.
-    if (str.length() > 2 && (int) str.charAt(0) == 255 &&
-        (int) str.charAt(1) == 254)
-    {
-      str = str.substring(2);
-    }
-    // It also isn't handling short strings.
-    if (str.length() > 1 && (int) str.charAt(1) == 0) {
-      char[] fixed = new char[str.length() / 2];
-      for (int i = 0; i < fixed.length; i ++) {
-        fixed[i] = str.charAt(i * 2);
-      }
-      str = new String(fixed);
-    }
-    return str;
-  }
+  private CharBuffer decodeUncompressedText(byte[] textBytes, int startPost,
+                                            int length) {
+    return _format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
+                                                  length));
+  }  
   
   /**
    * @return Number of bytes that should be read for this column

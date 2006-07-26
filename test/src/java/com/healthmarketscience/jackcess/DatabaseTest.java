@@ -321,8 +321,8 @@ public class DatabaseTest extends TestCase {
 
     try {
       table.addRow(new BigDecimal("342523234145343543.3453"));
-      fail("ArithmeticException should have been thrown");
-    } catch(ArithmeticException e) {
+      fail("IOException should have been thrown");
+    } catch(IOException e) {
       // ignored
     }
   }
