@@ -217,14 +217,12 @@ public class Table {
     nullMask.read(_buffer);
 
     short rowVarColumnCount = 0;
-    byte[][] varColumnData = null;
     short[] varColumnOffsets = null;
     short lastVarColumnStart = 0;
     // if _maxVarColumnCount is 0, then row info does not include varcol info
     if(_maxVarColumnCount > 0) {
       _buffer.position(_buffer.limit() - nullMask.byteSize() - 2);
       rowVarColumnCount = _buffer.getShort();  // number of variable length columns in this row
-      varColumnData = new byte[rowVarColumnCount][];  //Holds variable length column data
 
       //Read in the offsets of each of the variable length columns
       varColumnOffsets = new short[rowVarColumnCount];
@@ -234,16 +232,7 @@ public class Table {
         varColumnOffsets[i] = _buffer.getShort();
       }
     }
-      
-    
-    //Read in the actual data for each of the variable length columns
-    for (short i = 0; i < rowVarColumnCount; i++) {
-      _buffer.position(_rowStart + varColumnOffsets[i]);
-      varColumnData[i] = new byte[lastVarColumnStart - varColumnOffsets[i]];
-      _buffer.get(varColumnData[i]);
-      lastVarColumnStart = varColumnOffsets[i];
-    }
-
+          
     // compute start of fixed data
     int dataStart = _rowStart + 2;
     
@@ -269,10 +258,16 @@ public class Table {
         {
            if (!isNull) 
            {
-             // Refer to already-read-in variable length data.  note,
-             // varLenTableIndex is from the *end* of the array...
-             columnData = varColumnData[rowVarColumnCount -
-                                        column.getVarLenTableIndex() - 1];
+             // read in var length column data
+             int varDataIdx = (rowVarColumnCount -
+                               column.getVarLenTableIndex() - 1);
+             int varDataStart = varColumnOffsets[varDataIdx];
+             int varDataEnd = ((varDataIdx > 0) ?
+                               varColumnOffsets[varDataIdx - 1] :
+                               lastVarColumnStart);
+             columnData = new byte[varDataEnd - varDataStart];
+             _buffer.position(_rowStart + varDataStart);
+             _buffer.get(columnData);
            }
         }
         if (!isNull && columnData != null &&
