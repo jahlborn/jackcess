@@ -763,6 +763,7 @@ public class Column implements Comparable<Column> {
       // handle compressed data
       byte[] tmpData = new byte[dataLength];
       System.arraycopy(data, dataStart, tmpData, 0, dataLength);
+      expander.reset();
       textBuf.append(expander.expand(tmpData));
     } else {
       // handle uncompressed data
