@@ -9,6 +9,7 @@
     </menu>
     <menu type="footer">
       <item name="Works on Linux" img="worksonlinux.png" href="http://www.linux.org"/>
+      <item name="Hosted by SourceForge" img="http://sflogo.sourceforge.net/sflogo.php?group_id=134943&amp;type=1" href="http://sourceforge.net"/>
     </menu>
   </body>
 </project>
