@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <project>
-  <pomVersion>1</pomVersion>
-  <id>jackcess</id>
+  <pomVersion>3</pomVersion>
+  <groupId>jackcess</groupId>
+  <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <currentVersion>1.1.6</currentVersion>
   <organization>
