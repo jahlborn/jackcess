@@ -68,6 +68,7 @@ public abstract class JetFormat {
   public final int OFFSET_MAX_COLS;
   public final int OFFSET_NUM_VAR_COLS;
   public final int OFFSET_NUM_COLS;
+  public final int OFFSET_NUM_INDEX_SLOTS;
   public final int OFFSET_NUM_INDEXES;
   public final int OFFSET_OWNED_PAGES;
   public final int OFFSET_FREE_SPACE_PAGES;
@@ -151,6 +152,7 @@ public abstract class JetFormat {
     OFFSET_MAX_COLS = defineOffsetMaxCols();
     OFFSET_NUM_VAR_COLS = defineOffsetNumVarCols();
     OFFSET_NUM_COLS = defineOffsetNumCols();
+    OFFSET_NUM_INDEX_SLOTS = defineOffsetNumIndexSlots();
     OFFSET_NUM_INDEXES = defineOffsetNumIndexes();
     OFFSET_OWNED_PAGES = defineOffsetOwnedPages();
     OFFSET_FREE_SPACE_PAGES = defineOffsetFreeSpacePages();
@@ -213,6 +215,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetMaxCols();
   protected abstract int defineOffsetNumVarCols();
   protected abstract int defineOffsetNumCols();
+  protected abstract int defineOffsetNumIndexSlots();
   protected abstract int defineOffsetNumIndexes();
   protected abstract int defineOffsetOwnedPages();
   protected abstract int defineOffsetFreeSpacePages();
@@ -276,6 +279,7 @@ public abstract class JetFormat {
     protected int defineOffsetMaxCols() { return 41; }
     protected int defineOffsetNumVarCols() { return 43; }
     protected int defineOffsetNumCols() { return 45; }
+    protected int defineOffsetNumIndexSlots() { return 47; }
     protected int defineOffsetNumIndexes() { return 51; }
     protected int defineOffsetOwnedPages() { return 55; }
     protected int defineOffsetFreeSpacePages() { return 59; }

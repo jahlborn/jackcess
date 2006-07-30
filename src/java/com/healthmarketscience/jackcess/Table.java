@@ -63,6 +63,8 @@ public class Table {
   private int _currentRowInPage;
   /** Number of indexes on the table */
   private int _indexCount;
+  /** Number of index slots for the table */
+  private int _indexSlotCount;
   /** Offset index in the buffer where the last row read started */
   private short _lastRowStart;
   /** Number of rows in the table */
@@ -163,6 +165,13 @@ public class Table {
    */
   public List<Index> getIndexes() {
     return Collections.unmodifiableList(_indexes);
+  }
+
+  /**
+   * Only called by unit tests
+   */
+  int getIndexSlotCount() {
+    return _indexSlotCount;
   }
   
   /**
@@ -334,6 +343,7 @@ public class Table {
     _maxColumnCount = _buffer.getShort(_format.OFFSET_MAX_COLS);
     _maxVarColumnCount = _buffer.getShort(_format.OFFSET_NUM_VAR_COLS);
     _columnCount = _buffer.getShort(_format.OFFSET_NUM_COLS);
+    _indexSlotCount = _buffer.getInt(_format.OFFSET_NUM_INDEX_SLOTS);
     _indexCount = _buffer.getInt(_format.OFFSET_NUM_INDEXES);
     
     byte rowNum = _buffer.get(_format.OFFSET_OWNED_PAGES);
@@ -379,14 +389,34 @@ public class Table {
     int idxOffset = _buffer.position();
     _buffer.position(idxOffset +
                      (_format.OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
-    for (int i = 0; i < _indexCount; i++) {
-      Index index = _indexes.get(i);
+
+    // there are _indexSlotCount blocks here, we ignore any slot with an index
+    // number greater than the number of actual indexes
+    int curIndex = 0;
+    for (int i = 0; i < _indexSlotCount; i++) {
+      
       _buffer.getInt(); //Forward past Unknown
-      index.setIndexNumber(_buffer.getInt());
+      int indexNumber = _buffer.getInt();
       _buffer.position(_buffer.position() + 15);
-      index.setPrimaryKey(_buffer.get() == 1);
+      byte indexType = _buffer.get();
       _buffer.position(_buffer.position() + 4);
+
+      if(indexNumber < _indexCount) {
+        Index index = _indexes.get(curIndex++);
+        index.setIndexNumber(indexNumber);
+        index.setPrimaryKey(indexType == 1);
+      }
     }
+
+    // for each empty index slot, there is some weird sort of name
+    for(int i = 0; i < (_indexSlotCount - _indexCount); ++i) {
+      int skipBytes = _buffer.getShort();
+      _buffer.position(_buffer.position() + skipBytes);
+    }
+
+    // read actual index names
+    // FIXME, we still are not always getting the names matched correctly with
+    // the index info, some weird indexing we are not figuring out yet
     for (int i = 0; i < _indexCount; i++) {
       byte[] nameBytes = new byte[_buffer.getShort()];
       _buffer.get(nameBytes);
