@@ -438,7 +438,7 @@ public class DatabaseTest extends TestCase {
     table = mdb.getTable("Table3");
     assertEquals(2, table.getIndexes().size());
     assertEquals(3, table.getIndexSlotCount());
- }
+  }
   
   private Object[] createTestRow() {
     return new Object[] {"Tim", "R", "McCune", 1234, (byte) 0xad, 555.66d,

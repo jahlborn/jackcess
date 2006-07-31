@@ -373,9 +373,9 @@ public class Database {
     buffer.putInt(0);  //Number of indexes in table
     buffer.put((byte) 0); //Usage map row number
     int usageMapPage = pageNumber + 1;
-    buffer.put(ByteUtil.to3ByteInt(usageMapPage));  //Usage map page number
+    ByteUtil.put3ByteInt(buffer, usageMapPage);  //Usage map page number
     buffer.put((byte) 1); //Free map row number
-    buffer.put(ByteUtil.to3ByteInt(usageMapPage));  //Free map page number
+    ByteUtil.put3ByteInt(buffer, usageMapPage);  //Free map page number
     if (LOG.isDebugEnabled()) {
       int position = buffer.position();
       buffer.rewind();

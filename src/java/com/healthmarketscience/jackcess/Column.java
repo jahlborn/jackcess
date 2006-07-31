@@ -69,15 +69,15 @@ public class Column implements Comparable<Column> {
   /**
    * Long value (LVAL) type that indicates that the value is stored on the same page
    */
-  private static final short LONG_VALUE_TYPE_THIS_PAGE = (short) 0x8000;
+  private static final byte LONG_VALUE_TYPE_THIS_PAGE = (byte) 0x80;
   /**
    * Long value (LVAL) type that indicates that the value is stored on another page
    */
-  private static final short LONG_VALUE_TYPE_OTHER_PAGE = (short) 0x4000;
+  private static final byte LONG_VALUE_TYPE_OTHER_PAGE = (byte) 0x40;
   /**
    * Long value (LVAL) type that indicates that the value is stored on multiple other pages
    */
-  private static final short LONG_VALUE_TYPE_OTHER_PAGES = (short) 0x0;
+  private static final byte LONG_VALUE_TYPE_OTHER_PAGES = (byte) 0x00;
 
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
 
@@ -298,19 +298,19 @@ public class Column implements Comparable<Column> {
    *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
-  private byte[] readLongBinaryValue(byte[] lvalDefinition, short[] outType)
+  private byte[] readLongBinaryValue(byte[] lvalDefinition, byte[] outType)
     throws IOException
   {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
     def.order(ByteOrder.LITTLE_ENDIAN);
-    short length = def.getShort();
+    int length = ByteUtil.get3ByteInt(def);
     // bail out gracefully here as we don't understand the format
     if (length < 0)
     {
        return null;
     }
     byte[] rtn = new byte[length];
-    short type = def.getShort();
+    byte type = def.get();
     switch (type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
         if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
@@ -351,7 +351,7 @@ public class Column implements Comparable<Column> {
   private String readLongStringValue(byte[] lvalDefinition)
     throws IOException
   {
-    short[] type = new short[1];
+    byte[] type = new byte[1];
     byte[] binData = readLongBinaryValue(lvalDefinition, type);
     if(binData == null) {
       return null;
@@ -573,8 +573,8 @@ public class Column implements Comparable<Column> {
   public ByteBuffer writeLongValue(byte[] value) throws IOException {
     ByteBuffer def = ByteBuffer.allocate(_format.SIZE_LONG_VALUE_DEF + value.length);
     def.order(ByteOrder.LITTLE_ENDIAN);
-    def.putShort((short) value.length);
-    def.putShort(LONG_VALUE_TYPE_THIS_PAGE);
+    ByteUtil.put3ByteInt(def, value.length);
+    def.put(LONG_VALUE_TYPE_THIS_PAGE);
     def.putInt(0);
     def.putInt(0);  //Unknown
     def.put(value);
@@ -606,10 +606,10 @@ public class Column implements Comparable<Column> {
     lvalPage.put(value);
     ByteBuffer def = ByteBuffer.allocate(_format.SIZE_LONG_VALUE_DEF);
     def.order(ByteOrder.LITTLE_ENDIAN);
-    def.putShort((short) value.length);
-    def.putShort(LONG_VALUE_TYPE_OTHER_PAGE);
+    ByteUtil.put3ByteInt(def, value.length);
+    def.put(LONG_VALUE_TYPE_OTHER_PAGE);
     def.put((byte) 0); //Row number
-    def.put(ByteUtil.to3ByteInt(_pageChannel.writeNewPage(lvalPage)));  //Page #
+    ByteUtil.put3ByteInt(def, _pageChannel.writeNewPage(lvalPage));  //Page #
     def.putInt(0);  //Unknown
     def.flip();
     return def;    

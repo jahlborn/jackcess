@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Byte manipulation and display utilities
@@ -41,31 +42,70 @@ public final class ByteUtil {
       "8", "9", "A", "B", "C", "D", "E", "F"};
       
   private ByteUtil() {}
+
+  /**
+   * Put an integer into the given buffer at the given offset as a 3-byte
+   * integer.
+   * @param buffer buffer into which to insert the int
+   * @param val Int to convert
+   */    
+  public static void put3ByteInt(ByteBuffer buffer, int val)
+  {
+    int pos = buffer.position();
+    put3ByteInt(buffer, val, pos);
+    buffer.position(pos + 3);
+  }
   
   /**
-   * Convert an int from 4 bytes to 3
-   * @param i Int to convert
-   * @return Array of 3 bytes in little-endian order
+   * Put an integer into the given buffer at the given offset as a 3-byte
+   * integer.
+   * @param buffer buffer into which to insert the int
+   * @param val Int to convert
+   * @param offset offset at which to insert the int
    */    
-  public static byte[] to3ByteInt(int i) {
-    byte[] rtn = new byte[3];
-    rtn[0] = (byte) (i & 0xFF);
-    rtn[1] = (byte) ((i >>> 8) & 0xFF);
-    rtn[2] = (byte) ((i >>> 16) & 0xFF);
+  public static void put3ByteInt(ByteBuffer buffer, int val, int offset) {
+
+    int offInc = 1;
+    if(buffer.order() == ByteOrder.BIG_ENDIAN) {
+      offInc = -1;
+      offset += 2;
+    }
+
+    buffer.put(offset, (byte) (val & 0xFF));
+    buffer.put(offset + (1 * offInc), (byte) ((val >>> 8) & 0xFF));
+    buffer.put(offset + (2 * offInc), (byte) ((val >>> 16) & 0xFF));
+  }
+
+  /**
+   * Read a 3 byte int from a buffer
+   * @param buffer Buffer containing the bytes
+   * @return The int
+   */
+  public static int get3ByteInt(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int rtn = get3ByteInt(buffer, pos);
+    buffer.position(pos + 3);
     return rtn;
   }
   
   /**
-   * Read a 3 byte int from a buffer in little-endian order
+   * Read a 3 byte int from a buffer
    * @param buffer Buffer containing the bytes
    * @param offset Offset at which to start reading the int
    * @return The int
    */
   public static int get3ByteInt(ByteBuffer buffer, int offset) {
-    int rtn = buffer.get(offset) & 0xff;
-    rtn += ((((int) buffer.get(offset + 1)) & 0xFF) << 8);
-    rtn += ((((int) buffer.get(offset + 2)) & 0xFF) << 16);
-    rtn &= 16777215;  //2 ^ (8 * 3) - 1
+
+    int offInc = 1;
+    if(buffer.order() == ByteOrder.BIG_ENDIAN) {
+      offInc = -1;
+      offset += 2;
+    }
+    
+    int rtn = buffer.get(offset) & 0xFF;
+    rtn += ((((int) buffer.get(offset + (1 * offInc))) & 0xFF) << 8);
+    rtn += ((((int) buffer.get(offset + (2 * offInc))) & 0xFF) << 16);
+    rtn &= 0xFFFFFF;
     return rtn;
   }
   
