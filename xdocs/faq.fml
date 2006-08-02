@@ -107,6 +107,13 @@
           Version 1.0 requires JDK 1.4 or higher.  The version in CVS HEAD and future releases
           will require JDK 1.5 or higher.
         </p>
+        <p>
+          However, some users have contributed patches to make later versions
+          compatible with JDK 1.4.  Please check the contributions/ directory
+          for any such patches.  Note that any code in this directory is
+          untested and unsupported, so please use at your own risk and do not
+          file bugs based on that code.
+        </p>
       </answer>
     </faq>
 
