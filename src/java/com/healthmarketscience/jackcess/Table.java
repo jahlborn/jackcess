@@ -137,6 +137,7 @@ public class Table {
       newBuffer.put(_buffer);
       newBuffer.put(nextPageBuffer.array(), 8, format.PAGE_SIZE - 8);
       _buffer = newBuffer;
+      _buffer.flip();
     }
     readPage();
     _name = name;
