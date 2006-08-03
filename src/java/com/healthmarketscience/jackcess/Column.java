@@ -315,25 +315,75 @@ public class Column implements Comparable<Column> {
       case LONG_VALUE_TYPE_OTHER_PAGE:
         if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
           throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
-              " bytes in long value definition, but found " + lvalDefinition.length);
+              " bytes in long value definition, but found " +
+                                lvalDefinition.length);
         }
-        byte rowNum = def.get();
-        int pageNum = ByteUtil.get3ByteInt(def, def.position());
-        ByteBuffer lvalPage = _pageChannel.createPageBuffer();
-        _pageChannel.readPage(lvalPage, pageNum);
-        short offset = lvalPage.getShort(14 +
-            rowNum * _format.SIZE_ROW_LOCATION);
-        lvalPage.position(offset);
-        lvalPage.get(rtn);
+
+        {
+          byte rowNum = def.get();
+          int pageNum = ByteUtil.get3ByteInt(def, def.position());
+          ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+          _pageChannel.readPage(lvalPage, pageNum);
+
+          short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
+          short rowEnd = Table.findRowEnd(lvalPage, rowNum, _format);
+
+          if((rowEnd - rowStart) != length) {
+            throw new IOException("Unexpected lval row length");
+          }
+        
+          lvalPage.position(rowStart);
+          lvalPage.get(rtn);
+        }
         break;
+        
       case LONG_VALUE_TYPE_THIS_PAGE:
         def.getInt();  //Skip over lval_dp
         def.getInt();  //Skip over unknown
         def.get(rtn);
         break;
+        
       case LONG_VALUE_TYPE_OTHER_PAGES:
-        //XXX
-        return null;
+
+        ByteBuffer rtnBuf = ByteBuffer.wrap(rtn);
+        
+        if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
+          throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
+              " bytes in long value definition, but found " +
+                                lvalDefinition.length);
+        }
+        byte rowNum = def.get();
+        int pageNum = ByteUtil.get3ByteInt(def, def.position());
+        ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+
+        int remainingLen = length;
+        while(remainingLen > 0) {
+          lvalPage.clear();
+          _pageChannel.readPage(lvalPage, pageNum);
+
+          short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
+          short rowEnd = Table.findRowEnd(lvalPage, rowNum, _format);
+
+          
+          // read next page information
+          lvalPage.position(rowStart);
+          rowNum = lvalPage.get();
+          pageNum = ByteUtil.get3ByteInt(lvalPage);
+
+          // update rowEnd and remainingLen based on chunkLength
+          int chunkLength = (rowEnd - rowStart) - 4;
+          if(chunkLength > remainingLen) {
+            rowEnd = (short)(rowEnd - (chunkLength - remainingLen));
+            chunkLength = remainingLen;
+          }
+          remainingLen -= chunkLength;
+          
+          lvalPage.limit(rowEnd);
+          rtnBuf.put(lvalPage);
+        }
+        
+        break;
+        
       default:
         throw new IOException("Unrecognized long value type: " + type);
     }
