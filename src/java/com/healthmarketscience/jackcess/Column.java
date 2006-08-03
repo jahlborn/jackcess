@@ -553,7 +553,7 @@ public class Column implements Comparable<Column> {
   private void writeGUIDValue(ByteBuffer buffer, Object value)
     throws IOException
   {
-    Matcher m = GUID_PATTERN.matcher((CharSequence)value);
+    Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
     if(m.matches()) {
       ByteUtil.writeHexString(buffer, m.group(1));
       ByteUtil.writeHexString(buffer, m.group(2));
@@ -635,7 +635,7 @@ public class Column implements Comparable<Column> {
     if (_type == DataType.OLE) {
       size += ((byte[]) obj).length;
     } else if(_type == DataType.MEMO) {
-      byte[] encodedData = encodeUncompressedText((CharSequence) obj).array();
+      byte[] encodedData = encodeUncompressedText(toCharSequence(obj)).array();
       size += encodedData.length;
       obj = encodedData;
     } else if(_type == DataType.TEXT) {
@@ -663,8 +663,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.BINARY) {
       buffer.put((byte[]) obj);
     } else if (_type == DataType.TEXT) {
-      CharSequence text = ((obj instanceof CharSequence) ?
-                           (CharSequence)obj : obj.toString());
+      CharSequence text = toCharSequence(obj);
       int maxChars = size / 2;
       if (text.length() > maxChars) {
         throw new IOException("Text is too big for column");
@@ -893,6 +892,20 @@ public class Column implements Comparable<Column> {
     }
   }
 
+  /**
+   * @return an appropriate CharSequence representation of the given object.
+   */
+  private static CharSequence toCharSequence(Object value)
+  {
+    if(value == null) {
+      return null;
+    } else if(value instanceof CharSequence) {
+      return (CharSequence)value;
+    } else {
+      return value.toString();
+    }
+  }
+  
   /**
    * Swaps the bytes of the given numeric in place.
    */
