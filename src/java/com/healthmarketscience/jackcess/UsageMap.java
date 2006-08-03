@@ -77,14 +77,9 @@ public abstract class UsageMap {
   {
     ByteBuffer dataBuffer = pageChannel.createPageBuffer();
     pageChannel.readPage(dataBuffer, pageNum);
-    short rowStart = dataBuffer.getShort(format.OFFSET_ROW_START + 2 * rowNum);
-    int rowEnd;
-    if (rowNum == 0) {
-      rowEnd = format.PAGE_SIZE - 1;
-    } else {
-      rowEnd = (dataBuffer.getShort(format.OFFSET_ROW_START + (rowNum - 1) * 2) & 0x0FFF) - 1;
-    }
-    dataBuffer.limit(rowEnd + 1);
+    short rowStart = Table.findRowStart(dataBuffer, rowNum, format);
+    int rowEnd = Table.findRowEnd(dataBuffer, rowNum, format);
+    dataBuffer.limit(rowEnd);    
     byte mapType = dataBuffer.get(rowStart);
     UsageMap rtn;
     if (mapType == MAP_TYPE_INLINE) {
