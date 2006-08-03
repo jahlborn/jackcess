@@ -311,10 +311,16 @@ public class Table {
         _currentRowInPage * _format.SIZE_ROW_LOCATION);
     _currentRowInPage++;
     _rowsLeftOnPage--;
-    if (_rowStart < 0) {
+
+    // FIXME, mdbtools seems to be confused as to which flag is which, this
+    // code follows the actual code, which disagrees with the HACKING doc
+    boolean deletedRow = ((_rowStart & 0x4000) != 0);
+    boolean overflowRow = ((_rowStart & 0x8000) != 0);
+    
+    if (deletedRow) {
       // Deleted row.  Skip.
       return positionAtNextRow();
-    } else if ((_rowStart & 0x4000) > 0) {
+    } else if (overflowRow) {
       // Overflow page.
       // FIXME - Currently skipping this.  Need to figure out how to read it.
       _buffer.position(_rowStart - 0x4000);
