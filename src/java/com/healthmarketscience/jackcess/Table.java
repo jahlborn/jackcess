@@ -49,6 +49,8 @@ import org.apache.commons.logging.LogFactory;
 public class Table {
   
   private static final Log LOG = LogFactory.getLog(Table.class);
+
+  private static final short OFFSET_MASK = (short)0x1FFF;
   
   /** Table type code for system tables */
   public static final byte TYPE_SYSTEM = 0x53;
@@ -316,16 +318,19 @@ public class Table {
     // code follows the actual code, which disagrees with the HACKING doc
     boolean deletedRow = ((_rowStart & 0x4000) != 0);
     boolean overflowRow = ((_rowStart & 0x8000) != 0);
+
+    _rowStart = (short)(_rowStart & OFFSET_MASK);
     
     if (deletedRow) {
       // Deleted row.  Skip.
+      _lastRowStart = _rowStart;
       return positionAtNextRow();
     } else if (overflowRow) {
       // Overflow page.
       // FIXME - Currently skipping this.  Need to figure out how to read it.
-      _buffer.position(_rowStart - 0x4000);
-      int overflow = _buffer.getInt();
-      _lastRowStart -= 4;
+//       _buffer.position(_rowStart);
+//       int overflow = _buffer.getInt();
+      _lastRowStart = _rowStart;
       return positionAtNextRow();
     } else {
       _buffer.position(_rowStart);
@@ -691,6 +696,24 @@ public class Table {
       rtn.append("\n");
     }
     return rtn.toString();
+  }
+
+  public static short findRowStart(ByteBuffer buffer, int rowNum,
+                                   JetFormat format)
+  {
+    return (short)(buffer.getShort(format.OFFSET_ROW_START +
+                                   (format.SIZE_ROW_LOCATION * rowNum))
+                   & OFFSET_MASK);
+  }
+  
+  public static short findRowEnd(ByteBuffer buffer, int rowNum,
+                                 JetFormat format)
+  {
+    return (short)((rowNum == 0) ?
+                   format.PAGE_SIZE :
+                   (buffer.getShort(format.OFFSET_ROW_START +
+                                    (format.SIZE_ROW_LOCATION * (rowNum - 1)))
+                    & OFFSET_MASK));
   }
   
 }
