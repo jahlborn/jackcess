@@ -491,5 +491,22 @@ public class DatabaseTest extends TestCase {
     columns.add(col);
     db.createTable("test", columns);
   }
+
+  private static void dumpDatabase(Database mdb) throws Exception {
+    System.out.println("DATABASE:");
+
+    for(String tableName : mdb.getTableNames()) {
+      dumpTable(mdb.getTable(tableName));
+    }
+  }
+
+  private static void dumpTable(Table table) throws Exception {
+    System.out.println("TABLE: " + table.getName());
+    table.reset();
+    Object row = null;
+    while((row = table.getNextRow()) != null) {
+      System.out.println(row);
+    }
+  }
   
 }
