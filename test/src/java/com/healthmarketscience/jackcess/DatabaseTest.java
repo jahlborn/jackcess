@@ -253,9 +253,8 @@ public class DatabaseTest extends TestCase {
   }
   
   private int countRows(Table table) throws Exception {
-    table.reset();
     int rtn = 0;
-    while (table.getNextRow() != null) {
+    for(Map<String, Object> row : table) {
       rtn++;
     }
     return rtn;
@@ -494,17 +493,14 @@ public class DatabaseTest extends TestCase {
 
   private static void dumpDatabase(Database mdb) throws Exception {
     System.out.println("DATABASE:");
-
-    for(String tableName : mdb.getTableNames()) {
-      dumpTable(mdb.getTable(tableName));
+    for(Table table : mdb) {
+      dumpTable(table);
     }
   }
 
   private static void dumpTable(Table table) throws Exception {
     System.out.println("TABLE: " + table.getName());
-    table.reset();
-    Object row = null;
-    while((row = table.getNextRow()) != null) {
+    for(Object row : table) {
       System.out.println(row);
     }
   }

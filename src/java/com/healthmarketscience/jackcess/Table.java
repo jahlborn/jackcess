@@ -39,6 +39,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -46,7 +48,9 @@ import org.apache.commons.logging.LogFactory;
  * A single database table
  * @author Tim McCune
  */
-public class Table {
+public class Table
+  implements Iterable<Map<String, Object>>
+{
   
   private static final Log LOG = LogFactory.getLog(Table.class);
 
@@ -256,40 +260,43 @@ public class Table {
       Column column = (Column) iter.next();
       boolean isNull = nullMask.isNull(columnNumber);
       Object value = null;
-      if (column.getType() == DataType.BOOLEAN) {
-        value = new Boolean(!isNull);  //Boolean values are stored in the null mask
-      } else {
-        if (!column.isVariableLength()) 
-        {
-          //Read in fixed length column data
-          columnData = new byte[column.getLength()];
-          _buffer.position(dataStart + column.getFixedDataOffset());
-          _buffer.get(columnData);
-        } 
-        else
-        {
-           if (!isNull) 
-           {
-             // read in var length column data
-             int varDataIdx = (rowVarColumnCount -
-                               column.getVarLenTableIndex() - 1);
-             int varDataStart = varColumnOffsets[varDataIdx];
-             int varDataEnd = ((varDataIdx > 0) ?
-                               varColumnOffsets[varDataIdx - 1] :
-                               lastVarColumnStart);
-             columnData = new byte[varDataEnd - varDataStart];
-             _buffer.position(_rowStart + varDataStart);
-             _buffer.get(columnData);
-           }
+      if((columnNames == null) || (columnNames.contains(column.getName()))) {
+
+        if (column.getType() == DataType.BOOLEAN) {
+          value = new Boolean(!isNull);  //Boolean values are stored in the null mask
+        } else {
+          if(!isNull) {
+            if (!column.isVariableLength()) 
+            {
+              //Read in fixed length column data
+              columnData = new byte[column.getLength()];
+              _buffer.position(dataStart + column.getFixedDataOffset());
+              _buffer.get(columnData);
+            } 
+            else
+            {
+              // read in var length column data
+              int varDataIdx = (rowVarColumnCount -
+                                column.getVarLenTableIndex() - 1);
+              int varDataStart = varColumnOffsets[varDataIdx];
+              int varDataEnd = ((varDataIdx > 0) ?
+                                varColumnOffsets[varDataIdx - 1] :
+                                lastVarColumnStart);
+              columnData = new byte[varDataEnd - varDataStart];
+              _buffer.position(_rowStart + varDataStart);
+              _buffer.get(columnData);
+            }
+            // parse the column data
+            value = column.read(columnData);
+          }
+          if (!isNull && columnData != null)
+          {
+            //Add the value if we are interested in it.
+            value = column.read(columnData);
+          }
         }
-        if (!isNull && columnData != null &&
-            (columnNames == null || columnNames.contains(column.getName())))
-        {
-          //Add the value if we are interested in it.
-          value = column.read(columnData);
-        }
+        rtn.put(column.getName(), value);
       }
-      rtn.put(column.getName(), value);
     }
     return rtn;
   }
@@ -341,6 +348,32 @@ public class Table {
     }
   }
 
+  /**
+   * Calls <code>reset</code> on this table and returns a modifiable Iterator
+   * which will iterate through all the rows of this table.  Use of the
+   * Iterator follows the same restrictions as a call to
+   * <code>getNextRow</code>.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> iterator()
+  {
+    return iterator(null);
+  }
+  
+  /**
+   * Calls <code>reset</code> on this table and returns a modifiable Iterator
+   * which will iterate through all the rows of this table, returning only the
+   * given columns.  Use of the Iterator follows the same restrictions as a
+   * call to <code>getNextRow</code>.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
+  {
+    return new RowIterator(columnNames);
+  }
+  
   /**
    * Read the table definition
    */
@@ -716,5 +749,49 @@ public class Table {
                                     (format.SIZE_ROW_LOCATION * (rowNum - 1)))
                     & OFFSET_MASK));
   }
-  
+
+  /**
+   * Row iterator for this table, supports modification.
+   */
+  private final class RowIterator implements Iterator<Map<String, Object>>
+  {
+    private Collection<String> _columnNames;
+    private Map<String, Object> _next;
+    
+    private RowIterator(Collection<String> columnNames)
+    {
+      try {
+        reset();
+        _columnNames = columnNames;
+        _next = getNextRow(_columnNames);
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+
+    public boolean hasNext() { return _next != null; }
+
+    public void remove() {
+      try {
+        deleteCurrentRow();
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      }        
+    }
+    
+    public Map<String, Object> next() {
+      if(!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      try {
+        Map<String, Object> rtn = _next;
+        _next = getNextRow(_columnNames);
+        return rtn;
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+    
+  }
+
 }

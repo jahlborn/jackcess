@@ -49,7 +49,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -59,7 +61,9 @@ import org.apache.commons.logging.LogFactory;
  *
  * @author Tim McCune
  */
-public class Database {
+public class Database
+  implements Iterable<Table>
+{
   
   private static final Log LOG = LogFactory.getLog(Database.class);
   
@@ -290,6 +294,18 @@ public class Database {
       }
     }
     return _tableNames;
+  }
+
+  /**
+   * @return an unmodifiable Iterator of the user Tables in this Database.
+   * @throws IllegalStateException if an IOException or SQLException is thrown
+   *         by one of the operations, the actual exception will be contained
+   *         within
+   * @throws ConcurrentModificationException if a table is added to the
+   *         database while an Iterator is in use.
+   */
+  public Iterator<Table> iterator() {
+    return new TableIterator();
   }
   
   /**
@@ -761,6 +777,9 @@ public class Database {
     return ((tableName != null) ? tableName.toUpperCase() : null);
   }
 
+  /**
+   * Utility class for storing table page number and actual name.
+   */
   private static class TableInfo
   {
     public Integer pageNumber;
@@ -770,6 +789,39 @@ public class Database {
                       String newTableName) {
       pageNumber = newPageNumber;
       tableName = newTableName;
+    }
+  }
+
+  /**
+   * Table iterator for this database, unmodifiable.
+   */
+  private class TableIterator implements Iterator<Table>
+  {
+    private Iterator<String> _tableNameIter;
+
+    private TableIterator() {
+      _tableNameIter = getTableNames().iterator();
+    }
+
+    public boolean hasNext() {
+      return _tableNameIter.hasNext();
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+
+    public Table next() {
+      if(!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      try {
+        return getTable(_tableNameIter.next());
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      } catch(SQLException e) {
+        throw new IllegalStateException(e);
+      }
     }
   }
   
