@@ -68,7 +68,7 @@ public class DatabaseTest extends TestCase {
   
   public void testGetNextRow() throws Exception {
     Database db = open();
-    assertEquals(1, db.getTableNames().size());
+    assertEquals(2, db.getTableNames().size());
     Table table = db.getTable("Table1");
     
     Map<String, Object> row = table.getNextRow();
@@ -438,6 +438,12 @@ public class DatabaseTest extends TestCase {
     table = mdb.getTable("Table3");
     assertEquals(2, table.getIndexes().size());
     assertEquals(3, table.getIndexSlotCount());
+  }
+
+  public void testMultiPageTableDef() throws Exception
+  {
+    List<Column> columns = open().getTable("Table2").getColumns();
+    assertEquals(89, columns.size());
   }
   
   private Object[] createTestRow() {
