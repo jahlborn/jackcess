@@ -184,7 +184,7 @@ public class Database
    * Open an existing Database
    * @param mdbFile File containing the database
    */
-  public static Database open(File mdbFile) throws IOException, SQLException {
+  public static Database open(File mdbFile) throws IOException {
     if(!mdbFile.exists() || !mdbFile.canRead()) {
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
@@ -196,7 +196,7 @@ public class Database
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
    */
-  public static Database create(File mdbFile) throws IOException, SQLException {
+  public static Database create(File mdbFile) throws IOException {
     FileChannel channel = openChannel(mdbFile);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
@@ -214,7 +214,7 @@ public class Database
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
    */
-  protected Database(FileChannel channel) throws IOException, SQLException {
+  protected Database(FileChannel channel) throws IOException {
     _format = JetFormat.getFormat(channel);
     _pageChannel = new PageChannel(channel, _format);
     _buffer = _pageChannel.createPageBuffer();
@@ -239,7 +239,7 @@ public class Database
   /**
    * Read the system catalog
    */
-  private void readSystemCatalog() throws IOException, SQLException {
+  private void readSystemCatalog() throws IOException {
     _pageChannel.readPage(_buffer, PAGE_SYSTEM_CATALOG);
     byte pageType = _buffer.get();
     if (pageType != PageTypes.TABLE_DEF) {
@@ -272,7 +272,7 @@ public class Database
    * Read the system access control entries table
    * @param pageNum Page number of the table def
    */
-  private void readAccessControlEntries(int pageNum) throws IOException, SQLException {
+  private void readAccessControlEntries(int pageNum) throws IOException {
     ByteBuffer buffer = _pageChannel.createPageBuffer();
     _pageChannel.readPage(buffer, pageNum);
     byte pageType = buffer.get();
@@ -298,9 +298,8 @@ public class Database
 
   /**
    * @return an unmodifiable Iterator of the user Tables in this Database.
-   * @throws IllegalStateException if an IOException or SQLException is thrown
-   *         by one of the operations, the actual exception will be contained
-   *         within
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
    * @throws ConcurrentModificationException if a table is added to the
    *         database while an Iterator is in use.
    */
@@ -312,7 +311,7 @@ public class Database
    * @param name Table name
    * @return The table, or null if it doesn't exist
    */
-  public Table getTable(String name) throws IOException, SQLException {
+  public Table getTable(String name) throws IOException {
 
     TableInfo tableInfo = lookupTable(name);
     
@@ -333,7 +332,7 @@ public class Database
    */
    //XXX Set up 1-page rollback buffer?
   public void createTable(String name, List<Column> columns)
-    throws IOException, SQLException
+    throws IOException
   {
 
     if(getTable(name) != null) {
@@ -651,7 +650,7 @@ public class Database
    * @param delim Regular expression representing the delimiter string.
    */
   public void importFile(String name, File f, String delim)
-  throws IOException, SQLException
+  throws IOException
   {
     BufferedReader in = null;
     try {
@@ -676,7 +675,7 @@ public class Database
    * @param delim Regular expression representing the delimiter string.
    */
   public void importReader(String name, BufferedReader in, String delim)
-  throws IOException, SQLException
+  throws IOException
   {
     String line = in.readLine();
     if (line == null || line.trim().length() == 0) {
@@ -818,8 +817,6 @@ public class Database
       try {
         return getTable(_tableNameIter.next());
       } catch(IOException e) {
-        throw new IllegalStateException(e);
-      } catch(SQLException e) {
         throw new IllegalStateException(e);
       }
     }

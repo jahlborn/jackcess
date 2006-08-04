@@ -126,7 +126,7 @@ public class Column implements Comparable<Column> {
    * @param format Format that the containing database is in
    */
   public Column(ByteBuffer buffer, int offset, PageChannel pageChannel, JetFormat format)
-  throws SQLException
+  throws IOException
   {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));

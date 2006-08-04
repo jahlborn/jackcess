@@ -30,7 +30,6 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -120,7 +119,7 @@ public class Table
 	 * @param name Table name
    */
   protected Table(ByteBuffer buffer, PageChannel pageChannel, JetFormat format, int pageNumber, String name)
-  throws IOException, SQLException
+  throws IOException
   {
     _buffer = buffer;
     _pageChannel = pageChannel;
@@ -377,7 +376,7 @@ public class Table
   /**
    * Read the table definition
    */
-  private void readPage() throws IOException, SQLException {
+  private void readPage() throws IOException {
     if (LOG.isDebugEnabled()) {
       _buffer.rewind();
       LOG.debug("Table def block:\n" + ByteUtil.toHexString(_buffer,

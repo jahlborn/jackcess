@@ -27,6 +27,7 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashMap;
@@ -128,12 +129,12 @@ public enum DataType {
     }
   }
   
-  public static DataType fromByte(byte b) throws SQLException {
+  public static DataType fromByte(byte b) throws IOException {
     DataType rtn = DATA_TYPES.get(b);
     if (rtn != null) {
       return rtn;
     } else {
-      throw new SQLException("Unrecognized data type: " + b);
+      throw new IOException("Unrecognized data type: " + b);
     }
   }
   
