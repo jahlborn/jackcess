@@ -162,9 +162,13 @@ public class Database {
   /** Format that the containing database is in */
   private JetFormat _format;
   /**
-   * Map of table names to page numbers containing their definition
+   * Map of UPPERCASE table names to page numbers containing their definition
+   * and their stored table name.
    */
-  private Map<String, Integer> _tables = new HashMap<String, Integer>();
+  private Map<String, TableInfo> _tableLookup =
+    new HashMap<String, TableInfo>();
+  /** set of table names as stored in the mdb file, created on demand */
+  private Set<String> _tableNames;
   /** Reads and writes database pages */
   private PageChannel _pageChannel;
   /** System catalog table */
@@ -246,7 +250,7 @@ public class Database {
       String name = (String) row.get(COL_NAME);
       if (name != null && TYPE_TABLE.equals(row.get(COL_TYPE))) {
         if (!name.startsWith(PREFIX_SYSTEM)) {
-          _tables.put((String) row.get(COL_NAME), (Integer) row.get(COL_ID));
+          addTable((String) row.get(COL_NAME), (Integer) row.get(COL_ID));
         } else if (TABLE_SYSTEM_ACES.equals(name)) {
           readAccessControlEntries(((Integer) row.get(COL_ID)).intValue());
         }
@@ -255,7 +259,8 @@ public class Database {
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished reading system catalog.  Tables: " + _tables);
+      LOG.debug("Finished reading system catalog.  Tables: " +
+                getTableNames());
     }
   }
   
@@ -278,7 +283,13 @@ public class Database {
    * @return The names of all of the user tables (String)
    */
   public Set<String> getTableNames() {
-    return _tables.keySet();
+    if(_tableNames == null) {
+      _tableNames = new HashSet<String>();
+      for(TableInfo tableInfo : _tableLookup.values()) {
+        _tableNames.add(tableInfo.tableName);
+      }
+    }
+    return _tableNames;
   }
   
   /**
@@ -286,19 +297,16 @@ public class Database {
    * @return The table, or null if it doesn't exist
    */
   public Table getTable(String name) throws IOException, SQLException {
+
+    TableInfo tableInfo = lookupTable(name);
     
-    Integer pageNumber = (Integer) _tables.get(name);
-    if (pageNumber == null) {
-      // Bug workaround:
-      pageNumber = (Integer) _tables.get(Character.toUpperCase(name.charAt(0)) +
-          name.substring(1));
-    }
-    
-    if (pageNumber == null) {
+    if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
     } else {
-      _pageChannel.readPage(_buffer, pageNumber.intValue());
-      return new Table(_buffer, _pageChannel, _format, pageNumber.intValue(), name);
+      int pageNumber = tableInfo.pageNumber.intValue();
+      _pageChannel.readPage(_buffer, pageNumber);
+      return new Table(_buffer, _pageChannel, _format, pageNumber,
+                       tableInfo.tableName);
     }
   }
   
@@ -308,7 +316,14 @@ public class Database {
    * @param columns List of Columns in the table
    */
    //XXX Set up 1-page rollback buffer?
-  public void createTable(String name, List<Column> columns) throws IOException {
+  public void createTable(String name, List<Column> columns)
+    throws IOException, SQLException
+  {
+
+    if(getTable(name) != null) {
+      throw new IllegalArgumentException(
+          "Cannot create table with name of existing table");
+    }
     
     //There is some really bizarre bug in here where tables that start with
     //the letters a-m (only lower case) won't open in Access. :)
@@ -337,7 +352,7 @@ public class Database {
     _pageChannel.writeNewPage(createUsageMapDataBuffer()); //Usage map
     
     //Add this table to our internal list.
-    _tables.put(name, new Integer(pageNumber));
+    addTable(name, new Integer(pageNumber));
     
     //Add this table to system tables
     addToSystemCatalog(name, pageNumber);
@@ -719,6 +734,43 @@ public class Database {
   
   public String toString() {
     return ToStringBuilder.reflectionToString(this);
+  }
+
+  /**
+   * Adds a table to the _tableLookup and resets the _tableNames set
+   */
+  private void addTable(String tableName, Integer pageNumber)
+  {
+    _tableLookup.put(toLookupTableName(tableName),
+                     new TableInfo(pageNumber, tableName));
+    // clear this, will be created next time needed
+    _tableNames = null;
+  }
+
+  /**
+   * @returns the tableInfo of the given table, if any
+   */
+  private TableInfo lookupTable(String tableName) {
+    return _tableLookup.get(toLookupTableName(tableName));
+  }
+
+  /**
+   * @return a string usable in the _tableLookup map.
+   */
+  private String toLookupTableName(String tableName) {
+    return ((tableName != null) ? tableName.toUpperCase() : null);
+  }
+
+  private static class TableInfo
+  {
+    public Integer pageNumber;
+    public String tableName;
+
+    private TableInfo(Integer newPageNumber,
+                      String newTableName) {
+      pageNumber = newPageNumber;
+      tableName = newTableName;
+    }
   }
   
 }
