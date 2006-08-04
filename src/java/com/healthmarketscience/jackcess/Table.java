@@ -122,6 +122,7 @@ public class Table {
     _pageChannel = pageChannel;
     _format = format;
     _tableDefPageNumber = pageNumber;
+    _name = name;
     int nextPage;
     ByteBuffer nextPageBuffer = null;
     nextPage = _buffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
@@ -140,7 +141,6 @@ public class Table {
       _buffer.flip();
     }
     readPage();
-    _name = name;
   }
 
   /**
