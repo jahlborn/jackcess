@@ -326,8 +326,10 @@ public class Database {
     //End of tabledef
     buffer.put((byte) 0xff);
     buffer.put((byte) 0xff);
-    
-    buffer.putInt(8, buffer.position());  //Overwrite length of data for this page
+
+    int tableDefLen = buffer.position();
+    buffer.putShort(2, (short)(_format.PAGE_SIZE - tableDefLen - 8)); // overwrite page free space
+    buffer.putInt(8, tableDefLen);  //Overwrite length of data for this page
        
     //Write the tdef and usage map pages to disk.
     _pageChannel.writeNewPage(buffer);
