@@ -5,6 +5,43 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.6" date="2006-08-07">
+      <action dev="jahlborn" type="fix">
+        Handle more tables with more index slots than actual indexes (fix bug
+        1530312)
+      </action>
+      <action dev="jahlborn" type="fix">
+        Clean up reading/writing 3-byte ints; long value length is 3-bytes
+        (fix bug 1449812)
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix handling of skipped rows
+      </action>
+      <action dev="jahlborn" type="fix">
+        When reading multi-page table def, flip buffer before parsing (fix bug
+        1306970)
+      </action>
+      <action dev="jahlborn" type="update">
+        Treat table names as case insensitive; use stored table names when
+        instantiating tables
+      </action>
+      <action dev="jahlborn" type="update">
+        Make Database and Table Iterable
+      </action>
+      <action dev="jahlborn" type="fix">
+        Use uppercase names when adding text columns to indexes, which fixes
+        long standing problem with table names starting with lowercase
+        characters (and other situations where tables could not be opened in
+        Access).  Remove hack which forced every table name to have uppercase
+        first character.
+      </action>      
+      <action dev="jahlborn" type="update">
+        Clean up compressed text handling.
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement reading multi-page long binary values
+      </action>
+    </release>
     <release version="1.1.5" date="2006-07-25">
       <action dev="jahlborn" type="update">
         Add support for currency columns (thanks to James Schopp).
