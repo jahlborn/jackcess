@@ -334,15 +334,10 @@ public class Database
   public void createTable(String name, List<Column> columns)
     throws IOException
   {
-
     if(getTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
     }
-    
-    //There is some really bizarre bug in here where tables that start with
-    //the letters a-m (only lower case) won't open in Access. :)
-    name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
     
     //We are creating a new page at the end of the db for the tdef.
     int pageNumber = _pageChannel.getPageCount();

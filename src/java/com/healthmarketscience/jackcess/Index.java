@@ -410,6 +410,10 @@ public class Index implements Comparable<Index> {
     public EntryColumn(Column col, Comparable value) {
       _column = col;
       _value = value;
+      if(_column.getType() == DataType.TEXT) {
+        // index strings are stored as uppercase
+        _value = ((_value != null) ? _value.toString().toUpperCase() : null);
+      }
     }
     
     /**
@@ -459,7 +463,7 @@ public class Index implements Comparable<Index> {
       if (_column.getType() == DataType.TEXT) {
         String s = (String) _value;
         for (int i = 0; i < s.length(); i++) {
-          Byte b = (Byte) CODES.get(new Character(Character.toUpperCase(s.charAt(i))));
+          Byte b = (Byte) CODES.get(new Character(s.charAt(i)));
           
           if (b == null) {
             throw new IOException("Unmapped index value: " + s.charAt(i));
