@@ -59,7 +59,7 @@ public class Index implements Comparable<Index> {
    * Map of characters to bytes that Access uses in indexes (not ASCII)
    *    (Character -> Byte)
    */
-  private static BidiMap CODES = new DualHashBidiMap();
+  private static final BidiMap CODES = new DualHashBidiMap();
   static {
     //These values are prefixed with a '43'
     CODES.put('^', (byte) 2);
@@ -403,6 +403,8 @@ public class Index implements Comparable<Index> {
     private Column _column;
     /** Column value */
     private Comparable _value;
+    /** extra column bytes */
+    private byte[] _extraBytes;
     
     /**
      * Create a new EntryColumn
@@ -435,7 +437,20 @@ public class Index implements Comparable<Index> {
               sb.append(c.charValue());
             }
           }
-          buffer.get(); //Forward past 0x00
+          //Forward past 0x00 (in some cases, there is more data here, which
+          //we don't currently understand)
+          byte endByte = buffer.get();
+          if(endByte != 0x00) {
+            int startPos = buffer.position() - 1;
+            int endPos = buffer.position();
+            while(buffer.get(endPos) != 0x00) {
+              ++endPos;
+            }
+            _extraBytes = new byte[endPos - startPos];
+            buffer.position(startPos);
+            buffer.get(_extraBytes);
+            buffer.get();
+          }
           _value = sb.toString();
         } else {
           byte[] data = new byte[col.getType().getSize()];
@@ -482,6 +497,9 @@ public class Index implements Comparable<Index> {
           }
         }
         buffer.put((byte) 1);
+        if(_extraBytes != null) {
+          buffer.put(_extraBytes);
+        }
         buffer.put((byte) 0);
       } else {
         Comparable value = _value;
@@ -503,10 +521,14 @@ public class Index implements Comparable<Index> {
         for (int i = 0; i < s.length(); i++) {
           rtn++;
           if (s.charAt(i) == '^' || s.charAt(i) == '_' || s.charAt(i) == '{' ||
-              s.charAt(i) == '|' || s.charAt(i) == '}' || s.charAt(i) == '-')
+              s.charAt(i) == '|' || s.charAt(i) == '}' || s.charAt(i) == '~')
           {
+            // account for the magic 43
             rtn++;
           }
+        }
+        if(_extraBytes != null) {
+          rtn += _extraBytes.length;
         }
         return rtn;
       } else {
