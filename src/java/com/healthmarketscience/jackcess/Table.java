@@ -265,35 +265,38 @@ public class Table
           value = new Boolean(!isNull);  //Boolean values are stored in the null mask
         } else {
           if(!isNull) {
+
+            // locate the column data bytes
+            int colDataPos = 0;
+            int colDataLen = 0;
             if (!column.isVariableLength()) 
             {
-              //Read in fixed length column data
-              columnData = new byte[column.getLength()];
-              _buffer.position(dataStart + column.getFixedDataOffset());
-              _buffer.get(columnData);
+              // find fixed length column data
+              colDataPos = dataStart + column.getFixedDataOffset();
+              colDataLen = column.getLength();
             } 
             else
             {
-              // read in var length column data
+              // find var length column data
               int varDataIdx = (rowVarColumnCount -
                                 column.getVarLenTableIndex() - 1);
               int varDataStart = varColumnOffsets[varDataIdx];
               int varDataEnd = ((varDataIdx > 0) ?
                                 varColumnOffsets[varDataIdx - 1] :
                                 lastVarColumnStart);
-              columnData = new byte[varDataEnd - varDataStart];
-              _buffer.position(_rowStart + varDataStart);
-              _buffer.get(columnData);
+              colDataPos = _rowStart + varDataStart;
+              colDataLen = varDataEnd - varDataStart;
             }
+
             // parse the column data
-            value = column.read(columnData);
-          }
-          if (!isNull && columnData != null)
-          {
-            //Add the value if we are interested in it.
+            columnData = new byte[colDataLen];
+            _buffer.position(colDataPos);
+            _buffer.get(columnData);
             value = column.read(columnData);
           }
         }
+
+        //Add the value to the row data
         rtn.put(column.getName(), value);
       }
     }
