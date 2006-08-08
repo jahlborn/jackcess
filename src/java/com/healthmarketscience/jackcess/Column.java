@@ -271,7 +271,7 @@ public class Column implements Comparable<Column> {
       return readCurrencyValue(data);
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
-        return readLongBinaryValue(data, null);
+        return readLongBinaryValue(data);
       } else {
         return null;
       }
@@ -298,7 +298,7 @@ public class Column implements Comparable<Column> {
    *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
-  private byte[] readLongBinaryValue(byte[] lvalDefinition, byte[] outType)
+  private byte[] readLongBinaryValue(byte[] lvalDefinition)
     throws IOException
   {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
@@ -387,10 +387,6 @@ public class Column implements Comparable<Column> {
       default:
         throw new IOException("Unrecognized long value type: " + type);
     }
-    if(outType != null) {
-      // return parsed type as well
-      outType[0] = type;
-    }
     return rtn;
   }
   
@@ -401,26 +397,11 @@ public class Column implements Comparable<Column> {
   private String readLongStringValue(byte[] lvalDefinition)
     throws IOException
   {
-    byte[] type = new byte[1];
-    byte[] binData = readLongBinaryValue(lvalDefinition, type);
+    byte[] binData = readLongBinaryValue(lvalDefinition);
     if(binData == null) {
       return null;
     }
-    String result = null;
-    switch (type[0]) {
-      case LONG_VALUE_TYPE_OTHER_PAGE:
-        result = decodeTextValue(binData);
-        break;
-      case LONG_VALUE_TYPE_THIS_PAGE:
-        result = decodeTextValue(binData);
-        break;
-      case LONG_VALUE_TYPE_OTHER_PAGES:
-        //XXX
-        return null;
-      default:
-        throw new IOException("Unrecognized long value type: " + type);
-    }
-    return result;
+    return decodeTextValue(binData);
   }
 
   /**
