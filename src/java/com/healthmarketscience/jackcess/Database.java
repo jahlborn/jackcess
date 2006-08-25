@@ -203,7 +203,7 @@ public class Database
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
     return new Database(openChannel(mdbFile,
-                                    (mdbFile.canWrite() && !readOnly)));
+                                    (!mdbFile.canWrite() || readOnly)));
   }
   
   /**
@@ -212,17 +212,17 @@ public class Database
    *    already exists, it will be overwritten.</b>
    */
   public static Database create(File mdbFile) throws IOException {
-    FileChannel channel = openChannel(mdbFile, true);
+    FileChannel channel = openChannel(mdbFile, false);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
         EMPTY_MDB)), 0, (long) Integer.MAX_VALUE);
     return new Database(channel);
   }
   
-  private static FileChannel openChannel(File mdbFile, boolean needWrite)
+  private static FileChannel openChannel(File mdbFile, boolean readOnly)
     throws FileNotFoundException
   {
-    String mode = (needWrite ? "rw" : "r");
+    String mode = (readOnly ? "r" : "rw");
     return new RandomAccessFile(mdbFile, mode).getChannel();
   }
   
