@@ -181,14 +181,29 @@ public class Database
   private Table _accessControlEntries;
   
   /**
-   * Open an existing Database
+   * Open an existing Database.  If the existing file is not writeable, the
+   * file will be opened read-only.
    * @param mdbFile File containing the database
    */
   public static Database open(File mdbFile) throws IOException {
+    return open(mdbFile, false);
+  }
+  
+  /**
+   * Open an existing Database.  If the existing file is not writeable or the
+   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * @param mdbFile File containing the database
+   * @param readOnly iff <code>true</code>, force opening file in read-only
+   *                 mode
+   */
+  public static Database open(File mdbFile, boolean readOnly)
+    throws IOException
+  {
     if(!mdbFile.exists() || !mdbFile.canRead()) {
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
-    return new Database(openChannel(mdbFile));
+    return new Database(openChannel(mdbFile,
+                                    (mdbFile.canWrite() && !readOnly)));
   }
   
   /**
@@ -197,15 +212,18 @@ public class Database
    *    already exists, it will be overwritten.</b>
    */
   public static Database create(File mdbFile) throws IOException {
-    FileChannel channel = openChannel(mdbFile);
+    FileChannel channel = openChannel(mdbFile, true);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
         EMPTY_MDB)), 0, (long) Integer.MAX_VALUE);
     return new Database(channel);
   }
   
-  private static FileChannel openChannel(File mdbFile) throws FileNotFoundException {
-    return new RandomAccessFile(mdbFile, "rw").getChannel();
+  private static FileChannel openChannel(File mdbFile, boolean needWrite)
+    throws FileNotFoundException
+  {
+    String mode = (needWrite ? "rw" : "r");
+    return new RandomAccessFile(mdbFile, mode).getChannel();
   }
   
   /**
