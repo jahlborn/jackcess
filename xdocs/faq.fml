@@ -21,6 +21,15 @@
       </answer>
     </faq>
 
+    <faq id="passwords">
+      <question>Are password protected databases supported?</question>
+      <answer>
+        <p>Basic password protection is merely software enforced, and Jackcess
+           does not do any password checking at this point.  So, a password
+           protected database can be used the same as any other.</p>
+      </answer>
+    </faq>
+
     <faq id="mdbtools">
       <question>
         How is this different from
