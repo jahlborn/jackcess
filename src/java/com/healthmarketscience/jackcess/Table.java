@@ -329,15 +329,26 @@ public class Table
     boolean deletedRow = ((_rowStart & 0x4000) != 0);
     boolean overflowRow = ((_rowStart & 0x8000) != 0);
 
+    if(deletedRow ^ overflowRow) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Row flags: deletedRow " + deletedRow + ", overflowRow " +
+                  overflowRow);
+      }
+    }
+    
     _rowStart = (short)(_rowStart & OFFSET_MASK);
     
     if (deletedRow) {
       // Deleted row.  Skip.
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Skipping deleted row");
+      }
       _lastRowStart = _rowStart;
       return positionAtNextRow();
     } else if (overflowRow) {
       // Overflow page.
       // FIXME - Currently skipping this.  Need to figure out how to read it.
+      LOG.warn("Skipping row with overflow flag");
 //       _buffer.position(_rowStart);
 //       int overflow = _buffer.getInt();
       _lastRowStart = _rowStart;
