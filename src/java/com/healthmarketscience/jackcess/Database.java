@@ -356,6 +356,20 @@ public class Database
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
     }
+    if(columns.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot create table with no columns");
+    }
+
+    Set<String> colNames = new HashSet<String>();
+    // next, validate the column definitions
+    for(Column column : columns) {
+      column.validate();
+      if(!colNames.add(column.getName().toUpperCase())) {
+        throw new IllegalArgumentException("duplicate column name: " +
+                                           column.getName());
+      }
+    }
     
     //We are creating a new page at the end of the db for the tdef.
     int pageNumber = _pageChannel.getPageCount();
@@ -454,7 +468,7 @@ public class Database
         buffer.putShort((short) 0);
       }
       buffer.putShort(columnNumber); //Column Number again
-      if(col.getType() == DataType.NUMERIC) {
+      if(col.getType().getHasScalePrecision()) {
         buffer.put((byte) col.getPrecision());  // numeric precision
         buffer.put((byte) col.getScale());  // numeric scale
       } else {
@@ -478,9 +492,13 @@ public class Database
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
-        fixedOffset += col.getType().getSize();
+        fixedOffset += col.getType().getFixedSize();
       }
-      buffer.putShort(col.getLength()); //Column length
+      if(!col.getType().isLongValue()) {
+        buffer.putShort(col.getLength()); //Column length
+      } else {
+        buffer.putShort((short)0x0000); // unused
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
             buffer, position, _format.SIZE_COLUMN_DEF_BLOCK));
@@ -598,6 +616,7 @@ public class Database
     List<Column> columns = new LinkedList<Column>();
     int textCount = 0;
     int totalSize = 0;
+    // FIXME, there is some ugly (and broken) logic here...
     for (int i = 1; i <= md.getColumnCount(); i++) {
       DataType accessColumnType = DataType.fromSQLType(md.getColumnType(i));
       switch (accessColumnType) {

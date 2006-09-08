@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,63 @@ public class DatabaseTest extends TestCase {
     return Database.create(tmp);
   }
 
+  public void testInvalidTableDefs() throws Exception {
+    Database db = create();
+
+    try {
+      db.createTable("test", Collections.<Column>emptyList());
+      fail("created table with no columns?");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+    
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("A");
+    col.setType(DataType.TEXT);
+    columns.add(col);
+    col = new Column();
+    col.setName("a");
+    col.setType(DataType.MEMO);
+    columns.add(col);
+
+    try {
+      db.createTable("test", columns);
+      fail("created table with duplicate column names?");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+    columns = new ArrayList<Column>();
+    col = new Column();
+    col.setName("A");
+    col.setType(DataType.TEXT);
+    col.setLength((short)(352 * 2));
+    columns.add(col);
+    
+    try {
+      db.createTable("test", columns);
+      fail("created table with invalid column length?");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+    columns = new ArrayList<Column>();
+    col = new Column();
+    col.setName("A");
+    col.setType(DataType.TEXT);
+    columns.add(col);
+    db.createTable("test", columns);
+    
+    try {
+      db.createTable("Test", columns);
+      fail("create duplicate tables?");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+  }
+      
   public void testReadDeletedRows() throws Exception {
     Table table = Database.open(new File("test/data/delTest.mdb")).getTable("Table");
     int rows = 0;
@@ -153,10 +211,33 @@ public class DatabaseTest extends TestCase {
   }
 
   public void testDeleteCurrentRow() throws Exception {
+
+    // make sure correct row is deleted
     Database db = create();
     createTestTable(db);
-    Object[] row = createTestRow();
+    Object[] row1 = createTestRow("Tim1");
+    Object[] row2 = createTestRow("Tim2");
+    Object[] row3 = createTestRow("Tim3");
     Table table = db.getTable("Test");
+    table.addRows(Arrays.asList(row1, row2, row3));
+
+    table.reset();
+    table.getNextRow();
+    table.getNextRow();
+    table.deleteCurrentRow();
+
+    table.reset();
+
+    Map<String, Object> outRow = table.getNextRow();
+    assertEquals("Tim1", outRow.get("A"));
+    outRow = table.getNextRow();
+    assertEquals("Tim3", outRow.get("A"));
+
+    // test multi row delete/add
+    db = create();
+    createTestTable(db);
+    Object[] row = createTestRow();
+    table = db.getTable("Test");
     for (int i = 0; i < 10; i++) {
       row[3] = i;
       table.addRow(row);
@@ -445,9 +526,13 @@ public class DatabaseTest extends TestCase {
     assertEquals(89, columns.size());
   }
   
-  private Object[] createTestRow() {
-    return new Object[] {"Tim", "R", "McCune", 1234, (byte) 0xad, 555.66d,
+  private Object[] createTestRow(String col1Val) {
+    return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
         777.88f, (short) 999, new Date()};
+  }
+
+  private Object[] createTestRow() {
+    return createTestRow("Tim");
   }
   
   private void createTestTable(Database db) throws Exception {

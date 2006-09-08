@@ -81,19 +81,14 @@ public class Column implements Comparable<Column> {
 
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
 
-  /** default precision value for new numeric columns */
-  public static final byte DEFAULT_PRECISION = 18;
-  /** default scale value for new numeric columns */
-  public static final byte DEFAULT_SCALE = 0;
-  
   /** For text columns, whether or not they are compressed */ 
   private boolean _compressedUnicode = false;
   /** Whether or not the column is of variable length */
   private boolean _variableLength;
   /** Numeric precision */
-  private byte _precision = DEFAULT_PRECISION;
+  private byte _precision;
   /** Numeric scale */
-  private byte _scale = DEFAULT_SCALE;
+  private byte _scale;
   /** Data type */
   private DataType _type;
   /** Format that the containing database is in */
@@ -136,7 +131,7 @@ public class Column implements Comparable<Column> {
     setType(DataType.fromByte(buffer.get(offset + format.OFFSET_COLUMN_TYPE)));
     _columnNumber = buffer.getShort(offset + format.OFFSET_COLUMN_NUMBER);
     _columnLength = buffer.getShort(offset + format.OFFSET_COLUMN_LENGTH);
-    if (_type == DataType.NUMERIC) {
+    if (_type.getHasScalePrecision()) {
       _precision = buffer.get(offset + format.OFFSET_COLUMN_PRECISION);
       _scale = buffer.get(offset + format.OFFSET_COLUMN_SCALE);
     }
@@ -171,12 +166,22 @@ public class Column implements Comparable<Column> {
   }
   
   /**
-   * Also sets the length and the variable length flag, inferred from the type
+   * Also sets the length and the variable length flag, inferred from the
+   * type.  For types with scale/precision, sets the scale and precision to
+   * default values.
    */
   public void setType(DataType type) {
     _type = type;
-    setLength((short) size());
-		setVariableLength(type.isVariableLength());
+    if(!type.isVariableLength()) {
+      setLength((short)type.getFixedSize());
+    } else if(!type.isLongValue()) {
+      setLength((short)type.getDefaultSize());
+    }
+    setVariableLength(type.isVariableLength());
+    if(type.getHasScalePrecision()) {
+      setScale((byte)type.getDefaultScale());
+      setPrecision((byte)type.getDefaultPrecision());
+    }
   }
   public DataType getType() {
     return _type;
@@ -199,9 +204,6 @@ public class Column implements Comparable<Column> {
   }
   
   public void setPrecision(byte newPrecision) {
-    if((newPrecision < 1) || (newPrecision > 28)) {
-      throw new IllegalArgumentException("Precision must be from 1 to 28 inclusive");
-    }
     _precision = newPrecision;
   }
   
@@ -210,9 +212,6 @@ public class Column implements Comparable<Column> {
   }
 
   public void setScale(byte newScale) {
-    if((newScale < 1) || (newScale > 28)) {
-      throw new IllegalArgumentException("Scale must be from 0 to 28 inclusive");
-    }
     _scale = newScale;
   }
   
@@ -229,6 +228,48 @@ public class Column implements Comparable<Column> {
 
   public int getFixedDataOffset() {
     return _fixedDataOffset;
+  }
+
+  /**
+   * Checks that this column definition is valid.
+   *
+   * @throw IllegalArgumentException if this column definition is invalid.
+   */
+  public void validate() {
+    if(getType() == null) {
+      throw new IllegalArgumentException("must have type");
+    }
+    if((getName() == null) || (getName().trim().length() == 0)) {
+      throw new IllegalArgumentException("must have valid name");
+    }
+    if(isVariableLength() != getType().isVariableLength()) {
+      throw new IllegalArgumentException("invalid variable length setting");
+    }
+
+    if(!isVariableLength()) {
+      if(getLength() != getType().getFixedSize()) {
+        throw new IllegalArgumentException("invalid fixed length size");
+      }
+    } else if(!getType().isLongValue()) {
+      if((getLength() < 0) || (getLength() > getType().getMaxSize())) {
+        throw new IllegalArgumentException("var length out of range");
+      }
+    }
+
+    if(getType().getHasScalePrecision()) {
+      if((getScale() < getType().getMinScale()) ||
+         (getScale() > getType().getMaxScale())) {
+        throw new IllegalArgumentException(
+            "Scale must be from " + getType().getMinScale() + " to " +
+            getType().getMaxScale() + " inclusive");
+      }
+      if((getPrecision() < getType().getMinPrecision()) ||
+         (getPrecision() > getType().getMaxPrecision())) {
+        throw new IllegalArgumentException(
+            "Precision must be from " + getType().getMinPrecision() + " to " +
+            getType().getMaxPrecision() + " inclusive");
+      }
+    }
   }
   
   /**
@@ -601,7 +642,14 @@ public class Column implements Comparable<Column> {
    * @param value Value of the LVAL column
    * @return A buffer containing the LVAL definition and the column value
    */
-  public ByteBuffer writeLongValue(byte[] value) throws IOException {
+  public ByteBuffer writeLongValue(byte[] value,
+                                   int remainingRowLength) throws IOException
+  {
+    // FIXME, take remainingRowLength into account (don't always write inline)
+    
+    if(value.length > getType().getMaxSize()) {
+      throw new IOException("value too big for column");
+    }
     ByteBuffer def = ByteBuffer.allocate(_format.SIZE_LONG_VALUE_DEF + value.length);
     def.order(ByteOrder.LITTLE_ENDIAN);
     ByteUtil.put3ByteInt(def, value.length);
@@ -619,7 +667,8 @@ public class Column implements Comparable<Column> {
    * @param value Value of the LVAL column
    * @return A buffer containing the LVAL definition
    */
-  public ByteBuffer writeLongValueInNewPage(byte[] value) throws IOException {
+  // FIXME, unused?
+  private ByteBuffer writeLongValueInNewPage(byte[] value) throws IOException {
     ByteBuffer lvalPage = _pageChannel.createPageBuffer();
     lvalPage.put(PageTypes.DATA); //Page type
     lvalPage.put((byte) 1); //Unknown
@@ -651,8 +700,10 @@ public class Column implements Comparable<Column> {
    * @param obj Object to serialize
    * @return A buffer containing the bytes
    */
-  public ByteBuffer write(Object obj) throws IOException {
-    return write(obj, ByteOrder.LITTLE_ENDIAN);
+  public ByteBuffer write(Object obj, int remainingRowLength)
+    throws IOException
+  {
+    return write(obj, remainingRowLength, ByteOrder.LITTLE_ENDIAN);
   }
   
   /**
@@ -661,62 +712,114 @@ public class Column implements Comparable<Column> {
    * @param order Order in which to serialize
    * @return A buffer containing the bytes
    */
-  public ByteBuffer write(Object obj, ByteOrder order) throws IOException {
-    int size = size();
-    if (_type == DataType.OLE) {
-      size += ((byte[]) obj).length;
-    } else if(_type == DataType.MEMO) {
-      byte[] encodedData = encodeUncompressedText(toCharSequence(obj)).array();
-      size += encodedData.length;
-      obj = encodedData;
-    } else if(_type == DataType.TEXT) {
-      size = getLength();
+  public ByteBuffer write(Object obj, int remainingRowLength, ByteOrder order)
+    throws IOException
+  {
+    if(!isVariableLength()) {
+      return writeFixedLengthField(obj, order);
     }
+      
+    // var length column
+    if(!getType().isLongValue()) {
+
+      // FIXME, take remainingRowLength into account?  overflow pages?
+      
+      // this is an "inline" var length field
+      switch(getType()) {
+      case TEXT:
+        CharSequence text = toCharSequence(obj);
+        int maxChars = getLength() / 2;
+        if (text.length() > maxChars) {
+          throw new IOException("Text is too big for column");
+        }
+        byte[] encodedData = encodeUncompressedText(text).array();
+        obj = encodedData;
+        break;
+      case BINARY:
+        // should already be "encoded"
+        break;
+      default:
+        throw new RuntimeException("unexpected inline var length type: " +
+                                   getType());
+      }
+
+      ByteBuffer buffer = ByteBuffer.wrap((byte[])obj);
+      buffer.order(order);
+      return buffer;
+    }
+
+    // var length, long value column
+    switch(getType()) {
+    case OLE:
+      // should already be "encoded"
+      break;
+    case MEMO:
+      obj = encodeUncompressedText(toCharSequence(obj)).array();
+      break;
+    default:
+      throw new RuntimeException("unexpected var length, long value type: " +
+                                 getType());
+    }    
+
+    // create long value buffer
+    return writeLongValue((byte[]) obj, remainingRowLength);
+  }
+
+  /**
+   * Serialize an Object into a raw byte value for this column
+   * @param obj Object to serialize
+   * @param order Order in which to serialize
+   * @return A buffer containing the bytes
+   */
+  public ByteBuffer writeFixedLengthField(Object obj, ByteOrder order)
+    throws IOException
+  {
+    int size = getType().getFixedSize();
+
+    // create buffer for data
     ByteBuffer buffer = ByteBuffer.allocate(size);
     buffer.order(order);
-    if (obj instanceof Boolean) {
-      obj = ((Boolean) obj) ? 1 : 0;
-    }
-    if (_type == DataType.BOOLEAN) {
+
+    obj = booleanToInteger(obj);
+
+    switch(getType()) {
+    case BOOLEAN:
       //Do nothing
-    } else if (_type == DataType.BYTE) {
+      break;
+    case  BYTE:
       buffer.put(obj != null ? ((Number) obj).byteValue() : (byte) 0);
-    } else if (_type == DataType.INT) {
+      break;
+    case INT:
       buffer.putShort(obj != null ? ((Number) obj).shortValue() : (short) 0);
-    } else if (_type == DataType.LONG) {
+      break;
+    case LONG:
       buffer.putInt(obj != null ? ((Number) obj).intValue() : 0);
-    } else if (_type == DataType.DOUBLE) {
+      break;
+    case DOUBLE:
       buffer.putDouble(obj != null ? ((Number) obj).doubleValue() : (double) 0);
-    } else if (_type == DataType.FLOAT) {
+      break;
+    case FLOAT:
       buffer.putFloat(obj != null ? ((Number) obj).floatValue() : (float) 0);
-    } else if (_type == DataType.SHORT_DATE_TIME) {
+      break;
+    case SHORT_DATE_TIME:
       writeDateValue(buffer, obj);
-    } else if (_type == DataType.BINARY) {
-      buffer.put((byte[]) obj);
-    } else if (_type == DataType.TEXT) {
-      CharSequence text = toCharSequence(obj);
-      int maxChars = size / 2;
-      if (text.length() > maxChars) {
-        throw new IOException("Text is too big for column");
-      }
-      buffer.put(encodeUncompressedText(text));
-    } else if (_type == DataType.MONEY) {
+      break;
+    case MONEY:
       writeCurrencyValue(buffer, obj);
-    } else if (_type == DataType.OLE) {
-      buffer.put(writeLongValue((byte[]) obj));
-    } else if (_type == DataType.MEMO) {
-      buffer.put(writeLongValue((byte[]) obj));
-    } else if (_type == DataType.NUMERIC) {
+      break;
+    case NUMERIC:
       writeNumericValue(buffer, obj);
-    } else if (_type == DataType.GUID) {
+      break;
+    case GUID:
       writeGUIDValue(buffer, obj);
-    } else {
-      throw new IOException("Unsupported data type: " + _type);
+      break;
+    default:
+      throw new IOException("Unsupported data type: " + getType());
     }
     buffer.flip();
     return buffer;
   }
-
+  
   /**
    * Decodes a compressed or uncompressed text value.
    */
@@ -826,45 +929,7 @@ public class Column implements Comparable<Column> {
     return _format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
                                                   length));
   }  
-  
-  /**
-   * @return Number of bytes that should be read for this column
-   *    (applies to fixed-width columns)
-   */
-  public int size() {
-    if (_type == DataType.BOOLEAN) {
-      return 0;
-    } else if (_type == DataType.BYTE) {
-      return 1;
-    } else if (_type == DataType.INT) {
-      return 2;
-    } else if (_type == DataType.LONG) {
-      return 4;
-    } else if (_type == DataType.MONEY || _type == DataType.DOUBLE) {
-      return 8;
-    } else if (_type == DataType.FLOAT) {
-      return 4;
-    } else if (_type == DataType.SHORT_DATE_TIME) {
-      return 8;
-    } else if (_type == DataType.BINARY) {
-      return 255;
-    } else if (_type == DataType.TEXT) {
-      return 50 * 2;
-    } else if (_type == DataType.OLE) {
-      return _format.SIZE_LONG_VALUE_DEF;
-    } else if (_type == DataType.MEMO) {
-      return _format.SIZE_LONG_VALUE_DEF;
-    } else if (_type == DataType.NUMERIC) {
-      return 17;
-    } else if (_type == DataType.GUID) {
-      return 16; 
-    } else if (_type == DataType.UNKNOWN_0D) {
-      throw new IllegalArgumentException("FIX ME");
-    } else {
-      throw new IllegalArgumentException("Unrecognized data type: " + _type);
-    }
-  }
-  
+    
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
@@ -926,7 +991,7 @@ public class Column implements Comparable<Column> {
   /**
    * @return an appropriate CharSequence representation of the given object.
    */
-  private static CharSequence toCharSequence(Object value)
+  public static CharSequence toCharSequence(Object value)
   {
     if(value == null) {
       return null;
@@ -952,6 +1017,16 @@ public class Column implements Comparable<Column> {
       bytes[idx + 1] = bytes[idx + 2];
       bytes[idx + 2] = b;
     }
+  }
+
+  /**
+   * Treat booleans as integers (C-style).
+   */
+  private Object booleanToInteger(Object obj) {
+    if (obj instanceof Boolean) {
+      obj = ((Boolean) obj) ? 1 : 0;
+    }
+    return obj;
   }
   
 }

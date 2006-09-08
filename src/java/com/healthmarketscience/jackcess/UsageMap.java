@@ -99,8 +99,8 @@ public abstract class UsageMap {
    * @param format Format of the database that contains this usage map
    * @param rowStart Offset at which the declaration starts in the buffer
    */
-  public UsageMap(PageChannel pageChannel, ByteBuffer dataBuffer, int pageNum,
-      JetFormat format, short rowStart)
+  protected UsageMap(PageChannel pageChannel, ByteBuffer dataBuffer,
+                     int pageNum, JetFormat format, short rowStart)
   throws IOException
   {
     _pageChannel = pageChannel;

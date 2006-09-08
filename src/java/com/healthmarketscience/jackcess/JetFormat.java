@@ -98,7 +98,6 @@ public abstract class JetFormat {
   public final int OFFSET_REFERENCE_MAP_PAGE_NUMBERS;
   
   public final int OFFSET_FREE_SPACE;
-  public final int OFFSET_DATA_ROW_LOCATION_BLOCK;
   public final int OFFSET_NUM_ROWS_ON_DATA_PAGE;
   
   public final int OFFSET_LVAL_ROW_LOCATION_BLOCK;
@@ -182,7 +181,6 @@ public abstract class JetFormat {
     OFFSET_REFERENCE_MAP_PAGE_NUMBERS = defineOffsetReferenceMapPageNumbers();
     
     OFFSET_FREE_SPACE = defineOffsetFreeSpace();
-    OFFSET_DATA_ROW_LOCATION_BLOCK = defineOffsetDataRowLocationBlock();
     OFFSET_NUM_ROWS_ON_DATA_PAGE = defineOffsetNumRowsOnDataPage();
     
     OFFSET_LVAL_ROW_LOCATION_BLOCK = defineOffsetLvalRowLocationBlock();
@@ -245,7 +243,6 @@ public abstract class JetFormat {
   protected abstract int defineOffsetReferenceMapPageNumbers();
   
   protected abstract int defineOffsetFreeSpace();
-  protected abstract int defineOffsetDataRowLocationBlock();
   protected abstract int defineOffsetNumRowsOnDataPage();
   
   protected abstract int defineOffsetLvalRowLocationBlock();
@@ -271,7 +268,7 @@ public abstract class JetFormat {
     
     protected int definePageSize() { return 4096; }
     
-    protected int defineMaxRowSize() { return PAGE_SIZE - 18; }
+    protected int defineMaxRowSize() { return PAGE_SIZE - 16; }
     
     protected int defineOffsetNextTableDefPage() { return 4; }
     protected int defineOffsetNumRows() { return 16; }
@@ -309,7 +306,6 @@ public abstract class JetFormat {
     protected int defineOffsetReferenceMapPageNumbers() { return 1; }
     
     protected int defineOffsetFreeSpace() { return 2; }
-    protected int defineOffsetDataRowLocationBlock() { return 14; }
     protected int defineOffsetNumRowsOnDataPage() { return 12; }
     
     protected int defineOffsetLvalRowLocationBlock() { return 10; }

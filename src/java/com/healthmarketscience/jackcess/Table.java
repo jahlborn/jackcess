@@ -54,6 +54,10 @@ public class Table
   private static final Log LOG = LogFactory.getLog(Table.class);
 
   private static final short OFFSET_MASK = (short)0x1FFF;
+
+  private static final short DELETED_ROW_MASK = (short)0x4000;
+  
+  private static final short OVERFLOW_ROW_MASK = (short)0x8000;
   
   /** Table type code for system tables */
   public static final byte TYPE_SYSTEM = 0x53;
@@ -203,9 +207,9 @@ public class Table
     if (_currentRowInPage == 0) {
       throw new IllegalStateException("Must call getNextRow first");
     }
-    int index = _format.OFFSET_DATA_ROW_LOCATION_BLOCK + (_currentRowInPage - 1) *
-        _format.SIZE_ROW_LOCATION + 1;
-    _buffer.put(index, (byte) (_buffer.get(index) | 0xc0));
+    int index = getRowStartOffset(_currentRowInPage - 1, _format);
+    _buffer.putShort(index, (short) (_buffer.getShort(index)
+                                     | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
     _pageChannel.writePage(_buffer, _ownedPages.getCurrentPageNumber());
   }
   
@@ -273,7 +277,7 @@ public class Table
             {
               // find fixed length column data
               colDataPos = dataStart + column.getFixedDataOffset();
-              colDataLen = column.getLength();
+              colDataLen = column.getType().getFixedSize();
             } 
             else
             {
@@ -319,15 +323,15 @@ public class Table
       _currentRowInPage = 0;
       _lastRowStart = (short) _format.PAGE_SIZE;
     }
-    _rowStart = _buffer.getShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
-        _currentRowInPage * _format.SIZE_ROW_LOCATION);
+    _rowStart = _buffer.getShort(getRowStartOffset(_currentRowInPage,
+                                                   _format));
     _currentRowInPage++;
     _rowsLeftOnPage--;
 
     // FIXME, mdbtools seems to be confused as to which flag is which, this
     // code follows the actual code, which disagrees with the HACKING doc
-    boolean deletedRow = ((_rowStart & 0x4000) != 0);
-    boolean overflowRow = ((_rowStart & 0x8000) != 0);
+    boolean deletedRow = ((_rowStart & DELETED_ROW_MASK) != 0);
+    boolean overflowRow = ((_rowStart & OVERFLOW_ROW_MASK) != 0);
 
     if(deletedRow ^ overflowRow) {
       if(LOG.isDebugEnabled()) {
@@ -514,7 +518,7 @@ public class Table
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
-      rowData[i] = createRow((Object[]) iter.next());
+      rowData[i] = createRow((Object[]) iter.next(), _format.MAX_ROW_SIZE);
     }
     List<Integer> pageNumbers = _ownedPages.getPageNumbers();
     int pageNumber;
@@ -533,7 +537,7 @@ public class Table
       short freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
       if (freeSpaceInPage < (rowSize + _format.SIZE_ROW_LOCATION)) {
         //Last data page is full.  Create a new one.
-        if (rowSize + _format.SIZE_ROW_LOCATION > _format.MAX_ROW_SIZE) {
+        if (rowSize > _format.MAX_ROW_SIZE) {
           throw new IOException("Row size " + rowSize + " is too large");
         }
         _pageChannel.writePage(dataPage, pageNumber);
@@ -548,18 +552,9 @@ public class Table
       //Increment row count record.
       short rowCount = dataPage.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
       dataPage.putShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE, (short) (rowCount + 1));
-      short rowLocation = (short) _format.PAGE_SIZE;
-      if (rowCount > 0) {
-        rowLocation = dataPage.getShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
-            (rowCount - 1) * _format.SIZE_ROW_LOCATION);
-        if (rowLocation < 0) {
-          // Deleted row
-          rowLocation &= ~0xc000;
-        }
-      }
+      short rowLocation = findRowEnd(dataPage, rowCount, _format);
       rowLocation -= rowSize;
-      dataPage.putShort(_format.OFFSET_DATA_ROW_LOCATION_BLOCK +
-          rowCount * _format.SIZE_ROW_LOCATION, rowLocation);
+      dataPage.putShort(getRowStartOffset(rowCount, _format), rowLocation);
       dataPage.position(rowLocation);
       dataPage.put(rowData[i]);
       Iterator<Index> indIter = _indexes.iterator();
@@ -594,8 +589,7 @@ public class Table
     }
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
-    dataPage.putShort((short) (_format.PAGE_SIZE - _format.OFFSET_DATA_ROW_LOCATION_BLOCK -
-        (rowData.limit() - 1) - _format.SIZE_ROW_LOCATION)); //Free space in this page
+    dataPage.putShort((short)_format.MAX_ROW_SIZE); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putInt(0); //Number of records on this page
@@ -608,7 +602,7 @@ public class Table
   /**
    * Serialize a row of Objects into a byte buffer
    */
-  ByteBuffer createRow(Object[] rowArray) throws IOException {
+  ByteBuffer createRow(Object[] rowArray, int maxRowSize) throws IOException {
     ByteBuffer buffer = _pageChannel.createPageBuffer();
     buffer.putShort((short) _columns.size());
     NullMask nullMask = new NullMask(_columns.size());
@@ -625,8 +619,9 @@ public class Table
     for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
       col = (Column) iter.next();
       if (!col.isVariableLength()) {
-        //Fixed length column data comes first
-        buffer.put(col.write(row.get(index)));
+        //Fixed length column data comes first (remainingRowLength is ignored
+        //when writing fixed length data
+        buffer.put(col.write(row.get(index), 0));
       }
       if (col.getType() == DataType.BOOLEAN) {
         if (row.get(index) != null) {
@@ -639,17 +634,28 @@ public class Table
         nullMask.markNull(index);
       }
     }
+
     int varLengthCount = Column.countVariableLength(_columns);
+
+    // figure out how much space remains for var length data.  first, account
+    // for already written space
+    maxRowSize -= buffer.position();
+    // now, account for trailer space
+    maxRowSize -= (nullMask.byteSize() + 4 + (varLengthCount * 2));
+    
     short[] varColumnOffsets = new short[varLengthCount];
     index = 0;
     int varColumnOffsetsIndex = 0;
     //Now write out variable length column data
-    for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
+    for (iter = _columns.iterator(); iter.hasNext() && index < row.size();
+         index++) {
       col = (Column) iter.next();
       short offset = (short) buffer.position();
       if (col.isVariableLength()) {
         if (row.get(index) != null) {
-          buffer.put(col.write(row.get(index)));
+          ByteBuffer varDataBuf = col.write(row.get(index), maxRowSize);
+          maxRowSize -= varDataBuf.remaining();
+          buffer.put(varDataBuf);
         }
         varColumnOffsets[varColumnOffsetsIndex++] = offset;
       }
@@ -748,9 +754,13 @@ public class Table
   public static short findRowStart(ByteBuffer buffer, int rowNum,
                                    JetFormat format)
   {
-    return (short)(buffer.getShort(format.OFFSET_ROW_START +
-                                   (format.SIZE_ROW_LOCATION * rowNum))
+    return (short)(buffer.getShort(getRowStartOffset(rowNum, format))
                    & OFFSET_MASK);
+  }
+
+  public static int getRowStartOffset(int rowNum, JetFormat format)
+  {
+    return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * rowNum);
   }
   
   public static short findRowEnd(ByteBuffer buffer, int rowNum,
@@ -758,11 +768,15 @@ public class Table
   {
     return (short)((rowNum == 0) ?
                    format.PAGE_SIZE :
-                   (buffer.getShort(format.OFFSET_ROW_START +
-                                    (format.SIZE_ROW_LOCATION * (rowNum - 1)))
+                   (buffer.getShort(getRowEndOffset(rowNum, format))
                     & OFFSET_MASK));
   }
 
+  public static int getRowEndOffset(int rowNum, JetFormat format)
+  {
+    return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * (rowNum - 1));
+  }
+  
   /**
    * Row iterator for this table, supports modification.
    */

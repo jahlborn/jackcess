@@ -18,6 +18,7 @@ public class TableTest extends TestCase {
   }
   
   public void testCreateRow() throws Exception {
+    JetFormat format = JetFormat.VERSION_4;
     Table table = new Table();
     List<Column> columns = new ArrayList<Column>();
     Column col = new Column();
@@ -33,7 +34,7 @@ public class TableTest extends TestCase {
     row[0] = new Short((short) 9);
     row[1] = "Tim";
     row[2] = "McCune";
-    ByteBuffer buffer = table.createRow(row);
+    ByteBuffer buffer = table.createRow(row, format.MAX_ROW_SIZE);
     assertEquals((short) colCount, buffer.getShort());
     assertEquals((short) 9, buffer.getShort());
     assertEquals((byte) 'T', buffer.get());

@@ -260,7 +260,9 @@ public class Index implements Comparable<Index> {
    * @param pageNumber Page number on which the row is stored
    * @param rowNumber Row number at which the row is stored
    */
-  public void addRow(Object[] row, int pageNumber, byte rowNumber) {
+  public void addRow(Object[] row, int pageNumber, byte rowNumber)
+    throws IOException
+  {
     _entries.add(new Entry(row, pageNumber, rowNumber));
   }
   
@@ -285,6 +287,21 @@ public class Index implements Comparable<Index> {
       return 0;
     }
   }
+
+  private static void checkColumnType(Column col)
+    throws IOException
+  {
+    if(col.isVariableLength() && !isTextualColumn(col)) {
+      throw new IOException("unsupported index column type: " +
+                            col.getType());
+    }
+  }      
+
+  private static boolean isTextualColumn(Column col) {
+    return((col.getType() == DataType.TEXT) ||
+           (col.getType() == DataType.MEMO));
+  }
+    
   
   /**
    * A single entry in an index (points to a single row)
@@ -304,7 +321,8 @@ public class Index implements Comparable<Index> {
      * @param page Page number on which the row is stored
      * @param rowNumber Row number at which the row is stored
      */
-    public Entry(Object[] values, int page, byte rowNumber) {
+    public Entry(Object[] values, int page, byte rowNumber) throws IOException
+    {
       _page = page;
       _row = rowNumber;
       Iterator iter = _columns.keySet().iterator();
@@ -409,12 +427,15 @@ public class Index implements Comparable<Index> {
     /**
      * Create a new EntryColumn
      */
-    public EntryColumn(Column col, Comparable value) {
+    public EntryColumn(Column col, Comparable value) throws IOException {
+      checkColumnType(col);
       _column = col;
       _value = value;
-      if(_column.getType() == DataType.TEXT) {
+      if(isTextualColumn(_column)) {
         // index strings are stored as uppercase
-        _value = ((_value != null) ? _value.toString().toUpperCase() : null);
+        _value = ((_value != null) ?
+                  Column.toCharSequence(_value).toString().toUpperCase() :
+                  null);
       }
     }
     
@@ -422,10 +443,11 @@ public class Index implements Comparable<Index> {
      * Read in an existing EntryColumn from a buffer
      */
     public EntryColumn(Column col, ByteBuffer buffer) throws IOException {
+      checkColumnType(col);
       _column = col;
       byte flag = buffer.get();
       if (flag != (byte) 0) {
-        if (col.getType() == DataType.TEXT) {
+        if (isTextualColumn(col)) {
           StringBuilder sb = new StringBuilder();
           byte b;
           while ( (b = buffer.get()) != (byte) 1) {
@@ -453,7 +475,7 @@ public class Index implements Comparable<Index> {
           }
           _value = sb.toString();
         } else {
-          byte[] data = new byte[col.getType().getSize()];
+          byte[] data = new byte[col.getType().getFixedSize()];
           buffer.get(data);
           _value = (Comparable) col.read(data, ByteOrder.BIG_ENDIAN);
           //ints and shorts are stored in index as value + 2147483648
@@ -465,7 +487,7 @@ public class Index implements Comparable<Index> {
         }
       }
     }
-    
+
     public Comparable getValue() {
       return _value;
     }
@@ -475,7 +497,7 @@ public class Index implements Comparable<Index> {
      */
     public void write(ByteBuffer buffer) throws IOException {
       buffer.put((byte) 0x7F);
-      if (_column.getType() == DataType.TEXT) {
+      if (isTextualColumn(_column)) {
         String s = (String) _value;
         for (int i = 0; i < s.length(); i++) {
           Byte b = (Byte) CODES.get(new Character(s.charAt(i)));
@@ -508,16 +530,16 @@ public class Index implements Comparable<Index> {
         } else if (value instanceof Short) {
           value = new Short((short) (((Short) value).longValue() - ((long) Integer.MAX_VALUE + 1L)));
         }
-        buffer.put(_column.write(value, ByteOrder.BIG_ENDIAN));
+        buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
       }
     }
     
     public int size() {
       if (_value == null) {
         return 0;
-      } else if (_value instanceof String) {
+      } else if(isTextualColumn(_column)) {
         int rtn = 3;
-        String s = (String) _value;
+        String s = (String)_value;
         for (int i = 0; i < s.length(); i++) {
           rtn++;
           if (s.charAt(i) == '^' || s.charAt(i) == '_' || s.charAt(i) == '{' ||
@@ -531,8 +553,8 @@ public class Index implements Comparable<Index> {
           rtn += _extraBytes.length;
         }
         return rtn;
-      } else {
-        return _column.getType().getSize();
+      } else  {
+        return _column.getType().getFixedSize();
       }
     }
     
