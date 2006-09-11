@@ -168,6 +168,7 @@ public class Table
    */
   void setColumns(List<Column> columns) {
     _columns = columns;
+    _maxVarColumnCount = Column.countVariableLength(_columns);
   }
   
   /**
@@ -519,7 +520,12 @@ public class Table
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
       rowData[i] = createRow((Object[]) iter.next(), _format.MAX_ROW_SIZE);
+      if (rowData[i].limit() > _format.MAX_ROW_SIZE) {
+        throw new IOException("Row size " + rowData[i].limit() +
+                              " is too large");
+      }
     }
+    
     List<Integer> pageNumbers = _ownedPages.getPageNumbers();
     int pageNumber;
     int rowSize;
@@ -532,23 +538,24 @@ public class Table
       pageNumber = ((Integer) pageNumbers.get(pageNumbers.size() - 1)).intValue();
       _pageChannel.readPage(dataPage, pageNumber);
     }
+    
     for (int i = 0; i < rowData.length; i++) {
       rowSize = rowData[i].limit();
+      int rowSpaceUsage = getRowSpaceUsage(rowSize, _format);
       short freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
-      if (freeSpaceInPage < (rowSize + _format.SIZE_ROW_LOCATION)) {
+      if (freeSpaceInPage < rowSpaceUsage) {
+
         //Last data page is full.  Create a new one.
-        if (rowSize > _format.MAX_ROW_SIZE) {
-          throw new IOException("Row size " + rowSize + " is too large");
-        }
         _pageChannel.writePage(dataPage, pageNumber);
         dataPage.clear();
-        pageNumber = newDataPage(dataPage, rowData[i]);
         _freeSpacePages.removePageNumber(pageNumber);
+
+        pageNumber = newDataPage(dataPage, rowData[i]);
         freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
       }
       //Decrease free space record.
       dataPage.putShort(_format.OFFSET_FREE_SPACE, (short) (freeSpaceInPage -
-          rowSize - _format.SIZE_ROW_LOCATION));
+          rowSpaceUsage));
       //Increment row count record.
       short rowCount = dataPage.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
       dataPage.putShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE, (short) (rowCount + 1));
@@ -589,7 +596,8 @@ public class Table
     }
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
-    dataPage.putShort((short)_format.MAX_ROW_SIZE); //Free space in this page
+    dataPage.putShort((short)getRowSpaceUsage(_format.MAX_ROW_SIZE,
+                                              _format)); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putInt(0); //Number of records on this page
@@ -636,37 +644,45 @@ public class Table
     }
 
     int varLengthCount = Column.countVariableLength(_columns);
+    short[] varColumnOffsets = null;
 
-    // figure out how much space remains for var length data.  first, account
-    // for already written space
-    maxRowSize -= buffer.position();
-    // now, account for trailer space
-    maxRowSize -= (nullMask.byteSize() + 4 + (varLengthCount * 2));
+    if(varLengthCount > 0) {
+      // figure out how much space remains for var length data.  first,
+      // account for already written space
+      maxRowSize -= buffer.position();
+      // now, account for trailer space
+      maxRowSize -= (nullMask.byteSize() + 4 + (varLengthCount * 2));
     
-    short[] varColumnOffsets = new short[varLengthCount];
-    index = 0;
-    int varColumnOffsetsIndex = 0;
-    //Now write out variable length column data
-    for (iter = _columns.iterator(); iter.hasNext() && index < row.size();
-         index++) {
-      col = (Column) iter.next();
-      short offset = (short) buffer.position();
-      if (col.isVariableLength()) {
-        if (row.get(index) != null) {
-          ByteBuffer varDataBuf = col.write(row.get(index), maxRowSize);
-          maxRowSize -= varDataBuf.remaining();
-          buffer.put(varDataBuf);
+      varColumnOffsets = new short[varLengthCount];
+      index = 0;
+      int varColumnOffsetsIndex = 0;
+      //Now write out variable length column data
+      for (iter = _columns.iterator(); iter.hasNext() && index < row.size();
+           index++) {
+        col = (Column) iter.next();
+        short offset = (short) buffer.position();
+        if (col.isVariableLength()) {
+          if (row.get(index) != null) {
+            ByteBuffer varDataBuf = col.write(row.get(index), maxRowSize);
+            maxRowSize -= varDataBuf.remaining();
+            buffer.put(varDataBuf);
+          }
+          varColumnOffsets[varColumnOffsetsIndex++] = offset;
         }
-        varColumnOffsets[varColumnOffsetsIndex++] = offset;
       }
     }
-    buffer.putShort((short) buffer.position()); //EOD marker
-    //Now write out variable length offsets
-    //Offsets are stored in reverse order
-    for (int i = varColumnOffsets.length - 1; i >= 0; i--) {
-      buffer.putShort(varColumnOffsets[i]);
+
+    // only need this info if this table contains any var length data
+    if(_maxVarColumnCount > 0) {
+      buffer.putShort((short) buffer.position()); //EOD marker
+      //Now write out variable length offsets
+      //Offsets are stored in reverse order
+      for (int i = varLengthCount - 1; i >= 0; i--) {
+        buffer.putShort(varColumnOffsets[i]);
+      }
+      buffer.putShort((short) varLengthCount);  //Number of var length columns
     }
-    buffer.putShort((short) varLengthCount);  //Number of var length columns
+    
     buffer.put(nullMask.wrap());  //Null mask
     buffer.limit(buffer.position());
     buffer.flip();
@@ -775,6 +791,11 @@ public class Table
   public static int getRowEndOffset(int rowNum, JetFormat format)
   {
     return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * (rowNum - 1));
+  }
+
+  public static int getRowSpaceUsage(int rowSize, JetFormat format)
+  {
+    return rowSize + format.SIZE_ROW_LOCATION;
   }
   
   /**
