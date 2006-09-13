@@ -70,7 +70,14 @@ public class NullMask {
    *    columns, returns the actual value of the column.
    */
   public boolean isNull(int columnNumber) {
-    return (_mask[columnNumber / 8] & (byte) (1 << (columnNumber % 8))) == 0;
+    int maskIndex = columnNumber / 8;
+    // if new columns were added to the table, old null masks may not include
+    // them (meaning the field is null)
+    if(maskIndex >= _mask.length) {
+      // it's null
+      return true;
+    }
+    return (_mask[maskIndex] & (byte) (1 << (columnNumber % 8))) == 0;
   }
   
   public void markNull(int columnNumber) {

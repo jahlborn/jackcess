@@ -525,6 +525,34 @@ public class DatabaseTest extends TestCase {
     List<Column> columns = open().getTable("Table2").getColumns();
     assertEquals(89, columns.size());
   }
+
+  public void testOverflow() throws Exception
+  {
+    Database mdb = Database.open(new File("test/data/overflowTest.mdb"));
+    Table table = mdb.getTable("Table1");
+
+    // 7 rows, 3 and 5 are overflow
+    table.getNextRow();
+    table.getNextRow();
+
+    Map<String, Object> row = table.getNextRow();
+    assertEquals(Arrays.<Object>asList(
+                     null, "row3col3", null, null, null, null, null,
+                     "row3col9", null),
+                 new ArrayList<Object>(row.values()));
+
+    table.getNextRow();
+
+    row = table.getNextRow();
+    assertEquals(Arrays.<Object>asList(
+                     null, "row5col2", null, null, null, null, null, null,
+                     null),
+                 new ArrayList<Object>(row.values()));
+
+    table.reset();
+    assertEquals(7, countRows(table));
+    
+  }
   
   private Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
