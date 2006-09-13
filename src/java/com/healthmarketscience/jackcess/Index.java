@@ -28,6 +28,7 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -54,6 +55,11 @@ public class Index implements Comparable<Index> {
   private static final int MAX_COLUMNS = 10;
   
   private static final short COLUMN_UNUSED = -1;
+
+  private static final int NEW_ENTRY_COLUMN_INDEX = -1;
+
+  private static final SoftReference<String> EMPTY_ACTUAL_VALUE =
+    new SoftReference<String>(null);
   
   /**
    * Map of characters to bytes that Access uses in indexes (not ASCII)
@@ -243,11 +249,13 @@ public class Index implements Comparable<Index> {
     byte[] entryMask = new byte[_format.SIZE_INDEX_ENTRY_MASK];
     indexPage.get(entryMask);
     int lastStart = 0;
+    int nextEntryIndex = 0;
     for (int i = 0; i < entryMask.length; i++) {
       for (int j = 0; j < 8; j++) {
         if ((entryMask[i] & (1 << j)) != 0) {
           int length = i * 8 + j - lastStart;
-          _entries.add(new Entry(indexPage));
+          Entry e = new Entry(indexPage, nextEntryIndex++);
+          _entries.add(e);
           lastStart += length;
         }
       }
@@ -301,6 +309,29 @@ public class Index implements Comparable<Index> {
     return((col.getType() == DataType.TEXT) ||
            (col.getType() == DataType.MEMO));
   }
+
+  /**
+   * Converts an index value for a text column into the "actual" value which
+   * is pretty much the original string, uppercased.
+   */
+  private static String toIndexActualStringValue(Comparable value) {
+    if(value != null) {
+      return Column.toCharSequence(value).toString().toUpperCase();
+    }
+    return null;
+  }
+  
+  /**
+   * Converts an index value for a text column into the "index" value which
+   * is the same as the "actual" value, minus some characters.
+   */
+  private static Comparable toIndexStringValue(Comparable value) {
+    if(value != null) {
+      // apparently '.' is completely ignored in index values
+      value = toIndexActualStringValue(value).replace(".", "");
+    }
+    return value;
+  }
     
   
   /**
@@ -329,23 +360,35 @@ public class Index implements Comparable<Index> {
       while (iter.hasNext()) {
         Column col = (Column) iter.next();
         Object value = values[col.getColumnNumber()];
-        _entryColumns.add(new EntryColumn(col, (Comparable) value));
+        _entryColumns.add(newEntryColumn(col)
+                          .initFromValue((Comparable) value));
       }
     }
     
     /**
      * Read an existing entry in from a buffer
      */
-    public Entry(ByteBuffer buffer) throws IOException {
+    public Entry(ByteBuffer buffer, int nextEntryIndex) throws IOException {
       Iterator iter = _columns.keySet().iterator();
       while (iter.hasNext()) {
-        _entryColumns.add(new EntryColumn((Column) iter.next(), buffer));
+        _entryColumns.add(newEntryColumn((Column)iter.next())
+                          .initFromBuffer(buffer, nextEntryIndex));
       }
-      //3-byte int in big endian order!  Gotta love those kooky MS programmers. :)
-      _page = (((int) buffer.get()) & 0xFF) << 16;
-      _page += (((int) buffer.get()) & 0xFF) << 8;
-      _page += (int) buffer.get();
+      // 3-byte int in big endian order!  Gotta love those kooky MS
+      // programmers. :)
+      _page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       _row = buffer.get();
+    }
+
+    /**
+     * Instantiate the correct EntryColumn for the given column type
+     */
+    private EntryColumn newEntryColumn(Column col) throws IOException
+    {
+      if(isTextualColumn(col)) {
+        return new TextEntryColumn(col);
+      }
+      return new FixedEntryColumn(col);
     }
     
     public List getEntryColumns() {
@@ -409,45 +452,187 @@ public class Index implements Comparable<Index> {
           .append(_row, other.getRow()).toComparison();
     }
     
-  }
-  
-  /**
-   * A single column value within an index Entry; encapsulates column
-   * definition and column value.
-   */
-  private class EntryColumn implements Comparable<EntryColumn> {
-    
-    /** Column definition */
-    private Column _column;
-    /** Column value */
-    private Comparable _value;
-    /** extra column bytes */
-    private byte[] _extraBytes;
-    
+
     /**
-     * Create a new EntryColumn
+     * A single column value within an index Entry; encapsulates column
+     * definition and column value.
      */
-    public EntryColumn(Column col, Comparable value) throws IOException {
-      checkColumnType(col);
-      _column = col;
-      _value = value;
-      if(isTextualColumn(_column)) {
-        // index strings are stored as uppercase
-        _value = ((_value != null) ?
-                  Column.toCharSequence(_value).toString().toUpperCase() :
-                  null);
+    private abstract class EntryColumn implements Comparable<EntryColumn>
+    {
+      /** Column definition */
+      protected Column _column;
+      /** Column value */
+      protected Comparable _value;
+    
+      protected EntryColumn(Column col) throws IOException {
+        checkColumnType(col);
+        _column = col;
+      }
+
+      public int size() {
+        if (_value == null) {
+          return 0;
+        } else  {
+          return nonNullSize();
+        }
+      }
+
+      /**
+       * Initialize using a new value
+       */
+      protected abstract EntryColumn initFromValue(Comparable value)
+        throws IOException;
+
+      /**
+       * Initialize from a buffer
+       */
+      protected abstract EntryColumn initFromBuffer(ByteBuffer buffer,
+                                                    int entryIndex)
+        throws IOException;
+
+      /**
+       * Write this entry column to a buffer
+       */
+      public abstract void write(ByteBuffer buffer) throws IOException;
+    
+      protected abstract int nonNullSize();
+
+      public abstract int compareTo(EntryColumn other);
+    }
+
+    /**
+     * A single fixed column value within an index Entry; encapsulates column
+     * definition and column value.
+     */
+    private class FixedEntryColumn extends EntryColumn
+    {
+    
+      public FixedEntryColumn(Column col) throws IOException {
+        super(col);
+        if(isTextualColumn(col)) {
+          throw new IOException("must be fixed column");
+        }
+      }
+
+      /**
+       * Initialize using a new value
+       */
+      @Override
+      protected EntryColumn initFromValue(Comparable value) throws IOException
+      {
+        _value = value;
+      
+        return this;
+      }
+
+      /**
+       * Initialize from a buffer
+       */
+      @Override
+      protected EntryColumn initFromBuffer(ByteBuffer buffer,
+                                           int entryIndex)
+        throws IOException
+      {
+        byte flag = buffer.get();
+        if (flag != (byte) 0) {
+          byte[] data = new byte[_column.getType().getFixedSize()];
+          buffer.get(data);
+          _value = (Comparable) _column.read(data, ByteOrder.BIG_ENDIAN);
+          //ints and shorts are stored in index as value + 2147483648
+          if (_value instanceof Integer) {
+            _value = new Integer((int) (((Integer) _value).longValue() +
+                                        (long) Integer.MAX_VALUE + 1L)); 
+          } else if (_value instanceof Short) {
+            _value = new Short((short) (((Short) _value).longValue() +
+                                        (long) Integer.MAX_VALUE + 1L));
+          }
+        }
+
+        return this;
+      }
+    
+      /**
+       * Write this entry column to a buffer
+       */
+      @Override
+      public void write(ByteBuffer buffer) throws IOException {
+        buffer.put((byte) 0x7F);
+        Comparable value = _value;
+        if (value instanceof Integer) {
+          value = new Integer((int) (((Integer) value).longValue() -
+                                     ((long) Integer.MAX_VALUE + 1L)));
+        } else if (value instanceof Short) {
+          value = new Short((short) (((Short) value).longValue() -
+                                     ((long) Integer.MAX_VALUE + 1L)));
+        }
+        buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
+      }
+    
+      @Override
+      protected int nonNullSize() {
+        return _column.getType().getFixedSize();
+      }
+
+      @Override
+      public String toString() {
+        return String.valueOf(_value);
+      }
+        
+      @Override
+      public int compareTo(EntryColumn other) {
+        return new CompareToBuilder().append(_value, other._value)
+          .toComparison();
       }
     }
-    
+
+  
     /**
-     * Read in an existing EntryColumn from a buffer
+     * A single textual column value within an index Entry; encapsulates
+     * column definition and column value.
      */
-    public EntryColumn(Column col, ByteBuffer buffer) throws IOException {
-      checkColumnType(col);
-      _column = col;
-      byte flag = buffer.get();
-      if (flag != (byte) 0) {
-        if (isTextualColumn(col)) {
+    private class TextEntryColumn extends EntryColumn
+    {
+      /** extra column bytes */
+      private byte[] _extraBytes;
+      /** original index of this textual column in the Index, if read from the
+          db */
+      private int _origIndex = NEW_ENTRY_COLUMN_INDEX;
+      /** the actual row value, used for ordering new values */
+      private SoftReference<String> _actualValue = EMPTY_ACTUAL_VALUE;
+    
+      public TextEntryColumn(Column col) throws IOException {
+        super(col);
+        if(!isTextualColumn(col)) {
+          throw new IOException("must be textual column");
+        }
+      }
+
+      /**
+       * Initialize using a new value
+       */
+      @Override
+      protected EntryColumn initFromValue(Comparable value) throws IOException
+      {
+        // convert strings appropriately
+        _actualValue = new SoftReference<String>(
+            toIndexActualStringValue(value));
+        _value = toIndexStringValue(value);
+      
+        return this;
+      }
+
+      /**
+       * Initialize from a buffer
+       */
+      @Override
+      protected EntryColumn initFromBuffer(ByteBuffer buffer,
+                                           int entryIndex)
+        throws IOException
+      {
+        _origIndex = entryIndex;
+        byte flag = buffer.get();
+        if (flag != (byte) 0) {
+          
           StringBuilder sb = new StringBuilder();
           byte b;
           while ( (b = buffer.get()) != (byte) 1) {
@@ -459,6 +644,8 @@ public class Index implements Comparable<Index> {
               sb.append(c.charValue());
             }
           }
+          _value = sb.toString();
+
           //Forward past 0x00 (in some cases, there is more data here, which
           //we don't currently understand)
           byte endByte = buffer.get();
@@ -473,31 +660,28 @@ public class Index implements Comparable<Index> {
             buffer.get(_extraBytes);
             buffer.get();
           }
-          _value = sb.toString();
-        } else {
-          byte[] data = new byte[col.getType().getFixedSize()];
-          buffer.get(data);
-          _value = (Comparable) col.read(data, ByteOrder.BIG_ENDIAN);
-          //ints and shorts are stored in index as value + 2147483648
-          if (_value instanceof Integer) {
-            _value = new Integer((int) (((Integer) _value).longValue() + (long) Integer.MAX_VALUE + 1L)); 
-          } else if (_value instanceof Short) {
-            _value = new Short((short) (((Short) _value).longValue() + (long) Integer.MAX_VALUE + 1L));
-          }
+          
         }
-      }
-    }
 
-    public Comparable getValue() {
-      return _value;
-    }
+        return this;
+      }
+
+      private String getActualValue() {
+        String actual = _actualValue.get();
+        if(actual == null) {
+          // FIXME, need to read from db, for now use index value
+          actual = (String)_value;
+          _actualValue = new SoftReference<String>(actual);
+        }
+        return actual;
+      }
     
-    /**
-     * Write this entry column to a buffer
-     */
-    public void write(ByteBuffer buffer) throws IOException {
-      buffer.put((byte) 0x7F);
-      if (isTextualColumn(_column)) {
+      /**
+       * Write this entry column to a buffer
+       */
+      @Override
+      public void write(ByteBuffer buffer) throws IOException {
+        buffer.put((byte) 0x7F);
         String s = (String) _value;
         for (int i = 0; i < s.length(); i++) {
           Byte b = (Byte) CODES.get(new Character(s.charAt(i)));
@@ -507,8 +691,8 @@ public class Index implements Comparable<Index> {
           } else {
             byte bv = b.byteValue();
             //WTF is this?  No idea why it's this way, but it is. :)
-            if (bv == (byte) 2 || bv == (byte) 3 || bv == (byte) 9 || bv == (byte) 11 ||
-                bv == (byte) 13 || bv == (byte) 15)
+            if (bv == (byte) 2 || bv == (byte) 3 || bv == (byte) 9 ||
+                bv == (byte) 11 || bv == (byte) 13 || bv == (byte) 15)
             {
               buffer.put((byte) 43);  //Ah, the magic 43.
             }
@@ -523,21 +707,10 @@ public class Index implements Comparable<Index> {
           buffer.put(_extraBytes);
         }
         buffer.put((byte) 0);
-      } else {
-        Comparable value = _value;
-        if (value instanceof Integer) {
-          value = new Integer((int) (((Integer) value).longValue() - ((long) Integer.MAX_VALUE + 1L)));
-        } else if (value instanceof Short) {
-          value = new Short((short) (((Short) value).longValue() - ((long) Integer.MAX_VALUE + 1L)));
-        }
-        buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
       }
-    }
-    
-    public int size() {
-      if (_value == null) {
-        return 0;
-      } else if(isTextualColumn(_column)) {
+
+      @Override
+      protected int nonNullSize() {
         int rtn = 3;
         String s = (String)_value;
         for (int i = 0; i < s.length(); i++) {
@@ -553,19 +726,33 @@ public class Index implements Comparable<Index> {
           rtn += _extraBytes.length;
         }
         return rtn;
-      } else  {
-        return _column.getType().getFixedSize();
       }
-    }
-    
-    public String toString() {
-      return String.valueOf(_value);
-    }
-    
-    public int compareTo(EntryColumn other) {
-      return new CompareToBuilder().append(_value, other.getValue())
+
+      @Override
+      public String toString() {
+        return "'" + String.valueOf(_value) + "' (origIndex = " +
+          _origIndex + ")";
+      }
+        
+      @Override
+      public int compareTo(EntryColumn other) {
+        TextEntryColumn textOther = (TextEntryColumn)other;
+        if((_origIndex != NEW_ENTRY_COLUMN_INDEX) &&
+           (textOther._origIndex != NEW_ENTRY_COLUMN_INDEX)) {
+          // use original index for order
+          return new CompareToBuilder().append(_origIndex,
+                                               textOther._origIndex)
+            .toComparison();
+        }
+
+        // compare using actual values
+        return new CompareToBuilder().append(getActualValue(),
+                                             textOther.getActualValue())
           .toComparison();
+      }
+    
     }
+    
   }
   
 }

@@ -576,14 +576,14 @@ public class DatabaseTest extends TestCase {
     db.createTable("test", columns);
   }
 
-  private static void dumpDatabase(Database mdb) throws Exception {
+  static void dumpDatabase(Database mdb) throws Exception {
     System.out.println("DATABASE:");
     for(Table table : mdb) {
       dumpTable(table);
     }
   }
 
-  private static void dumpTable(Table table) throws Exception {
+  static void dumpTable(Table table) throws Exception {
     System.out.println("TABLE: " + table.getName());
     for(Object row : table) {
       System.out.println(row);

@@ -82,12 +82,22 @@ public final class ByteUtil {
    * @return The int
    */
   public static int get3ByteInt(ByteBuffer buffer) {
+    return get3ByteInt(buffer, buffer.order());
+  }
+
+  /**
+   * Read a 3 byte int from a buffer
+   * @param buffer Buffer containing the bytes
+   * @param order  the order of the bytes of the int
+   * @return The int
+   */
+  public static int get3ByteInt(ByteBuffer buffer, ByteOrder order) {  
     int pos = buffer.position();
-    int rtn = get3ByteInt(buffer, pos);
+    int rtn = get3ByteInt(buffer, pos, order);
     buffer.position(pos + 3);
     return rtn;
   }
-  
+
   /**
    * Read a 3 byte int from a buffer
    * @param buffer Buffer containing the bytes
@@ -95,9 +105,21 @@ public final class ByteUtil {
    * @return The int
    */
   public static int get3ByteInt(ByteBuffer buffer, int offset) {
+    return get3ByteInt(buffer, offset, buffer.order());
+  }
+  
+  /**
+   * Read a 3 byte int from a buffer
+   * @param buffer Buffer containing the bytes
+   * @param offset Offset at which to start reading the int
+   * @param order  the order of the bytes of the int
+   * @return The int
+   */
+  public static int get3ByteInt(ByteBuffer buffer, int offset,
+                                ByteOrder order) {
 
     int offInc = 1;
-    if(buffer.order() == ByteOrder.BIG_ENDIAN) {
+    if(order == ByteOrder.BIG_ENDIAN) {
       offInc = -1;
       offset += 2;
     }
