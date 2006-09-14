@@ -53,23 +53,25 @@ public class Table
   
   private static final Log LOG = LogFactory.getLog(Table.class);
 
+  private static final int INVALID_ROW_NUMBER = -1;
+  
   private static final short OFFSET_MASK = (short)0x1FFF;
 
   private static final short DELETED_ROW_MASK = (short)0x8000;
   
   private static final short OVERFLOW_ROW_MASK = (short)0x4000;
-  
+
   /** Table type code for system tables */
   public static final byte TYPE_SYSTEM = 0x53;
   /** Table type code for user tables */
   public static final byte TYPE_USER = 0x4e;
   
-  /** Buffer used for reading the table */
-  private ByteBuffer _rowBuffer;
+  /** State used for reading the table rows */
+  private RowState _rowState;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
   private byte _tableType;
   /** Number of the current row in a data page */
-  private int _currentRowInPage;
+  private int _currentRowInPage = INVALID_ROW_NUMBER;
   /** Number of indexes on the table */
   private int _indexCount;
   /** Number of index slots for the table */
@@ -104,12 +106,6 @@ public class Table
   private UsageMap _ownedPages;
   /** Usage map of pages that this table owns with free space on them */
   private UsageMap _freeSpacePages;
-  /** buffer used for reading overflow pages */
-  private ByteBuffer _overflowRowBuffer;
-  /** the page number of the currently read overflow page */
-  private int _overflowPageNumber;
-  /** true if the current row is an overflow row */
-  private boolean _overflowRow;
   
   /**
    * Only used by unit tests
@@ -150,10 +146,10 @@ public class Table
       tableBuffer = newBuffer;
       tableBuffer.flip();
     }
-    readPage(tableBuffer);
+    readTableDefinition(tableBuffer);
     tableBuffer = null;
 
-    _rowBuffer = _pageChannel.createPageBuffer();
+    _rowState = new RowState(true);
   }
 
   /**
@@ -169,6 +165,7 @@ public class Table
   public List<Column> getColumns() {
     return Collections.unmodifiableList(_columns);
   }
+  
   /**
    * Only called by unit tests
    */
@@ -192,13 +189,14 @@ public class Table
   }
   
   /**
-   * After calling this method, getNextRow will return the first row in the table
+   * After calling this method, getNextRow will return the first row in the
+   * table
    */
   public void reset() {
     _rowsLeftOnPage = 0;
+    _currentRowInPage = INVALID_ROW_NUMBER;
     _ownedPages.reset();
-    _currentRowInPage = 0;
-    _overflowRow = false;
+    _rowState.reset();
   }
   
   /**
@@ -212,13 +210,17 @@ public class Table
    * Delete the current row (retrieved by a call to {@link #getNextRow}).
    */
   public void deleteCurrentRow() throws IOException {
-    if (_currentRowInPage == 0) {
+    if (_currentRowInPage == INVALID_ROW_NUMBER) {
       throw new IllegalStateException("Must call getNextRow first");
     }
-    int index = getRowStartOffset(_currentRowInPage - 1, _format);
-    _rowBuffer.putShort(index, (short) (_rowBuffer.getShort(index)
-                                     | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
-    _pageChannel.writePage(_rowBuffer, _ownedPages.getCurrentPageNumber());
+
+    // delete flag always gets set in the "root" page (even if overflow row)
+    ByteBuffer rowBuffer = _rowState.getPage(_pageChannel);
+    int index = getRowStartOffset(_currentRowInPage, _format);
+    rowBuffer.putShort(index, (short)(rowBuffer.getShort(index)
+                                      | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
+    writeDataPage(rowBuffer, _rowState.getPageNumber());
+    _rowState.setDeleted(true);
   }
   
   /**
@@ -228,21 +230,22 @@ public class Table
   public Map<String, Object> getNextRow(Collection<String> columnNames) 
     throws IOException
   {
-    if (!positionAtNextRow()) {
+    // find next row
+    ByteBuffer rowBuffer = positionAtNextRow();
+    if (rowBuffer == null) {
       return null;
     }
-
-    // figure out which buffer to use
-    ByteBuffer rowBuffer = ((!_overflowRow) ? _rowBuffer : _overflowRowBuffer);
+    
+    // keep track of row bounds
+    int rowStart = rowBuffer.position();
+    int rowEnd = rowBuffer.limit();
     
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Data block at position " + Integer.toHexString(rowBuffer.position()) +
-          ":\n" + ByteUtil.toHexString(rowBuffer, rowBuffer.position(),
-          rowBuffer.limit() - rowBuffer.position()));
+      LOG.debug("Data block at position " +
+                Integer.toHexString(rowBuffer.position()) +
+                ":\n" + ByteUtil.toHexString(rowBuffer, rowStart,
+                                             (rowEnd - rowStart)));
     }
-    
-    // keep track of where the row starts
-    int rowStart = rowBuffer.position();
     
     short columnCount = rowBuffer.getShort(); //Number of columns in this row
 
@@ -251,23 +254,22 @@ public class Table
     
     // read null mask
     NullMask nullMask = new NullMask(columnCount);
-    rowBuffer.position(rowBuffer.limit() - nullMask.byteSize());  //Null mask at end
+    rowBuffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
     nullMask.read(rowBuffer);
 
-    short rowVarColumnCount = 0;
     short[] varColumnOffsets = null;
-    short lastVarColumnStart = 0;
     // if _maxVarColumnCount is 0, then row info does not include varcol info
     if(_maxVarColumnCount > 0) {
-      rowBuffer.position(rowBuffer.limit() - nullMask.byteSize() - 2);
-      rowVarColumnCount = rowBuffer.getShort();  // number of variable length columns in this row
+      rowBuffer.position(rowEnd - nullMask.byteSize() - 2);
+      short rowVarColumnCount = rowBuffer.getShort();  // number of variable length columns in this row
 
-      //Read in the offsets of each of the variable length columns
-      varColumnOffsets = new short[rowVarColumnCount];
-      rowBuffer.position(rowBuffer.position() - 2 - (rowVarColumnCount * 2) - 2);
-      lastVarColumnStart = rowBuffer.getShort();
-      for (short i = 0; i < rowVarColumnCount; i++) {
-        varColumnOffsets[i] = rowBuffer.getShort();
+      // Read in the offsets of each of the variable length columns (in
+      // reverse order)
+      varColumnOffsets = new short[rowVarColumnCount + 1];
+      int varColumnOffsetPos = rowBuffer.position() - 4;
+      for (short i = 0; i < (rowVarColumnCount + 1); i++) {
+        varColumnOffsets[i] = rowBuffer.getShort(varColumnOffsetPos);
+        varColumnOffsetPos -= 2;
       }
     }
 
@@ -297,12 +299,9 @@ public class Table
             else
             {
               // find var length column data
-              int varDataIdx = (rowVarColumnCount -
-                                column.getVarLenTableIndex() - 1);
-              int varDataStart = varColumnOffsets[varDataIdx];
-              int varDataEnd = ((varDataIdx > 0) ?
-                                varColumnOffsets[varDataIdx - 1] :
-                                lastVarColumnStart);
+              int varDataIdx = column.getVarLenTableIndex();
+              short varDataStart = varColumnOffsets[varDataIdx];
+              short varDataEnd = varColumnOffsets[varDataIdx + 1];
               colDataPos = rowStart + varDataStart;
               colDataLen = varDataEnd - varDataStart;
             }
@@ -324,138 +323,141 @@ public class Table
   
   /**
    * Position the buffer at the next row in the table
-   * @return True if another row was found, false if there are no more rows
+   * @return a ByteBuffer narrowed to the next row, or null if none
    */
-  private boolean positionAtNextRow() throws IOException {
+  private ByteBuffer positionAtNextRow() throws IOException {
 
     // loop until we find the next valid row or run out of pages
     while(true) {
+
+      // prepare to read new row
+      _rowState.reset();
       
       if (_rowsLeftOnPage == 0) {
-        do {
-          if (!_ownedPages.getNextPage(_rowBuffer)) {
-            //No more owned pages.  No more rows.
-            return false;
-          }
-        } while (_rowBuffer.get() != PageTypes.DATA);  //Only interested in data pages
-        _rowsLeftOnPage = _rowBuffer.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
-        _currentRowInPage = 0;
+
+        // reset row number
+        _currentRowInPage = INVALID_ROW_NUMBER;
+        
+        Integer nextPageNumber = _ownedPages.getNextPage();
+        if (nextPageNumber == null) {
+          //No more owned pages.  No more rows.
+          return null;
+        }
+
+        // load new page
+        ByteBuffer rowBuffer = _rowState.setPage(_pageChannel, nextPageNumber);
+        if(rowBuffer.get() != PageTypes.DATA) {
+          //Only interested in data pages
+          continue;
+        }
+
+        _rowsLeftOnPage = rowBuffer.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
+        if(_rowsLeftOnPage == 0) {
+          // no rows on this page?
+          continue;
+        }
+        
       }
 
-      int curRow = _currentRowInPage++;
+      // move to next row
+      _currentRowInPage++;
       _rowsLeftOnPage--;
-      _overflowRow = false;
 
-      if(positionAtRow(_rowBuffer, curRow)) {
-        return true;
+      // reset row state to current "root" page
+      _rowState.setPage(_pageChannel);
+
+      ByteBuffer rowBuffer =
+        positionAtRow(_rowState, _currentRowInPage, _pageChannel, _format);
+      if(rowBuffer != null) {
+        return rowBuffer;
       }
     }
   }
 
   /**
-   * Sets the position and limit in the given row buffer according to the
-   * given row number and row end.
+   * Sets the position and limit in a new buffer using the given rowState
+   * according to the given row number and row end, following overflow row
+   * pointers as necessary.
    * 
-   * @return <code>true</code> if set to valid row, <code>false</code> if the
-   *         given row was deleted.  sets up the _overflow* fields
-   *         apppropriately as a side effect.
+   * @return a ByteBuffer narrowed to the next row, or null if row was deleted
    */
-  private boolean positionAtRow(ByteBuffer rowBuffer, int rowNum)
+  private static ByteBuffer positionAtRow(RowState rowState, int rowNum,
+                                          PageChannel pageChannel,
+                                          JetFormat format)
     throws IOException
   {
-    // note, we don't use findRowStart here cause we need the unmasked value
-    short rowStart = rowBuffer.getShort(getRowStartOffset(rowNum, _format));
-    short rowEnd = findRowEnd(rowBuffer, rowNum, _format);
 
-    boolean deletedRow = ((rowStart & DELETED_ROW_MASK) != 0);
-    boolean overflowRow = ((rowStart & OVERFLOW_ROW_MASK) != 0);
-
-    if(deletedRow ^ overflowRow) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Row flags: deletedRow " + deletedRow + ", overflowRow " +
-                  overflowRow);
-      }
-    }
-
-    rowStart = (short)(rowStart & OFFSET_MASK);
-
-    // note, if we are reading from an overflow page, the row will be marked
-    // as deleted on that page, so ignore the deletedRow flag on overflow
-    // pages
-    if (deletedRow && !_overflowRow) {
-      
-      // Deleted row.  Skip.
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Skipping deleted row");
-      }
-      return false;
-      
-    } else if (overflowRow) {
-
-      if((rowEnd - rowStart) < 4) {
-        throw new IOException("invalid overflow row info");
-      }
-      
-      // Overflow page.  the "row" data in the current page points to another
-      // page/row
-      rowBuffer.position(rowStart);
-      rowBuffer.limit(rowEnd);
-      
-      int overflowRowNum = rowBuffer.get();
-      int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer);
-      return positionAtOverflowPage(overflowPageNum, overflowRowNum);
-      
-    } else {
-      
-      rowBuffer.position(rowStart);
-      rowBuffer.limit(rowEnd);
-      return true;
-    }
+    while(true) {
+      ByteBuffer rowBuffer = rowState.getFinalPage();
     
+      // note, we don't use findRowStart here cause we need the unmasked value
+      short rowStart = rowBuffer.getShort(getRowStartOffset(rowNum, format));
+      short rowEnd = findRowEnd(rowBuffer, rowNum, format);
+
+      // note, if we are reading from an overflow page, the row will be marked
+      // as deleted on that page, so ignore the deletedRow flag on overflow
+      // pages
+      boolean deletedRow =
+        (((rowStart & DELETED_ROW_MASK) != 0) && !rowState.isOverflow());
+      boolean overflowRow = ((rowStart & OVERFLOW_ROW_MASK) != 0);
+
+      if(deletedRow ^ overflowRow) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Row flags: deletedRow " + deletedRow + ", overflowRow " +
+                    overflowRow);
+        }
+      }
+
+      // now, strip flags from rowStart offset
+      rowStart = (short)(rowStart & OFFSET_MASK);
+
+      if (deletedRow) {
+      
+        // Deleted row.  Skip.
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Skipping deleted row");
+        }
+        rowState.setDeleted(true);
+        return null;
+      
+      } else if (overflowRow) {
+
+        if((rowEnd - rowStart) < 4) {
+          throw new IOException("invalid overflow row info");
+        }
+      
+        // Overflow page.  the "row" data in the current page points to another
+        // page/row
+        int overflowRowNum = rowBuffer.get(rowStart);
+        int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer, rowStart + 1);
+        rowState.setOverflowPage(pageChannel, overflowPageNum);
+
+        // reset row number and move to overflow page
+        rowNum = overflowRowNum;
+      
+      } else {
+
+        return PageChannel.narrowBuffer(rowBuffer, rowStart, rowEnd);
+      }
+    }    
   }
 
   /**
-   * Sets the _overflow* fields appropriately for the given overflow page/row
-   * info.
-   * 
-   * @return <code>true</code> if set to valid row, <code>false</code> if the
-   *         given row was deleted.
+   * Reads a single column from the given row in the given buffer.
    */
-  private boolean positionAtOverflowPage(int pageNumber, int rowNum)
+  public static Object readRowSingleColumn(ByteBuffer buffer, int rowNum,
+                                           Column column, JetFormat format)
     throws IOException
   {
-    if((_overflowRowBuffer == null) || (_overflowPageNumber != pageNumber)) {
+    // FIXME, doesn't support overflow row
+    short rowStart = findRowStart(buffer, rowNum, format);
+    short rowEnd = findRowEnd(buffer, rowNum, format);
 
-      // need to load page
-      if(_overflowRowBuffer == null) {
-        // create buffer
-        _overflowRowBuffer = _pageChannel.createPageBuffer();
-      }
-
-      // read page
-      _overflowPageNumber = pageNumber;
-      _pageChannel.readPage(_overflowRowBuffer, _overflowPageNumber);
-
-    }
-
-    // indicate that the row data is in the overflow page
-    _overflowRow = true;
-    
-    // find position on overflow page
-    return positionAtRow(_overflowRowBuffer, rowNum);
-  }
-  
-  public static Object readRowColumn(ByteBuffer buffer, int rowNum,
-                                     Column column, JetFormat format)
-    throws IOException
-  {
-    int rowStart = findRowStart(buffer, rowNum, format);
-    int rowEnd = findRowEnd(buffer, rowNum, format);
-
+    buffer.position(rowStart);
     short columnCount = buffer.getShort(); //Number of columns in this row
     
     NullMask nullMask = new NullMask(columnCount);
-    buffer.position(buffer.limit() - nullMask.byteSize());  //Null mask at end
+    buffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
     nullMask.read(buffer);
 
     boolean isNull = nullMask.isNull(column.getColumnNumber());
@@ -479,20 +481,14 @@ public class Table
     } else {
 
       // read var length value
-      short rowVarColumnCount = 0;
-      short lastVarColumnStart = 0;
+      int varColumnOffsetPos =
+        (rowEnd - nullMask.byteSize() - 4) -
+        (column.getVarLenTableIndex() * 2);
 
-      // FIXME
-//       buffer.position(buffer.limit() - nullMask.byteSize() - 2);
-//       rowVarColumnCount = buffer.getShort();  // number of variable length columns in this row
-
-//       //Read in the offsets of each of the variable length columns
-//       varColumnOffsets = new short[rowVarColumnCount];
-//       buffer.position(buffer.position() - 2 - (rowVarColumnCount * 2) - 2);
-//       lastVarColumnStart = buffer.getShort();
-//       for (short i = 0; i < rowVarColumnCount; i++) {
-//         varColumnOffsets[i] = buffer.getShort();
-//       }
+      short varDataStart = buffer.getShort(varColumnOffsetPos);
+      short varDataEnd = buffer.getShort(varColumnOffsetPos - 2);
+      colDataPos = rowStart + varDataStart;
+      colDataLen = varDataEnd - varDataStart;
     }
 
     // parse the column data
@@ -531,7 +527,8 @@ public class Table
   /**
    * Read the table definition
    */
-  private void readPage(ByteBuffer tableBuffer) throws IOException {
+  private void readTableDefinition(ByteBuffer tableBuffer) throws IOException
+  {
     if (LOG.isDebugEnabled()) {
       tableBuffer.rewind();
       LOG.debug("Table def block:\n" + ByteUtil.toHexString(tableBuffer,
@@ -636,6 +633,20 @@ public class Table
     // reset to end of index info
     tableBuffer.position(idxEndOffset);
   }
+
+  /**
+   * Writes the given page data to the given page number, clears any other
+   * relevant buffers.
+   */
+  private void writeDataPage(ByteBuffer pageBuffer, int pageNumber)
+    throws IOException
+  {
+    // write the page data
+    _pageChannel.writePage(pageBuffer, pageNumber);
+
+    // if the overflow buffer is this page, invalidate it
+    _rowState.possiblyInvalidate(pageNumber, pageBuffer);
+  }
   
   /**
    * Add a single row to this table and write it to disk
@@ -682,7 +693,7 @@ public class Table
       if (freeSpaceInPage < rowSpaceUsage) {
 
         //Last data page is full.  Create a new one.
-        _pageChannel.writePage(dataPage, pageNumber);
+        writeDataPage(dataPage, pageNumber);
         dataPage.clear();
         _freeSpacePages.removePageNumber(pageNumber);
 
@@ -706,7 +717,7 @@ public class Table
         index.addRow((Object[]) rows.get(i), pageNumber, (byte) rowCount);
       }
     }
-    _pageChannel.writePage(dataPage, pageNumber);
+    writeDataPage(dataPage, pageNumber);
     
     //Update tdef page
     ByteBuffer tdefPage = _pageChannel.createPageBuffer();
@@ -972,11 +983,97 @@ public class Table
         _next = getNextRow(_columnNames);
         return rtn;
       } catch(IOException e) {
-        e.printStackTrace(System.out);
         throw new IllegalStateException(e);
       }
     }
     
   }
 
+  /**
+   * Maintains the state of reading a row of data.
+   */
+  public static class RowState
+  {
+    /** Buffer used for reading the row data pages */
+    private TempPageHolder _rowBufferH;
+    /** true if the current row is an overflow row */
+    public boolean _overflow;
+    /** true if the current row is a deleted row */
+    public boolean _deleted;
+    /** buffer used for reading overflow pages */
+    public TempPageHolder _overflowRowBufferH =
+      TempPageHolder.newHolder(false);
+    /** the row buffer which contains the final data (after following any
+        overflow pointers) */
+    public ByteBuffer _finalRowBuffer;
+
+    public RowState(boolean hardRowBuffer) {
+      _rowBufferH = TempPageHolder.newHolder(hardRowBuffer);
+    }
+    
+    public void reset() {
+      _finalRowBuffer = null;
+      _deleted = false;
+      _overflow = false;
+    }
+
+    public int getPageNumber() {
+      return _rowBufferH.getPageNumber();
+    }
+
+    public ByteBuffer getFinalPage()
+      throws IOException
+    {
+      return _finalRowBuffer;
+    }
+
+    public void setDeleted(boolean deleted) {
+      _deleted = deleted;
+    }
+
+    public boolean isDeleted() {
+      return _deleted;
+    }
+    
+    public boolean isOverflow() {
+      return _overflow;
+    }
+
+    public void possiblyInvalidate(int modifiedPageNumber,
+                                   ByteBuffer modifiedBuffer) {
+      _rowBufferH.possiblyInvalidate(modifiedPageNumber,
+                                     modifiedBuffer);
+      _overflowRowBufferH.possiblyInvalidate(modifiedPageNumber,
+                                             modifiedBuffer);
+    }
+    
+    public ByteBuffer getPage(PageChannel pageChannel)
+      throws IOException
+    {
+      return _rowBufferH.getPage(pageChannel);
+    }
+
+    public ByteBuffer setPage(PageChannel pageChannel)
+      throws IOException
+    {
+      return setPage(pageChannel, _rowBufferH.getPageNumber());
+    }
+    
+    public ByteBuffer setPage(PageChannel pageChannel, int pageNumber)
+      throws IOException
+    {
+      _finalRowBuffer = _rowBufferH.setPage(pageChannel, pageNumber);
+      return _finalRowBuffer;
+    }
+
+    public ByteBuffer setOverflowPage(PageChannel pageChannel, int pageNumber)
+      throws IOException
+    {
+      _overflow = true;
+      _finalRowBuffer = _overflowRowBufferH.setPage(pageChannel, pageNumber);
+      return _finalRowBuffer;
+    }
+
+  }
+  
 }

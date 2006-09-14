@@ -151,25 +151,24 @@ public abstract class UsageMap {
   protected JetFormat getFormat() {
     return _format;
   }
-  
+
   /**
-   * After calling this method, getNextPage will return the first page in the map
+   * After calling this method, getNextPage will return the first page in the
+   * map
    */
   public void reset() {
     _currentPageIndex = 0;
   }
   
   /**
-   * @param buffer Buffer to read the next page into
-   * @return Whether or not there was another page to read
+   * @return non-<code>null</code> if there was another page to read,
+   *         <code>null</code> otherwise
    */
-  public boolean getNextPage(ByteBuffer buffer) throws IOException {
+  public Integer getNextPage() {
     if (_pageNumbers.size() > _currentPageIndex) {
-      Integer pageNumber = _pageNumbers.get(_currentPageIndex++);
-      _pageChannel.readPage(buffer, pageNumber);
-      return true;
+      return _pageNumbers.get(_currentPageIndex++);
     } else {
-      return false;
+      return null;
     }
   }
   

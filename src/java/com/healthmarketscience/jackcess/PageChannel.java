@@ -43,6 +43,8 @@ public class PageChannel implements Channel {
   
   private static final Log LOG = LogFactory.getLog(PageChannel.class);
   
+  static final int INVALID_PAGE_NUMBER = -1;
+  
   /** Global usage map always lives on page 1 */
   private static final int PAGE_GLOBAL_USAGE_MAP = 1;
   
@@ -130,6 +132,20 @@ public class PageChannel implements Channel {
   
   public boolean isOpen() {
     return _channel.isOpen();
+  }
+
+  /**
+   * @return a duplicate of the current buffer narrowed to the given position
+   *         and limit.
+   */
+  public static ByteBuffer narrowBuffer(ByteBuffer buffer, int position,
+                                        int limit)
+  {
+    return (ByteBuffer)buffer.duplicate()
+      .order(buffer.order())
+      .clear()
+      .limit(limit)
+      .position(position);
   }
   
 }

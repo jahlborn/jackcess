@@ -26,11 +26,11 @@ public class DatabaseTest extends TestCase {
     super(name);
   }
    
-  private Database open() throws Exception {
+  static Database open() throws Exception {
     return Database.open(new File("test/data/test.mdb"));
   }
   
-  private Database create() throws Exception {
+  static Database create() throws Exception {
     File tmp = File.createTempFile("databaseTest", ".mdb");
     tmp.deleteOnExit();
     return Database.create(tmp);
@@ -116,9 +116,10 @@ public class DatabaseTest extends TestCase {
     checkColumn(columns, 8, "I", DataType.BOOLEAN);
   }
   
-  private void checkColumn(List columns, int columnNumber, String name,
+  static void checkColumn(List columns, int columnNumber, String name,
       DataType dataType)
-  throws Exception {
+    throws Exception
+  {
     Column column = (Column) columns.get(columnNumber);
     assertEquals(name, column.getName());
     assertEquals(dataType, column.getType());
@@ -333,14 +334,6 @@ public class DatabaseTest extends TestCase {
     assertEquals(expectedPKs, foundPKs);
   }
   
-  private int countRows(Table table) throws Exception {
-    int rtn = 0;
-    for(Map<String, Object> row : table) {
-      rtn++;
-    }
-    return rtn;
-  }
-
   public void testReadWithDeletedCols() throws Exception {
     Table table = Database.open(new File("test/data/delColTest.mdb")).getTable("Table1");
 
@@ -554,16 +547,16 @@ public class DatabaseTest extends TestCase {
     
   }
   
-  private Object[] createTestRow(String col1Val) {
+  static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
         777.88f, (short) 999, new Date()};
   }
 
-  private Object[] createTestRow() {
+  static Object[] createTestRow() {
     return createTestRow("Tim");
   }
   
-  private void createTestTable(Database db) throws Exception {
+  static void createTestTable(Database db) throws Exception {
     List<Column> columns = new ArrayList<Column>();
     Column col = new Column();
     col.setName("A");
@@ -602,6 +595,14 @@ public class DatabaseTest extends TestCase {
     col.setType(DataType.SHORT_DATE_TIME);
     columns.add(col);
     db.createTable("test", columns);
+  }
+
+  static int countRows(Table table) throws Exception {
+    int rtn = 0;
+    for(Map<String, Object> row : table) {
+      rtn++;
+    }
+    return rtn;
   }
 
   static void dumpDatabase(Database mdb) throws Exception {
