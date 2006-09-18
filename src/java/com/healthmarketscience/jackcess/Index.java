@@ -27,13 +27,15 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,8 +43,6 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.collections.BidiMap;
-import org.apache.commons.collections.bidimap.DualHashBidiMap;
 import org.apache.commons.lang.builder.CompareToBuilder;
 
 /**
@@ -58,78 +58,124 @@ public class Index implements Comparable<Index> {
 
   private static final int NEW_ENTRY_COLUMN_INDEX = -1;
 
-  private static final SoftReference<String> EMPTY_ACTUAL_VALUE =
-    new SoftReference<String>(null);
+  private static final byte REVERSE_ORDER_FLAG = (byte)0x01;
+  
+  private static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
+    new Comparator<byte[]>() {
+      public int compare(byte[] left, byte[] right) {
+        if(left == right) {
+          return 0;
+        }
+        if(left == null) {
+          return -1;
+        }
+        if(right == null) {
+          return 1;
+        }
+
+        int len = Math.min(left.length, right.length);
+        int pos = 0;
+        while((pos < len) && (left[pos] == right[pos])) {
+          ++pos;
+        }
+        if(pos < len) {
+          return ((left[pos] < right[pos]) ? -1 : 1);
+        }
+        return ((left.length < right.length) ? -1 :
+                ((left.length > right.length) ? 1 : 0));
+      }
+    };
+        
   
   /**
-   * Map of characters to bytes that Access uses in indexes (not ASCII)
-   *    (Character -> Byte)
+   * Map of character to byte[] that Access uses in indexes (not ASCII)
+   *    (Character -> byte[]) as codes to order text
    */
-  private static final BidiMap CODES = new DualHashBidiMap();
+  private static final Map<Character, byte[]> CODES =
+    new HashMap<Character, byte[]>();
+  /**
+   * Map of character to byte[] that Access uses in indexes (not ASCII)
+   *    (Character -> byte[]), in the extended portion
+   */
+  private static final Map<Character, byte[]> CODES_EXT =
+    new HashMap<Character, byte[]>();
   static {
-    //These values are prefixed with a '43'
-    CODES.put('^', (byte) 2);
-    CODES.put('_', (byte) 3);
-    CODES.put('{', (byte) 9);
-    CODES.put('|', (byte) 11);
-    CODES.put('}', (byte) 13);
-    CODES.put('~', (byte) 15);
+
+    CODES.put('^', new byte[]{(byte)43, (byte)2});
+    CODES.put('_', new byte[]{(byte)43, (byte)3});
+    CODES.put('`', new byte[]{(byte)43, (byte)7});
+    CODES.put('{', new byte[]{(byte)43, (byte)9});
+    CODES.put('|', new byte[]{(byte)43, (byte)11});
+    CODES.put('}', new byte[]{(byte)43, (byte)13});
+    CODES.put('~', new byte[]{(byte)43, (byte)15});
     
-    //These values aren't.
-    CODES.put(' ', (byte) 7);
-    CODES.put('#', (byte) 12);
-    CODES.put('$', (byte) 14);
-    CODES.put('%', (byte) 16);
-    CODES.put('&', (byte) 18);
-    CODES.put('(', (byte) 20);
-    CODES.put(')', (byte) 22);
-    CODES.put('*', (byte) 24);
-    CODES.put(',', (byte) 26);
-    CODES.put('/', (byte) 30);
-    CODES.put(':', (byte) 32);
-    CODES.put(';', (byte) 34);
-    CODES.put('?', (byte) 36);
-    CODES.put('@', (byte) 38);
-    CODES.put('+', (byte) 44);
-    CODES.put('<', (byte) 46);
-    CODES.put('=', (byte) 48);
-    CODES.put('>', (byte) 50);
-    CODES.put('0', (byte) 54);
-    CODES.put('1', (byte) 56);
-    CODES.put('2', (byte) 58);
-    CODES.put('3', (byte) 60);
-    CODES.put('4', (byte) 62);
-    CODES.put('5', (byte) 64);
-    CODES.put('6', (byte) 66);
-    CODES.put('7', (byte) 68);
-    CODES.put('8', (byte) 70);
-    CODES.put('9', (byte) 72);
-    CODES.put('A', (byte) 74);
-    CODES.put('B', (byte) 76);
-    CODES.put('C', (byte) 77);
-    CODES.put('D', (byte) 79);
-    CODES.put('E', (byte) 81);
-    CODES.put('F', (byte) 83);
-    CODES.put('G', (byte) 85);
-    CODES.put('H', (byte) 87);
-    CODES.put('I', (byte) 89);
-    CODES.put('J', (byte) 91);
-    CODES.put('K', (byte) 92);
-    CODES.put('L', (byte) 94);
-    CODES.put('M', (byte) 96);
-    CODES.put('N', (byte) 98);
-    CODES.put('O', (byte) 100);
-    CODES.put('P', (byte) 102);
-    CODES.put('Q', (byte) 104);
-    CODES.put('R', (byte) 105);
-    CODES.put('S', (byte) 107);
-    CODES.put('T', (byte) 109);
-    CODES.put('U', (byte) 111);
-    CODES.put('V', (byte) 113);
-    CODES.put('W', (byte) 115);
-    CODES.put('X', (byte) 117);
-    CODES.put('Y', (byte) 118);
-    CODES.put('Z', (byte) 120);
+    CODES.put('\t', new byte[]{(byte)8, (byte)3});
+    CODES.put('\r', new byte[]{(byte)8, (byte)4});
+    CODES.put('\n', new byte[]{(byte)8, (byte)7});
+        
+    CODES.put(' ', new byte[]{(byte)7});
+    CODES.put('!', new byte[]{(byte)9});
+    CODES.put('"', new byte[]{(byte)10});
+    CODES.put('#', new byte[]{(byte)12});
+    CODES.put('$', new byte[]{(byte)14});
+    CODES.put('%', new byte[]{(byte)16});
+    CODES.put('&', new byte[]{(byte)18});
+    CODES.put('(', new byte[]{(byte)20});
+    CODES.put(')', new byte[]{(byte)22});
+    CODES.put('*', new byte[]{(byte)24});
+    CODES.put(',', new byte[]{(byte)26});
+    CODES.put('.', new byte[]{(byte)28});
+    CODES.put('/', new byte[]{(byte)30});
+    CODES.put(':', new byte[]{(byte)32});
+    CODES.put(';', new byte[]{(byte)34});
+    CODES.put('?', new byte[]{(byte)36});
+    CODES.put('@', new byte[]{(byte)38});    
+    CODES.put('[', new byte[]{(byte)39});
+    CODES.put('\\', new byte[]{(byte)41});
+    CODES.put(']', new byte[]{(byte)42});
+    CODES.put('+', new byte[]{(byte)44});
+    CODES.put('<', new byte[]{(byte)46});
+    CODES.put('=', new byte[]{(byte)48});
+    CODES.put('>', new byte[]{(byte)50});
+    CODES.put('0', new byte[]{(byte)54});
+    CODES.put('1', new byte[]{(byte)56});
+    CODES.put('2', new byte[]{(byte)58});
+    CODES.put('3', new byte[]{(byte)60});
+    CODES.put('4', new byte[]{(byte)62});
+    CODES.put('5', new byte[]{(byte)64});
+    CODES.put('6', new byte[]{(byte)66});
+    CODES.put('7', new byte[]{(byte)68});
+    CODES.put('8', new byte[]{(byte)70});
+    CODES.put('9', new byte[]{(byte)72});
+    CODES.put('A', new byte[]{(byte)74});
+    CODES.put('B', new byte[]{(byte)76});
+    CODES.put('C', new byte[]{(byte)77});
+    CODES.put('D', new byte[]{(byte)79});
+    CODES.put('E', new byte[]{(byte)81});
+    CODES.put('F', new byte[]{(byte)83});
+    CODES.put('G', new byte[]{(byte)85});
+    CODES.put('H', new byte[]{(byte)87});
+    CODES.put('I', new byte[]{(byte)89});
+    CODES.put('J', new byte[]{(byte)91});
+    CODES.put('K', new byte[]{(byte)92});
+    CODES.put('L', new byte[]{(byte)94});
+    CODES.put('M', new byte[]{(byte)96});
+    CODES.put('N', new byte[]{(byte)98});
+    CODES.put('O', new byte[]{(byte)100});
+    CODES.put('P', new byte[]{(byte)102});
+    CODES.put('Q', new byte[]{(byte)104});
+    CODES.put('R', new byte[]{(byte)105});
+    CODES.put('S', new byte[]{(byte)107});
+    CODES.put('T', new byte[]{(byte)109});
+    CODES.put('U', new byte[]{(byte)111});
+    CODES.put('V', new byte[]{(byte)113});
+    CODES.put('W', new byte[]{(byte)115});
+    CODES.put('X', new byte[]{(byte)117});
+    CODES.put('Y', new byte[]{(byte)118});
+    CODES.put('Z', new byte[]{(byte)120});
+
+    CODES_EXT.put('\'', new byte[]{(byte)6, (byte)128});
+    CODES_EXT.put('-', new byte[]{(byte)6, (byte)130});
   }
   
   /** Page number of the index data */
@@ -139,7 +185,7 @@ public class Index implements Comparable<Index> {
   private int _rowCount;
   private JetFormat _format;
   private SortedSet<Entry> _entries = new TreeSet<Entry>();
-  /** Map of columns to order */
+  /** Map of columns to flags */
   private Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
   private PageChannel _pageChannel;
   /** 0-based index number */
@@ -148,6 +194,7 @@ public class Index implements Comparable<Index> {
   private String _name;
   /** is this index a primary key */
   private boolean _primaryKey;
+
   
   public Index(int parentPageNumber, PageChannel channel, JetFormat format) {
     _parentPageNumber = parentPageNumber;
@@ -235,9 +282,9 @@ public class Index implements Comparable<Index> {
   {
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = buffer.getShort();
-      Byte order = new Byte(buffer.get());
+      Byte flags = new Byte(buffer.get());
       if (columnNumber != COLUMN_UNUSED) {
-        _columns.put(availableColumns.get(columnNumber), order);
+        _columns.put(availableColumns.get(columnNumber), flags);
       }
     }
     buffer.getInt(); //Forward past Unknown
@@ -310,29 +357,113 @@ public class Index implements Comparable<Index> {
            (col.getType() == DataType.MEMO));
   }
 
-  /**
-   * Converts an index value for a text column into the "actual" value which
-   * is pretty much the original string, uppercased.
-   */
-  private static String toIndexActualStringValue(Comparable value) {
-    if(value != null) {
-      return Column.toCharSequence(value).toString().toUpperCase();
-    }
-    return null;
+  private static boolean isFloatingPointColumn(Column col) {
+    return((col.getType() == DataType.FLOAT) ||
+           (col.getType() == DataType.DOUBLE));
   }
+
+  /**
+   * Converts an index value for a fixed column into the index bytes
+   */
+  // FIXME
+//   private static void toIndexFixedValue(
+//       Entry.FixedEntryColumn entryCol,
+//       Object value,
+//       byte flags)
+//     throws IOException
+//   {
+//     if(value == null) {
+//       // nothing more to do
+//       return;
+//     }
+
+//     Column column = entryCol._column;
+    
+// //     if (value instanceof Integer) {
+// //       value = new Integer((int) (((Integer) value).longValue() -
+// //                                  ((long) Integer.MAX_VALUE + 1L)));
+// //     } else if (value instanceof Short) {
+// //       value = new Short((short) (((Short) value).longValue() -
+// //                                  ((long) Integer.MAX_VALUE + 1L)));
+// //     }
+
+//     byte[] value = column.write(value, 0, ByteOrder.BIG_ENDIAN);
+    
+//     if(isFloatingPointColumn(column)) {
+//       if(((Number)value).doubleValue() < 0) {
+//         // invert all the bits
+//         for(int i = 0; i < value.length; ++i) {
+//           value[i] = (byte)~value[i];
+//         }
+//       }
+//     } else {
+//       // invert the highest bit
+//       value[0] = (byte)((value[0] ^ 0x80) & 0xFF);
+//     }
+    
+    
+//   }
   
   /**
-   * Converts an index value for a text column into the "index" value which
-   * is the same as the "actual" value, minus some characters.
+   * Converts an index value for a text column into the value which
+   * is based on a variety of nifty codes.
    */
-  private static Comparable toIndexStringValue(Comparable value) {
-    if(value != null) {
-      // apparently '.' is completely ignored in index values
-      value = toIndexActualStringValue(value).replace(".", "");
+  private static void toIndexTextValue(
+      Entry.TextEntryColumn entryCol,
+      Object value,
+      byte flags)
+    throws IOException
+  {
+    if(value == null) {
+      // nothing more to do
+      return;
     }
-    return value;
+
+    // first, convert to uppercase string (all text characters are uppercase)
+    String str = Column.toCharSequence(value).toString().toUpperCase();
+
+    // now, convert each character to a "code" of one or more bytes
+    ByteArrayOutputStream bout = new ByteArrayOutputStream(str.length());
+    ByteArrayOutputStream boutExt = null;
+    for(int i = 0; i < str.length(); ++i) {
+      char c = str.charAt(i);
+
+      byte[] bytes = CODES.get(c);
+      if(bytes != null) {
+        bout.write(bytes);
+      } else {
+        bytes = CODES_EXT.get(c);
+        if(bytes != null) {
+          // add extra chars
+          if(boutExt == null) {
+            boutExt = new ByteArrayOutputStream(7);
+            // setup funky extra bytes
+            boutExt.write(1);
+            boutExt.write(1);
+            boutExt.write(1);
+          }
+
+          // FIXME, complete me..
+          
+          // no clue where this comes from...
+          int offset = 7 + (i * 4);
+          boutExt.write((byte)0x80);
+          boutExt.write((byte)offset);
+          boutExt.write(bytes);
+            
+        } else {
+          throw new IOException("unmapped string index value");
+        }
+      }
+      
+    }
+
+    entryCol._valueBytes = bout.toByteArray();
+    if(boutExt != null) {
+      entryCol._extraBytes = boutExt.toByteArray();
+    }
   }
-    
+
   
   /**
    * A single entry in an index (points to a single row)
@@ -356,12 +487,11 @@ public class Index implements Comparable<Index> {
     {
       _page = page;
       _row = rowNumber;
-      Iterator iter = _columns.keySet().iterator();
-      while (iter.hasNext()) {
-        Column col = (Column) iter.next();
+      for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
+        Column col = entry.getKey();
+        Byte flags = entry.getValue();
         Object value = values[col.getColumnNumber()];
-        _entryColumns.add(newEntryColumn(col)
-                          .initFromValue((Comparable) value));
+        _entryColumns.add(newEntryColumn(col).initFromValue(value, flags));
       }
     }
     
@@ -369,10 +499,11 @@ public class Index implements Comparable<Index> {
      * Read an existing entry in from a buffer
      */
     public Entry(ByteBuffer buffer, int nextEntryIndex) throws IOException {
-      Iterator iter = _columns.keySet().iterator();
-      while (iter.hasNext()) {
-        _entryColumns.add(newEntryColumn((Column)iter.next())
-                          .initFromBuffer(buffer, nextEntryIndex));
+      for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
+        Column col = entry.getKey();
+        Byte flags = entry.getValue();
+        _entryColumns.add(newEntryColumn(col)
+                          .initFromBuffer(buffer, nextEntryIndex, flags));
       }
       // 3-byte int in big endian order!  Gotta love those kooky MS
       // programmers. :)
@@ -404,7 +535,7 @@ public class Index implements Comparable<Index> {
     }
     
     public int size() {
-      int rtn = 5;
+      int rtn = 4;
       Iterator iter = _entryColumns.iterator();
       while (iter.hasNext()) {
         rtn += ((EntryColumn) iter.next()).size();
@@ -461,8 +592,6 @@ public class Index implements Comparable<Index> {
     {
       /** Column definition */
       protected Column _column;
-      /** Column value */
-      protected Comparable _value;
     
       protected EntryColumn(Column col) throws IOException {
         checkColumnType(col);
@@ -470,31 +599,48 @@ public class Index implements Comparable<Index> {
       }
 
       public int size() {
-        if (_value == null) {
-          return 0;
-        } else  {
-          return nonNullSize();
+        int size = 1;
+        if (!isNullValue()) {
+          size += nonNullSize();
         }
+        return size;
       }
 
       /**
        * Initialize using a new value
        */
-      protected abstract EntryColumn initFromValue(Comparable value)
+      protected abstract EntryColumn initFromValue(Object value,
+                                                   byte flags)
         throws IOException;
 
       /**
        * Initialize from a buffer
        */
       protected abstract EntryColumn initFromBuffer(ByteBuffer buffer,
-                                                    int entryIndex)
+                                                    int entryIndex,
+                                                    byte flags)
         throws IOException;
 
+      protected abstract boolean isNullValue();
+      
       /**
        * Write this entry column to a buffer
        */
-      public abstract void write(ByteBuffer buffer) throws IOException;
-    
+      public void write(ByteBuffer buffer) throws IOException
+      {
+        if(isNullValue()) {
+          buffer.put((byte)0);
+        } else {
+          writeNonNullValue(buffer);
+        }
+      }
+
+      /**
+       * Write this non-null entry column to a buffer
+       */
+      protected abstract void writeNonNullValue(ByteBuffer buffer)
+          throws IOException;
+      
       protected abstract int nonNullSize();
 
       public abstract int compareTo(EntryColumn other);
@@ -506,6 +652,8 @@ public class Index implements Comparable<Index> {
      */
     private class FixedEntryColumn extends EntryColumn
     {
+      /** Column value */
+      private Comparable _value;
     
       public FixedEntryColumn(Column col) throws IOException {
         super(col);
@@ -518,9 +666,10 @@ public class Index implements Comparable<Index> {
        * Initialize using a new value
        */
       @Override
-      protected EntryColumn initFromValue(Comparable value) throws IOException
+      protected EntryColumn initFromValue(Object value, byte flags)
+        throws IOException
       {
-        _value = value;
+        _value = (Comparable)value;
       
         return this;
       }
@@ -530,14 +679,17 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           int entryIndex)
+                                           int entryIndex,
+                                           byte flags)
         throws IOException
       {
         byte flag = buffer.get();
+        // FIXME, reverse is 0x80, reverse null is 0xFF
         if (flag != (byte) 0) {
-          byte[] data = new byte[_column.getType().getFixedSize()];
+          byte[] data = new byte[_column.getType().getFixedSize()];          
           buffer.get(data);
           _value = (Comparable) _column.read(data, ByteOrder.BIG_ENDIAN);
+          
           //ints and shorts are stored in index as value + 2147483648
           if (_value instanceof Integer) {
             _value = new Integer((int) (((Integer) _value).longValue() +
@@ -550,12 +702,17 @@ public class Index implements Comparable<Index> {
 
         return this;
       }
-    
+
+      @Override
+      protected boolean isNullValue() {
+        return(_value == null);
+      }
+      
       /**
        * Write this entry column to a buffer
        */
       @Override
-      public void write(ByteBuffer buffer) throws IOException {
+      protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
         buffer.put((byte) 0x7F);
         Comparable value = _value;
         if (value instanceof Integer) {
@@ -580,7 +737,8 @@ public class Index implements Comparable<Index> {
         
       @Override
       public int compareTo(EntryColumn other) {
-        return new CompareToBuilder().append(_value, other._value)
+        return new CompareToBuilder()
+          .append(_value, ((FixedEntryColumn)other)._value)
           .toComparison();
       }
     }
@@ -592,13 +750,10 @@ public class Index implements Comparable<Index> {
      */
     private class TextEntryColumn extends EntryColumn
     {
+      /** the string byte codes */
+      private byte[] _valueBytes;
       /** extra column bytes */
       private byte[] _extraBytes;
-      /** original index of this textual column in the Index, if read from the
-          db */
-      private int _origIndex = NEW_ENTRY_COLUMN_INDEX;
-      /** the actual row value, used for ordering new values */
-      private SoftReference<String> _actualValue = EMPTY_ACTUAL_VALUE;
     
       public TextEntryColumn(Column col) throws IOException {
         super(col);
@@ -611,12 +766,12 @@ public class Index implements Comparable<Index> {
        * Initialize using a new value
        */
       @Override
-      protected EntryColumn initFromValue(Comparable value) throws IOException
+      protected EntryColumn initFromValue(Object value,
+                                          byte flags)
+        throws IOException
       {
-        // convert strings appropriately
-        _actualValue = new SoftReference<String>(
-            toIndexActualStringValue(value));
-        _value = toIndexStringValue(value);
+        // convert string to byte array
+        toIndexTextValue(this, value, flags);
       
         return this;
       }
@@ -626,38 +781,41 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           int entryIndex)
+                                           int entryIndex,
+                                           byte flags)
         throws IOException
       {
-        _origIndex = entryIndex;
         byte flag = buffer.get();
+        // FIXME, reverse is 0x80, reverse null is 0xFF
+        // end flag is FE, post extra bytes is FF 00
+        // extra bytes are inverted, so are normal bytes
         if (flag != (byte) 0) {
-          
-          StringBuilder sb = new StringBuilder();
-          byte b;
-          while ( (b = buffer.get()) != (byte) 1) {
-            if ((int) b == 43) {
-              b = buffer.get();
-            }
-            Character c = (Character) CODES.getKey(new Byte(b));
-            if (c != null) {
-              sb.append(c.charValue());
-            }
-          }
-          _value = sb.toString();
 
+          int endPos = buffer.position();
+          while(buffer.get(endPos) != (byte) 1) {
+            ++endPos;
+          }
+
+          // read index bytes
+          _valueBytes = new byte[endPos - buffer.position()];
+          buffer.get(_valueBytes);
+
+          // read end codes byte
+          buffer.get();
+          
           //Forward past 0x00 (in some cases, there is more data here, which
           //we don't currently understand)
           byte endByte = buffer.get();
-          if(endByte != 0x00) {
-            int startPos = buffer.position() - 1;
-            int endPos = buffer.position();
-            while(buffer.get(endPos) != 0x00) {
+          if(endByte != (byte)0x00) {
+            endPos = buffer.position() - 1;
+            buffer.position(endPos);
+            while(buffer.get(endPos) != (byte)0x00) {
               ++endPos;
             }
-            _extraBytes = new byte[endPos - startPos];
-            buffer.position(startPos);
+            _extraBytes = new byte[endPos - buffer.position()];
             buffer.get(_extraBytes);
+
+            // re-get endByte
             buffer.get();
           }
           
@@ -666,42 +824,18 @@ public class Index implements Comparable<Index> {
         return this;
       }
 
-      private String getActualValue() {
-        String actual = _actualValue.get();
-        if(actual == null) {
-          // FIXME, need to read from db, for now use index value
-          actual = (String)_value;
-          _actualValue = new SoftReference<String>(actual);
-        }
-        return actual;
+      @Override
+      protected boolean isNullValue() {
+        return(_valueBytes == null);
       }
-    
+      
       /**
        * Write this entry column to a buffer
        */
       @Override
-      public void write(ByteBuffer buffer) throws IOException {
+      protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
         buffer.put((byte) 0x7F);
-        String s = (String) _value;
-        for (int i = 0; i < s.length(); i++) {
-          Byte b = (Byte) CODES.get(new Character(s.charAt(i)));
-          
-          if (b == null) {
-            throw new IOException("Unmapped index value: " + s.charAt(i));
-          } else {
-            byte bv = b.byteValue();
-            //WTF is this?  No idea why it's this way, but it is. :)
-            if (bv == (byte) 2 || bv == (byte) 3 || bv == (byte) 9 ||
-                bv == (byte) 11 || bv == (byte) 13 || bv == (byte) 15)
-            {
-              buffer.put((byte) 43);  //Ah, the magic 43.
-            }
-            buffer.put(b.byteValue());
-            if (s.equals("_")) {
-              buffer.put((byte) 3);
-            }
-          }
-        }
+        buffer.put(_valueBytes);
         buffer.put((byte) 1);
         if(_extraBytes != null) {
           buffer.put(_extraBytes);
@@ -711,17 +845,7 @@ public class Index implements Comparable<Index> {
 
       @Override
       protected int nonNullSize() {
-        int rtn = 3;
-        String s = (String)_value;
-        for (int i = 0; i < s.length(); i++) {
-          rtn++;
-          if (s.charAt(i) == '^' || s.charAt(i) == '_' || s.charAt(i) == '{' ||
-              s.charAt(i) == '|' || s.charAt(i) == '}' || s.charAt(i) == '~')
-          {
-            // account for the magic 43
-            rtn++;
-          }
-        }
+        int rtn = _valueBytes.length + 2;
         if(_extraBytes != null) {
           rtn += _extraBytes.length;
         }
@@ -730,25 +854,30 @@ public class Index implements Comparable<Index> {
 
       @Override
       public String toString() {
-        return "'" + String.valueOf(_value) + "' (origIndex = " +
-          _origIndex + ")";
+        if(_valueBytes == null) {
+          return String.valueOf(_valueBytes);
+        }
+
+        String rtn = ByteUtil.toHexString(ByteBuffer.wrap(_valueBytes),
+                                          _valueBytes.length);
+        if(_extraBytes != null) {
+          rtn += " (" + ByteUtil.toHexString(ByteBuffer.wrap(_extraBytes),
+                                             _extraBytes.length) + ")";
+        }
+        
+        return rtn;
       }
         
       @Override
       public int compareTo(EntryColumn other) {
         TextEntryColumn textOther = (TextEntryColumn)other;
-        if((_origIndex != NEW_ENTRY_COLUMN_INDEX) &&
-           (textOther._origIndex != NEW_ENTRY_COLUMN_INDEX)) {
-          // use original index for order
-          return new CompareToBuilder().append(_origIndex,
-                                               textOther._origIndex)
-            .toComparison();
+        int rtn = BYTE_CODE_COMPARATOR.compare(
+            _valueBytes, textOther._valueBytes);
+        if(rtn != 0) {
+          return rtn;
         }
-
-        // compare using actual values
-        return new CompareToBuilder().append(getActualValue(),
-                                             textOther.getActualValue())
-          .toComparison();
+        return BYTE_CODE_COMPARATOR.compare(
+            _extraBytes, textOther._extraBytes);
       }
     
     }

@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -445,20 +446,32 @@ public class Table
   /**
    * Reads a single column from the given row in the given buffer.
    */
-  public static Object readRowSingleColumn(ByteBuffer buffer, int rowNum,
-                                           Column column, JetFormat format)
+  public static Object readRowSingleColumn(
+      RowState rowState, int pageNumber, int rowNum,
+      Column column, PageChannel pageChannel, JetFormat format)
     throws IOException
   {
-    // FIXME, doesn't support overflow row
-    short rowStart = findRowStart(buffer, rowNum, format);
-    short rowEnd = findRowEnd(buffer, rowNum, format);
+    // reset state, then set to correct page
+    rowState.reset();
+    rowState.setPage(pageChannel, pageNumber);
 
-    buffer.position(rowStart);
-    short columnCount = buffer.getShort(); //Number of columns in this row
+    // position at correct row
+    ByteBuffer rowBuffer = positionAtRow(rowState, rowNum, pageChannel,
+                                         format);
+    if(rowBuffer == null) {
+      // note, row state will indicate that row was deleted
+      return null;
+    }
+    
+    int rowStart = rowBuffer.position();
+    int rowEnd = rowBuffer.limit();
+
+    rowBuffer.position(rowStart);
+    short columnCount = rowBuffer.getShort(); //Number of columns in this row
     
     NullMask nullMask = new NullMask(columnCount);
-    buffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
-    nullMask.read(buffer);
+    rowBuffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
+    nullMask.read(rowBuffer);
 
     boolean isNull = nullMask.isNull(column.getColumnNumber());
     if(column.getType() == DataType.BOOLEAN) {
@@ -485,16 +498,16 @@ public class Table
         (rowEnd - nullMask.byteSize() - 4) -
         (column.getVarLenTableIndex() * 2);
 
-      short varDataStart = buffer.getShort(varColumnOffsetPos);
-      short varDataEnd = buffer.getShort(varColumnOffsetPos - 2);
+      short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
+      short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
       colDataPos = rowStart + varDataStart;
       colDataLen = varDataEnd - varDataStart;
     }
 
     // parse the column data
     byte[] columnData = new byte[colDataLen];
-    buffer.position(colDataPos);
-    buffer.get(columnData);
+    rowBuffer.position(colDataPos);
+    rowBuffer.get(columnData);
     return column.read(columnData);
   }
 
@@ -673,17 +686,26 @@ public class Table
       }
     }
     
-    List<Integer> pageNumbers = _ownedPages.getPageNumbers();
-    int pageNumber;
+    int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
     int rowSize;
-    if (pageNumbers.size() == 0) {
+
+    // find last data page (Not bothering to check other pages for free
+    // space.)
+    List<Integer> pageNumbers = _ownedPages.getPageNumbers();
+    for(ListIterator<Integer> pageIter = pageNumbers.listIterator(
+            pageNumbers.size()); pageIter.hasPrevious(); ) {
+      Integer tmpPageNumber = pageIter.previous();
+      _pageChannel.readPage(dataPage, tmpPageNumber);
+      if(dataPage.get() == PageTypes.DATA) {
+        // found last data page
+        pageNumber = tmpPageNumber;
+        break;
+      }
+    }
+
+    if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
       //No data pages exist.  Create a new one.
-      pageNumber = newDataPage(dataPage, rowData[0]);
-    } else {
-      //Get the last data page.
-      //Not bothering to check other pages for free space.
-      pageNumber = ((Integer) pageNumbers.get(pageNumbers.size() - 1)).intValue();
-      _pageChannel.readPage(dataPage, pageNumber);
+      pageNumber = newDataPage(dataPage);
     }
     
     for (int i = 0; i < rowData.length; i++) {
@@ -697,7 +719,7 @@ public class Table
         dataPage.clear();
         _freeSpacePages.removePageNumber(pageNumber);
 
-        pageNumber = newDataPage(dataPage, rowData[i]);
+        pageNumber = newDataPage(dataPage);
         freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
       }
       //Decrease free space record.
@@ -737,7 +759,7 @@ public class Table
    * Create a new data page
    * @return Page number of the new page
    */
-  private int newDataPage(ByteBuffer dataPage, ByteBuffer rowData) throws IOException {
+  private int newDataPage(ByteBuffer dataPage) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating new data page");
     }
