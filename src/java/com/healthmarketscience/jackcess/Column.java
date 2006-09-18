@@ -310,7 +310,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.TEXT) {
       return decodeTextValue(data);
     } else if (_type == DataType.MONEY) {
-      return readCurrencyValue(data);
+      return readCurrencyValue(buffer);
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
         return readLongBinaryValue(data);
@@ -449,20 +449,18 @@ public class Column implements Comparable<Column> {
   /**
    * Decodes "Currency" values.
    * 
-   * @param lvalDefinition Column value that points to an LVAL record
+   * @param valueBytes Column value that points to currency data
    * @return BigDecimal representing the monetary value
    * @throws IOException if the value cannot be parsed 
    */
-  private BigDecimal readCurrencyValue(byte[] lvalDefinition)
+  private BigDecimal readCurrencyValue(ByteBuffer buffer)
     throws IOException
   {
-    if(lvalDefinition.length != 8) {
+    if(buffer.remaining() != 8) {
       throw new IOException("Invalid money value.");
     }
     
-    ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
-    def.order(ByteOrder.LITTLE_ENDIAN);
-    return new BigDecimal(BigInteger.valueOf(def.getLong(0)), 4);
+    return new BigDecimal(BigInteger.valueOf(buffer.getLong(0)), 4);
   }
 
   /**
