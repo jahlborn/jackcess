@@ -27,7 +27,9 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -162,7 +164,7 @@ public final class ByteUtil {
    */
   public static String toHexString(ByteBuffer buffer,
                                    int offset, int size, boolean formatted) {
-
+    
     StringBuilder rtn = new StringBuilder();
     int position = buffer.position();
     buffer.position(offset);
@@ -211,5 +213,22 @@ public final class ByteUtil {
     }
   }
 
-  
+  /**
+   * Writes a chunk of data to a file in pretty printed hexidecimal.
+   */
+  public static void toHexFile(
+      String fileName,
+      ByteBuffer buffer, 
+      int offset, int size)
+    throws IOException
+  {
+    PrintWriter writer = new PrintWriter(
+        new FileWriter(fileName));
+    try {
+      writer.println(toHexString(buffer, offset, size));
+    } finally {
+      writer.close();
+    }
+  }
+    
 }
