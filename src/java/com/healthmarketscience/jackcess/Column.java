@@ -728,11 +728,9 @@ public class Column implements Comparable<Column> {
       case NUMERIC:
         // don't ask me why numerics are "var length" columns...
         ByteBuffer buffer = ByteBuffer.allocate(getLength());
-        System.out.println("BUZ NUMERIC " + getLength());
         buffer.order(order);
         writeNumericValue(buffer, obj);
         buffer.flip();
-        System.out.println("BUZ NUMERIC rem " + buffer.remaining());
         return buffer;
 
       case TEXT:
