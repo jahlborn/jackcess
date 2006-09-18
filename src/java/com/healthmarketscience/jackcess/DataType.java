@@ -47,14 +47,15 @@ public enum DataType {
   FLOAT((byte) 0x06, Types.FLOAT, 4),
   DOUBLE((byte) 0x07, Types.DOUBLE, 8),
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
-  BINARY((byte) 0x09, Types.BINARY, null, true, false, 255, 255),
-  TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 50 * 2,
+  BINARY((byte) 0x09, Types.BINARY, null, true, false, 0, 255, 255),
+  TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0, 50 * 2,
        (int)JetFormat.TEXT_FIELD_MAX_LENGTH),
-  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, null, 0xFFFFFF),
-  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, null, 0xFFFFFF),
+  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0xFFFFFF),
+  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF),
   UNKNOWN_0D((byte) 0x0D),
   GUID((byte) 0x0F, null, 16),
-  NUMERIC((byte) 0x10, Types.NUMERIC, 17, false, false, null, null,
+  // for some reason numeric is "var len" even though it has a fixed size...
+  NUMERIC((byte) 0x10, Types.NUMERIC, null, true, false, 17, 17, 17,
           true, 0, 0, 28, 1, 18, 28);
 
   /** Map of SQL types to Access data types */
@@ -92,9 +93,11 @@ public enum DataType {
   private byte _value;
   /** Size in bytes of fixed length columns */
   private Integer _fixedSize;
-  /** default size for var length columns */
+  /** min in bytes size for var length columns */
+  private Integer _minSize;
+  /** default size in bytes for var length columns */
   private Integer _defaultSize;
-  /** Max size in bytes */
+  /** Max size in bytes for var length columns */
   private Integer _maxSize;
   /** SQL type equivalent, or null if none defined */
   private Integer _sqlType;
@@ -116,21 +119,24 @@ public enum DataType {
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize) {
-    this(value, sqlType, fixedSize, false, false, null, null);
+    this(value, sqlType, fixedSize, false, false, null, null, null);
   }
 
   private DataType(byte value, Integer sqlType, Integer fixedSize,
                    boolean variableLength,
                    boolean longValue,
+                   Integer minSize,
                    Integer defaultSize,
                    Integer maxSize) {
-    this(value, sqlType, fixedSize, variableLength, longValue, defaultSize,
-         maxSize, false, null, null, null, null, null, null);
+    this(value, sqlType, fixedSize, variableLength, longValue,
+         minSize, defaultSize, maxSize,
+         false, null, null, null, null, null, null);
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize,
                    boolean variableLength,
                    boolean longValue,
+                   Integer minSize,
                    Integer defaultSize,
                    Integer maxSize,
                    boolean hasScalePrecision,
@@ -145,6 +151,7 @@ public enum DataType {
     _fixedSize = fixedSize;
     _variableLength = variableLength;
     _longValue = longValue;
+    _minSize = minSize;
     _defaultSize = defaultSize;
     _maxSize = maxSize;
     _hasScalePrecision = hasScalePrecision;
@@ -178,6 +185,10 @@ public enum DataType {
     } else {
       throw new IllegalArgumentException("FIX ME");
     }
+  }
+
+  public int getMinSize() {
+    return _minSize;
   }
 
   public int getDefaultSize() {
@@ -237,5 +248,5 @@ public enum DataType {
       throw new SQLException("Unsupported SQL type: " + sqlType);
     }
   }
-  
+
 }

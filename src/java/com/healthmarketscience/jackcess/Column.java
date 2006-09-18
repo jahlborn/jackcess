@@ -251,7 +251,8 @@ public class Column implements Comparable<Column> {
         throw new IllegalArgumentException("invalid fixed length size");
       }
     } else if(!getType().isLongValue()) {
-      if((getLength() < 0) || (getLength() > getType().getMaxSize())) {
+      if((getLength() < getType().getMinSize()) ||
+         (getLength() > getType().getMaxSize())) {
         throw new IllegalArgumentException("var length out of range");
       }
     }
@@ -726,6 +727,16 @@ public class Column implements Comparable<Column> {
       
       // this is an "inline" var length field
       switch(getType()) {
+      case NUMERIC:
+        // don't ask me why numerics are "var length" columns...
+        ByteBuffer buffer = ByteBuffer.allocate(getLength());
+        System.out.println("BUZ NUMERIC " + getLength());
+        buffer.order(order);
+        writeNumericValue(buffer, obj);
+        buffer.flip();
+        System.out.println("BUZ NUMERIC rem " + buffer.remaining());
+        return buffer;
+
       case TEXT:
         CharSequence text = toCharSequence(obj);
         int maxChars = getLength() / 2;
@@ -735,6 +746,7 @@ public class Column implements Comparable<Column> {
         byte[] encodedData = encodeUncompressedText(text).array();
         obj = encodedData;
         break;
+        
       case BINARY:
         // should already be "encoded"
         break;
@@ -806,9 +818,6 @@ public class Column implements Comparable<Column> {
       break;
     case MONEY:
       writeCurrencyValue(buffer, obj);
-      break;
-    case NUMERIC:
-      writeNumericValue(buffer, obj);
       break;
     case GUID:
       writeGUIDValue(buffer, obj);

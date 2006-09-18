@@ -462,7 +462,7 @@ public class Database
       buffer.put((byte) 0x06);  //Unknown
       buffer.putShort((short) 0); //Unknown
       buffer.putShort(columnNumber);  //Column Number
-      if (col.getType().isVariableLength()) {
+      if (col.isVariableLength()) {
         buffer.putShort(variableOffset++);
       } else {
         buffer.putShort((short) 0);
@@ -476,7 +476,7 @@ public class Database
         buffer.put((byte) 0x00); //unused
       }
       buffer.putShort((short) 0); //Unknown
-      if (col.getType().isVariableLength()) { //Variable length
+      if (col.isVariableLength()) { //Variable length
         buffer.put((byte) 0x2);
       } else {
         buffer.put((byte) 0x3);
@@ -488,7 +488,7 @@ public class Database
       }
       buffer.putInt(0); //Unknown, but always 0.
       //Offset for fixed length columns
-      if (col.getType().isVariableLength()) {
+      if (col.isVariableLength()) {
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
