@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -628,7 +629,17 @@ public class DatabaseTest extends TestCase {
       colNames.add(col.getName());
     }
     writer.println("COLUMNS: " + colNames);
-    for(Object row : table) {
+    for(Map<String, Object> row : table) {
+
+      // make byte[] printable
+      for(Map.Entry<String, Object> entry : row.entrySet()) {
+        Object v = entry.getValue();
+        if(v instanceof byte[]) {
+          byte[] bv = (byte[])v;
+          entry.setValue(ByteUtil.toHexString(ByteBuffer.wrap(bv), bv.length));
+        }
+      }
+      
       writer.println(row);
     }
   }
