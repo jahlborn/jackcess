@@ -201,19 +201,14 @@ public class Table
   }
   
   /**
-   * @return The next row in this table (Column name -> Column value)
-   */
-  public Map<String, Object> getNextRow() throws IOException {
-    return getNextRow(null);
-  }
-
-  /**
    * Delete the current row (retrieved by a call to {@link #getNextRow}).
    */
   public void deleteCurrentRow() throws IOException {
     if (_currentRowInPage == INVALID_ROW_NUMBER) {
       throw new IllegalStateException("Must call getNextRow first");
     }
+
+    // FIXME, want to make this static, but writeDataPage is not static, also, this may screw up other rowstates...
 
     // delete flag always gets set in the "root" page (even if overflow row)
     ByteBuffer rowBuffer = _rowState.getPage(_pageChannel);
@@ -224,6 +219,13 @@ public class Table
     _rowState.setDeleted(true);
   }
   
+  /**
+   * @return The next row in this table (Column name -> Column value)
+   */
+  public Map<String, Object> getNextRow() throws IOException {
+    return getNextRow(null);
+  }
+
   /**
    * @param columnNames Only column names in this collection will be returned
    * @return The next row in this table (Column name -> Column value)
@@ -236,92 +238,152 @@ public class Table
     if (rowBuffer == null) {
       return null;
     }
-    
-    // keep track of row bounds
-    int rowStart = rowBuffer.position();
-    int rowEnd = rowBuffer.limit();
-    
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Data block at position " +
-                Integer.toHexString(rowBuffer.position()) +
-                ":\n" + ByteUtil.toHexString(rowBuffer, rowStart,
-                                             (rowEnd - rowStart)));
+
+    return getRow(rowBuffer, getRowNullMask(rowBuffer), _columns,
+                  columnNames);
+  }
+  
+  /**
+   * Reads a single column from the given row.
+   */
+  public static Object getRowSingleColumn(
+      RowState rowState, int pageNumber, int rowNum,
+      Column column, PageChannel pageChannel, JetFormat format)
+    throws IOException
+  {
+    // set row state to correct page
+    rowState.setPage(pageChannel, pageNumber);
+
+    // position at correct row
+    ByteBuffer rowBuffer = positionAtRow(rowState, rowNum, pageChannel,
+                                         format);
+    if(rowBuffer == null) {
+      // note, row state will indicate that row was deleted
+      return null;
     }
     
-    short columnCount = rowBuffer.getShort(); //Number of columns in this row
+    return getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column);
+  }
+ 
+  /**
+   * Reads some columns from the given row.
+   * @param columnNames Only column names in this collection will be returned
+   */
+  public static Map<String, Object> getRow(
+      RowState rowState, int pageNumber, int rowNum,
+      Collection<Column> columns, PageChannel pageChannel, JetFormat format,
+      Collection<String> columnNames)
+    throws IOException
+  {
+    // set row state to correct page
+    rowState.setPage(pageChannel, pageNumber);
 
-    // keep track of where the row data starts
-    int dataStart = rowBuffer.position();
-    
-    // read null mask
-    NullMask nullMask = new NullMask(columnCount);
-    rowBuffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
-    nullMask.read(rowBuffer);
-
-    short[] varColumnOffsets = null;
-    // if _maxVarColumnCount is 0, then row info does not include varcol info
-    if(_maxVarColumnCount > 0) {
-      rowBuffer.position(rowEnd - nullMask.byteSize() - 2);
-      short rowVarColumnCount = rowBuffer.getShort();  // number of variable length columns in this row
-
-      // Read in the offsets of each of the variable length columns (in
-      // reverse order)
-      varColumnOffsets = new short[rowVarColumnCount + 1];
-      int varColumnOffsetPos = rowBuffer.position() - 4;
-      for (short i = 0; i < (rowVarColumnCount + 1); i++) {
-        varColumnOffsets[i] = rowBuffer.getShort(varColumnOffsetPos);
-        varColumnOffsetPos -= 2;
-      }
+    // position at correct row
+    ByteBuffer rowBuffer = positionAtRow(rowState, rowNum, pageChannel,
+                                         format);
+    if(rowBuffer == null) {
+      // note, row state will indicate that row was deleted
+      return null;
     }
 
-    //Now read in the fixed length columns and populate the columnData array
-    //with the combination of fixed length and variable length data.
-    Map<String, Object> rtn = new LinkedHashMap<String, Object>(columnCount);
-    for (Iterator iter = _columns.iterator(); iter.hasNext(); ) {
-      Column column = (Column) iter.next();
-      boolean isNull = nullMask.isNull(column.getColumnNumber());
+    return getRow(rowBuffer, getRowNullMask(rowBuffer), columns,
+                  columnNames);
+  }
+
+  /**
+   * Reads the row data from the given row buffer.  Leaves limit unchanged.
+   */
+  private static Map<String, Object> getRow(
+      ByteBuffer rowBuffer,
+      NullMask nullMask,
+      Collection<Column> columns,
+      Collection<String> columnNames)
+    throws IOException
+  {
+    Map<String, Object> rtn = new LinkedHashMap<String, Object>(
+        columns.size());
+    for(Column column : columns) {
       Object value = null;
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
-
-        if (column.getType() == DataType.BOOLEAN) {
-          value = new Boolean(!isNull);  //Boolean values are stored in the null mask
-        } else {
-          if(!isNull) {
-
-            // locate the column data bytes
-            int colDataPos = 0;
-            int colDataLen = 0;
-            if (!column.isVariableLength()) 
-            {
-              // find fixed length column data
-              colDataPos = dataStart + column.getFixedDataOffset();
-              colDataLen = column.getType().getFixedSize();
-            } 
-            else
-            {
-              // find var length column data
-              int varDataIdx = column.getVarLenTableIndex();
-              short varDataStart = varColumnOffsets[varDataIdx];
-              short varDataEnd = varColumnOffsets[varDataIdx + 1];
-              colDataPos = rowStart + varDataStart;
-              colDataLen = varDataEnd - varDataStart;
-            }
-
-            // parse the column data
-            byte[] columnData = new byte[colDataLen];
-            rowBuffer.position(colDataPos);
-            rowBuffer.get(columnData);
-            value = column.read(columnData);
-          }
-        }
-
-        //Add the value to the row data
-        rtn.put(column.getName(), value);
+        // Add the value to the row data
+        rtn.put(column.getName(), getRowColumn(rowBuffer, nullMask, column));
       }
     }
     return rtn;
+    
   }
   
+  /**
+   * Reads the column data from the given row buffer.  Leaves limit unchanged.
+   */
+  private static Object getRowColumn(ByteBuffer rowBuffer,
+                                     NullMask nullMask,
+                                     Column column)
+    throws IOException
+  {
+    boolean isNull = nullMask.isNull(column.getColumnNumber());
+    if(column.getType() == DataType.BOOLEAN) {
+      return new Boolean(!isNull);  //Boolean values are stored in the null mask
+    } else if(isNull) {
+      // well, that's easy!
+      return null;
+    }
+
+    // reset position to row start
+    rowBuffer.reset();
+    
+    // locate the column data bytes
+    int rowStart = rowBuffer.position();
+    int colDataPos = 0;
+    int colDataLen = 0;
+    if(!column.isVariableLength()) {
+
+      // read fixed length value (non-boolean at this point)
+      int dataStart = rowStart + 2;
+      colDataPos = dataStart + column.getFixedDataOffset();
+      colDataLen = column.getType().getFixedSize();
+      
+    } else {
+
+      // read var length value
+      int varColumnOffsetPos =
+        (rowBuffer.limit() - nullMask.byteSize() - 4) -
+        (column.getVarLenTableIndex() * 2);
+
+      short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
+      short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
+      colDataPos = rowStart + varDataStart;
+      colDataLen = varDataEnd - varDataStart;
+    }
+
+    // grab the column data
+    byte[] columnData = new byte[colDataLen];
+    rowBuffer.position(colDataPos);
+    rowBuffer.get(columnData);
+
+    // parse the column data
+    return column.read(columnData);
+  }
+
+  /**
+   * Reads the null mask from the given row buffer.  Leaves limit unchanged.
+   */
+  private static NullMask getRowNullMask(ByteBuffer rowBuffer)
+    throws IOException
+  {
+    // reset position to row start
+    rowBuffer.reset();
+    
+    short columnCount = rowBuffer.getShort(); // Number of columns in this row
+    
+    // read null mask
+    NullMask nullMask = new NullMask(columnCount);
+    rowBuffer.position(rowBuffer.limit() - nullMask.byteSize());  //Null mask at end
+    nullMask.read(rowBuffer);
+
+    return nullMask;
+  }
+                                        
   /**
    * Position the buffer at the next row in the table
    * @return a ByteBuffer narrowed to the next row, or null if none
@@ -331,9 +393,6 @@ public class Table
     // loop until we find the next valid row or run out of pages
     while(true) {
 
-      // prepare to read new row
-      _rowState.reset();
-      
       if (_rowsLeftOnPage == 0) {
 
         // reset row number
@@ -364,12 +423,10 @@ public class Table
       _currentRowInPage++;
       _rowsLeftOnPage--;
 
-      // reset row state to current "root" page
-      _rowState.setPage(_pageChannel);
-
       ByteBuffer rowBuffer =
         positionAtRow(_rowState, _currentRowInPage, _pageChannel, _format);
       if(rowBuffer != null) {
+        // we found a non-deleted row, return it
         return rowBuffer;
       }
     }
@@ -387,9 +444,11 @@ public class Table
                                           JetFormat format)
     throws IOException
   {
-
+    // reset row state
+    rowState.reset();
+    
     while(true) {
-      ByteBuffer rowBuffer = rowState.getFinalPage();
+      ByteBuffer rowBuffer = rowState.getFinalPage(pageChannel);
     
       // note, we don't use findRowStart here cause we need the unmasked value
       short rowStart = rowBuffer.getShort(getRowStartOffset(rowNum, format));
@@ -443,74 +502,7 @@ public class Table
     }    
   }
 
-  /**
-   * Reads a single column from the given row in the given buffer.
-   */
-  public static Object readRowSingleColumn(
-      RowState rowState, int pageNumber, int rowNum,
-      Column column, PageChannel pageChannel, JetFormat format)
-    throws IOException
-  {
-    // reset state, then set to correct page
-    rowState.reset();
-    rowState.setPage(pageChannel, pageNumber);
-
-    // position at correct row
-    ByteBuffer rowBuffer = positionAtRow(rowState, rowNum, pageChannel,
-                                         format);
-    if(rowBuffer == null) {
-      // note, row state will indicate that row was deleted
-      return null;
-    }
-    
-    int rowStart = rowBuffer.position();
-    int rowEnd = rowBuffer.limit();
-
-    rowBuffer.position(rowStart);
-    short columnCount = rowBuffer.getShort(); //Number of columns in this row
-    
-    NullMask nullMask = new NullMask(columnCount);
-    rowBuffer.position(rowEnd - nullMask.byteSize());  //Null mask at end
-    nullMask.read(rowBuffer);
-
-    boolean isNull = nullMask.isNull(column.getColumnNumber());
-    if(column.getType() == DataType.BOOLEAN) {
-      return new Boolean(!isNull);  //Boolean values are stored in the null mask
-    } else if(isNull) {
-      // well, that's easy!
-      return null;
-    }
-
-    // locate the column data bytes
-    int colDataPos = 0;
-    int colDataLen = 0;
-    if(!column.isVariableLength()) {
-
-      // read fixed length value (non-boolean at this point)
-      int dataStart = rowStart + 2;
-      colDataPos = dataStart + column.getFixedDataOffset();
-      colDataLen = column.getType().getFixedSize();
-      
-    } else {
-
-      // read var length value
-      int varColumnOffsetPos =
-        (rowEnd - nullMask.byteSize() - 4) -
-        (column.getVarLenTableIndex() * 2);
-
-      short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
-      short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
-      colDataPos = rowStart + varDataStart;
-      colDataLen = varDataEnd - varDataStart;
-    }
-
-    // parse the column data
-    byte[] columnData = new byte[colDataLen];
-    rowBuffer.position(colDataPos);
-    rowBuffer.get(columnData);
-    return column.read(columnData);
-  }
-
+  
   /**
    * Calls <code>reset</code> on this table and returns a modifiable Iterator
    * which will iterate through all the rows of this table.  Use of the
@@ -1043,9 +1035,13 @@ public class Table
       return _rowBufferH.getPageNumber();
     }
 
-    public ByteBuffer getFinalPage()
+    public ByteBuffer getFinalPage(PageChannel pageChannel)
       throws IOException
     {
+      if(_finalRowBuffer == null) {
+        // (re)load current page
+        _finalRowBuffer = getPage(pageChannel);
+      }
       return _finalRowBuffer;
     }
 
@@ -1075,15 +1071,10 @@ public class Table
       return _rowBufferH.getPage(pageChannel);
     }
 
-    public ByteBuffer setPage(PageChannel pageChannel)
-      throws IOException
-    {
-      return setPage(pageChannel, _rowBufferH.getPageNumber());
-    }
-    
     public ByteBuffer setPage(PageChannel pageChannel, int pageNumber)
       throws IOException
     {
+      reset();
       _finalRowBuffer = _rowBufferH.setPage(pageChannel, pageNumber);
       return _finalRowBuffer;
     }

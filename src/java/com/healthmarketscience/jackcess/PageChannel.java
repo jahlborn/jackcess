@@ -74,7 +74,12 @@ public class PageChannel implements Channel {
    * @return True if the page was successfully read into the buffer, false if
    *    that page doesn't exist.
    */
-  public boolean readPage(ByteBuffer buffer, int pageNumber) throws IOException {
+  public boolean readPage(ByteBuffer buffer, int pageNumber)
+    throws IOException
+  {
+    if(pageNumber == INVALID_PAGE_NUMBER) {
+      throw new IllegalStateException("invalid page number");
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Reading in page " + Integer.toHexString(pageNumber));
     }
@@ -136,7 +141,7 @@ public class PageChannel implements Channel {
 
   /**
    * @return a duplicate of the current buffer narrowed to the given position
-   *         and limit.
+   *         and limit.  mark will be set at the current position.
    */
   public static ByteBuffer narrowBuffer(ByteBuffer buffer, int position,
                                         int limit)
@@ -145,7 +150,8 @@ public class PageChannel implements Channel {
       .order(buffer.order())
       .clear()
       .limit(limit)
-      .position(position);
+      .position(position)
+      .mark();
   }
   
 }
