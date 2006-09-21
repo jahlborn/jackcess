@@ -521,7 +521,7 @@ public class Column implements Comparable<Column> {
       }
 
       // write sign byte
-      buffer.put(negative ? (byte)1 : (byte)0);
+      buffer.put(negative ? (byte)0x80 : (byte)0);
 
       // adjust scale according to this column type (will cause the an
       // ArithmeticException if number has too many decimal places)
