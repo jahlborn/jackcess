@@ -5,6 +5,7 @@ package com.healthmarketscience.jackcess;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -606,16 +607,29 @@ public class DatabaseTest extends TestCase {
   }
 
   static void dumpDatabase(Database mdb) throws Exception {
-    System.out.println("DATABASE:");
-    for(Table table : mdb) {
-      dumpTable(table);
-    }
+    dumpDatabase(mdb, new PrintWriter(System.out, true));
   }
 
   static void dumpTable(Table table) throws Exception {
-    System.out.println("TABLE: " + table.getName());
+    dumpTable(table, new PrintWriter(System.out, true));
+  }
+
+  static void dumpDatabase(Database mdb, PrintWriter writer) throws Exception {
+    writer.println("DATABASE:");
+    for(Table table : mdb) {
+      dumpTable(table, writer);
+    }
+  }
+
+  static void dumpTable(Table table, PrintWriter writer) throws Exception {
+    writer.println("TABLE: " + table.getName());
+    List<String> colNames = new ArrayList<String>();
+    for(Column col : table.getColumns()) {
+      colNames.add(col.getName());
+    }
+    writer.println("COLUMNS: " + colNames);
     for(Object row : table) {
-      System.out.println(row);
+      writer.println(row);
     }
   }
   
