@@ -1006,6 +1006,13 @@ public class Column implements Comparable<Column> {
       return value.toString();
     }
   }
+
+  /**
+   * Interpret a boolean value (null == false)
+   */
+  public static boolean toBooleanValue(Object obj) {
+    return ((obj != null) && ((Boolean)obj).booleanValue());
+  }
   
   /**
    * Swaps the bytes of the given numeric in place.
@@ -1033,5 +1040,5 @@ public class Column implements Comparable<Column> {
     }
     return obj;
   }
-  
+
 }

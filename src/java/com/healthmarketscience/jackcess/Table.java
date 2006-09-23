@@ -793,11 +793,9 @@ public class Table
         buffer.put(col.write(row.get(index), 0));
       }
       if (col.getType() == DataType.BOOLEAN) {
-        if (row.get(index) != null) {
-          if (!((Boolean) row.get(index)).booleanValue()) {
-            //Booleans are stored in the null mask
-            nullMask.markNull(index);
-          }
+        if(!Column.toBooleanValue(row.get(index))) {
+          //Booleans are stored in the null mask
+          nullMask.markNull(index);
         }
       } else if (row.get(index) == null) {
         nullMask.markNull(index);
