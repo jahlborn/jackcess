@@ -60,7 +60,7 @@ public class Index implements Comparable<Index> {
 
   private static final byte REVERSE_ORDER_FLAG = (byte)0x01;
   
-  private static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
+  static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
       public int compare(byte[] left, byte[] right) {
         if(left == right) {
@@ -79,7 +79,8 @@ public class Index implements Comparable<Index> {
           ++pos;
         }
         if(pos < len) {
-          return ((left[pos] < right[pos]) ? -1 : 1);
+          return ((ByteUtil.toUnsignedInt(left[pos]) <
+                   ByteUtil.toUnsignedInt(right[pos])) ? -1 : 1);
         }
         return ((left.length < right.length) ? -1 :
                 ((left.length > right.length) ? 1 : 0));

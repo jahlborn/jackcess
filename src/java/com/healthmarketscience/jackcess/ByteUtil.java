@@ -126,9 +126,9 @@ public final class ByteUtil {
       offset += 2;
     }
     
-    int rtn = buffer.get(offset) & 0xFF;
-    rtn += ((((int) buffer.get(offset + (1 * offInc))) & 0xFF) << 8);
-    rtn += ((((int) buffer.get(offset + (2 * offInc))) & 0xFF) << 16);
+    int rtn = toUnsignedInt(buffer.get(offset));
+    rtn += (toUnsignedInt(buffer.get(offset + (1 * offInc))) << 8);
+    rtn += (toUnsignedInt(buffer.get(offset + (2 * offInc))) << 16);
     rtn &= 0xFFFFFF;
     return rtn;
   }
@@ -230,5 +230,12 @@ public final class ByteUtil {
       writer.close();
     }
   }
-    
+
+  /**
+   * @return the byte value converted to an unsigned int value
+   */
+  public static int toUnsignedInt(byte b) { 
+    return (int)b & 0xFF;
+  }
+  
 }
