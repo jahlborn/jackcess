@@ -132,6 +132,55 @@ public final class ByteUtil {
     rtn &= 0xFFFFFF;
     return rtn;
   }
+
+  /**
+   * @return an int from the current position in the given buffer, read using
+   *         the given ByteOrder
+   */
+  public static int getInt(ByteBuffer buffer, ByteOrder order) {
+    int offset = buffer.position();
+    int rtn = getInt(buffer, offset, order);
+    buffer.position(offset + 4);
+    return rtn;
+  }
+  
+  /**
+   * @return an int from the given position in the given buffer, read using
+   *         the given ByteOrder
+   */
+  public static int getInt(ByteBuffer buffer, int offset, ByteOrder order) {
+    ByteOrder origOrder = buffer.order();
+    try {
+      return buffer.order(order).getInt(offset);
+    } finally {
+      buffer.order(origOrder);
+    }
+  }
+  
+  /**
+   * Writes an int at the current position in the given buffer, using the
+   * given ByteOrder
+   */
+  public static void putInt(ByteBuffer buffer, int val, ByteOrder order) {
+    int offset = buffer.position();
+    putInt(buffer, val, offset, order);
+    buffer.position(offset + 4);
+  }
+  
+  /**
+   * Writes an int at the given position in the given buffer, using the
+   * given ByteOrder
+   */
+  public static void putInt(ByteBuffer buffer, int val, int offset,
+                           ByteOrder order)
+  {
+    ByteOrder origOrder = buffer.order();
+    try {
+      buffer.order(order).putInt(offset, val);
+    } finally {
+      buffer.order(origOrder);
+    }
+  }
   
   /**
    * Convert a byte buffer to a hexadecimal string for display
