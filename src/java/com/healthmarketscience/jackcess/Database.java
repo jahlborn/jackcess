@@ -42,6 +42,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,7 +73,7 @@ public class Database
     SID[0] = (byte) 0xA6;
     SID[1] = (byte) 0x33;
   }
-  
+
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
   
@@ -117,6 +118,11 @@ public class Database
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
+
+  /** the columns to read when reading system catalog initially */
+  private static Collection<String> SYSTEM_CATALOG_COLUMNS =
+    new HashSet<String>(Arrays.asList(COL_NAME, COL_TYPE, COL_ID));
+  
   
   /**
    * All of the reserved words in Access that should be escaped when creating
@@ -266,8 +272,7 @@ public class Database
     }
     _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG, "System Catalog");
     Map row;
-    while ( (row = _systemCatalog.getNextRow(Arrays.asList(
-        COL_NAME, COL_TYPE, COL_ID))) != null)
+    while ( (row = _systemCatalog.getNextRow(SYSTEM_CATALOG_COLUMNS)) != null)
     {
       String name = (String) row.get(COL_NAME);
       if (name != null && TYPE_TABLE.equals(row.get(COL_TYPE))) {
