@@ -42,8 +42,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
 import org.apache.commons.lang.builder.CompareToBuilder;
+
+
 
 /**
  * Access table index
@@ -59,6 +60,9 @@ public class Index implements Comparable<Index> {
   private static final int NEW_ENTRY_COLUMN_INDEX = -1;
 
   private static final byte REVERSE_ORDER_FLAG = (byte)0x01;
+
+  private static final byte INDEX_NODE_PAGE_TYPE = (byte)0x03;
+  private static final byte INDEX_LEAF_PAGE_TYPE = (byte)0x04;
   
   static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
@@ -195,7 +199,8 @@ public class Index implements Comparable<Index> {
   private String _name;
   /** is this index a primary key */
   private boolean _primaryKey;
-
+  /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
+  boolean _readOnly;
   
   public Index(int parentPageNumber, PageChannel channel, JetFormat format) {
     _parentPageNumber = parentPageNumber;
@@ -232,15 +237,19 @@ public class Index implements Comparable<Index> {
   public Collection<Column> getColumns() {
     return Collections.unmodifiableCollection(_columns.keySet());
   }
-  
+
   public void update() throws IOException {
+    if(_readOnly) {
+      throw new UnsupportedOperationException(
+          "FIXME cannot write indexes of this type yet");
+    }
     _pageChannel.writePage(write(), _pageNumber);
   }
 
   /**
    * Write this index out to a buffer
    */
-  public ByteBuffer write() throws IOException {
+  private ByteBuffer write() throws IOException {
     ByteBuffer buffer = _pageChannel.createPageBuffer();
     buffer.put((byte) 0x04);  //Page type
     buffer.put((byte) 0x01);  //Unknown
@@ -274,41 +283,153 @@ public class Index implements Comparable<Index> {
   }
   
   /**
-   * Read this index in from a buffer
-   * @param buffer Buffer to read from
+   * Read this index in from a tableBuffer
+   * @param tableBuffer table definition buffer to read from initial info
    * @param availableColumns Columns that this index may use
    */
-  public void read(ByteBuffer buffer, List<Column> availableColumns)
+  public void read(ByteBuffer tableBuffer, List<Column> availableColumns)
   throws IOException
   {
     for (int i = 0; i < MAX_COLUMNS; i++) {
-      short columnNumber = buffer.getShort();
-      Byte flags = new Byte(buffer.get());
+      short columnNumber = tableBuffer.getShort();
+      Byte flags = new Byte(tableBuffer.get());
       if (columnNumber != COLUMN_UNUSED) {
         _columns.put(availableColumns.get(columnNumber), flags);
       }
     }
-    buffer.getInt(); //Forward past Unknown
-    _pageNumber = buffer.getInt();
-    buffer.position(buffer.position() + 10);  //Forward past other stuff
+    tableBuffer.getInt(); //Forward past Unknown
+    _pageNumber = tableBuffer.getInt();
+    tableBuffer.position(tableBuffer.position() + 10);  //Forward past other stuff
     ByteBuffer indexPage = _pageChannel.createPageBuffer();
-    _pageChannel.readPage(indexPage, _pageNumber);
-    indexPage.position(_format.OFFSET_INDEX_ENTRY_MASK);
-    byte[] entryMask = new byte[_format.SIZE_INDEX_ENTRY_MASK];
-    indexPage.get(entryMask);
+
+    // find first leaf page
+    int leafPageNumber = _pageNumber;
+    while(true) {
+      _pageChannel.readPage(indexPage, leafPageNumber);
+
+      if(indexPage.get(0) == INDEX_NODE_PAGE_TYPE) {
+        // FIXME we can't modify this index at this point in time
+        _readOnly = true;
+
+        // found another node page
+        leafPageNumber = readNodePage(indexPage);
+      } else {
+        // found first leaf
+        indexPage.rewind();
+        break;
+      }
+    }
+    
+    // read all leaf pages
+    while(true) {
+
+      leafPageNumber = readLeafPage(indexPage);
+      if(leafPageNumber != 0) {
+        // FIXME we can't modify this index at this point in time
+        _readOnly = true;
+        
+        // found another one 
+        _pageChannel.readPage(indexPage, leafPageNumber);
+        
+      } else {
+        // all done
+        break;
+      }
+    }
+
+  }
+
+  /**
+   * Reads the first entry off of an index node page and returns the next page
+   * number.
+   */
+  private int readNodePage(ByteBuffer nodePage)
+    throws IOException
+  {
+    if(nodePage.get(0) != INDEX_NODE_PAGE_TYPE) {
+      throw new IOException("expected index node page, found " +
+                            nodePage.get(0));
+    }
+    
+    List<NodeEntry> nodeEntries = new ArrayList<NodeEntry>();
+    readIndexPage(nodePage, false, null, nodeEntries);
+
+    // grab the first entry
+    // FIXME, need to parse all...?
+    return nodeEntries.get(0).getSubPageNumber();
+  }
+
+  /**
+   * Reads an index leaf page.
+   * @return the next leaf page number, 0 if none
+   */
+  private int readLeafPage(ByteBuffer leafPage)
+    throws IOException
+  {
+    if(leafPage.get(0) != INDEX_LEAF_PAGE_TYPE) {
+      throw new IOException("expected index leaf page, found " +
+                            leafPage.get(0));
+    }
+    
+    // note, "header" data is in LITTLE_ENDIAN format, entry data is in
+    // BIG_ENDIAN format
+
+    int nextLeafPage = leafPage.getInt(_format.OFFSET_NEXT_INDEX_LEAF_PAGE);
+    readIndexPage(leafPage, true, _entries, null);
+
+    return nextLeafPage;
+  }
+
+  /**
+   * Reads an index page, populating the correct collection based on the page
+   * type (node or leaf).
+   */
+  private void readIndexPage(ByteBuffer indexPage, boolean isLeaf,
+                             Collection<Entry> entries,
+                             Collection<NodeEntry> nodeEntries)
+    throws IOException
+  {
+    // note, "header" data is in LITTLE_ENDIAN format, entry data is in
+    // BIG_ENDIAN format
+    int numCompressedBytes = indexPage.get(
+        _format.OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
+    int entryMaskLength = _format.SIZE_INDEX_ENTRY_MASK;
+    int entryMaskPos = _format.OFFSET_INDEX_ENTRY_MASK;
+    int entryPos = entryMaskPos + _format.SIZE_INDEX_ENTRY_MASK;
     int lastStart = 0;
-    int nextEntryIndex = 0;
-    for (int i = 0; i < entryMask.length; i++) {
+    byte[] valuePrefix = null;
+    boolean firstEntry = true;
+    for (int i = 0; i < entryMaskLength; i++) {
+      byte entryMask = indexPage.get(entryMaskPos + i);
       for (int j = 0; j < 8; j++) {
-        if ((entryMask[i] & (1 << j)) != 0) {
+        if ((entryMask & (1 << j)) != 0) {
           int length = i * 8 + j - lastStart;
-          Entry e = new Entry(indexPage, nextEntryIndex++);
-          _entries.add(e);
-          lastStart += length;
+          indexPage.position(entryPos + lastStart);
+          if(isLeaf) {
+            entries.add(new Entry(indexPage, length, valuePrefix));
+          } else {
+            nodeEntries.add(new NodeEntry(indexPage, length, valuePrefix));
+          }
+
+          // read any shared "compressed" bytes
+          if(firstEntry) {
+            firstEntry = false;
+            if(numCompressedBytes > 0) {
+              // FIXME we can't modify this index at this point in time
+              _readOnly = true;
+
+              valuePrefix = new byte[numCompressedBytes];
+              indexPage.position(entryPos + lastStart);
+              indexPage.get(valuePrefix);
+            }
+          }
+
+          lastStart += length;          
         }
       }
     }
   }
+  
   
   /**
    * Add a row to this index
@@ -321,7 +442,8 @@ public class Index implements Comparable<Index> {
   {
     _entries.add(new Entry(row, pageNumber, rowNumber));
   }
-  
+
+  @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
@@ -467,7 +589,7 @@ public class Index implements Comparable<Index> {
 
   
   /**
-   * A single entry in an index (points to a single row)
+   * A single leaf entry in an index (points to a single row)
    */
   private class Entry implements Comparable<Entry> {
     
@@ -499,15 +621,15 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing entry in from a buffer
      */
-    public Entry(ByteBuffer buffer, int nextEntryIndex) throws IOException {
+    public Entry(ByteBuffer buffer, int length, byte[] valuePrefix)
+      throws IOException
+    {
       for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
         Column col = entry.getKey();
         Byte flags = entry.getValue();
         _entryColumns.add(newEntryColumn(col)
-                          .initFromBuffer(buffer, nextEntryIndex, flags));
+                          .initFromBuffer(buffer, flags, valuePrefix));
       }
-      // 3-byte int in big endian order!  Gotta love those kooky MS
-      // programmers. :)
       _page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       _row = buffer.get();
     }
@@ -558,6 +680,7 @@ public class Index implements Comparable<Index> {
       buffer.put(_row);
     }
     
+    @Override
     public String toString() {
       return ("Page = " + _page + ", Row = " + _row + ", Columns = " + _entryColumns + "\n");
     }
@@ -618,8 +741,8 @@ public class Index implements Comparable<Index> {
        * Initialize from a buffer
        */
       protected abstract EntryColumn initFromBuffer(ByteBuffer buffer,
-                                                    int entryIndex,
-                                                    byte flags)
+                                                    byte flags,
+                                                    byte[] valuePrefix)
         throws IOException;
 
       protected abstract boolean isNullValue();
@@ -680,15 +803,25 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           int entryIndex,
-                                           byte flags)
+                                           byte flags,
+                                           byte[] valuePrefix)
         throws IOException
       {
-        byte flag = buffer.get();
+        
+        
+        byte flag = ((valuePrefix == null) ? buffer.get() : valuePrefix[0]);
         // FIXME, reverse is 0x80, reverse null is 0xFF
         if (flag != (byte) 0) {
-          byte[] data = new byte[_column.getType().getFixedSize()];          
-          buffer.get(data);
+          byte[] data = new byte[_column.getType().getFixedSize()];
+          int numPrefixBytes = ((valuePrefix == null) ? 0 :
+                                (valuePrefix.length - 1));
+          int dataOffset = 0;
+          if((valuePrefix != null) && (valuePrefix.length > 1)) {
+            System.arraycopy(valuePrefix, 1, data, 0,
+                             (valuePrefix.length - 1));
+            dataOffset += (valuePrefix.length - 1);
+          }
+          buffer.get(data, dataOffset, (data.length - dataOffset));
           _value = (Comparable) _column.read(data, ByteOrder.BIG_ENDIAN);
           
           //ints and shorts are stored in index as value + 2147483648
@@ -700,7 +833,7 @@ public class Index implements Comparable<Index> {
                                         (long) Integer.MAX_VALUE + 1L));
           }
         }
-
+        
         return this;
       }
 
@@ -782,11 +915,11 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           int entryIndex,
-                                           byte flags)
+                                           byte flags,
+                                           byte[] valuePrefix)
         throws IOException
       {
-        byte flag = buffer.get();
+        byte flag = ((valuePrefix == null) ? buffer.get() : valuePrefix[0]);
         // FIXME, reverse is 0x80, reverse null is 0xFF
         // end flag is FE, post extra bytes is FF 00
         // extra bytes are inverted, so are normal bytes
@@ -797,9 +930,20 @@ public class Index implements Comparable<Index> {
             ++endPos;
           }
 
+          // FIXME, prefix could probably include extraBytes...
+          
           // read index bytes
-          _valueBytes = new byte[endPos - buffer.position()];
-          buffer.get(_valueBytes);
+          int numPrefixBytes = ((valuePrefix == null) ? 0 :
+                                (valuePrefix.length - 1));
+          int dataOffset = 0;
+          _valueBytes = new byte[(endPos - buffer.position()) +
+                                 numPrefixBytes];
+          if(numPrefixBytes > 0) {
+            System.arraycopy(valuePrefix, 1, _valueBytes, 0, numPrefixBytes);
+            dataOffset += numPrefixBytes;
+          }
+          buffer.get(_valueBytes, dataOffset,
+                     (_valueBytes.length - dataOffset));
 
           // read end codes byte
           buffer.get();
@@ -884,5 +1028,37 @@ public class Index implements Comparable<Index> {
     }
     
   }
-  
+
+  /**
+   * A single node entry in an index (points to a sub-page in the index)
+   */
+  private class NodeEntry extends Entry {
+
+    /** index page number of the page to which this node entry refers */
+    private int _subPageNumber;
+    
+
+    /**
+     * Read an existing node entry in from a buffer
+     */
+    public NodeEntry(ByteBuffer buffer, int length, byte[] valuePrefix)
+      throws IOException
+    {
+      super(buffer, length, valuePrefix);
+
+      _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
+    }
+
+    public int getSubPageNumber() {
+      return _subPageNumber;
+    }
+
+    public String toString() {
+      return ("Page = " + getPage() + ", Row = " + getRow() +
+              ", SubPage = " + _subPageNumber +
+              ", Columns = " + getEntryColumns() + "\n");
+    }
+        
+  }
+
 }

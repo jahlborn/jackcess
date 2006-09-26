@@ -3,6 +3,7 @@
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -90,6 +91,33 @@ public class IndexTest extends TestCase {
     table = mdb.getTable("Table3");
     assertEquals(2, table.getIndexes().size());
     assertEquals(3, table.getIndexSlotCount());
+  }
+
+  public void testComplexIndex() throws Exception
+  {
+    // this file has an index with "compressed" entries and node pages
+    File origFile = new File("test/data/compIndexTest.mdb");
+    Database db = Database.open(origFile);
+    Table t = db.getTable("Table1");
+    assertEquals(512, countRows(t));
+    db.close();
+
+    // copy to temp file and attemp to edit
+    File testFile = File.createTempFile("databaseTest", ".mdb");
+    testFile.deleteOnExit();
+
+    copyFile(origFile, testFile);
+
+    db = Database.open(testFile);
+    t = db.getTable("Table1");
+    
+    try {
+      // we don't support writing these indexes
+      t.addRow(99, "abc", "def");
+      fail("Should have thrown IOException");
+    } catch(UnsupportedOperationException e) {
+      // success
+    }
   }
 
   

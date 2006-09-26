@@ -3,8 +3,12 @@
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -323,19 +327,6 @@ public class DatabaseTest extends TestCase {
     assertTrue(!bogusFile.exists());
   }
 
-  public void testPrimaryKey() throws Exception {
-    Table table = open().getTable("Table1");
-    Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
-    for(Index index : table.getIndexes()) {
-      foundPKs.put(index.getColumns().iterator().next().getName(),
-                   index.isPrimaryKey());
-    }
-    Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
-    expectedPKs.put("A", Boolean.TRUE);
-    expectedPKs.put("B", Boolean.FALSE);
-    assertEquals(expectedPKs, foundPKs);
-  }
-  
   public void testReadWithDeletedCols() throws Exception {
     Table table = Database.open(new File("test/data/delColTest.mdb")).getTable("Table1");
 
@@ -498,23 +489,6 @@ public class DatabaseTest extends TestCase {
     }
   }
 
-  public void testIndexSlots() throws Exception
-  {
-    Database mdb = Database.open(new File("test/data/indexTest.mdb"));
-
-    Table table = mdb.getTable("Table1");
-    assertEquals(4, table.getIndexes().size());
-    assertEquals(4, table.getIndexSlotCount());
-
-    table = mdb.getTable("Table2");
-    assertEquals(2, table.getIndexes().size());
-    assertEquals(3, table.getIndexSlotCount());
-
-    table = mdb.getTable("Table3");
-    assertEquals(2, table.getIndexes().size());
-    assertEquals(3, table.getIndexSlotCount());
-  }
-
   public void testMultiPageTableDef() throws Exception
   {
     List<Column> columns = open().getTable("Table2").getColumns();
@@ -641,6 +615,24 @@ public class DatabaseTest extends TestCase {
       }
       
       writer.println(row);
+    }
+  }
+
+  static void copyFile(File srcFile, File dstFile)
+    throws IOException
+  {
+    // FIXME should really be using commons io FileUtils here, but don't want
+    // to add dep for one simple test method
+    byte[] buf = new byte[1024];
+    OutputStream ostream = new FileOutputStream(dstFile);
+    InputStream istream = new FileInputStream(srcFile);
+    try {
+      int numBytes = 0;
+      while((numBytes = istream.read(buf)) >= 0) {
+        ostream.write(buf, 0, numBytes);
+      }
+    } finally {
+      ostream.close();
     }
   }
   

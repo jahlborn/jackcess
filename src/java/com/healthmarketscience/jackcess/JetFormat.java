@@ -105,6 +105,7 @@ public abstract class JetFormat {
   public final int OFFSET_USED_PAGES_USAGE_MAP_DEF;
   public final int OFFSET_FREE_PAGES_USAGE_MAP_DEF;
   
+  public final int OFFSET_INDEX_COMPRESSED_BYTE_COUNT;
   public final int OFFSET_INDEX_ENTRY_MASK;
   public final int OFFSET_NEXT_INDEX_LEAF_PAGE;
   
@@ -189,6 +190,7 @@ public abstract class JetFormat {
     OFFSET_USED_PAGES_USAGE_MAP_DEF = defineOffsetUsedPagesUsageMapDef();
     OFFSET_FREE_PAGES_USAGE_MAP_DEF = defineOffsetFreePagesUsageMapDef();
     
+    OFFSET_INDEX_COMPRESSED_BYTE_COUNT = defineOffsetIndexCompressedByteCount();
     OFFSET_INDEX_ENTRY_MASK = defineOffsetIndexEntryMask();
     OFFSET_NEXT_INDEX_LEAF_PAGE = defineOffsetNextIndexLeafPage();
     
@@ -252,6 +254,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetUsedPagesUsageMapDef();
   protected abstract int defineOffsetFreePagesUsageMapDef();
   
+  protected abstract int defineOffsetIndexCompressedByteCount();
   protected abstract int defineOffsetIndexEntryMask();
   protected abstract int defineOffsetNextIndexLeafPage();
   
@@ -316,8 +319,9 @@ public abstract class JetFormat {
     protected int defineOffsetUsedPagesUsageMapDef() { return 4027; }
     protected int defineOffsetFreePagesUsageMapDef() { return 3958; }
     
+    protected int defineOffsetIndexCompressedByteCount() { return 24; }
     protected int defineOffsetIndexEntryMask() { return 27; }
-    protected int defineOffsetNextIndexLeafPage() { return 12; }
+    protected int defineOffsetNextIndexLeafPage() { return 16; }
     
     protected int defineSizeIndexDefinition() { return 12; }
     protected int defineSizeColumnHeader() { return 25; }
