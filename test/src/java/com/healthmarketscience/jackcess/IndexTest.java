@@ -43,7 +43,6 @@ public class IndexTest extends TestCase {
   }
   
   public void testByteCodeComparator() {
-    // FIXME, writeme
     byte[] b0 = null;
     byte[] b1 = new byte[]{(byte)0x00};
     byte[] b2 = new byte[]{(byte)0x00, (byte)0x00};
@@ -99,7 +98,10 @@ public class IndexTest extends TestCase {
     File origFile = new File("test/data/compIndexTest.mdb");
     Database db = Database.open(origFile);
     Table t = db.getTable("Table1");
+    Index index = t.getIndexes().get(0);
+    assertFalse(index.isInitialized());
     assertEquals(512, countRows(t));
+    assertEquals(512, index.getEntryCount());
     db.close();
 
     // copy to temp file and attemp to edit

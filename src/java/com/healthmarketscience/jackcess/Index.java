@@ -189,7 +189,7 @@ public class Index implements Comparable<Index> {
   /** Number of rows in the index */
   private int _rowCount;
   private JetFormat _format;
-  private SortedSet<Entry> _entries = new TreeSet<Entry>();
+  private SortedSet<Entry> _entries;
   /** Map of columns to flags */
   private Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
   private PageChannel _pageChannel;
@@ -199,6 +199,9 @@ public class Index implements Comparable<Index> {
   private String _name;
   /** is this index a primary key */
   private boolean _primaryKey;
+  /** <code>true</code> if the index entries have been initialized,
+      <code>false</code> otherwise */
+  private boolean _initialized;
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
@@ -238,7 +241,44 @@ public class Index implements Comparable<Index> {
     return Collections.unmodifiableCollection(_columns.keySet());
   }
 
+  /**
+   * Returns the number of index entries in the index.  Only called by unit
+   * tests.
+   * <p>
+   * Forces index initialization.
+   */
+  int getEntryCount()
+    throws IOException
+  {
+    initialize();
+    return _entries.size();
+  }
+  
+  public boolean isInitialized() {
+    return _initialized;
+  }
+
+  /**
+   * Forces initialization of this index (actual parsing of index pages).
+   * normally, the index will not be initialized until the entries are
+   * actually needed.
+   */
+  public void initialize() throws IOException {
+    if(!_initialized) {
+      readIndexEntries();
+      _initialized = true;
+    }
+  }
+
+  /**
+   * Writes the current index state to the database.
+   * <p>
+   * Forces index initialization.
+   */
   public void update() throws IOException {
+    // make sure we've parsed the entries
+    initialize();
+    
     if(_readOnly) {
       throw new UnsupportedOperationException(
           "FIXME cannot write indexes of this type yet");
@@ -287,12 +327,12 @@ public class Index implements Comparable<Index> {
   }
   
   /**
-   * Read this index in from a tableBuffer
+   * Read the index info from a tableBuffer
    * @param tableBuffer table definition buffer to read from initial info
    * @param availableColumns Columns that this index may use
    */
   public void read(ByteBuffer tableBuffer, List<Column> availableColumns)
-  throws IOException
+    throws IOException
   {
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = tableBuffer.getShort();
@@ -304,6 +344,16 @@ public class Index implements Comparable<Index> {
     tableBuffer.getInt(); //Forward past Unknown
     _pageNumber = tableBuffer.getInt();
     tableBuffer.position(tableBuffer.position() + 10);  //Forward past other stuff
+  }
+
+  /**
+   * Reads the actual index entries.
+   */
+  private void readIndexEntries()
+    throws IOException
+  {
+    _entries = new TreeSet<Entry>();
+    
     ByteBuffer indexPage = _pageChannel.createPageBuffer();
 
     // find first leaf page
@@ -340,7 +390,6 @@ public class Index implements Comparable<Index> {
         break;
       }
     }
-
   }
 
   /**
@@ -437,6 +486,9 @@ public class Index implements Comparable<Index> {
   
   /**
    * Add a row to this index
+   * <p>
+   * Forces index initialization.
+   * 
    * @param row Row to add
    * @param pageNumber Page number on which the row is stored
    * @param rowNumber Row number at which the row is stored
@@ -444,6 +496,9 @@ public class Index implements Comparable<Index> {
   public void addRow(Object[] row, int pageNumber, byte rowNumber)
     throws IOException
   {
+    // make sure we've parsed the entries
+    initialize();
+    
     _entries.add(new Entry(row, pageNumber, rowNumber));
   }
 
@@ -455,6 +510,7 @@ public class Index implements Comparable<Index> {
     rtn.append("\n\tPage number: " + _pageNumber);
     rtn.append("\n\tIs Primary Key: " + _primaryKey);
     rtn.append("\n\tColumns: " + _columns);
+    rtn.append("\n\tInitialized: " + _initialized);
     rtn.append("\n\tEntries: " + _entries);
     rtn.append("\n\n");
     return rtn.toString();
