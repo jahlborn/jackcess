@@ -259,7 +259,7 @@ public class Index implements Comparable<Index> {
     buffer.putInt(0); //Next page
     buffer.putInt(0); //Leaf page
     buffer.putInt(0); //Unknown
-    buffer.put((byte) 0); //Unknown
+    buffer.put((byte) 0); // compressed byte count
     buffer.put((byte) 0); //Unknown
     buffer.put((byte) 0); //Unknown
     byte[] entryMask = new byte[_format.SIZE_INDEX_ENTRY_MASK];
@@ -270,6 +270,10 @@ public class Index implements Comparable<Index> {
       int size = entry.size();
       totalSize += size;
       int idx = totalSize  / 8;
+      if(idx >= entryMask.length) {
+        throw new UnsupportedOperationException(
+            "FIXME cannot write large index yet");
+      }
       entryMask[idx] |= (1 << (totalSize % 8));
     }
     buffer.put(entryMask);
