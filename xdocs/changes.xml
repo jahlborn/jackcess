@@ -5,6 +5,38 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.7" date="2006-10-02">
+      <action dev="jahlborn" type="update">
+        Refactored DataType class, cleaned up a lot of "custom" data type code
+        springled throughout the codebase.
+      </action>
+      <action dev="jahlborn" type="update">
+        Added sanity checking on table creation (check column/table properties
+        for validity).
+      </action>
+      <action dev="jahlborn" type="update">
+        Clean up index reading/writing of text columns, add support for more
+        characters
+      </action>
+      <action dev="jahlborn" type="update">
+        Support reading 'compressed' indexes (fix 1563654)
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement "overflow" row reading.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Allow multi-page long value reading.
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement multi-page long value writing.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix decimal data type writing.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for opening files read-only (fix 1545857)
+      </action>
+    </release>
     <release version="1.1.6" date="2006-08-07">
       <action dev="jahlborn" type="fix">
         Handle more tables with more index slots than actual indexes (fix bug
