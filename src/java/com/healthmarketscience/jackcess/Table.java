@@ -701,7 +701,7 @@ public class Table
     }
     
     for (int i = 0; i < rowData.length; i++) {
-      rowSize = rowData[i].limit();
+      rowSize = rowData[i].remaining();
       int rowSpaceUsage = getRowSpaceUsage(rowSize, _format);
       short freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
       if (freeSpaceInPage < rowSpaceUsage) {
@@ -714,21 +714,16 @@ public class Table
         pageNumber = newDataPage(dataPage);
         freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
       }
-      //Decrease free space record.
-      dataPage.putShort(_format.OFFSET_FREE_SPACE, (short) (freeSpaceInPage -
-          rowSpaceUsage));
-      //Increment row count record.
-      short rowCount = dataPage.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
-      dataPage.putShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE, (short) (rowCount + 1));
-      short rowLocation = findRowEnd(dataPage, rowCount, _format);
-      rowLocation -= rowSize;
-      dataPage.putShort(getRowStartOffset(rowCount, _format), rowLocation);
-      dataPage.position(rowLocation);
+
+      // write out the row data
+      int rowNum = addDataPageRow(dataPage, rowSize, _format);
       dataPage.put(rowData[i]);
+
+      // update the indexes
       Iterator<Index> indIter = _indexes.iterator();
       while (indIter.hasNext()) {
         Index index = (Index) indIter.next();
-        index.addRow((Object[]) rows.get(i), pageNumber, (byte) rowCount);
+        index.addRow((Object[]) rows.get(i), pageNumber, (byte) rowNum);
       }
     }
     writeDataPage(dataPage, pageNumber);
@@ -926,6 +921,40 @@ public class Table
     return rtn.toString();
   }
 
+  /**
+   * Updates free space and row info for a new row of the given size in the
+   * given data page.  Positions the page for writing the row data.
+   * @return the row number of the new row
+   */
+  public static int addDataPageRow(ByteBuffer dataPage,
+                                   int rowSize,
+                                   JetFormat format)
+  {
+    int rowSpaceUsage = getRowSpaceUsage(rowSize, format);
+    
+    // Decrease free space record.
+    short freeSpaceInPage = dataPage.getShort(format.OFFSET_FREE_SPACE);
+    dataPage.putShort(format.OFFSET_FREE_SPACE, (short) (freeSpaceInPage -
+                                                         rowSpaceUsage));
+
+    // Increment row count record.
+    short rowCount = dataPage.getShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
+    dataPage.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE,
+                      (short) (rowCount + 1));
+
+    // determine row position
+    short rowLocation = findRowEnd(dataPage, rowCount, format);
+    rowLocation -= rowSize;
+
+    // write row position
+    dataPage.putShort(getRowStartOffset(rowCount, format), rowLocation);
+
+    // set position for row data
+    dataPage.position(rowLocation);
+
+    return rowCount;
+  }
+  
   public static short findRowStart(ByteBuffer buffer, int rowNum,
                                    JetFormat format)
   {

@@ -44,6 +44,9 @@ public class PageChannel implements Channel {
   private static final Log LOG = LogFactory.getLog(PageChannel.class);
   
   static final int INVALID_PAGE_NUMBER = -1;
+
+  /** dummy buffer used when allocating new pages */
+  private static final ByteBuffer FORCE_BYTES = ByteBuffer.allocate(1);
   
   /** Global usage map always lives on page 1 */
   private static final int PAGE_GLOBAL_USAGE_MAP = 1;
@@ -109,6 +112,21 @@ public class PageChannel implements Channel {
     long size = _channel.size();
     page.rewind();
     _channel.write(page, size);
+    int pageNumber = (int) (size / _format.PAGE_SIZE);
+    _globalUsageMap.removePageNumber(pageNumber);  //force is done here
+    return pageNumber;
+  }
+
+  /**
+   * Allocates a new page in the database.  Data in the page is undefined
+   * until it is written in a call to {@link #writePage}.
+   */
+  public int allocateNewPage() throws IOException {
+    long size = _channel.size();
+    FORCE_BYTES.rewind();
+    long offset = size + _format.PAGE_SIZE - FORCE_BYTES.remaining();
+    // this will force the file to be extended with mostly undefined bytes
+    _channel.write(FORCE_BYTES, offset);
     int pageNumber = (int) (size / _format.PAGE_SIZE);
     _globalUsageMap.removePageNumber(pageNumber);  //force is done here
     return pageNumber;

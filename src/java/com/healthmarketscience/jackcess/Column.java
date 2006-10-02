@@ -313,7 +313,7 @@ public class Column implements Comparable<Column> {
       return readCurrencyValue(buffer);
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
-        return readLongBinaryValue(data);
+        return readLongValue(data);
       } else {
         return null;
       }
@@ -340,7 +340,7 @@ public class Column implements Comparable<Column> {
    *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
-  private byte[] readLongBinaryValue(byte[] lvalDefinition)
+  private byte[] readLongValue(byte[] lvalDefinition)
     throws IOException
   {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
@@ -353,18 +353,30 @@ public class Column implements Comparable<Column> {
     }
     byte[] rtn = new byte[length];
     byte type = def.get();
-    switch (type) {
-      case LONG_VALUE_TYPE_OTHER_PAGE:
-        if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
-          throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
-              " bytes in long value definition, but found " +
-                                lvalDefinition.length);
-        }
 
+    if(type == LONG_VALUE_TYPE_THIS_PAGE) {
+
+      // inline long value
+      def.getInt();  //Skip over lval_dp
+      def.getInt();  //Skip over unknown
+      def.get(rtn);
+
+    } else {
+
+      // long value on other page(s)
+      if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
+        throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
+                              " bytes in long value definition, but found " +
+                              lvalDefinition.length);
+      }
+
+      byte rowNum = def.get();
+      int pageNum = ByteUtil.get3ByteInt(def, def.position());
+      ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+      
+      switch (type) {
+      case LONG_VALUE_TYPE_OTHER_PAGE:
         {
-          byte rowNum = def.get();
-          int pageNum = ByteUtil.get3ByteInt(def, def.position());
-          ByteBuffer lvalPage = _pageChannel.createPageBuffer();
           _pageChannel.readPage(lvalPage, pageNum);
 
           short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
@@ -379,25 +391,9 @@ public class Column implements Comparable<Column> {
         }
         break;
         
-      case LONG_VALUE_TYPE_THIS_PAGE:
-        def.getInt();  //Skip over lval_dp
-        def.getInt();  //Skip over unknown
-        def.get(rtn);
-        break;
-        
       case LONG_VALUE_TYPE_OTHER_PAGES:
 
         ByteBuffer rtnBuf = ByteBuffer.wrap(rtn);
-        
-        if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
-          throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
-              " bytes in long value definition, but found " +
-                                lvalDefinition.length);
-        }
-        byte rowNum = def.get();
-        int pageNum = ByteUtil.get3ByteInt(def, def.position());
-        ByteBuffer lvalPage = _pageChannel.createPageBuffer();
-
         int remainingLen = length;
         while(remainingLen > 0) {
           lvalPage.clear();
@@ -405,7 +401,6 @@ public class Column implements Comparable<Column> {
 
           short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
           short rowEnd = Table.findRowEnd(lvalPage, rowNum, _format);
-
           
           // read next page information
           lvalPage.position(rowStart);
@@ -428,7 +423,9 @@ public class Column implements Comparable<Column> {
         
       default:
         throw new IOException("Unrecognized long value type: " + type);
+      }
     }
+    
     return rtn;
   }
   
@@ -439,7 +436,7 @@ public class Column implements Comparable<Column> {
   private String readLongStringValue(byte[] lvalDefinition)
     throws IOException
   {
-    byte[] binData = readLongBinaryValue(lvalDefinition);
+    byte[] binData = readLongValue(lvalDefinition);
     if(binData == null) {
       return null;
     }
@@ -637,61 +634,137 @@ public class Column implements Comparable<Column> {
   }
   
   /**
-   * Write an LVAL column into a ByteBuffer inline (LONG_VALUE_TYPE_THIS_PAGE)
+   * Write an LVAL column into a ByteBuffer inline if it fits, otherwise in
+   * other data page(s).
    * @param value Value of the LVAL column
-   * @return A buffer containing the LVAL definition and the column value
+   * @return A buffer containing the LVAL definition and (possibly) the column
+   *         value (unless written to other pages)
    */
   public ByteBuffer writeLongValue(byte[] value,
                                    int remainingRowLength) throws IOException
   {
-    // FIXME, take remainingRowLength into account (don't always write inline)
-    
     if(value.length > getType().getMaxSize()) {
       throw new IOException("value too big for column");
     }
-    ByteBuffer def = ByteBuffer.allocate(_format.SIZE_LONG_VALUE_DEF + value.length);
+
+    // determine which type to write
+    byte type = 0;
+    int lvalDefLen = _format.SIZE_LONG_VALUE_DEF;
+    if((_format.SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength) {
+      type = LONG_VALUE_TYPE_THIS_PAGE;
+      lvalDefLen += value.length;
+    } else if(Table.getRowSpaceUsage(value.length, _format) <=
+              _format.MAX_ROW_SIZE)
+    {
+      type = LONG_VALUE_TYPE_OTHER_PAGE;
+    } else {
+      type = LONG_VALUE_TYPE_OTHER_PAGES;
+    }
+
+    ByteBuffer def = ByteBuffer.allocate(lvalDefLen);
     def.order(ByteOrder.LITTLE_ENDIAN);
     ByteUtil.put3ByteInt(def, value.length);
-    def.put(LONG_VALUE_TYPE_THIS_PAGE);
-    def.putInt(0);
-    def.putInt(0);  //Unknown
-    def.put(value);
+    def.put(type);
+
+    if(type == LONG_VALUE_TYPE_THIS_PAGE) {
+      // write long value inline
+      def.putInt(0);
+      def.putInt(0);  //Unknown
+      def.put(value);
+    } else {
+      
+      int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
+      byte firstLvalRow = 0;
+
+      ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+      
+      // write other page(s)
+      switch(type) {
+      case LONG_VALUE_TYPE_OTHER_PAGE:
+        writeLongValueHeader(lvalPage);
+        firstLvalRow = (byte)Table.addDataPageRow(lvalPage,
+                                                  value.length,
+                                                  _format);
+        lvalPage.put(value);
+        firstLvalPageNum = _pageChannel.writeNewPage(lvalPage);
+        break;
+
+      case LONG_VALUE_TYPE_OTHER_PAGES:
+
+        ByteBuffer buffer = ByteBuffer.wrap(value);
+        int remainingLen = buffer.remaining();
+        buffer.limit(0);
+        int lvalPageNum = _pageChannel.allocateNewPage();
+        byte lvalRow = 0;
+        int nextLvalPageNum = 0;
+        while(remainingLen > 0) {
+          lvalPage.clear();
+          writeLongValueHeader(lvalPage);
+
+          // figure out how much we will put in this page
+          int chunkLength = Math.min(_format.MAX_ROW_SIZE - 4,
+                                     remainingLen);
+          nextLvalPageNum = ((chunkLength < remainingLen) ?
+                             _pageChannel.allocateNewPage() : 0);
+
+          // add row to this page
+          lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
+                                               _format);
+          
+          // write next page info (we'll always be writing into row 0 for
+          // newly created pages)
+          lvalPage.put((byte)0); // row number
+          ByteUtil.put3ByteInt(lvalPage, nextLvalPageNum); // page number
+
+          // write this page's chunk of data
+          buffer.limit(buffer.limit() + chunkLength);
+          lvalPage.put(buffer);
+          remainingLen -= chunkLength;
+
+          // write new page to database
+          _pageChannel.writePage(lvalPage, lvalPageNum);
+          
+          // hang onto first page info
+          if(firstLvalPageNum == PageChannel.INVALID_PAGE_NUMBER) {
+            firstLvalPageNum = lvalPageNum;
+            firstLvalRow = lvalRow;
+          }
+
+          // move to next page
+          lvalPageNum = nextLvalPageNum;
+        }
+        break;
+
+      default:
+        throw new IOException("Unrecognized long value type: " + type);
+      }
+
+      // update def
+      def.put(firstLvalRow);
+      ByteUtil.put3ByteInt(def, firstLvalPageNum);
+      def.putInt(0);  //Unknown
+      
+    }
+      
     def.flip();
-    return def;    
+    return def;
   }
-  
+
   /**
-   * Write an LVAL column into a ByteBuffer on another page
-   *    (LONG_VALUE_TYPE_OTHER_PAGE)
-   * @param value Value of the LVAL column
-   * @return A buffer containing the LVAL definition
+   * Writes the header info for a long value page.
    */
-  // FIXME, unused?
-  private ByteBuffer writeLongValueInNewPage(byte[] value) throws IOException {
-    ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+  private void writeLongValueHeader(ByteBuffer lvalPage)
+  {
     lvalPage.put(PageTypes.DATA); //Page type
     lvalPage.put((byte) 1); //Unknown
     lvalPage.putShort((short) (_format.PAGE_SIZE -
-        _format.OFFSET_LVAL_ROW_LOCATION_BLOCK - _format.SIZE_ROW_LOCATION -
-        value.length)); //Free space
+                               _format.OFFSET_ROW_START)); //Free space
     lvalPage.put((byte) 'L');
     lvalPage.put((byte) 'V');
     lvalPage.put((byte) 'A');
     lvalPage.put((byte) 'L');
-    int offset = _format.PAGE_SIZE - value.length;
-    lvalPage.position(14);
-    lvalPage.putShort((short) offset);
-    lvalPage.position(offset);
-    lvalPage.put(value);
-    ByteBuffer def = ByteBuffer.allocate(_format.SIZE_LONG_VALUE_DEF);
-    def.order(ByteOrder.LITTLE_ENDIAN);
-    ByteUtil.put3ByteInt(def, value.length);
-    def.put(LONG_VALUE_TYPE_OTHER_PAGE);
-    def.put((byte) 0); //Row number
-    ByteUtil.put3ByteInt(def, _pageChannel.writeNewPage(lvalPage));  //Page #
-    def.putInt(0);  //Unknown
-    def.flip();
-    return def;    
+    lvalPage.putShort((short)0); // num rows in page
+    lvalPage.putInt(0); //unknown
   }
   
   /**
@@ -721,8 +794,6 @@ public class Column implements Comparable<Column> {
     // var length column
     if(!getType().isLongValue()) {
 
-      // FIXME, take remainingRowLength into account?  overflow pages?
-      
       // this is an "inline" var length field
       switch(getType()) {
       case NUMERIC:

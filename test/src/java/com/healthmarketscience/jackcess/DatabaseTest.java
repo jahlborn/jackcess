@@ -37,8 +37,16 @@ public class DatabaseTest extends TestCase {
   }
   
   static Database create() throws Exception {
+    return create(false);
+  }
+
+  static Database create(boolean keep) throws Exception {
     File tmp = File.createTempFile("databaseTest", ".mdb");
-    tmp.deleteOnExit();
+    if(keep) {
+      System.out.println("Created " + tmp);
+    } else {
+      tmp.deleteOnExit();
+    }
     return Database.create(tmp);
   }
 
@@ -277,7 +285,7 @@ public class DatabaseTest extends TestCase {
     assertEquals(2, table.getNextRow().get("D"));
   }
 
-  public void testReadMemo() throws Exception {
+  public void testReadLongValue() throws Exception {
 
     Database db = Database.open(new File("test/data/test2.mdb"));
     Table table = db.getTable("MSP_PROJECTS");
@@ -286,9 +294,14 @@ public class DatabaseTest extends TestCase {
     assertEquals("T", row.get("PROJ_PROP_COMPANY"));
     assertEquals("Standard", row.get("PROJ_INFO_CAL_NAME"));
     assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
+    byte[] foundBinaryData = (byte[])row.get("RESERVED_BINARY_DATA");
+    System.out.println("FOO found len " + foundBinaryData.length);
+    byte[] expectedBinaryData =
+      toByteArray(new File("test/data/test2BinData.dat"));
+    assertTrue(Arrays.equals(expectedBinaryData, foundBinaryData));
   }
 
-  public void testWriteMemo() throws Exception {
+  public void testWriteLongValue() throws Exception {
 
     Database db = create();
 
@@ -301,18 +314,39 @@ public class DatabaseTest extends TestCase {
     col.setName("B");
     col.setType(DataType.MEMO);
     columns.add(col);
+    col = new Column();
+    col.setName("C");
+    col.setType(DataType.OLE);
+    columns.add(col);
     db.createTable("test", columns);
 
     String testStr = "This is a test";
+    StringBuilder strBuf = new StringBuilder();
+    for(int i = 0; i < 2030; ++i) {
+      char c = (char)('a' + (i % 26));
+      strBuf.append(c);
+    }
+    String longMemo = strBuf.toString();
+    byte[] oleValue = toByteArray(new File("test/data/test2BinData.dat"));
+    
     
     Table table = db.getTable("Test");
-    table.addRow(new Object[]{testStr, testStr});
+    table.addRow(testStr, testStr, null);
+    table.addRow(testStr, longMemo, oleValue);
+
     table.reset();
 
     Map<String, Object> row = table.getNextRow();
 
     assertEquals(testStr, row.get("A"));
     assertEquals(testStr, row.get("B"));
+    assertNull(row.get("C"));
+
+    row = table.getNextRow();
+    
+    assertEquals(testStr, row.get("A"));
+    assertEquals(longMemo, row.get("B"));
+    assertTrue(Arrays.equals(oleValue, (byte[])row.get("C")));
     
   }
 
@@ -633,6 +667,21 @@ public class DatabaseTest extends TestCase {
       }
     } finally {
       ostream.close();
+    }
+  }
+
+  static byte[] toByteArray(File file)
+    throws IOException
+  {
+    // FIXME should really be using commons io IOUtils here, but don't want
+    // to add dep for one simple test method
+    FileInputStream istream = new FileInputStream(file);
+    try {
+      byte[] bytes = new byte[(int)file.length()];
+      istream.read(bytes);
+      return bytes;
+    } finally {
+      istream.close();
     }
   }
   
