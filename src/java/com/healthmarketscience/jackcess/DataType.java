@@ -47,19 +47,24 @@ public enum DataType {
   FLOAT((byte) 0x06, Types.FLOAT, 4),
   DOUBLE((byte) 0x07, Types.DOUBLE, 8),
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
-  BINARY((byte) 0x09, Types.BINARY, null, true, false, 0, 255, 255),
-  TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0, 50 * 2,
-       (int)JetFormat.TEXT_FIELD_MAX_LENGTH),
-  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0xFFFFFF),
-  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF),
+  BINARY((byte) 0x09, Types.BINARY, null, true, false, 0, 255, 255, 1),
+  TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
+       50 * JetFormat.TEXT_FIELD_UNIT_SIZE,
+       (int)JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_UNIT_SIZE),
+  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0xFFFFFF,
+      1),
+  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF,
+       JetFormat.TEXT_FIELD_UNIT_SIZE),
   UNKNOWN_0D((byte) 0x0D),
   GUID((byte) 0x0F, null, 16),
   // for some reason numeric is "var len" even though it has a fixed size...
   NUMERIC((byte) 0x10, Types.NUMERIC, null, true, false, 17, 17, 17,
-          true, 0, 0, 28, 1, 18, 28);
+          true, 0, 0, 28, 1, 18, 28, 1);
 
   /** Map of SQL types to Access data types */
   private static Map<Integer, DataType> SQL_TYPES = new HashMap<Integer, DataType>();
+  /** Alternate map of SQL types to Access data types */
+  private static Map<Integer, DataType> ALT_SQL_TYPES = new HashMap<Integer, DataType>();
   static {
     for (DataType type : DataType.values()) {
       if (type._sqlType != null) {
@@ -68,12 +73,18 @@ public enum DataType {
     }
     SQL_TYPES.put(Types.BIT, BYTE);
     SQL_TYPES.put(Types.BLOB, OLE);
+    SQL_TYPES.put(Types.CLOB, MEMO);
     SQL_TYPES.put(Types.BIGINT, LONG);
     SQL_TYPES.put(Types.CHAR, TEXT);
     SQL_TYPES.put(Types.DATE, SHORT_DATE_TIME);
     SQL_TYPES.put(Types.REAL, DOUBLE);
     SQL_TYPES.put(Types.TIME, SHORT_DATE_TIME);
     SQL_TYPES.put(Types.VARBINARY, BINARY);
+
+    // the "alternate" types allow for larger values
+    ALT_SQL_TYPES.put(Types.VARCHAR, MEMO);
+    ALT_SQL_TYPES.put(Types.VARBINARY, OLE);
+    ALT_SQL_TYPES.put(Types.BINARY, OLE);
   }
   
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
@@ -113,13 +124,15 @@ public enum DataType {
   private Integer _defaultPrecision;
   /** max precision value */
   private Integer _maxPrecision;
+  /** the number of bytes per "unit" for this data type */
+  private int _unitSize;
   
   private DataType(byte value) {
     this(value, null, null);
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize) {
-    this(value, sqlType, fixedSize, false, false, null, null, null);
+    this(value, sqlType, fixedSize, false, false, null, null, null, 1);
   }
 
   private DataType(byte value, Integer sqlType, Integer fixedSize,
@@ -127,10 +140,11 @@ public enum DataType {
                    boolean longValue,
                    Integer minSize,
                    Integer defaultSize,
-                   Integer maxSize) {
+                   Integer maxSize,
+                   int unitSize) {
     this(value, sqlType, fixedSize, variableLength, longValue,
          minSize, defaultSize, maxSize,
-         false, null, null, null, null, null, null);
+         false, null, null, null, null, null, null, unitSize);
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize,
@@ -145,7 +159,8 @@ public enum DataType {
                    Integer maxScale,
                    Integer minPrecision,
                    Integer defaultPrecision,
-                   Integer maxPrecision) {
+                   Integer maxPrecision,
+                   int unitSize) {
     _value = value;
     _sqlType = sqlType;
     _fixedSize = fixedSize;
@@ -161,6 +176,7 @@ public enum DataType {
     _minPrecision = minPrecision;
     _defaultPrecision = defaultPrecision;
     _maxPrecision = maxPrecision;
+    _unitSize = unitSize;
   }
   
   public byte getValue() {
@@ -230,6 +246,26 @@ public enum DataType {
   public int getMaxPrecision() {
     return _maxPrecision;
   }
+
+  public int getUnitSize() {
+    return _unitSize;
+  }
+
+  public boolean isValidSize(int size) {
+    return isWithinRange(size, getMinSize(), getMaxSize());
+  }
+
+  public boolean isValidScale(int scale) {
+    return isWithinRange(scale, getMinScale(), getMaxScale());
+  }
+
+  public boolean isValidPrecision(int precision) {
+    return isWithinRange(precision, getMinPrecision(), getMaxPrecision());
+  }
+
+  private boolean isWithinRange(int value, int minValue, int maxValue) {
+    return((value >= minValue) && (value <= maxValue));
+  }
   
   public static DataType fromByte(byte b) throws IOException {
     DataType rtn = DATA_TYPES.get(b);
@@ -240,13 +276,35 @@ public enum DataType {
     }
   }
   
-  public static DataType fromSQLType(int sqlType) throws SQLException {
+  public static DataType fromSQLType(int sqlType)
+  throws SQLException
+  {
+    return fromSQLType(sqlType, 0);
+  }
+  
+  public static DataType fromSQLType(int sqlType, int lengthInUnits)
+  throws SQLException
+  {
     DataType rtn = SQL_TYPES.get(sqlType);
-    if (rtn != null) {
-      return rtn;
-    } else {
+    if(rtn == null) {
       throw new SQLException("Unsupported SQL type: " + sqlType);
     }
+
+    if(rtn.isVariableLength()) {
+      // make sure size is reasonable
+      if(lengthInUnits > (rtn.getMaxSize() * rtn.getUnitSize())) {
+        // try alternate types
+        DataType altRtn = ALT_SQL_TYPES.get(sqlType);
+        if(altRtn != null) {
+          if(lengthInUnits <= (altRtn.getMaxSize() * altRtn.getUnitSize())) {
+            // use alternate type
+            rtn = altRtn;
+          }
+        }
+      }
+    }
+      
+    return rtn;
   }
 
 }

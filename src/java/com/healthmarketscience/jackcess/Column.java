@@ -192,7 +192,11 @@ public class Column implements Comparable<Column> {
   }
   
   public void setSQLType(int type) throws SQLException {
-    setType(DataType.fromSQLType(type));
+    setSQLType(type, 0);
+  }
+  
+  public void setSQLType(int type, int lengthInUnits) throws SQLException {
+    setType(DataType.fromSQLType(type, lengthInUnits));
   }
   
   public boolean isCompressedUnicode() {
@@ -222,6 +226,13 @@ public class Column implements Comparable<Column> {
     return _columnLength;
   }
 
+  public void setLengthInUnits(short unitLength) {
+    setLength((short)(getType().getUnitSize() * unitLength));
+  }
+  public short getLengthInUnits() {
+    return (short)(getLength() / getType().getUnitSize());
+  }
+  
   public int getVarLenTableIndex() {
     return _varLenTableIndex;
   }
@@ -251,21 +262,18 @@ public class Column implements Comparable<Column> {
         throw new IllegalArgumentException("invalid fixed length size");
       }
     } else if(!getType().isLongValue()) {
-      if((getLength() < getType().getMinSize()) ||
-         (getLength() > getType().getMaxSize())) {
+      if(!getType().isValidSize(getLength())) {
         throw new IllegalArgumentException("var length out of range");
       }
     }
 
     if(getType().getHasScalePrecision()) {
-      if((getScale() < getType().getMinScale()) ||
-         (getScale() > getType().getMaxScale())) {
+      if(!getType().isValidScale(getScale())) {
         throw new IllegalArgumentException(
             "Scale must be from " + getType().getMinScale() + " to " +
             getType().getMaxScale() + " inclusive");
       }
-      if((getPrecision() < getType().getMinPrecision()) ||
-         (getPrecision() > getType().getMaxPrecision())) {
+      if(!getType().isValidPrecision(getPrecision())) {
         throw new IllegalArgumentException(
             "Precision must be from " + getType().getMinPrecision() + " to " +
             getType().getMaxPrecision() + " inclusive");
