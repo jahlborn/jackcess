@@ -616,60 +616,53 @@ public class Database
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    */
-  public void copyTable(String name, ResultSet source) throws SQLException, IOException {
+  public void copyTable(String name, ResultSet source)
+    throws SQLException, IOException
+  {
+    copyTable(name, source, SimpleImportFilter.INSTANCE);
+  }
+  
+  /**
+   * Copy an existing JDBC ResultSet into a new table in this database
+   * @param name Name of the new table to create
+   * @param source ResultSet to copy from
+   * @param filter valid import filter
+   */
+  public void copyTable(String name, ResultSet source, ImportFilter filter)
+    throws SQLException, IOException
+  {
     ResultSetMetaData md = source.getMetaData();
     List<Column> columns = new LinkedList<Column>();
-    int textCount = 0;
-    int totalSize = 0;
-    // FIXME, there is some ugly (and broken) logic here...
-    for (int i = 1; i <= md.getColumnCount(); i++) {
-      DataType accessColumnType = DataType.fromSQLType(md.getColumnType(i));
-      switch (accessColumnType) {
-        case BYTE:
-        case INT:
-        case LONG:
-        case MONEY:
-        case FLOAT:
-        case NUMERIC:
-          totalSize += 4;
-          break;
-        case DOUBLE:
-        case SHORT_DATE_TIME:
-          totalSize += 8;
-          break;
-        case BINARY:
-        case TEXT:
-        case OLE:
-        case MEMO:
-          textCount++;
-          break;
-      }
-    }
-    short textSize = 0;
-    if (textCount > 0) {
-      textSize = (short) ((JetFormat.MAX_RECORD_SIZE - totalSize) / textCount);
-      if (textSize > JetFormat.TEXT_FIELD_MAX_LENGTH) {
-        textSize = JetFormat.TEXT_FIELD_MAX_LENGTH;
-      }
-    }
     for (int i = 1; i <= md.getColumnCount(); i++) {
       Column column = new Column();
       column.setName(escape(md.getColumnName(i)));
-      column.setType(DataType.fromSQLType(md.getColumnType(i)));
-      if (column.getType() == DataType.TEXT) {
-        column.setLength(textSize);
+      int lengthInUnits = md.getColumnDisplaySize(i);
+      column.setSQLType(md.getColumnType(i), lengthInUnits);
+      DataType type = column.getType();
+      if(type.isVariableLength()) {
+        column.setLengthInUnits((short)lengthInUnits);
+      }
+      if(type.getHasScalePrecision()) {
+        int scale = md.getScale(i);
+        int precision = md.getPrecision(i);
+        if(type.isValidScale(scale)) {
+          column.setScale((byte)scale);
+        }
+        if(type.isValidPrecision(precision)) {
+          column.setPrecision((byte)precision);
+        }
       }
       columns.add(column);
     }
-    createTable(escape(name), columns);
+    createTable(escape(name), filter.filterColumns(columns, md));
     Table table = getTable(escape(name));
-    List<Object[]> rows = new ArrayList<Object[]>();
+    List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
     while (source.next()) {
       Object[] row = new Object[md.getColumnCount()];
       for (int i = 0; i < row.length; i++) {
         row[i] = source.getObject(i + 1);
       }
-      rows.add(row);
+      rows.add(filter.filterRow(row));
       if (rows.size() == COPY_TABLE_BATCH_SIZE) {
         table.addRows(rows);
         rows.clear();
@@ -687,12 +680,26 @@ public class Database
    * @param delim Regular expression representing the delimiter string.
    */
   public void importFile(String name, File f, String delim)
-  throws IOException
+    throws IOException
+  {
+    importFile(name, f, delim, SimpleImportFilter.INSTANCE);
+  }
+
+  /**
+   * Copy a delimited text file into a new table in this database
+   * @param name Name of the new table to create
+   * @param f Source file to import
+   * @param delim Regular expression representing the delimiter string.
+   * @param filter valid import filter
+   */
+  public void importFile(String name, File f, String delim,
+                         ImportFilter filter)
+    throws IOException
   {
     BufferedReader in = null;
     try {
       in = new BufferedReader(new FileReader(f));
-      importReader(name, in, delim);
+      importReader(name, in, delim, filter);
     } finally {
       if (in != null) {
         try {
@@ -704,7 +711,6 @@ public class Database
     }
   }
 
-
   /**
    * Copy a delimited text file into a new table in this database
    * @param name Name of the new table to create
@@ -712,7 +718,21 @@ public class Database
    * @param delim Regular expression representing the delimiter string.
    */
   public void importReader(String name, BufferedReader in, String delim)
-  throws IOException
+    throws IOException
+  {
+    importReader(name, in, delim, SimpleImportFilter.INSTANCE);
+  }
+  
+  /**
+   * Copy a delimited text file into a new table in this database
+   * @param name Name of the new table to create
+   * @param in Source reader to import
+   * @param delim Regular expression representing the delimiter string.
+   * @param filter valid import filter
+   */
+  public void importReader(String name, BufferedReader in, String delim,
+                           ImportFilter filter)
+    throws IOException
   {
     String line = in.readLine();
     if (line == null || line.trim().length() == 0) {
@@ -728,41 +748,40 @@ public class Database
     List<Column> columns = new LinkedList<Column>();
     String[] columnNames = line.split(delim);
       
-    short textSize = (short) ((JetFormat.MAX_RECORD_SIZE) / columnNames.length);
-    if (textSize > JetFormat.TEXT_FIELD_MAX_LENGTH) {
-      textSize = JetFormat.TEXT_FIELD_MAX_LENGTH;
-    }
-
     for (int i = 0; i < columnNames.length; i++) {
       Column column = new Column();
       column.setName(escape(columnNames[i]));
       column.setType(DataType.TEXT);
-      column.setLength(textSize);
+      column.setLength((short)DataType.TEXT.getMaxSize());
       columns.add(column);
     }
+
+    try {
+      createTable(tableName, filter.filterColumns(columns, null));
+      Table table = getTable(tableName);
+      List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
       
-    createTable(tableName, columns);
-    Table table = getTable(tableName);
-    List<String[]> rows = new ArrayList<String[]>();
-      
-    while ((line = in.readLine()) != null)
-    {
-      // 
-      // Handle the situation where the end of the line
-      // may have null fields.  We always want to add the
-      // same number of columns to the table each time.
-      //
-      String[] data = new String[columnNames.length];
-      String[] splitData = line.split(delim);
-      System.arraycopy(splitData, 0, data, 0, splitData.length);
-      rows.add(data);
-      if (rows.size() == COPY_TABLE_BATCH_SIZE) {
-        table.addRows(rows);
-        rows.clear();
+      while ((line = in.readLine()) != null)
+      {
+        // 
+        // Handle the situation where the end of the line
+        // may have null fields.  We always want to add the
+        // same number of columns to the table each time.
+        //
+        String[] data = new String[columnNames.length];
+        String[] splitData = line.split(delim);
+        System.arraycopy(splitData, 0, data, 0, splitData.length);
+        rows.add(filter.filterRow(data));
+        if (rows.size() == COPY_TABLE_BATCH_SIZE) {
+          table.addRows(rows);
+          rows.clear();
+        }
       }
-    }
-    if (rows.size() > 0) {
-      table.addRows(rows);
+      if (rows.size() > 0) {
+        table.addRows(rows);
+      }
+    } catch(SQLException e) {
+      throw (IOException)new IOException(e.getMessage()).initCause(e);
     }
   }
   

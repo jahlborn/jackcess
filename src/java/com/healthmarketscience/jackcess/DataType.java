@@ -292,11 +292,11 @@ public enum DataType {
 
     if(rtn.isVariableLength()) {
       // make sure size is reasonable
-      if(lengthInUnits > (rtn.getMaxSize() * rtn.getUnitSize())) {
+      if((lengthInUnits * rtn.getUnitSize()) > rtn.getMaxSize()) {
         // try alternate types
         DataType altRtn = ALT_SQL_TYPES.get(sqlType);
         if(altRtn != null) {
-          if(lengthInUnits <= (altRtn.getMaxSize() * altRtn.getUnitSize())) {
+          if((lengthInUnits * altRtn.getUnitSize()) <= altRtn.getMaxSize()) {
             // use alternate type
             rtn = altRtn;
           }

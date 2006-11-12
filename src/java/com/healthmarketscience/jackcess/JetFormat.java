@@ -42,9 +42,11 @@ public abstract class JetFormat {
   
   /** Maximum size of a record minus OLE objects and Memo fields */
   public static final int MAX_RECORD_SIZE = 1900;  //2kb minus some overhead
-  
+
+  /** the "unit" size for text fields */
+  public static final short TEXT_FIELD_UNIT_SIZE = 2;
   /** Maximum size of a text field */
-  public static final short TEXT_FIELD_MAX_LENGTH = 255 * 2;
+  public static final short TEXT_FIELD_MAX_LENGTH = 255 * TEXT_FIELD_UNIT_SIZE;
   
   /** Offset in the file that holds the byte describing the Jet format version */
   private static final long OFFSET_VERSION = 20L;
