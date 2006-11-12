@@ -290,17 +290,14 @@ public enum DataType {
       throw new SQLException("Unsupported SQL type: " + sqlType);
     }
 
-    if(rtn.isVariableLength()) {
-      // make sure size is reasonable
-      if((lengthInUnits * rtn.getUnitSize()) > rtn.getMaxSize()) {
-        // try alternate types
-        DataType altRtn = ALT_SQL_TYPES.get(sqlType);
-        if(altRtn != null) {
-          if((lengthInUnits * altRtn.getUnitSize()) <= altRtn.getMaxSize()) {
-            // use alternate type
-            rtn = altRtn;
-          }
-        }
+    // make sure size is reasonable
+    int size = lengthInUnits * rtn.getUnitSize();
+    if(rtn.isVariableLength() && !rtn.isValidSize(size)) {
+      // try alternate type
+      DataType altRtn = ALT_SQL_TYPES.get(sqlType);
+      if((altRtn != null) && altRtn.isValidSize(size)) {
+        // use alternate type
+        rtn = altRtn;
       }
     }
       
