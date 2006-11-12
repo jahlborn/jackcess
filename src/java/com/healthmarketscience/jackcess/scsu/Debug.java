@@ -7,7 +7,7 @@ import org.apache.commons.logging.LogFactory;
  * This sample software accompanies Unicode Technical Report #6 and
  * distributed as is by Unicode, Inc., subject to the following:
  *
- * Copyright © 1996-1997 Unicode, Inc.. All Rights Reserved.
+ * Copyright 1996-1997 Unicode, Inc.. All Rights Reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * without fee is hereby granted provided that this copyright notice
