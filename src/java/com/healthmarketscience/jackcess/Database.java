@@ -639,7 +639,10 @@ public class Database
       int lengthInUnits = md.getColumnDisplaySize(i);
       column.setSQLType(md.getColumnType(i), lengthInUnits);
       DataType type = column.getType();
-      if(type.isVariableLength()) {
+      // we check for isTrueVariableLength here to avoid setting the length
+      // for a NUMERIC column, which pretends to be var-len, even though it
+      // isn't
+      if(type.isTrueVariableLength() && !type.isLongValue()) {
         column.setLengthInUnits((short)lengthInUnits);
       }
       if(type.getHasScalePrecision()) {

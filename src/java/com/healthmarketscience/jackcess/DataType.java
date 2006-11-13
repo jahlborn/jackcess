@@ -187,6 +187,12 @@ public enum DataType {
     return _variableLength;
   }
 
+  public boolean isTrueVariableLength() {
+    // some "var len" fields do not really have a variable length,
+    // e.g. NUMERIC
+    return (isVariableLength() && (getMinSize() != getMaxSize()));
+  }
+  
   public boolean isLongValue() {
     return _longValue;
   }

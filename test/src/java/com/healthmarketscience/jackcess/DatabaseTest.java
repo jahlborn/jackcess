@@ -81,7 +81,7 @@ public class DatabaseTest extends TestCase {
     col = new Column();
     col.setName("A");
     col.setType(DataType.TEXT);
-    col.setLength((short)(352 * 2));
+    col.setLength((short)(352 * DataType.TEXT.getUnitSize()));
     columns.add(col);
     
     try {
@@ -295,7 +295,6 @@ public class DatabaseTest extends TestCase {
     assertEquals("Standard", row.get("PROJ_INFO_CAL_NAME"));
     assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
     byte[] foundBinaryData = (byte[])row.get("RESERVED_BINARY_DATA");
-    System.out.println("FOO found len " + foundBinaryData.length);
     byte[] expectedBinaryData =
       toByteArray(new File("test/data/test2BinData.dat"));
     assertTrue(Arrays.equals(expectedBinaryData, foundBinaryData));
