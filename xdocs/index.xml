@@ -23,7 +23,7 @@
       <p>
         <ul>
           <li>Displaying the contents of a table:
-            <pre>Database.open(new File("my.mdb")).getTable("MyTable").display();</pre>
+            <pre>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());</pre>
           </li>
           <li>Creating a new table and writing data into it:
             <pre>Database db = Database.create(new File("new.mdb"));
