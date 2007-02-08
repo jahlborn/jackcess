@@ -8,7 +8,7 @@
   <body>
     <section name="Jackcess">
       <p>
-        Jackcess ia a pure Java library for reading from and
+        Jackcess is a pure Java library for reading from and
         writing to MS Access databases.  It is not an application.
         There is no GUI.  It's a library, intended for other
         developers to use to build Java applications.
