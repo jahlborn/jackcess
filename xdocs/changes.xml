@@ -5,6 +5,22 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.8" date="2007-02-13">
+      <action dev="jahlborn" type="update">
+        Additional info in DataType to support better type validation
+        (scale/precision range).  Add "unit size" concept.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add CLOB support in JDBC handling.  Add general support for large
+        types (BLOB/CLOB).
+      </action>
+      <action dev="jahlborn" type="update">
+        Enhance Database.copyTable/importReader to allow for better control
+        over column definitions and row values through the ImportFilter.
+        Change default type translation to handle large and variable length
+        types better.
+      </action>
+    </release>
     <release version="1.1.7" date="2006-10-02">
       <action dev="jahlborn" type="update">
         Refactored DataType class, cleaned up a lot of "custom" data type code
