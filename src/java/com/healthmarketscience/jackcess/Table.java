@@ -112,7 +112,7 @@ public class Table
    * Only used by unit tests
    */
   Table() throws IOException {
-    _pageChannel = new PageChannel(null, JetFormat.VERSION_4);
+    _pageChannel = new PageChannel(null, JetFormat.VERSION_4, true);
   }
   
   /**

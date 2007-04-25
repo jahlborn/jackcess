@@ -57,14 +57,19 @@ public class PageChannel implements Channel {
   private JetFormat _format;
   /** Tracks free pages in the database. */
   private UsageMap _globalUsageMap;
+  /** whether or not to force all writes to disk immediately */
+  private boolean _autoSync;
   
   /**
    * @param channel Channel containing the database
    * @param format Format of the database in the channel
    */
-  public PageChannel(FileChannel channel, JetFormat format) throws IOException {
+  public PageChannel(FileChannel channel, JetFormat format, boolean autoSync)
+    throws IOException
+  {
     _channel = channel;
     _format = format;
+    _autoSync = autoSync;
     //Null check only exists for unit tests.  Channel should never normally be null.
     if (channel != null) {
       _globalUsageMap = UsageMap.read(this, PAGE_GLOBAL_USAGE_MAP, (byte) 0, format);
@@ -100,7 +105,9 @@ public class PageChannel implements Channel {
   public void writePage(ByteBuffer page, int pageNumber) throws IOException {
     page.rewind();
     _channel.write(page, (long) pageNumber * (long) _format.PAGE_SIZE);
-    _channel.force(true);
+    if(_autoSync) {
+      _channel.force(true);
+    }
   }
   
   /**

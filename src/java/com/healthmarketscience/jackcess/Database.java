@@ -74,6 +74,10 @@ public class Database
     SID[1] = (byte) 0x33;
   }
 
+  /** default value for the auto-sync value ({@code true}).  this is slower,
+      but leaves more chance of a useable database in the face of failures. */
+  public static final boolean DEFAULT_AUTO_SYNC = true;
+  
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
   
@@ -188,7 +192,8 @@ public class Database
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
-   * file will be opened read-only.
+   * file will be opened read-only.  Auto-syncing is enabled for the returned
+   * Database.
    * @param mdbFile File containing the database
    */
   public static Database open(File mdbFile) throws IOException {
@@ -198,6 +203,7 @@ public class Database
   /**
    * Open an existing Database.  If the existing file is not writeable or the
    * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * Auto-syncing is enabled for the returned Database.
    * @param mdbFile File containing the database
    * @param readOnly iff <code>true</code>, force opening file in read-only
    *                 mode
@@ -205,11 +211,33 @@ public class Database
   public static Database open(File mdbFile, boolean readOnly)
     throws IOException
   {
+    return open(mdbFile, readOnly, DEFAULT_AUTO_SYNC);
+  }
+  
+  /**
+   * Open an existing Database.  If the existing file is not writeable or the
+   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * @param mdbFile File containing the database
+   * @param readOnly iff <code>true</code>, force opening file in read-only
+   *                 mode
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   */
+  public static Database open(File mdbFile, boolean readOnly, boolean autoSync)
+    throws IOException
+  {    
     if(!mdbFile.exists() || !mdbFile.canRead()) {
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
     return new Database(openChannel(mdbFile,
-                                    (!mdbFile.canWrite() || readOnly)));
+                                    (!mdbFile.canWrite() || readOnly)),
+                        autoSync);
   }
   
   /**
@@ -218,11 +246,30 @@ public class Database
    *    already exists, it will be overwritten.</b>
    */
   public static Database create(File mdbFile) throws IOException {
+    return create(mdbFile, DEFAULT_AUTO_SYNC);
+  }
+  
+  /**
+   * Create a new Database
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   */
+  public static Database create(File mdbFile, boolean autoSync)
+    throws IOException
+  {    
     FileChannel channel = openChannel(mdbFile, false);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
         EMPTY_MDB)), 0, (long) Integer.MAX_VALUE);
-    return new Database(channel);
+    return new Database(channel, autoSync);
   }
   
   private static FileChannel openChannel(File mdbFile, boolean readOnly)
@@ -238,9 +285,10 @@ public class Database
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
    */
-  protected Database(FileChannel channel) throws IOException {
+  protected Database(FileChannel channel, boolean autoSync) throws IOException
+  {
     _format = JetFormat.getFormat(channel);
-    _pageChannel = new PageChannel(channel, _format);
+    _pageChannel = new PageChannel(channel, _format, autoSync);
     _buffer = _pageChannel.createPageBuffer();
     readSystemCatalog();
   }
