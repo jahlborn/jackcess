@@ -140,6 +140,22 @@
       </answer>
     </faq>
 
+    <faq id="speed">
+      <question>Why is jackcess so slow for large updates?</question>
+      <answer>
+        <p>
+          While there is much room for improvement in update speed, one factor
+          is whether or not all writes are automatically forced to disk.  By
+          default, "autoSync" is enabled, which keeps the database file in a
+          more consistent state, but can be very slow for large updates.
+          Disabling "autoSync" can dramatically increase update speed, but
+          exceptions during update can leave the file in an unusable state.
+          So, modifying this option essentially trades off speed for
+          recoverability.
+        </p>
+      </answer>
+    </faq>
+    
     <faq id="hms">
       <question>Who is Health Market Science?</question>
       <answer>
