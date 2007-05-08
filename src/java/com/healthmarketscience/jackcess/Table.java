@@ -896,6 +896,11 @@ public class Table
         }
       }
 
+      // fill in offsets for any remaining deleted columns
+      while(varColumnOffsetsIndex < varColumnOffsets.length) {
+        varColumnOffsets[varColumnOffsetsIndex++] = (short) buffer.position();
+      }
+
       buffer.putShort((short) buffer.position()); //EOD marker
       //Now write out variable length offsets
       //Offsets are stored in reverse order
