@@ -837,7 +837,7 @@ public class Column implements Comparable<Column> {
 
       case TEXT:
         CharSequence text = toCharSequence(obj);
-        int maxChars = getLength() / 2;
+        int maxChars = getLengthInUnits();
         if (text.length() > maxChars) {
           throw new IOException("Text is too big for column");
         }
