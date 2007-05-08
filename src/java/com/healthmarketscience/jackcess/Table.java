@@ -99,8 +99,6 @@ public class Table
   private short _maxColumnCount;
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
-  /** Number of columns in the table */
-  private short _columnCount;
   /** Format of the database that contains this table */
   private JetFormat _format;
   /** List of columns in this table, ordered by column number */
@@ -568,7 +566,7 @@ public class Table
     _tableType = tableBuffer.get(_format.OFFSET_TABLE_TYPE);
     _maxColumnCount = tableBuffer.getShort(_format.OFFSET_MAX_COLS);
     _maxVarColumnCount = tableBuffer.getShort(_format.OFFSET_NUM_VAR_COLS);
-    _columnCount = tableBuffer.getShort(_format.OFFSET_NUM_COLS);
+    short columnCount = tableBuffer.getShort(_format.OFFSET_NUM_COLS);
     _indexSlotCount = tableBuffer.getInt(_format.OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(_format.OFFSET_NUM_INDEXES);
     
@@ -589,7 +587,7 @@ public class Table
     int offset = _format.OFFSET_INDEX_DEF_BLOCK +
         _indexCount * _format.SIZE_INDEX_DEFINITION;
     Column column;
-    for (int i = 0; i < _columnCount; i++) {
+    for (int i = 0; i < columnCount; i++) {
       column = new Column(tableBuffer,
           offset + i * _format.SIZE_COLUMN_HEADER, _pageChannel, _format);
       _columns.add(column);
@@ -599,8 +597,8 @@ public class Table
         _varColumns.add(column);
       }
     }
-    offset += _columnCount * _format.SIZE_COLUMN_HEADER;
-    for (int i = 0; i < _columnCount; i++) {
+    offset += columnCount * _format.SIZE_COLUMN_HEADER;
+    for (int i = 0; i < columnCount; i++) {
       column = (Column) _columns.get(i);
       short nameLength = tableBuffer.getShort(offset);
       offset += 2;
@@ -823,10 +821,13 @@ public class Table
     ByteBuffer buffer = _pageChannel.createPageBuffer();
     buffer.putShort((short) _maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
-    List<Object> row = new ArrayList<Object>(Arrays.asList(rowArray));
     
+    List<Object> row = new ArrayList<Object>(_columns.size());
+    for(Object rowValue : rowArray) {
+      row.add(rowValue);
+    }
     //Append null for arrays that are too small
-    for (int i = rowArray.length; i < _columnCount; i++) {
+    for (int i = rowArray.length; i < _columns.size(); i++) {
       row.add(null);
     }
 
@@ -928,7 +929,7 @@ public class Table
     rtn.append("Type: " + _tableType);
 		rtn.append("\nName: " + _name);
     rtn.append("\nRow count: " + _rowCount);
-    rtn.append("\nColumn count: " + _columnCount);
+    rtn.append("\nColumn count: " + _columns.size());
     rtn.append("\nIndex count: " + _indexCount);
     rtn.append("\nColumns:\n");
     Iterator iter = _columns.iterator();
