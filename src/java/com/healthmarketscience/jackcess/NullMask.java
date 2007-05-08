@@ -44,13 +44,10 @@ public class NullMask {
    *    used for
    */
   public NullMask(int columnCount) {
+    // we leave everything initially marked as null so that we don't need to
+    // do anything for deleted columns (we only need to mark as non-null
+    // valid columns for which we actually have values).
     _mask = new byte[(columnCount + 7) / 8];
-    for (int i = 0; i < _mask.length; i++) {
-      _mask[i] = (byte) 0xff;
-    }
-    for (int i = columnCount; i < _mask.length * 8; i++) {
-      markNull(i);
-    }
   }
   
   /**
@@ -67,7 +64,8 @@ public class NullMask {
   /**
    * @param columnNumber 0-based column number in this mask's row
    * @return Whether or not the value for that column is null.  For boolean
-   *    columns, returns the actual value of the column.
+   *    columns, returns the actual value of the column (where
+   *    non-{@code null} == {@code true})
    */
   public boolean isNull(int columnNumber) {
     int maskIndex = columnNumber / 8;
@@ -79,10 +77,15 @@ public class NullMask {
     }
     return (_mask[maskIndex] & (byte) (1 << (columnNumber % 8))) == 0;
   }
-  
-  public void markNull(int columnNumber) {
+
+  /**
+   * Indicate that the column with the given number is not {@code null} (or a
+   * boolean value is {@code true}).
+   * @param columnNumber 0-based column number in this mask's row
+   */
+  public void markNotNull(int columnNumber) {
     int maskIndex = columnNumber / 8;
-    _mask[maskIndex] = (byte) (_mask[maskIndex] & (byte) ~(1 << (columnNumber % 8)));
+    _mask[maskIndex] = (byte) (_mask[maskIndex] | (byte) (1 << (columnNumber % 8)));
   }
   
   /**

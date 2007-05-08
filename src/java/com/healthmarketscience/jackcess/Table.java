@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,6 +67,17 @@ public class Table
   public static final byte TYPE_SYSTEM = 0x53;
   /** Table type code for user tables */
   public static final byte TYPE_USER = 0x4e;
+
+  /** comparator which sorts variable length columns vased on their index into
+      the variable length offset table */
+  private static final Comparator<Column> VAR_LEN_COLUMN_COMPARATOR =
+    new Comparator<Column>() {
+      public int compare(Column c1, Column c2) {
+        return ((c1.getVarLenTableIndex() < c2.getVarLenTableIndex()) ? -1 :
+                ((c1.getVarLenTableIndex() > c2.getVarLenTableIndex()) ? 1 :
+                 0));
+      }
+    };
   
   /** State used for reading the table rows */
   private RowState _rowState;
@@ -87,16 +99,14 @@ public class Table
   private short _maxColumnCount;
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
-  /** Number of variable columns in the table */
-  private short _varColumnCount;
-  /** Number of fixed columns in the table */
-  private short _fixedColumnCount;
   /** Number of columns in the table */
   private short _columnCount;
   /** Format of the database that contains this table */
   private JetFormat _format;
-  /** List of columns in this table */
+  /** List of columns in this table, ordered by column number */
   private List<Column> _columns = new ArrayList<Column>();
+  /** List of variable length columns in this table, ordered by offset */
+  private List<Column> _varColumns = new ArrayList<Column>();
   /** List of indexes on this table */
   private List<Index> _indexes = new ArrayList<Index>();
   /** Used to read in pages */
@@ -172,7 +182,22 @@ public class Table
    */
   void setColumns(List<Column> columns) {
     _columns = columns;
-    _maxVarColumnCount = Column.countVariableLength(_columns);
+    int colIdx = 0;
+    int varLenIdx = 0;
+    int fixedOffset = 0;
+    for(Column col : _columns) {
+      col.setColumnNumber((short)colIdx);
+      col.setColumnIndex(colIdx++);
+      if(col.isVariableLength()) {
+        col.setVarLenTableIndex(varLenIdx++);
+        _varColumns.add(col);
+      } else {
+        col.setFixedDataOffset(fixedOffset);
+        fixedOffset += col.getType().getFixedSize();
+      }
+    }
+    _maxColumnCount = (short)_columns.size();
+    _maxVarColumnCount = (short)_varColumns.size();
   }
   
   /**
@@ -567,12 +592,12 @@ public class Table
     for (int i = 0; i < _columnCount; i++) {
       column = new Column(tableBuffer,
           offset + i * _format.SIZE_COLUMN_HEADER, _pageChannel, _format);
-      if(column.isVariableLength()) {
-        _varColumnCount++;
-      } else {
-        _fixedColumnCount++;
-      }
       _columns.add(column);
+      if(column.isVariableLength()) {
+        // also shove it in the variable columns list, which is ordered
+        // differently from the _columns list
+        _varColumns.add(column);
+      }
     }
     offset += _columnCount * _format.SIZE_COLUMN_HEADER;
     for (int i = 0; i < _columnCount; i++) {
@@ -587,6 +612,16 @@ public class Table
     }
     Collections.sort(_columns);
 
+    // setup the data index for the columns
+    int colIdx = 0;
+    for(Column col : _columns) {
+      col.setColumnIndex(colIdx++);
+    }
+
+    // sort variable length columns based on their index into the variable
+    // length offset table, because we will write the columns in this order
+    Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
+    
     int idxOffset = tableBuffer.position();
     tableBuffer.position(idxOffset +
                      (_format.OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
@@ -639,6 +674,24 @@ public class Table
     tableBuffer.position(idxEndOffset);
   }
 
+  /**
+   * Sets up the _varColumns list, assuming the _columns has already been set
+   * up.
+   */
+  private void setupVariableColumns()
+  {
+    // pull out the variable length columns into a separate list
+    for(Column col : _columns) {
+      if(col.isVariableLength()) {
+        _varColumns.add(col);
+      }
+    }
+
+    // lastly sort these columns based on their index into the variable length
+    // offset table, because we will write the columns in this order
+    Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
+  }
+  
   /**
    * Writes the given page data to the given page number, clears any other
    * relevant buffers.
@@ -768,73 +821,88 @@ public class Table
    */
   ByteBuffer createRow(Object[] rowArray, int maxRowSize) throws IOException {
     ByteBuffer buffer = _pageChannel.createPageBuffer();
-    buffer.putShort((short) _columns.size());
-    NullMask nullMask = new NullMask(_columns.size());
-    Iterator iter;
-    int index = 0;
-    Column col;
+    buffer.putShort((short) _maxColumnCount);
+    NullMask nullMask = new NullMask(_maxColumnCount);
     List<Object> row = new ArrayList<Object>(Arrays.asList(rowArray));
     
     //Append null for arrays that are too small
     for (int i = rowArray.length; i < _columnCount; i++) {
       row.add(null);
     }
-    
-    for (iter = _columns.iterator(); iter.hasNext() && index < row.size(); index++) {
-      col = (Column) iter.next();
-      if (!col.isVariableLength()) {
-        //Fixed length column data comes first (remainingRowLength is ignored
-        //when writing fixed length data
-        buffer.put(col.write(row.get(index), 0));
-      }
-      if (col.getType() == DataType.BOOLEAN) {
-        if(!Column.toBooleanValue(row.get(index))) {
-          //Booleans are stored in the null mask
-          nullMask.markNull(index);
+
+    //Fixed length column data comes first
+    int fixedDataStart = buffer.position();
+    int fixedDataEnd = fixedDataStart;
+    for (Column col : _columns) {
+
+      if(!col.isVariableLength()) {
+        
+        Object rowValue = row.get(col.getColumnIndex());
+
+        if (col.getType() == DataType.BOOLEAN) {
+        
+          if(Column.toBooleanValue(rowValue)) {
+            //Booleans are stored in the null mask
+            nullMask.markNotNull(col.getColumnNumber());
+          }
+        
+        } else if(rowValue != null) {
+        
+          // we have a value
+          nullMask.markNotNull(col.getColumnNumber());
+
+          //remainingRowLength is ignored when writing fixed length data
+          buffer.position(fixedDataStart + col.getFixedDataOffset());
+          buffer.put(col.write(rowValue, 0));
+
+          // keep track of the end of fixed data
+          if(buffer.position() > fixedDataEnd) {
+            fixedDataEnd = buffer.position();
+          }
         }
-      } else if (row.get(index) == null) {
-        nullMask.markNull(index);
       }
     }
 
-    int varLengthCount = Column.countVariableLength(_columns);
-    short[] varColumnOffsets = null;
+    // reposition at end of fixed data
+    buffer.position(fixedDataEnd);
+      
+    // only need this info if this table contains any var length data
+    if(_maxVarColumnCount > 0) {
 
-    if(varLengthCount > 0) {
       // figure out how much space remains for var length data.  first,
       // account for already written space
       maxRowSize -= buffer.position();
       // now, account for trailer space
-      maxRowSize -= (nullMask.byteSize() + 4 + (varLengthCount * 2));
+      maxRowSize -= (nullMask.byteSize() + 4 + (_maxVarColumnCount * 2));
     
-      varColumnOffsets = new short[varLengthCount];
-      index = 0;
-      int varColumnOffsetsIndex = 0;
       //Now write out variable length column data
-      for (iter = _columns.iterator(); iter.hasNext() && index < row.size();
-           index++) {
-        col = (Column) iter.next();
+      short[] varColumnOffsets = new short[_maxVarColumnCount];
+      int varColumnOffsetsIndex = 0;
+      for (Column varCol : _varColumns) {
         short offset = (short) buffer.position();
-        if (col.isVariableLength()) {
-          if (row.get(index) != null) {
-            ByteBuffer varDataBuf = col.write(row.get(index), maxRowSize);
-            maxRowSize -= varDataBuf.remaining();
-            buffer.put(varDataBuf);
-          }
+        Object rowValue = row.get(varCol.getColumnIndex());
+        if (rowValue != null) {
+          // we have a value
+          nullMask.markNotNull(varCol.getColumnNumber());
+
+          ByteBuffer varDataBuf = varCol.write(rowValue, maxRowSize);
+          maxRowSize -= varDataBuf.remaining();
+          buffer.put(varDataBuf);
+        }
+
+        // we do a loop here so that we fill in offsets for deleted columns
+        while(varColumnOffsetsIndex <= varCol.getVarLenTableIndex()) {
           varColumnOffsets[varColumnOffsetsIndex++] = offset;
         }
       }
-    }
 
-    // only need this info if this table contains any var length data
-    if(_maxVarColumnCount > 0) {
       buffer.putShort((short) buffer.position()); //EOD marker
       //Now write out variable length offsets
       //Offsets are stored in reverse order
-      for (int i = varLengthCount - 1; i >= 0; i--) {
+      for (int i = _maxVarColumnCount - 1; i >= 0; i--) {
         buffer.putShort(varColumnOffsets[i]);
       }
-      buffer.putShort((short) varLengthCount);  //Number of var length columns
+      buffer.putShort((short) _maxVarColumnCount);  //Number of var length columns
     }
     
     buffer.put(nullMask.wrap());  //Null mask

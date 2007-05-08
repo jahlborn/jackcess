@@ -27,6 +27,8 @@ public class TableTest extends TestCase {
     col = new Column();
     col.setType(DataType.TEXT);
     columns.add(col);
+    col = new Column();
+    col.setType(DataType.TEXT);
     columns.add(col);
     table.setColumns(columns);
     int colCount = 3;

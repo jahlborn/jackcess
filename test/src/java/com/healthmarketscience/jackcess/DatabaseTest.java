@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -555,6 +556,34 @@ public class DatabaseTest extends TestCase {
     assertEquals(7, countRows(table));
     
   }
+
+  public void testLongValueAsMiddleColumn() throws Exception
+  {
+
+    Database db = create();
+    Column a = new Column();
+    a.setName("a");
+    a.setSQLType(Types.INTEGER);
+    Column b = new Column();
+    b.setName("b");
+    b.setSQLType(Types.LONGVARCHAR);
+    Column c = new Column();
+    c.setName("c");
+    c.setSQLType(Types.VARCHAR);
+    db.createTable("NewTable", Arrays.asList(a, b, c));
+    Table newTable = db.getTable("NewTable");
+    
+    String lval = createString(2000); // "--2000 chars long text--";
+    String tval = createString(40); // "--40chars long text--";
+    newTable.addRow(new Integer(1), lval, tval);
+
+    newTable = db.getTable("NewTable");
+    Map<String, Object> readRow = newTable.getNextRow();
+    assertEquals(new Integer(1), readRow.get("a"));
+    assertEquals(lval, readRow.get("b"));
+    assertEquals(tval, readRow.get("c"));
+
+  }
   
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
@@ -606,6 +635,15 @@ public class DatabaseTest extends TestCase {
     db.createTable("test", columns);
   }
 
+  static String createString(int len) {
+    StringBuilder builder = new StringBuilder(len);
+    for(int i = 0; i < len; ++i) {
+      builder.append((char)('a' + (i % 26)));
+    }
+    String str = builder.toString();
+    return str;
+  }
+    
   static int countRows(Table table) throws Exception {
     int rtn = 0;
     for(Map<String, Object> row : table) {

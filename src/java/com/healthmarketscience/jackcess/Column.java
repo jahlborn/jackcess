@@ -99,6 +99,8 @@ public class Column implements Comparable<Column> {
   private short _columnLength;
   /** 0-based column number */
   private short _columnNumber;
+  /** index of the data for this column within a list of row data */
+  private int _columnIndex;
   /** Column name */
   private String _name;
   /** the offset of the fixed data in the row */
@@ -157,12 +159,25 @@ public class Column implements Comparable<Column> {
   public boolean isVariableLength() {
     return _variableLength;
   }
+
   public void setVariableLength(boolean variableLength) {
     _variableLength = variableLength;
   }
-  
+
   public short getColumnNumber() {
     return _columnNumber;
+  }
+
+  public void setColumnNumber(short newColumnNumber) {
+    _columnNumber = newColumnNumber;
+  }
+
+  public int getColumnIndex() {
+    return _columnIndex;
+  }
+
+  public void setColumnIndex(int newColumnIndex) {
+    _columnIndex = newColumnIndex;
   }
   
   /**
@@ -232,11 +247,19 @@ public class Column implements Comparable<Column> {
   public short getLengthInUnits() {
     return (short)(getLength() / getType().getUnitSize());
   }
+
+  public void setVarLenTableIndex(int idx) {
+    _varLenTableIndex = idx;
+  }
   
   public int getVarLenTableIndex() {
     return _varLenTableIndex;
   }
 
+  public void setFixedDataOffset(int newOffset) {
+    _fixedDataOffset = newOffset;
+  }
+  
   public int getFixedDataOffset() {
     return _fixedDataOffset;
   }
@@ -1040,11 +1063,9 @@ public class Column implements Comparable<Column> {
    * @param columns A list of columns in a table definition
    * @return The number of variable length columns found in the list
    */
-  public static short countVariableLength(List columns) {
+  public static short countVariableLength(List<Column> columns) {
     short rtn = 0;
-    Iterator iter = columns.iterator();
-    while (iter.hasNext()) {
-      Column col = (Column) iter.next();
+    for (Column col : columns) {
       if (col.isVariableLength()) {
         rtn++;
       }
@@ -1052,6 +1073,21 @@ public class Column implements Comparable<Column> {
     return rtn;
   }
 
+  /**
+   * @param columns A list of columns in a table definition
+   * @return The number of variable length columns which are not long values
+   *         found in the list
+   */
+  public static short countNonLongVariableLength(List<Column> columns) {
+    short rtn = 0;
+    for (Column col : columns) {
+      if (col.isVariableLength() && !col.getType().isLongValue()) {
+        rtn++;
+      }
+    }
+    return rtn;
+  }
+  
   /**
    * @return an appropriate BigDecimal representation of the given object.
    *         <code>null</code> is returned as 0 and Numbers are converted

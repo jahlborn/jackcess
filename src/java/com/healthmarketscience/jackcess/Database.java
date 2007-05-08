@@ -501,14 +501,17 @@ public class Database
    * @param buffer Buffer to write to
    * @param columns List of Columns to write definitions for
    */
-  private void writeColumnDefinitions(ByteBuffer buffer, List columns)
+  private void writeColumnDefinitions(ByteBuffer buffer, List<Column> columns)
   throws IOException {
-    Iterator iter;
     short columnNumber = (short) 0;
     short fixedOffset = (short) 0;
     short variableOffset = (short) 0;
-    for (iter = columns.iterator(); iter.hasNext(); columnNumber++) {
-      Column col = (Column) iter.next();
+    // we specifically put the "long variable" values after the normal
+    // variable length values so that we have a better chance of fitting it
+    // all (because "long variable" values can go in separate pages)
+    short longVariableOffset =
+      (short) Column.countNonLongVariableLength(columns);
+    for (Column col : columns) {
       int position = buffer.position();
       buffer.put(col.getType().getValue());
       buffer.put((byte) 0x59);  //Unknown
@@ -516,7 +519,11 @@ public class Database
       buffer.putShort((short) 0); //Unknown
       buffer.putShort(columnNumber);  //Column Number
       if (col.isVariableLength()) {
-        buffer.putShort(variableOffset++);
+        if(!col.getType().isLongValue()) {
+          buffer.putShort(variableOffset++);
+        } else {
+          buffer.putShort(longVariableOffset++);
+        }          
       } else {
         buffer.putShort((short) 0);
       }
@@ -552,14 +559,13 @@ public class Database
       } else {
         buffer.putShort((short)0x0000); // unused
       }
+      columnNumber++;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
             buffer, position, _format.SIZE_COLUMN_DEF_BLOCK));
       }
     }
-    iter = columns.iterator();
-    while (iter.hasNext()) {
-      Column col = (Column) iter.next();
+    for (Column col : columns) {
       ByteBuffer colName = _format.CHARSET.encode(col.getName());
       buffer.putShort((short) colName.remaining());
       buffer.put(colName);
