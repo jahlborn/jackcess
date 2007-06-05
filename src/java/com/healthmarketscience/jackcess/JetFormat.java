@@ -58,6 +58,9 @@ public abstract class JetFormat {
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
   //doesn't allow this; hence all the abstract defineXXX() methods.
+
+  /** the name of this format */
+  private final String _name;
   
   /** Database page size in bytes */
   public final int PAGE_SIZE;
@@ -141,7 +144,8 @@ public abstract class JetFormat {
     }
   }
   
-  private JetFormat() {
+  private JetFormat(String name) {
+    _name = name;
     
     PAGE_SIZE = definePageSize();
     
@@ -265,8 +269,17 @@ public abstract class JetFormat {
   protected abstract int definePagesPerUsageMapPage();
     
   protected abstract Charset defineCharset();
+
+  @Override
+  public String toString() {
+    return _name;
+  }
   
   private static final class Jet4Format extends JetFormat {
+
+    private Jet4Format() {
+      super("VERSION_4");
+    }
     
     protected int definePageSize() { return 4096; }
     

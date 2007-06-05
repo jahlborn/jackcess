@@ -417,7 +417,7 @@ public class Database
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(Column column : columns) {
-      column.validate();
+      column.validate(_format);
       if(!colNames.add(column.getName().toUpperCase())) {
         throw new IllegalArgumentException("duplicate column name: " +
                                            column.getName());

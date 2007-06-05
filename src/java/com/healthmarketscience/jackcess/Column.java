@@ -269,7 +269,11 @@ public class Column implements Comparable<Column> {
    *
    * @throw IllegalArgumentException if this column definition is invalid.
    */
-  public void validate() {
+  public void validate(JetFormat format) {
+    if(_format != format) {
+      throw new IllegalArgumentException("format must be " + format +
+                                         " but is " + _format);
+    }
     if(getType() == null) {
       throw new IllegalArgumentException("must have type");
     }
