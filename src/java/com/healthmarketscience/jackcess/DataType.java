@@ -58,7 +58,7 @@ public enum DataType {
   UNKNOWN_0D((byte) 0x0D),
   GUID((byte) 0x0F, null, 16),
   // for some reason numeric is "var len" even though it has a fixed size...
-  NUMERIC((byte) 0x10, Types.NUMERIC, null, true, false, 17, 17, 17,
+  NUMERIC((byte) 0x10, Types.NUMERIC, 17, true, false, 17, 17, 17,
           true, 0, 0, 28, 1, 18, 28, 1);
 
   /** Map of SQL types to Access data types */

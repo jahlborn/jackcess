@@ -478,6 +478,7 @@ public class DatabaseTest extends TestCase {
     col.setScale((byte)4);
     col.setPrecision((byte)8);
     columns.add(col);
+    assertTrue(col.isVariableLength());
     
     col = new Column();
     col.setName("B");
@@ -522,6 +523,57 @@ public class DatabaseTest extends TestCase {
       // ignored
     }
   }
+
+  public void testFixedNumeric() throws Exception
+  {
+    File srcFile = new File("test/data/fixedNumericTest.mdb");
+    File dbFile = File.createTempFile("databaseTest", ".mdb");
+    dbFile.deleteOnExit();
+    copyFile(srcFile, dbFile);
+    
+    Database db = Database.open(dbFile);
+    Table t = db.getTable("test");
+
+    boolean first = true;
+    for(Column col : t.getColumns()) {
+      if(first) {
+        assertTrue(col.isVariableLength());
+        assertEquals(DataType.MEMO, col.getType());
+        first = false;
+      } else {
+        assertFalse(col.isVariableLength());
+        assertEquals(DataType.NUMERIC, col.getType());
+      }
+    }
+      
+    Map<String, Object> row = t.getNextRow();
+    assertEquals("some data", row.get("col1"));
+    assertEquals(new BigDecimal("1"), row.get("col2"));
+    assertEquals(new BigDecimal("0"), row.get("col3"));
+    assertEquals(new BigDecimal("0"), row.get("col4"));
+    assertEquals(new BigDecimal("4"), row.get("col5"));
+    assertEquals(new BigDecimal("-1"), row.get("col6"));
+    assertEquals(new BigDecimal("1"), row.get("col7"));
+
+    Object[] tmpRow = new Object[]{
+      "foo", new BigDecimal("1"), new BigDecimal(3), new BigDecimal("13"),
+      new BigDecimal("-17"), new BigDecimal("0"), new BigDecimal("8734")};
+    t.addRow(tmpRow);
+    t.reset();
+
+    t.getNextRow();
+    row = t.getNextRow();
+    assertEquals(tmpRow[0], row.get("col1"));
+    assertEquals(tmpRow[1], row.get("col2"));
+    assertEquals(tmpRow[2], row.get("col3"));
+    assertEquals(tmpRow[3], row.get("col4"));
+    assertEquals(tmpRow[4], row.get("col5"));
+    assertEquals(tmpRow[5], row.get("col6"));
+    assertEquals(tmpRow[6], row.get("col7"));
+    
+    db.close();
+
+  }  
 
   public void testMultiPageTableDef() throws Exception
   {

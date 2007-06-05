@@ -924,6 +924,11 @@ public class Column implements Comparable<Column> {
     case GUID:
       writeGUIDValue(buffer, obj);
       break;
+    case NUMERIC:
+      // yes, that's right, occasionally numeric values are written as fixed
+      // length...
+      writeNumericValue(buffer, obj);
+      break;
     default:
       throw new IOException("Unsupported data type: " + getType());
     }
