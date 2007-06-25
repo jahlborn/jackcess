@@ -221,6 +221,19 @@ public class Index implements Comparable<Index> {
   public void setRowCount(int rowCount) {
     _rowCount = rowCount;
   }
+
+  /**
+   * Note, there may still be some issues around the name of an index, this
+   * information may not be correct.  I've done a variety of testing comparing
+   * the index name to what ms access shows, and i think the data is being
+   * parsed correctly, but sometimes access comes up with a completely
+   * different index name, hence my lack of confidence in this method.  (of
+   * course, access could also just be doing some monkeying under the
+   * hood...).
+   */
+  public String getName() {
+    return _name;
+  }
   
   public void setName(String name) {
     _name = name;
