@@ -30,7 +30,9 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -47,8 +49,6 @@ public abstract class UsageMap {
   /** Reference map type, for maps that are too large to fit inline */
   public static final byte MAP_TYPE_REFERENCE = 0x1;
   
-  /** Index of the current page, incremented after calling getNextPage */
-  private int _currentPageIndex = 0;
   /** Page number of the map declaration */
   private int _dataPageNum;
   /** Offset of the data page at which the usage map data starts */
@@ -57,12 +57,17 @@ public abstract class UsageMap {
   private short _rowStart;
   /** Format of the database that contains this usage map */
   private JetFormat _format;
-  /** List of page numbers used */
-  private List<Integer> _pageNumbers = new ArrayList<Integer>();
+  /** First page that this usage map applies to */
+  private int _startPage;
+  /** bits representing page numbers used, offset from _startPage */
+  private BitSet _pageNumbers = new BitSet();
   /** Buffer that contains the usage map declaration page */
   private ByteBuffer _dataBuffer;
   /** Used to read in pages */
   private PageChannel _pageChannel;
+  /** modification count on the usage map, used to keep the iterators in
+      sync */
+  private int _modCount = 0;
   
   /**
    * @param pageChannel Used to read in pages
@@ -115,19 +120,19 @@ public abstract class UsageMap {
           dataBuffer.limit() - _rowStart));
     }
   }
+
+  public PageIterator iterator() {
+    return new ForwardPageIterator();
+  }
+
+  public PageIterator reverseIterator() {
+    return new ReversePageIterator();
+  }
   
   protected short getRowStart() {
     return _rowStart;
   }
   
-  public List<Integer> getPageNumbers() {
-    return _pageNumbers;
-  }
-
-  public Integer getCurrentPageNumber() {
-    return _pageNumbers.get(_currentPageIndex - 1);
-  }
-
   protected void setStartOffset(int startOffset) {
     _startOffset = startOffset;
   }
@@ -152,24 +157,16 @@ public abstract class UsageMap {
     return _format;
   }
 
-  /**
-   * After calling this method, getNextPage will return the first page in the
-   * map
-   */
-  public void reset() {
-    _currentPageIndex = 0;
+  protected int getStartPage() {
+    return _startPage;
   }
-  
-  /**
-   * @return non-<code>null</code> if there was another page to read,
-   *         <code>null</code> otherwise
-   */
-  public Integer getNextPage() {
-    if (_pageNumbers.size() > _currentPageIndex) {
-      return _pageNumbers.get(_currentPageIndex++);
-    } else {
-      return null;
-    }
+
+  protected void setStartPage(int newStartPage) {
+    _startPage = newStartPage;
+  }
+
+  protected BitSet getPageNumbers() {
+    return _pageNumbers;
   }
   
   /**
@@ -177,13 +174,14 @@ public abstract class UsageMap {
    */
   protected void processMap(ByteBuffer buffer, int pageIndex, int startPage) {
     int byteCount = 0;
+    _startPage = startPage;
     while (buffer.hasRemaining()) {
       byte b = buffer.get();
       for (int i = 0; i < 8; i++) {
         if ((b & (1 << i)) != 0) {
-          Integer pageNumber = new Integer((startPage + byteCount * 8 + i) +
-              (pageIndex * _format.PAGES_PER_USAGE_MAP_PAGE));
-          _pageNumbers.add(pageNumber);
+          int pageNumberOffset = (byteCount * 8 + i) +
+            (pageIndex * _format.PAGES_PER_USAGE_MAP_PAGE);
+          _pageNumbers.set(pageNumberOffset);
         }
       }
       byteCount++;
@@ -195,9 +193,15 @@ public abstract class UsageMap {
    */
   public void addPageNumber(int pageNumber) throws IOException {
     //Sanity check, only on in debug mode for performance considerations
-    if (LOG.isDebugEnabled() && _pageNumbers.contains(new Integer(pageNumber))) {
-      throw new IOException("Page number " + pageNumber + " already in usage map");
+    if (LOG.isDebugEnabled()) {
+      int pageNumberOffset = pageNumber - _startPage;
+      if((pageNumberOffset < 0) ||
+         _pageNumbers.get(pageNumberOffset)) {
+        throw new IOException("Page number " + pageNumber +
+                              " already in usage map");
+      }
     }
+    ++_modCount;
     addOrRemovePageNumber(pageNumber, true);
   }
   
@@ -205,6 +209,7 @@ public abstract class UsageMap {
    * Remove a page number from this usage map
    */
   public void removePageNumber(int pageNumber) throws IOException {
+    ++_modCount;
     addOrRemovePageNumber(pageNumber, false);
   }
   
@@ -215,17 +220,27 @@ public abstract class UsageMap {
     int offset = relativePageNumber / 8;
     byte b = buffer.get(_startOffset + offset);
     //Apply the bitmask
+    int pageNumberOffset = absolutePageNumber - _startPage;
     if (add) {
       b |= bitmask;
-      _pageNumbers.add(new Integer(absolutePageNumber));
+      _pageNumbers.set(pageNumberOffset);
     } else {
       b &= ~bitmask;
+      _pageNumbers.clear(pageNumberOffset);
     }
     buffer.put(_startOffset + offset, b);
   }
   
   public String toString() {
-    return "page numbers: " + _pageNumbers;
+    StringBuilder builder = new StringBuilder("page numbers: [");
+    for(PageIterator iter = iterator(); iter.hasNextPage(); ) {
+      builder.append(iter.getNextPage());
+      if(iter.hasNextPage()) {
+        builder.append(", ");
+      }
+    }
+    builder.append("]");
+    return builder.toString();
   }
   
   /**
@@ -233,5 +248,116 @@ public abstract class UsageMap {
    * @param add True to add it, false to remove it
    */
   protected abstract void addOrRemovePageNumber(int pageNumber, boolean add) throws IOException;
+
+  /**
+   * Utility class to iterate over the pages in the UsageMap.
+   */
+  public abstract class PageIterator
+  {
+    /** the next set page number bit */
+    protected int _nextSetBit;
+    /** the previous set page number bit */
+    protected int _prevSetBit;
+    /** the last read modification count on the UsageMap.  we track this so
+        that the iterator can detect updates to the usage map while iterating
+        and act accordingly */
+    protected int _lastModCount;
+
+    protected PageIterator() {
+    }
+
+    /**
+     * @return {@code true} if there is another valid page, {@code false}
+     *         otherwise.
+     */
+    public boolean hasNextPage() {
+      if((_nextSetBit < 0) &&
+         (_lastModCount != _modCount)) {
+        // recheck the last page, in case more showed up
+        if(_prevSetBit < 0) {
+          // we were at the beginning
+          reset();
+        } else {
+          _nextSetBit = _prevSetBit;
+          getNextPage();
+        }
+      }
+      return(_nextSetBit >= 0);
+    }      
+    
+    /**
+     * @return valid page number if there was another page to read,
+     *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
+     */
+    public abstract int getNextPage();
+
+    /**
+     * After calling this method, getNextPage will return the first page in the
+     * map
+     */
+    public abstract void reset();
+  }
+  
+  /**
+   * Utility class to iterate forward over the pages in the UsageMap.
+   */
+  public class ForwardPageIterator extends PageIterator
+  {
+    private ForwardPageIterator() {
+      reset();
+    }
+    
+    @Override
+    public int getNextPage() {
+      if (hasNextPage()) {
+        _lastModCount = _modCount;
+        _prevSetBit = _nextSetBit;
+        _nextSetBit = _pageNumbers.nextSetBit(_nextSetBit + 1);
+        return _prevSetBit + _startPage;
+      } else {
+        return PageChannel.INVALID_PAGE_NUMBER;
+      }
+    }
+
+    @Override
+    public final void reset() {
+      _lastModCount = _modCount;
+      _prevSetBit = -1;
+      _nextSetBit = _pageNumbers.nextSetBit(0);
+    }
+  }
+  
+  /**
+   * Utility class to iterate backward over the pages in the UsageMap.
+   */
+  public class ReversePageIterator extends PageIterator
+  {
+    private ReversePageIterator() {
+      reset();
+    }
+    
+    @Override
+    public int getNextPage() {
+      if(hasNextPage()) {
+        _lastModCount = _modCount;
+        _prevSetBit = _nextSetBit;
+        --_nextSetBit;
+        while(hasNextPage() && !_pageNumbers.get(_nextSetBit)) {
+          --_nextSetBit;
+        }
+        return _prevSetBit + _startPage;
+      } else {
+        return PageChannel.INVALID_PAGE_NUMBER;
+      }
+    }
+
+    @Override
+    public final void reset() {
+      _lastModCount = _modCount;
+      _prevSetBit = -1;
+      _nextSetBit = _pageNumbers.length() - 1;
+    }
+  }
+
   
 }

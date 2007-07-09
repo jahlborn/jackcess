@@ -31,14 +31,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -113,6 +111,8 @@ public class Table
   private String _name;
   /** Usage map of pages that this table owns */
   private UsageMap _ownedPages;
+  /** Iterator over the pages that this table owns */
+  private UsageMap.PageIterator _ownedPagesIterator;
   /** Usage map of pages that this table owns with free space on them */
   private UsageMap _freeSpacePages;
   
@@ -219,7 +219,7 @@ public class Table
   public void reset() {
     _rowsLeftOnPage = 0;
     _currentRowInPage = INVALID_ROW_NUMBER;
-    _ownedPages.reset();
+    _ownedPagesIterator.reset();
     _rowState.reset();
   }
   
@@ -421,8 +421,8 @@ public class Table
         // reset row number
         _currentRowInPage = INVALID_ROW_NUMBER;
         
-        Integer nextPageNumber = _ownedPages.getNextPage();
-        if (nextPageNumber == null) {
+        int nextPageNumber = _ownedPagesIterator.getNextPage();
+        if (nextPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
           //No more owned pages.  No more rows.
           return null;
         }
@@ -573,6 +573,7 @@ public class Table
     byte rowNum = tableBuffer.get(_format.OFFSET_OWNED_PAGES);
     int pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_OWNED_PAGES + 1);
     _ownedPages = UsageMap.read(_pageChannel, pageNum, rowNum, _format);
+    _ownedPagesIterator = _ownedPages.iterator();
     rowNum = tableBuffer.get(_format.OFFSET_FREE_SPACE_PAGES);
     pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_FREE_SPACE_PAGES + 1);
     _freeSpacePages = UsageMap.read(_pageChannel, pageNum, rowNum, _format);
@@ -734,10 +735,10 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    List<Integer> pageNumbers = _ownedPages.getPageNumbers();
-    for(ListIterator<Integer> pageIter = pageNumbers.listIterator(
-            pageNumbers.size()); pageIter.hasPrevious(); ) {
-      Integer tmpPageNumber = pageIter.previous();
+    for(UsageMap.PageIterator revPageIter = _ownedPages.reverseIterator();
+        revPageIter.hasNextPage(); )
+    {
+      int tmpPageNumber = revPageIter.getNextPage();
       _pageChannel.readPage(dataPage, tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
         // found last data page

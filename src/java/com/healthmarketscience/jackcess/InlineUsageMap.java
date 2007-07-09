@@ -42,9 +42,6 @@ public class InlineUsageMap extends UsageMap {
   /** Size in bytes of the map */
   private static final int MAP_SIZE = 64;
   
-  /** First page that this usage map applies to */
-  private int _startPage = 0;
-  
   /**
    * @param pageChannel Used to read in pages
    * @param dataBuffer Buffer that contains this map's declaration
@@ -57,38 +54,38 @@ public class InlineUsageMap extends UsageMap {
   throws IOException
   {
     super(pageChannel, dataBuffer, pageNum, format, rowStart);
-    _startPage = dataBuffer.getInt(rowStart + 1);
-    processMap(dataBuffer, 0, _startPage);
+    int startPage = dataBuffer.getInt(rowStart + 1);
+    processMap(dataBuffer, 0, startPage);
   }
   
   //Javadoc copied from UsageMap
   protected void addOrRemovePageNumber(final int pageNumber, boolean add)
   throws IOException
   {
-    if (add && pageNumber < _startPage) {
+    int startPage = getStartPage();
+    if (add && pageNumber < startPage) {
       throw new IOException("Can't add page number " + pageNumber +
-          " because it is less than start page " + _startPage);
+          " because it is less than start page " + startPage);
     }
-    int relativePageNumber = pageNumber - _startPage;
+    int relativePageNumber = pageNumber - startPage;
     ByteBuffer buffer = getDataBuffer();
-    if ((!add && !getPageNumbers().remove(new Integer(pageNumber))) || (add &&
-        (relativePageNumber > MAP_SIZE * 8 - 1)))
+    if ((!add && !getPageNumbers().get(relativePageNumber)) ||
+        (add && (relativePageNumber > MAP_SIZE * 8 - 1)))
     {
       //Increase the start page to the current page and clear out the map.
-      _startPage = pageNumber;
+      startPage = pageNumber;
+      setStartPage(startPage);
       buffer.position(getRowStart() + 1);
-      buffer.putInt(_startPage);
+      buffer.putInt(startPage);
       getPageNumbers().clear();
       if (!add) {
         for (int j = 0; j < MAP_SIZE; j++) {
           buffer.put((byte) 0xff); //Fill bitmap with 1s
         }
-        for (int j = _startPage; j < _startPage + MAP_SIZE * 8; j++) {
-          getPageNumbers().add(new Integer(j)); //Fill our list with page numbers
-        }
+        getPageNumbers().set(0, (MAP_SIZE * 8)); //Fill our list with page numbers
       }
       getPageChannel().writePage(buffer, getDataPageNumber());
-      relativePageNumber = pageNumber - _startPage;
+      relativePageNumber = pageNumber - startPage;
     }
     updateMap(pageNumber, relativePageNumber, 1 << (relativePageNumber % 8), buffer, add);
     //Write the updated map back to disk
