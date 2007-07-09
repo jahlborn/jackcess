@@ -95,9 +95,10 @@ public abstract class TempPageHolder {
    * the PageChannel as a new page and assigned a number.
    */
   public void finishNewPage(int pageNumber)
+    throws IOException
   {
     if(_pageNumber != PageChannel.INVALID_PAGE_NUMBER) {
-      throw new IllegalStateException("page number should not be set");
+      throw new IOException("page number should not be set");
     }
     _pageNumber = pageNumber;
   }

@@ -140,13 +140,6 @@ public class PageChannel implements Channel {
   }
   
   /**
-   * @return Number of pages in the database
-   */
-  public int getPageCount() throws IOException {
-    return (int) (_channel.size() / _format.PAGE_SIZE);
-  }
-  
-  /**
    * @return A newly-allocated buffer that can be passed to readPage
    */
   public ByteBuffer createPageBuffer() {

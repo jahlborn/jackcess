@@ -423,14 +423,14 @@ public class Database
                                            column.getName());
       }
     }
-    
-    //We are creating a new page at the end of the db for the tdef.
-    int pageNumber = _pageChannel.getPageCount();
-    
+
+    // first, create the usage map page
+    int usageMapPageNumber = _pageChannel.writeNewPage(
+        createUsageMapDefinitionBuffer());
+
+    // now, create the table definition
     ByteBuffer buffer = _pageChannel.createPageBuffer();
-    
-    writeTableDefinition(buffer, columns, pageNumber);
-    
+    writeTableDefinition(buffer, columns, usageMapPageNumber);
     writeColumnDefinitions(buffer, columns); 
     
     //End of tabledef
@@ -441,17 +441,15 @@ public class Database
     buffer.putShort(2, (short)(_format.PAGE_SIZE - tableDefLen - 8)); // overwrite page free space
     buffer.putInt(8, tableDefLen);  //Overwrite length of data for this page
        
-    //Write the tdef and usage map pages to disk.
-    _pageChannel.writeNewPage(buffer);
-    _pageChannel.writeNewPage(createUsageMapDefinitionBuffer(pageNumber));
-    _pageChannel.writeNewPage(createUsageMapDataBuffer()); //Usage map
+    //Write the tdef page to disk.
+    int tdefPageNumber = _pageChannel.writeNewPage(buffer);
     
     //Add this table to our internal list.
-    addTable(name, new Integer(pageNumber));
+    addTable(name, new Integer(tdefPageNumber));
     
     //Add this table to system tables
-    addToSystemCatalog(name, pageNumber);
-    addToAccessControlEntries(pageNumber);    
+    addToSystemCatalog(name, tdefPageNumber);
+    addToAccessControlEntries(tdefPageNumber);    
   }
   
   /**
@@ -460,7 +458,7 @@ public class Database
    * @param pageNumber Page number that this table definition will be written to
    */
   private void writeTableDefinition(ByteBuffer buffer, List<Column> columns,
-      int pageNumber)
+      int usageMapPageNumber)
   throws IOException {
     //Start writing the tdef
     buffer.put(PageTypes.TABLE_DEF);  //Page type
@@ -484,10 +482,9 @@ public class Database
     buffer.putInt(0);  //Number of indexes in table
     buffer.putInt(0);  //Number of indexes in table
     buffer.put((byte) 0); //Usage map row number
-    int usageMapPage = pageNumber + 1;
-    ByteUtil.put3ByteInt(buffer, usageMapPage);  //Usage map page number
+    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Usage map page number
     buffer.put((byte) 1); //Free map row number
-    ByteUtil.put3ByteInt(buffer, usageMapPage);  //Free map page number
+    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Free map page number
     if (LOG.isDebugEnabled()) {
       int position = buffer.position();
       buffer.rewind();
@@ -573,12 +570,10 @@ public class Database
   }
   
   /**
-   * Create the usage map definition page buffer.  It will be stored on the page
-   * immediately after the tdef page.
-   * @param pageNumber Page number that the corresponding table definition will
-   *    be written to
+   * Create the usage map definition page buffer.
    */
-  private ByteBuffer createUsageMapDefinitionBuffer(int pageNumber) throws IOException {
+  private ByteBuffer createUsageMapDefinitionBuffer() throws IOException
+  {
     ByteBuffer rtn = _pageChannel.createPageBuffer();
     rtn.put(PageTypes.DATA);
     rtn.put((byte) 0x1);  //Unknown
@@ -590,20 +585,8 @@ public class Database
     rtn.putShort((short) _format.OFFSET_FREE_PAGES_USAGE_MAP_DEF);  //Second location
     rtn.position(_format.OFFSET_USED_PAGES_USAGE_MAP_DEF);
     rtn.put((byte) UsageMap.MAP_TYPE_REFERENCE);
-    rtn.putInt(pageNumber + 2);  //First referenced page number
     rtn.position(_format.OFFSET_FREE_PAGES_USAGE_MAP_DEF);
     rtn.put((byte) UsageMap.MAP_TYPE_INLINE);
-    return rtn;
-  }
-  
-  /**
-   * Create a usage map data page buffer.
-   */
-  private ByteBuffer createUsageMapDataBuffer() throws IOException {
-    ByteBuffer rtn = _pageChannel.createPageBuffer();
-    rtn.put(PageTypes.USAGE_MAP);
-    rtn.put((byte) 0x01); //Unknown
-    rtn.putShort((short) 0);  //Unknown
     return rtn;
   }
   
