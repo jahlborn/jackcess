@@ -40,9 +40,8 @@ import java.nio.ByteBuffer;
 public class ReferenceUsageMap extends UsageMap {
   
   /** Buffer that contains the current reference map page */ 
-  private ByteBuffer _mapPageBuffer;
-  /** Page number of the reference map page that was last read */
-  private int _mapPageNum;
+  private final TempPageHolder _mapPageHolder =
+    TempPageHolder.newHolder(false);
   
   /**
    * @param pageChannel Used to read in pages
@@ -56,20 +55,20 @@ public class ReferenceUsageMap extends UsageMap {
   throws IOException
   {
     super(pageChannel, dataBuffer, pageNum, format, rowStart);
-    _mapPageBuffer = pageChannel.createPageBuffer();
     for (int i = 0; i < 17; i++) {
-      _mapPageNum = dataBuffer.getInt(getRowStart() +
+      int mapPageNum = dataBuffer.getInt(getRowStart() +
           format.OFFSET_REFERENCE_MAP_PAGE_NUMBERS + (4 * i));
-      if (_mapPageNum > 0) {
-        pageChannel.readPage(_mapPageBuffer, _mapPageNum);
-        byte pageType = _mapPageBuffer.get();
+      if (mapPageNum > 0) {
+        ByteBuffer mapPageBuffer =
+          _mapPageHolder.setPage(pageChannel, mapPageNum);
+        byte pageType = mapPageBuffer.get();
         if (pageType != PageTypes.USAGE_MAP) {
-          throw new IOException("Looking for usage map at page " + _mapPageNum +
+          throw new IOException("Looking for usage map at page " + mapPageNum +
               ", but page type is " + pageType);
         }
-        _mapPageBuffer.position(format.OFFSET_USAGE_MAP_PAGE_DATA);
-        setStartOffset(_mapPageBuffer.position());
-        processMap(_mapPageBuffer, i, 0);
+        mapPageBuffer.position(format.OFFSET_USAGE_MAP_PAGE_DATA);
+        setStartOffset(mapPageBuffer.position());
+        processMap(mapPageBuffer, i, 0);
       }
     }
   }
@@ -79,21 +78,17 @@ public class ReferenceUsageMap extends UsageMap {
   throws IOException
   {
     int pageIndex = (int) Math.floor(pageNumber / getFormat().PAGES_PER_USAGE_MAP_PAGE);
-    int mapPageNumber = getDataBuffer().getInt(calculateMapPagePointerOffset(pageIndex));
-    if (mapPageNumber > 0) {
-      if (_mapPageNum != mapPageNumber) {
-        //Need to read in the map page
-        getPageChannel().readPage(_mapPageBuffer, mapPageNumber);
-        _mapPageNum = mapPageNumber;
-      }
-    } else {
+    int mapPageNum = getDataBuffer().getInt(calculateMapPagePointerOffset(pageIndex));
+    if(mapPageNum <= 0) {
       //Need to create a new usage map page
-      createNewUsageMapPage(pageIndex);
+      mapPageNum  = createNewUsageMapPage(pageIndex);
     }
+    ByteBuffer mapPageBuffer = _mapPageHolder.setPage(getPageChannel(),
+                                                      mapPageNum);
     updateMap(pageNumber, pageNumber - (getFormat().PAGES_PER_USAGE_MAP_PAGE * pageIndex),
         1 << ((pageNumber - (getFormat().PAGES_PER_USAGE_MAP_PAGE * pageIndex)) % 8),
-        _mapPageBuffer, add);
-    getPageChannel().writePage(_mapPageBuffer, _mapPageNum);
+        mapPageBuffer, add);
+    getPageChannel().writePage(mapPageBuffer, mapPageNum);
   }
   
   /**
@@ -101,14 +96,17 @@ public class ReferenceUsageMap extends UsageMap {
    *    to it.
    * @param pageIndex Index of the page reference within the map declaration 
    */
-  private void createNewUsageMapPage(int pageIndex) throws IOException {
-    _mapPageBuffer = getPageChannel().createPageBuffer();
-    _mapPageBuffer.put(PageTypes.USAGE_MAP);
-    _mapPageBuffer.put((byte) 0x01);  //Unknown
-    _mapPageBuffer.putShort((short) 0); //Unknown
-    _mapPageNum = getPageChannel().writeNewPage(_mapPageBuffer);
-    getDataBuffer().putInt(calculateMapPagePointerOffset(pageIndex), _mapPageNum);
+  private int createNewUsageMapPage(int pageIndex) throws IOException {
+    ByteBuffer mapPageBuffer = _mapPageHolder.startNewPage(getPageChannel());
+    mapPageBuffer.put(PageTypes.USAGE_MAP);
+    mapPageBuffer.put((byte) 0x01);  //Unknown
+    mapPageBuffer.putShort((short) 0); //Unknown
+    int mapPageNum = getPageChannel().writeNewPage(mapPageBuffer);
+    _mapPageHolder.finishNewPage(mapPageNum);
+    getDataBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
+                           mapPageNum);
     getPageChannel().writePage(getDataBuffer(), getDataPageNumber());
+    return mapPageNum;
   }
   
   private int calculateMapPagePointerOffset(int pageIndex) {

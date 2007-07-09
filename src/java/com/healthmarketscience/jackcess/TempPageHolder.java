@@ -78,6 +78,31 @@ public abstract class TempPageHolder {
   }
 
   /**
+   * Sets the current page number to INVALID_PAGE_NUMBER and returns a new
+   * empty buffer.  Once the new page has been written to the page channel,
+   * {@link #finishNewPage} must be called with the new page number.
+   */
+  public ByteBuffer startNewPage(PageChannel pageChannel)
+    throws IOException
+  {
+    clear();
+    return getBuffer(pageChannel);
+  }
+
+  /**
+   * Sets the new page number for the current buffer of data.  Must be called
+   * after the buffer returned from {@link #startNewPage} has been written to
+   * the PageChannel as a new page and assigned a number.
+   */
+  public void finishNewPage(int pageNumber)
+  {
+    if(_pageNumber != PageChannel.INVALID_PAGE_NUMBER) {
+      throw new IllegalStateException("page number should not be set");
+    }
+    _pageNumber = pageNumber;
+  }
+  
+  /**
    * Forces any current page data to be disregarded (any
    * <code>getPage</code>/<code>setPage</code> call must reload page data).
    * Does not necessarily release any memory.
