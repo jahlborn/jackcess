@@ -118,7 +118,6 @@ public abstract class JetFormat {
   public final int SIZE_COLUMN_DEF_BLOCK;
   public final int SIZE_INDEX_ENTRY_MASK;
   
-  public final int PAGES_PER_USAGE_MAP_PAGE;
   public final int USAGE_MAP_TABLE_BYTE_LENGTH;
   
   public final Charset CHARSET;
@@ -203,7 +202,6 @@ public abstract class JetFormat {
     SIZE_COLUMN_DEF_BLOCK = defineSizeColumnDefBlock();
     SIZE_INDEX_ENTRY_MASK = defineSizeIndexEntryMask();
     
-    PAGES_PER_USAGE_MAP_PAGE = definePagesPerUsageMapPage();
     USAGE_MAP_TABLE_BYTE_LENGTH = defineUsageMapTableByteLength();
     
     CHARSET = defineCharset();
@@ -266,7 +264,6 @@ public abstract class JetFormat {
   protected abstract int defineSizeColumnDefBlock();
   protected abstract int defineSizeIndexEntryMask();
   
-  protected abstract int definePagesPerUsageMapPage();
   protected abstract int defineUsageMapTableByteLength();
     
   protected abstract Charset defineCharset();
@@ -339,7 +336,6 @@ public abstract class JetFormat {
     protected int defineSizeColumnDefBlock() { return 25; }
     protected int defineSizeIndexEntryMask() { return 453; }
     
-    protected int definePagesPerUsageMapPage() { return 4092 * 8; }
     protected int defineUsageMapTableByteLength() { return 64; }
       
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }

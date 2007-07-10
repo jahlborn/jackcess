@@ -181,6 +181,35 @@ public final class ByteUtil {
       buffer.order(origOrder);
     }
   }
+
+  /**
+   * Sets all bits in the given byte range to 0.
+   */
+  public static void clearRange(ByteBuffer buffer, int start,
+                                int end)
+  {
+    putRange(buffer, start, end, (byte)0x00);
+  }
+
+  /**
+   * Sets all bits in the given byte range to 1.
+   */
+  public static void fillRange(ByteBuffer buffer, int start,
+                               int end)
+  {
+    putRange(buffer, start, end, (byte)0xff);
+  }
+  
+  /**
+   * Sets all bytes in the given byte range to the given byte value.
+   */
+  public static void putRange(ByteBuffer buffer, int start,
+                              int end, byte b)
+  {
+    for(int i = start; i < end; ++i) {
+      buffer.put(i, b);
+    }
+  }
   
   /**
    * Convert a byte buffer to a hexadecimal string for display

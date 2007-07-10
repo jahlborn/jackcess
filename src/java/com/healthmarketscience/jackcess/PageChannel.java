@@ -72,7 +72,10 @@ public class PageChannel implements Channel {
     _autoSync = autoSync;
     //Null check only exists for unit tests.  Channel should never normally be null.
     if (channel != null) {
-      _globalUsageMap = UsageMap.read(this, PAGE_GLOBAL_USAGE_MAP, (byte) 0, format);
+      // note the global usage map is a special map where any page outside of
+      // the current range is assumed to be "on"
+      _globalUsageMap = UsageMap.read(this, PAGE_GLOBAL_USAGE_MAP, (byte) 0,
+                                      format, true);
     }
   }
   
@@ -131,10 +134,15 @@ public class PageChannel implements Channel {
    * @param page Page to write
    * @return Page number at which the page was written
    */
-  public int writeNewPage(ByteBuffer page) throws IOException {
+  public int writeNewPage(ByteBuffer page) throws IOException
+  {
     long size = _channel.size();
     page.rewind();
-    _channel.write(page, size);
+    // push the buffer to the end of the page, so that a full page's worth of
+    // data is written regardless of the incoming buffer size (we use a tiny
+    // buffer in allocateNewPage)
+    long offset = size + (_format.PAGE_SIZE - page.remaining());
+    _channel.write(page, offset);
     int pageNumber = (int) (size / _format.PAGE_SIZE);
     _globalUsageMap.removePageNumber(pageNumber);  //force is done here
     return pageNumber;
@@ -145,14 +153,8 @@ public class PageChannel implements Channel {
    * until it is written in a call to {@link #writePage}.
    */
   public int allocateNewPage() throws IOException {
-    long size = _channel.size();
-    FORCE_BYTES.rewind();
-    long offset = size + _format.PAGE_SIZE - FORCE_BYTES.remaining();
     // this will force the file to be extended with mostly undefined bytes
-    _channel.write(FORCE_BYTES, offset);
-    int pageNumber = (int) (size / _format.PAGE_SIZE);
-    _globalUsageMap.removePageNumber(pageNumber);  //force is done here
-    return pageNumber;
+    return writeNewPage(FORCE_BYTES);
   }
   
   /**

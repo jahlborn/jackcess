@@ -572,11 +572,13 @@ public class Table
     
     byte rowNum = tableBuffer.get(_format.OFFSET_OWNED_PAGES);
     int pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_OWNED_PAGES + 1);
-    _ownedPages = UsageMap.read(_pageChannel, pageNum, rowNum, _format);
+    _ownedPages = UsageMap.read(_pageChannel, pageNum, rowNum, _format,
+                                false);
     _ownedPagesIterator = _ownedPages.iterator();
     rowNum = tableBuffer.get(_format.OFFSET_FREE_SPACE_PAGES);
     pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_FREE_SPACE_PAGES + 1);
-    _freeSpacePages = UsageMap.read(_pageChannel, pageNum, rowNum, _format);
+    _freeSpacePages = UsageMap.read(_pageChannel, pageNum, rowNum, _format,
+                                    false);
     
     for (int i = 0; i < _indexCount; i++) {
       Index index = new Index(_tableDefPageNumber, _pageChannel, _format);
