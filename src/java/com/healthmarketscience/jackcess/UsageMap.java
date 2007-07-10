@@ -51,8 +51,8 @@ public class UsageMap
   /** Reference map type, for maps that are too large to fit inline */
   public static final byte MAP_TYPE_REFERENCE = 0x1;
   
-  /** Page number of the map declaration */
-  private int _dataPageNum;
+  /** Page number of the map table declaration */
+  private int _tablePageNum;
   /** Offset of the data page at which the usage map data starts */
   private int _startOffset;
   /** Offset of the data page at which the usage map declaration starts */
@@ -65,8 +65,8 @@ public class UsageMap
   private int _endPage;
   /** bits representing page numbers used, offset from _startPage */
   private BitSet _pageNumbers = new BitSet();
-  /** Buffer that contains the usage map declaration page */
-  private ByteBuffer _dataBuffer;
+  /** Buffer that contains the usage map table declaration page */
+  private ByteBuffer _tableBuffer;
   /** Used to read in pages */
   private PageChannel _pageChannel;
   /** modification count on the usage map, used to keep the iterators in
@@ -78,25 +78,25 @@ public class UsageMap
   
   /**
    * @param pageChannel Used to read in pages
-   * @param dataBuffer Buffer that contains this map's declaration
+   * @param tableBuffer Buffer that contains this map's declaration
    * @param pageNum Page number that this usage map is contained in
    * @param format Format of the database that contains this usage map
    * @param rowStart Offset at which the declaration starts in the buffer
    */
-  private UsageMap(PageChannel pageChannel, ByteBuffer dataBuffer,
+  private UsageMap(PageChannel pageChannel, ByteBuffer tableBuffer,
                    int pageNum, JetFormat format, short rowStart)
   throws IOException
   {
     _pageChannel = pageChannel;
-    _dataBuffer = dataBuffer;
-    _dataPageNum = pageNum;
+    _tableBuffer = tableBuffer;
+    _tablePageNum = pageNum;
     _format = format;
     _rowStart = rowStart;
-    _dataBuffer.position((int) _rowStart + format.OFFSET_MAP_START);
-    _startOffset = _dataBuffer.position();
+    _tableBuffer.position((int) _rowStart + format.OFFSET_MAP_START);
+    _startOffset = _tableBuffer.position();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_dataBuffer, _rowStart,
-          dataBuffer.limit() - _rowStart));
+      LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_tableBuffer, _rowStart,
+          tableBuffer.limit() - _rowStart));
     }
   }
 
@@ -112,13 +112,13 @@ public class UsageMap
                               byte rowNum, JetFormat format)
     throws IOException
   {
-    ByteBuffer dataBuffer = pageChannel.createPageBuffer();
-    pageChannel.readPage(dataBuffer, pageNum);
-    short rowStart = Table.findRowStart(dataBuffer, rowNum, format);
-    int rowEnd = Table.findRowEnd(dataBuffer, rowNum, format);
-    dataBuffer.limit(rowEnd);    
-    byte mapType = dataBuffer.get(rowStart);
-    UsageMap rtn = new UsageMap(pageChannel, dataBuffer, pageNum, format,
+    ByteBuffer tableBuffer = pageChannel.createPageBuffer();
+    pageChannel.readPage(tableBuffer, pageNum);
+    short rowStart = Table.findRowStart(tableBuffer, rowNum, format);
+    int rowEnd = Table.findRowEnd(tableBuffer, rowNum, format);
+    tableBuffer.limit(rowEnd);    
+    byte mapType = tableBuffer.get(rowStart);
+    UsageMap rtn = new UsageMap(pageChannel, tableBuffer, pageNum, format,
                                 rowStart);
     rtn.initHandler(mapType);
     return rtn;
@@ -156,12 +156,12 @@ public class UsageMap
     return _startOffset;
   }
   
-  protected ByteBuffer getDataBuffer() {
-    return _dataBuffer;
+  protected ByteBuffer getTableBuffer() {
+    return _tableBuffer;
   }
   
-  protected int getDataPageNumber() {
-    return _dataPageNum;
+  protected int getTablePageNumber() {
+    return _tablePageNum;
   }
   
   protected PageChannel getPageChannel() {
@@ -228,6 +228,13 @@ public class UsageMap
   protected int pageNumberToBitIndex(int pageNumber) {
     return((pageNumber != PageChannel.INVALID_PAGE_NUMBER) ?
            (pageNumber - _startPage) : -1);
+  }
+
+  protected void writeTable()
+    throws IOException
+  {
+    // note, we only want to write the row data with which we are working
+    _pageChannel.writePage(_tableBuffer, _tablePageNum, _rowStart);
   }
   
   /**
@@ -311,14 +318,14 @@ public class UsageMap
     int tableStart = _startOffset - 4;
     int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH + 4;
     for(int i = tableStart; i < tableEnd; ++i) {
-      _dataBuffer.put(i, (byte)0);
+      _tableBuffer.put(i, (byte)0);
     }
 
     // set the new map type
-    _dataBuffer.put(tableStart - 1, MAP_TYPE_REFERENCE);
+    _tableBuffer.put(tableStart - 1, MAP_TYPE_REFERENCE);
 
-    // write the new databuffer
-    _pageChannel.writePage(_dataBuffer, _dataPageNum);    
+    // write the new table data
+    writeTable();
     
     // set new handler
     _handler = new ReferenceHandler();
@@ -370,10 +377,10 @@ public class UsageMap
     private InlineHandler()
       throws IOException
     {
-      int startPage = getDataBuffer().getInt(getRowStart() + 1);
+      int startPage = getTableBuffer().getInt(getRowStart() + 1);
       setPageRange(startPage, startPage +
                    (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8));
-      processMap(getDataBuffer(), 0);
+      processMap(getTableBuffer(), 0);
     }
   
     @Override
@@ -386,7 +393,7 @@ public class UsageMap
                               " because it is less than start page " + startPage);
       }
       int relativePageNumber = pageNumber - startPage;
-      ByteBuffer buffer = getDataBuffer();
+      ByteBuffer buffer = getTableBuffer();
       if ((!add && !getPageNumbers().get(relativePageNumber)) ||
           (add && (relativePageNumber >
                    (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8 - 1))))
@@ -409,12 +416,12 @@ public class UsageMap
           }
           getPageNumbers().set(0, (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8)); //Fill our list with page numbers
         }
-        getPageChannel().writePage(buffer, getDataPageNumber());
+        writeTable();
         relativePageNumber = pageNumber - startPage;
       }
       updateMap(pageNumber, relativePageNumber, buffer, add);
       //Write the updated map back to disk
-      getPageChannel().writePage(buffer, getDataPageNumber());
+      writeTable();
     }
   }
 
@@ -443,7 +450,7 @@ public class UsageMap
       // extra page reference on top of the number of page references that fit
       // in the table
       for (int i = 0; i < numPages; i++) {
-        int mapPageNum = getDataBuffer().getInt(
+        int mapPageNum = getTableBuffer().getInt(
             getRowStart() + getFormat().OFFSET_REFERENCE_MAP_PAGE_NUMBERS +
             (4 * i));
         if (mapPageNum > 0) {
@@ -466,7 +473,7 @@ public class UsageMap
       throws IOException
     {
       int pageIndex = (int) Math.floor(pageNumber / getFormat().PAGES_PER_USAGE_MAP_PAGE);
-      int mapPageNum = getDataBuffer().getInt(calculateMapPagePointerOffset(pageIndex));
+      int mapPageNum = getTableBuffer().getInt(calculateMapPagePointerOffset(pageIndex));
       if(mapPageNum <= 0) {
         //Need to create a new usage map page
         mapPageNum  = createNewUsageMapPage(pageIndex);
@@ -493,9 +500,9 @@ public class UsageMap
       }
       int mapPageNum = getPageChannel().writeNewPage(mapPageBuffer);
       _mapPageHolder.finishNewPage(mapPageNum);
-      getDataBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
+      getTableBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
                              mapPageNum);
-      getPageChannel().writePage(getDataBuffer(), getDataPageNumber());
+      writeTable();
       return mapPageNum;
     }
   

@@ -103,8 +103,24 @@ public class PageChannel implements Channel {
    * @param pageNumber Page number to write the page to
    */
   public void writePage(ByteBuffer page, int pageNumber) throws IOException {
+    writePage(page, pageNumber, 0);
+  }
+  
+  /**
+   * Write a page (or part of a page) to disk
+   * @param page Page to write
+   * @param pageNumber Page number to write the page to
+   * @param pageOffset offset within the page at which to start writing the
+   *                   page data
+   */
+  public void writePage(ByteBuffer page, int pageNumber,
+                        int pageOffset)
+    throws IOException
+  {
     page.rewind();
-    _channel.write(page, (long) pageNumber * (long) _format.PAGE_SIZE);
+    page.position(pageOffset);
+    _channel.write(page, (((long) pageNumber * (long) _format.PAGE_SIZE) +
+                          (long) pageOffset));
     if(_autoSync) {
       _channel.force(true);
     }
