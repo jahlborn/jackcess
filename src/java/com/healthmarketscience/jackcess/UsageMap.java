@@ -185,9 +185,9 @@ public class UsageMap
   /**
    * Read in the page numbers in this inline map
    */
-  protected void processMap(ByteBuffer buffer, int pageIndex, int startPage) {
+  protected void processMap(ByteBuffer buffer, int pageIndex)
+  {
     int byteCount = 0;
-    _startPage = startPage;
     while (buffer.hasRemaining()) {
       byte b = buffer.get();
       if(b != (byte)0) {
@@ -228,11 +228,13 @@ public class UsageMap
     _handler.addOrRemovePageNumber(pageNumber, false);
   }
   
-  protected void updateMap(int absolutePageNumber, int relativePageNumber,
-      int bitmask, ByteBuffer buffer, boolean add)
+  protected void updateMap(int absolutePageNumber,
+                           int bufferRelativePageNumber,
+                           ByteBuffer buffer, boolean add)
   {
     //Find the byte to apply the bitmask to
-    int offset = relativePageNumber / 8;
+    int offset = bufferRelativePageNumber / 8;
+    int bitmask = 1 << (bufferRelativePageNumber % 8);
     byte b = buffer.get(_startOffset + offset);
     //Apply the bitmask
     int pageNumberOffset = absolutePageNumber - _startPage;
@@ -246,15 +248,41 @@ public class UsageMap
     buffer.put(_startOffset + offset, b);
   }
   
-  private void promoteInlineHandlerToReferenceHandler(int pageNumber)
+  private void promoteInlineHandlerToReferenceHandler(int newPageNumber)
     throws IOException
   {
-    // FIXME writeme
-//     int startPage = _startPage;
-//     BitSet curPageNumbers = (BitSet)_pageNumbers.clone();
-//     _pageNumbers.clear();
-//     _startPage = 0;
+    System.out.println("FOO promoting!");
     
+    // copy current page number info to new references and then clear old
+    int oldStartPage = _startPage;
+    BitSet oldPageNumbers = (BitSet)_pageNumbers.clone();
+    _pageNumbers.clear();
+    _startPage = 0;
+
+    // clear out the main table (inline usage map data and start page)
+    int tableStart = _startOffset - 4;
+    int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH + 4;
+    for(int i = tableStart; i < tableEnd; ++i) {
+      _dataBuffer.put(i, (byte)0);
+    }
+
+    // set the new map type
+    _dataBuffer.put(tableStart - 1, MAP_TYPE_REFERENCE);
+
+    // write the new databuffer
+    _pageChannel.writePage(_dataBuffer, _dataPageNum);    
+    
+    // set new handler
+    _handler = new ReferenceHandler();
+
+    // now add all the old pages back in
+    for(int i = oldPageNumbers.nextSetBit(0); i >= 0;
+        i = oldPageNumbers.nextSetBit(i + 1)) {
+      addPageNumber(oldStartPage + i);
+    }
+
+    // and then add the new page
+    addPageNumber(newPageNumber);
   }
   
   public String toString() {
@@ -295,7 +323,8 @@ public class UsageMap
       throws IOException
     {
       int startPage = getDataBuffer().getInt(getRowStart() + 1);
-      processMap(getDataBuffer(), 0, startPage);
+      setStartPage(startPage);
+      processMap(getDataBuffer(), 0);
     }
   
     @Override
@@ -313,11 +342,11 @@ public class UsageMap
           (add && (relativePageNumber >
                    (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8 - 1))))
       {
-        // FIXME writeme
-//         if(add) {
-//           promoteInlineHandlerToReferenceHandler(pageNumber);
-//           return;
-//         }
+        if(add) {
+          // we need to expand to a reference handler
+          promoteInlineHandlerToReferenceHandler(pageNumber);
+          return;
+        }
         //Increase the start page to the current page and clear out the map.
         startPage = pageNumber;
         setStartPage(startPage);
@@ -333,7 +362,7 @@ public class UsageMap
         getPageChannel().writePage(buffer, getDataPageNumber());
         relativePageNumber = pageNumber - startPage;
       }
-      updateMap(pageNumber, relativePageNumber, 1 << (relativePageNumber % 8), buffer, add);
+      updateMap(pageNumber, relativePageNumber, buffer, add);
       //Write the updated map back to disk
       getPageChannel().writePage(buffer, getDataPageNumber());
     }
@@ -356,6 +385,7 @@ public class UsageMap
       throws IOException
     {
       setStartOffset(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
+      setStartPage(0);
       // there is no "start page" for a reference usage map, so we get an
       // extra page reference on top of the number of page references that fit
       // in the table
@@ -374,7 +404,7 @@ public class UsageMap
                                   pageType);
           }
           mapPageBuffer.position(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
-          processMap(mapPageBuffer, i, 0);
+          processMap(mapPageBuffer, i);
         }
       }
     }
@@ -392,7 +422,6 @@ public class UsageMap
       ByteBuffer mapPageBuffer = _mapPageHolder.setPage(getPageChannel(),
                                                         mapPageNum);
       updateMap(pageNumber, pageNumber - (getFormat().PAGES_PER_USAGE_MAP_PAGE * pageIndex),
-                1 << ((pageNumber - (getFormat().PAGES_PER_USAGE_MAP_PAGE * pageIndex)) % 8),
                 mapPageBuffer, add);
       getPageChannel().writePage(mapPageBuffer, mapPageNum);
     }
