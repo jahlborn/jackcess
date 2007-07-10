@@ -61,6 +61,8 @@ public class UsageMap
   private JetFormat _format;
   /** First page that this usage map applies to */
   private int _startPage;
+  /** Last page that this usage map applies to */
+  private int _endPage;
   /** bits representing page numbers used, offset from _startPage */
   private BitSet _pageNumbers = new BitSet();
   /** Buffer that contains the usage map declaration page */
@@ -173,13 +175,59 @@ public class UsageMap
   protected int getStartPage() {
     return _startPage;
   }
-
-  protected void setStartPage(int newStartPage) {
-    _startPage = newStartPage;
-  }
-
+    
   protected BitSet getPageNumbers() {
     return _pageNumbers;
+  }
+
+  protected void setPageRange(int newStartPage, int newEndPage) {
+    _startPage = newStartPage;
+    _endPage = newEndPage;
+  }
+
+  protected boolean isPageWithinRange(int pageNumber)
+  {
+    return((pageNumber >= _startPage) && (pageNumber < _endPage));
+  }
+
+  protected int getFirstPageNumber() {
+    return bitIndexToPageNumber(getNextBitIndex(-1));
+  }
+
+  protected int getNextPageNumber(int curPage) {
+    return bitIndexToPageNumber(
+        getNextBitIndex(pageNumberToBitIndex(curPage)));
+  }    
+  
+  protected int getNextBitIndex(int curIndex) {
+    return _pageNumbers.nextSetBit(curIndex + 1);
+  }    
+  
+  protected int getLastPageNumber() {
+    return bitIndexToPageNumber(getPrevBitIndex(_pageNumbers.length()));
+  }
+
+  protected int getPrevPageNumber(int curPage) {
+    return bitIndexToPageNumber(
+        getPrevBitIndex(pageNumberToBitIndex(curPage)));
+  }    
+  
+  protected int getPrevBitIndex(int curIndex) {
+    --curIndex;
+    while((curIndex >= 0) && !_pageNumbers.get(curIndex)) {
+      --curIndex;
+    }
+    return curIndex;
+  }    
+  
+  protected int bitIndexToPageNumber(int bitIndex) {
+    return((bitIndex >= 0) ? (_startPage + bitIndex) :
+           PageChannel.INVALID_PAGE_NUMBER);
+  }
+
+  protected int pageNumberToBitIndex(int pageNumber) {
+    return((pageNumber != PageChannel.INVALID_PAGE_NUMBER) ?
+           (pageNumber - _startPage) : -1);
   }
   
   /**
@@ -323,7 +371,8 @@ public class UsageMap
       throws IOException
     {
       int startPage = getDataBuffer().getInt(getRowStart() + 1);
-      setStartPage(startPage);
+      setPageRange(startPage, startPage +
+                   (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8));
       processMap(getDataBuffer(), 0);
     }
   
@@ -349,7 +398,8 @@ public class UsageMap
         }
         //Increase the start page to the current page and clear out the map.
         startPage = pageNumber;
-        setStartPage(startPage);
+        setPageRange(startPage, startPage +
+                     (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8));
         buffer.position(getRowStart() + 1);
         buffer.putInt(startPage);
         getPageNumbers().clear();
@@ -384,12 +434,14 @@ public class UsageMap
     private ReferenceHandler()
       throws IOException
     {
+      int numPages = (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH / 4) + 1;
+      int numBitsPerPage = ((getFormat().PAGE_SIZE -
+                             getFormat().OFFSET_USAGE_MAP_PAGE_DATA) * 8);
       setStartOffset(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
-      setStartPage(0);
+      setPageRange(0, (numPages * numBitsPerPage));
       // there is no "start page" for a reference usage map, so we get an
       // extra page reference on top of the number of page references that fit
       // in the table
-      int numPages = (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH / 4) + 1;
       for (int i = 0; i < numPages; i++) {
         int mapPageNum = getDataBuffer().getInt(
             getRowStart() + getFormat().OFFSET_REFERENCE_MAP_PAGE_NUMBERS +
@@ -455,18 +507,20 @@ public class UsageMap
   
   
   /**
-   * Utility class to iterate over the pages in the UsageMap.
+   * Utility class to iterate over the pages in the UsageMap.  Note, since the
+   * iterators hold on to page numbers, they should stay valid even as the
+   * usage map handlers shift around the bits.
    */
   public abstract class PageIterator
   {
-    /** the next set page number bit */
-    protected int _nextSetBit;
-    /** the previous set page number bit */
-    protected int _prevSetBit;
+    /** the next used page number */
+    private int _nextPageNumber;
+    /** the previous used page number */
+    private int _prevPageNumber;
     /** the last read modification count on the UsageMap.  we track this so
         that the iterator can detect updates to the usage map while iterating
         and act accordingly */
-    protected int _lastModCount;
+    private int _lastModCount;
 
     protected PageIterator() {
     }
@@ -475,32 +529,48 @@ public class UsageMap
      * @return {@code true} if there is another valid page, {@code false}
      *         otherwise.
      */
-    public boolean hasNextPage() {
-      if((_nextSetBit < 0) &&
+    public final boolean hasNextPage() {
+      if((_nextPageNumber == PageChannel.INVALID_PAGE_NUMBER) &&
          (_lastModCount != _modCount)) {
         // recheck the last page, in case more showed up
-        if(_prevSetBit < 0) {
+        if(_prevPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
           // we were at the beginning
           reset();
         } else {
-          _nextSetBit = _prevSetBit;
-          getNextPage();
+          _lastModCount = _modCount;
+          _nextPageNumber = getNextPage(_prevPageNumber);
         }
       }
-      return(_nextSetBit >= 0);
+      return(_nextPageNumber != PageChannel.INVALID_PAGE_NUMBER);
     }      
     
     /**
      * @return valid page number if there was another page to read,
      *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
      */
-    public abstract int getNextPage();
+    public final int getNextPage() {
+      if (hasNextPage()) {
+        _lastModCount = _modCount;
+        _prevPageNumber = _nextPageNumber;
+        _nextPageNumber = getNextPage(_nextPageNumber);
+        return _prevPageNumber;
+      }
+      return PageChannel.INVALID_PAGE_NUMBER;
+    }
 
     /**
-     * After calling this method, getNextPage will return the first page in the
-     * map
+     * After calling this method, getNextPage will return the first page in
+     * the map
      */
-    public abstract void reset();
+    public final void reset() {
+      _lastModCount = _modCount;
+      _prevPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      _nextPageNumber = getInitialPage();
+    }
+
+    protected abstract int getInitialPage();
+
+    protected abstract int getNextPage(int curPage);
   }
   
   /**
@@ -513,21 +583,13 @@ public class UsageMap
     }
     
     @Override
-    public int getNextPage() {
-      if (hasNextPage()) {
-        _lastModCount = _modCount;
-        _prevSetBit = _nextSetBit;
-        _nextSetBit = _pageNumbers.nextSetBit(_nextSetBit + 1);
-        return _prevSetBit + _startPage;
-      }
-      return PageChannel.INVALID_PAGE_NUMBER;
+    protected int getNextPage(int curPage) {
+      return UsageMap.this.getNextPageNumber(curPage);
     }
 
     @Override
-    public final void reset() {
-      _lastModCount = _modCount;
-      _prevSetBit = -1;
-      _nextSetBit = _pageNumbers.nextSetBit(0);
+    protected int getInitialPage() {
+      return UsageMap.this.getFirstPageNumber();
     }
   }
   
@@ -541,24 +603,13 @@ public class UsageMap
     }
     
     @Override
-    public int getNextPage() {
-      if(hasNextPage()) {
-        _lastModCount = _modCount;
-        _prevSetBit = _nextSetBit;
-        --_nextSetBit;
-        while(hasNextPage() && !_pageNumbers.get(_nextSetBit)) {
-          --_nextSetBit;
-        }
-        return _prevSetBit + _startPage;
-      }
-      return PageChannel.INVALID_PAGE_NUMBER;
+    protected int getNextPage(int curPage) {
+      return UsageMap.this.getPrevPageNumber(curPage);
     }
 
     @Override
-    public final void reset() {
-      _lastModCount = _modCount;
-      _prevSetBit = -1;
-      _nextSetBit = _pageNumbers.length() - 1;
+    protected int getInitialPage() {
+      return UsageMap.this.getLastPageNumber();
     }
   }
 
