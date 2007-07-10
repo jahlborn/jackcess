@@ -19,8 +19,10 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -636,6 +638,31 @@ public class DatabaseTest extends TestCase {
     assertEquals(tval, readRow.get("c"));
 
   }
+
+
+  public void testUsageMapPromotion() throws Exception {
+    File srcFile = new File("test/data/testPromotion.mdb");
+    File dbFile = File.createTempFile("databaseTest", ".mdb");
+    dbFile.deleteOnExit();
+    copyFile(srcFile, dbFile);
+    
+    Database db = Database.open(dbFile);
+    Table t = db.getTable("jobDB1");
+
+    String lval = createString(255); // "--255 chars long text--";
+
+    for(int i = 0; i < 1000; ++i) {
+      t.addRow(i, 13, 57, 47.0d, lval, lval, lval, lval, lval, lval);
+    }
+
+    Set<Integer> ids = new HashSet<Integer>();
+    for(Map<String,Object> row : t) {
+      ids.add((Integer)row.get("ID"));
+    }
+    assertEquals(1000, ids.size());
+
+    db.close();
+  }  
   
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

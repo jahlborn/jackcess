@@ -29,9 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.List;
 import java.util.logging.Handler;
 
 import org.apache.commons.logging.Log;

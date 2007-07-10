@@ -28,9 +28,11 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.Flushable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -39,7 +41,6 @@ import java.nio.channels.FileChannel;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -63,7 +64,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  */
 public class Database
-  implements Iterable<Table>
+  implements Iterable<Table>, Closeable, Flushable
 {
   
   private static final Log LOG = LogFactory.getLog(Database.class);
@@ -823,6 +824,13 @@ public class Database
     } catch(SQLException e) {
       throw (IOException)new IOException(e.getMessage()).initCause(e);
     }
+  }
+
+  /**
+   * Flushes any current changes to the database file to disk.
+   */
+  public void flush() throws IOException {
+    _pageChannel.flush();
   }
   
   /**

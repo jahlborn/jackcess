@@ -27,11 +27,13 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.Flushable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -39,7 +41,7 @@ import org.apache.commons.logging.LogFactory;
  * Reads and writes individual pages in a database file
  * @author Tim McCune
  */
-public class PageChannel implements Channel {
+public class PageChannel implements Channel, Flushable {
   
   private static final Log LOG = LogFactory.getLog(PageChannel.class);
   
@@ -125,7 +127,7 @@ public class PageChannel implements Channel {
     _channel.write(page, (((long) pageNumber * (long) _format.PAGE_SIZE) +
                           (long) pageOffset));
     if(_autoSync) {
-      _channel.force(true);
+      flush();
     }
   }
   
@@ -165,9 +167,13 @@ public class PageChannel implements Channel {
     rtn.order(ByteOrder.LITTLE_ENDIAN);
     return rtn;
   }
+
+  public void flush() throws IOException {
+    _channel.force(true);
+  }
   
   public void close() throws IOException {
-    _channel.force(true);
+    flush();
     _channel.close();
   }
   
