@@ -1,0 +1,3 @@
+Missing pieces:
+
+- large index update support (can read large indexes, but not update them)
