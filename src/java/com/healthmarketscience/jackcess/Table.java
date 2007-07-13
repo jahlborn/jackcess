@@ -119,8 +119,8 @@ public class Table
   /**
    * Only used by unit tests
    */
-  Table() throws IOException {
-    _pageChannel = new PageChannel(null, JetFormat.VERSION_4, true);
+  Table(boolean testing) throws IOException {
+    _pageChannel = new PageChannel(testing);
   }
   
   /**
@@ -147,9 +147,8 @@ public class Table
       }
       _pageChannel.readPage(nextPageBuffer, nextPage);
       nextPage = nextPageBuffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
-      ByteBuffer newBuffer = ByteBuffer.allocate(tableBuffer.capacity() +
-                                                 format.PAGE_SIZE - 8);
-      newBuffer.order(ByteOrder.LITTLE_ENDIAN);
+      ByteBuffer newBuffer = _pageChannel.createBuffer(
+          tableBuffer.capacity() + format.PAGE_SIZE - 8);
       newBuffer.put(tableBuffer);
       newBuffer.put(nextPageBuffer.array(), 8, format.PAGE_SIZE - 8);
       tableBuffer = newBuffer;
@@ -551,7 +550,272 @@ public class Table
   {
     return new RowIterator(columnNames);
   }
+
+  /**
+   * Writes a new table defined by the given columns to the database.
+   * @return the first page of the new table's definition
+   */
+  public static int writeTableDefinition(
+      List<Column> columns, PageChannel pageChannel, JetFormat format)
+    throws IOException
+  {
+    // first, create the usage map page
+    int usageMapPageNumber = pageChannel.writeNewPage(
+        createUsageMapDefinitionBuffer(pageChannel, format));
+
+    // next, determine how big the table def will be (in case it will be more
+    // than one page)
+    int totalTableDefSize = format.SIZE_TDEF_HEADER +
+      (format.SIZE_COLUMN_DEF_BLOCK * columns.size()) +
+      format.SIZE_TDEF_TRAILER;
+    for(Column col : columns) {
+      // we add the number of bytes for the column name and 2 bytes for the
+      // length of the column name
+      ByteBuffer cName = format.CHARSET.encode(col.getName());
+      int nameByteLen = (col.getName().length() *
+                         JetFormat.TEXT_FIELD_UNIT_SIZE);
+      totalTableDefSize += nameByteLen + 2;
+    }
+    
+    // now, create the table definition
+    ByteBuffer buffer = pageChannel.createBuffer(Math.max(totalTableDefSize,
+                                                          format.PAGE_SIZE));
+    writeTableDefinitionHeader(buffer, columns, usageMapPageNumber,
+                               totalTableDefSize, format);
+    writeColumnDefinitions(buffer, columns, format); 
+    
+    //End of tabledef
+    buffer.put((byte) 0xff);
+    buffer.put((byte) 0xff);
+
+    // write table buffer to database
+    int tdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+    if(totalTableDefSize <= format.PAGE_SIZE) {
+      
+      // easy case, fits on one page
+      buffer.putShort(format.OFFSET_FREE_SPACE,
+                      (short)(buffer.remaining() - 8)); // overwrite page free space
+      // Write the tdef page to disk.
+      tdefPageNumber = pageChannel.writeNewPage(buffer);
+      
+    } else {
+
+      // need to split across multiple pages
+      ByteBuffer partialTdef = pageChannel.createPageBuffer();
+      buffer.rewind();
+      int nextTdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      while(buffer.hasRemaining()) {
+
+        // reset for next write
+        partialTdef.clear();
+        
+        if(tdefPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+          
+          // this is the first page.  note, the first page already has the
+          // page header, so no need to write it here
+          tdefPageNumber = pageChannel.allocateNewPage();
+          nextTdefPageNumber = tdefPageNumber;
+          
+        } else {
+
+          // write page header
+          writeTablePageHeader(partialTdef);
+        }
+
+        // copy the next page of tdef bytes
+        int curTdefPageNumber = nextTdefPageNumber;
+        int writeLen = Math.min(partialTdef.remaining(), buffer.remaining());
+        partialTdef.put(buffer.array(), buffer.position(), writeLen);
+        buffer.position(buffer.position() + writeLen);
+
+        if(buffer.hasRemaining()) {
+          // need a next page
+          nextTdefPageNumber = pageChannel.allocateNewPage();
+          partialTdef.putInt(format.OFFSET_NEXT_TABLE_DEF_PAGE,
+                             nextTdefPageNumber);
+        }
+
+        // update page free space
+        partialTdef.putShort(format.OFFSET_FREE_SPACE,
+                             (short)(partialTdef.remaining() - 8)); // overwrite page free space
+
+        // write partial page to disk
+        pageChannel.writePage(partialTdef, curTdefPageNumber);
+      }
+        
+    }
+       
+    return tdefPageNumber;
+  }
+
+  /**
+   * @param buffer Buffer to write to
+   * @param columns List of Columns in the table
+   */
+  private static void writeTableDefinitionHeader(
+      ByteBuffer buffer, List<Column> columns,
+      int usageMapPageNumber, int totalTableDefSize, JetFormat format)
+    throws IOException
+  {
+    //Start writing the tdef
+    writeTablePageHeader(buffer);
+    buffer.putInt(totalTableDefSize);  //Length of table def
+    buffer.put((byte) 0x59);  //Unknown
+    buffer.put((byte) 0x06);  //Unknown
+    buffer.putShort((short) 0); //Unknown
+    buffer.putInt(0);  //Number of rows
+    buffer.putInt(0); //Autonumber
+    for (int i = 0; i < 16; i++) {  //Unknown
+      buffer.put((byte) 0);
+    }
+    buffer.put(Table.TYPE_USER); //Table type
+    buffer.putShort((short) columns.size()); //Max columns a row will have
+    buffer.putShort(Column.countVariableLength(columns));  //Number of variable columns in table
+    buffer.putShort((short) columns.size()); //Number of columns in table
+    buffer.putInt(0);  //Number of indexes in table
+    buffer.putInt(0);  //Number of indexes in table
+    buffer.put((byte) 0); //Usage map row number
+    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Usage map page number
+    buffer.put((byte) 1); //Free map row number
+    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Free map page number
+    if (LOG.isDebugEnabled()) {
+      int position = buffer.position();
+      buffer.rewind();
+      LOG.debug("Creating new table def block:\n" + ByteUtil.toHexString(
+          buffer, format.SIZE_TDEF_HEADER));
+      buffer.position(position);
+    }
+  }
+
+  /**
+   * Writes the page header for a table definition page
+   * @param buffer Buffer to write to
+   */
+  private static void writeTablePageHeader(ByteBuffer buffer)
+  {
+    buffer.put(PageTypes.TABLE_DEF);  //Page type
+    buffer.put((byte) 0x01); //Unknown
+    buffer.put((byte) 0); //Unknown
+    buffer.put((byte) 0); //Unknown
+    buffer.putInt(0);  //Next TDEF page pointer
+  }
   
+  /**
+   * @param buffer Buffer to write to
+   * @param columns List of Columns to write definitions for
+   */
+  private static void writeColumnDefinitions(
+      ByteBuffer buffer, List<Column> columns, JetFormat format)
+    throws IOException
+  {
+    short columnNumber = (short) 0;
+    short fixedOffset = (short) 0;
+    short variableOffset = (short) 0;
+    // we specifically put the "long variable" values after the normal
+    // variable length values so that we have a better chance of fitting it
+    // all (because "long variable" values can go in separate pages)
+    short longVariableOffset =
+      (short) Column.countNonLongVariableLength(columns);
+    for (Column col : columns) {
+      int position = buffer.position();
+      buffer.put(col.getType().getValue());
+      buffer.put((byte) 0x59);  //Unknown
+      buffer.put((byte) 0x06);  //Unknown
+      buffer.putShort((short) 0); //Unknown
+      buffer.putShort(columnNumber);  //Column Number
+      if (col.isVariableLength()) {
+        if(!col.getType().isLongValue()) {
+          buffer.putShort(variableOffset++);
+        } else {
+          buffer.putShort(longVariableOffset++);
+        }          
+      } else {
+        buffer.putShort((short) 0);
+      }
+      buffer.putShort(columnNumber); //Column Number again
+      if(col.getType().getHasScalePrecision()) {
+        buffer.put((byte) col.getPrecision());  // numeric precision
+        buffer.put((byte) col.getScale());  // numeric scale
+      } else {
+        buffer.put((byte) 0x00); //unused
+        buffer.put((byte) 0x00); //unused
+      }
+      buffer.putShort((short) 0); //Unknown
+      if (col.isVariableLength()) { //Variable length
+        buffer.put((byte) 0x2);
+      } else {
+        buffer.put((byte) 0x3);
+      }
+      if (col.isCompressedUnicode()) {  //Compressed
+        buffer.put((byte) 1);
+      } else {
+        buffer.put((byte) 0);
+      }
+      buffer.putInt(0); //Unknown, but always 0.
+      //Offset for fixed length columns
+      if (col.isVariableLength()) {
+        buffer.putShort((short) 0);
+      } else {
+        buffer.putShort(fixedOffset);
+        fixedOffset += col.getType().getFixedSize();
+      }
+      if(!col.getType().isLongValue()) {
+        buffer.putShort(col.getLength()); //Column length
+      } else {
+        buffer.putShort((short)0x0000); // unused
+      }
+      columnNumber++;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
+            buffer, position, format.SIZE_COLUMN_DEF_BLOCK));
+      }
+    }
+    for (Column col : columns) {
+      ByteBuffer colName = format.CHARSET.encode(col.getName());
+      buffer.putShort((short) colName.remaining());
+      buffer.put(colName);
+    }
+  }
+  
+  /**
+   * Create the usage map definition page buffer.  The "used pages" map is in
+   * row 0, the "pages with free space" map is in row 1.
+   */
+  private static ByteBuffer createUsageMapDefinitionBuffer(
+      PageChannel pageChannel, JetFormat format)
+    throws IOException
+  {
+    // USAGE_MAP_DEF_FREE_SPACE = 3940;
+    int usageMapRowLength = format.OFFSET_USAGE_MAP_START +
+      format.USAGE_MAP_TABLE_BYTE_LENGTH;
+    int freeSpace = getRowSpaceUsage(format.MAX_ROW_SIZE, format)
+      - (2 * getRowSpaceUsage(usageMapRowLength, format));
+    
+    ByteBuffer rtn = pageChannel.createPageBuffer();
+    rtn.put(PageTypes.DATA);
+    rtn.put((byte) 0x1);  //Unknown
+    rtn.putShort((short)freeSpace);  //Free space in page
+    rtn.putInt(0); //Table definition
+    rtn.putInt(0); //Unknown
+    rtn.putShort((short) 2); //Number of records on this page
+
+    // write two rows of usage map definitions
+    int rowStart = findRowEnd(rtn, 0, format) - usageMapRowLength;
+    for(int i = 0; i < 2; ++i) {
+      rtn.putShort(getRowStartOffset(i, format), (short)rowStart);
+      if(i == 0) {
+        // initial "usage pages" map definition
+        rtn.put(rowStart, (byte)UsageMap.MAP_TYPE_REFERENCE);
+      } else {
+        // initial "pages with free space" map definition
+        rtn.put(rowStart, (byte)UsageMap.MAP_TYPE_INLINE);
+      }
+      rowStart -= usageMapRowLength;
+    }
+        
+    return rtn;
+  }
+    
   /**
    * Read the table definition
    */
@@ -560,7 +824,7 @@ public class Table
     if (LOG.isDebugEnabled()) {
       tableBuffer.rewind();
       LOG.debug("Table def block:\n" + ByteUtil.toHexString(tableBuffer,
-          _format.SIZE_TDEF_BLOCK));
+          _format.SIZE_TDEF_HEADER));
     }
     _rowCount = tableBuffer.getInt(_format.OFFSET_NUM_ROWS);
     _tableType = tableBuffer.get(_format.OFFSET_TABLE_TYPE);

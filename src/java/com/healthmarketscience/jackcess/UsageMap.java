@@ -90,7 +90,7 @@ public class UsageMap
     _tablePageNum = pageNum;
     _format = format;
     _rowStart = rowStart;
-    _tableBuffer.position((int) _rowStart + format.OFFSET_MAP_START);
+    _tableBuffer.position((int) _rowStart + format.OFFSET_USAGE_MAP_START);
     _startOffset = _tableBuffer.position();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_tableBuffer, _rowStart,
@@ -242,7 +242,7 @@ public class UsageMap
     ++_modCount;
     
     // clear out the table data
-    int tableStart = getRowStart() + getFormat().OFFSET_MAP_START - 4;
+    int tableStart = getRowStart() + getFormat().OFFSET_USAGE_MAP_START - 4;
     int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH + 4;
     ByteUtil.clearRange(_tableBuffer, tableStart, tableEnd);
   }
@@ -441,7 +441,9 @@ public class UsageMap
         if(add) {
 
           // we can ignore out-of-range page addition if we are already
-          // assuming out-of-range bits are "on"
+          // assuming out-of-range bits are "on".  Note, we are leaving small
+          // holes in the database here (leaving behind some free pages), but
+          // it's not the end of the world.
           if(!_assumeOutOfRangeBitsOn) {
             
             // we are adding, can we shift the bits and stay inline?
@@ -556,7 +558,7 @@ public class UsageMap
       if(firstPage == PageChannel.INVALID_PAGE_NUMBER) {
         
         // this is the common case where we left everything behind
-        int tableStart = getRowStart() + getFormat().OFFSET_MAP_START;
+        int tableStart = getRowStart() + getFormat().OFFSET_USAGE_MAP_START;
         int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH;
         ByteUtil.fillRange(_tableBuffer, tableStart, tableEnd);
 

@@ -663,6 +663,42 @@ public class DatabaseTest extends TestCase {
 
     db.close();
   }  
+
+
+  public void testLargeTableDef() throws Exception {
+    final int numColumns = 90;
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    List<String> colNames = new ArrayList<String>();
+    for(int i = 0; i < numColumns; ++i) {
+      String colName = "MyColumnName" + i;
+      colNames.add(colName);
+      Column col = new Column();
+      col.setName(colName);
+      col.setType(DataType.TEXT);
+      columns.add(col);
+    }
+
+    db.createTable("test", columns);
+
+    Table t = db.getTable("test");
+
+    List<String> row = new ArrayList<String>();
+    Map<String,Object> expectedRowData = new HashMap<String, Object>();
+    for(int i = 0; i < numColumns; ++i) {
+      String value = "" + i + " some row data";
+      row.add(value);
+      expectedRowData.put(colNames.get(i), value);
+    }
+
+    t.addRow(row.toArray());
+
+    t.reset();
+    assertEquals(expectedRowData, t.getNextRow());
+    
+    db.close();
+  }
   
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
@@ -713,7 +749,7 @@ public class DatabaseTest extends TestCase {
     columns.add(col);
     db.createTable("test", columns);
   }
-
+    
   static String createString(int len) {
     StringBuilder builder = new StringBuilder(len);
     for(int i = 0; i < len; ++i) {

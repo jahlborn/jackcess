@@ -19,15 +19,15 @@ public class TableTest extends TestCase {
   
   public void testCreateRow() throws Exception {
     JetFormat format = JetFormat.VERSION_4;
-    Table table = new Table();
+    Table table = new Table(true);
     List<Column> columns = new ArrayList<Column>();
-    Column col = new Column();
+    Column col = new Column(true);
     col.setType(DataType.INT);
     columns.add(col);
-    col = new Column();
+    col = new Column(true);
     col.setType(DataType.TEXT);
     columns.add(col);
-    col = new Column();
+    col = new Column(true);
     col.setType(DataType.TEXT);
     columns.add(col);
     table.setColumns(columns);

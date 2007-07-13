@@ -94,7 +94,7 @@ public abstract class JetFormat {
   public final int OFFSET_ROW_LOCATION_BLOCK;
   
   public final int OFFSET_ROW_START;
-  public final int OFFSET_MAP_START;
+  public final int OFFSET_USAGE_MAP_START;
   
   public final int OFFSET_USAGE_MAP_PAGE_DATA;
   
@@ -102,9 +102,6 @@ public abstract class JetFormat {
   
   public final int OFFSET_FREE_SPACE;
   public final int OFFSET_NUM_ROWS_ON_DATA_PAGE;
-  
-  public final int OFFSET_USED_PAGES_USAGE_MAP_DEF;
-  public final int OFFSET_FREE_PAGES_USAGE_MAP_DEF;
   
   public final int OFFSET_INDEX_COMPRESSED_BYTE_COUNT;
   public final int OFFSET_INDEX_ENTRY_MASK;
@@ -114,7 +111,8 @@ public abstract class JetFormat {
   public final int SIZE_COLUMN_HEADER;
   public final int SIZE_ROW_LOCATION;
   public final int SIZE_LONG_VALUE_DEF;
-  public final int SIZE_TDEF_BLOCK;
+  public final int SIZE_TDEF_HEADER;
+  public final int SIZE_TDEF_TRAILER;
   public final int SIZE_COLUMN_DEF_BLOCK;
   public final int SIZE_INDEX_ENTRY_MASK;
   
@@ -178,7 +176,7 @@ public abstract class JetFormat {
     OFFSET_ROW_LOCATION_BLOCK = defineOffsetRowLocationBlock();
     
     OFFSET_ROW_START = defineOffsetRowStart();
-    OFFSET_MAP_START = defineOffsetMapStart();
+    OFFSET_USAGE_MAP_START = defineOffsetUsageMapStart();
     
     OFFSET_USAGE_MAP_PAGE_DATA = defineOffsetUsageMapPageData();
     
@@ -186,9 +184,6 @@ public abstract class JetFormat {
     
     OFFSET_FREE_SPACE = defineOffsetFreeSpace();
     OFFSET_NUM_ROWS_ON_DATA_PAGE = defineOffsetNumRowsOnDataPage();
-    
-    OFFSET_USED_PAGES_USAGE_MAP_DEF = defineOffsetUsedPagesUsageMapDef();
-    OFFSET_FREE_PAGES_USAGE_MAP_DEF = defineOffsetFreePagesUsageMapDef();
     
     OFFSET_INDEX_COMPRESSED_BYTE_COUNT = defineOffsetIndexCompressedByteCount();
     OFFSET_INDEX_ENTRY_MASK = defineOffsetIndexEntryMask();
@@ -198,7 +193,8 @@ public abstract class JetFormat {
     SIZE_COLUMN_HEADER = defineSizeColumnHeader();
     SIZE_ROW_LOCATION = defineSizeRowLocation();
     SIZE_LONG_VALUE_DEF = defineSizeLongValueDef();
-    SIZE_TDEF_BLOCK = defineSizeTdefBlock();
+    SIZE_TDEF_HEADER = defineSizeTdefHeader();
+    SIZE_TDEF_TRAILER = defineSizeTdefTrailer();
     SIZE_COLUMN_DEF_BLOCK = defineSizeColumnDefBlock();
     SIZE_INDEX_ENTRY_MASK = defineSizeIndexEntryMask();
     
@@ -240,7 +236,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetRowLocationBlock();
   
   protected abstract int defineOffsetRowStart();
-  protected abstract int defineOffsetMapStart();
+  protected abstract int defineOffsetUsageMapStart();
   
   protected abstract int defineOffsetUsageMapPageData();
   
@@ -248,9 +244,6 @@ public abstract class JetFormat {
   
   protected abstract int defineOffsetFreeSpace();
   protected abstract int defineOffsetNumRowsOnDataPage();
-  
-  protected abstract int defineOffsetUsedPagesUsageMapDef();
-  protected abstract int defineOffsetFreePagesUsageMapDef();
   
   protected abstract int defineOffsetIndexCompressedByteCount();
   protected abstract int defineOffsetIndexEntryMask();
@@ -260,7 +253,8 @@ public abstract class JetFormat {
   protected abstract int defineSizeColumnHeader();
   protected abstract int defineSizeRowLocation();
   protected abstract int defineSizeLongValueDef();
-  protected abstract int defineSizeTdefBlock();
+  protected abstract int defineSizeTdefHeader();
+  protected abstract int defineSizeTdefTrailer();
   protected abstract int defineSizeColumnDefBlock();
   protected abstract int defineSizeIndexEntryMask();
   
@@ -278,66 +272,109 @@ public abstract class JetFormat {
     private Jet4Format() {
       super("VERSION_4");
     }
-    
+
+    @Override
     protected int definePageSize() { return 4096; }
     
+    @Override
     protected int defineMaxRowSize() { return PAGE_SIZE - 16; }
     
+    @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
+    @Override
     protected int defineOffsetNumRows() { return 16; }
+    @Override
     protected int defineOffsetTableType() { return 40; }
+    @Override
     protected int defineOffsetMaxCols() { return 41; }
+    @Override
     protected int defineOffsetNumVarCols() { return 43; }
+    @Override
     protected int defineOffsetNumCols() { return 45; }
+    @Override
     protected int defineOffsetNumIndexSlots() { return 47; }
+    @Override
     protected int defineOffsetNumIndexes() { return 51; }
+    @Override
     protected int defineOffsetOwnedPages() { return 55; }
+    @Override
     protected int defineOffsetFreeSpacePages() { return 59; }
+    @Override
     protected int defineOffsetIndexDefBlock() { return 63; }
 
+    @Override
     protected int defineOffsetIndexNumberBlock() { return 52; }
     
+    @Override
     protected int defineOffsetColumnType() { return 0; }
+    @Override
     protected int defineOffsetColumnNumber() { return 5; }
+    @Override
     protected int defineOffsetColumnPrecision() { return 11; }
+    @Override
     protected int defineOffsetColumnScale() { return 12; }
+    @Override
     protected int defineOffsetColumnVariable() { return 15; }
+    @Override
     protected int defineOffsetColumnCompressedUnicode() { return 16; }
+    @Override
     protected int defineOffsetColumnLength() { return 23; }
+    @Override
     protected int defineOffsetColumnVariableTableIndex() { return 7; }
+    @Override
     protected int defineOffsetColumnFixedDataOffset() { return 21; }
   
+    @Override
     protected int defineOffsetTableDefLocation() { return 4; }
+    @Override
     protected int defineOffsetNumRowsOnPage() { return 12; }
+    @Override
     protected int defineOffsetRowLocationBlock() { return 16; }
     
+    @Override
     protected int defineOffsetRowStart() { return 14; }
-    protected int defineOffsetMapStart() { return 5; }
+    @Override
+    protected int defineOffsetUsageMapStart() { return 5; }
     
+    @Override
     protected int defineOffsetUsageMapPageData() { return 4; }
     
+    @Override
     protected int defineOffsetReferenceMapPageNumbers() { return 1; }
     
+    @Override
     protected int defineOffsetFreeSpace() { return 2; }
+    @Override
     protected int defineOffsetNumRowsOnDataPage() { return 12; }
     
-    protected int defineOffsetUsedPagesUsageMapDef() { return 4027; }
-    protected int defineOffsetFreePagesUsageMapDef() { return 3958; }
-    
+    @Override
     protected int defineOffsetIndexCompressedByteCount() { return 24; }
+    @Override
     protected int defineOffsetIndexEntryMask() { return 27; }
+    @Override
     protected int defineOffsetNextIndexLeafPage() { return 16; }
     
+    @Override
     protected int defineSizeIndexDefinition() { return 12; }
+    @Override
     protected int defineSizeColumnHeader() { return 25; }
+    @Override
     protected int defineSizeRowLocation() { return 2; }
+    @Override
     protected int defineSizeLongValueDef() { return 12; }
-    protected int defineSizeTdefBlock() { return 63; }
+    @Override
+    protected int defineSizeTdefHeader() { return 63; }
+    @Override
+    protected int defineSizeTdefTrailer() { return 2; }
+    @Override
     protected int defineSizeColumnDefBlock() { return 25; }
+    @Override
     protected int defineSizeIndexEntryMask() { return 453; }
     
+    @Override
     protected int defineUsageMapTableByteLength() { return 64; }
       
+    @Override
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
   }
   

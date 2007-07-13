@@ -87,9 +87,6 @@ public class Database
   
   private static final int ACM = 1048319;
   
-  /** Free space left in page for new usage map definition pages */
-  private static final short USAGE_MAP_DEF_FREE_SPACE = 3940;
-  
   private static final String COL_ACM = "ACM";
   /** System catalog column name of the date a system object was created */
   private static final String COL_DATE_CREATE = "DateCreate";
@@ -425,25 +422,9 @@ public class Database
       }
     }
 
-    // first, create the usage map page
-    int usageMapPageNumber = _pageChannel.writeNewPage(
-        createUsageMapDefinitionBuffer());
-
-    // now, create the table definition
-    ByteBuffer buffer = _pageChannel.createPageBuffer();
-    writeTableDefinition(buffer, columns, usageMapPageNumber);
-    writeColumnDefinitions(buffer, columns); 
-    
-    //End of tabledef
-    buffer.put((byte) 0xff);
-    buffer.put((byte) 0xff);
-
-    int tableDefLen = buffer.position();
-    buffer.putShort(2, (short)(_format.PAGE_SIZE - tableDefLen - 8)); // overwrite page free space
-    buffer.putInt(8, tableDefLen);  //Overwrite length of data for this page
-       
     //Write the tdef page to disk.
-    int tdefPageNumber = _pageChannel.writeNewPage(buffer);
+    int tdefPageNumber = Table.writeTableDefinition(columns, _pageChannel,
+                                                    _format);
     
     //Add this table to our internal list.
     addTable(name, new Integer(tdefPageNumber));
@@ -452,145 +433,7 @@ public class Database
     addToSystemCatalog(name, tdefPageNumber);
     addToAccessControlEntries(tdefPageNumber);    
   }
-  
-  /**
-   * @param buffer Buffer to write to
-   * @param columns List of Columns in the table
-   * @param pageNumber Page number that this table definition will be written to
-   */
-  private void writeTableDefinition(ByteBuffer buffer, List<Column> columns,
-      int usageMapPageNumber)
-  throws IOException {
-    //Start writing the tdef
-    buffer.put(PageTypes.TABLE_DEF);  //Page type
-    buffer.put((byte) 0x01); //Unknown
-    buffer.put((byte) 0); //Unknown
-    buffer.put((byte) 0); //Unknown
-    buffer.putInt(0);  //Next TDEF page pointer
-    buffer.putInt(0);  //Length of data for this page
-    buffer.put((byte) 0x59);  //Unknown
-    buffer.put((byte) 0x06);  //Unknown
-    buffer.putShort((short) 0); //Unknown
-    buffer.putInt(0);  //Number of rows
-    buffer.putInt(0); //Autonumber
-    for (int i = 0; i < 16; i++) {  //Unknown
-      buffer.put((byte) 0);
-    }
-    buffer.put(Table.TYPE_USER); //Table type
-    buffer.putShort((short) columns.size()); //Max columns a row will have
-    buffer.putShort(Column.countVariableLength(columns));  //Number of variable columns in table
-    buffer.putShort((short) columns.size()); //Number of columns in table
-    buffer.putInt(0);  //Number of indexes in table
-    buffer.putInt(0);  //Number of indexes in table
-    buffer.put((byte) 0); //Usage map row number
-    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Usage map page number
-    buffer.put((byte) 1); //Free map row number
-    ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Free map page number
-    if (LOG.isDebugEnabled()) {
-      int position = buffer.position();
-      buffer.rewind();
-      LOG.debug("Creating new table def block:\n" + ByteUtil.toHexString(
-          buffer, _format.SIZE_TDEF_BLOCK));
-      buffer.position(position);
-    }
-  }
-  
-  /**
-   * @param buffer Buffer to write to
-   * @param columns List of Columns to write definitions for
-   */
-  private void writeColumnDefinitions(ByteBuffer buffer, List<Column> columns)
-  throws IOException {
-    short columnNumber = (short) 0;
-    short fixedOffset = (short) 0;
-    short variableOffset = (short) 0;
-    // we specifically put the "long variable" values after the normal
-    // variable length values so that we have a better chance of fitting it
-    // all (because "long variable" values can go in separate pages)
-    short longVariableOffset =
-      (short) Column.countNonLongVariableLength(columns);
-    for (Column col : columns) {
-      int position = buffer.position();
-      buffer.put(col.getType().getValue());
-      buffer.put((byte) 0x59);  //Unknown
-      buffer.put((byte) 0x06);  //Unknown
-      buffer.putShort((short) 0); //Unknown
-      buffer.putShort(columnNumber);  //Column Number
-      if (col.isVariableLength()) {
-        if(!col.getType().isLongValue()) {
-          buffer.putShort(variableOffset++);
-        } else {
-          buffer.putShort(longVariableOffset++);
-        }          
-      } else {
-        buffer.putShort((short) 0);
-      }
-      buffer.putShort(columnNumber); //Column Number again
-      if(col.getType().getHasScalePrecision()) {
-        buffer.put((byte) col.getPrecision());  // numeric precision
-        buffer.put((byte) col.getScale());  // numeric scale
-      } else {
-        buffer.put((byte) 0x00); //unused
-        buffer.put((byte) 0x00); //unused
-      }
-      buffer.putShort((short) 0); //Unknown
-      if (col.isVariableLength()) { //Variable length
-        buffer.put((byte) 0x2);
-      } else {
-        buffer.put((byte) 0x3);
-      }
-      if (col.isCompressedUnicode()) {  //Compressed
-        buffer.put((byte) 1);
-      } else {
-        buffer.put((byte) 0);
-      }
-      buffer.putInt(0); //Unknown, but always 0.
-      //Offset for fixed length columns
-      if (col.isVariableLength()) {
-        buffer.putShort((short) 0);
-      } else {
-        buffer.putShort(fixedOffset);
-        fixedOffset += col.getType().getFixedSize();
-      }
-      if(!col.getType().isLongValue()) {
-        buffer.putShort(col.getLength()); //Column length
-      } else {
-        buffer.putShort((short)0x0000); // unused
-      }
-      columnNumber++;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
-            buffer, position, _format.SIZE_COLUMN_DEF_BLOCK));
-      }
-    }
-    for (Column col : columns) {
-      ByteBuffer colName = _format.CHARSET.encode(col.getName());
-      buffer.putShort((short) colName.remaining());
-      buffer.put(colName);
-    }
-  }
-  
-  /**
-   * Create the usage map definition page buffer.
-   */
-  private ByteBuffer createUsageMapDefinitionBuffer() throws IOException
-  {
-    ByteBuffer rtn = _pageChannel.createPageBuffer();
-    rtn.put(PageTypes.DATA);
-    rtn.put((byte) 0x1);  //Unknown
-    rtn.putShort(USAGE_MAP_DEF_FREE_SPACE);  //Free space in page
-    rtn.putInt(0); //Table definition
-    rtn.putInt(0); //Unknown
-    rtn.putShort((short) 2); //Number of records on this page
-    rtn.putShort((short) _format.OFFSET_USED_PAGES_USAGE_MAP_DEF);  //First location
-    rtn.putShort((short) _format.OFFSET_FREE_PAGES_USAGE_MAP_DEF);  //Second location
-    rtn.position(_format.OFFSET_USED_PAGES_USAGE_MAP_DEF);
-    rtn.put((byte) UsageMap.MAP_TYPE_REFERENCE);
-    rtn.position(_format.OFFSET_FREE_PAGES_USAGE_MAP_DEF);
-    rtn.put((byte) UsageMap.MAP_TYPE_INLINE);
-    return rtn;
-  }
-  
+    
   /**
    * Add a new table to the system catalog
    * @param name Table name

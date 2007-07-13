@@ -115,7 +115,15 @@ public class Column implements Comparable<Column> {
   public Column(JetFormat format) {
     _format = format;
   }
-  
+
+  /**
+   * Only used by unit tests
+   */
+  Column(boolean testing) {
+    _format = JetFormat.VERSION_4;
+    _pageChannel = new PageChannel(testing);
+  }
+    
   /**
    * Read a column definition in from a buffer
    * @param buffer Buffer containing column definition
@@ -696,8 +704,7 @@ public class Column implements Comparable<Column> {
       type = LONG_VALUE_TYPE_OTHER_PAGES;
     }
 
-    ByteBuffer def = ByteBuffer.allocate(lvalDefLen);
-    def.order(ByteOrder.LITTLE_ENDIAN);
+    ByteBuffer def = _pageChannel.createBuffer(lvalDefLen);
     ByteUtil.put3ByteInt(def, value.length);
     def.put(type);
 
@@ -833,8 +840,7 @@ public class Column implements Comparable<Column> {
       switch(getType()) {
       case NUMERIC:
         // don't ask me why numerics are "var length" columns...
-        ByteBuffer buffer = ByteBuffer.allocate(getLength());
-        buffer.order(order);
+        ByteBuffer buffer = _pageChannel.createBuffer(getLength(), order);
         writeNumericValue(buffer, obj);
         buffer.flip();
         return buffer;
@@ -891,8 +897,7 @@ public class Column implements Comparable<Column> {
     int size = getType().getFixedSize();
 
     // create buffer for data
-    ByteBuffer buffer = ByteBuffer.allocate(size);
-    buffer.order(order);
+    ByteBuffer buffer = _pageChannel.createBuffer(size, order);
 
     obj = booleanToInteger(obj);
 

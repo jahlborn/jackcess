@@ -80,6 +80,15 @@ public class PageChannel implements Channel, Flushable {
                                       format, true);
     }
   }
+
+  /**
+   * Only used by unit tests
+   */
+  PageChannel(boolean testing) {
+    _channel = null;
+    _format = JetFormat.VERSION_4;
+    _autoSync = false;
+  }
   
   /**
    * @param buffer Buffer to read the page into
@@ -163,11 +172,26 @@ public class PageChannel implements Channel, Flushable {
    * @return A newly-allocated buffer that can be passed to readPage
    */
   public ByteBuffer createPageBuffer() {
-    ByteBuffer rtn = ByteBuffer.allocate(_format.PAGE_SIZE);
-    rtn.order(ByteOrder.LITTLE_ENDIAN);
-    return rtn;
+    return createBuffer(_format.PAGE_SIZE);
   }
 
+  /**
+   * @return A newly-allocated buffer of the given size and LITTLE_ENDIAN byte
+   *         order
+   */
+  public ByteBuffer createBuffer(int size) {
+    return createBuffer(size, ByteOrder.LITTLE_ENDIAN);
+  }
+  
+  /**
+   * @return A newly-allocated buffer of the given size and byte order
+   */
+  public ByteBuffer createBuffer(int size, ByteOrder order) {
+    ByteBuffer rtn = ByteBuffer.allocate(size);
+    rtn.order(order);
+    return rtn;
+  }
+  
   public void flush() throws IOException {
     _channel.force(true);
   }
