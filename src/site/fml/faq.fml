@@ -39,7 +39,7 @@
         <p>
           We want to give a lot of credit to mdbtools.  They have
           been around much longer than Jackcess, and, along with
-          <a href="http://jakarta.apache.org/poi">POI</a>,
+          <a href="http://poi.apache.org/">POI</a>,
           inspired us that a project like this could be done.
           mdbtools is written in C.  There is a Java port of it,
           but if you've ever read or used a Java port of a C
@@ -67,7 +67,7 @@
     <faq id="poi">
       <question>
         This looks like a logical addition to
-        <a href="http://jakarta.apache.org/poi">POI</a>.  Why not integrate
+        <a href="http://poi.apache.org/">POI</a>.  Why not integrate
         with that project?
       </question>
       <answer>
@@ -75,7 +75,7 @@
           POI is released under
           <a href="http://www.apache.org/foundation/licence-FAQ.html">The Apache License</a>.
           Jackcess is released under
-          <a href="http://www.gnu.org/copyleft/lesser.html">The GNU Lesser General Public License</a>.
+          <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt">The GNU Lesser General Public License</a>.
           The Apache license allows closed-source and/or commercial forks.
           The LGPL does not.  If you change or enhance Jackcess, you must contribute
           your changes back to the project.
@@ -131,10 +131,10 @@
       <answer>
         <p>
           Probably because you're missing a jar that Jackcess depends on from your
-          classpath.  Take a loook at the <a href="http://jackcess.sourceforge.net/dependencies.html">dependencies list</a>.  The first 3 are required for both building and running
-          and can be found either at the <a href="http://jakarta.apache.org/commons/">
+          classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The first 3 are required for both building and running
+          and can be found either at the <a href="http://commons.apache.org/">
           Jakarta Commons</a> or the <a href="http://www.ibiblio.org/maven">Ibiblio
-          Maven Repository</a>.  The other 3 are only required for building, in which
+          Maven Repository</a>.  The others are only required for building, in which
           case, Maven will find them for you.
         </p>
       </answer>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<project default="jar:jar">
-  
-  <goal name="sfRelease"
-        prereqs="jar:jar, dist, sourceforge:deploy, site:deploy"/>
-  
-</project>

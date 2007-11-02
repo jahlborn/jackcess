@@ -275,7 +275,7 @@ public class Column implements Comparable<Column> {
   /**
    * Checks that this column definition is valid.
    *
-   * @throw IllegalArgumentException if this column definition is invalid.
+   * @throws IllegalArgumentException if this column definition is invalid.
    */
   public void validate(JetFormat format) {
     if(_format != format) {

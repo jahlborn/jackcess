@@ -8,13 +8,13 @@
     <release version="1.1.10" date="TBD">
     </release>
     <release version="1.1.9" date="2007-07-12">
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1675522">
         Add support for writing large table definitions, bug #1675522.
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1748827">
         Fix handling of usage maps for large tables, bug #1748827.
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1672071">
         Fixed some edge cases for reading numeric columns, bug #1672071.
       </action>
     </release>
@@ -47,7 +47,7 @@
         Clean up index reading/writing of text columns, add support for more
         characters
       </action>
-      <action dev="jahlborn" type="update">
+      <action dev="jahlborn" type="update" issue="1563654">
         Support reading 'compressed' indexes (fix 1563654)
       </action>
       <action dev="jahlborn" type="update">
@@ -62,23 +62,23 @@
       <action dev="jahlborn" type="fix">
         Fix decimal data type writing.
       </action>
-      <action dev="jahlborn" type="update">
+      <action dev="jahlborn" type="update" issue="1545857">
         Add support for opening files read-only (fix 1545857)
       </action>
     </release>
     <release version="1.1.6" date="2006-08-07">
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1530312">
         Handle more tables with more index slots than actual indexes (fix bug
         1530312)
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1449812">
         Clean up reading/writing 3-byte ints; long value length is 3-bytes
         (fix bug 1449812)
       </action>
       <action dev="jahlborn" type="fix">
         Fix handling of skipped rows
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1306970">
         When reading multi-page table def, flip buffer before parsing (fix bug
         1306970)
       </action>
