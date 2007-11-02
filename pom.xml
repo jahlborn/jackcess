@@ -41,7 +41,7 @@
     <url>http://sourceforge.net/tracker/?group_id=134943&amp;atid=731445</url>
   </issueManagement>
   <scm>
-    <connection>scm:cvs:pserver:anonymous@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</connection>
+    <connection>scm:cvs:pserver:anonymous:@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</connection>
     <!-- read/write cvs connection -->
     <developerConnection>scm:cvs:ext:username@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</developerConnection>
     <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/</url>
@@ -186,8 +186,7 @@
         </reportSets>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>changelog-maven-plugin</artifactId>
+        <artifactId>maven-changelog-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -227,7 +226,6 @@
         <configuration>
           <threshold>Normal</threshold>
           <effort>Default</effort>
-          <excludeFilterFile>src/test/resources/findBugsExcludes.xml</excludeFilterFile>
         </configuration>
       </plugin>
       <plugin>
