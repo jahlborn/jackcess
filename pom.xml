@@ -187,6 +187,10 @@
       </plugin>
       <plugin>
         <artifactId>maven-changelog-plugin</artifactId>
+        <configuration>
+          <!-- For some reason the anonymous cvs connection hanges when diffing -->
+          <connectionType>developerConnection</connectionType>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
