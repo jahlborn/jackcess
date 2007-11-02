@@ -133,7 +133,7 @@
           Probably because you're missing a jar that Jackcess depends on from your
           classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The first 3 are required for both building and running
           and can be found either at the <a href="http://commons.apache.org/">
-          Jakarta Commons</a> or the <a href="http://www.ibiblio.org/maven">Ibiblio
+          Apache Commons</a> or the <a href="http://www.ibiblio.org/maven">Ibiblio
           Maven Repository</a>.  The others are only required for building, in which
           case, Maven will find them for you.
         </p>
