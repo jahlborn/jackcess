@@ -44,7 +44,8 @@
     <connection>scm:cvs:pserver:anonymous:@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</connection>
     <!-- read/write cvs connection -->
     <developerConnection>scm:cvs:ext:username@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</developerConnection>
-    <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/</url>
+    <!-- Note, the added '?viewvc' makes this url work with ViewSCM -->
+    <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/?viewvc</url>
   </scm>
   <organization>
     <name>Health Market Science</name>
@@ -157,6 +158,10 @@
   <reporting>
     <plugins>
       <plugin>
+        <groupId>net.sf</groupId>
+        <artifactId>stat-scm</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <reportSets>
@@ -184,13 +189,6 @@
             </reports>
           </reportSet>
         </reportSets>
-      </plugin>
-      <plugin>
-        <artifactId>maven-changelog-plugin</artifactId>
-        <configuration>
-          <!-- For some reason the anonymous cvs connection hanges when diffing -->
-          <connectionType>developerConnection</connectionType>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
