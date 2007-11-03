@@ -85,6 +85,9 @@ public class PageChannel implements Channel, Flushable {
    * Only used by unit tests
    */
   PageChannel(boolean testing) {
+    if(!testing) {
+      throw new IllegalArgumentException();
+    }
     _channel = null;
     _format = JetFormat.VERSION_4;
     _autoSync = false;

@@ -427,7 +427,7 @@ public class Database
                                                     _format);
     
     //Add this table to our internal list.
-    addTable(name, new Integer(tdefPageNumber));
+    addTable(name, Integer.valueOf(tdefPageNumber));
     
     //Add this table to system tables
     addToSystemCatalog(name, tdefPageNumber);
@@ -446,7 +446,7 @@ public class Database
     for (iter = _systemCatalog.getColumns().iterator(); iter.hasNext(); idx++) {
       Column col = (Column) iter.next();
       if (COL_ID.equals(col.getName())) {
-        catalogRow[idx] = new Integer(pageNumber);
+        catalogRow[idx] = Integer.valueOf(pageNumber);
       } else if (COL_NAME.equals(col.getName())) {
         catalogRow[idx] = name;
       } else if (COL_TYPE.equals(col.getName())) {
@@ -458,7 +458,7 @@ public class Database
       } else if (COL_PARENT_ID.equals(col.getName())) {
         catalogRow[idx] = _tableParentId;
       } else if (COL_FLAGS.equals(col.getName())) {
-        catalogRow[idx] = new Integer(0);
+        catalogRow[idx] = Integer.valueOf(0);
       } else if (COL_OWNER.equals(col.getName())) {
         byte[] owner = new byte[2];
         catalogRow[idx] = owner;
@@ -484,7 +484,7 @@ public class Database
       } else if (col.getName().equals(COL_F_INHERITABLE)) {
         aceRow[idx] = Boolean.FALSE;
       } else if (col.getName().equals(COL_OBJECT_ID)) {
-        aceRow[idx] = new Integer(pageNumber);
+        aceRow[idx] = Integer.valueOf(pageNumber);
       } else if (col.getName().equals(COL_SID)) {
         aceRow[idx] = SID;
       }

@@ -36,7 +36,6 @@ import java.nio.CharBuffer;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
@@ -120,6 +119,9 @@ public class Column implements Comparable<Column> {
    * Only used by unit tests
    */
   Column(boolean testing) {
+    if(!testing) {
+      throw new IllegalArgumentException();
+    }
     _format = JetFormat.VERSION_4;
     _pageChannel = new PageChannel(testing);
   }
@@ -337,15 +339,15 @@ public class Column implements Comparable<Column> {
     if (_type == DataType.BOOLEAN) {
       throw new IOException("Tried to read a boolean from data instead of null mask.");
     } else if (_type == DataType.BYTE) {
-      return new Byte(buffer.get());
+      return Byte.valueOf(buffer.get());
     } else if (_type == DataType.INT) {
-      return new Short(buffer.getShort());
+      return Short.valueOf(buffer.getShort());
     } else if (_type == DataType.LONG) {
-      return new Integer(buffer.getInt());
+      return Integer.valueOf(buffer.getInt());
     } else if (_type == DataType.DOUBLE) {
-      return new Double(buffer.getDouble());
+      return Double.valueOf(buffer.getDouble());
     } else if (_type == DataType.FLOAT) {
-      return new Float(buffer.getFloat());
+      return Float.valueOf(buffer.getFloat());
     } else if (_type == DataType.SHORT_DATE_TIME) {
       return readDateValue(buffer);
     } else if (_type == DataType.BINARY) {

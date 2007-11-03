@@ -473,17 +473,15 @@ public class UsageMap
           if(_assumeOutOfRangeBitsOn) {
 
             // we are using an inline map and assuming that anything not
-            // within the current range is "on"
+            // within the current range is "on".  so, if we attempt to set a
+            // bit which is before the current page, ignore it, we are not
+            // going back for it.
             if((firstPage == PageChannel.INVALID_PAGE_NUMBER) ||
                (pageNumber > lastPage)) {
 
               // move to new start page, filling in as we move
               moveToNewStartPageForRemove(firstPage, lastPage, pageNumber);
               
-            } else {
-              
-              // umm, we are removing an already passed bit.  whatever, we are
-              // not going back for it
             }
             
           } else {
@@ -661,7 +659,7 @@ public class UsageMap
       mapPageBuffer.put((byte) 0x01);  //Unknown
       mapPageBuffer.putShort((short) 0); //Unknown
       for(int i = 0; i < mapPageBuffer.limit(); ++i) {
-        byte b = mapPageBuffer.get(i);
+        mapPageBuffer.get(i);
       }
       int mapPageNum = _mapPageHolder.getPageNumber();
       getTableBuffer().putInt(calculateMapPagePointerOffset(pageIndex),

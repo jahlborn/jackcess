@@ -57,10 +57,6 @@ public class Index implements Comparable<Index> {
   
   private static final short COLUMN_UNUSED = -1;
 
-  private static final int NEW_ENTRY_COLUMN_INDEX = -1;
-
-  private static final byte REVERSE_ORDER_FLAG = (byte)0x01;
-
   private static final byte INDEX_NODE_PAGE_TYPE = (byte)0x03;
   private static final byte INDEX_LEAF_PAGE_TYPE = (byte)0x04;
   
@@ -222,6 +218,10 @@ public class Index implements Comparable<Index> {
     _rowCount = rowCount;
   }
 
+  public int getRowCount() {
+    return _rowCount;
+  }
+
   /**
    * Note, there may still be some issues around the name of an index, this
    * information may not be correct.  I've done a variety of testing comparing
@@ -349,7 +349,7 @@ public class Index implements Comparable<Index> {
   {
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = tableBuffer.getShort();
-      Byte flags = new Byte(tableBuffer.get());
+      Byte flags = Byte.valueOf(tableBuffer.get());
       if (columnNumber != COLUMN_UNUSED) {
         _columns.put(availableColumns.get(columnNumber), flags);
       }
@@ -472,9 +472,9 @@ public class Index implements Comparable<Index> {
           int length = i * 8 + j - lastStart;
           indexPage.position(entryPos + lastStart);
           if(isLeaf) {
-            entries.add(new Entry(indexPage, length, valuePrefix));
+            entries.add(new Entry(indexPage, valuePrefix));
           } else {
-            nodeEntries.add(new NodeEntry(indexPage, length, valuePrefix));
+            nodeEntries.add(new NodeEntry(indexPage, valuePrefix));
           }
 
           // read any shared "compressed" bytes
@@ -553,10 +553,11 @@ public class Index implements Comparable<Index> {
            (col.getType() == DataType.MEMO));
   }
 
-  private static boolean isFloatingPointColumn(Column col) {
-    return((col.getType() == DataType.FLOAT) ||
-           (col.getType() == DataType.DOUBLE));
-  }
+  // FIXME
+//   private static boolean isFloatingPointColumn(Column col) {
+//     return((col.getType() == DataType.FLOAT) ||
+//            (col.getType() == DataType.DOUBLE));
+//   }
 
   /**
    * Converts an index value for a fixed column into the index bytes
@@ -576,10 +577,10 @@ public class Index implements Comparable<Index> {
 //     Column column = entryCol._column;
     
 // //     if (value instanceof Integer) {
-// //       value = new Integer((int) (((Integer) value).longValue() -
+// //       value = Integer.valueOf((int) (((Integer) value).longValue() -
 // //                                  ((long) Integer.MAX_VALUE + 1L)));
 // //     } else if (value instanceof Short) {
-// //       value = new Short((short) (((Short) value).longValue() -
+// //       value = Short.valueOf((short) (((Short) value).longValue() -
 // //                                  ((long) Integer.MAX_VALUE + 1L)));
 // //     }
 
@@ -694,7 +695,7 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing entry in from a buffer
      */
-    public Entry(ByteBuffer buffer, int length, byte[] valuePrefix)
+    public Entry(ByteBuffer buffer, byte[] valuePrefix)
       throws IOException
     {
       for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
@@ -886,8 +887,6 @@ public class Index implements Comparable<Index> {
         // FIXME, reverse is 0x80, reverse null is 0xFF
         if (flag != (byte) 0) {
           byte[] data = new byte[_column.getType().getFixedSize()];
-          int numPrefixBytes = ((valuePrefix == null) ? 0 :
-                                (valuePrefix.length - 1));
           int dataOffset = 0;
           if((valuePrefix != null) && (valuePrefix.length > 1)) {
             System.arraycopy(valuePrefix, 1, data, 0,
@@ -899,10 +898,10 @@ public class Index implements Comparable<Index> {
           
           //ints and shorts are stored in index as value + 2147483648
           if (_value instanceof Integer) {
-            _value = new Integer((int) (((Integer) _value).longValue() +
+            _value = Integer.valueOf((int) (((Integer) _value).longValue() +
                                         (long) Integer.MAX_VALUE + 1L)); 
           } else if (_value instanceof Short) {
-            _value = new Short((short) (((Short) _value).longValue() +
+            _value = Short.valueOf((short) (((Short) _value).longValue() +
                                         (long) Integer.MAX_VALUE + 1L));
           }
         }
@@ -923,10 +922,10 @@ public class Index implements Comparable<Index> {
         buffer.put((byte) 0x7F);
         Comparable value = _value;
         if (value instanceof Integer) {
-          value = new Integer((int) (((Integer) value).longValue() -
+          value = Integer.valueOf((int) (((Integer) value).longValue() -
                                      ((long) Integer.MAX_VALUE + 1L)));
         } else if (value instanceof Short) {
-          value = new Short((short) (((Short) value).longValue() -
+          value = Short.valueOf((short) (((Short) value).longValue() -
                                      ((long) Integer.MAX_VALUE + 1L)));
         }
         buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
@@ -1114,10 +1113,10 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing node entry in from a buffer
      */
-    public NodeEntry(ByteBuffer buffer, int length, byte[] valuePrefix)
+    public NodeEntry(ByteBuffer buffer, byte[] valuePrefix)
       throws IOException
     {
-      super(buffer, length, valuePrefix);
+      super(buffer, valuePrefix);
 
       _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
     }

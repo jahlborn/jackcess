@@ -29,7 +29,6 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -120,6 +119,9 @@ public class Table
    * Only used by unit tests
    */
   Table(boolean testing) throws IOException {
+    if(!testing) {
+      throw new IllegalArgumentException();
+    }
     _pageChannel = new PageChannel(testing);
   }
   
@@ -325,7 +327,6 @@ public class Table
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(
         columns.size());
     for(Column column : columns) {
-      Object value = null;
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
         rtn.put(column.getName(), getRowColumn(rowBuffer, nullMask, column));
@@ -345,7 +346,7 @@ public class Table
   {
     boolean isNull = nullMask.isNull(column.getColumnNumber());
     if(column.getType() == DataType.BOOLEAN) {
-      return new Boolean(!isNull);  //Boolean values are stored in the null mask
+      return Boolean.valueOf(!isNull);  //Boolean values are stored in the null mask
     } else if(isNull) {
       // well, that's easy!
       return null;
@@ -571,7 +572,6 @@ public class Table
     for(Column col : columns) {
       // we add the number of bytes for the column name and 2 bytes for the
       // length of the column name
-      ByteBuffer cName = format.CHARSET.encode(col.getName());
       int nameByteLen = (col.getName().length() *
                          JetFormat.TEXT_FIELD_UNIT_SIZE);
       totalTableDefSize += nameByteLen + 2;
@@ -937,24 +937,6 @@ public class Table
 
     // reset to end of index info
     tableBuffer.position(idxEndOffset);
-  }
-
-  /**
-   * Sets up the _varColumns list, assuming the _columns has already been set
-   * up.
-   */
-  private void setupVariableColumns()
-  {
-    // pull out the variable length columns into a separate list
-    for(Column col : _columns) {
-      if(col.isVariableLength()) {
-        _varColumns.add(col);
-      }
-    }
-
-    // lastly sort these columns based on their index into the variable length
-    // offset table, because we will write the columns in this order
-    Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
   }
   
   /**
