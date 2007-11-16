@@ -88,6 +88,8 @@ public class Table
   private int _indexSlotCount;
   /** Number of rows in the table */
   private int _rowCount;
+  /** last auto number for the table */
+  private int _lastAutoNumber;
   /** page number of the definition of this table */
   private int _tableDefPageNumber;
   /** Number of rows left to be read on the current page */
@@ -664,7 +666,7 @@ public class Table
     buffer.put((byte) 0x06);  //Unknown
     buffer.putShort((short) 0); //Unknown
     buffer.putInt(0);  //Number of rows
-    buffer.putInt(0); //Autonumber
+    buffer.putInt(0); //Last Autonumber
     for (int i = 0; i < 16; i++) {  //Unknown
       buffer.put((byte) 0);
     }
@@ -741,11 +743,7 @@ public class Table
         buffer.put((byte) 0x00); //unused
       }
       buffer.putShort((short) 0); //Unknown
-      if (col.isVariableLength()) { //Variable length
-        buffer.put((byte) 0x2);
-      } else {
-        buffer.put((byte) 0x3);
-      }
+      buffer.put(getColumnBitFlags(col)); // misc col flags
       if (col.isCompressedUnicode()) {  //Compressed
         buffer.put((byte) 1);
       } else {
@@ -775,6 +773,20 @@ public class Table
       buffer.putShort((short) colName.remaining());
       buffer.put(colName);
     }
+  }
+
+  /**
+   * Constructs a byte containing the flags for the given column.
+   */
+  private static byte getColumnBitFlags(Column col) {
+    byte flags = Column.UNKNOWN_FLAG_MASK;
+    if(!col.isVariableLength()) {
+      flags |= Column.FIXED_LEN_FLAG_MASK;
+    }
+    if(col.isAutoNumber()) {
+      flags |= Column.AUTO_NUMBER_FLAG_MASK;
+    }
+    return flags;
   }
   
   /**
@@ -827,6 +839,7 @@ public class Table
           _format.SIZE_TDEF_HEADER));
     }
     _rowCount = tableBuffer.getInt(_format.OFFSET_NUM_ROWS);
+    _lastAutoNumber = tableBuffer.getInt(_format.OFFSET_NEXT_AUTO_NUMBER);
     _tableType = tableBuffer.get(_format.OFFSET_TABLE_TYPE);
     _maxColumnCount = tableBuffer.getShort(_format.OFFSET_MAX_COLS);
     _maxVarColumnCount = tableBuffer.getShort(_format.OFFSET_NUM_VAR_COLS);
@@ -921,7 +934,7 @@ public class Table
     for (int i = 0; i < _indexCount; i++) {
       byte[] nameBytes = new byte[tableBuffer.getShort()];
       tableBuffer.get(nameBytes);
-      ((Index) _indexes.get(i)).setName(_format.CHARSET.decode(ByteBuffer.wrap(
+      _indexes.get(i).setName(_format.CHARSET.decode(ByteBuffer.wrap(
           nameBytes)).toString());
     }
     int idxEndOffset = tableBuffer.position();
@@ -932,7 +945,7 @@ public class Table
     tableBuffer.position(idxOffset);
     for (int i = 0; i < _indexCount; i++) {
       tableBuffer.getInt(); //Forward past Unknown
-      ((Index) _indexes.get(i)).read(tableBuffer, _columns);
+      _indexes.get(i).read(tableBuffer, _columns);
     }
 
     // reset to end of index info
@@ -971,7 +984,7 @@ public class Table
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
-      rowData[i] = createRow((Object[]) iter.next(), _format.MAX_ROW_SIZE);
+      rowData[i] = createRow(iter.next(), _format.MAX_ROW_SIZE);
       if (rowData[i].limit() > _format.MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
@@ -1022,8 +1035,8 @@ public class Table
       // update the indexes
       Iterator<Index> indIter = _indexes.iterator();
       while (indIter.hasNext()) {
-        Index index = (Index) indIter.next();
-        index.addRow((Object[]) rows.get(i), pageNumber, (byte) rowNum);
+        Index index = indIter.next();
+        index.addRow(rows.get(i), pageNumber, (byte) rowNum);
       }
     }
     writeDataPage(dataPage, pageNumber);
@@ -1032,11 +1045,12 @@ public class Table
     ByteBuffer tdefPage = _pageChannel.createPageBuffer();
     _pageChannel.readPage(tdefPage, _tableDefPageNumber);
     tdefPage.putInt(_format.OFFSET_NUM_ROWS, ++_rowCount);
+    tdefPage.putInt(_format.OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
     Iterator<Index> indIter = _indexes.iterator();
     for (int i = 0; i < _indexes.size(); i++) {
       tdefPage.putInt(_format.OFFSET_INDEX_DEF_BLOCK +
           i * _format.SIZE_INDEX_DEFINITION + 4, _rowCount);
-      Index index = (Index) indIter.next();
+      Index index = indIter.next();
       index.update();
     }
     _pageChannel.writePage(tdefPage, _tableDefPageNumber);
@@ -1096,18 +1110,26 @@ public class Table
             nullMask.markNotNull(col.getColumnNumber());
           }
         
-        } else if(rowValue != null) {
+        } else {
+
+          if(col.isAutoNumber()) {
+            // ignore given row value, use next autonumber
+            rowValue = getNextAutoNumber();
+          }
+          
+          if(rowValue != null) {
         
-          // we have a value
-          nullMask.markNotNull(col.getColumnNumber());
+            // we have a value
+            nullMask.markNotNull(col.getColumnNumber());
 
-          //remainingRowLength is ignored when writing fixed length data
-          buffer.position(fixedDataStart + col.getFixedDataOffset());
-          buffer.put(col.write(rowValue, 0));
+            //remainingRowLength is ignored when writing fixed length data
+            buffer.position(fixedDataStart + col.getFixedDataOffset());
+            buffer.put(col.write(rowValue, 0));
 
-          // keep track of the end of fixed data
-          if(buffer.position() > fixedDataEnd) {
-            fixedDataEnd = buffer.position();
+            // keep track of the end of fixed data
+            if(buffer.position() > fixedDataEnd) {
+              fixedDataEnd = buffer.position();
+            }
           }
         }
       }
@@ -1172,6 +1194,11 @@ public class Table
   public int getRowCount() {
     return _rowCount;
   }
+
+  private int getNextAutoNumber() {
+    // note, the saved value is the last one handed out, so pre-increment
+    return ++_lastAutoNumber;
+  }
   
   public String toString() {
     StringBuilder rtn = new StringBuilder();
@@ -1181,14 +1208,12 @@ public class Table
     rtn.append("\nColumn count: " + _columns.size());
     rtn.append("\nIndex count: " + _indexCount);
     rtn.append("\nColumns:\n");
-    Iterator iter = _columns.iterator();
-    while (iter.hasNext()) {
-      rtn.append(iter.next().toString());
+    for(Column col : _columns) {
+      rtn.append(col);
     }
     rtn.append("\nIndexes:\n");
-    iter = _indexes.iterator();
-    while (iter.hasNext()) {
-      rtn.append(iter.next().toString());
+    for(Index index : _indexes) {
+      rtn.append(index);
     }
     rtn.append("\nOwned pages: " + _ownedPages + "\n");
     return rtn.toString();
@@ -1208,20 +1233,18 @@ public class Table
   public String display(long limit) throws IOException {
     reset();
     StringBuilder rtn = new StringBuilder();
-    Iterator iter = _columns.iterator();
-    while (iter.hasNext()) {
-      Column col = (Column) iter.next();
+    for(Iterator<Column> iter = _columns.iterator(); iter.hasNext(); ) {
+      Column col = iter.next();
       rtn.append(col.getName());
       if (iter.hasNext()) {
         rtn.append("\t");
       }
     }
     rtn.append("\n");
-    Map row;
+    Map<String, Object> row;
     int rowCount = 0;
     while ((rowCount++ < limit) && (row = getNextRow()) != null) {
-      iter = row.values().iterator();
-      while (iter.hasNext()) {
+      for(Iterator<Object> iter = row.values().iterator(); iter.hasNext(); ) {
         Object obj = iter.next();
         if (obj instanceof byte[]) {
           byte[] b = (byte[]) obj;

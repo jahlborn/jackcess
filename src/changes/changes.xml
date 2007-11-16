@@ -6,6 +6,10 @@
   </properties>
   <body>
     <release version="1.1.10" date="TBD">
+      <action dev="jahlborn" type="update" issue="1565216">
+        Add experimental support for auto-number columns, feature request
+        #1565216.
+      </action>
       <action dev="jahlborn" type="update">
         Move project to maven2 and change project groupId to
         com.healthmarketscience.jackcess.

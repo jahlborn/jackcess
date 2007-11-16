@@ -54,6 +54,13 @@ import org.apache.commons.logging.LogFactory;
 public class Column implements Comparable<Column> {
   
   private static final Log LOG = LogFactory.getLog(Column.class);
+
+  /**
+   * Meaningless placeholder object for inserting values in an autonumber
+   * column.  it is not required that this value be used (any passed in value
+   * is ignored), but using this placeholder may make code more obvious.
+   */
+  public static final Object AUTO_NUMBER = "<AUTO_NUMBER>";
   
   /**
    * Access starts counting dates at Jan 1, 1900.  Java starts counting
@@ -78,12 +85,23 @@ public class Column implements Comparable<Column> {
    */
   private static final byte LONG_VALUE_TYPE_OTHER_PAGES = (byte) 0x00;
 
+  /** mask for the fixed len bit */
+  public static final byte FIXED_LEN_FLAG_MASK = (byte)0x01;
+  
+  /** mask for the auto number bit */
+  public static final byte AUTO_NUMBER_FLAG_MASK = (byte)0x04;
+  
+  /** mask for the unknown bit */
+  public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
+  
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
 
   /** For text columns, whether or not they are compressed */ 
   private boolean _compressedUnicode = false;
   /** Whether or not the column is of variable length */
   private boolean _variableLength;
+  /** Whether or not the column is an autonumber column */
+  private boolean _autoNumber;
   /** Numeric precision */
   private byte _precision;
   /** Numeric scale */
@@ -147,8 +165,9 @@ public class Column implements Comparable<Column> {
       _precision = buffer.get(offset + format.OFFSET_COLUMN_PRECISION);
       _scale = buffer.get(offset + format.OFFSET_COLUMN_SCALE);
     }
-    _variableLength = ((buffer.get(offset + format.OFFSET_COLUMN_VARIABLE)
-        & 1) != 1);
+    byte flags = buffer.get(offset + format.OFFSET_COLUMN_FLAGS);
+    _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
+    _autoNumber = ((flags & AUTO_NUMBER_FLAG_MASK) != 0);
     _compressedUnicode = ((buffer.get(offset +
         format.OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
 
@@ -172,6 +191,14 @@ public class Column implements Comparable<Column> {
 
   public void setVariableLength(boolean variableLength) {
     _variableLength = variableLength;
+  }
+  
+  public boolean isAutoNumber() {
+    return _autoNumber;
+  }
+
+  public void setAutoNumber(boolean autoNumber) {
+    _autoNumber = autoNumber;
   }
 
   public short getColumnNumber() {
@@ -316,6 +343,13 @@ public class Column implements Comparable<Column> {
             getType().getMaxPrecision() + " inclusive");
       }
     }
+
+    if(isAutoNumber()) {
+      if(getType() != DataType.LONG) {
+        throw new IllegalArgumentException(
+            "Auto number column must be long integer");
+      }
+    }
   }
   
   /**
@@ -359,15 +393,13 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.OLE) {
       if (data.length > 0) {
         return readLongValue(data);
-      } else {
-        return null;
       }
+      return null;
     } else if (_type == DataType.MEMO) {
       if (data.length > 0) {
         return readLongStringValue(data);
-      } else {
-        return null;
       }
+      return null;
     } else if (_type == DataType.NUMERIC) {
       return readNumericValue(buffer);
     } else if (_type == DataType.GUID) {
@@ -988,9 +1020,9 @@ public class Column implements Comparable<Column> {
 
         return textBuf.toString();
         
-      } else {
-        return decodeUncompressedText(data);
       }
+      
+      return decodeUncompressedText(data);
       
     } catch (IllegalInputException e) {
       throw (IOException)
@@ -1052,7 +1084,8 @@ public class Column implements Comparable<Column> {
     return _format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
                                                   length));
   }  
-    
+
+  @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);

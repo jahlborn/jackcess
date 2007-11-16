@@ -317,7 +317,7 @@ public class Database
           PAGE_SYSTEM_CATALOG + ", but page type is " + pageType);
     }
     _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG, "System Catalog");
-    Map row;
+    Map<String,Object> row;
     while ( (row = _systemCatalog.getNextRow(SYSTEM_CATALOG_COLUMNS)) != null)
     {
       String name = (String) row.get(COL_NAME);
@@ -386,12 +386,12 @@ public class Database
     
     if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
-    } else {
-      int pageNumber = tableInfo.pageNumber.intValue();
-      _pageChannel.readPage(_buffer, pageNumber);
-      return new Table(_buffer, _pageChannel, _format, pageNumber,
-                       tableInfo.tableName);
     }
+    
+    int pageNumber = tableInfo.pageNumber.intValue();
+    _pageChannel.readPage(_buffer, pageNumber);
+    return new Table(_buffer, _pageChannel, _format, pageNumber,
+                     tableInfo.tableName);
   }
   
   /**
@@ -442,9 +442,10 @@ public class Database
   private void addToSystemCatalog(String name, int pageNumber) throws IOException {
     Object[] catalogRow = new Object[_systemCatalog.getColumns().size()];
     int idx = 0;
-    Iterator iter;
-    for (iter = _systemCatalog.getColumns().iterator(); iter.hasNext(); idx++) {
-      Column col = (Column) iter.next();
+    for (Iterator<Column> iter = _systemCatalog.getColumns().iterator();
+         iter.hasNext(); idx++)
+    {
+      Column col = iter.next();
       if (COL_ID.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(pageNumber);
       } else if (COL_NAME.equals(col.getName())) {
@@ -476,9 +477,10 @@ public class Database
   private void addToAccessControlEntries(int pageNumber) throws IOException {
     Object[] aceRow = new Object[_accessControlEntries.getColumns().size()];
     int idx = 0;
-    Iterator iter;
-    for (iter = _accessControlEntries.getColumns().iterator(); iter.hasNext(); idx++) {
-      Column col = (Column) iter.next();
+    for (Iterator<Column> iter = _accessControlEntries.getColumns().iterator();
+         iter.hasNext(); idx++)
+    {
+      Column col = iter.next();
       if (col.getName().equals(COL_ACM)) {
         aceRow[idx] = ACM;
       } else if (col.getName().equals(COL_F_INHERITABLE)) {
@@ -689,11 +691,11 @@ public class Database
   private String escape(String s) {
     if (RESERVED_WORDS.contains(s.toLowerCase())) {
       return ESCAPE_PREFIX + s; 
-    } else {
-      return s;
     }
+    return s;
   }
-  
+
+  @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this);
   }

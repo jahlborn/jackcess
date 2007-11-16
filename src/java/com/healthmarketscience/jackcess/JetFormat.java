@@ -67,6 +67,7 @@ public abstract class JetFormat {
   
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
+  public final int OFFSET_NEXT_AUTO_NUMBER;
   public final int OFFSET_TABLE_TYPE;
   public final int OFFSET_MAX_COLS;
   public final int OFFSET_NUM_VAR_COLS;
@@ -83,7 +84,7 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_NUMBER;
   public final int OFFSET_COLUMN_PRECISION;
   public final int OFFSET_COLUMN_SCALE;
-  public final int OFFSET_COLUMN_VARIABLE;
+  public final int OFFSET_COLUMN_FLAGS;
   public final int OFFSET_COLUMN_COMPRESSED_UNICODE;
   public final int OFFSET_COLUMN_LENGTH;
   public final int OFFSET_COLUMN_VARIABLE_TABLE_INDEX;
@@ -149,6 +150,7 @@ public abstract class JetFormat {
     
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
+    OFFSET_NEXT_AUTO_NUMBER = defineOffsetNextAutoNumber();
     OFFSET_TABLE_TYPE = defineOffsetTableType();
     OFFSET_MAX_COLS = defineOffsetMaxCols();
     OFFSET_NUM_VAR_COLS = defineOffsetNumVarCols();
@@ -165,7 +167,7 @@ public abstract class JetFormat {
     OFFSET_COLUMN_NUMBER = defineOffsetColumnNumber();
     OFFSET_COLUMN_PRECISION = defineOffsetColumnPrecision();
     OFFSET_COLUMN_SCALE = defineOffsetColumnScale();
-    OFFSET_COLUMN_VARIABLE = defineOffsetColumnVariable();
+    OFFSET_COLUMN_FLAGS = defineOffsetColumnFlags();
     OFFSET_COLUMN_COMPRESSED_UNICODE = defineOffsetColumnCompressedUnicode();
     OFFSET_COLUMN_LENGTH = defineOffsetColumnLength();
     OFFSET_COLUMN_VARIABLE_TABLE_INDEX = defineOffsetColumnVariableTableIndex();
@@ -209,6 +211,7 @@ public abstract class JetFormat {
   
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
+  protected abstract int defineOffsetNextAutoNumber();
   protected abstract int defineOffsetTableType();
   protected abstract int defineOffsetMaxCols();
   protected abstract int defineOffsetNumVarCols();
@@ -225,7 +228,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnNumber();
   protected abstract int defineOffsetColumnPrecision();
   protected abstract int defineOffsetColumnScale();
-  protected abstract int defineOffsetColumnVariable();
+  protected abstract int defineOffsetColumnFlags();
   protected abstract int defineOffsetColumnCompressedUnicode();
   protected abstract int defineOffsetColumnLength();
   protected abstract int defineOffsetColumnVariableTableIndex();
@@ -284,6 +287,8 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetNumRows() { return 16; }
     @Override
+    protected int defineOffsetNextAutoNumber() { return 20; }
+    @Override
     protected int defineOffsetTableType() { return 40; }
     @Override
     protected int defineOffsetMaxCols() { return 41; }
@@ -314,7 +319,7 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetColumnScale() { return 12; }
     @Override
-    protected int defineOffsetColumnVariable() { return 15; }
+    protected int defineOffsetColumnFlags() { return 15; }
     @Override
     protected int defineOffsetColumnCompressedUnicode() { return 16; }
     @Override

@@ -699,6 +699,57 @@ public class DatabaseTest extends TestCase {
     
     db.close();
   }
+
+  public void testAutoNumber() throws Exception {
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("a");
+    col.setType(DataType.LONG);
+    col.setAutoNumber(true);
+    columns.add(col);
+    col = new Column();
+    col.setName("b");
+    col.setType(DataType.TEXT);
+    columns.add(col);
+
+    db.createTable("test", columns);
+
+    Table table = db.getTable("test");
+    table.addRow(null, "row1");
+    table.addRow(13, "row2");
+    table.addRow("flubber", "row3");
+
+    table.reset();
+
+    table.addRow(Column.AUTO_NUMBER, "row4");
+    table.addRow(Column.AUTO_NUMBER, "row5");
+
+    table.reset();
+
+    List<Map<String, Object>> expectedRows =
+      createExpectedTable(
+          createExpectedRow(
+              "a", 1,
+              "b", "row1"),
+          createExpectedRow(
+              "a", 2,
+              "b", "row2"),
+          createExpectedRow(
+              "a", 3,
+              "b", "row3"),
+          createExpectedRow(
+              "a", 4,
+              "b", "row4"),
+          createExpectedRow(
+              "a", 5,
+              "b", "row5"));
+
+    assertTable(expectedRows, table);    
+    
+    db.close();
+  }  
   
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
@@ -767,6 +818,30 @@ public class DatabaseTest extends TestCase {
     return rtn;
   }
 
+  static void assertTable(List<Map<String, Object>> expectedTable, Table table)
+  {
+    List<Map<String, Object>> foundTable =
+      new ArrayList<Map<String, Object>>();
+    for(Map<String, Object> row : table) {
+      foundTable.add(row);
+    }
+    assertEquals(expectedTable, foundTable);
+  }
+  
+  static Map<String, Object> createExpectedRow(Object... rowElements) {
+    Map<String, Object> row = new HashMap<String, Object>();
+    for(int i = 0; i < rowElements.length; i += 2) {
+      row.put((String)rowElements[i],
+              rowElements[i + 1]);
+    }
+    return row;
+  }    
+
+  @SuppressWarnings("unchecked")
+  static List<Map<String, Object>> createExpectedTable(Map... rows) {
+    return Arrays.<Map<String, Object>>asList(rows);
+  }    
+  
   static void dumpDatabase(Database mdb) throws Exception {
     dumpDatabase(mdb, new PrintWriter(System.out, true));
   }
