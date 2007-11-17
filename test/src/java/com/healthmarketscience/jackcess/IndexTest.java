@@ -122,5 +122,45 @@ public class IndexTest extends TestCase {
     }
   }
 
+  public void testEntryDeletion() throws Exception {
+    File srcFile = new File("test/data/test.mdb");
+    File dbFile = File.createTempFile("databaseTest", ".mdb");
+    dbFile.deleteOnExit();
+    copyFile(srcFile, dbFile);
+
+    Table table = Database.open(dbFile).getTable("Table1");
+
+    for(int i = 0; i < 10; ++i) {
+      table.addRow("foo" + i, "bar" + i, (byte)42 + i, (short)53 + i, 13 * i,
+                   (6.7d / i), null, null, true);
+    }
+    table.reset();
+    assertRowCount(12, table);
+
+    for(Index index : table.getIndexes()) {
+      assertEquals(12, index.getEntryCount());
+    }
+
+    table.reset();
+    table.getNextRow();
+    table.getNextRow();
+    table.deleteCurrentRow();
+    table.getNextRow();
+    table.deleteCurrentRow();
+    table.getNextRow();
+    table.getNextRow();
+    table.deleteCurrentRow();
+    table.getNextRow();
+    table.getNextRow();
+    table.getNextRow();
+    table.deleteCurrentRow();
+
+    table.reset();
+    assertRowCount(8, table);
+
+    for(Index index : table.getIndexes()) {
+      assertEquals(8, index.getEntryCount());
+    }
+  }
   
 }

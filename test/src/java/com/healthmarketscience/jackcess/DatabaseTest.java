@@ -238,7 +238,8 @@ public class DatabaseTest extends TestCase {
     Object[] row3 = createTestRow("Tim3");
     Table table = db.getTable("Test");
     table.addRows(Arrays.asList(row1, row2, row3));
-
+    assertRowCount(3, table);
+    
     table.reset();
     table.getNextRow();
     table.getNextRow();
@@ -250,6 +251,7 @@ public class DatabaseTest extends TestCase {
     assertEquals("Tim1", outRow.get("A"));
     outRow = table.getNextRow();
     assertEquals("Tim3", outRow.get("A"));
+    assertRowCount(2, table);
 
     // test multi row delete/add
     db = create();
@@ -261,29 +263,29 @@ public class DatabaseTest extends TestCase {
       table.addRow(row);
     }
     row[3] = 1974;
-    assertEquals(10, countRows(table));
+    assertRowCount(10, table);
     table.reset();
     table.getNextRow();
     table.deleteCurrentRow();
-    assertEquals(9, countRows(table));
+    assertRowCount(9, table);
     table.reset();
     table.getNextRow();
     table.deleteCurrentRow();
-    assertEquals(8, countRows(table));
+    assertRowCount(8, table);
     table.reset();
     for (int i = 0; i < 8; i++) {
       table.getNextRow();
     }
     table.deleteCurrentRow();
-    assertEquals(7, countRows(table));
+    assertRowCount(7, table);
     table.addRow(row);
-    assertEquals(8, countRows(table));
+    assertRowCount(8, table);
     table.reset();
     for (int i = 0; i < 3; i++) {
       table.getNextRow();
     }
     table.deleteCurrentRow();
-    assertEquals(7, countRows(table));
+    assertRowCount(7, table);
     table.reset();
     assertEquals(2, table.getNextRow().get("D"));
   }
@@ -607,7 +609,7 @@ public class DatabaseTest extends TestCase {
                  new ArrayList<Object>(row.values()));
 
     table.reset();
-    assertEquals(7, countRows(table));
+    assertRowCount(7, table);
     
   }
 
@@ -809,7 +811,14 @@ public class DatabaseTest extends TestCase {
     String str = builder.toString();
     return str;
   }
-    
+
+  static void assertRowCount(int expectedRowCount, Table table)
+    throws Exception
+  {
+    assertEquals(expectedRowCount, countRows(table));
+    assertEquals(expectedRowCount, table.getRowCount());
+  }
+  
   static int countRows(Table table) throws Exception {
     int rtn = 0;
     for(Map<String, Object> row : table) {

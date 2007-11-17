@@ -30,6 +30,7 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -161,7 +162,7 @@ public class Table
     readTableDefinition(tableBuffer);
     tableBuffer = null;
 
-    _rowState = new RowState(true);
+    _rowState = new RowState(true, _maxColumnCount);
   }
 
   /**
@@ -236,13 +237,29 @@ public class Table
 
     // FIXME, want to make this static, but writeDataPage is not static, also, this may screw up other rowstates...
 
+    // see if row was already deleted
+    if(_rowState.isDeleted()) {
+      throw new IllegalStateException("Deleting already deleted row");
+    }
+    
     // delete flag always gets set in the "root" page (even if overflow row)
     ByteBuffer rowBuffer = _rowState.getPage(_pageChannel);
-    int index = getRowStartOffset(_currentRowInPage, _format);
-    rowBuffer.putShort(index, (short)(rowBuffer.getShort(index)
+    int pageNumber = _rowState.getPageNumber();
+    int rowIndex = getRowStartOffset(_currentRowInPage, _format);
+    rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
                                       | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
-    writeDataPage(rowBuffer, _rowState.getPageNumber());
+    writeDataPage(rowBuffer, pageNumber);
     _rowState.setDeleted(true);
+
+    // update the indexes
+    for(Index index : _indexes) {
+      index.deleteRow(_rowState.getRowValues(), pageNumber,
+                      (byte)_currentRowInPage);
+    }
+    
+    // make sure table def gets updated
+    --_rowCount;
+    updateTableDefinition();
   }
   
   /**
@@ -265,7 +282,7 @@ public class Table
       return null;
     }
 
-    return getRow(rowBuffer, getRowNullMask(rowBuffer), _columns,
+    return getRow(_rowState, rowBuffer, getRowNullMask(rowBuffer), _columns,
                   columnNames);
   }
   
@@ -312,7 +329,7 @@ public class Table
       return null;
     }
 
-    return getRow(rowBuffer, getRowNullMask(rowBuffer), columns,
+    return getRow(rowState, rowBuffer, getRowNullMask(rowBuffer), columns,
                   columnNames);
   }
 
@@ -320,6 +337,7 @@ public class Table
    * Reads the row data from the given row buffer.  Leaves limit unchanged.
    */
   private static Map<String, Object> getRow(
+      RowState rowState,
       ByteBuffer rowBuffer,
       NullMask nullMask,
       Collection<Column> columns,
@@ -329,10 +347,18 @@ public class Table
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(
         columns.size());
     for(Column column : columns) {
+      Object value = null;
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
-        rtn.put(column.getName(), getRowColumn(rowBuffer, nullMask, column));
+        value = getRowColumn(rowBuffer, nullMask, column);
+        rtn.put(column.getName(), value);
       }
+
+      // cache the row values in order to be able to update the index on row
+      // deletion.  note, most of the returned values are immutable, except
+      // for binary data (returned as byte[]), but binary data shouldn't be
+      // indexed anyway.
+      rowState._rowValues[column.getColumnNumber()] = value;
     }
     return rtn;
     
@@ -1033,26 +1059,40 @@ public class Table
       dataPage.put(rowData[i]);
 
       // update the indexes
-      Iterator<Index> indIter = _indexes.iterator();
-      while (indIter.hasNext()) {
-        Index index = indIter.next();
-        index.addRow(rows.get(i), pageNumber, (byte) rowNum);
+      for(Index index : _indexes) {
+        index.addRow(rows.get(i), pageNumber, (byte)rowNum);
       }
     }
     writeDataPage(dataPage, pageNumber);
     
     //Update tdef page
+    _rowCount += rows.size();
+    updateTableDefinition();
+  }
+
+  /**
+   * Updates the table definition after rows are modified.
+   */
+  private void updateTableDefinition() throws IOException
+  {
+    // load table definition
     ByteBuffer tdefPage = _pageChannel.createPageBuffer();
     _pageChannel.readPage(tdefPage, _tableDefPageNumber);
-    tdefPage.putInt(_format.OFFSET_NUM_ROWS, ++_rowCount);
+    
+    // make sure rowcount and autonumber are up-to-date
+    tdefPage.putInt(_format.OFFSET_NUM_ROWS, _rowCount);
     tdefPage.putInt(_format.OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
+
+    // write any index changes
     Iterator<Index> indIter = _indexes.iterator();
     for (int i = 0; i < _indexes.size(); i++) {
       tdefPage.putInt(_format.OFFSET_INDEX_DEF_BLOCK +
-          i * _format.SIZE_INDEX_DEFINITION + 4, _rowCount);
+          (i * _format.SIZE_INDEX_DEFINITION) + 4, _rowCount);
       Index index = indIter.next();
       index.update();
     }
+
+    // write modified table definition
     _pageChannel.writePage(tdefPage, _tableDefPageNumber);
   }
   
@@ -1393,15 +1433,19 @@ public class Table
     /** the row buffer which contains the final data (after following any
         overflow pointers) */
     public ByteBuffer _finalRowBuffer;
-
-    public RowState(boolean hardRowBuffer) {
+    /** values read from the last row */
+    public Object[] _rowValues;
+    
+    public RowState(boolean hardRowBuffer, int colCount) {
       _rowBufferH = TempPageHolder.newHolder(hardRowBuffer);
+      _rowValues = new Object[colCount];
     }
     
     public void reset() {
       _finalRowBuffer = null;
       _deleted = false;
       _overflow = false;
+      Arrays.fill(_rowValues, null);
     }
 
     public int getPageNumber() {
@@ -1430,6 +1474,10 @@ public class Table
       return _overflow;
     }
 
+    public Object[] getRowValues() {
+      return _rowValues;
+    }
+    
     public void possiblyInvalidate(int modifiedPageNumber,
                                    ByteBuffer modifiedBuffer) {
       _rowBufferH.possiblyInvalidate(modifiedPageNumber,

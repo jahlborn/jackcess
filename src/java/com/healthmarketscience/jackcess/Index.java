@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -42,7 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
 import org.apache.commons.lang.builder.CompareToBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 
 
@@ -51,6 +55,8 @@ import org.apache.commons.lang.builder.CompareToBuilder;
  * @author Tim McCune
  */
 public class Index implements Comparable<Index> {
+  
+  private static final Log LOG = LogFactory.getLog(Index.class);
   
   /** Max number of columns in an index */
   private static final int MAX_COLUMNS = 10;
@@ -182,7 +188,9 @@ public class Index implements Comparable<Index> {
   /** Page number of the index data */
   private int _pageNumber;
   private int _parentPageNumber;
-  /** Number of rows in the index */
+  /** Number of rows in the index
+      NOTE: this does not actually seem to be the row count, unclear what the
+      value means*/
   private int _rowCount;
   private JetFormat _format;
   private SortedSet<Entry> _entries;
@@ -317,9 +325,7 @@ public class Index implements Comparable<Index> {
     buffer.put((byte) 0); //Unknown
     byte[] entryMask = new byte[_format.SIZE_INDEX_ENTRY_MASK];
     int totalSize = 0;
-    Iterator iter = _entries.iterator();
-    while (iter.hasNext()) {
-      Entry entry = (Entry) iter.next();
+    for(Entry entry : _entries) {
       int size = entry.size();
       totalSize += size;
       int idx = totalSize  / 8;
@@ -330,9 +336,7 @@ public class Index implements Comparable<Index> {
       entryMask[idx] |= (1 << (totalSize % 8));
     }
     buffer.put(entryMask);
-    iter = _entries.iterator();
-    while (iter.hasNext()) {
-      Entry entry = (Entry) iter.next();
+    for(Entry entry : _entries) {
       entry.write(buffer);
     }
     buffer.putShort(2, (short) (_format.PAGE_SIZE - buffer.position()));
@@ -498,7 +502,7 @@ public class Index implements Comparable<Index> {
   
   
   /**
-   * Add a row to this index
+   * Adds a row to this index
    * <p>
    * Forces index initialization.
    * 
@@ -511,8 +515,46 @@ public class Index implements Comparable<Index> {
   {
     // make sure we've parsed the entries
     initialize();
-    
+
+    ++_rowCount;
     _entries.add(new Entry(row, pageNumber, rowNumber));
+  }
+
+  /**
+   * Removes a row from this index
+   * <p>
+   * Forces index initialization.
+   * 
+   * @param row Row to remove
+   * @param pageNumber Page number on which the row is removed
+   * @param rowNumber Row number at which the row is removed
+   */
+  public void deleteRow(Object[] row, int pageNumber, byte rowNumber)
+    throws IOException
+  {
+    // make sure we've parsed the entries
+    initialize();
+
+    --_rowCount;
+    Entry oldEntry = new Entry(row, pageNumber, rowNumber);
+    if(!_entries.remove(oldEntry)) {
+      // the caller may have only read some of the row data, if this is the
+      // case, just search for the page/row numbers
+      boolean removed = false;
+      for(Iterator<Entry> iter = _entries.iterator(); iter.hasNext(); ) {
+        Entry entry = iter.next();
+        if((entry.getPage() == pageNumber) &&
+           (entry.getRow() == rowNumber)) {
+          iter.remove();
+          removed = true;
+          break;
+        }
+      }
+      if(!removed) {
+        LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
+                 Arrays.asList(row));
+      }
+    }
   }
 
   @Override
@@ -719,7 +761,7 @@ public class Index implements Comparable<Index> {
       return new FixedEntryColumn(col);
     }
     
-    public List getEntryColumns() {
+    public List<EntryColumn> getEntryColumns() {
       return _entryColumns;
     }
     
@@ -733,9 +775,8 @@ public class Index implements Comparable<Index> {
     
     public int size() {
       int rtn = 4;
-      Iterator iter = _entryColumns.iterator();
-      while (iter.hasNext()) {
-        rtn += ((EntryColumn) iter.next()).size();
+      for(EntryColumn entryCol : _entryColumns) {
+        rtn += entryCol.size();
       }
       return rtn;
     }
@@ -744,9 +785,8 @@ public class Index implements Comparable<Index> {
      * Write this entry into a buffer
      */
     public void write(ByteBuffer buffer) throws IOException {
-      Iterator iter = _entryColumns.iterator();
-      while (iter.hasNext()) {
-        ((EntryColumn) iter.next()).write(buffer);
+      for(EntryColumn entryCol : _entryColumns) {
+        entryCol.write(buffer);
       }
       buffer.put((byte) (_page >>> 16));
       buffer.put((byte) (_page >>> 8));
@@ -763,15 +803,15 @@ public class Index implements Comparable<Index> {
       if (this == other) {
         return 0;
       }
-      Iterator myIter = _entryColumns.iterator();
-      Iterator otherIter = other.getEntryColumns().iterator();
+      Iterator<EntryColumn> myIter = _entryColumns.iterator();
+      Iterator<EntryColumn> otherIter = other.getEntryColumns().iterator();
       while (myIter.hasNext()) {
         if (!otherIter.hasNext()) {
           throw new IllegalArgumentException(
               "Trying to compare index entries with a different number of entry columns");
         }
-        EntryColumn myCol = (EntryColumn) myIter.next();
-        EntryColumn otherCol = (EntryColumn) otherIter.next();
+        EntryColumn myCol = myIter.next();
+        EntryColumn otherCol = otherIter.next();
         int i = myCol.compareTo(otherCol);
         if (i != 0) {
           return i;
