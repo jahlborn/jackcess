@@ -96,6 +96,8 @@ public class Column implements Comparable<Column> {
   
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
 
+  /** owning table */
+  private final Table _table;
   /** For text columns, whether or not they are compressed */ 
   private boolean _compressedUnicode = false;
   /** Whether or not the column is of variable length */
@@ -108,10 +110,6 @@ public class Column implements Comparable<Column> {
   private byte _scale;
   /** Data type */
   private DataType _type;
-  /** Format that the containing database is in */
-  private JetFormat _format;
-  /** Used to read in LVAL pages */
-  private PageChannel _pageChannel;
   /** Maximum column length */
   private short _columnLength;
   /** 0-based column number */
@@ -130,7 +128,7 @@ public class Column implements Comparable<Column> {
   }
   
   public Column(JetFormat format) {
-    _format = format;
+    _table = null;
   }
 
   /**
@@ -140,42 +138,53 @@ public class Column implements Comparable<Column> {
     if(!testing) {
       throw new IllegalArgumentException();
     }
-    _format = JetFormat.VERSION_4;
-    _pageChannel = new PageChannel(testing);
+    _table = null;
   }
     
   /**
    * Read a column definition in from a buffer
+   * @param table owning table
    * @param buffer Buffer containing column definition
    * @param offset Offset in the buffer at which the column definition starts
    * @param format Format that the containing database is in
    */
-  public Column(ByteBuffer buffer, int offset, PageChannel pageChannel, JetFormat format)
-  throws IOException
+  public Column(Table table, ByteBuffer buffer, int offset)
+    throws IOException
   {
+    _table = table;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));
     }
-    _pageChannel = pageChannel;
-    _format = format;
-    setType(DataType.fromByte(buffer.get(offset + format.OFFSET_COLUMN_TYPE)));
-    _columnNumber = buffer.getShort(offset + format.OFFSET_COLUMN_NUMBER);
-    _columnLength = buffer.getShort(offset + format.OFFSET_COLUMN_LENGTH);
+    setType(DataType.fromByte(buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE)));
+    _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
+    _columnLength = buffer.getShort(offset + getFormat().OFFSET_COLUMN_LENGTH);
     if (_type.getHasScalePrecision()) {
-      _precision = buffer.get(offset + format.OFFSET_COLUMN_PRECISION);
-      _scale = buffer.get(offset + format.OFFSET_COLUMN_SCALE);
+      _precision = buffer.get(offset + getFormat().OFFSET_COLUMN_PRECISION);
+      _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
     }
-    byte flags = buffer.get(offset + format.OFFSET_COLUMN_FLAGS);
+    byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
     _autoNumber = ((flags & AUTO_NUMBER_FLAG_MASK) != 0);
     _compressedUnicode = ((buffer.get(offset +
-        format.OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
+        getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
 
     if(_variableLength) {
-      _varLenTableIndex = buffer.getShort(offset + format.OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
+      _varLenTableIndex = buffer.getShort(offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
     } else {
-      _fixedDataOffset = buffer.getShort(offset + format.OFFSET_COLUMN_FIXED_DATA_OFFSET);
+      _fixedDataOffset = buffer.getShort(offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
     }
+  }
+
+  public Table getTable() {
+    return _table;
+  }
+  
+  public JetFormat getFormat() {
+    return getTable().getFormat();
+  }
+
+  public PageChannel getPageChannel() {
+    return getTable().getPageChannel();
   }
   
   public String getName() {
@@ -307,10 +316,6 @@ public class Column implements Comparable<Column> {
    * @throws IllegalArgumentException if this column definition is invalid.
    */
   public void validate(JetFormat format) {
-    if(_format != format) {
-      throw new IllegalArgumentException("format must be " + format +
-                                         " but is " + _format);
-    }
     if(getType() == null) {
       throw new IllegalArgumentException("must have type");
     }
@@ -441,23 +446,23 @@ public class Column implements Comparable<Column> {
     } else {
 
       // long value on other page(s)
-      if (lvalDefinition.length != _format.SIZE_LONG_VALUE_DEF) {
-        throw new IOException("Expected " + _format.SIZE_LONG_VALUE_DEF +
+      if (lvalDefinition.length != getFormat().SIZE_LONG_VALUE_DEF) {
+        throw new IOException("Expected " + getFormat().SIZE_LONG_VALUE_DEF +
                               " bytes in long value definition, but found " +
                               lvalDefinition.length);
       }
 
       byte rowNum = def.get();
       int pageNum = ByteUtil.get3ByteInt(def, def.position());
-      ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+      ByteBuffer lvalPage = getPageChannel().createPageBuffer();
       
       switch (type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
         {
-          _pageChannel.readPage(lvalPage, pageNum);
+          getPageChannel().readPage(lvalPage, pageNum);
 
-          short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
-          short rowEnd = Table.findRowEnd(lvalPage, rowNum, _format);
+          short rowStart = Table.findRowStart(lvalPage, rowNum, getFormat());
+          short rowEnd = Table.findRowEnd(lvalPage, rowNum, getFormat());
 
           if((rowEnd - rowStart) != length) {
             throw new IOException("Unexpected lval row length");
@@ -474,10 +479,10 @@ public class Column implements Comparable<Column> {
         int remainingLen = length;
         while(remainingLen > 0) {
           lvalPage.clear();
-          _pageChannel.readPage(lvalPage, pageNum);
+          getPageChannel().readPage(lvalPage, pageNum);
 
-          short rowStart = Table.findRowStart(lvalPage, rowNum, _format);
-          short rowEnd = Table.findRowEnd(lvalPage, rowNum, _format);
+          short rowStart = Table.findRowStart(lvalPage, rowNum, getFormat());
+          short rowEnd = Table.findRowEnd(lvalPage, rowNum, getFormat());
           
           // read next page information
           lvalPage.position(rowStart);
@@ -726,19 +731,19 @@ public class Column implements Comparable<Column> {
 
     // determine which type to write
     byte type = 0;
-    int lvalDefLen = _format.SIZE_LONG_VALUE_DEF;
-    if((_format.SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength) {
+    int lvalDefLen = getFormat().SIZE_LONG_VALUE_DEF;
+    if((getFormat().SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength) {
       type = LONG_VALUE_TYPE_THIS_PAGE;
       lvalDefLen += value.length;
-    } else if(Table.getRowSpaceUsage(value.length, _format) <=
-              _format.MAX_ROW_SIZE)
+    } else if(Table.getRowSpaceUsage(value.length, getFormat()) <=
+              getFormat().MAX_ROW_SIZE)
     {
       type = LONG_VALUE_TYPE_OTHER_PAGE;
     } else {
       type = LONG_VALUE_TYPE_OTHER_PAGES;
     }
 
-    ByteBuffer def = _pageChannel.createBuffer(lvalDefLen);
+    ByteBuffer def = getPageChannel().createBuffer(lvalDefLen);
     ByteUtil.put3ByteInt(def, value.length);
     def.put(type);
 
@@ -752,7 +757,7 @@ public class Column implements Comparable<Column> {
       int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
       byte firstLvalRow = 0;
 
-      ByteBuffer lvalPage = _pageChannel.createPageBuffer();
+      ByteBuffer lvalPage = getPageChannel().createPageBuffer();
       
       // write other page(s)
       switch(type) {
@@ -760,9 +765,9 @@ public class Column implements Comparable<Column> {
         writeLongValueHeader(lvalPage);
         firstLvalRow = (byte)Table.addDataPageRow(lvalPage,
                                                   value.length,
-                                                  _format);
+                                                  getFormat());
         lvalPage.put(value);
-        firstLvalPageNum = _pageChannel.writeNewPage(lvalPage);
+        firstLvalPageNum = getPageChannel().writeNewPage(lvalPage);
         break;
 
       case LONG_VALUE_TYPE_OTHER_PAGES:
@@ -770,7 +775,7 @@ public class Column implements Comparable<Column> {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         int remainingLen = buffer.remaining();
         buffer.limit(0);
-        int lvalPageNum = _pageChannel.allocateNewPage();
+        int lvalPageNum = getPageChannel().allocateNewPage();
         byte lvalRow = 0;
         int nextLvalPageNum = 0;
         while(remainingLen > 0) {
@@ -778,14 +783,14 @@ public class Column implements Comparable<Column> {
           writeLongValueHeader(lvalPage);
 
           // figure out how much we will put in this page
-          int chunkLength = Math.min(_format.MAX_ROW_SIZE - 4,
+          int chunkLength = Math.min(getFormat().MAX_ROW_SIZE - 4,
                                      remainingLen);
           nextLvalPageNum = ((chunkLength < remainingLen) ?
-                             _pageChannel.allocateNewPage() : 0);
+                             getPageChannel().allocateNewPage() : 0);
 
           // add row to this page
           lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
-                                               _format);
+                                               getFormat());
           
           // write next page info (we'll always be writing into row 0 for
           // newly created pages)
@@ -798,7 +803,7 @@ public class Column implements Comparable<Column> {
           remainingLen -= chunkLength;
 
           // write new page to database
-          _pageChannel.writePage(lvalPage, lvalPageNum);
+          getPageChannel().writePage(lvalPage, lvalPageNum);
           
           // hang onto first page info
           if(firstLvalPageNum == PageChannel.INVALID_PAGE_NUMBER) {
@@ -833,8 +838,8 @@ public class Column implements Comparable<Column> {
   {
     lvalPage.put(PageTypes.DATA); //Page type
     lvalPage.put((byte) 1); //Unknown
-    lvalPage.putShort((short) (_format.PAGE_SIZE -
-                               _format.OFFSET_ROW_START)); //Free space
+    lvalPage.putShort((short) (getFormat().PAGE_SIZE -
+                               getFormat().OFFSET_ROW_START)); //Free space
     lvalPage.put((byte) 'L');
     lvalPage.put((byte) 'V');
     lvalPage.put((byte) 'A');
@@ -874,7 +879,7 @@ public class Column implements Comparable<Column> {
       switch(getType()) {
       case NUMERIC:
         // don't ask me why numerics are "var length" columns...
-        ByteBuffer buffer = _pageChannel.createBuffer(getLength(), order);
+        ByteBuffer buffer = getPageChannel().createBuffer(getLength(), order);
         writeNumericValue(buffer, obj);
         buffer.flip();
         return buffer;
@@ -931,7 +936,7 @@ public class Column implements Comparable<Column> {
     int size = getType().getFixedSize();
 
     // create buffer for data
-    ByteBuffer buffer = _pageChannel.createBuffer(size, order);
+    ByteBuffer buffer = getPageChannel().createBuffer(size, order);
 
     obj = booleanToInteger(obj);
 
@@ -1064,7 +1069,7 @@ public class Column implements Comparable<Column> {
    * @return A buffer with the text encoded
    */
   private ByteBuffer encodeUncompressedText(CharSequence text) {
-    return _format.CHARSET.encode(CharBuffer.wrap(text));
+    return getFormat().CHARSET.encode(CharBuffer.wrap(text));
   }
 
   /**
@@ -1081,7 +1086,7 @@ public class Column implements Comparable<Column> {
    */
   private CharBuffer decodeUncompressedText(byte[] textBytes, int startPost,
                                             int length) {
-    return _format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
+    return getFormat().CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
                                                   length));
   }  
 

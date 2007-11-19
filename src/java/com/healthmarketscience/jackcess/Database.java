@@ -172,7 +172,7 @@ public class Database
   /** ID of the Tables system object */
   private Integer _tableParentId;
   /** Format that the containing database is in */
-  private JetFormat _format;
+  private final JetFormat _format;
   /**
    * Map of UPPERCASE table names to page numbers containing their definition
    * and their stored table name.
@@ -182,7 +182,7 @@ public class Database
   /** set of table names as stored in the mdb file, created on demand */
   private Set<String> _tableNames;
   /** Reads and writes database pages */
-  private PageChannel _pageChannel;
+  private final PageChannel _pageChannel;
   /** System catalog table */
   private Table _systemCatalog;
   /** System access control entries table */
@@ -287,12 +287,20 @@ public class Database
   {
     _format = JetFormat.getFormat(channel);
     _pageChannel = new PageChannel(channel, _format, autoSync);
+    // note, it's slighly sketchy to pass ourselves along partially
+    // constructed, but only our _format and _pageChannel refs should be
+    // needed
+    _pageChannel.initialize(this);
     _buffer = _pageChannel.createPageBuffer();
     readSystemCatalog();
   }
   
   public PageChannel getPageChannel() {
     return _pageChannel;
+  }
+
+  public JetFormat getFormat() {
+    return _format;
   }
   
   /**
@@ -316,7 +324,8 @@ public class Database
       throw new IOException("Looking for system catalog at page " +
           PAGE_SYSTEM_CATALOG + ", but page type is " + pageType);
     }
-    _systemCatalog = new Table(_buffer, _pageChannel, _format, PAGE_SYSTEM_CATALOG, "System Catalog");
+    _systemCatalog = new Table(this, _buffer, PAGE_SYSTEM_CATALOG,
+                               "System Catalog");
     Map<String,Object> row;
     while ( (row = _systemCatalog.getNextRow(SYSTEM_CATALOG_COLUMNS)) != null)
     {
@@ -349,7 +358,8 @@ public class Database
       throw new IOException("Looking for MSysACEs at page " + pageNum +
           ", but page type is " + pageType);
     }
-    _accessControlEntries = new Table(buffer, _pageChannel, _format, pageNum, "Access Control Entries");
+    _accessControlEntries = new Table(this, buffer, pageNum,
+                                      "Access Control Entries");
   }
   
   /**
@@ -390,8 +400,7 @@ public class Database
     
     int pageNumber = tableInfo.pageNumber.intValue();
     _pageChannel.readPage(_buffer, pageNumber);
-    return new Table(_buffer, _pageChannel, _format, pageNumber,
-                     tableInfo.tableName);
+    return new Table(this, _buffer, pageNumber, tableInfo.tableName);
   }
   
   /**

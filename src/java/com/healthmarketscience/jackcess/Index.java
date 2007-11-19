@@ -184,19 +184,18 @@ public class Index implements Comparable<Index> {
     CODES_EXT.put('\'', new byte[]{(byte)6, (byte)128});
     CODES_EXT.put('-', new byte[]{(byte)6, (byte)130});
   }
-  
+
+  /** owning table */
+  private final Table _table;
   /** Page number of the index data */
   private int _pageNumber;
-  private int _parentPageNumber;
   /** Number of rows in the index
       NOTE: this does not actually seem to be the row count, unclear what the
       value means*/
   private int _rowCount;
-  private JetFormat _format;
   private SortedSet<Entry> _entries;
   /** Map of columns to flags */
   private Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
-  private PageChannel _pageChannel;
   /** 0-based index number */
   private int _indexNumber;
   /** Index name */
@@ -209,12 +208,22 @@ public class Index implements Comparable<Index> {
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
-  public Index(int parentPageNumber, PageChannel channel, JetFormat format) {
-    _parentPageNumber = parentPageNumber;
-    _pageChannel = channel;
-    _format = format;
+  public Index(Table table) {
+    _table  = table;
+  }
+
+  public Table getTable() {
+    return _table;
   }
   
+  public JetFormat getFormat() {
+    return getTable().getFormat();
+  }
+
+  public PageChannel getPageChannel() {
+    return getTable().getPageChannel();
+  }
+
   public void setIndexNumber(int indexNumber) {
     _indexNumber = indexNumber;
   }
@@ -304,18 +313,18 @@ public class Index implements Comparable<Index> {
       throw new UnsupportedOperationException(
           "FIXME cannot write indexes of this type yet");
     }
-    _pageChannel.writePage(write(), _pageNumber);
+    getPageChannel().writePage(write(), _pageNumber);
   }
 
   /**
    * Write this index out to a buffer
    */
   private ByteBuffer write() throws IOException {
-    ByteBuffer buffer = _pageChannel.createPageBuffer();
+    ByteBuffer buffer = getPageChannel().createPageBuffer();
     buffer.put((byte) 0x04);  //Page type
     buffer.put((byte) 0x01);  //Unknown
     buffer.putShort((short) 0); //Free space
-    buffer.putInt(_parentPageNumber);
+    buffer.putInt(getTable().getTableDefPageNumber());
     buffer.putInt(0); //Prev page
     buffer.putInt(0); //Next page
     buffer.putInt(0); //Leaf page
@@ -323,7 +332,7 @@ public class Index implements Comparable<Index> {
     buffer.put((byte) 0); // compressed byte count
     buffer.put((byte) 0); //Unknown
     buffer.put((byte) 0); //Unknown
-    byte[] entryMask = new byte[_format.SIZE_INDEX_ENTRY_MASK];
+    byte[] entryMask = new byte[getFormat().SIZE_INDEX_ENTRY_MASK];
     int totalSize = 0;
     for(Entry entry : _entries) {
       int size = entry.size();
@@ -339,7 +348,7 @@ public class Index implements Comparable<Index> {
     for(Entry entry : _entries) {
       entry.write(buffer);
     }
-    buffer.putShort(2, (short) (_format.PAGE_SIZE - buffer.position()));
+    buffer.putShort(2, (short) (getFormat().PAGE_SIZE - buffer.position()));
     return buffer;
   }
   
@@ -371,12 +380,12 @@ public class Index implements Comparable<Index> {
   {
     _entries = new TreeSet<Entry>();
     
-    ByteBuffer indexPage = _pageChannel.createPageBuffer();
+    ByteBuffer indexPage = getPageChannel().createPageBuffer();
 
     // find first leaf page
     int leafPageNumber = _pageNumber;
     while(true) {
-      _pageChannel.readPage(indexPage, leafPageNumber);
+      getPageChannel().readPage(indexPage, leafPageNumber);
 
       if(indexPage.get(0) == INDEX_NODE_PAGE_TYPE) {
         // FIXME we can't modify this index at this point in time
@@ -400,7 +409,7 @@ public class Index implements Comparable<Index> {
         _readOnly = true;
         
         // found another one 
-        _pageChannel.readPage(indexPage, leafPageNumber);
+        getPageChannel().readPage(indexPage, leafPageNumber);
         
       } else {
         // all done
@@ -444,7 +453,7 @@ public class Index implements Comparable<Index> {
     // note, "header" data is in LITTLE_ENDIAN format, entry data is in
     // BIG_ENDIAN format
 
-    int nextLeafPage = leafPage.getInt(_format.OFFSET_NEXT_INDEX_LEAF_PAGE);
+    int nextLeafPage = leafPage.getInt(getFormat().OFFSET_NEXT_INDEX_LEAF_PAGE);
     readIndexPage(leafPage, true, _entries, null);
 
     return nextLeafPage;
@@ -462,10 +471,10 @@ public class Index implements Comparable<Index> {
     // note, "header" data is in LITTLE_ENDIAN format, entry data is in
     // BIG_ENDIAN format
     int numCompressedBytes = indexPage.get(
-        _format.OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
-    int entryMaskLength = _format.SIZE_INDEX_ENTRY_MASK;
-    int entryMaskPos = _format.OFFSET_INDEX_ENTRY_MASK;
-    int entryPos = entryMaskPos + _format.SIZE_INDEX_ENTRY_MASK;
+        getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
+    int entryMaskLength = getFormat().SIZE_INDEX_ENTRY_MASK;
+    int entryMaskPos = getFormat().OFFSET_INDEX_ENTRY_MASK;
+    int entryPos = entryMaskPos + getFormat().SIZE_INDEX_ENTRY_MASK;
     int lastStart = 0;
     byte[] valuePrefix = null;
     boolean firstEntry = true;

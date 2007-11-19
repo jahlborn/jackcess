@@ -54,13 +54,13 @@ public class PageChannel implements Channel, Flushable {
   private static final int PAGE_GLOBAL_USAGE_MAP = 1;
   
   /** Channel containing the database */
-  private FileChannel _channel;
+  private final FileChannel _channel;
   /** Format of the database in the channel */
-  private JetFormat _format;
+  private final JetFormat _format;
+  /** whether or not to force all writes to disk immediately */
+  private final  boolean _autoSync;
   /** Tracks free pages in the database. */
   private UsageMap _globalUsageMap;
-  /** whether or not to force all writes to disk immediately */
-  private boolean _autoSync;
   
   /**
    * @param channel Channel containing the database
@@ -72,15 +72,20 @@ public class PageChannel implements Channel, Flushable {
     _channel = channel;
     _format = format;
     _autoSync = autoSync;
-    //Null check only exists for unit tests.  Channel should never normally be null.
-    if (channel != null) {
-      // note the global usage map is a special map where any page outside of
-      // the current range is assumed to be "on"
-      _globalUsageMap = UsageMap.read(this, PAGE_GLOBAL_USAGE_MAP, (byte) 0,
-                                      format, true);
-    }
   }
 
+  /**
+   * Does second-stage initialization, must be called after construction.
+   */
+  public void initialize(Database database)
+    throws IOException
+  {
+    // note the global usage map is a special map where any page outside of
+    // the current range is assumed to be "on"
+    _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP, (byte) 0,
+                                    true);
+  }
+  
   /**
    * Only used by unit tests
    */
@@ -91,6 +96,10 @@ public class PageChannel implements Channel, Flushable {
     _channel = null;
     _format = JetFormat.VERSION_4;
     _autoSync = false;
+  }
+
+  public JetFormat getFormat() {
+    return _format;
   }
   
   /**
@@ -109,7 +118,7 @@ public class PageChannel implements Channel, Flushable {
       LOG.debug("Reading in page " + Integer.toHexString(pageNumber));
     }
     buffer.clear();
-    boolean rtn = _channel.read(buffer, (long) pageNumber * (long) _format.PAGE_SIZE) != -1;
+    boolean rtn = _channel.read(buffer, (long) pageNumber * (long) getFormat().PAGE_SIZE) != -1;
     buffer.flip();
     return rtn;
   }
@@ -136,7 +145,7 @@ public class PageChannel implements Channel, Flushable {
   {
     page.rewind();
     page.position(pageOffset);
-    _channel.write(page, (((long) pageNumber * (long) _format.PAGE_SIZE) +
+    _channel.write(page, (((long) pageNumber * (long) getFormat().PAGE_SIZE) +
                           (long) pageOffset));
     if(_autoSync) {
       flush();
@@ -155,9 +164,9 @@ public class PageChannel implements Channel, Flushable {
     // push the buffer to the end of the page, so that a full page's worth of
     // data is written regardless of the incoming buffer size (we use a tiny
     // buffer in allocateNewPage)
-    long offset = size + (_format.PAGE_SIZE - page.remaining());
+    long offset = size + (getFormat().PAGE_SIZE - page.remaining());
     _channel.write(page, offset);
-    int pageNumber = (int) (size / _format.PAGE_SIZE);
+    int pageNumber = (int) (size / getFormat().PAGE_SIZE);
     _globalUsageMap.removePageNumber(pageNumber);  //force is done here
     return pageNumber;
   }
@@ -175,7 +184,7 @@ public class PageChannel implements Channel, Flushable {
    * @return A newly-allocated buffer that can be passed to readPage
    */
   public ByteBuffer createPageBuffer() {
-    return createBuffer(_format.PAGE_SIZE);
+    return createBuffer(getFormat().PAGE_SIZE);
   }
 
   /**

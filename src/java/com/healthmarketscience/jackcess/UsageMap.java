@@ -48,15 +48,15 @@ public class UsageMap
   public static final byte MAP_TYPE_INLINE = 0x0;
   /** Reference map type, for maps that are too large to fit inline */
   public static final byte MAP_TYPE_REFERENCE = 0x1;
-  
+
+  /** owning database */
+  private final Database _database;
   /** Page number of the map table declaration */
-  private int _tablePageNum;
+  private final int _tablePageNum;
   /** Offset of the data page at which the usage map data starts */
   private int _startOffset;
   /** Offset of the data page at which the usage map declaration starts */
   private short _rowStart;
-  /** Format of the database that contains this usage map */
-  private JetFormat _format;
   /** First page that this usage map applies to */
   private int _startPage;
   /** Last page that this usage map applies to */
@@ -64,9 +64,7 @@ public class UsageMap
   /** bits representing page numbers used, offset from _startPage */
   private BitSet _pageNumbers = new BitSet();
   /** Buffer that contains the usage map table declaration page */
-  private ByteBuffer _tableBuffer;
-  /** Used to read in pages */
-  private PageChannel _pageChannel;
+  private final ByteBuffer _tableBuffer;
   /** modification count on the usage map, used to keep the iterators in
       sync */
   private int _modCount = 0;
@@ -75,22 +73,20 @@ public class UsageMap
   private Handler _handler;
   
   /**
-   * @param pageChannel Used to read in pages
+   * @param database database that contains this usage map
    * @param tableBuffer Buffer that contains this map's declaration
    * @param pageNum Page number that this usage map is contained in
-   * @param format Format of the database that contains this usage map
    * @param rowStart Offset at which the declaration starts in the buffer
    */
-  private UsageMap(PageChannel pageChannel, ByteBuffer tableBuffer,
-                   int pageNum, JetFormat format, short rowStart)
+  private UsageMap(Database database, ByteBuffer tableBuffer,
+                   int pageNum, short rowStart)
   throws IOException
   {
-    _pageChannel = pageChannel;
+    _database = database;
     _tableBuffer = tableBuffer;
     _tablePageNum = pageNum;
-    _format = format;
     _rowStart = rowStart;
-    _tableBuffer.position((int) _rowStart + format.OFFSET_USAGE_MAP_START);
+    _tableBuffer.position((int) _rowStart + getFormat().OFFSET_USAGE_MAP_START);
     _startOffset = _tableBuffer.position();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_tableBuffer, _rowStart,
@@ -98,27 +94,38 @@ public class UsageMap
     }
   }
 
+  public Database getDatabase() {
+    return _database;
+  }
+  
+  public JetFormat getFormat() {
+    return getDatabase().getFormat();
+  }
+
+  public PageChannel getPageChannel() {
+    return getDatabase().getPageChannel();
+  }
+  
   /**
-   * @param pageChannel Used to read in pages
+   * @param database database that contains this usage map
    * @param pageNum Page number that this usage map is contained in
    * @param rowNum Number of the row on the page that contains this usage map
-   * @param format Format of the database that contains this usage map
    * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
    *         which type of map is found
    */
-  public static UsageMap read(PageChannel pageChannel, int pageNum,
-                              byte rowNum, JetFormat format,
-                              boolean assumeOutOfRangeBitsOn)
+  public static UsageMap read(Database database, int pageNum,
+                              byte rowNum, boolean assumeOutOfRangeBitsOn)
     throws IOException
   {
+    JetFormat format = database.getFormat();
+    PageChannel pageChannel = database.getPageChannel();
     ByteBuffer tableBuffer = pageChannel.createPageBuffer();
     pageChannel.readPage(tableBuffer, pageNum);
     short rowStart = Table.findRowStart(tableBuffer, rowNum, format);
     int rowEnd = Table.findRowEnd(tableBuffer, rowNum, format);
     tableBuffer.limit(rowEnd);    
     byte mapType = tableBuffer.get(rowStart);
-    UsageMap rtn = new UsageMap(pageChannel, tableBuffer, pageNum, format,
-                                rowStart);
+    UsageMap rtn = new UsageMap(database, tableBuffer, pageNum, rowStart);
     rtn.initHandler(mapType, assumeOutOfRangeBitsOn);
     return rtn;
   }
@@ -163,14 +170,6 @@ public class UsageMap
     return _tablePageNum;
   }
   
-  protected PageChannel getPageChannel() {
-    return _pageChannel;
-  }
-  
-  protected JetFormat getFormat() {
-    return _format;
-  }
-
   protected int getStartPage() {
     return _startPage;
   }
@@ -251,7 +250,7 @@ public class UsageMap
     throws IOException
   {
     // note, we only want to write the row data with which we are working
-    _pageChannel.writePage(_tableBuffer, _tablePageNum, _rowStart);
+    getPageChannel().writePage(_tableBuffer, _tablePageNum, _rowStart);
   }
   
   /**

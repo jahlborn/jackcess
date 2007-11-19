@@ -76,7 +76,9 @@ public class Table
                  0));
       }
     };
-  
+
+  /** owning database */
+  private final Database _database;
   /** State used for reading the table rows */
   private RowState _rowState;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
@@ -92,25 +94,21 @@ public class Table
   /** last auto number for the table */
   private int _lastAutoNumber;
   /** page number of the definition of this table */
-  private int _tableDefPageNumber;
+  private final int _tableDefPageNumber;
   /** Number of rows left to be read on the current page */
   private short _rowsLeftOnPage = 0;
   /** max Number of columns in the table (includes previous deletions) */
   private short _maxColumnCount;
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
-  /** Format of the database that contains this table */
-  private JetFormat _format;
   /** List of columns in this table, ordered by column number */
   private List<Column> _columns = new ArrayList<Column>();
   /** List of variable length columns in this table, ordered by offset */
   private List<Column> _varColumns = new ArrayList<Column>();
   /** List of indexes on this table */
   private List<Index> _indexes = new ArrayList<Index>();
-  /** Used to read in pages */
-  private PageChannel _pageChannel;
   /** Table name as stored in Database */
-  private String _name;
+  private final String _name;
   /** Usage map of pages that this table owns */
   private UsageMap _ownedPages;
   /** Iterator over the pages that this table owns */
@@ -121,11 +119,14 @@ public class Table
   /**
    * Only used by unit tests
    */
-  Table(boolean testing) throws IOException {
+  Table(boolean testing, List<Column> columns) throws IOException {
     if(!testing) {
       throw new IllegalArgumentException();
     }
-    _pageChannel = new PageChannel(testing);
+    _database = null;
+    _tableDefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+    _name = null;
+    setColumns(columns);
   }
   
   /**
@@ -135,27 +136,25 @@ public class Table
    * @param pageNumber Page number of the table definition
 	 * @param name Table name
    */
-  protected Table(ByteBuffer tableBuffer, PageChannel pageChannel,
-                  JetFormat format, int pageNumber, String name)
+  protected Table(Database database, ByteBuffer tableBuffer,
+                  int pageNumber, String name)
   throws IOException
   {
-    _pageChannel = pageChannel;
-    _format = format;
+    _database = database;
     _tableDefPageNumber = pageNumber;
     _name = name;
-    int nextPage;
+    int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
     ByteBuffer nextPageBuffer = null;
-    nextPage = tableBuffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
     while (nextPage != 0) {
       if (nextPageBuffer == null) {
-        nextPageBuffer = _pageChannel.createPageBuffer();
+        nextPageBuffer = getPageChannel().createPageBuffer();
       }
-      _pageChannel.readPage(nextPageBuffer, nextPage);
-      nextPage = nextPageBuffer.getInt(_format.OFFSET_NEXT_TABLE_DEF_PAGE);
-      ByteBuffer newBuffer = _pageChannel.createBuffer(
-          tableBuffer.capacity() + format.PAGE_SIZE - 8);
+      getPageChannel().readPage(nextPageBuffer, nextPage);
+      nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
+      ByteBuffer newBuffer = getPageChannel().createBuffer(
+          tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
       newBuffer.put(tableBuffer);
-      newBuffer.put(nextPageBuffer.array(), 8, format.PAGE_SIZE - 8);
+      newBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
       tableBuffer = newBuffer;
       tableBuffer.flip();
     }
@@ -171,6 +170,22 @@ public class Table
   public String getName() {
     return _name;
   }
+
+  public Database getDatabase() {
+    return _database;
+  }
+  
+  public JetFormat getFormat() {
+    return getDatabase().getFormat();
+  }
+
+  public PageChannel getPageChannel() {
+    return getDatabase().getPageChannel();
+  }
+
+  protected int getTableDefPageNumber() {
+    return _tableDefPageNumber;
+  }
   
   /**
    * @return All of the columns in this table (unmodifiable List)
@@ -182,7 +197,7 @@ public class Table
   /**
    * Only called by unit tests
    */
-  void setColumns(List<Column> columns) {
+  private void setColumns(List<Column> columns) {
     _columns = columns;
     int colIdx = 0;
     int varLenIdx = 0;
@@ -243,9 +258,9 @@ public class Table
     }
     
     // delete flag always gets set in the "root" page (even if overflow row)
-    ByteBuffer rowBuffer = _rowState.getPage(_pageChannel);
+    ByteBuffer rowBuffer = _rowState.getPage(getPageChannel());
     int pageNumber = _rowState.getPageNumber();
-    int rowIndex = getRowStartOffset(_currentRowInPage, _format);
+    int rowIndex = getRowStartOffset(_currentRowInPage, getFormat());
     rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
                                       | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
     writeDataPage(rowBuffer, pageNumber);
@@ -456,13 +471,13 @@ public class Table
         }
 
         // load new page
-        ByteBuffer rowBuffer = _rowState.setPage(_pageChannel, nextPageNumber);
+        ByteBuffer rowBuffer = _rowState.setPage(getPageChannel(), nextPageNumber);
         if(rowBuffer.get() != PageTypes.DATA) {
           //Only interested in data pages
           continue;
         }
 
-        _rowsLeftOnPage = rowBuffer.getShort(_format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
+        _rowsLeftOnPage = rowBuffer.getShort(getFormat().OFFSET_NUM_ROWS_ON_DATA_PAGE);
         if(_rowsLeftOnPage == 0) {
           // no rows on this page?
           continue;
@@ -475,7 +490,7 @@ public class Table
       _rowsLeftOnPage--;
 
       ByteBuffer rowBuffer =
-        positionAtRow(_rowState, _currentRowInPage, _pageChannel, _format);
+        positionAtRow(_rowState, _currentRowInPage, getPageChannel(), getFormat());
       if(rowBuffer != null) {
         // we found a non-deleted row, return it
         return rowBuffer;
@@ -862,40 +877,38 @@ public class Table
     if (LOG.isDebugEnabled()) {
       tableBuffer.rewind();
       LOG.debug("Table def block:\n" + ByteUtil.toHexString(tableBuffer,
-          _format.SIZE_TDEF_HEADER));
+          getFormat().SIZE_TDEF_HEADER));
     }
-    _rowCount = tableBuffer.getInt(_format.OFFSET_NUM_ROWS);
-    _lastAutoNumber = tableBuffer.getInt(_format.OFFSET_NEXT_AUTO_NUMBER);
-    _tableType = tableBuffer.get(_format.OFFSET_TABLE_TYPE);
-    _maxColumnCount = tableBuffer.getShort(_format.OFFSET_MAX_COLS);
-    _maxVarColumnCount = tableBuffer.getShort(_format.OFFSET_NUM_VAR_COLS);
-    short columnCount = tableBuffer.getShort(_format.OFFSET_NUM_COLS);
-    _indexSlotCount = tableBuffer.getInt(_format.OFFSET_NUM_INDEX_SLOTS);
-    _indexCount = tableBuffer.getInt(_format.OFFSET_NUM_INDEXES);
+    _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
+    _lastAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
+    _tableType = tableBuffer.get(getFormat().OFFSET_TABLE_TYPE);
+    _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
+    _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
+    short columnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_COLS);
+    _indexSlotCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
+    _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
     
-    byte rowNum = tableBuffer.get(_format.OFFSET_OWNED_PAGES);
-    int pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_OWNED_PAGES + 1);
-    _ownedPages = UsageMap.read(_pageChannel, pageNum, rowNum, _format,
-                                false);
+    byte rowNum = tableBuffer.get(getFormat().OFFSET_OWNED_PAGES);
+    int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
+    _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     _ownedPagesIterator = _ownedPages.iterator();
-    rowNum = tableBuffer.get(_format.OFFSET_FREE_SPACE_PAGES);
-    pageNum = ByteUtil.get3ByteInt(tableBuffer, _format.OFFSET_FREE_SPACE_PAGES + 1);
-    _freeSpacePages = UsageMap.read(_pageChannel, pageNum, rowNum, _format,
-                                    false);
+    rowNum = tableBuffer.get(getFormat().OFFSET_FREE_SPACE_PAGES);
+    pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
+    _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     
     for (int i = 0; i < _indexCount; i++) {
-      Index index = new Index(_tableDefPageNumber, _pageChannel, _format);
+      Index index = new Index(this);
       _indexes.add(index);
-      index.setRowCount(tableBuffer.getInt(_format.OFFSET_INDEX_DEF_BLOCK +
-          i * _format.SIZE_INDEX_DEFINITION + 4));
+      index.setRowCount(tableBuffer.getInt(getFormat().OFFSET_INDEX_DEF_BLOCK +
+          i * getFormat().SIZE_INDEX_DEFINITION + 4));
     }
     
-    int offset = _format.OFFSET_INDEX_DEF_BLOCK +
-        _indexCount * _format.SIZE_INDEX_DEFINITION;
+    int offset = getFormat().OFFSET_INDEX_DEF_BLOCK +
+        _indexCount * getFormat().SIZE_INDEX_DEFINITION;
     Column column;
     for (int i = 0; i < columnCount; i++) {
-      column = new Column(tableBuffer,
-          offset + i * _format.SIZE_COLUMN_HEADER, _pageChannel, _format);
+      column = new Column(this, tableBuffer,
+          offset + i * getFormat().SIZE_COLUMN_HEADER);
       _columns.add(column);
       if(column.isVariableLength()) {
         // also shove it in the variable columns list, which is ordered
@@ -903,7 +916,7 @@ public class Table
         _varColumns.add(column);
       }
     }
-    offset += columnCount * _format.SIZE_COLUMN_HEADER;
+    offset += columnCount * getFormat().SIZE_COLUMN_HEADER;
     for (int i = 0; i < columnCount; i++) {
       column = (Column) _columns.get(i);
       short nameLength = tableBuffer.getShort(offset);
@@ -911,7 +924,7 @@ public class Table
       byte[] nameBytes = new byte[nameLength];
       tableBuffer.position(offset);
       tableBuffer.get(nameBytes, 0, (int) nameLength);
-      column.setName(_format.CHARSET.decode(ByteBuffer.wrap(nameBytes)).toString());
+      column.setName(getFormat().CHARSET.decode(ByteBuffer.wrap(nameBytes)).toString());
       offset += nameLength;
     }
     Collections.sort(_columns);
@@ -928,7 +941,7 @@ public class Table
     
     int idxOffset = tableBuffer.position();
     tableBuffer.position(idxOffset +
-                     (_format.OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
+                     (getFormat().OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
 
     // there are _indexSlotCount blocks here, we ignore any slot with an index
     // number greater than the number of actual indexes
@@ -960,7 +973,7 @@ public class Table
     for (int i = 0; i < _indexCount; i++) {
       byte[] nameBytes = new byte[tableBuffer.getShort()];
       tableBuffer.get(nameBytes);
-      _indexes.get(i).setName(_format.CHARSET.decode(ByteBuffer.wrap(
+      _indexes.get(i).setName(getFormat().CHARSET.decode(ByteBuffer.wrap(
           nameBytes)).toString());
     }
     int idxEndOffset = tableBuffer.position();
@@ -986,7 +999,7 @@ public class Table
     throws IOException
   {
     // write the page data
-    _pageChannel.writePage(pageBuffer, pageNumber);
+    getPageChannel().writePage(pageBuffer, pageNumber);
 
     // if the overflow buffer is this page, invalidate it
     _rowState.possiblyInvalidate(pageNumber, pageBuffer);
@@ -1006,12 +1019,12 @@ public class Table
    * @param rows List of Object[] row values
    */
   public void addRows(List<? extends Object[]> rows) throws IOException {
-    ByteBuffer dataPage = _pageChannel.createPageBuffer();
+    ByteBuffer dataPage = getPageChannel().createPageBuffer();
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
-      rowData[i] = createRow(iter.next(), _format.MAX_ROW_SIZE);
-      if (rowData[i].limit() > _format.MAX_ROW_SIZE) {
+      rowData[i] = createRow(iter.next(), getFormat().MAX_ROW_SIZE);
+      if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
       }
@@ -1026,7 +1039,7 @@ public class Table
         revPageIter.hasNextPage(); )
     {
       int tmpPageNumber = revPageIter.getNextPage();
-      _pageChannel.readPage(dataPage, tmpPageNumber);
+      getPageChannel().readPage(dataPage, tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
         // found last data page
         pageNumber = tmpPageNumber;
@@ -1041,8 +1054,8 @@ public class Table
     
     for (int i = 0; i < rowData.length; i++) {
       rowSize = rowData[i].remaining();
-      int rowSpaceUsage = getRowSpaceUsage(rowSize, _format);
-      short freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
+      int rowSpaceUsage = getRowSpaceUsage(rowSize, getFormat());
+      short freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       if (freeSpaceInPage < rowSpaceUsage) {
 
         //Last data page is full.  Create a new one.
@@ -1051,11 +1064,11 @@ public class Table
         _freeSpacePages.removePageNumber(pageNumber);
 
         pageNumber = newDataPage(dataPage);
-        freeSpaceInPage = dataPage.getShort(_format.OFFSET_FREE_SPACE);
+        freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       }
 
       // write out the row data
-      int rowNum = addDataPageRow(dataPage, rowSize, _format);
+      int rowNum = addDataPageRow(dataPage, rowSize, getFormat());
       dataPage.put(rowData[i]);
 
       // update the indexes
@@ -1076,24 +1089,24 @@ public class Table
   private void updateTableDefinition() throws IOException
   {
     // load table definition
-    ByteBuffer tdefPage = _pageChannel.createPageBuffer();
-    _pageChannel.readPage(tdefPage, _tableDefPageNumber);
+    ByteBuffer tdefPage = getPageChannel().createPageBuffer();
+    getPageChannel().readPage(tdefPage, _tableDefPageNumber);
     
     // make sure rowcount and autonumber are up-to-date
-    tdefPage.putInt(_format.OFFSET_NUM_ROWS, _rowCount);
-    tdefPage.putInt(_format.OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
+    tdefPage.putInt(getFormat().OFFSET_NUM_ROWS, _rowCount);
+    tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
 
     // write any index changes
     Iterator<Index> indIter = _indexes.iterator();
     for (int i = 0; i < _indexes.size(); i++) {
-      tdefPage.putInt(_format.OFFSET_INDEX_DEF_BLOCK +
-          (i * _format.SIZE_INDEX_DEFINITION) + 4, _rowCount);
+      tdefPage.putInt(getFormat().OFFSET_INDEX_DEF_BLOCK +
+          (i * getFormat().SIZE_INDEX_DEFINITION) + 4, _rowCount);
       Index index = indIter.next();
       index.update();
     }
 
     // write modified table definition
-    _pageChannel.writePage(tdefPage, _tableDefPageNumber);
+    getPageChannel().writePage(tdefPage, _tableDefPageNumber);
   }
   
   /**
@@ -1106,12 +1119,12 @@ public class Table
     }
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
-    dataPage.putShort((short)getRowSpaceUsage(_format.MAX_ROW_SIZE,
-                                              _format)); //Free space in this page
+    dataPage.putShort((short)getRowSpaceUsage(getFormat().MAX_ROW_SIZE,
+                                              getFormat())); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putInt(0); //Number of records on this page
-    int pageNumber = _pageChannel.writeNewPage(dataPage);
+    int pageNumber = getPageChannel().writeNewPage(dataPage);
     _ownedPages.addPageNumber(pageNumber);
     _freeSpacePages.addPageNumber(pageNumber);
     return pageNumber;
@@ -1121,7 +1134,7 @@ public class Table
    * Serialize a row of Objects into a byte buffer
    */
   ByteBuffer createRow(Object[] rowArray, int maxRowSize) throws IOException {
-    ByteBuffer buffer = _pageChannel.createPageBuffer();
+    ByteBuffer buffer = getPageChannel().createPageBuffer();
     buffer.putShort((short) _maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
     

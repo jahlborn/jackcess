@@ -18,19 +18,24 @@ public class TableTest extends TestCase {
   }
   
   public void testCreateRow() throws Exception {
-    JetFormat format = JetFormat.VERSION_4;
-    Table table = new Table(true);
+    final JetFormat format = JetFormat.VERSION_4;
+    final PageChannel pageChannel = new PageChannel(true);
     List<Column> columns = new ArrayList<Column>();
-    Column col = new Column(true);
+    Column col = newTestColumn(pageChannel);
     col.setType(DataType.INT);
     columns.add(col);
-    col = new Column(true);
+    col = newTestColumn(pageChannel);
     col.setType(DataType.TEXT);
     columns.add(col);
-    col = new Column(true);
+    col = newTestColumn(pageChannel);
     col.setType(DataType.TEXT);
     columns.add(col);
-    table.setColumns(columns);
+    Table table = new Table(true, columns) {
+        @Override
+        public PageChannel getPageChannel() {
+          return pageChannel;
+        }
+      };
     int colCount = 3;
     Object[] row = new Object[colCount];
     row[0] = new Short((short) 9);
@@ -45,6 +50,19 @@ public class TableTest extends TestCase {
     assertEquals((short) 4, buffer.getShort(26));
     assertEquals((short) 2, buffer.getShort(28));
     assertEquals((byte) 7, buffer.get(30));
+  }
+
+  private static Column newTestColumn(final PageChannel pageChannel) {
+    return new Column(true) {
+        @Override
+        public PageChannel getPageChannel() {
+          return pageChannel;
+        }
+        @Override
+        public JetFormat getFormat() {
+          return JetFormat.VERSION_4;
+        }
+      };
   }
   
 }
