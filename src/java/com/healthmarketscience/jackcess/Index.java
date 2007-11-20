@@ -519,14 +519,14 @@ public class Index implements Comparable<Index> {
    * @param pageNumber Page number on which the row is stored
    * @param rowNumber Row number at which the row is stored
    */
-  public void addRow(Object[] row, int pageNumber, byte rowNumber)
+  public void addRow(Object[] row, RowId rowId)
     throws IOException
   {
     // make sure we've parsed the entries
     initialize();
 
     ++_rowCount;
-    _entries.add(new Entry(row, pageNumber, rowNumber));
+    _entries.add(new Entry(row, rowId));
   }
 
   /**
@@ -538,22 +538,21 @@ public class Index implements Comparable<Index> {
    * @param pageNumber Page number on which the row is removed
    * @param rowNumber Row number at which the row is removed
    */
-  public void deleteRow(Object[] row, int pageNumber, byte rowNumber)
+  public void deleteRow(Object[] row, RowId rowId)
     throws IOException
   {
     // make sure we've parsed the entries
     initialize();
 
     --_rowCount;
-    Entry oldEntry = new Entry(row, pageNumber, rowNumber);
+    Entry oldEntry = new Entry(row, rowId);
     if(!_entries.remove(oldEntry)) {
       // the caller may have only read some of the row data, if this is the
       // case, just search for the page/row numbers
       boolean removed = false;
       for(Iterator<Entry> iter = _entries.iterator(); iter.hasNext(); ) {
         Entry entry = iter.next();
-        if((entry.getPage() == pageNumber) &&
-           (entry.getRow() == rowNumber)) {
+        if(entry.getRowId().equals(rowId)) {
           iter.remove();
           removed = true;
           break;
@@ -718,10 +717,8 @@ public class Index implements Comparable<Index> {
    */
   private class Entry implements Comparable<Entry> {
     
-    /** Page number on which the row is stored */
-    private int _page;
-    /** Row number at which the row is stored */
-    private byte _row;
+    /** page/row on which this row is stored */
+    private final RowId _rowId;
     /** Columns that are indexed */
     private List<EntryColumn> _entryColumns = new ArrayList<EntryColumn>();
     
@@ -731,10 +728,9 @@ public class Index implements Comparable<Index> {
      * @param page Page number on which the row is stored
      * @param rowNumber Row number at which the row is stored
      */
-    public Entry(Object[] values, int page, byte rowNumber) throws IOException
+    public Entry(Object[] values, RowId rowId) throws IOException
     {
-      _page = page;
-      _row = rowNumber;
+      _rowId = rowId;
       for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
         Column col = entry.getKey();
         Byte flags = entry.getValue();
@@ -755,8 +751,9 @@ public class Index implements Comparable<Index> {
         _entryColumns.add(newEntryColumn(col)
                           .initFromBuffer(buffer, flags, valuePrefix));
       }
-      _page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
-      _row = buffer.get();
+      int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
+      int row = buffer.get();
+      _rowId = new RowId(page, row);
     }
 
     /**
@@ -773,13 +770,17 @@ public class Index implements Comparable<Index> {
     public List<EntryColumn> getEntryColumns() {
       return _entryColumns;
     }
+
+    public RowId getRowId() {
+      return _rowId;
+    }
     
     public int getPage() {
-      return _page;
+      return getRowId().getPageNumber();
     }
     
     public byte getRow() {
-      return _row;
+      return (byte)getRowId().getRowNumber();
     }
     
     public int size() {
@@ -797,15 +798,16 @@ public class Index implements Comparable<Index> {
       for(EntryColumn entryCol : _entryColumns) {
         entryCol.write(buffer);
       }
-      buffer.put((byte) (_page >>> 16));
-      buffer.put((byte) (_page >>> 8));
-      buffer.put((byte) _page);
-      buffer.put(_row);
+      int page = getPage();
+      buffer.put((byte) (page >>> 16));
+      buffer.put((byte) (page >>> 8));
+      buffer.put((byte) page);
+      buffer.put(getRow());
     }
     
     @Override
     public String toString() {
-      return ("Page = " + _page + ", Row = " + _row + ", Columns = " + _entryColumns + "\n");
+      return ("RowId = " + _rowId + ", Columns = " + _entryColumns + "\n");
     }
     
     public int compareTo(Entry other) {
@@ -826,8 +828,7 @@ public class Index implements Comparable<Index> {
           return i;
         }
       }
-      return new CompareToBuilder().append(_page, other.getPage())
-          .append(_row, other.getRow()).toComparison();
+      return _rowId.compareTo(other.getRowId());
     }
     
 

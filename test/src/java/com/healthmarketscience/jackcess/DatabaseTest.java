@@ -821,7 +821,7 @@ public class DatabaseTest extends TestCase {
   
   static int countRows(Table table) throws Exception {
     int rtn = 0;
-    for(Map<String, Object> row : table) {
+    for(Map<String, Object> row : Cursor.createCursor(table)) {
       rtn++;
     }
     return rtn;
@@ -831,7 +831,7 @@ public class DatabaseTest extends TestCase {
   {
     List<Map<String, Object>> foundTable =
       new ArrayList<Map<String, Object>>();
-    for(Map<String, Object> row : table) {
+    for(Map<String, Object> row : Cursor.createCursor(table)) {
       foundTable.add(row);
     }
     assertEquals(expectedTable, foundTable);
@@ -873,7 +873,7 @@ public class DatabaseTest extends TestCase {
       colNames.add(col.getName());
     }
     writer.println("COLUMNS: " + colNames);
-    for(Map<String, Object> row : table) {
+    for(Map<String, Object> row : Cursor.createCursor(table)) {
 
       // make byte[] printable
       for(Map.Entry<String, Object> entry : row.entrySet()) {

@@ -12,6 +12,8 @@ import org.apache.commons.lang.builder.CompareToBuilder;
  */
 public class RowId implements Comparable<RowId>
 {
+  public static final int INVALID_ROW_NUMBER = -1;
+
   private final int _pageNumber;
   private final int _rowNumber;
   
@@ -32,6 +34,10 @@ public class RowId implements Comparable<RowId>
     return _rowNumber;
   }
 
+  public boolean isValidRow() {
+    return(getRowNumber() != INVALID_ROW_NUMBER);
+  }
+  
   public int compareTo(RowId other) {
       return new CompareToBuilder()
         .append(getPageNumber(), other.getPageNumber())
