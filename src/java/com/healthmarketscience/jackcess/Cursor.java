@@ -61,9 +61,58 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Creates a normal, un-indexed cursor for the given table.
+   * @param table the table over which this cursor will traverse
    */
   public static Cursor createCursor(Table table) {
     return new TableScanCursor(table);
+  }
+
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern.  See {@link #findRow(Map)} for details on the
+   * rowPattern.
+   * 
+   * @param table the table to search
+   * @param rowPattern pattern to be used to find the row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Map<String,Object> findRow(Table table,
+                                           Map<String,Object> rowPattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table);
+    if(cursor.findRow(rowPattern)) {
+      return cursor.getCurrentRow();
+    }
+    return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern.  See {@link #findRow(Column,Object)} for details on
+   * the pattern.
+   * <p>
+   * Note, a {@code null} result value is ambiguous in that it could imply no
+   * match or a matching row with {@code null} for the desired value.  If
+   * distinguishing this situation is important, you will need to use a Cursor
+   * directly instead of this convenience method.
+   * 
+   * @param table the table to search
+   * @param column column whose value should be returned
+   * @param columnPattern column being matched by the valuePattern
+   * @param valuePattern value from the columnPattern which will match the
+   *                     desired row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Object findValue(Table table, Column column,
+                                 Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table);
+    if(cursor.findRow(columnPattern, valuePattern)) {
+      return cursor.getCurrentRowValue(column);
+    }
+    return null;
   }
   
   public Table getTable() {
@@ -162,57 +211,70 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
-   * Delete the current row (retrieved by a call to {@link #getNextRow}).
+   * Delete the current row.
+   * @throws IllegalStateException if the current row is not valid (at
+   *         beginning or end of table), or already deleted.
    */
   public void deleteCurrentRow() throws IOException {
     _table.deleteRow(_rowState, _currentRowId);
   }
 
   /**
-   * @return The next row in this table (Column name -> Column value)
+   * Moves to the next row in the table and returns it.
+   * @return The next row in this table (Column name -> Column value), or
+   *         {@code null} if no next row is found
    */
   public Map<String, Object> getNextRow() throws IOException {
     return getNextRow(null);
   }
 
   /**
+   * Moves to the next row in the table and returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return The next row in this table (Column name -> Column value)
+   * @return The next row in this table (Column name -> Column value), or
+   *         {@code null} if no next row is found
    */
   public Map<String, Object> getNextRow(Collection<String> columnNames) 
     throws IOException
   {
-    return getNextRow(columnNames, true);
+    return getAnotherRow(columnNames, true);
   }
 
   /**
-   * @return The previous row in this table (Column name -> Column value)
+   * Moves to the previous row in the table and returns it.
+   * @return The previous row in this table (Column name -> Column value), or
+   *         {@code null} if no previous row is found
    */
   public Map<String, Object> getPreviousRow() throws IOException {
     return getPreviousRow(null);
   }
 
   /**
+   * Moves to the previous row in the table and returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return The previous row in this table (Column name -> Column value)
+   * @return The previous row in this table (Column name -> Column value), or
+   *         {@code null} if no previous row is found
    */
   public Map<String, Object> getPreviousRow(Collection<String> columnNames) 
     throws IOException
   {
-    return getNextRow(columnNames, false);
+    return getAnotherRow(columnNames, false);
   }
 
 
   /**
+   * Moves to another row in the table based on the given direction and
+   * returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return The next row in this table (Column name -> Column value), where
-   *         "next" may be backwards if moveForward is {@code false}.
+   * @return another row in this table (Column name -> Column value), where
+   *         "next" may be backwards if moveForward is {@code false}, or
+   *         {@code null} if there is not another row in the given direction.
    */
-  private Map<String, Object> getNextRow(Collection<String> columnNames,
-                                         boolean moveForward) 
+  private Map<String, Object> getAnotherRow(Collection<String> columnNames,
+                                            boolean moveForward) 
     throws IOException
   {
-    if(moveToNextRow(moveForward)) {
+    if(moveToAnotherRow(moveForward)) {
       return getCurrentRow(columnNames);
     }
     return null;
@@ -226,7 +288,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean moveToNextRow()
     throws IOException
   {
-    return moveToNextRow(true);
+    return moveToAnotherRow(true);
   }
 
   /**
@@ -237,15 +299,15 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean moveToPreviousRow()
     throws IOException
   {
-    return moveToNextRow(false);
+    return moveToAnotherRow(false);
   }
 
   /**
-   * Moves to the next row as defined by this cursor.
-   * @return {@code true} if a valid next row was found, {@code false}
-   *         otherwise
+   * Moves to another row in the given direction as defined by this cursor.
+   * @return {@code true} if another valid row was found in the given
+   *         direction, {@code false} otherwise
    */
-  private boolean moveToNextRow(boolean moveForward)
+  private boolean moveToAnotherRow(boolean moveForward)
     throws IOException
   {
     RowId endRowId = getDirHandler(moveForward).getEndRowId();
@@ -262,18 +324,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Moves to the first row (as defined by the cursor) where the given column
    * has the given value.  This may be more efficient on some cursors than
-   * others.
-   * 
+   * others.  The location of the cursor when a match is not found is
+   * undefined.
+   *
+   * @param columnPattern column from the table for this cursor which is being
+   *                      matched by the valuePattern
+   * @param valuePattern value which is equal to the corresponding value in
+   *                     the matched row
    * @return {@code true} if a valid row was found with the given value,
-   *         {@code false} if no row was found (and the cursor is now pointing
-   *         past the end of the table)
+   *         {@code false} if no row was found
    */
-  public boolean findRow(Column column, Object value)
+  public boolean findRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
     beforeFirst();
     while(moveToNextRow()) {
-      if(ObjectUtils.equals(value, getCurrentRowSingleColumn(column))) {
+      if(ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern))) {
         return true;
       }
     }
@@ -283,19 +349,21 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Moves to the first row (as defined by the cursor) where the given columns
    * have the given values.  This may be more efficient on some cursors than
-   * others.
-   * 
+   * others.  The location of the cursor when a match is not found is
+   * undefined.
+   *
+   * @param rowPattern column names and values which must be equal to the
+   *                   corresponding values in the matched row
    * @return {@code true} if a valid row was found with the given values,
-   *         {@code false} if no row was found (and the cursor is now pointing
-   *         past the end of the table)
+   *         {@code false} if no row was found
    */
-  public boolean findRow(Map<String,Object> row)
+  public boolean findRow(Map<String,Object> rowPattern)
     throws IOException
   {
     beforeFirst();
+    Collection<String> columnNames = rowPattern.keySet();
     while(moveToNextRow()) {
-      Object value = getCurrentRow(row.keySet());
-      if(ObjectUtils.equals(row, value)) {
+      if(ObjectUtils.equals(rowPattern, getCurrentRow(columnNames))) {
         return true;
       }
     }
@@ -309,11 +377,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public int skipNextRows(int numRows)
     throws IOException
   {
-    int numSkippedRows = 0;
-    while((numSkippedRows < numRows) && moveToNextRow()) {
-      ++numSkippedRows;
-    }
-    return numSkippedRows;
+    return skipSomeRows(numRows, true);
   }
 
   /**
@@ -323,11 +387,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public int skipPreviousRows(int numRows)
     throws IOException
   {
-    int numSkippedRows = 0;
-    while((numSkippedRows < numRows) && moveToNextRow()) {
-      ++numSkippedRows;
-    }
-    return numSkippedRows;
+    return skipSomeRows(numRows, false);
   }
 
   /**
@@ -335,11 +395,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * number of rows.
    * @return the number of rows skipped.
    */
-  private int skipRows(int numRows, boolean moveForward)
+  private int skipSomeRows(int numRows, boolean moveForward)
     throws IOException
   {
     int numSkippedRows = 0;
-    while((numSkippedRows < numRows) && moveToNextRow(moveForward)) {
+    while((numSkippedRows < numRows) && moveToAnotherRow(moveForward)) {
       ++numSkippedRows;
     }
     return numSkippedRows;
@@ -368,10 +428,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Returns the given column from the current row.
    */
-  public Object getCurrentRowSingleColumn(Column column)
+  public Object getCurrentRowValue(Column column)
     throws IOException
   {
-    return _table.getRowSingleColumn(_rowState, column);
+    return _table.getRowValue(_rowState, column);
   }
   
   /**

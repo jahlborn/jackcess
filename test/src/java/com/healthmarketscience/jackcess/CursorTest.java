@@ -111,6 +111,11 @@ public class CursorTest extends TestCase {
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
+
+    assertEquals("data" + 9,
+                 Cursor.findValue(table,
+                                  table.getColumn("value"),
+                                  table.getColumn("id"), 9));
     
     db.close();
   }

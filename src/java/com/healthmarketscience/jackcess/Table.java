@@ -319,7 +319,7 @@ public class Table
   /**
    * Reads a single column from the given row.
    */
-  public Object getRowSingleColumn(RowState rowState, Column column)
+  public Object getRowValue(RowState rowState, Column column)
     throws IOException
   {
     if(this != column.getTable()) {
