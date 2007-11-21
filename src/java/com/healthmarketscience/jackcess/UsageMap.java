@@ -143,11 +143,13 @@ public class UsageMap
   }
   
   public PageIterator iterator() {
-    return new ForwardPageIterator();
+    return new PageIterator();
   }
 
-  public PageIterator reverseIterator() {
-    return new ReversePageIterator();
+  public PageIterator iteratorAtEnd() {
+    PageIterator iterator = new PageIterator();
+    iterator.afterLast();
+    return iterator;
   }
   
   protected short getRowStart() {
@@ -679,8 +681,12 @@ public class UsageMap
    * iterators hold on to page numbers, they should stay valid even as the
    * usage map handlers shift around the bits.
    */
-  public abstract class PageIterator
+  public class PageIterator
   {
+    /** handler for moving the page iterator forward */
+    private final DirHandler _forwardDirHandler = new ForwardDirHandler();
+    /** handler for moving the page iterator backward */
+    private final DirHandler _reverseDirHandler = new ReverseDirHandler();
     /** the next used page number */
     private int _nextPageNumber;
     /** the previous used page number */
@@ -690,26 +696,53 @@ public class UsageMap
         and act accordingly */
     private int _lastModCount;
 
-    protected PageIterator() {
+    private PageIterator() {
+      reset();
     }
 
     /**
-     * @return {@code true} if there is another valid page, {@code false}
-     *         otherwise.
+     * Returns the DirHandler for the given direction
+     */
+    private DirHandler getDirHandler(boolean moveForward) {
+      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
+    }
+    
+    /**
+     * @return {@code true} if there is another valid page after the current
+     *         page, {@code false} otherwise.
      */
     public final boolean hasNextPage() {
-      if((_nextPageNumber == PageChannel.INVALID_PAGE_NUMBER) &&
-         (_lastModCount != _modCount)) {
+      return hasAnotherPage(true);
+    }      
+    
+    /**
+     * @return {@code true} if there is another valid page before the current
+     *         page, {@code false} otherwise.
+     */
+    public final boolean hasPreviousPage() {
+      return hasAnotherPage(false);
+    }      
+
+    private boolean hasAnotherPage(boolean moveForward) {
+      DirHandler handler = getDirHandler(moveForward);
+      int curPageNumber = handler.getCurrentPageNumber();
+      int otherPageNumber = handler.getOtherPageNumber();
+      
+      if((curPageNumber == PageChannel.INVALID_PAGE_NUMBER) &&
+         (_lastModCount != UsageMap.this._modCount)) {
         // recheck the last page, in case more showed up
-        if(_prevPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+        if(otherPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
           // we were at the beginning
-          reset();
+          reset(moveForward);
         } else {
-          _lastModCount = _modCount;
-          _nextPageNumber = getNextPage(_prevPageNumber);
+          // we were at the end
+          _lastModCount = UsageMap.this._modCount;
+          handler.setCurrentPageNumber(
+              handler.getAnotherPageNumber(otherPageNumber));
         }
+        curPageNumber = handler.getCurrentPageNumber();
       }
-      return(_nextPageNumber != PageChannel.INVALID_PAGE_NUMBER);
+      return(curPageNumber != PageChannel.INVALID_PAGE_NUMBER);
     }      
     
     /**
@@ -717,69 +750,128 @@ public class UsageMap
      *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
      */
     public final int getNextPage() {
-      if (hasNextPage()) {
-        _lastModCount = _modCount;
-        _prevPageNumber = _nextPageNumber;
-        _nextPageNumber = getNextPage(_nextPageNumber);
-        return _prevPageNumber;
+      return getAnotherPage(true);
+    }
+
+    /**
+     * @return valid page number if there was another page to read,
+     *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
+     */
+    public final int getPreviousPage() {
+      return getAnotherPage(false);
+    }
+
+    /**
+     * Gets another page in the given direction, returning the current page.
+     */
+    private int getAnotherPage(boolean moveForward) {
+      if (hasAnotherPage(moveForward)) {
+        _lastModCount = UsageMap.this._modCount;
+        DirHandler handler = getDirHandler(moveForward);
+        int anotherPage = handler.getCurrentPageNumber();
+        handler.setOtherPageNumber(anotherPage);
+        handler.setCurrentPageNumber(
+            handler.getAnotherPageNumber(anotherPage));
+        return anotherPage;
       }
       return PageChannel.INVALID_PAGE_NUMBER;
     }
-
+    
     /**
      * After calling this method, getNextPage will return the first page in
      * the map
      */
     public final void reset() {
-      _lastModCount = _modCount;
-      _prevPageNumber = PageChannel.INVALID_PAGE_NUMBER;
-      _nextPageNumber = getInitialPage();
+      beforeFirst();
     }
 
-    protected abstract int getInitialPage();
-
-    protected abstract int getNextPage(int curPage);
-  }
-  
-  /**
-   * Utility class to iterate forward over the pages in the UsageMap.
-   */
-  public class ForwardPageIterator extends PageIterator
-  {
-    private ForwardPageIterator() {
-      reset();
-    }
-    
-    @Override
-    protected int getNextPage(int curPage) {
-      return UsageMap.this.getNextPageNumber(curPage);
+    /**
+     * After calling this method, {@link #getNextPage} will return the first
+     * page in the map
+     */
+    public void beforeFirst() {
+      reset(true);
     }
 
-    @Override
-    protected int getInitialPage() {
-      return UsageMap.this.getFirstPageNumber();
-    }
-  }
-  
-  /**
-   * Utility class to iterate backward over the pages in the UsageMap.
-   */
-  public class ReversePageIterator extends PageIterator
-  {
-    private ReversePageIterator() {
-      reset();
-    }
-    
-    @Override
-    protected int getNextPage(int curPage) {
-      return UsageMap.this.getPrevPageNumber(curPage);
+    /**
+     * After calling this method, {@link #getPreviousPage} will return the
+     * last page in the map
+     */
+    public void afterLast() {
+      reset(false);
     }
 
-    @Override
-    protected int getInitialPage() {
-      return UsageMap.this.getLastPageNumber();
+    /**
+     * Resets this page iterator for iterating the given direction.
+     */
+    protected void reset(boolean moveForward) {
+      _lastModCount = UsageMap.this._modCount;
+      getDirHandler(moveForward).reset();
     }
-  }
 
+    /**
+     * Handles moving the iterator in a given direction.  Separates iterator
+     * logic from value storage.
+     */
+    private abstract class DirHandler {
+      public abstract int getCurrentPageNumber();
+      public abstract void setCurrentPageNumber(int newPageNumber);
+      public abstract int getOtherPageNumber();
+      public abstract void setOtherPageNumber(int newPageNumber);
+      public abstract int getAnotherPageNumber(int curPageNumber);
+      public abstract void reset();
+    }
+        
+    /**
+     * Handles moving the iterator forward.
+     */
+    private final class ForwardDirHandler extends DirHandler {
+      public int getCurrentPageNumber() {
+        return _nextPageNumber;
+      }
+      public void setCurrentPageNumber(int newPageNumber) {
+        _nextPageNumber = newPageNumber;
+      }
+      public int getOtherPageNumber() {
+        return _prevPageNumber;
+      }
+      public void setOtherPageNumber(int newPageNumber) {
+        _prevPageNumber = newPageNumber;
+      }
+      public int getAnotherPageNumber(int curPageNumber) {
+        return UsageMap.this.getNextPageNumber(curPageNumber);
+      }
+      public void reset() {
+        _nextPageNumber = UsageMap.this.getFirstPageNumber();
+        _prevPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      }
+    }
+        
+    /**
+     * Handles moving the iterator backward.
+     */
+    private final class ReverseDirHandler extends DirHandler {
+      public int getCurrentPageNumber() {
+        return _prevPageNumber;
+      }
+      public void setCurrentPageNumber(int newPageNumber) {
+        _prevPageNumber = newPageNumber;
+      }
+      public int getOtherPageNumber() {
+        return _nextPageNumber;
+      }
+      public void setOtherPageNumber(int newPageNumber) {
+        _nextPageNumber = newPageNumber;
+      }
+      public int getAnotherPageNumber(int curPageNumber) {
+        return UsageMap.this.getPrevPageNumber(curPageNumber);
+      }
+      public void reset() {
+        _nextPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+        _prevPageNumber = UsageMap.this.getLastPageNumber();
+      }
+    }
+        
+  }  
   
 }

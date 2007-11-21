@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.healthmarketscience.jackcess.Table.RowState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -193,10 +194,6 @@ public class Table
 
   protected UsageMap.PageIterator getOwnedPagesIterator() {
     return _ownedPages.iterator();
-  }
-  
-  protected UsageMap.PageIterator getOwnedPagesReverseIterator() {
-    return _ownedPages.reverseIterator();
   }
   
   /**
@@ -997,10 +994,10 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    for(UsageMap.PageIterator revPageIter = _ownedPages.reverseIterator();
-        revPageIter.hasNextPage(); )
+    for(UsageMap.PageIterator revPageIter = _ownedPages.iteratorAtEnd();
+        revPageIter.hasPreviousPage(); )
     {
-      int tmpPageNumber = revPageIter.getNextPage();
+      int tmpPageNumber = revPageIter.getPreviousPage();
       getPageChannel().readPage(dataPage, tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
         // found last data page
@@ -1511,7 +1508,8 @@ public class Table
       checkForModification();
       _rowNumber = rowNumber;
       _finalRowNumber = rowNumber;
-      if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+      if((pageNumber == Cursor.FIRST_PAGE_NUMBER) ||
+         (pageNumber == Cursor.LAST_PAGE_NUMBER)) {
         return null;
       }
       _finalRowBuffer = _rowBufferH.setPage(getPageChannel(), pageNumber);

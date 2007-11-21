@@ -3,6 +3,7 @@
 package com.healthmarketscience.jackcess;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -80,13 +81,13 @@ public class CursorTest extends TestCase {
     List<Map<String, Object>> foundRows =
       new ArrayList<Map<String, Object>>();
     foundRows.add(cursor.getNextRow());
-    assertEquals(3, cursor.skipRows(3));
+    assertEquals(3, cursor.skipNextRows(3));
     while(cursor.moveToNextRow()) {
       foundRows.add(cursor.getCurrentRow());
     }
     assertEquals(expectedRows, foundRows);
 
-    assertEquals(0, cursor.skipRows(3));
+    assertEquals(0, cursor.skipNextRows(3));
 
     db.close();
   }
@@ -99,18 +100,37 @@ public class CursorTest extends TestCase {
 
     Cursor cursor = Cursor.createCursor(table);
 
-    assertTrue(cursor.moveToRow(table.getColumn("id"), 3));
+    assertTrue(cursor.findRow(table.getColumn("id"), 3));
     assertEquals(createExpectedRow("id", 3,
                                    "value", "data" + 3),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.moveToRow(createExpectedRow(
+    assertTrue(cursor.findRow(createExpectedRow(
                                     "id", 6,
                                     "value", "data" + 6)));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
     
+    db.close();
+  }
+
+  public void testReverse() throws Exception {
+    Database db = createTestTable();
+
+    Table table = db.getTable("test");
+    List<Map<String,Object>> expectedRows = createTestTableData();
+    Collections.reverse(expectedRows);
+
+    Cursor cursor = Cursor.createCursor(table);
+    cursor.afterLast();
+    List<Map<String, Object>> foundRows =
+      new ArrayList<Map<String, Object>>();
+    while(cursor.moveToPreviousRow()) {
+      foundRows.add(cursor.getCurrentRow());
+    }
+    assertEquals(expectedRows, foundRows);
+
     db.close();
   }
 

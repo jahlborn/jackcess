@@ -29,8 +29,8 @@ import static com.healthmarketscience.jackcess.RowId.INVALID_ROW_NUMBER;
  */
 public abstract class Cursor implements Iterable<Map<String, Object>>
 {
-  private static final int FIRST_PAGE_NUMBER = INVALID_PAGE_NUMBER;
-  private static final int LAST_PAGE_NUMBER = Integer.MAX_VALUE;
+  public static final int FIRST_PAGE_NUMBER = INVALID_PAGE_NUMBER;
+  public static final int LAST_PAGE_NUMBER = Integer.MAX_VALUE;
 
   public static final RowId FIRST_ROW_ID = new RowId(
       FIRST_PAGE_NUMBER, INVALID_ROW_NUMBER);
@@ -44,11 +44,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /** State used for reading the table rows */
   protected final RowState _rowState;
   /** the first (exclusive) row id for this iterator */
-  protected final RowId _firstRowId;
+  private final RowId _firstRowId;
   /** the last (exclusive) row id for this iterator */
-  protected final RowId _lastRowId;
+  private final RowId _lastRowId;
   /** the current row */
-  protected RowId _currentRowId;
+  private RowId _currentRowId;
   
 
   protected Cursor(Table table, RowId firstRowId, RowId lastRowId) {
@@ -78,7 +78,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return getTable().getPageChannel();
   }
 
-
+  public RowId getCurrentRowId() {
+    return _currentRowId;
+  }
+  
   /**
    * Returns the first row id (exclusive) as defined by this cursor.
    */
@@ -92,12 +95,54 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   protected RowId getLastRowId() {
     return _lastRowId;
   }
-  
+
+  /**
+   * Resets this cursor for forward iteration.  Calls {@link #beforeFirst}.
+   */
   public void reset() {
-    _currentRowId = getFirstRowId();
+    beforeFirst();
+  }  
+
+  /**
+   * Resets this cursor for forward iteration (sets cursor to before the first
+   * row).
+   */
+  public void beforeFirst() {
+    reset(true);
+  }
+  
+  /**
+   * Resets this cursor for reverse iteration (sets cursor to after the last
+   * row).
+   */
+  public void afterLast() {
+    reset(false);
+  }
+  
+  /**
+   * Resets this cursor for iterating the given direction.
+   */
+  protected void reset(boolean moveForward) {
+    _currentRowId = getBeginningRowId(moveForward);
     _rowState.reset();
   }  
 
+  protected final RowId getEndRowId(boolean moveForward) {
+    return (moveForward ? getLastRowId() : getFirstRowId());
+  }
+  
+  protected final RowId getBeginningRowId(boolean moveForward) {
+    return (moveForward ? getFirstRowId() : getLastRowId());
+  }
+
+  /**
+   * Returns {@code true} if the cursor is currently pointing at a valid row,
+   * {@code false} otherwise.
+   */
+  public boolean isCurrentRowValid() {
+    return _currentRowId.isValidRow();
+  }
+  
   /**
    * Calls <code>reset</code> on this table and returns a modifiable Iterator
    * which will iterate through all the rows of this table.  Use of the
@@ -145,11 +190,41 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Map<String, Object> getNextRow(Collection<String> columnNames) 
     throws IOException
   {
-    if(moveToNextRow()) {
+    return getNextRow(columnNames, true);
+  }
+
+  /**
+   * @return The previous row in this table (Column name -> Column value)
+   */
+  public Map<String, Object> getPreviousRow() throws IOException {
+    return getPreviousRow(null);
+  }
+
+  /**
+   * @param columnNames Only column names in this collection will be returned
+   * @return The previous row in this table (Column name -> Column value)
+   */
+  public Map<String, Object> getPreviousRow(Collection<String> columnNames) 
+    throws IOException
+  {
+    return getNextRow(columnNames, false);
+  }
+
+
+  /**
+   * @param columnNames Only column names in this collection will be returned
+   * @return The next row in this table (Column name -> Column value), where
+   *         "next" may be backwards if moveForward is {@code false}.
+   */
+  private Map<String, Object> getNextRow(Collection<String> columnNames,
+                                         boolean moveForward) 
+    throws IOException
+  {
+    if(moveToNextRow(moveForward)) {
       return getCurrentRow(columnNames);
     }
     return null;
-  }
+  }  
 
   /**
    * Moves to the next row as defined by this cursor.
@@ -159,14 +234,37 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean moveToNextRow()
     throws IOException
   {
-    if(_currentRowId.equals(getLastRowId())) {
+    return moveToNextRow(true);
+  }
+
+  /**
+   * Moves to the previous row as defined by this cursor.
+   * @return {@code true} if a valid previous row was found, {@code false}
+   *         otherwise
+   */
+  public boolean moveToPreviousRow()
+    throws IOException
+  {
+    return moveToNextRow(false);
+  }
+
+  /**
+   * Moves to the next row as defined by this cursor.
+   * @return {@code true} if a valid next row was found, {@code false}
+   *         otherwise
+   */
+  private boolean moveToNextRow(boolean moveForward)
+    throws IOException
+  {
+    RowId endRowId = getEndRowId(moveForward);
+    if(_currentRowId.equals(endRowId)) {
       // already at end
       return false;
     }
     
     _rowState.reset();
-    _currentRowId = findNextRowId(_currentRowId);
-    return(!_currentRowId.equals(getLastRowId()));
+    _currentRowId = findNextRowId(_currentRowId, moveForward, endRowId);
+    return(!_currentRowId.equals(endRowId));
   }
 
   /**
@@ -178,9 +276,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *         {@code false} if no row was found (and the cursor is now pointing
    *         past the end of the table)
    */
-  public boolean moveToRow(Column column, Object value)
+  public boolean findRow(Column column, Object value)
     throws IOException
   {
+    beforeFirst();
     while(moveToNextRow()) {
       if(ObjectUtils.equals(value, getCurrentRowSingleColumn(column))) {
         return true;
@@ -198,11 +297,13 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *         {@code false} if no row was found (and the cursor is now pointing
    *         past the end of the table)
    */
-  public boolean moveToRow(Map<String,Object> row)
+  public boolean findRow(Map<String,Object> row)
     throws IOException
   {
+    beforeFirst();
     while(moveToNextRow()) {
-      if(ObjectUtils.equals(row, getCurrentRow(row.keySet()))) {
+      Object value = getCurrentRow(row.keySet());
+      if(ObjectUtils.equals(row, value)) {
         return true;
       }
     }
@@ -213,11 +314,40 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Skips as many rows as possible up to the given number of rows.
    * @return the number of rows skipped.
    */
-  public int skipRows(int numRows)
+  public int skipNextRows(int numRows)
     throws IOException
   {
     int numSkippedRows = 0;
     while((numSkippedRows < numRows) && moveToNextRow()) {
+      ++numSkippedRows;
+    }
+    return numSkippedRows;
+  }
+
+  /**
+   * Skips as many rows as possible up to the given number of rows.
+   * @return the number of rows skipped.
+   */
+  public int skipPreviousRows(int numRows)
+    throws IOException
+  {
+    int numSkippedRows = 0;
+    while((numSkippedRows < numRows) && moveToNextRow()) {
+      ++numSkippedRows;
+    }
+    return numSkippedRows;
+  }
+
+  /**
+   * Skips as many rows as possible in the given direction up to the given
+   * number of rows.
+   * @return the number of rows skipped.
+   */
+  private int skipRows(int numRows, boolean moveForward)
+    throws IOException
+  {
+    int numSkippedRows = 0;
+    while((numSkippedRows < numRows) && moveToNextRow(moveForward)) {
       ++numSkippedRows;
     }
     return numSkippedRows;
@@ -284,11 +414,15 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
-   * Finds the next non-deleted row after the given row as defined by this
-   * cursor and returns the id of the row.  If there are no more rows, the
-   * returned rowId should equal the value returned by {@link #getLastRowId}.
+   * Finds the next non-deleted row after the given row (as defined by this
+   * cursor) and returns the id of the row, where "next" may be backwards if
+   * moveForward is {@code false}.  If there are no more rows, the returned
+   * rowId should equal the value returned by {@link #getLastRowId} if moving
+   * forward and {@link #getFirstRowId} if moving backward.
    */
-  protected abstract RowId findNextRowId(RowId currentRowId)
+  protected abstract RowId findNextRowId(RowId currentRowId,
+                                         boolean moveForward,
+                                         RowId endRowId)
     throws IOException;
   
   /**
@@ -335,6 +469,19 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     
   }
 
+  protected abstract class DirHandler
+  {
+    public abstract RowId getBeginningRowId();
+    public abstract RowId getEndRowId();
+  }
+
+  protected abstract class ForwardDirHandler
+  {
+    public abstract RowId getBeginningRowId();
+    public abstract RowId getEndRowId();
+  }
+
+  
   /**
    * Simple un-indexed cursor.
    */
@@ -349,9 +496,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     @Override
-    public void reset() {
-      _ownedPagesIterator.reset();
-      super.reset();
+    protected void reset(boolean moveForward) {
+      _ownedPagesIterator.reset(moveForward);
+      super.reset(moveForward);
     }
 
     /**
@@ -359,7 +506,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * @return a ByteBuffer narrowed to the next row, or null if none
      */
     @Override
-    protected RowId findNextRowId(RowId currentRowId)
+    protected RowId findNextRowId(RowId currentRowId, boolean moveForward,
+                                  RowId endRowId)
       throws IOException
     {
 
@@ -370,28 +518,35 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
       int rowsOnPage = getRowsOnCurrentDataPage(
           _rowState.setRow(currentPageNumber, currentRowNumber));
+      int inc = (moveForward ? 1 : -1);
     
       // loop until we find the next valid row or run out of pages
       while(true) {
 
-        currentRowNumber++;
-        if(currentRowNumber < rowsOnPage) {
+        currentRowNumber += inc;
+        if((currentRowNumber >= 0) && (currentRowNumber < rowsOnPage)) {
           _rowState.setRow(currentPageNumber, currentRowNumber);
         } else {
 
           // load next page
           currentRowNumber = INVALID_ROW_NUMBER;
-          currentPageNumber = _ownedPagesIterator.getNextPage();
-        
+          currentPageNumber =
+            (moveForward ?
+             _ownedPagesIterator.getNextPage() :
+             _ownedPagesIterator.getPreviousPage());
+
           ByteBuffer rowBuffer = _rowState.setRow(
               currentPageNumber, currentRowNumber);
           if(rowBuffer == null) {
             //No more owned pages.  No more rows.
-            return getLastRowId();
+            return endRowId;
           }          
 
           // update row count
           rowsOnPage = getRowsOnCurrentDataPage(rowBuffer);
+          if(!moveForward) {
+            currentRowNumber = rowsOnPage;
+          }
 
           // start again from the top
           continue;
@@ -403,6 +558,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         }
       }
     }
+    
     
   }
   
