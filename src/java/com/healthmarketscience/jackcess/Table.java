@@ -191,8 +191,8 @@ public class Table
     return new RowState(true);
   }
 
-  protected UsageMap.PageIterator getOwnedPagesIterator() {
-    return _ownedPages.iterator();
+  protected UsageMap.PageCursor getOwnedPagesCursor() {
+    return _ownedPages.cursor();
   }
   
   /**
@@ -266,21 +266,17 @@ public class Table
   public void deleteCurrentRow() throws IOException {
     _cursor.deleteCurrentRow();
   }
-  
+
   /**
    * Delete the row on which the given rowState is currently positioned.
    */
   public void deleteRow(RowState rowState, RowId rowId) throws IOException {
+    requireValidRowId(rowId);
+    
     // ensure that the relevant row state is up-to-date
     ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
 
-    if(!rowState.isValid()) {
-      throw new IllegalArgumentException(
-          "Given rowId is invalid for this table " + rowId);
-    }
-    if(rowState.isDeleted()) {
-      throw new IllegalStateException("Deleting already deleted row");
-    }
+    requireNonDeletedRow(rowState, rowId);
     
     // delete flag always gets set in the "header" row (even if data is on
     // overflow row)
@@ -333,18 +329,11 @@ public class Table
       throw new IllegalArgumentException(
           "Given column " + column + " is not from this table");
     }
+    requireValidRowId(rowId);
     
     // position at correct row
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
-    if(!rowState.isValid()) {
-      // this was a bogus rowId
-      throw new IllegalArgumentException(
-          "Given rowId is not valid for this table " + rowId);
-    }
-    if(rowState.isDeleted()) {
-      // note, row state will indicate that row was deleted
-      return null;
-    }
+    requireNonDeletedRow(rowState, rowId);
     
     Object value = getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column);
 
@@ -365,17 +354,11 @@ public class Table
       RowState rowState, RowId rowId, Collection<String> columnNames)
     throws IOException
   {
+    requireValidRowId(rowId);
+
     // position at correct row
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
-    if(!rowState.isValid()) {
-      // this was a bogus rowId
-      throw new IllegalArgumentException(
-          "Given rowId is not valid for this table " + rowId);
-    }
-    if(rowState.isDeleted()) {
-      // note, row state will indicate that row was deleted
-      return null;
-    }
+    requireNonDeletedRow(rowState, rowId);
 
     return getRow(rowState, rowBuffer, getRowNullMask(rowBuffer), _columns,
                   columnNames);
@@ -1061,10 +1044,12 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    for(UsageMap.PageIterator revPageIter = _ownedPages.iteratorAtEnd();
-        revPageIter.hasPreviousPage(); )
-    {
-      int tmpPageNumber = revPageIter.getPreviousPage();
+    UsageMap.PageCursor revPageCursor = _ownedPages.cursorAtEnd();
+    while(true) {
+      int tmpPageNumber = revPageCursor.getPreviousPage();
+      if(tmpPageNumber < 0) {
+        break;
+      }
       getPageChannel().readPage(dataPage, tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
         // found last data page
@@ -1384,7 +1369,7 @@ public class Table
    * Returns the row count for the current page.  If the page is invalid
    * ({@code null}) or the page is not a DATA page, 0 is returned.
    */
-  public static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
+  private static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
     throws IOException
   {
     int rowsOnPage = 0;
@@ -1395,16 +1380,25 @@ public class Table
   }
 
   /**
-   * Returns {@code true} if the row is marked as deleted, {@code false}
-   * otherwise.
+   * @throws IllegalStateException if the given rowId is invalid
    */
-  public static boolean isDeletedRow(ByteBuffer rowBuffer, int rowNum,
-                                     JetFormat format)
-    throws IOException
-  {
-    // note, we don't use findRowStart here cause we need the unmasked value
-    return isDeletedRow(
-        rowBuffer.getShort(Table.getRowStartOffset(rowNum, format)));
+  private static void requireValidRowId(RowId rowId) {
+    if(!rowId.isValid()) {
+      throw new IllegalArgumentException("Given rowId is invalid: " + rowId);
+    }
+  }
+  
+  /**
+   * @throws IllegalStateException if the given row is invalid or deleted
+   */
+  private static void requireNonDeletedRow(RowState rowState, RowId rowId) {
+    if(!rowState.isValid()) {
+      throw new IllegalArgumentException(
+          "Given rowId is invalid for this table: " + rowId);
+    }
+    if(rowState.isDeleted()) {
+      throw new IllegalStateException("Row is deleted: " + rowId);
+    }
   }
   
   public static boolean isDeletedRow(short rowStart) {
@@ -1513,8 +1507,12 @@ public class Table
       }
     }
 
+    public boolean isUpToDate() {
+      return(Table.this._modCount == _lastModCount);
+    }
+    
     private void checkForModification() {
-      if(Table.this._modCount != _lastModCount) {
+      if(!isUpToDate()) {
         reset();
         _headerRowBufferH.invalidate();
         _overflowRowBufferH.invalidate();
@@ -1641,7 +1639,7 @@ public class Table
     {
       // this should never see modifications because it only happens within
       // the positionAtRowData method
-      if(_lastModCount != Table.this._modCount) {
+      if(!isUpToDate()) {
         throw new IllegalStateException("Table modified while searching?");
       }
       if(_rowStatus != RowStatus.OVERFLOW) {

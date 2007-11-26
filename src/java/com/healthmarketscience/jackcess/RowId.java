@@ -54,7 +54,7 @@ public class RowId implements Comparable<RowId>
    * Returns {@code true} if this rowId potentially represents an actual row
    * of data, {@code false} otherwise.
    */
-  public boolean isValidRowId() {
+  public boolean isValid() {
     return((getRowNumber() >= 0) && (getPageNumber() >= 0));
   }
 

@@ -1260,7 +1260,11 @@ public class Index implements Comparable<Index> {
     private EntryIterator() {
       reset();
     }
-    
+
+    public boolean isUpToDate() {
+      return(Index.this._modCount == _lastModCount);
+    }
+        
     public void reset() {
       beforeFirst();
     }
@@ -1280,7 +1284,7 @@ public class Index implements Comparable<Index> {
     }
 
     private void resyncIndex() {
-      if(Index.this._modCount != _lastModCount) {
+      if(!isUpToDate()) {
         if(_nextEntryIdx == 0) {
           // we were at the beginning of the list
           _nextEntry = _entries.get(_nextEntryIdx);

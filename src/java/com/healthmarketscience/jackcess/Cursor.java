@@ -34,6 +34,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   private final RowId _firstRowId;
   /** the last (exclusive) row id for this iterator */
   private final RowId _lastRowId;
+  /** the previous row */
+  private RowId _previousRowId;
   /** the current row */
   private RowId _currentRowId;
   
@@ -44,6 +46,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     _firstRowId = firstRowId;
     _lastRowId = lastRowId;
     _currentRowId = firstRowId;
+    _previousRowId = firstRowId;
   }
 
   /**
@@ -159,16 +162,26 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Returns {@code true} if the cursor is currently positioned before the
    * first row, {@code false} otherwise.
    */
-  public boolean isBeforeFirst() {
-    return getFirstRowId().equals(_currentRowId);
+  public boolean isBeforeFirst()
+    throws IOException
+  {
+    if(getFirstRowId().equals(_currentRowId)) {
+      return !recheckPosition(false);
+    }
+    return false;
   }
   
   /**
    * Returns {@code true} if the cursor is currently positioned after the
    * last row, {@code false} otherwise.
    */
-  public boolean isAfterLast() {
-    return getLastRowId().equals(_currentRowId);
+  public boolean isAfterLast()
+    throws IOException
+  {
+    if(getLastRowId().equals(_currentRowId)) {
+      return !recheckPosition(true);
+    }
+    return false;
   }
 
   /**
@@ -179,6 +192,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     // we need to ensure that the "deleted" flag has been read for this row
+    // (or re-read if the table has been recently modified)
     Table.positionAtRowData(_rowState, _currentRowId);
     return _rowState.isDeleted();
   }
@@ -188,6 +202,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   protected void reset(boolean moveForward) {
     _currentRowId = getDirHandler(moveForward).getBeginningRowId();
+    _previousRowId = _currentRowId;
     _rowState.reset();
   }  
 
@@ -350,16 +365,58 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     RowId endRowId = getDirHandler(moveForward).getEndRowId();
     if(_currentRowId.equals(endRowId)) {
-      // already at end
-      return false;
+      // already at end, make sure nothing has changed
+      return recheckPosition(moveForward);
     }
-    
-    _rowState.reset();
-    _currentRowId = findAnotherRowId(_rowState, _currentRowId, moveForward);
-    Table.positionAtRowHeader(_rowState, _currentRowId);
-    return(!_currentRowId.equals(endRowId));
+
+    return moveToAnotherRowImpl(moveForward);
   }
 
+  /**
+   * Restores the current position to the previous position.
+   */
+  protected void restorePreviousPosition()
+    throws IOException
+  {
+    // essentially swap current and previous
+    RowId tmp = _previousRowId;
+    _previousRowId = _currentRowId;
+    _currentRowId = tmp;
+  }
+
+  /**
+   * Rechecks the current position if the underlying data structures have been
+   * modified.
+   * @return {@code true} if the cursor ended up in a new position,
+   *         {@code false} otherwise.
+   */
+  private boolean recheckPosition(boolean moveForward)
+    throws IOException
+  {
+    if(isUpToDate()) {
+      // nothing has changed
+      return false;
+    }
+
+    // move the cursor back to the previous position
+    restorePreviousPosition();
+    return moveToAnotherRowImpl(moveForward);
+  }
+
+  /**
+   * Does the grunt work of moving the cursor to another position in the given
+   * direction.
+   */
+  private boolean moveToAnotherRowImpl(boolean moveForward)
+    throws IOException
+  {
+    _rowState.reset();
+    _previousRowId = _currentRowId;
+    _currentRowId = findAnotherRowId(_rowState, _currentRowId, moveForward);
+    Table.positionAtRowHeader(_rowState, _currentRowId);
+    return(!_currentRowId.equals(getDirHandler(moveForward).getEndRowId()));
+  }
+  
   /**
    * Moves to the first row (as defined by the cursor) where the given column
    * has the given value.  This may be more efficient on some cursors than
@@ -471,12 +528,21 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Returns the given column from the current row.
    */
+  @SuppressWarnings("foo")
   public Object getCurrentRowValue(Column column)
     throws IOException
   {
     return _table.getRowValue(_rowState, _currentRowId, column);
   }
 
+  /**
+   * Returns {@code true} if this cursor is up-to-date with respect to the
+   * relevant table and related table objects, {@code false} otherwise.
+   */
+  protected boolean isUpToDate() {
+    return _rowState.isUpToDate();
+  }
+  
   /**
    * Finds the next non-deleted row after the given row (as defined by this
    * cursor) and returns the id of the row, where "next" may be backwards if
@@ -552,31 +618,44 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   private static class TableScanCursor extends Cursor
   {
-    /** ScanDirHandler for forward iteration */
+    /** ScanDirHandler for forward traversal */
     private final ScanDirHandler _forwardDirHandler =
       new ForwardScanDirHandler();
-    /** ScanDirHandler for backward iteration */
+    /** ScanDirHandler for backward traversal */
     private final ScanDirHandler _reverseDirHandler =
       new ReverseScanDirHandler();
-    /** Iterator over the pages that this table owns */
-    private final UsageMap.PageIterator _ownedPagesIterator;
+    /** Cursor over the pages that this table owns */
+    private final UsageMap.PageCursor _ownedPagesCursor;
     
     private TableScanCursor(Table table) {
       super(table, RowId.FIRST_ROW_ID, RowId.LAST_ROW_ID);
-      _ownedPagesIterator = table.getOwnedPagesIterator();
+      _ownedPagesCursor = table.getOwnedPagesCursor();
     }
 
     @Override
     protected ScanDirHandler getDirHandler(boolean moveForward) {
       return (moveForward ? _forwardDirHandler : _reverseDirHandler);
     }
+
+    @Override
+    protected boolean isUpToDate() {
+      return(super.isUpToDate() && _ownedPagesCursor.isUpToDate());
+    }
     
     @Override
     protected void reset(boolean moveForward) {
-      _ownedPagesIterator.reset(moveForward);
+      _ownedPagesCursor.reset(moveForward);
       super.reset(moveForward);
     }
 
+    @Override
+    protected void restorePreviousPosition()
+      throws IOException
+    {
+      super.restorePreviousPosition();
+      _ownedPagesCursor.setCurrentPage(getCurrentRowId().getPageNumber());
+    }
+    
     /**
      * Position the buffer at the next row in the table
      * @return a ByteBuffer narrowed to the next row, or null if none
@@ -591,17 +670,15 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       // figure out how many rows are left on this page so we can find the
       // next row
       Table.positionAtRowHeader(rowState, currentRowId);
-      int rowInc = handler.getRowIncrement();
       int currentRowNumber = currentRowId.getRowNumber();
     
       // loop until we find the next valid row or run out of pages
       while(true) {
 
-        currentRowNumber += rowInc;
+        currentRowNumber = handler.getAnotherRowNumber(currentRowNumber);
         currentRowId = new RowId(currentRowId.getPageNumber(),
                                  currentRowNumber);
-        ByteBuffer rowBuffer =
-          Table.positionAtRowHeader(rowState, currentRowId);
+        Table.positionAtRowHeader(rowState, currentRowId);
         
         if(!rowState.isValid()) {
           
@@ -633,7 +710,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * cursor logic from value storage.
      */
     private abstract class ScanDirHandler extends DirHandler {
-      public abstract int getRowIncrement();
+      public abstract int getAnotherRowNumber(int curRowNumber);
       public abstract int getAnotherPageNumber();
       public abstract int getInitialRowNumber(int rowsOnPage);
     }
@@ -642,18 +719,23 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * Handles moving the table scan cursor forward.
      */
     private final class ForwardScanDirHandler extends ScanDirHandler {
+      @Override
       public RowId getBeginningRowId() {
         return getFirstRowId();
       }
+      @Override
       public RowId getEndRowId() {
         return getLastRowId();
       }
-      public int getRowIncrement() {
-        return 1;
+      @Override
+      public int getAnotherRowNumber(int curRowNumber) {
+        return curRowNumber + 1;
       }
+      @Override
       public int getAnotherPageNumber() {
-        return _ownedPagesIterator.getNextPage();
+        return _ownedPagesCursor.getNextPage();
       }
+      @Override
       public int getInitialRowNumber(int rowsOnPage) {
         return -1;
       }
@@ -663,18 +745,23 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * Handles moving the table scan cursor backward.
      */
     private final class ReverseScanDirHandler extends ScanDirHandler {
+      @Override
       public RowId getBeginningRowId() {
         return getLastRowId();
       }
+      @Override
       public RowId getEndRowId() {
         return getFirstRowId();
       }
-      public int getRowIncrement() {
-        return -1;
+      @Override
+      public int getAnotherRowNumber(int curRowNumber) {
+        return curRowNumber - 1;
       }
+      @Override
       public int getAnotherPageNumber() {
-        return _ownedPagesIterator.getPreviousPage();
+        return _ownedPagesCursor.getPreviousPage();
       }
+      @Override
       public int getInitialRowNumber(int rowsOnPage) {
         return rowsOnPage;
       }

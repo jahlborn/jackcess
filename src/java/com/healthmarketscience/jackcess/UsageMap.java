@@ -41,7 +41,6 @@ import org.apache.commons.logging.LogFactory;
  */
 public class UsageMap
 {
-  
   private static final Log LOG = LogFactory.getLog(UsageMap.class);
   
   /** Inline map type */
@@ -49,6 +48,9 @@ public class UsageMap
   /** Reference map type, for maps that are too large to fit inline */
   public static final byte MAP_TYPE_REFERENCE = 0x1;
 
+  /** bit index value for an invalid page number */
+  private static final int INVALID_BIT_INDEX = -1;
+  
   /** owning database */
   private final Database _database;
   /** Page number of the map table declaration */
@@ -65,9 +67,9 @@ public class UsageMap
   private BitSet _pageNumbers = new BitSet();
   /** Buffer that contains the usage map table declaration page */
   private final ByteBuffer _tableBuffer;
-  /** modification count on the usage map, used to keep the iterators in
+  /** modification count on the usage map, used to keep the cursors in
       sync */
-  private int _modCount = 0;
+  private int _modCount;
   /** the current handler implementation for reading/writing the specific
       usage map type.  note, this may change over time. */
   private Handler _handler;
@@ -142,14 +144,14 @@ public class UsageMap
     }
   }
   
-  public PageIterator iterator() {
-    return new PageIterator();
+  public PageCursor cursor() {
+    return new PageCursor();
   }
 
-  public PageIterator iteratorAtEnd() {
-    PageIterator iterator = new PageIterator();
-    iterator.afterLast();
-    return iterator;
+  public PageCursor cursorAtEnd() {
+    PageCursor cursor = new PageCursor();
+    cursor.afterLast();
+    return cursor;
   }
   
   protected short getRowStart() {
@@ -230,8 +232,8 @@ public class UsageMap
   }
 
   protected int pageNumberToBitIndex(int pageNumber) {
-    return((pageNumber != PageChannel.INVALID_PAGE_NUMBER) ?
-           (pageNumber - _startPage) : -1);
+    return((pageNumber >= 0) ? (pageNumber - _startPage) :
+           INVALID_BIT_INDEX);
   }
 
   protected void clearTableAndPages()
@@ -372,11 +374,13 @@ public class UsageMap
   
   public String toString() {
     StringBuilder builder = new StringBuilder("page numbers: [");
-    for(PageIterator iter = iterator(); iter.hasNextPage(); ) {
-      builder.append(iter.getNextPage());
-      if(iter.hasNextPage()) {
-        builder.append(", ");
+    PageCursor pCursor = cursor();
+    while(true) {
+      int nextPage = pCursor.getNextPage();
+      if(nextPage < 0) {
+        break;
       }
+      builder.append(nextPage).append(", ");
     }
     builder.append("]");
     return builder.toString();
@@ -693,29 +697,27 @@ public class UsageMap
         (pageIndex * 4);
     }
   }
-  
-  
+
   /**
-   * Utility class to iterate over the pages in the UsageMap.  Note, since the
-   * iterators hold on to page numbers, they should stay valid even as the
-   * usage map handlers shift around the bits.
+   * Utility class to traverse over the pages in the UsageMap.  Remains valid
+   * in the face of usage map modifications.
    */
-  public class PageIterator
+  public class PageCursor
   {
-    /** handler for moving the page iterator forward */
+    /** handler for moving the page cursor forward */
     private final DirHandler _forwardDirHandler = new ForwardDirHandler();
-    /** handler for moving the page iterator backward */
+    /** handler for moving the page cursor backward */
     private final DirHandler _reverseDirHandler = new ReverseDirHandler();
-    /** the next used page number */
-    private int _nextPageNumber;
+    /** the current used page number */
+    private int _curPageNumber;
     /** the previous used page number */
     private int _prevPageNumber;
     /** the last read modification count on the UsageMap.  we track this so
-        that the iterator can detect updates to the usage map while iterating
+        that the cursor can detect updates to the usage map while traversing
         and act accordingly */
     private int _lastModCount;
 
-    private PageIterator() {
+    private PageCursor() {
       reset();
     }
 
@@ -725,58 +727,47 @@ public class UsageMap
     private DirHandler getDirHandler(boolean moveForward) {
       return (moveForward ? _forwardDirHandler : _reverseDirHandler);
     }
-    
-    /**
-     * @return {@code true} if there is another valid page after the current
-     *         page, {@code false} otherwise.
-     */
-    public final boolean hasNextPage() {
-      return hasAnotherPage(true);
-    }      
-    
-    /**
-     * @return {@code true} if there is another valid page before the current
-     *         page, {@code false} otherwise.
-     */
-    public final boolean hasPreviousPage() {
-      return hasAnotherPage(false);
-    }      
 
-    private boolean hasAnotherPage(boolean moveForward) {
-      DirHandler handler = getDirHandler(moveForward);
-      int curPageNumber = handler.getCurrentPageNumber();
-      int otherPageNumber = handler.getOtherPageNumber();
-      
-      if((curPageNumber == PageChannel.INVALID_PAGE_NUMBER) &&
-         (_lastModCount != UsageMap.this._modCount)) {
-        // recheck the last page, in case more showed up
-        if(otherPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
-          // we were at the beginning
-          reset(moveForward);
-        } else {
-          // we were at the end
-          _lastModCount = UsageMap.this._modCount;
-          handler.setCurrentPageNumber(
-              handler.getAnotherPageNumber(otherPageNumber));
-        }
-        curPageNumber = handler.getCurrentPageNumber();
+    /**
+     * Returns {@code true} if this cursor is up-to-date with respect to its
+     * usage map.
+     */
+    public boolean isUpToDate() {
+      return(UsageMap.this._modCount == _lastModCount);
+    }    
+
+    /**
+     * Returns the current page number.
+     */
+    public int getCurrentPage() {
+      return _curPageNumber;
+    }
+
+    /**
+     * Resets the cursor to the given page number.
+     */
+    public void setCurrentPage(int curPageNumber) {
+      if(curPageNumber < UsageMap.this.getFirstPageNumber()) {
+        curPageNumber = RowId.FIRST_PAGE_NUMBER;
+      } else if(curPageNumber > UsageMap.this.getLastPageNumber()) {
+        curPageNumber = RowId.LAST_PAGE_NUMBER;
       }
-      return(curPageNumber != PageChannel.INVALID_PAGE_NUMBER);
-    }      
+      restorePosition(curPageNumber);
+    }
     
     /**
      * @return valid page number if there was another page to read,
-     *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
+     *         {@link RowId#LAST_PAGE_NUMBER} otherwise
      */
-    public final int getNextPage() {
+    public int getNextPage() {
       return getAnotherPage(true);
     }
 
     /**
      * @return valid page number if there was another page to read,
-     *         {@link PageChannel#INVALID_PAGE_NUMBER} otherwise
+     *         {@link RowId#FIRST_PAGE_NUMBER} otherwise
      */
-    public final int getPreviousPage() {
+    public int getPreviousPage() {
       return getAnotherPage(false);
     }
 
@@ -784,18 +775,23 @@ public class UsageMap
      * Gets another page in the given direction, returning the current page.
      */
     private int getAnotherPage(boolean moveForward) {
-      if (hasAnotherPage(moveForward)) {
-        _lastModCount = UsageMap.this._modCount;
-        DirHandler handler = getDirHandler(moveForward);
-        int anotherPage = handler.getCurrentPageNumber();
-        handler.setOtherPageNumber(anotherPage);
-        handler.setCurrentPageNumber(
-            handler.getAnotherPageNumber(anotherPage));
-        return anotherPage;
+      DirHandler handler = getDirHandler(moveForward);
+      if(_curPageNumber == handler.getEndPageNumber()) {
+        if(!isUpToDate()) {
+          restorePosition(_prevPageNumber);
+          // drop through and retry moving to another page
+        } else {
+          // at end, no more
+          return _curPageNumber;
+        }
       }
-      return PageChannel.INVALID_PAGE_NUMBER;
+
+      _prevPageNumber = _curPageNumber;
+      _curPageNumber = handler.getAnotherPageNumber(_curPageNumber);
+      _lastModCount = UsageMap.this._modCount;
+      return _curPageNumber;
     }
-    
+
     /**
      * After calling this method, getNextPage will return the first page in
      * the map
@@ -821,73 +817,76 @@ public class UsageMap
     }
 
     /**
-     * Resets this page iterator for iterating the given direction.
+     * Resets this page cursor for traversing the given direction.
      */
     protected void reset(boolean moveForward) {
       _lastModCount = UsageMap.this._modCount;
-      getDirHandler(moveForward).reset();
+      _curPageNumber = getDirHandler(moveForward).getBeginningPageNumber();
+      _prevPageNumber = _curPageNumber;
     }
 
     /**
-     * Handles moving the iterator in a given direction.  Separates iterator
+     * Restores a previous position for the cursor.
+     */
+    private void restorePosition(int curPageNumber) {
+      _prevPageNumber = _curPageNumber;
+      _curPageNumber = curPageNumber;
+      _lastModCount = UsageMap.this._modCount;
+    }
+    
+    /**
+     * Handles moving the cursor in a given direction.  Separates cursor
      * logic from value storage.
      */
     private abstract class DirHandler {
-      public abstract int getCurrentPageNumber();
-      public abstract void setCurrentPageNumber(int newPageNumber);
-      public abstract int getOtherPageNumber();
-      public abstract void setOtherPageNumber(int newPageNumber);
       public abstract int getAnotherPageNumber(int curPageNumber);
-      public abstract void reset();
+      public abstract int getBeginningPageNumber();
+      public abstract int getEndPageNumber();
     }
         
     /**
-     * Handles moving the iterator forward.
+     * Handles moving the cursor forward.
      */
     private final class ForwardDirHandler extends DirHandler {
-      public int getCurrentPageNumber() {
-        return _nextPageNumber;
-      }
-      public void setCurrentPageNumber(int newPageNumber) {
-        _nextPageNumber = newPageNumber;
-      }
-      public int getOtherPageNumber() {
-        return _prevPageNumber;
-      }
-      public void setOtherPageNumber(int newPageNumber) {
-        _prevPageNumber = newPageNumber;
-      }
+      @Override
       public int getAnotherPageNumber(int curPageNumber) {
-        return UsageMap.this.getNextPageNumber(curPageNumber);
+        if(curPageNumber == RowId.FIRST_PAGE_NUMBER) {
+          return UsageMap.this.getFirstPageNumber();
+        }
+        int anotherPageNumber = UsageMap.this.getNextPageNumber(curPageNumber);
+        return ((anotherPageNumber >= 0) ? anotherPageNumber :
+                RowId.LAST_PAGE_NUMBER);
       }
-      public void reset() {
-        _nextPageNumber = UsageMap.this.getFirstPageNumber();
-        _prevPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      @Override
+      public int getBeginningPageNumber() {
+        return RowId.FIRST_PAGE_NUMBER;
+      }
+      @Override
+      public int getEndPageNumber() {
+        return RowId.LAST_PAGE_NUMBER;
       }
     }
         
     /**
-     * Handles moving the iterator backward.
+     * Handles moving the cursor backward.
      */
     private final class ReverseDirHandler extends DirHandler {
-      public int getCurrentPageNumber() {
-        return _prevPageNumber;
-      }
-      public void setCurrentPageNumber(int newPageNumber) {
-        _prevPageNumber = newPageNumber;
-      }
-      public int getOtherPageNumber() {
-        return _nextPageNumber;
-      }
-      public void setOtherPageNumber(int newPageNumber) {
-        _nextPageNumber = newPageNumber;
-      }
+      @Override
       public int getAnotherPageNumber(int curPageNumber) {
-        return UsageMap.this.getPrevPageNumber(curPageNumber);
+        if(curPageNumber == RowId.LAST_PAGE_NUMBER) {
+          return UsageMap.this.getLastPageNumber();
+        }
+        int anotherPageNumber = UsageMap.this.getPrevPageNumber(curPageNumber);
+        return ((anotherPageNumber >= 0) ? anotherPageNumber :
+                RowId.FIRST_PAGE_NUMBER);
       }
-      public void reset() {
-        _nextPageNumber = PageChannel.INVALID_PAGE_NUMBER;
-        _prevPageNumber = UsageMap.this.getLastPageNumber();
+      @Override
+      public int getBeginningPageNumber() {
+        return RowId.LAST_PAGE_NUMBER;
+      }
+      @Override
+      public int getEndPageNumber() {
+        return RowId.FIRST_PAGE_NUMBER;
       }
     }
         

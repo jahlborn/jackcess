@@ -155,5 +155,77 @@ public class CursorTest extends TestCase {
     db.close();
   }
 
+  public void testLiveAddition() throws Exception {
+    Database db = createTestTable();
+
+    Table table = db.getTable("test");
+
+    Cursor cursor1 = Cursor.createCursor(table);
+    Cursor cursor2 = Cursor.createCursor(table);
+    cursor1.skipNextRows(11);
+    cursor2.skipNextRows(11);
+
+    assertTrue(cursor1.isAfterLast());
+    assertTrue(cursor2.isAfterLast());
+
+    int newRowNum = 11;
+    table.addRow(newRowNum, "data" + newRowNum);
+    Map<String,Object> expectedRow = 
+      createExpectedRow("id", newRowNum, "value", "data" + newRowNum);
+
+    assertFalse(cursor1.isAfterLast());
+    assertFalse(cursor2.isAfterLast());
+
+    assertEquals(expectedRow, cursor1.getCurrentRow());
+    assertEquals(expectedRow, cursor2.getCurrentRow());
+    assertFalse(cursor1.moveToNextRow());
+    assertFalse(cursor2.moveToNextRow());
+    assertTrue(cursor1.isAfterLast());
+    assertTrue(cursor2.isAfterLast());
+    
+    db.close();
+  }
+
+  public void testLiveDeletion() throws Exception {
+    Database db = createTestTable();
+
+    Table table = db.getTable("test");
+
+    Cursor cursor1 = Cursor.createCursor(table);
+    Cursor cursor2 = Cursor.createCursor(table);
+    Cursor cursor3 = Cursor.createCursor(table);
+    Cursor cursor4 = Cursor.createCursor(table);
+    cursor1.skipNextRows(2);
+    cursor2.skipNextRows(3);
+    cursor3.skipNextRows(3);
+    cursor4.skipNextRows(4);
+
+    Map<String,Object> expectedPrevRow =
+      createExpectedRow("id", 1, "value", "data" + 1);
+    Map<String,Object> expectedDeletedRow =
+      createExpectedRow("id", 2, "value", "data" + 2);
+    Map<String,Object> expectedNextRow =
+      createExpectedRow("id", 3, "value", "data" + 3);
+    
+    assertEquals(expectedDeletedRow, cursor2.getCurrentRow());
+    assertEquals(expectedDeletedRow, cursor3.getCurrentRow());
+    
+    assertFalse(cursor2.isCurrentRowDeleted());
+    assertFalse(cursor3.isCurrentRowDeleted());
+
+    cursor2.deleteCurrentRow();
+
+    assertTrue(cursor2.isCurrentRowDeleted());
+    assertTrue(cursor3.isCurrentRowDeleted());
+
+    assertEquals(expectedNextRow, cursor1.getNextRow());
+    assertEquals(expectedNextRow, cursor2.getNextRow());
+    assertEquals(expectedNextRow, cursor3.getNextRow());
+    
+    assertEquals(expectedPrevRow, cursor3.getPreviousRow());
+    
+    db.close();
+  }
+
   
 }
