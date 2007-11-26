@@ -12,9 +12,6 @@ import java.util.NoSuchElementException;
 import com.healthmarketscience.jackcess.Table.RowState;
 import org.apache.commons.lang.ObjectUtils;
 
-import static com.healthmarketscience.jackcess.PageChannel.INVALID_PAGE_NUMBER;
-import static com.healthmarketscience.jackcess.RowId.INVALID_ROW_NUMBER;
-
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
@@ -28,21 +25,11 @@ import static com.healthmarketscience.jackcess.RowId.INVALID_ROW_NUMBER;
  * @author james
  */
 public abstract class Cursor implements Iterable<Map<String, Object>>
-{
-  public static final int FIRST_PAGE_NUMBER = INVALID_PAGE_NUMBER;
-  public static final int LAST_PAGE_NUMBER = Integer.MAX_VALUE;
-
-  public static final RowId FIRST_ROW_ID = new RowId(
-      FIRST_PAGE_NUMBER, INVALID_ROW_NUMBER);
-
-  public static final RowId LAST_ROW_ID = new RowId(
-      LAST_PAGE_NUMBER, INVALID_ROW_NUMBER);
-
-  
+{  
   /** owning table */
-  protected final Table _table;
+  private final Table _table;
   /** State used for reading the table rows */
-  protected final RowState _rowState;
+  private final RowState _rowState;
   /** the first (exclusive) row id for this iterator */
   private final RowId _firstRowId;
   /** the last (exclusive) row id for this iterator */
@@ -167,6 +154,34 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public void afterLast() {
     reset(false);
   }
+
+  /**
+   * Returns {@code true} if the cursor is currently positioned before the
+   * first row, {@code false} otherwise.
+   */
+  public boolean isBeforeFirst() {
+    return getFirstRowId().equals(_currentRowId);
+  }
+  
+  /**
+   * Returns {@code true} if the cursor is currently positioned after the
+   * last row, {@code false} otherwise.
+   */
+  public boolean isAfterLast() {
+    return getLastRowId().equals(_currentRowId);
+  }
+
+  /**
+   * Returns {@code true} if the row at which the cursor is currently
+   * positioned is deleted, {@code false} otherwise (including invalid rows).
+   */
+  public boolean isCurrentRowDeleted()
+    throws IOException
+  {
+    // we need to ensure that the "deleted" flag has been read for this row
+    Table.positionAtRowData(_rowState, _currentRowId);
+    return _rowState.isDeleted();
+  }
   
   /**
    * Resets this cursor for iterating the given direction.
@@ -177,17 +192,40 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }  
 
   /**
-   * Returns {@code true} if the cursor is currently pointing at a valid row,
-   * {@code false} otherwise.
+   * Returns an Iterable whose iterator() method calls <code>afterLast</code>
+   * on this cursor and returns an unmodifiable Iterator which will iterate
+   * through all the rows of this table in reverse order.  Use of the Iterator
+   * follows the same restrictions as a call to <code>getPreviousRow</code>.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
    */
-  public boolean isCurrentRowValid() {
-    return _currentRowId.isValidRow();
+  public Iterable<Map<String, Object>> reverseIterable() {
+    return reverseIterable(null);
   }
   
   /**
-   * Calls <code>reset</code> on this table and returns a modifiable Iterator
-   * which will iterate through all the rows of this table.  Use of the
-   * Iterator follows the same restrictions as a call to
+   * Returns an Iterable whose iterator() method calls <code>afterLast</code>
+   * on this table and returns an unmodifiable Iterator which will iterate
+   * through all the rows of this table in reverse order, returning only the
+   * given columns.  Use of the Iterator follows the same restrictions as a
+   * call to <code>getPreviousRow</code>.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> reverseIterable(
+      final Collection<String> columnNames)
+  {
+    return new Iterable<Map<String, Object>>() {
+      public Iterator<Map<String, Object>> iterator() {
+        return new RowIterator(columnNames, false);
+      }
+    };
+  }
+  
+  /**
+   * Calls <code>beforeFirst</code> on this cursor and returns an unmodifiable
+   * Iterator which will iterate through all the rows of this table.  Use of
+   * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
@@ -198,16 +236,16 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
-   * Calls <code>reset</code> on this table and returns a modifiable Iterator
-   * which will iterate through all the rows of this table, returning only the
-   * given columns.  Use of the Iterator follows the same restrictions as a
-   * call to <code>getNextRow</code>.
+   * Calls <code>beforeFirst</code> on this table and returns an unmodifiable
+   * Iterator which will iterate through all the rows of this table, returning
+   * only the given columns.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
   {
-    return new RowIterator(columnNames);
+    return new RowIterator(columnNames, true);
   }
 
   /**
@@ -317,7 +355,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     _rowState.reset();
-    _currentRowId = findAnotherRowId(_currentRowId, moveForward);
+    _currentRowId = findAnotherRowId(_rowState, _currentRowId, moveForward);
+    Table.positionAtRowHeader(_rowState, _currentRowId);
     return(!_currentRowId.equals(endRowId));
   }
 
@@ -337,6 +376,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean findRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
+    // FIXME, add save restore?
+
     beforeFirst();
     while(moveToNextRow()) {
       if(ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern))) {
@@ -360,6 +401,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean findRow(Map<String,Object> rowPattern)
     throws IOException
   {
+    // FIXME, add save restore?
+
     beforeFirst();
     Collection<String> columnNames = rowPattern.keySet();
     while(moveToNextRow()) {
@@ -422,7 +465,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Map<String, Object> getCurrentRow(Collection<String> columnNames)
     throws IOException
   {
-    return _table.getRow(_rowState, columnNames);
+    return _table.getRow(_rowState, _currentRowId, columnNames);
   }
 
   /**
@@ -431,38 +474,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Object getCurrentRowValue(Column column)
     throws IOException
   {
-    return _table.getRowValue(_rowState, column);
-  }
-  
-  /**
-   * Returns {@code true} if the row is marked as deleted, {@code false}
-   * otherwise.  This method will not modify the rowState (it only looks at
-   * the "main" row, which is where the deleted flag is located).
-   */
-  protected final boolean isCurrentRowDeleted()
-    throws IOException
-  {
-    ByteBuffer rowBuffer = _rowState.getFinalPage();
-    int rowNum = _rowState.getFinalRowNumber();
-    
-    // note, we don't use findRowStart here cause we need the unmasked value
-    return Table.isDeletedRow(
-        rowBuffer.getShort(Table.getRowStartOffset(rowNum, getFormat())));
-  }
-
-  /**
-   * Returns the row count for the current page.  If the page number is
-   * invalid or the page is not a DATA page, 0 is returned.
-   */
-  protected final int getRowsOnCurrentDataPage(ByteBuffer rowBuffer)
-    throws IOException
-  {
-    int rowsOnPage = 0;
-    if((rowBuffer != null) && (rowBuffer.get(0) == PageTypes.DATA)) {
-      rowsOnPage = 
-        rowBuffer.getShort(getFormat().OFFSET_NUM_ROWS_ON_DATA_PAGE);
-    }
-    return rowsOnPage;
+    return _table.getRowValue(_rowState, _currentRowId, column);
   }
 
   /**
@@ -472,7 +484,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * rowId should equal the value returned by {@link #getLastRowId} if moving
    * forward and {@link #getFirstRowId} if moving backward.
    */
-  protected abstract RowId findAnotherRowId(RowId currentRowId,
+  protected abstract RowId findAnotherRowId(RowState rowState,
+                                            RowId currentRowId,
                                             boolean moveForward)
     throws IOException;
 
@@ -486,15 +499,17 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   private final class RowIterator implements Iterator<Map<String, Object>>
   {
-    private Collection<String> _columnNames;
+    private final Collection<String> _columnNames;
+    private final boolean _moveForward;
     private boolean _hasNext = false;
     
-    private RowIterator(Collection<String> columnNames)
+    private RowIterator(Collection<String> columnNames, boolean moveForward)
     {
       try {
-        reset();
         _columnNames = columnNames;
-        _hasNext = moveToNextRow();
+        _moveForward = moveForward;
+        reset(_moveForward);
+        _hasNext = moveToAnotherRow(_moveForward);
       } catch(IOException e) {
         throw new IllegalStateException(e);
       }
@@ -503,11 +518,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     public boolean hasNext() { return _hasNext; }
 
     public void remove() {
-      try {
-        deleteCurrentRow();
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
-      }        
+      throw new UnsupportedOperationException();
     }
     
     public Map<String, Object> next() {
@@ -516,7 +527,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       }
       try {
         Map<String, Object> rtn = getCurrentRow(_columnNames);
-        _hasNext = moveToNextRow();
+        _hasNext = moveToAnotherRow(_moveForward);
         return rtn;
       } catch(IOException e) {
         throw new IllegalStateException(e);
@@ -551,7 +562,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     private final UsageMap.PageIterator _ownedPagesIterator;
     
     private TableScanCursor(Table table) {
-      super(table, FIRST_ROW_ID, LAST_ROW_ID);
+      super(table, RowId.FIRST_ROW_ID, RowId.LAST_ROW_ID);
       _ownedPagesIterator = table.getOwnedPagesIterator();
     }
 
@@ -571,51 +582,49 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * @return a ByteBuffer narrowed to the next row, or null if none
      */
     @Override
-    protected RowId findAnotherRowId(RowId currentRowId, boolean moveForward)
+    protected RowId findAnotherRowId(RowState rowState, RowId currentRowId,
+                                     boolean moveForward)
       throws IOException
     {
       ScanDirHandler handler = getDirHandler(moveForward);
       
-      // prepare to read next row
-      _rowState.reset();
-      int currentPageNumber = currentRowId.getPageNumber();
-      int currentRowNumber = currentRowId.getRowNumber();
-
-      int rowsOnPage = getRowsOnCurrentDataPage(
-          _rowState.setRow(currentPageNumber, currentRowNumber));
+      // figure out how many rows are left on this page so we can find the
+      // next row
+      Table.positionAtRowHeader(rowState, currentRowId);
       int rowInc = handler.getRowIncrement();
+      int currentRowNumber = currentRowId.getRowNumber();
     
       // loop until we find the next valid row or run out of pages
       while(true) {
 
         currentRowNumber += rowInc;
-        if((currentRowNumber >= 0) && (currentRowNumber < rowsOnPage)) {
-          _rowState.setRow(currentPageNumber, currentRowNumber);
-        } else {
-
+        currentRowId = new RowId(currentRowId.getPageNumber(),
+                                 currentRowNumber);
+        ByteBuffer rowBuffer =
+          Table.positionAtRowHeader(rowState, currentRowId);
+        
+        if(!rowState.isValid()) {
+          
           // load next page
-          currentRowNumber = INVALID_ROW_NUMBER;
-          currentPageNumber = handler.getAnotherPageNumber();
-
-          ByteBuffer rowBuffer = _rowState.setRow(
-              currentPageNumber, currentRowNumber);
-          if(rowBuffer == null) {
+          currentRowId = new RowId(handler.getAnotherPageNumber(),
+                                   RowId.INVALID_ROW_NUMBER);
+          Table.positionAtRowHeader(rowState, currentRowId);
+          
+          if(!rowState.isHeaderPageNumberValid()) {
             //No more owned pages.  No more rows.
             return handler.getEndRowId();
-          }          
+          }
 
           // update row count and initial row number
-          rowsOnPage = getRowsOnCurrentDataPage(rowBuffer);
-          currentRowNumber = handler.getInitialRowNumber(rowsOnPage);
+          currentRowNumber = handler.getInitialRowNumber(
+              rowState.getRowsOnHeaderPage());
 
-          // start again from the top
-          continue;
+        } else if(!rowState.isDeleted()) {
+          
+          // we found a valid, non-deleted row, return it
+          return currentRowId;
         }
-
-        if(!isCurrentRowDeleted()) {
-          // we found a non-deleted row, return it
-          return new RowId(currentPageNumber, currentRowNumber);
-        }
+        
       }
     }
 
@@ -646,7 +655,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         return _ownedPagesIterator.getNextPage();
       }
       public int getInitialRowNumber(int rowsOnPage) {
-        return INVALID_ROW_NUMBER;
+        return -1;
       }
     }
     

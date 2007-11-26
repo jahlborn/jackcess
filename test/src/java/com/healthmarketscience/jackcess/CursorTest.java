@@ -3,9 +3,11 @@
 package com.healthmarketscience.jackcess;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import junit.framework.TestCase;
 
@@ -51,6 +53,21 @@ public class CursorTest extends TestCase {
     }
 
     return db;
+  }
+
+  public void testRowId() throws Exception {
+    // test special cases
+    RowId rowId1 = new RowId(1, 2);
+    RowId rowId2 = new RowId(1, 3);
+    RowId rowId3 = new RowId(2, 1);
+
+    List<RowId> sortedRowIds = new ArrayList<RowId>(new TreeSet<RowId>(
+        Arrays.asList(rowId1, rowId2, rowId3, RowId.FIRST_ROW_ID,
+                      RowId.LAST_ROW_ID)));
+
+    assertEquals(Arrays.asList(RowId.FIRST_ROW_ID, rowId1, rowId2, rowId3,
+                               RowId.LAST_ROW_ID),
+                 sortedRowIds);
   }
   
   public void testSimple() throws Exception {
@@ -128,11 +145,10 @@ public class CursorTest extends TestCase {
     Collections.reverse(expectedRows);
 
     Cursor cursor = Cursor.createCursor(table);
-    cursor.afterLast();
     List<Map<String, Object>> foundRows =
       new ArrayList<Map<String, Object>>();
-    while(cursor.moveToPreviousRow()) {
-      foundRows.add(cursor.getCurrentRow());
+    for(Map<String, Object> row : cursor.reverseIterable()) {
+      foundRows.add(row);
     }
     assertEquals(expectedRows, foundRows);
 

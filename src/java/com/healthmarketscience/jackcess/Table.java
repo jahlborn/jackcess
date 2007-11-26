@@ -38,7 +38,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import com.healthmarketscience.jackcess.Table.RowState;
 import org.apache.commons.logging.Log;
@@ -252,7 +251,7 @@ public class Table
   int getIndexSlotCount() {
     return _indexSlotCount;
   }
-  
+
   /**
    * After calling this method, getNextRow will return the first row in the
    * table
@@ -269,29 +268,37 @@ public class Table
   }
   
   /**
-   * Delete the current row (retrieved by a call to {@link #getNextRow}).
+   * Delete the row on which the given rowState is currently positioned.
    */
   public void deleteRow(RowState rowState, RowId rowId) throws IOException {
-    if (!rowId.isValidRow()) {
-      throw new IllegalStateException("Given row is not valid: " + rowId);
-    }
+    // ensure that the relevant row state is up-to-date
+    ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
 
-    // see if row was already deleted
+    if(!rowState.isValid()) {
+      throw new IllegalArgumentException(
+          "Given rowId is invalid for this table " + rowId);
+    }
     if(rowState.isDeleted()) {
       throw new IllegalStateException("Deleting already deleted row");
     }
     
-    // delete flag always gets set in the "root" page (even if overflow row)
-    ByteBuffer rowBuffer = rowState.getPage();
-    int rowIndex = getRowStartOffset(rowId.getRowNumber(), getFormat());
+    // delete flag always gets set in the "header" row (even if data is on
+    // overflow row)
+    int pageNumber = rowState.getHeaderRowId().getPageNumber();
+    int rowNumber = rowState.getHeaderRowId().getRowNumber();
+
+    // use any read rowValues to help update the indexes
+    Object[] rowValues = (!_indexes.isEmpty() ?
+                          rowState.getRowValues() : null);
+    
+    int rowIndex = getRowStartOffset(rowNumber, getFormat());
     rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
                                       | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
-    writeDataPage(rowBuffer, rowId.getPageNumber());
-    rowState.setDeleted(true);
+    writeDataPage(rowBuffer, pageNumber);
 
     // update the indexes
     for(Index index : _indexes) {
-      index.deleteRow(rowState.getRowValues(), rowId);
+      index.deleteRow(rowValues, rowId);
     }
     
     // make sure table def gets updated
@@ -319,7 +326,7 @@ public class Table
   /**
    * Reads a single column from the given row.
    */
-  public Object getRowValue(RowState rowState, Column column)
+  public Object getRowValue(RowState rowState, RowId rowId, Column column)
     throws IOException
   {
     if(this != column.getTable()) {
@@ -328,14 +335,26 @@ public class Table
     }
     
     // position at correct row
-    ByteBuffer rowBuffer = positionAtRowData(rowState, getPageChannel(),
-                                             getFormat());
-    if(rowBuffer == null) {
+    ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
+    if(!rowState.isValid()) {
+      // this was a bogus rowId
+      throw new IllegalArgumentException(
+          "Given rowId is not valid for this table " + rowId);
+    }
+    if(rowState.isDeleted()) {
       // note, row state will indicate that row was deleted
       return null;
     }
     
-    return getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column);
+    Object value = getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column);
+
+    // cache the row values in order to be able to update the index on row
+    // deletion.  note, most of the returned values are immutable, except
+    // for binary data (returned as byte[]), but binary data shouldn't be
+    // indexed anyway.
+    rowState.setRowValue(column.getColumnNumber(), value);
+
+    return value;
   }
 
   /**
@@ -343,13 +362,17 @@ public class Table
    * @param columnNames Only column names in this collection will be returned
    */
   public Map<String, Object> getRow(
-      RowState rowState, Collection<String> columnNames)
+      RowState rowState, RowId rowId, Collection<String> columnNames)
     throws IOException
   {
     // position at correct row
-    ByteBuffer rowBuffer = positionAtRowData(rowState, getPageChannel(),
-                                             getFormat());
-    if(rowBuffer == null) {
+    ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
+    if(!rowState.isValid()) {
+      // this was a bogus rowId
+      throw new IllegalArgumentException(
+          "Given rowId is not valid for this table " + rowId);
+    }
+    if(rowState.isDeleted()) {
       // note, row state will indicate that row was deleted
       return null;
     }
@@ -360,6 +383,7 @@ public class Table
 
   /**
    * Reads the row data from the given row buffer.  Leaves limit unchanged.
+   * Saves parsed row values to the given rowState.
    */
   private static Map<String, Object> getRow(
       RowState rowState,
@@ -371,23 +395,21 @@ public class Table
   {
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(
         columns.size());
-    Object[] rowValues = rowState.getRowValues();
     for(Column column : columns) {
-      Object value = null;
+
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
-        value = getRowColumn(rowBuffer, nullMask, column);
+        Object value = getRowColumn(rowBuffer, nullMask, column);
         rtn.put(column.getName(), value);
-      }
 
-      // cache the row values in order to be able to update the index on row
-      // deletion.  note, most of the returned values are immutable, except
-      // for binary data (returned as byte[]), but binary data shouldn't be
-      // indexed anyway.
-      rowValues[column.getColumnNumber()] = value;
+        // cache the row values in order to be able to update the index on row
+        // deletion.  note, most of the returned values are immutable, except
+        // for binary data (returned as byte[]), but binary data shouldn't be
+        // indexed anyway.
+        rowState.setRowValue(column.getColumnNumber(), value);
+      }
     }
     return rtn;
-    
   }
   
   /**
@@ -460,78 +482,122 @@ public class Table
 
     return nullMask;
   }
-                                        
+
+  /**
+   * Sets a new buffer to the correct row header page using the given rowState
+   * according to the given rowId.  Deleted state is
+   * determined, but overflow row pointers are not followed.
+   * 
+   * @return a ByteBuffer of the relevant page, or null if row was invalid
+   */
+  public static ByteBuffer positionAtRowHeader(RowState rowState,
+                                               RowId rowId)
+    throws IOException
+  {
+    ByteBuffer rowBuffer = rowState.setHeaderRow(rowId);
+
+    if(rowState.isAtHeaderRow()) {
+      // this task has already been accomplished
+      return rowBuffer;
+    }
+    
+    if(!rowState.isValid()) {
+      // this was an invalid page/row
+      rowState.setStatus(RowStateStatus.AT_HEADER);
+      return null;
+    }
+
+    // note, we don't use findRowStart here cause we need the unmasked value
+    short rowStart = rowBuffer.getShort(
+        getRowStartOffset(rowId.getRowNumber(),
+                          rowState.getTable().getFormat()));
+
+    // check the deleted, overflow flags for the row (the "real" flags are
+    // always set on the header row)
+    RowStatus rowStatus = RowStatus.NORMAL;
+    if(isDeletedRow(rowStart)) {
+      rowStatus = RowStatus.DELETED;
+    } else if(isOverflowRow(rowStart)) {
+      rowStatus = RowStatus.OVERFLOW;
+    }
+
+    rowState.setRowStatus(rowStatus);
+    rowState.setStatus(RowStateStatus.AT_HEADER);
+    return rowBuffer;
+  }
+  
   /**
    * Sets the position and limit in a new buffer using the given rowState
    * according to the given row number and row end, following overflow row
    * pointers as necessary.
    * 
    * @return a ByteBuffer narrowed to the actual row data, or null if row was
-   *         deleted
+   *         invalid or deleted
    */
-  private static ByteBuffer positionAtRowData(RowState rowState, 
-                                              PageChannel pageChannel,
-                                              JetFormat format)
+  public static ByteBuffer positionAtRowData(RowState rowState,
+                                             RowId rowId)
     throws IOException
   {
-    while(true) {
-      ByteBuffer rowBuffer = rowState.getFinalPage();
-      int rowNum = rowState.getFinalRowNumber();
+    positionAtRowHeader(rowState, rowId);
+    if(!rowState.isValid() || rowState.isDeleted()) {
+      // row is invalid or deleted
+      rowState.setStatus(RowStateStatus.AT_FINAL);
+      return null;
+    }
+
+    ByteBuffer rowBuffer = rowState.getFinalPage();
+    int rowNum = rowState.getFinalRowId().getRowNumber();
+    JetFormat format = rowState.getTable().getFormat();
     
+    if(rowState.isAtFinalRow()) {
+      // we've already found the final row data
+      return PageChannel.narrowBuffer(
+          rowBuffer,
+          findRowStart(rowBuffer, rowNum, format),
+          findRowEnd(rowBuffer, rowNum, format));
+    }
+    
+    while(true) {
+      
       // note, we don't use findRowStart here cause we need the unmasked value
       short rowStart = rowBuffer.getShort(getRowStartOffset(rowNum, format));
       short rowEnd = findRowEnd(rowBuffer, rowNum, format);
 
-      // note, if we are reading from an overflow page, the row will be marked
-      // as deleted on that page, so ignore the deletedRow flag on overflow
-      // pages
-      boolean deletedRow =
-        (((rowStart & DELETED_ROW_MASK) != 0) && !rowState.isOverflow());
-      boolean overflowRow = ((rowStart & OVERFLOW_ROW_MASK) != 0);
-
-      if(deletedRow ^ overflowRow) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Row flags: deletedRow " + deletedRow + ", overflowRow " +
-                    overflowRow);
-        }
-      }
+      // note, at this point we know the row is not deleted, so ignore any
+      // subsequent deleted flags (as overflow rows are always marked deleted
+      // anyway)
+      boolean overflowRow = isOverflowRow(rowStart);
 
       // now, strip flags from rowStart offset
       rowStart = (short)(rowStart & OFFSET_MASK);
 
-      if (deletedRow) {
-      
-        // Deleted row.  Skip.
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Skipping deleted row");
-        }
-        rowState.setDeleted(true);
-        return null;
-      
-      } else if (overflowRow) {
+      if (overflowRow) {
 
         if((rowEnd - rowStart) < 4) {
           throw new IOException("invalid overflow row info");
         }
       
-        // Overflow page.  the "row" data in the current page points to another
-        // page/row
+        // Overflow page.  the "row" data in the current page points to
+        // another page/row
         int overflowRowNum = rowBuffer.get(rowStart);
         int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer, rowStart + 1);
-        rowState.setOverflowRow(overflowPageNum, overflowRowNum);
+        rowBuffer = rowState.setOverflowRow(
+            new RowId(overflowPageNum, overflowRowNum));
+        rowNum = overflowRowNum;
       
       } else {
 
+        rowState.setStatus(RowStateStatus.AT_FINAL);
         return PageChannel.narrowBuffer(rowBuffer, rowStart, rowEnd);
       }
-    }    
+    }
   }
 
   
   /**
-   * Calls <code>reset</code> on this table and returns a modifiable Iterator
-   * which will iterate through all the rows of this table.  Use of the
-   * Iterator follows the same restrictions as a call to
+   * Calls <code>reset</code> on this table and returns an unmodifiable
+   * Iterator which will iterate through all the rows of this table.  Use of
+   * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
@@ -542,15 +608,16 @@ public class Table
   }
   
   /**
-   * Calls <code>reset</code> on this table and returns a modifiable Iterator
-   * which will iterate through all the rows of this table, returning only the
-   * given columns.  Use of the Iterator follows the same restrictions as a
-   * call to <code>getNextRow</code>.
+   * Calls <code>reset</code> on this table and returns an unmodifiable
+   * Iterator which will iterate through all the rows of this table, returning
+   * only the given columns.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
   {
+    reset();
     return _cursor.iterator(columnNames);
   }
 
@@ -1313,6 +1380,33 @@ public class Table
     return rowCount;
   }
 
+  /**
+   * Returns the row count for the current page.  If the page is invalid
+   * ({@code null}) or the page is not a DATA page, 0 is returned.
+   */
+  public static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
+    throws IOException
+  {
+    int rowsOnPage = 0;
+    if((rowBuffer != null) && (rowBuffer.get(0) == PageTypes.DATA)) {
+      rowsOnPage = rowBuffer.getShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE);
+    }
+    return rowsOnPage;
+  }
+
+  /**
+   * Returns {@code true} if the row is marked as deleted, {@code false}
+   * otherwise.
+   */
+  public static boolean isDeletedRow(ByteBuffer rowBuffer, int rowNum,
+                                     JetFormat format)
+    throws IOException
+  {
+    // note, we don't use findRowStart here cause we need the unmasked value
+    return isDeletedRow(
+        rowBuffer.getShort(Table.getRowStartOffset(rowNum, format)));
+  }
+  
   public static boolean isDeletedRow(short rowStart) {
     return ((rowStart & DELETED_ROW_MASK) != 0);
   }
@@ -1355,175 +1449,207 @@ public class Table
   {
     return rowSize + format.SIZE_ROW_LOCATION;
   }
-  
-  /**
-   * Row iterator for this table, supports modification.
-   */
-  private final class RowIterator implements Iterator<Map<String, Object>>
-  {
-    private Collection<String> _columnNames;
-    private Map<String, Object> _next;
-    
-    private RowIterator(Collection<String> columnNames)
-    {
-      try {
-        reset();
-        _columnNames = columnNames;
-        _next = getNextRow(_columnNames);
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
-      }
-    }
 
-    public boolean hasNext() { return _next != null; }
-
-    public void remove() {
-      try {
-        deleteCurrentRow();
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
-      }        
-    }
-    
-    public Map<String, Object> next() {
-      if(!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      try {
-        Map<String, Object> rtn = _next;
-        _next = getNextRow(_columnNames);
-        return rtn;
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
-      }
-    }
-    
+  /** various statuses for the row data */
+  private enum RowStatus {
+    INIT, INVALID_PAGE, INVALID_ROW, VALID, DELETED, NORMAL, OVERFLOW;
   }
 
+  /** the phases the RowState moves through as the data is parsed */
+  private enum RowStateStatus {
+    INIT, AT_HEADER, AT_FINAL;
+  }
+  
   /**
    * Maintains the state of reading a row of data.
    */
   public class RowState
   {
-    /** Buffer used for reading the row data pages */
-    private TempPageHolder _rowBufferH;
-    /** the row number on the main page */
-    private int _rowNumber;
-    /** true if the current row is an overflow row */
-    private boolean _overflow;
-    /** true if the current row is a deleted row */
-    private boolean _deleted;
+    /** Buffer used for reading the header row data pages */
+    private final TempPageHolder _headerRowBufferH;
+    /** the header rowId */
+    private RowId _headerRowId = RowId.FIRST_ROW_ID;
+    /** the number of rows on the header page */
+    private int _rowsOnHeaderPage;
+    /** the rowState status */
+    private RowStateStatus _status = RowStateStatus.INIT;
+    /** the row status */
+    private RowStatus _rowStatus = RowStatus.INIT;
     /** buffer used for reading overflow pages */
-    private TempPageHolder _overflowRowBufferH =
+    private final TempPageHolder _overflowRowBufferH =
       TempPageHolder.newHolder(false);
     /** the row buffer which contains the final data (after following any
         overflow pointers) */
     private ByteBuffer _finalRowBuffer;
-    /** the row number which contains the final data (after following any
-        overflow pointers) */
-    private int _finalRowNumber;
+    /** the rowId which contains the final data (after following any overflow
+        pointers) */
+    private RowId _finalRowId = null;
+    /** true if the row values array has data */
+    private boolean _haveRowValues;
     /** values read from the last row */
-    private Object[] _rowValues;
+    private final Object[] _rowValues;
     /** last modification count seen on the table */
     private int _lastModCount;
     
     private RowState(boolean hardRowBuffer) {
-      _rowBufferH = TempPageHolder.newHolder(hardRowBuffer);
+      _headerRowBufferH = TempPageHolder.newHolder(hardRowBuffer);
       _rowValues = new Object[Table.this._maxColumnCount];
       _lastModCount = Table.this._modCount;
     }
+
+    public Table getTable() {
+      return Table.this;
+    }
     
     public void reset() {
-      resetDuringSearch();
-      Arrays.fill(_rowValues, null);
-    }
-
-    public void resetDuringSearch() {
-      _finalRowNumber = RowId.INVALID_ROW_NUMBER;
+      _finalRowId = null;
       _finalRowBuffer = null;
-      _deleted = false;
-      _overflow = false;
+      _rowsOnHeaderPage = 0;
+      _status = RowStateStatus.INIT;
+      _rowStatus = RowStatus.INIT;
+      if(_haveRowValues) {
+        Arrays.fill(_rowValues, null);
+        _haveRowValues = false;
+      }
     }
 
     private void checkForModification() {
       if(Table.this._modCount != _lastModCount) {
-        _rowBufferH.invalidate();
+        reset();
+        _headerRowBufferH.invalidate();
         _overflowRowBufferH.invalidate();
         _lastModCount = Table.this._modCount;
       }
     }
     
-    public ByteBuffer getFinalPage()
+    private ByteBuffer getFinalPage()
       throws IOException
     {
       if(_finalRowBuffer == null) {
         // (re)load current page
-        _finalRowBuffer = getPage();
+        _finalRowBuffer = getHeaderPage();
       }
       return _finalRowBuffer;
     }
 
-    public int getFinalRowNumber() {
-      if(_finalRowNumber == RowId.INVALID_ROW_NUMBER) {
-        _finalRowNumber = _rowNumber;
+    public RowId getFinalRowId() {
+      if(_finalRowId == null) {
+        _finalRowId = getHeaderRowId();
       }
-      return _finalRowNumber;
-    }
-    
-    public void setDeleted(boolean deleted) {
-      _deleted = deleted;
+      return _finalRowId;
     }
 
+    private void setRowStatus(RowStatus rowStatus) {
+      _rowStatus = rowStatus;
+    }
+
+    public boolean isValid() {
+      return(_rowStatus.ordinal() >= RowStatus.VALID.ordinal());
+    }
+    
     public boolean isDeleted() {
-      return _deleted;
+      return(_rowStatus == RowStatus.DELETED);
     }
     
     public boolean isOverflow() {
-      return _overflow;
+      return(_rowStatus == RowStatus.OVERFLOW);
     }
 
+    public boolean isHeaderPageNumberValid() {
+      return(_rowStatus.ordinal() > RowStatus.INVALID_PAGE.ordinal());
+    }
+    
+    public boolean isHeaderRowNumberValid() {
+      return(_rowStatus.ordinal() > RowStatus.INVALID_ROW.ordinal());
+    }
+    
+    private void setStatus(RowStateStatus status) {
+      _status = status;
+    }
+    
+    public boolean isAtHeaderRow() {
+      return(_status.ordinal() >= RowStateStatus.AT_HEADER.ordinal());
+    }
+    
+    public boolean isAtFinalRow() {
+      return(_status.ordinal() >= RowStateStatus.AT_FINAL.ordinal());
+    }
+
+    private void setRowValue(int idx, Object value) {
+      _haveRowValues = true;
+      _rowValues[idx] = value;
+    }
+    
     public Object[] getRowValues() {
-      return _rowValues;
+      Object[] copy = new Object[_rowValues.length];
+      System.arraycopy(_rowValues, 0, copy, 0, _rowValues.length);
+      return copy;
     }
     
-    public void possiblyInvalidate(int modifiedPageNumber,
-                                   ByteBuffer modifiedBuffer) {
-      _rowBufferH.possiblyInvalidate(modifiedPageNumber,
-                                     modifiedBuffer);
-      _overflowRowBufferH.possiblyInvalidate(modifiedPageNumber,
-                                             modifiedBuffer);
-    }
-    
-    public ByteBuffer getPage()
-      throws IOException
-    {
-      checkForModification();
-      return _rowBufferH.getPage(getPageChannel());
+    public RowId getHeaderRowId() {
+      return _headerRowId;
     }
 
-    public ByteBuffer setRow(int pageNumber, int rowNumber)
+    public int getRowsOnHeaderPage() {
+      return _rowsOnHeaderPage;
+    }
+    
+    private ByteBuffer getHeaderPage()
       throws IOException
     {
-      resetDuringSearch();
       checkForModification();
-      _rowNumber = rowNumber;
-      _finalRowNumber = rowNumber;
-      if((pageNumber == Cursor.FIRST_PAGE_NUMBER) ||
-         (pageNumber == Cursor.LAST_PAGE_NUMBER)) {
+      return _headerRowBufferH.getPage(getPageChannel());
+    }
+
+    private ByteBuffer setHeaderRow(RowId rowId)
+      throws IOException
+    {
+      checkForModification();
+
+      // don't do any work if we are already positioned correctly
+      if(isAtHeaderRow() && (getHeaderRowId().equals(rowId))) {
+        return(isValid() ? getHeaderPage() : null);
+      }
+
+      // rejigger everything
+      reset();
+      _headerRowId = rowId;
+      _finalRowId = rowId;
+
+      int pageNumber = rowId.getPageNumber();
+      int rowNumber = rowId.getRowNumber();
+      if((pageNumber < 0) || !_ownedPages.containsPageNumber(pageNumber)) {
+        setRowStatus(RowStatus.INVALID_PAGE);
         return null;
       }
-      _finalRowBuffer = _rowBufferH.setPage(getPageChannel(), pageNumber);
+      
+      _finalRowBuffer = _headerRowBufferH.setPage(getPageChannel(),
+                                                  pageNumber);
+      _rowsOnHeaderPage = getRowsOnDataPage(_finalRowBuffer, getFormat());
+      
+      if((rowNumber < 0) || (rowNumber >= _rowsOnHeaderPage)) {
+        setRowStatus(RowStatus.INVALID_ROW);
+        return null;
+      }
+
+      setRowStatus(RowStatus.VALID);
       return _finalRowBuffer;
     }
 
-    public ByteBuffer setOverflowRow(int pageNumber, int rowNumber)
+    private ByteBuffer setOverflowRow(RowId rowId)
       throws IOException
     {
-      checkForModification();
-      _overflow = true;
-      _finalRowNumber = rowNumber;
+      // this should never see modifications because it only happens within
+      // the positionAtRowData method
+      if(_lastModCount != Table.this._modCount) {
+        throw new IllegalStateException("Table modified while searching?");
+      }
+      if(_rowStatus != RowStatus.OVERFLOW) {
+        throw new IllegalStateException("Row is not an overflow row?");
+      }
+      _finalRowId = rowId;
       _finalRowBuffer = _overflowRowBufferH.setPage(getPageChannel(),
-                                                    pageNumber);
+                                                    rowId.getPageNumber());
       return _finalRowBuffer;
     }
 

@@ -193,9 +193,11 @@ public class Index implements Comparable<Index> {
       NOTE: this does not actually seem to be the row count, unclear what the
       value means*/
   private int _rowCount;
-  private SortedSet<Entry> _entries;
+  /** sorted collection of index entries.  this is kept in a list instead of a
+      SortedSet because the SortedSet has lame traversal utilities */
+  private final List<Entry> _entries = new ArrayList<Entry>();
   /** Map of columns to flags */
-  private Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
+  private final Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
   /** 0-based index number */
   private int _indexNumber;
   /** Index name */
@@ -205,6 +207,8 @@ public class Index implements Comparable<Index> {
   /** <code>true</code> if the index entries have been initialized,
       <code>false</code> otherwise */
   private boolean _initialized;
+  /** modification count for the table, keeps iterators up-to-date */
+  private int _modCount;
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
@@ -378,7 +382,8 @@ public class Index implements Comparable<Index> {
   private void readIndexEntries()
     throws IOException
   {
-    _entries = new TreeSet<Entry>();
+    // use sorted set initially to do the bulk of the sorting
+    SortedSet<Entry> tmpEntries = new TreeSet<Entry>();
     
     ByteBuffer indexPage = getPageChannel().createPageBuffer();
 
@@ -403,7 +408,7 @@ public class Index implements Comparable<Index> {
     // read all leaf pages
     while(true) {
 
-      leafPageNumber = readLeafPage(indexPage);
+      leafPageNumber = readLeafPage(indexPage, tmpEntries);
       if(leafPageNumber != 0) {
         // FIXME we can't modify this index at this point in time
         _readOnly = true;
@@ -416,6 +421,9 @@ public class Index implements Comparable<Index> {
         break;
       }
     }
+
+    // dump all the entries (sorted) into the actual _entries list
+    _entries.addAll(tmpEntries);
   }
 
   /**
@@ -442,7 +450,7 @@ public class Index implements Comparable<Index> {
    * Reads an index leaf page.
    * @return the next leaf page number, 0 if none
    */
-  private int readLeafPage(ByteBuffer leafPage)
+  private int readLeafPage(ByteBuffer leafPage, Collection<Entry> entries)
     throws IOException
   {
     if(leafPage.get(0) != INDEX_LEAF_PAGE_TYPE) {
@@ -454,7 +462,7 @@ public class Index implements Comparable<Index> {
     // BIG_ENDIAN format
 
     int nextLeafPage = leafPage.getInt(getFormat().OFFSET_NEXT_INDEX_LEAF_PAGE);
-    readIndexPage(leafPage, true, _entries, null);
+    readIndexPage(leafPage, true, entries, null);
 
     return nextLeafPage;
   }
@@ -525,8 +533,14 @@ public class Index implements Comparable<Index> {
     // make sure we've parsed the entries
     initialize();
 
-    ++_rowCount;
-    _entries.add(new Entry(row, rowId));
+    Entry newEntry = new Entry(row, rowId);
+    if(addEntry(newEntry)) {
+      ++_rowCount;
+      ++_modCount;
+    } else {
+      LOG.warn("Added duplicate index entry " + newEntry + " for row: " +
+               Arrays.asList(row));
+    }
   }
 
   /**
@@ -544,26 +558,75 @@ public class Index implements Comparable<Index> {
     // make sure we've parsed the entries
     initialize();
 
-    --_rowCount;
     Entry oldEntry = new Entry(row, rowId);
-    if(!_entries.remove(oldEntry)) {
+    if(removeEntry(oldEntry)) {
+      --_rowCount;
+      ++_modCount;
+    } else {
+      LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
+               Arrays.asList(row));
+    }
+  }
+
+  /**
+   * Finds the index of given entry in the _entries list.
+   * @return the index if found, (-<insertion_point> - 1) if not found
+   */
+  private int findEntry(Entry entry) {
+    return Collections.binarySearch(_entries, entry);
+  }
+
+  /**
+   * Returns the valid insertion point for an index indicating a missing
+   * entry.
+   */
+  private static int missingIndexToInsertionPoint(int idx) {
+    return -(idx + 1);
+  }
+  
+  /**
+   * Adds an entry to the _entries list, maintaining the order.
+   */
+  private boolean addEntry(Entry newEntry) {
+    int idx = findEntry(newEntry);
+    if(idx < 0) {
+      // this is a new entry
+      idx = missingIndexToInsertionPoint(idx);
+      _entries.add(idx, newEntry);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Removes an entry from the _entries list, maintaining the order.  Will
+   * search by RowId if entry is not found in case a partial entry was
+   * provided.
+   */
+  private boolean removeEntry(Entry oldEntry)
+  {
+    int idx = findEntry(oldEntry);
+    boolean removed = false;
+    if(idx < 0) {
       // the caller may have only read some of the row data, if this is the
       // case, just search for the page/row numbers
-      boolean removed = false;
       for(Iterator<Entry> iter = _entries.iterator(); iter.hasNext(); ) {
         Entry entry = iter.next();
-        if(entry.getRowId().equals(rowId)) {
+        if(entry.getRowId().equals(oldEntry.getRowId())) {
           iter.remove();
           removed = true;
           break;
         }
       }
-      if(!removed) {
-        LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
-                 Arrays.asList(row));
-      }
+    } else {
+      // found it!
+      _entries.remove(idx);
+      removed = true;
     }
+    
+    return removed;
   }
+  
 
   @Override
   public String toString() {
@@ -728,7 +791,7 @@ public class Index implements Comparable<Index> {
      * @param page Page number on which the row is stored
      * @param rowNumber Row number at which the row is stored
      */
-    public Entry(Object[] values, RowId rowId) throws IOException
+    protected Entry(Object[] values, RowId rowId) throws IOException
     {
       _rowId = rowId;
       for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
@@ -742,7 +805,7 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing entry in from a buffer
      */
-    public Entry(ByteBuffer buffer, byte[] valuePrefix)
+    protected Entry(ByteBuffer buffer, byte[] valuePrefix)
       throws IOException
     {
       for(Map.Entry<Column, Byte> entry : _columns.entrySet()) {
@@ -898,12 +961,12 @@ public class Index implements Comparable<Index> {
      * A single fixed column value within an index Entry; encapsulates column
      * definition and column value.
      */
-    private class FixedEntryColumn extends EntryColumn
+    private final class FixedEntryColumn extends EntryColumn
     {
       /** Column value */
       private Comparable _value;
     
-      public FixedEntryColumn(Column col) throws IOException {
+      private FixedEntryColumn(Column col) throws IOException {
         super(col);
         if(isTextualColumn(col)) {
           throw new IOException("must be fixed column");
@@ -1004,14 +1067,14 @@ public class Index implements Comparable<Index> {
      * A single textual column value within an index Entry; encapsulates
      * column definition and column value.
      */
-    private class TextEntryColumn extends EntryColumn
+    private final class TextEntryColumn extends EntryColumn
     {
       /** the string byte codes */
       private byte[] _valueBytes;
       /** extra column bytes */
       private byte[] _extraBytes;
     
-      public TextEntryColumn(Column col) throws IOException {
+      private TextEntryColumn(Column col) throws IOException {
         super(col);
         if(!isTextualColumn(col)) {
           throw new IOException("must be textual column");
@@ -1154,7 +1217,7 @@ public class Index implements Comparable<Index> {
   /**
    * A single node entry in an index (points to a sub-page in the index)
    */
-  private class NodeEntry extends Entry {
+  private final class NodeEntry extends Entry {
 
     /** index page number of the page to which this node entry refers */
     private int _subPageNumber;
@@ -1163,7 +1226,7 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing node entry in from a buffer
      */
-    public NodeEntry(ByteBuffer buffer, byte[] valuePrefix)
+    private NodeEntry(ByteBuffer buffer, byte[] valuePrefix)
       throws IOException
     {
       super(buffer, valuePrefix);
@@ -1183,4 +1246,126 @@ public class Index implements Comparable<Index> {
         
   }
 
+  /**
+   * Utility class to iterate over the entries in the Index.  Note, since the
+   * iterators hold on to entries, they should stay valid even as the
+   * entries are updated.
+   */
+  public class EntryIterator
+  {
+    private Entry _nextEntry;
+    private int _nextEntryIdx;
+    private int _lastModCount;
+
+    private EntryIterator() {
+      reset();
+    }
+    
+    public void reset() {
+      beforeFirst();
+    }
+
+    public void beforeFirst() {
+      reset(true);
+    }
+
+    public void afterLast() {
+      reset(false);
+    }
+
+    protected void reset(boolean moveForward) {
+      _nextEntry = null;
+      _nextEntryIdx = (moveForward ? 0 : _entries.size());
+      _lastModCount = Index.this._modCount;
+    }
+
+    private void resyncIndex() {
+      if(Index.this._modCount != _lastModCount) {
+        if(_nextEntryIdx == 0) {
+          // we were at the beginning of the list
+          _nextEntry = _entries.get(_nextEntryIdx);
+        } else if(_nextEntry == null) {
+          // we were at the end of the list
+          _nextEntryIdx = _entries.size();
+        } else {
+          // we were somewhere in the middle of the list
+          int idx = findEntry(_nextEntry);
+          if(idx >= 0) {
+            _nextEntryIdx = idx;
+          } else {
+            // current entry was deleted
+            _nextEntryIdx = missingIndexToInsertionPoint(idx);
+            _nextEntry = _entries.get(_nextEntryIdx);
+          }
+        }
+        _lastModCount = Index.this._modCount;
+      }
+    }
+
+    /**
+     * Repositions the iterator so that the next row will be the first entry
+     * >= the given row.
+     */
+    public void beforeEntry(Object[] row)
+      throws IOException
+    {
+      moveToEntry(new Entry(row, RowId.FIRST_ROW_ID));
+    }
+    
+    /**
+     * Repositions the iterator so that the previous row will be the first
+     * entry <= the given row.
+     */
+    public void afterEntry(Object[] row)
+      throws IOException
+    {
+      moveToEntry(new Entry(row, RowId.LAST_ROW_ID));
+    }
+
+    /**
+     * Repositions the iterator relative to a given entry.  The given entry
+     * must have a fake rowId.
+     */
+    private void moveToEntry(Entry entry)
+      throws IOException
+    {
+      // note, we will never get a real index back from findIndex because we
+      // are using a fake rowId which will never match a real row
+      _nextEntryIdx = missingIndexToInsertionPoint(findEntry(entry));
+      _nextEntry = ((_nextEntryIdx < _entries.size()) ?
+                    _entries.get(_nextEntryIdx) : null);
+      _lastModCount = Index.this._modCount;
+    }
+    
+    public boolean hasNextRowId() {
+      resyncIndex();
+      return(_nextEntryIdx < _entries.size());
+    }
+
+    public boolean hasPreviousRowId() {
+      resyncIndex();
+      return(_nextEntryIdx > 0);
+    }
+    
+    public RowId getNextRowId() {
+      if(hasNextRowId()) {
+        RowId nextRowId = _nextEntry.getRowId();
+        ++_nextEntryIdx;
+        _nextEntry = ((_nextEntryIdx < _entries.size()) ?
+                      _entries.get(_nextEntryIdx) : null);
+        return nextRowId;
+      }
+      return RowId.LAST_ROW_ID;
+    }
+
+    public RowId getPreviousRowId() {
+      if(hasPreviousRowId()) {
+        --_nextEntryIdx;
+        _nextEntry = _entries.get(_nextEntryIdx);
+        return _nextEntry.getRowId();
+      }
+      return RowId.FIRST_ROW_ID;
+    }
+  }
+  
 }

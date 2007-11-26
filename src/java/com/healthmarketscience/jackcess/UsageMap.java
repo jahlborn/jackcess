@@ -274,6 +274,13 @@ public class UsageMap
       byteCount++;
     }
   }
+
+  /**
+   * Determines if the given page number is contained in this map.
+   */
+  public boolean containsPageNumber(int pageNumber) {
+    return _handler.containsPageNumber(pageNumber);
+  }
   
   /**
    * Add a page number to this usage map
@@ -379,6 +386,11 @@ public class UsageMap
   {
     protected Handler() {
     }
+
+    public boolean containsPageNumber(int pageNumber) {
+      return(isPageWithinRange(pageNumber) &&
+             getPageNumbers().get(pageNumberToBitIndex(pageNumber)));
+    }
     
     /**
      * @param pageNumber Page number to add or remove from this map
@@ -419,6 +431,13 @@ public class UsageMap
     private void setInlinePageRange(int startPage) {
       setPageRange(startPage, startPage + getMaxInlinePages());
     }      
+
+    @Override
+    public boolean containsPageNumber(int pageNumber) {
+      return(super.containsPageNumber(pageNumber) ||
+             (_assumeOutOfRangeBitsOn && (pageNumber >= 0) &&
+              !isPageWithinRange(pageNumber)));
+    }
     
     @Override
     public void addOrRemovePageNumber(int pageNumber, boolean add)
