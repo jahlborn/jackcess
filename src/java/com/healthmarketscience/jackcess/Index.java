@@ -57,6 +57,11 @@ import org.apache.commons.logging.LogFactory;
 public class Index implements Comparable<Index> {
   
   private static final Log LOG = LogFactory.getLog(Index.class);
+
+  /** index of the first (exclusive) index entry */
+  private static final int FIRST_ENTRY_IDX = -1;
+  /** index of the last (exclusive) index entry */
+  private static final int LAST_ENTRY_IDX = -2;
   
   /** Max number of columns in an index */
   private static final int MAX_COLUMNS = 10;
@@ -207,7 +212,7 @@ public class Index implements Comparable<Index> {
   /** <code>true</code> if the index entries have been initialized,
       <code>false</code> otherwise */
   private boolean _initialized;
-  /** modification count for the table, keeps iterators up-to-date */
+  /** modification count for the table, keeps cursors up-to-date */
   private int _modCount;
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
@@ -1247,18 +1252,31 @@ public class Index implements Comparable<Index> {
   }
 
   /**
-   * Utility class to iterate over the entries in the Index.  Note, since the
-   * iterators hold on to entries, they should stay valid even as the
-   * entries are updated.
+   * Utility class to traverse the entries in the Index.  Remains valid in the
+   * face of index entry modifications.
    */
-  public class EntryIterator
+  public final class EntryCursor
   {
-    private Entry _nextEntry;
-    private int _nextEntryIdx;
+    /** handler for moving the page cursor forward */
+    private final DirHandler _forwardDirHandler = new ForwardDirHandler();
+    /** handler for moving the page cursor backward */
+    private final DirHandler _reverseDirHandler = new ReverseDirHandler();
+    private Entry _curEntry;
+    private int _curEntryIdx;
+    private boolean _curEntryDeleted;
+    private Entry _prevEntry;
+    private int _prevEntryIdx;
     private int _lastModCount;
 
-    private EntryIterator() {
+    private EntryCursor() {
       reset();
+    }
+
+    /**
+     * Returns the DirHandler for the given direction
+     */
+    private DirHandler getDirHandler(boolean moveForward) {
+      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
     }
 
     public boolean isUpToDate() {
@@ -1278,56 +1296,38 @@ public class Index implements Comparable<Index> {
     }
 
     protected void reset(boolean moveForward) {
-      _nextEntry = null;
-      _nextEntryIdx = (moveForward ? 0 : _entries.size());
+      _curEntry = null;
+      _prevEntry = null;
+      _curEntryDeleted = false;
+      _curEntryIdx = getDirHandler(moveForward).getBeginningIndex();
+      _prevEntryIdx = _curEntryIdx;
       _lastModCount = Index.this._modCount;
     }
 
-    private void resyncIndex() {
-      if(!isUpToDate()) {
-        if(_nextEntryIdx == 0) {
-          // we were at the beginning of the list
-          _nextEntry = _entries.get(_nextEntryIdx);
-        } else if(_nextEntry == null) {
-          // we were at the end of the list
-          _nextEntryIdx = _entries.size();
-        } else {
-          // we were somewhere in the middle of the list
-          int idx = findEntry(_nextEntry);
-          if(idx >= 0) {
-            _nextEntryIdx = idx;
-          } else {
-            // current entry was deleted
-            _nextEntryIdx = missingIndexToInsertionPoint(idx);
-            _nextEntry = _entries.get(_nextEntryIdx);
-          }
-        }
-        _lastModCount = Index.this._modCount;
-      }
-    }
-
     /**
-     * Repositions the iterator so that the next row will be the first entry
+     * Repositions the cursor so that the next row will be the first entry
      * >= the given row.
      */
     public void beforeEntry(Object[] row)
       throws IOException
     {
+      // FIXME, change how row is given?
       moveToEntry(new Entry(row, RowId.FIRST_ROW_ID));
     }
     
     /**
-     * Repositions the iterator so that the previous row will be the first
+     * Repositions the cursor so that the previous row will be the first
      * entry <= the given row.
      */
     public void afterEntry(Object[] row)
       throws IOException
     {
+      // FIXME, change how row is given?
       moveToEntry(new Entry(row, RowId.LAST_ROW_ID));
     }
 
     /**
-     * Repositions the iterator relative to a given entry.  The given entry
+     * Repositions the cursor relative to a given entry.  The given entry
      * must have a fake rowId.
      */
     private void moveToEntry(Entry entry)
@@ -1335,41 +1335,156 @@ public class Index implements Comparable<Index> {
     {
       // note, we will never get a real index back from findIndex because we
       // are using a fake rowId which will never match a real row
-      _nextEntryIdx = missingIndexToInsertionPoint(findEntry(entry));
-      _nextEntry = ((_nextEntryIdx < _entries.size()) ?
-                    _entries.get(_nextEntryIdx) : null);
-      _lastModCount = Index.this._modCount;
-    }
-    
-    public boolean hasNextRowId() {
-      resyncIndex();
-      return(_nextEntryIdx < _entries.size());
-    }
-
-    public boolean hasPreviousRowId() {
-      resyncIndex();
-      return(_nextEntryIdx > 0);
+      // FIXME
+//       _nextEntryIdx = missingIndexToInsertionPoint(findEntry(entry));
+//       _nextEntry = ((_nextEntryIdx < _entries.size()) ?
+//                     _entries.get(_nextEntryIdx) : null);
+//       _lastModCount = Index.this._modCount;
     }
     
     public RowId getNextRowId() {
-      if(hasNextRowId()) {
-        RowId nextRowId = _nextEntry.getRowId();
-        ++_nextEntryIdx;
-        _nextEntry = ((_nextEntryIdx < _entries.size()) ?
-                      _entries.get(_nextEntryIdx) : null);
-        return nextRowId;
-      }
-      return RowId.LAST_ROW_ID;
+      return getAnotherRowId(true);
     }
 
     public RowId getPreviousRowId() {
-      if(hasPreviousRowId()) {
-        --_nextEntryIdx;
-        _nextEntry = _entries.get(_nextEntryIdx);
-        return _nextEntry.getRowId();
-      }
-      return RowId.FIRST_ROW_ID;
+      return getAnotherRowId(false);
     }
+
+    private void restorePosition(int curEntryIdx, Entry curEntry)
+    {
+      _prevEntryIdx = _curEntryIdx;
+      _prevEntry = _curEntry;
+      _curEntryIdx = curEntryIdx;
+      _curEntry = curEntry;
+      checkForModification();
+    }
+
+    private void checkForModification() {
+      if(!isUpToDate()) {
+
+        if(_curEntry != null) {
+          // find the new position for this entry
+          int idx = findEntry(_curEntry);
+          if(idx >= 0) {
+            _curEntryIdx = idx;
+          } else {
+            // current entry was deleted.  our current position is now really
+            // between two indexes, but we cannot support that as an integer
+            // value so we set a flag instead
+            _curEntryIdx = missingIndexToInsertionPoint(idx);
+            _curEntryDeleted = true;
+          }
+        }          
+
+        _lastModCount = Index.this._modCount;
+      }
+    }
+    
+    private RowId getAnotherRowId(boolean moveForward) {
+      DirHandler handler = getDirHandler(moveForward);
+      if(_curEntryIdx == handler.getEndIndex()) {
+        if(!isUpToDate()) {
+          restorePosition(_prevEntryIdx, _prevEntry);
+          // drop through and retry moving to another entry
+        } else {
+          // at end, no more
+          return handler.getEndRowId();
+        }
+      }
+
+      checkForModification();
+
+      if(_curEntryDeleted) {
+        // the current position is technically between the current index and
+        // the current index - 1.  reset the current position to the previous
+        // position as defined by the given direction
+        _curEntryIdx = handler.getPreviousIndexForDeletion(_curEntryIdx);
+        if(_curEntryIdx >= 0) {
+          _curEntry = _entries.get(_curEntryIdx);
+        }
+        _curEntryDeleted = false;
+      }
+      
+      _prevEntryIdx = _curEntryIdx;
+      _prevEntry = _curEntry;
+      _curEntryIdx = handler.getAnotherIndex(_curEntryIdx);
+      if(_curEntryIdx >= 0) {
+        _curEntry = _entries.get(_curEntryIdx);
+        return _curEntry.getRowId();
+      }
+      _curEntry = null;
+      return handler.getEndRowId();
+    }
+    
+    /**
+     * Handles moving the cursor in a given direction.  Separates cursor
+     * logic from value storage.
+     */
+    private abstract class DirHandler {
+      public abstract int getAnotherIndex(int curIdx);
+      public abstract int getPreviousIndexForDeletion(int curIdx);
+      public abstract int getBeginningIndex();
+      public abstract int getEndIndex();
+      public abstract RowId getEndRowId();
+    }
+        
+    /**
+     * Handles moving the cursor forward.
+     */
+    private final class ForwardDirHandler extends DirHandler {
+      @Override
+      public int getAnotherIndex(int curIdx) {
+        curIdx = ((curIdx == FIRST_ENTRY_IDX) ? 0 : (curIdx + 1));
+        return ((curIdx < _entries.size()) ? curIdx : LAST_ENTRY_IDX);
+      }
+      @Override
+      public int getPreviousIndexForDeletion(int curIdx) {
+        curIdx = curIdx - 1;
+        return((curIdx >= 0) ? curIdx : FIRST_ENTRY_IDX);
+      }
+      @Override
+      public int getBeginningIndex() {
+        return FIRST_ENTRY_IDX;
+      }
+      @Override
+      public int getEndIndex() {
+        return LAST_ENTRY_IDX;
+      }
+      @Override
+      public RowId getEndRowId() {
+        return RowId.LAST_ROW_ID;
+      }
+    }
+        
+    /**
+     * Handles moving the cursor backward.
+     */
+    private final class ReverseDirHandler extends DirHandler {
+      @Override
+      public int getAnotherIndex(int curIdx) {
+        curIdx = ((curIdx == LAST_ENTRY_IDX) ?
+                  (_entries.size() - 1) : (curIdx - 1));
+        return ((curIdx >= 0) ? curIdx : FIRST_ENTRY_IDX);
+      }
+      @Override
+      public int getPreviousIndexForDeletion(int curIdx) {
+        // the curIdx is already pointing to the "previous" index
+        return((curIdx < _entries.size()) ? curIdx : LAST_ENTRY_IDX);
+      }
+      @Override
+      public int getBeginningIndex() {
+        return LAST_ENTRY_IDX;
+      }
+      @Override
+      public int getEndIndex() {
+        return FIRST_ENTRY_IDX;
+      }
+      @Override
+      public RowId getEndRowId() {
+        return RowId.FIRST_ROW_ID;
+      }
+    }
+    
   }
   
 }

@@ -1457,7 +1457,7 @@ public class Table
   /**
    * Maintains the state of reading a row of data.
    */
-  public class RowState
+  public final class RowState
   {
     /** Buffer used for reading the header row data pages */
     private final TempPageHolder _headerRowBufferH;

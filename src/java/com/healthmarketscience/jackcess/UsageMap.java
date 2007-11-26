@@ -197,12 +197,13 @@ public class UsageMap
   }
 
   protected int getFirstPageNumber() {
-    return bitIndexToPageNumber(getNextBitIndex(-1));
+    return bitIndexToPageNumber(getNextBitIndex(-1), RowId.LAST_PAGE_NUMBER);
   }
 
   protected int getNextPageNumber(int curPage) {
     return bitIndexToPageNumber(
-        getNextBitIndex(pageNumberToBitIndex(curPage)));
+        getNextBitIndex(pageNumberToBitIndex(curPage)),
+        RowId.LAST_PAGE_NUMBER);
   }    
   
   protected int getNextBitIndex(int curIndex) {
@@ -210,12 +211,14 @@ public class UsageMap
   }    
   
   protected int getLastPageNumber() {
-    return bitIndexToPageNumber(getPrevBitIndex(_pageNumbers.length()));
+    return bitIndexToPageNumber(getPrevBitIndex(_pageNumbers.length()),
+                                RowId.FIRST_PAGE_NUMBER);
   }
 
   protected int getPrevPageNumber(int curPage) {
     return bitIndexToPageNumber(
-        getPrevBitIndex(pageNumberToBitIndex(curPage)));
+        getPrevBitIndex(pageNumberToBitIndex(curPage)),
+        RowId.FIRST_PAGE_NUMBER);
   }    
   
   protected int getPrevBitIndex(int curIndex) {
@@ -226,9 +229,9 @@ public class UsageMap
     return curIndex;
   }    
   
-  protected int bitIndexToPageNumber(int bitIndex) {
-    return((bitIndex >= 0) ? (_startPage + bitIndex) :
-           PageChannel.INVALID_PAGE_NUMBER);
+  protected int bitIndexToPageNumber(int bitIndex,
+                                     int invalidPageNumber) {
+    return((bitIndex >= 0) ? (_startPage + bitIndex) : invalidPageNumber);
   }
 
   protected int pageNumberToBitIndex(int pageNumber) {
@@ -702,7 +705,7 @@ public class UsageMap
    * Utility class to traverse over the pages in the UsageMap.  Remains valid
    * in the face of usage map modifications.
    */
-  public class PageCursor
+  public final class PageCursor
   {
     /** handler for moving the page cursor forward */
     private final DirHandler _forwardDirHandler = new ForwardDirHandler();
@@ -786,9 +789,10 @@ public class UsageMap
         }
       }
 
+      checkForModification();
+      
       _prevPageNumber = _curPageNumber;
       _curPageNumber = handler.getAnotherPageNumber(_curPageNumber);
-      _lastModCount = UsageMap.this._modCount;
       return _curPageNumber;
     }
 
@@ -820,9 +824,9 @@ public class UsageMap
      * Resets this page cursor for traversing the given direction.
      */
     protected void reset(boolean moveForward) {
-      _lastModCount = UsageMap.this._modCount;
       _curPageNumber = getDirHandler(moveForward).getBeginningPageNumber();
       _prevPageNumber = _curPageNumber;
+      _lastModCount = UsageMap.this._modCount;
     }
 
     /**
@@ -831,7 +835,12 @@ public class UsageMap
     private void restorePosition(int curPageNumber) {
       _prevPageNumber = _curPageNumber;
       _curPageNumber = curPageNumber;
-      _lastModCount = UsageMap.this._modCount;
+      checkForModification();
+    }
+
+    private void checkForModification() {
+      // since we store page numbers, we don't need to adjust anything
+      _lastModCount = UsageMap.this._modCount;      
     }
     
     /**
@@ -853,9 +862,7 @@ public class UsageMap
         if(curPageNumber == RowId.FIRST_PAGE_NUMBER) {
           return UsageMap.this.getFirstPageNumber();
         }
-        int anotherPageNumber = UsageMap.this.getNextPageNumber(curPageNumber);
-        return ((anotherPageNumber >= 0) ? anotherPageNumber :
-                RowId.LAST_PAGE_NUMBER);
+        return UsageMap.this.getNextPageNumber(curPageNumber);
       }
       @Override
       public int getBeginningPageNumber() {
@@ -876,9 +883,7 @@ public class UsageMap
         if(curPageNumber == RowId.LAST_PAGE_NUMBER) {
           return UsageMap.this.getLastPageNumber();
         }
-        int anotherPageNumber = UsageMap.this.getPrevPageNumber(curPageNumber);
-        return ((anotherPageNumber >= 0) ? anotherPageNumber :
-                RowId.FIRST_PAGE_NUMBER);
+        return UsageMap.this.getPrevPageNumber(curPageNumber);
       }
       @Override
       public int getBeginningPageNumber() {
