@@ -775,7 +775,7 @@ public class UsageMap
     }
 
     /**
-     * Gets another page in the given direction, returning the current page.
+     * Gets another page in the given direction, returning the new page.
      */
     private int getAnotherPage(boolean moveForward) {
       DirHandler handler = getDirHandler(moveForward);
@@ -835,13 +835,24 @@ public class UsageMap
     private void restorePosition(int curPageNumber) {
       _prevPageNumber = _curPageNumber;
       _curPageNumber = curPageNumber;
-      checkForModification();
-    }
-
-    private void checkForModification() {
-      // since we store page numbers, we don't need to adjust anything
       _lastModCount = UsageMap.this._modCount;      
     }
+
+    /**
+     * Checks the usage map for modifications an updates state accordingly.
+     */
+    private void checkForModification() {
+      // since page numbers are not affected by modifications, we don't need
+      // to adjust anything
+      _lastModCount = UsageMap.this._modCount;      
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + " CurPosition " + _curPageNumber +
+        ", PrevPosition " + _prevPageNumber;
+    }
+    
     
     /**
      * Handles moving the cursor in a given direction.  Separates cursor
@@ -859,7 +870,7 @@ public class UsageMap
     private final class ForwardDirHandler extends DirHandler {
       @Override
       public int getAnotherPageNumber(int curPageNumber) {
-        if(curPageNumber == RowId.FIRST_PAGE_NUMBER) {
+        if(curPageNumber == getBeginningPageNumber()) {
           return UsageMap.this.getFirstPageNumber();
         }
         return UsageMap.this.getNextPageNumber(curPageNumber);
@@ -880,7 +891,7 @@ public class UsageMap
     private final class ReverseDirHandler extends DirHandler {
       @Override
       public int getAnotherPageNumber(int curPageNumber) {
-        if(curPageNumber == RowId.LAST_PAGE_NUMBER) {
+        if(curPageNumber == getBeginningPageNumber()) {
           return UsageMap.this.getLastPageNumber();
         }
         return UsageMap.this.getPrevPageNumber(curPageNumber);
