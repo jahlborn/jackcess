@@ -1426,9 +1426,13 @@ public class Index implements Comparable<Index> {
      */
     private void restorePosition(Entry curEntry)
     {
-      _prevPos = updatePosition(_curPos.getEntry());
-      _curPos = updatePosition(curEntry);
-      _lastModCount = Index.this._modCount;
+      if(!curEntry.equals(_curPos.getEntry())) {
+        _prevPos = updatePosition(_curPos.getEntry());
+        _curPos = updatePosition(curEntry);
+        _lastModCount = Index.this._modCount;
+      } else {
+        checkForModification();
+      }
     }
 
     /**

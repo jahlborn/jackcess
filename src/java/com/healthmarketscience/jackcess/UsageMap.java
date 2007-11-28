@@ -30,7 +30,6 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
-import java.util.logging.Handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -833,9 +832,11 @@ public class UsageMap
      * Restores a previous position for the cursor.
      */
     private void restorePosition(int curPageNumber) {
-      _prevPageNumber = _curPageNumber;
-      _curPageNumber = curPageNumber;
-      _lastModCount = UsageMap.this._modCount;      
+      if(curPageNumber != _curPageNumber) {
+        _prevPageNumber = _curPageNumber;
+        _curPageNumber = curPageNumber;
+      }
+      _lastModCount = UsageMap.this._modCount;
     }
 
     /**

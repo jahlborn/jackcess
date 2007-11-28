@@ -3,7 +3,6 @@
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -11,6 +10,8 @@ import java.util.NoSuchElementException;
 
 import com.healthmarketscience.jackcess.Table.RowState;
 import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -26,13 +27,19 @@ import org.apache.commons.lang.ObjectUtils;
  */
 public abstract class Cursor implements Iterable<Map<String, Object>>
 {  
+  private static final Log LOG = LogFactory.getLog(Cursor.class);  
+
+  /** normal first position for the TableScanCursor */
   private static final ScanPosition FIRST_SCAN_POSITION =
     new ScanPosition(RowId.FIRST_ROW_ID);
+  /** normal last position for the TableScanCursor */
   private static final ScanPosition LAST_SCAN_POSITION =
     new ScanPosition(RowId.LAST_ROW_ID);
 
+  /** normal first position for the IndexCursor */
   private static final IndexPosition FIRST_INDEX_POSITION =
     new IndexPosition(Index.FIRST_ENTRY);
+  /** normal last position for the IndexCursor */
   private static final IndexPosition LAST_INDEX_POSITION =
     new IndexPosition(Index.LAST_ENTRY);
 
@@ -65,6 +72,18 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   public static Cursor createCursor(Table table) {
     return new TableScanCursor(table);
+  }
+
+  /**
+   * Creates an indexed cursor for the given table.
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   */
+  public static Cursor createIndexCursor(Table table, Index index)
+    throws IOException
+  {
+    return new IndexCursor(table, index);
   }
 
   /**
@@ -397,10 +416,12 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   protected void restorePosition(Position curPos)
     throws IOException
   {
-    // make the current position previous, and the new position current
-    _prevPos = _curPos;
-    _curPos = curPos;
-    _rowState.reset();
+    if(!curPos.equals(_curPos)) {
+      // make the current position previous, and the new position current
+      _prevPos = _curPos;
+      _curPos = curPos;
+      _rowState.reset();
+    }
   }
 
   /**
@@ -439,8 +460,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Moves to the first row (as defined by the cursor) where the given column
    * has the given value.  This may be more efficient on some cursors than
-   * others.  The location of the cursor when a match is not found is
-   * undefined.
+   * others.  If a match is not found (or an exception is thrown), the cursor
+   * is restored to its previous state.
    *
    * @param columnPattern column from the table for this cursor which is being
    *                      matched by the valuePattern
@@ -452,22 +473,27 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean findRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
-    // FIXME, add save restore?
-
-    beforeFirst();
-    while(moveToNextRow()) {
-      if(ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern))) {
-        return true;
+    Position curPos = _curPos;
+    boolean found = false;
+    try {
+      found = findRowImpl(columnPattern, valuePattern);
+      return found;
+    } finally {
+      if(!found) {
+        try {
+          restorePosition(curPos);
+        } catch(IOException e) {
+          LOG.error("Failed restoring position", e);
+        }
       }
     }
-    return false;
   }
   
   /**
    * Moves to the first row (as defined by the cursor) where the given columns
    * have the given values.  This may be more efficient on some cursors than
-   * others.  The location of the cursor when a match is not found is
-   * undefined.
+   * others.  If a match is not found (or an exception is thrown), the cursor
+   * is restored to its previous state.
    *
    * @param rowPattern column names and values which must be equal to the
    *                   corresponding values in the matched row
@@ -477,8 +503,62 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean findRow(Map<String,Object> rowPattern)
     throws IOException
   {
-    // FIXME, add save restore?
+    Position curPos = _curPos;
+    boolean found = false;
+    try {
+      found = findRowImpl(rowPattern);
+      return found;
+    } finally {
+      if(!found) {
+        try {
+          restorePosition(curPos);
+        } catch(IOException e) {
+          LOG.error("Failed restoring position", e);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Moves to the first row (as defined by the cursor) where the given column
+   * has the given value.  Caller manages save/restore on failure.
+   * <p>
+   * Default implementation scans the table from beginning to end.
+   *
+   * @param columnPattern column from the table for this cursor which is being
+   *                      matched by the valuePattern
+   * @param valuePattern value which is equal to the corresponding value in
+   *                     the matched row
+   * @return {@code true} if a valid row was found with the given value,
+   *         {@code false} if no row was found
+   */
+  protected boolean findRowImpl(Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    beforeFirst();
+    while(moveToNextRow()) {
+      if(ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern)))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
 
+  /**
+   * Moves to the first row (as defined by the cursor) where the given columns
+   * have the given values.  Caller manages save/restore on failure.
+   * <p>
+   * Default implementation scans the table from beginning to end.
+   *
+   * @param rowPattern column names and values which must be equal to the
+   *                   corresponding values in the matched row
+   * @return {@code true} if a valid row was found with the given values,
+   *         {@code false} if no row was found
+   */
+  protected boolean findRowImpl(Map<String,Object> rowPattern)
+    throws IOException
+  {
     beforeFirst();
     Collection<String> columnNames = rowPattern.keySet();
     while(moveToNextRow()) {
@@ -487,8 +567,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       }
     }
     return false;
-  }
-  
+  }  
+
   /**
    * Skips as many rows as possible up to the given number of rows.
    * @return the number of rows skipped.
@@ -578,7 +658,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Returns the DirHandler for the given movement direction.
    */
   protected abstract DirHandler getDirHandler(boolean moveForward);
-
 
   @Override
   public String toString() {
@@ -685,7 +764,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       super.restorePosition(curPos);
       _ownedPagesCursor.setCurrentPage(curPos.getRowId().getPageNumber());
     }
-    
+
     /**
      * Position the buffer at the next row in the table
      * @return a ByteBuffer narrowed to the next row, or null if none
