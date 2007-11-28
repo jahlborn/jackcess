@@ -1488,15 +1488,9 @@ public class Index implements Comparable<Index> {
 
       checkForModification();
 
-      if(_curPos.isDeleted()) {
-        // the current position is technically between the current index and
-        // the current index - 1.  reset the current position to the previous
-        // position as defined by the given direction
-        _curPos = handler.getPreviousPositionForDeletion(_curPos.getIndex());
-      }
-      
       _prevPos = _curPos;
-      _curPos = handler.getAnotherPosition(_curPos.getIndex());
+      _curPos = handler.getAnotherPosition(_curPos.getIndex(),
+                                           _curPos.isDeleted());
       return _curPos.getEntry();
     }
 
@@ -1511,8 +1505,7 @@ public class Index implements Comparable<Index> {
      * logic from value storage.
      */
     private abstract class DirHandler {
-      public abstract Position getAnotherPosition(int curIdx);
-      public abstract Position getPreviousPositionForDeletion(int curIdx);
+      public abstract Position getAnotherPosition(int curIdx, boolean deleted);
       public abstract Position getBeginningPosition();
       public abstract Position getEndPosition();
       protected final Position newPosition(int curIdx) {
@@ -1533,14 +1526,14 @@ public class Index implements Comparable<Index> {
      */
     private final class ForwardDirHandler extends DirHandler {
       @Override
-      public Position getAnotherPosition(int curIdx) {
-        curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                  0 : (curIdx + 1));
+      public Position getAnotherPosition(int curIdx, boolean deleted) {
+        // note, curIdx does not need to be advanced if it was pointing at a
+        // deleted entry
+        if(!deleted) {
+          curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
+                    0 : (curIdx + 1));
+        }
         return newForwardPosition(curIdx);
-      }
-      @Override
-      public Position getPreviousPositionForDeletion(int curIdx) {
-        return newReversePosition(curIdx - 1);
       }
       @Override
       public Position getBeginningPosition() {
@@ -1557,15 +1550,13 @@ public class Index implements Comparable<Index> {
      */
     private final class ReverseDirHandler extends DirHandler {
       @Override
-      public Position getAnotherPosition(int curIdx) {
+      public Position getAnotherPosition(int curIdx, boolean deleted) {
+        // note, we ignore the deleted flag here because the index will be
+        // pointing at the correct next index in either the deleted or
+        // non-deleted case
         curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
                   (_entries.size() - 1) : (curIdx - 1));
         return newReversePosition(curIdx);
-      }
-      @Override
-      public Position getPreviousPositionForDeletion(int curIdx) {
-        // the curIdx is already pointing to the "previous" index
-        return newForwardPosition(curIdx);
       }
       @Override
       public Position getBeginningPosition() {
