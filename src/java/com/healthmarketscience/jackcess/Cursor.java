@@ -5,6 +5,7 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -411,12 +412,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
-   * Restores the current position to the previous position.
+   * Restores a current position for the cursor (current position becomes
+   * previous position).
    */
   protected void restorePosition(Position curPos)
     throws IOException
   {
-    if(!curPos.equals(_curPos)) {
+    restorePosition(curPos, _curPos);
+  }
+    
+  /**
+   * Restores a current and previous position for the cursor.
+   */
+  protected void restorePosition(Position curPos, Position prevPos)
+    throws IOException
+  {
+    if(!curPos.equals(_curPos) || !prevPos.equals(_prevPos)) {
       // make the current position previous, and the new position current
       _prevPos = _curPos;
       _curPos = curPos;
@@ -474,6 +485,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     Position curPos = _curPos;
+    Position prevPos = _prevPos;
     boolean found = false;
     try {
       found = findRowImpl(columnPattern, valuePattern);
@@ -481,7 +493,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     } finally {
       if(!found) {
         try {
-          restorePosition(curPos);
+          restorePosition(curPos, prevPos);
         } catch(IOException e) {
           LOG.error("Failed restoring position", e);
         }
@@ -504,6 +516,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     Position curPos = _curPos;
+    Position prevPos = _prevPos;
     boolean found = false;
     try {
       found = findRowImpl(rowPattern);
@@ -511,7 +524,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     } finally {
       if(!found) {
         try {
-          restorePosition(curPos);
+          restorePosition(curPos, prevPos);
         } catch(IOException e) {
           LOG.error("Failed restoring position", e);
         }
@@ -627,7 +640,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Returns the given column from the current row.
    */
-  @SuppressWarnings("foo")
   public Object getCurrentRowValue(Column column)
     throws IOException
   {
@@ -754,21 +766,19 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
 
     @Override
-    protected void restorePosition(Position curPos)
+    protected void restorePosition(Position curPos, Position prevPos)
       throws IOException
     {
-      if(!(curPos instanceof ScanPosition)) {
+      if(!(curPos instanceof ScanPosition) ||
+         !(prevPos instanceof ScanPosition)) {
         throw new IllegalArgumentException(
-            "New position must be a scan position");
+            "Restored positions must be scan positions");
       }
-      super.restorePosition(curPos);
-      _ownedPagesCursor.setCurrentPage(curPos.getRowId().getPageNumber());
+      super.restorePosition(curPos, prevPos);
+      _ownedPagesCursor.restorePosition(curPos.getRowId().getPageNumber(),
+                                        prevPos.getRowId().getPageNumber());
     }
 
-    /**
-     * Position the buffer at the next row in the table
-     * @return a ByteBuffer narrowed to the next row, or null if none
-     */
     @Override
     protected Position findAnotherPosition(RowState rowState, Position curPos,
                                            boolean moveForward)
@@ -920,21 +930,97 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
 
     @Override
-    protected void restorePosition(Position curPos)
+    protected void restorePosition(Position curPos, Position prevPos)
       throws IOException
     {
-      if(!(curPos instanceof IndexPosition)) {
+      if(!(curPos instanceof IndexPosition) ||
+         !(prevPos instanceof IndexPosition)) {
         throw new IllegalArgumentException(
-            "New position must be an index position");
+            "Restored positions must be index positions");
       }
-      super.restorePosition(curPos);
-      _entryCursor.setCurrentEntry(((IndexPosition)curPos).getEntry());
+      super.restorePosition(curPos, prevPos);
+      _entryCursor.restorePosition(((IndexPosition)curPos).getEntry(),
+                                   ((IndexPosition)prevPos).getEntry());
+    }
+
+    @Override
+    protected boolean findRowImpl(Column columnPattern, Object valuePattern)
+      throws IOException
+    {
+      Object[] rowValues = _entryCursor.getIndex().constructIndexRow(
+          columnPattern.getName(), valuePattern);
+
+      if(rowValues == null) {
+        // bummer, use the default table scan
+        return super.findRowImpl(columnPattern, valuePattern);
+      }
+      
+      // sweet, we can use our index
+      _entryCursor.beforeEntry(rowValues);
+      Index.Entry startEntry = _entryCursor.getNextEntry();
+      if(!startEntry.getRowId().isValid()) {
+        // at end of index, no potential matches
+        return false;
+      }
+
+      // either we found a row with the given value, or none exist in the
+      // table
+      restorePosition(new IndexPosition(startEntry));
+      return ObjectUtils.equals(getCurrentRowValue(columnPattern),
+                                valuePattern);
+    }
+
+    @Override
+    protected boolean findRowImpl(Map<String,Object> rowPattern)
+      throws IOException
+    {
+      Index index = _entryCursor.getIndex();
+      Object[] rowValues = index.constructIndexRow(rowPattern);
+
+      if(rowValues == null) {
+        // bummer, use the default table scan
+        return super.findRowImpl(rowPattern);
+      }
+      
+      // sweet, we can use our index
+      _entryCursor.beforeEntry(rowValues);
+      Index.Entry startEntry = _entryCursor.getNextEntry();
+      if(!startEntry.getRowId().isValid()) {
+        // at end of index, no potential matches
+        return false;
+      }
+      restorePosition(new IndexPosition(startEntry));
+
+      Map<String,Object> indexRowPattern =
+        new LinkedHashMap<String,Object>();
+      for(Column idxCol : _entryCursor.getIndex().getColumns()) {
+        indexRowPattern.put(idxCol.getName(),
+                            rowValues[idxCol.getColumnNumber()]);
+      }
+        
+      // there may be multiple columns which fit the pattern subset used by
+      // the index, so we need to keep checking until we no longer our index
+      // values no longer match
+      do {
+
+        if(!ObjectUtils.equals(getCurrentRow(indexRowPattern.keySet()),
+                               indexRowPattern)) {
+          // there are no more rows which could possibly match
+          break;
+        }
+
+        if(ObjectUtils.equals(getCurrentRow(rowPattern.keySet()),
+                              rowPattern)) {
+          // found it!
+          return true;
+        }
+
+      } while(moveToNextRow());
+        
+      // none of the potential rows matched
+      return false;
     }
     
-    /**
-     * Position the buffer at the next row in the table
-     * @return a ByteBuffer narrowed to the next row, or null if none
-     */
     @Override
     protected Position findAnotherPosition(RowState rowState, Position curPos,
                                            boolean moveForward)
@@ -1004,7 +1090,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     @Override
     public final boolean equals(Object o) {
       return((this == o) ||
-             ((getClass() == o.getClass()) && equalsImpl(o)));
+             ((o != null) && (getClass() == o.getClass()) && equalsImpl(o)));
     }
 
     /**

@@ -723,6 +723,10 @@ public class UsageMap
       reset();
     }
 
+    public UsageMap getUsageMap() {
+      return UsageMap.this;
+    }
+    
     /**
      * Returns the DirHandler for the given direction
      */
@@ -738,25 +742,6 @@ public class UsageMap
       return(UsageMap.this._modCount == _lastModCount);
     }    
 
-    /**
-     * Returns the current page number.
-     */
-    public int getCurrentPage() {
-      return _curPageNumber;
-    }
-
-    /**
-     * Resets the cursor to the given page number.
-     */
-    public void setCurrentPage(int curPageNumber) {
-      if(curPageNumber < UsageMap.this.getFirstPageNumber()) {
-        curPageNumber = RowId.FIRST_PAGE_NUMBER;
-      } else if(curPageNumber > UsageMap.this.getLastPageNumber()) {
-        curPageNumber = RowId.LAST_PAGE_NUMBER;
-      }
-      restorePosition(curPageNumber);
-    }
-    
     /**
      * @return valid page number if there was another page to read,
      *         {@link RowId#LAST_PAGE_NUMBER} otherwise
@@ -829,25 +814,49 @@ public class UsageMap
     }
 
     /**
-     * Restores a previous position for the cursor.
+     * Restores a current position for the cursor (current position becomes
+     * previous position).
      */
-    private void restorePosition(int curPageNumber) {
-      if(curPageNumber != _curPageNumber) {
-        _prevPageNumber = _curPageNumber;
-        _curPageNumber = curPageNumber;
+    private void restorePosition(int curPageNumber)
+    {
+      restorePosition(curPageNumber, _curPageNumber);
+    }
+    
+    /**
+     * Restores a current and previous position for the cursor.
+     */
+    protected void restorePosition(int curPageNumber, int prevPageNumber) {
+      if((curPageNumber != _curPageNumber) ||
+         (prevPageNumber != _prevPageNumber))
+      {
+        _prevPageNumber = updatePosition(prevPageNumber);
+        _curPageNumber = updatePosition(curPageNumber);
+        _lastModCount = UsageMap.this._modCount;
+      } else {
+        checkForModification();
       }
-      _lastModCount = UsageMap.this._modCount;
     }
 
     /**
      * Checks the usage map for modifications an updates state accordingly.
      */
     private void checkForModification() {
-      // since page numbers are not affected by modifications, we don't need
-      // to adjust anything
-      _lastModCount = UsageMap.this._modCount;      
+      if(!isUpToDate()) {
+        _prevPageNumber = updatePosition(_prevPageNumber);
+        _curPageNumber = updatePosition(_curPageNumber);
+        _lastModCount = UsageMap.this._modCount;
+      }
     }
 
+    private int updatePosition(int pageNumber) {
+      if(pageNumber < UsageMap.this.getFirstPageNumber()) {
+        pageNumber = RowId.FIRST_PAGE_NUMBER;
+      } else if(pageNumber > UsageMap.this.getLastPageNumber()) {
+        pageNumber = RowId.LAST_PAGE_NUMBER;
+      }
+      return pageNumber;
+    }
+    
     @Override
     public String toString() {
       return getClass().getSimpleName() + " CurPosition " + _curPageNumber +

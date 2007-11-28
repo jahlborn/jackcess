@@ -171,6 +171,10 @@ public class Table
     return _name;
   }
 
+  public int getMaxColumnCount() {
+    return _maxColumnCount;
+  }
+  
   public Database getDatabase() {
     return _database;
   }
@@ -1487,7 +1491,7 @@ public class Table
     
     private RowState(boolean hardRowBuffer) {
       _headerRowBufferH = TempPageHolder.newHolder(hardRowBuffer);
-      _rowValues = new Object[Table.this._maxColumnCount];
+      _rowValues = new Object[Table.this.getMaxColumnCount()];
       _lastModCount = Table.this._modCount;
     }
 

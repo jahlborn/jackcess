@@ -659,7 +659,60 @@ public class Index implements Comparable<Index> {
     
     return removed;
   }
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column values, expected to match the columns for this index.
+   * @return the appropriate sparse array of data
+   * @throws IllegalArgumentException if the wrong number of values are
+   *         provided
+   */
+  public Object[] constructIndexRow(Object... values)
+  {
+    if(values.length != _columns.size()) {
+      throw new IllegalArgumentException(
+          "Wrong number of column values given " + values.length +
+          ", expected " + _columns.size());
+    }
+    int valIdx = 0;
+    Object[] idxRow = new Object[getTable().getMaxColumnCount()];
+    for(Column col : _columns.keySet()) {
+      idxRow[col.getColumnNumber()] = values[valIdx++];
+    }
+    return idxRow;
+  }
+    
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column value.
+   * @return the appropriate sparse array of data or {@code null} if not all
+   *         columns for this index were provided
+   */
+  public Object[] constructIndexRow(String colName, Object value)
+  {
+    return constructIndexRow(Collections.singletonMap(colName, value));
+  }
   
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column values.
+   * @return the appropriate sparse array of data or {@code null} if not all
+   *         columns for this index were provided
+   */
+  public Object[] constructIndexRow(Map<String,Object> row)
+  {
+    for(Column col : _columns.keySet()) {
+      if(!row.containsKey(col.getName())) {
+        return null;
+      }
+    }
+
+    Object[] idxRow = new Object[getTable().getMaxColumnCount()];
+    for(Column col : _columns.keySet()) {
+      idxRow[col.getColumnNumber()] = row.get(col.getName());
+    }
+    return idxRow;
+  }  
 
   @Override
   public String toString() {
@@ -898,7 +951,7 @@ public class Index implements Comparable<Index> {
     }
 
     public boolean isValid() {
-      return _rowId.isValid();
+      return(_entryColumns != null);
     }
     
     /**
@@ -934,7 +987,7 @@ public class Index implements Comparable<Index> {
     @Override
     public boolean equals(Object o) {
       return((this == o) ||
-             ((getClass() == o.getClass()) &&
+             ((o != null) && (getClass() == o.getClass()) &&
               (compareTo((Entry)o) == 0)));
     }
     
@@ -943,9 +996,11 @@ public class Index implements Comparable<Index> {
         return 0;
       }
 
-      // note, if the one or both of the entries has no entryColumns, it is a
-      // "special" entry which should be compared on the rowId alone
-      if((_entryColumns != null) && (other.getEntryColumns() != null)) {
+      // note, if the one or both of the entries are not valid, they are
+      // "special" entries, which are handled below
+      if(isValid() && other.isValid()) {
+
+        // comparing two normal entries
         Iterator<EntryColumn> myIter = _entryColumns.iterator();
         Iterator<EntryColumn> otherIter = other.getEntryColumns().iterator();
         while (myIter.hasNext()) {
@@ -960,8 +1015,34 @@ public class Index implements Comparable<Index> {
             return i;
           }
         }
+
+        // if entry columns are equal, sort by rowIds
+        return _rowId.compareTo(other.getRowId());
       }
-      return _rowId.compareTo(other.getRowId());
+
+      // this is the odd case where mixed entries are being compared.  if both
+      // entries are invalid or the rowIds are not equal, then use the rowId
+      // comparison.
+      int rowCmp = _rowId.compareTo(other.getRowId());
+      if((isValid() == other.isValid()) || (rowCmp != 0)) {
+        return rowCmp;
+      }
+
+      // at this point, the rowId's are equal, but the validity is not.  this
+      // will happen when a "special" entry is compared to something created
+      // by EntryCursor.afterEntry or EntryCursor.beforeEntry.  in this case,
+      // the FIRST_ENTRY is always least and the LAST_ENTRY is always
+      // greatest.
+      int cmp = 0;
+      Entry invalid = null;
+      if(!isValid()) {
+        cmp = -1;
+        invalid = this;
+      } else {
+        cmp = 1;
+        invalid = other;
+      }
+      return (cmp * (invalid.equals(FIRST_ENTRY.getRowId()) ? 1 : -1));
     }
     
 
@@ -1016,6 +1097,13 @@ public class Index implements Comparable<Index> {
         }
       }
 
+      @Override
+      public boolean equals(Object o) {
+        return((this == o) ||
+               ((o != null) && (o != null) && (getClass() == o.getClass()) &&
+                (compareTo((EntryColumn)o) == 0)));
+      }
+      
       /**
        * Write this non-null entry column to a buffer
        */
@@ -1335,6 +1423,10 @@ public class Index implements Comparable<Index> {
       reset();
     }
 
+    public Index getIndex() {
+      return Index.this;
+    }
+    
     /**
      * Returns the DirHandler for the given direction
      */
@@ -1376,7 +1468,6 @@ public class Index implements Comparable<Index> {
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      // FIXME, change how row is given?
       restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
     }
     
@@ -1387,22 +1478,7 @@ public class Index implements Comparable<Index> {
     public void afterEntry(Object[] row)
       throws IOException
     {
-      // FIXME, change how row is given?
       restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
-    }
-
-    /**
-     * Returns the current entry.
-     */
-    public Entry getCurrentEntry() {
-      return _curPos.getEntry();
-    }
-
-    /**
-     * Resets the cursor to the given entry.
-     */
-    public void setCurrentEntry(Entry entry) {
-      restorePosition(entry);
     }
     
     /**
@@ -1422,12 +1498,22 @@ public class Index implements Comparable<Index> {
     }
 
     /**
-     * Restores a previous position for the cursor.
+     * Restores a current position for the cursor (current position becomes
+     * previous position).
      */
-    private void restorePosition(Entry curEntry)
+    private void restorePosition(Entry curEntry) {
+      restorePosition(curEntry, _curPos.getEntry());
+    }
+    
+    /**
+     * Restores a current and previous position for the cursor.
+     */
+    protected void restorePosition(Entry curEntry, Entry prevEntry)
     {
-      if(!curEntry.equals(_curPos.getEntry())) {
-        _prevPos = updatePosition(_curPos.getEntry());
+      if(!curEntry.equals(_curPos.getEntry()) ||
+         !prevEntry.equals(_prevPos.getEntry()))
+      {
+        _prevPos = updatePosition(prevEntry);
         _curPos = updatePosition(curEntry);
         _lastModCount = Index.this._modCount;
       } else {
@@ -1451,19 +1537,19 @@ public class Index implements Comparable<Index> {
      */
     private Position updatePosition(Entry entry) {
       int curIdx = FIRST_ENTRY_IDX;
-      boolean deleted = false;
+      boolean between = false;
       RowId rowId = entry.getRowId();
-      if(rowId.isValid()) {
+      if(entry.isValid()) {
         // find the new position for this entry
         int idx = findEntry(entry);
         if(idx >= 0) {
           curIdx = idx;
         } else {
-          // given entry was deleted.  our current position is now really
-          // between two indexes, but we cannot support that as an integer
-          // value so we set a flag instead
+          // given entry was not found exactly.  our current position is now
+          // really between two indexes, but we cannot support that as an
+          // integer value so we set a flag instead
           curIdx = missingIndexToInsertionPoint(idx);
-          deleted = true;
+          between = true;
         }
       } else if(rowId.equals(RowId.FIRST_ROW_ID)) {
         curIdx = FIRST_ENTRY_IDX;
@@ -1472,7 +1558,7 @@ public class Index implements Comparable<Index> {
       } else {
         throw new IllegalArgumentException("Invalid entry given: " + entry);
       }
-      return new Position(curIdx, entry, deleted);
+      return new Position(curIdx, entry, between);
     }
     
     /**
@@ -1494,7 +1580,7 @@ public class Index implements Comparable<Index> {
 
       _prevPos = _curPos;
       _curPos = handler.getAnotherPosition(_curPos.getIndex(),
-                                           _curPos.isDeleted());
+                                           _curPos.isBetween());
       return _curPos.getEntry();
     }
 
@@ -1509,7 +1595,7 @@ public class Index implements Comparable<Index> {
      * logic from value storage.
      */
     private abstract class DirHandler {
-      public abstract Position getAnotherPosition(int curIdx, boolean deleted);
+      public abstract Position getAnotherPosition(int curIdx, boolean between);
       public abstract Position getBeginningPosition();
       public abstract Position getEndPosition();
       protected final Position newPosition(int curIdx) {
@@ -1530,10 +1616,10 @@ public class Index implements Comparable<Index> {
      */
     private final class ForwardDirHandler extends DirHandler {
       @Override
-      public Position getAnotherPosition(int curIdx, boolean deleted) {
+      public Position getAnotherPosition(int curIdx, boolean between) {
         // note, curIdx does not need to be advanced if it was pointing at a
-        // deleted entry
-        if(!deleted) {
+        // between position
+        if(!between) {
           curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
                     0 : (curIdx + 1));
         }
@@ -1554,10 +1640,10 @@ public class Index implements Comparable<Index> {
      */
     private final class ReverseDirHandler extends DirHandler {
       @Override
-      public Position getAnotherPosition(int curIdx, boolean deleted) {
-        // note, we ignore the deleted flag here because the index will be
-        // pointing at the correct next index in either the deleted or
-        // non-deleted case
+      public Position getAnotherPosition(int curIdx, boolean between) {
+        // note, we ignore the between flag here because the index will be
+        // pointing at the correct next index in either the between or
+        // non-between case
         curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
                   (_entries.size() - 1) : (curIdx - 1));
         return newReversePosition(curIdx);
@@ -1583,16 +1669,16 @@ public class Index implements Comparable<Index> {
     private final Entry _entry;
     /** {@code true} if this entry does not currently exist in the entry list,
         {@code false} otherwise */
-    private final boolean _deleted;
+    private final boolean _between;
 
     private Position(int idx, Entry entry) {
       this(idx, entry, false);
     }
     
-    private Position(int idx, Entry entry, boolean deleted) {
+    private Position(int idx, Entry entry, boolean between) {
       _idx = idx;
       _entry = entry;
-      _deleted = deleted;
+      _between = between;
     }
 
     public int getIndex() {
@@ -1603,23 +1689,23 @@ public class Index implements Comparable<Index> {
       return _entry;
     }
 
-    public boolean isDeleted() {
-      return _deleted;
+    public boolean isBetween() {
+      return _between;
     }
 
     @Override
     public boolean equals(Object o) {
       return((this == o) ||
-             ((getClass() == o.getClass()) &&
+             ((o != null) && (getClass() == o.getClass()) &&
               (_idx == ((Position)o)._idx) &&
               _entry.equals(((Position)o)._entry) &&
-              (_deleted == ((Position)o)._deleted)));
+              (_between == ((Position)o)._between)));
     }
 
     @Override
     public String toString() {
-      return "Idx = " + _idx + ", Entry = " + _entry + ", Deleted = " +
-        _deleted;
+      return "Idx = " + _idx + ", Entry = " + _entry + ", Between = " +
+        _between;
     }
   }
   
