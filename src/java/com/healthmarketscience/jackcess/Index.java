@@ -1535,7 +1535,6 @@ public class Index implements Comparable<Index> {
     private Position updatePosition(Entry entry) {
       int curIdx = FIRST_ENTRY_IDX;
       boolean between = false;
-      RowId rowId = entry.getRowId();
       if(entry.isValid()) {
         // find the new position for this entry
         int idx = findEntry(entry);

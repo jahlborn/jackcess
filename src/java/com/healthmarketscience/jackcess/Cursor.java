@@ -135,6 +135,56 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return null;
   }
   
+  /**
+   * Convenience method for finding a specific row in an indexed table which
+   * matches a given row "pattern.  See {@link #findRow(Map)} for details on
+   * the rowPattern.
+   * 
+   * @param table the table to search
+   * @param index index to assist the search
+   * @param rowPattern pattern to be used to find the row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Map<String,Object> findRow(Table table, Index index,
+                                           Map<String,Object> rowPattern)
+    throws IOException
+  {
+    Cursor cursor = createIndexCursor(table, index);
+    if(cursor.findRow(rowPattern)) {
+      return cursor.getCurrentRow();
+    }
+    return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern.  See {@link #findRow(Column,Object)} for details on
+   * the pattern.
+   * <p>
+   * Note, a {@code null} result value is ambiguous in that it could imply no
+   * match or a matching row with {@code null} for the desired value.  If
+   * distinguishing this situation is important, you will need to use a Cursor
+   * directly instead of this convenience method.
+   * 
+   * @param table the table to search
+   * @param index index to assist the search
+   * @param column column whose value should be returned
+   * @param columnPattern column being matched by the valuePattern
+   * @param valuePattern value from the columnPattern which will match the
+   *                     desired row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Object findValue(Table table, Index index, Column column,
+                                 Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    Cursor cursor = createIndexCursor(table, index);
+    if(cursor.findRow(columnPattern, valuePattern)) {
+      return cursor.getCurrentRowValue(column);
+    }
+    return null;
+  }
+  
   public Table getTable() {
     return _table;
   }
@@ -147,18 +197,23 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return getTable().getPageChannel();
   }
 
-  public Position getCurrentPosition() {
-    return _curPos;
+  /**
+   * Returns the current state of the cursor which can be restored at a future
+   * point in time by a call to {@link #restoreSavepoint}.
+   */
+  public Savepoint getSavepoint() {
+    return new Savepoint(_curPos, _prevPos);
   }
 
   /**
-   * Moves the cursor to a position previously returned from
-   * {@link #getCurrentPosition}.
+   * Moves the cursor to a savepoint previously returned from
+   * {@link #getSavepoint}.
    */
-  public void setCurrentPosition(Position curPos)
+  public void restoreSavepoint(Savepoint savepoint)
     throws IOException
   {
-    restorePosition(curPos);
+    restorePosition(savepoint.getCurrentPosition(),
+                    savepoint.getPreviousPosition());
   }
   
   /**
@@ -1079,6 +1134,34 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     
   }
 
+  /**
+   * Value object which represents a complete save state of the cursor.
+   */
+  public static final class Savepoint
+  {
+    private final Position _curPos;
+    private final Position _prevPos;
+
+    private Savepoint(Position curPos, Position prevPos) {
+      _curPos = curPos;
+      _prevPos = prevPos;
+    }
+
+    public Position getCurrentPosition() {
+      return _curPos;
+    }
+
+    private Position getPreviousPosition() {
+      return _prevPos;
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + " CurPosition " + _curPos +
+        ", PrevPosition " + _prevPos;
+    }
+  }
+  
   /**
    * Value object which maintains the current position of the cursor.
    */

@@ -142,6 +142,15 @@ public class CursorTest extends TestCase {
     assertEquals(3, cursor.moveNextRows(3));
     assertFalse(cursor.isBeforeFirst());
     assertFalse(cursor.isAfterLast());
+
+    Map<String,Object> expectedRow = cursor.getCurrentRow();
+    Cursor.Savepoint savepoint = cursor.getSavepoint();
+    assertEquals(2, cursor.movePreviousRows(2));
+    assertEquals(2, cursor.moveNextRows(2));
+    assertTrue(cursor.moveToNextRow());
+    assertTrue(cursor.moveToPreviousRow());
+    assertEquals(expectedRow, cursor.getCurrentRow());
+    
     while(cursor.moveToNextRow()) {
       foundRows.add(cursor.getCurrentRow());
     }
@@ -150,6 +159,17 @@ public class CursorTest extends TestCase {
     assertTrue(cursor.isAfterLast());
 
     assertEquals(0, cursor.moveNextRows(3));
+
+    cursor.beforeFirst();
+    assertTrue(cursor.isBeforeFirst());
+    assertFalse(cursor.isAfterLast());
+
+    cursor.afterLast();
+    assertFalse(cursor.isBeforeFirst());
+    assertTrue(cursor.isAfterLast());
+
+    cursor.restoreSavepoint(savepoint);
+    assertEquals(expectedRow, cursor.getCurrentRow());    
   }
 
   public void testSearch() throws Exception {
@@ -157,14 +177,14 @@ public class CursorTest extends TestCase {
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestSearch(table, cursor);
+    doTestSearch(table, cursor, null);
     
     db.close();
   }
 
-  private void doTestSearch(Table table, Cursor cursor) throws Exception {
-    List<Map<String,Object>> expectedRows = createTestTableData();
-
+  private void doTestSearch(Table table, Cursor cursor, Index index)
+    throws Exception
+  {
     assertTrue(cursor.findRow(table.getColumn("id"), 3));
     assertEquals(createExpectedRow("id", 3,
                                    "value", "data" + 3),
@@ -178,16 +198,42 @@ public class CursorTest extends TestCase {
                  cursor.getCurrentRow());
 
     assertFalse(cursor.findRow(createExpectedRow(
-                                   "id", 13,
-                                   "value", "data" + 8)));
+                                   "id", 8,
+                                   "value", "data" + 13)));
+    assertFalse(cursor.findRow(table.getColumn("id"), 13));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
+                 cursor.getCurrentRow());
+
+    assertTrue(cursor.findRow(createExpectedRow(
+                                    "value", "data" + 7)));
+    assertEquals(createExpectedRow("id", 7,
+                                   "value", "data" + 7),
+                 cursor.getCurrentRow());
+    
+    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 2));
+    assertEquals(createExpectedRow("id", 2,
+                                   "value", "data" + 2),
                  cursor.getCurrentRow());
     
     assertEquals("data" + 9,
                  Cursor.findValue(table,
                                   table.getColumn("value"),
                                   table.getColumn("id"), 9));
+    assertEquals(createExpectedRow("id", 9,
+                                   "value", "data" + 9),
+                 Cursor.findRow(table,
+                                createExpectedRow("id", 9)));
+    if(index != null) {
+      assertEquals("data" + 9,
+                   Cursor.findValue(table, index,
+                                    table.getColumn("value"),
+                                    table.getColumn("id"), 9));
+      assertEquals(createExpectedRow("id", 9,
+                                     "value", "data" + 9),
+                   Cursor.findRow(table, index,
+                                  createExpectedRow("id", 9)));
+    }
   }
 
   public void testReverse() throws Exception {
@@ -343,7 +389,7 @@ public class CursorTest extends TestCase {
     Table table = db.getTable("test");
     Index idx = table.getIndexes().get(0);
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestSearch(table, cursor);
+    doTestSearch(table, cursor, idx);
     
     db.close();
   }
