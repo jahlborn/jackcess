@@ -1,5 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion> 
+  <parent>
+    <groupId>com.healthmarketscience</groupId>
+    <artifactId>openhms-parent</artifactId>
+    <version>1.0.0</version>
+  </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
@@ -29,13 +34,6 @@
       <timezone>-5</timezone>
     </developer>
   </developers>
-  <licenses>
-    <license>
-      <name>GNU Lesser General Public License, 2.1</name>
-      <url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url>
-      <distribution>manual</distribution>
-    </license>
-  </licenses>
   <issueManagement>
     <system>SourceForge</system>
     <url>http://sourceforge.net/tracker/?group_id=134943&amp;atid=731445</url>
@@ -47,10 +45,6 @@
     <!-- Note, the added '?viewvc' makes this url work with ViewSCM -->
     <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/?viewvc</url>
   </scm>
-  <organization>
-    <name>Health Market Science</name>
-    <url>http://www.healthmarketscience.com</url>
-  </organization>
   <build>
     <defaultGoal>install</defaultGoal>
     <sourceDirectory>src/java</sourceDirectory>
@@ -62,16 +56,6 @@
     </resources>
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <configuration>
-            <source>1.5</source>
-            <target>1.5</target>
-            <compilerArgument>-Xlint:all</compilerArgument>
-            <showWarnings>true</showWarnings>
-          </configuration>
-        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -123,12 +107,6 @@
           </toAddresses>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <configuration>
-<!--           <goals>deploy,changes:announcement-generate,changes:announcement-mail</goals> -->
-        </configuration>
-      </plugin>       
     </plugins>
   </build>
   <dependencies>
@@ -208,40 +186,6 @@
           <show>public</show>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jxr-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-        <configuration>
-          <aggregate>true</aggregate>
-          <targetJdk>1.5</targetJdk>
-          <!-- Use csv reports because unneeded and xml causes failures (bug in pmd 3.9 with SuppressWarnings in source code) -->
-          <format>csv</format>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <configuration>
-          <threshold>Normal</threshold>
-          <effort>Default</effort>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>      
-        <artifactId>taglist-maven-plugin</artifactId>
-        <configuration>
-          <tags>
-            <list>TODO</list>
-            <list>todo</list>
-            <list>FIXME</list>
-            <list>fixme</list>
-          </tags>
-        </configuration>     
-      </plugin> 
     </plugins>
   </reporting>
   <distributionManagement>
@@ -249,15 +193,5 @@
       <id>jackcess-build-site</id>
       <url>scp://shell.sourceforge.net/home/groups/j/ja/jackcess/htdocs</url>
     </site>    
-    <repository>
-      <id>openhms-deploy-site</id>
-      <name>OpenHMS public repository</name>
-      <url>scp://open.hmsonline.com/home/repo/html/maven2</url>
-    </repository>
-    <snapshotRepository>
-      <id>openhms-deploy-site</id>
-      <name>OpenHMS public repository</name>
-      <url>scp://open.hmsonline.com/home/repo/html/maven2-snapshot</url>
-    </snapshotRepository>
   </distributionManagement>
 </project>
