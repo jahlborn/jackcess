@@ -985,6 +985,11 @@ public class Index implements Comparable<Index> {
     }
 
     @Override
+    public int hashCode() {
+      return _rowId.hashCode();
+    }
+
+    @Override
     public boolean equals(Object o) {
       return((this == o) ||
              ((o != null) && (getClass() == o.getClass()) &&
@@ -1042,7 +1047,7 @@ public class Index implements Comparable<Index> {
         cmp = 1;
         invalid = other;
       }
-      return (cmp * (invalid.equals(FIRST_ENTRY.getRowId()) ? 1 : -1));
+      return (cmp * (invalid.equals(FIRST_ENTRY) ? 1 : -1));
     }
     
 
@@ -1097,13 +1102,6 @@ public class Index implements Comparable<Index> {
         }
       }
 
-      @Override
-      public boolean equals(Object o) {
-        return((this == o) ||
-               ((o != null) && (o != null) && (getClass() == o.getClass()) &&
-                (compareTo((EntryColumn)o) == 0)));
-      }
-      
       /**
        * Write this non-null entry column to a buffer
        */
@@ -1455,7 +1453,6 @@ public class Index implements Comparable<Index> {
     }
 
     protected void reset(boolean moveForward) {
-      DirHandler handler = getDirHandler(moveForward);
       _curPos = getDirHandler(moveForward).getBeginningPosition();
       _prevPos = _curPos;
       _lastModCount = Index.this._modCount;
@@ -1551,9 +1548,9 @@ public class Index implements Comparable<Index> {
           curIdx = missingIndexToInsertionPoint(idx);
           between = true;
         }
-      } else if(rowId.equals(RowId.FIRST_ROW_ID)) {
+      } else if(entry.equals(FIRST_ENTRY)) {
         curIdx = FIRST_ENTRY_IDX;
-      } else if(rowId.equals(RowId.LAST_ROW_ID)) {
+      } else if(entry.equals(LAST_ENTRY)) {
         curIdx = LAST_ENTRY_IDX;
       } else {
         throw new IllegalArgumentException("Invalid entry given: " + entry);
@@ -1693,6 +1690,11 @@ public class Index implements Comparable<Index> {
       return _between;
     }
 
+    @Override
+    public int hashCode() {
+      return _entry.hashCode();
+    }
+    
     @Override
     public boolean equals(Object o) {
       return((this == o) ||

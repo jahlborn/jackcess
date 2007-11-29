@@ -583,38 +583,38 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }  
 
   /**
-   * Skips as many rows as possible up to the given number of rows.
-   * @return the number of rows skipped.
+   * Moves forward as many rows as possible up to the given number of rows.
+   * @return the number of rows moved.
    */
-  public int skipNextRows(int numRows)
+  public int moveNextRows(int numRows)
     throws IOException
   {
-    return skipSomeRows(numRows, true);
+    return moveSomeRows(numRows, true);
   }
 
   /**
-   * Skips as many rows as possible up to the given number of rows.
-   * @return the number of rows skipped.
+   * Moves backward as many rows as possible up to the given number of rows.
+   * @return the number of rows moved.
    */
-  public int skipPreviousRows(int numRows)
+  public int movePreviousRows(int numRows)
     throws IOException
   {
-    return skipSomeRows(numRows, false);
+    return moveSomeRows(numRows, false);
   }
 
   /**
-   * Skips as many rows as possible in the given direction up to the given
+   * Moves as many rows as possible in the given direction up to the given
    * number of rows.
-   * @return the number of rows skipped.
+   * @return the number of rows moved.
    */
-  private int skipSomeRows(int numRows, boolean moveForward)
+  private int moveSomeRows(int numRows, boolean moveForward)
     throws IOException
   {
-    int numSkippedRows = 0;
-    while((numSkippedRows < numRows) && moveToAnotherRow(moveForward)) {
-      ++numSkippedRows;
+    int numMovedRows = 0;
+    while((numMovedRows < numRows) && moveToAnotherRow(moveForward)) {
+      ++numMovedRows;
     }
-    return numSkippedRows;
+    return numMovedRows;
   }
 
   /**
@@ -653,7 +653,13 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   protected boolean isUpToDate() {
     return _rowState.isUpToDate();
   }
-  
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + " CurPosition " + _curPos +
+      ", PrevPosition " + _prevPos;
+  }
+    
   /**
    * Finds the next non-deleted row after the given row (as defined by this
    * cursor) and returns the id of the row, where "next" may be backwards if
@@ -671,12 +677,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   protected abstract DirHandler getDirHandler(boolean moveForward);
 
-  @Override
-  public String toString() {
-    return getClass().getSimpleName() + " CurPosition " + _curPos +
-      ", PrevPosition " + _prevPos;
-  }
-  
   /**
    * Row iterator for this table, supports modification.
    */
@@ -1087,6 +1087,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     protected Position() {
     }
 
+    @Override
+    public final int hashCode() {
+      return getRowId().hashCode();
+    }
+    
     @Override
     public final boolean equals(Object o) {
       return((this == o) ||

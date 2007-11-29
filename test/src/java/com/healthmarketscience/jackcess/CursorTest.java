@@ -120,30 +120,36 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRows, foundRows);
   }
 
-  public void testSkip() throws Exception {
+  public void testMove() throws Exception {
     Database db = createTestTable();
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestSkip(table, cursor);
+    doTestMove(table, cursor);
     
     db.close();
   }
 
-  private void doTestSkip(Table table, Cursor cursor) throws Exception {
+  private void doTestMove(Table table, Cursor cursor) throws Exception {
     List<Map<String,Object>> expectedRows = createTestTableData();
     expectedRows.subList(1, 4).clear();
 
     List<Map<String, Object>> foundRows =
       new ArrayList<Map<String, Object>>();
+    assertTrue(cursor.isBeforeFirst());
+    assertFalse(cursor.isAfterLast());
     foundRows.add(cursor.getNextRow());
-    assertEquals(3, cursor.skipNextRows(3));
+    assertEquals(3, cursor.moveNextRows(3));
+    assertFalse(cursor.isBeforeFirst());
+    assertFalse(cursor.isAfterLast());
     while(cursor.moveToNextRow()) {
       foundRows.add(cursor.getCurrentRow());
     }
     assertEquals(expectedRows, foundRows);
+    assertFalse(cursor.isBeforeFirst());
+    assertTrue(cursor.isAfterLast());
 
-    assertEquals(0, cursor.skipNextRows(3));
+    assertEquals(0, cursor.moveNextRows(3));
   }
 
   public void testSearch() throws Exception {
@@ -222,8 +228,8 @@ public class CursorTest extends TestCase {
                                   Cursor cursor1,
                                   Cursor cursor2) throws Exception
   {
-    cursor1.skipNextRows(11);
-    cursor2.skipNextRows(11);
+    cursor1.moveNextRows(11);
+    cursor2.moveNextRows(11);
 
     assertTrue(cursor1.isAfterLast());
     assertTrue(cursor2.isAfterLast());
@@ -265,10 +271,10 @@ public class CursorTest extends TestCase {
                                   Cursor cursor3,
                                   Cursor cursor4) throws Exception
   {
-    cursor1.skipNextRows(2);
-    cursor2.skipNextRows(3);
-    cursor3.skipNextRows(3);
-    cursor4.skipNextRows(4);
+    cursor1.moveNextRows(2);
+    cursor2.moveNextRows(3);
+    cursor3.moveNextRows(3);
+    cursor4.moveNextRows(4);
 
     Map<String,Object> expectedPrevRow =
       createExpectedRow("id", 1, "value", "data" + 1);
@@ -309,13 +315,13 @@ public class CursorTest extends TestCase {
     db.close();
   }
 
-  public void testSkipIndex() throws Exception {
+  public void testMoveIndex() throws Exception {
     Database db = createTestIndexTable();
 
     Table table = db.getTable("test");
     Index idx = table.getIndexes().get(0);
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestSkip(table, cursor);
+    doTestMove(table, cursor);
     
     db.close();
   }

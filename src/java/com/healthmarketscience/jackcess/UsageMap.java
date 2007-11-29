@@ -784,7 +784,7 @@ public class UsageMap
      * After calling this method, getNextPage will return the first page in
      * the map
      */
-    public final void reset() {
+    public void reset() {
       beforeFirst();
     }
 
