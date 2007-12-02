@@ -597,8 +597,46 @@ public class Index implements Comparable<Index> {
   public EntryCursor cursor()
     throws IOException
   {
+    return cursor(null, true, null, true);
+  }
+  
+  /**
+   * Gets a new cursor for this index, narrowed to the range defined by the
+   * given startRow and endRow.
+   * <p>
+   * Forces index initialization.
+   * 
+   * @param startRow the first row of data for the cursor, or {@code null} for
+   *                 the first entry
+   * @param startInclusive whether or not startRow is inclusive or exclusive
+   * @param endRow the last row of data for the cursor, or {@code null} for
+   *               the last entry
+   * @param endInclusive whether or not endRow is inclusive or exclusive
+   */
+  public EntryCursor cursor(Object[] startRow,
+                            boolean startInclusive,
+                            Object[] endRow,
+                            boolean endInclusive)
+    throws IOException
+  {
     initialize();
-    return new EntryCursor();
+    Position startPos = FIRST_POSITION;
+    if(startRow != null) {
+      Entry startEntry = new Entry(startRow,
+                                   (startInclusive ?
+                                    RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID),
+                                   _columns);
+      startPos = new Position(FIRST_ENTRY_IDX, startEntry);
+    }
+    Position endPos = LAST_POSITION;
+    if(endRow != null) {
+      Entry endEntry = new Entry(endRow,
+                                 (endInclusive ?
+                                  RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID),
+                                 _columns);
+      endPos = new Position(LAST_ENTRY_IDX, endEntry);
+    }
+    return new EntryCursor(startPos, endPos);
   }
   
   /**
@@ -1413,16 +1451,47 @@ public class Index implements Comparable<Index> {
     private final DirHandler _forwardDirHandler = new ForwardDirHandler();
     /** handler for moving the page cursor backward */
     private final DirHandler _reverseDirHandler = new ReverseDirHandler();
+    /** the first (exclusive) row id for this cursor */
+    private final Position _firstPos;
+    /** the last (exclusive) row id for this cursor */
+    private final Position _lastPos;
+    /** the first valid index for this cursor */
+    private int _minIndex;
+    /** the last valid index for this cursor */
+    private int _maxIndex;
+    /** the current entry */
     private Position _curPos;
+    /** the previous entry */
     private Position _prevPos;
+    /** the last read modification count on the Index.  we track this so that
+        the cursor can detect updates to the index while traversing and act
+        accordingly */
     private int _lastModCount;
 
-    private EntryCursor() {
+    private EntryCursor(Position firstPos, Position lastPos) {
+      _firstPos = firstPos;
+      _lastPos = lastPos;
+      // force bounds to be updated
+      _lastModCount = Index.this._modCount - 1;
       reset();
     }
 
     public Index getIndex() {
       return Index.this;
+    }
+    
+    /**
+     * Returns the first entry (exclusive) as defined by this cursor.
+     */
+    public Entry getFirstEntry() {
+      return _firstPos.getEntry();
+    }
+  
+    /**
+     * Returns the last entry (exclusive) as defined by this cursor.
+     */
+    public Entry getLastEntry() {
+      return _lastPos.getEntry();
     }
     
     /**
@@ -1440,55 +1509,60 @@ public class Index implements Comparable<Index> {
       return(Index.this._modCount == _lastModCount);
     }
         
-    public void reset() {
-      beforeFirst();
+    public EntryCursor reset() {
+      return beforeFirst();
     }
 
-    public void beforeFirst() {
-      reset(true);
+    public EntryCursor beforeFirst() {
+      return reset(true);
     }
 
-    public void afterLast() {
-      reset(false);
+    public EntryCursor afterLast() {
+      return reset(false);
     }
 
-    protected void reset(boolean moveForward) {
+    protected EntryCursor reset(boolean moveForward) {
       _curPos = getDirHandler(moveForward).getBeginningPosition();
       _prevPos = _curPos;
-      _lastModCount = Index.this._modCount;
+      if(!isUpToDate()) {
+        // update bounds
+        updateBounds();
+        _lastModCount = Index.this._modCount;
+      }
+      return this;
     }
 
     /**
      * Repositions the cursor so that the next row will be the first entry
      * >= the given row.
      */
-    public void beforeEntry(Object[] row)
+    public EntryCursor beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
+      return restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
     }
     
     /**
      * Repositions the cursor so that the previous row will be the first
      * entry <= the given row.
      */
-    public void afterEntry(Object[] row)
+    public EntryCursor afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
+      return restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
     }
     
     /**
-     * @return valid entry if there was entry, {@link Index#LAST_ENTRY}
-     *         otherwise
+     * @return valid entry if there was a next entry,
+     *         {@code #getLastEntry} otherwise
      */
     public Entry getNextEntry() {
       return getAnotherEntry(true);
     }
 
     /**
-     * @return valid entry if there was entry, {@link Index#FIRST_ENTRY}
-     *         otherwise
+     * @return valid entry if there was a next entry,
+     *         {@code #getFirstEntry} otherwise
      */
     public Entry getPreviousEntry() {
       return getAnotherEntry(false);
@@ -1498,63 +1572,90 @@ public class Index implements Comparable<Index> {
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    private void restorePosition(Entry curEntry) {
-      restorePosition(curEntry, _curPos.getEntry());
+    private EntryCursor restorePosition(Entry curEntry) {
+      return restorePosition(curEntry, _curPos.getEntry());
     }
     
     /**
      * Restores a current and previous position for the cursor.
      */
-    protected void restorePosition(Entry curEntry, Entry prevEntry)
+    protected EntryCursor restorePosition(Entry curEntry, Entry prevEntry)
     {
       if(!curEntry.equals(_curPos.getEntry()) ||
          !prevEntry.equals(_prevPos.getEntry()))
       {
         _prevPos = updatePosition(prevEntry);
         _curPos = updatePosition(curEntry);
-        _lastModCount = Index.this._modCount;
+        if(!isUpToDate()) {
+          updateBounds();
+          _lastModCount = Index.this._modCount;
+        }
       } else {
         checkForModification();
       }
+      return this;
     }
 
     /**
-     * Checks the index for modifications an updates state accordingly.
+     * Checks the index for modifications and updates state accordingly.
      */
     private void checkForModification() {
       if(!isUpToDate()) {
         _prevPos = updatePosition(_prevPos.getEntry());
         _curPos = updatePosition(_curPos.getEntry());
+        updateBounds();
         _lastModCount = Index.this._modCount;
       }
     }
 
+    private void updateBounds() {
+      int idx = findEntry(_firstPos.getEntry());
+      if(idx < 0) {
+        idx = missingIndexToInsertionPoint(idx);
+      }
+      _minIndex = idx;
+
+      idx = findEntry(_lastPos.getEntry());
+      if(idx < 0) {
+        idx = missingIndexToInsertionPoint(idx) - 1;
+      }
+      _maxIndex = idx;
+    }
+    
     /**
      * Gets an up-to-date position for the given entry.
      */
     private Position updatePosition(Entry entry) {
-      int curIdx = FIRST_ENTRY_IDX;
-      boolean between = false;
       if(entry.isValid()) {
+        
         // find the new position for this entry
-        int idx = findEntry(entry);
-        if(idx >= 0) {
-          curIdx = idx;
-        } else {
+        int curIdx = findEntry(entry);
+        boolean between = false;
+        if(curIdx < 0) {
           // given entry was not found exactly.  our current position is now
           // really between two indexes, but we cannot support that as an
           // integer value so we set a flag instead
-          curIdx = missingIndexToInsertionPoint(idx);
+          curIdx = missingIndexToInsertionPoint(curIdx);
           between = true;
         }
-      } else if(entry.equals(FIRST_ENTRY)) {
-        curIdx = FIRST_ENTRY_IDX;
-      } else if(entry.equals(LAST_ENTRY)) {
-        curIdx = LAST_ENTRY_IDX;
+
+        if(curIdx < _minIndex) {
+          curIdx = _minIndex;
+          between = true;
+        } else if(curIdx > _maxIndex) {
+          curIdx = _maxIndex + 1;
+          between = true;
+        }
+        
+        return new Position(curIdx, entry, between);
+        
+      } else if(entry.equals(_firstPos.getEntry())) {
+        return _firstPos;
+      } else if(entry.equals(_lastPos.getEntry())) {
+        return _lastPos;
       } else {
         throw new IllegalArgumentException("Invalid entry given: " + entry);
       }
-      return new Position(curIdx, entry, between);
     }
     
     /**
@@ -1598,12 +1699,12 @@ public class Index implements Comparable<Index> {
         return new Position(curIdx, _entries.get(curIdx));
       }
       protected final Position newForwardPosition(int curIdx) {
-        return((curIdx < _entries.size()) ?
-               newPosition(curIdx) : LAST_POSITION);
+        return((curIdx <= _maxIndex) ?
+               newPosition(curIdx) : _lastPos);
       }
       protected final Position newReversePosition(int curIdx) {
-        return ((curIdx >= 0) ?
-                newPosition(curIdx) : FIRST_POSITION);
+        return ((curIdx >= _minIndex) ?
+                newPosition(curIdx) : _firstPos);
       }
     }
         
@@ -1617,17 +1718,17 @@ public class Index implements Comparable<Index> {
         // between position
         if(!between) {
           curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                    0 : (curIdx + 1));
+                    _minIndex : (curIdx + 1));
         }
         return newForwardPosition(curIdx);
       }
       @Override
       public Position getBeginningPosition() {
-        return FIRST_POSITION;
+        return _firstPos;
       }
       @Override
       public Position getEndPosition() {
-        return LAST_POSITION;
+        return _lastPos;
       }
     }
         
@@ -1641,16 +1742,16 @@ public class Index implements Comparable<Index> {
         // pointing at the correct next index in either the between or
         // non-between case
         curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                  (_entries.size() - 1) : (curIdx - 1));
+                  _maxIndex : (curIdx - 1));
         return newReversePosition(curIdx);
       }
       @Override
       public Position getBeginningPosition() {
-        return LAST_POSITION;
+        return _lastPos;
       }
       @Override
       public Position getEndPosition() {
-        return FIRST_POSITION;
+        return _firstPos;
       }
     }
   }

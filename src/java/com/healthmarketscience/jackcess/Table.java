@@ -39,7 +39,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.Table.RowState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -1048,7 +1047,7 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    UsageMap.PageCursor revPageCursor = _ownedPages.cursorAtEnd();
+    UsageMap.PageCursor revPageCursor = _ownedPages.cursor().afterLast();
     while(true) {
       int tmpPageNumber = revPageCursor.getPreviousPage();
       if(tmpPageNumber < 0) {
@@ -1486,7 +1485,9 @@ public class Table
     private boolean _haveRowValues;
     /** values read from the last row */
     private final Object[] _rowValues;
-    /** last modification count seen on the table */
+    /** last modification count seen on the table we track this so that the
+        rowState can detect updates to the table and re-read any buffered
+        data */
     private int _lastModCount;
     
     private RowState(boolean hardRowBuffer) {

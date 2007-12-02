@@ -30,27 +30,20 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 {  
   private static final Log LOG = LogFactory.getLog(Cursor.class);  
 
-  /** normal first position for the TableScanCursor */
+  /** first position for the TableScanCursor */
   private static final ScanPosition FIRST_SCAN_POSITION =
     new ScanPosition(RowId.FIRST_ROW_ID);
-  /** normal last position for the TableScanCursor */
+  /** last position for the TableScanCursor */
   private static final ScanPosition LAST_SCAN_POSITION =
     new ScanPosition(RowId.LAST_ROW_ID);
-
-  /** normal first position for the IndexCursor */
-  private static final IndexPosition FIRST_INDEX_POSITION =
-    new IndexPosition(Index.FIRST_ENTRY);
-  /** normal last position for the IndexCursor */
-  private static final IndexPosition LAST_INDEX_POSITION =
-    new IndexPosition(Index.LAST_ENTRY);
 
   /** owning table */
   private final Table _table;
   /** State used for reading the table rows */
   private final RowState _rowState;
-  /** the first (exclusive) row id for this iterator */
+  /** the first (exclusive) row id for this cursor */
   private final Position _firstPos;
-  /** the last (exclusive) row id for this iterator */
+  /** the last (exclusive) row id for this cursor */
   private final Position _lastPos;
   /** the previous row */
   private Position _prevPos;
@@ -84,7 +77,54 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public static Cursor createIndexCursor(Table table, Index index)
     throws IOException
   {
-    return new IndexCursor(table, index);
+    return createIndexCursor(table, index, null, null);
+  }
+
+  /**
+   * Creates an indexed cursor for the given table, narrowed to the given
+   * range.
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   * @param startRow the first row of data for the cursor (inclusive), or
+   *                 {@code null} for the first entry
+   * @param endRow the last row of data for the cursor (inclusive), or
+   *               {@code null} for the last entry
+   */
+  public static Cursor createIndexCursor(Table table, Index index,
+                                         Object[] startRow, Object[] endRow)
+    throws IOException
+  {
+    return createIndexCursor(table, index, startRow, true, endRow, true);
+  }
+  
+  /**
+   * Creates an indexed cursor for the given table, narrowed to the given
+   * range.
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   * @param startRow the first row of data for the cursor, or {@code null} for
+   *                 the first entry
+   * @param startInclusive whether or not startRow is inclusive or exclusive
+   * @param endRow the last row of data for the cursor, or {@code null} for
+   *               the last entry
+   * @param endInclusive whether or not endRow is inclusive or exclusive
+   */
+  public static Cursor createIndexCursor(Table table, Index index,
+                                         Object[] startRow,
+                                         boolean startInclusive,
+                                         Object[] endRow,
+                                         boolean endInclusive)
+    throws IOException
+  {
+    if(table != index.getTable()) {
+      throw new IllegalArgumentException(
+          "Given index is not for given table: " + index + ", " + table);
+    }
+    return new IndexCursor(table, index,
+                           index.cursor(startRow, startInclusive,
+                                        endRow, endInclusive));
   }
 
   /**
@@ -209,11 +249,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Moves the cursor to a savepoint previously returned from
    * {@link #getSavepoint}.
    */
-  public void restoreSavepoint(Savepoint savepoint)
+  public Cursor restoreSavepoint(Savepoint savepoint)
     throws IOException
   {
-    restorePosition(savepoint.getCurrentPosition(),
-                    savepoint.getPreviousPosition());
+    return restorePosition(savepoint.getCurrentPosition(),
+                           savepoint.getPreviousPosition());
   }
   
   /**
@@ -231,26 +271,26 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
-   * Resets this cursor for forward iteration.  Calls {@link #beforeFirst}.
+   * Resets this cursor for forward traversal.  Calls {@link #beforeFirst}.
    */
-  public void reset() {
-    beforeFirst();
+  public Cursor reset() {
+    return beforeFirst();
   }  
 
   /**
-   * Resets this cursor for forward iteration (sets cursor to before the first
+   * Resets this cursor for forward traversal (sets cursor to before the first
    * row).
    */
-  public void beforeFirst() {
-    reset(true);
+  public Cursor beforeFirst() {
+    return reset(true);
   }
   
   /**
-   * Resets this cursor for reverse iteration (sets cursor to after the last
+   * Resets this cursor for reverse traversal (sets cursor to after the last
    * row).
    */
-  public void afterLast() {
-    reset(false);
+  public Cursor afterLast() {
+    return reset(false);
   }
 
   /**
@@ -293,12 +333,13 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
-   * Resets this cursor for iterating the given direction.
+   * Resets this cursor for traversing the given direction.
    */
-  protected void reset(boolean moveForward) {
+  protected Cursor reset(boolean moveForward) {
     _curPos = getDirHandler(moveForward).getBeginningPosition();
     _prevPos = _curPos;
     _rowState.reset();
+    return this;
   }  
 
   /**
@@ -470,26 +511,37 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Restores a current position for the cursor (current position becomes
    * previous position).
    */
-  protected void restorePosition(Position curPos)
+  protected Cursor restorePosition(Position curPos)
     throws IOException
   {
-    restorePosition(curPos, _curPos);
+    return restorePosition(curPos, _curPos);
   }
     
   /**
-   * Restores a current and previous position for the cursor.
+   * Restores a current and previous position for the cursor if the given
+   * positions are different from the current positions.
    */
-  protected void restorePosition(Position curPos, Position prevPos)
+  protected final Cursor restorePosition(Position curPos, Position prevPos)
     throws IOException
   {
     if(!curPos.equals(_curPos) || !prevPos.equals(_prevPos)) {
-      // make the current position previous, and the new position current
-      _prevPos = _curPos;
-      _curPos = curPos;
-      _rowState.reset();
+      restorePositionImpl(curPos, prevPos);
     }
+    return this;
   }
 
+  /**
+   * Restores a current and previous position for the cursor.
+   */
+  protected void restorePositionImpl(Position curPos, Position prevPos)
+    throws IOException
+  {
+    // make the current position previous, and the new position current
+    _prevPos = _curPos;
+    _curPos = curPos;
+    _rowState.reset();
+  }
+  
   /**
    * Rechecks the current position if the underlying data structures have been
    * modified.
@@ -815,13 +867,13 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     @Override
-    protected void reset(boolean moveForward) {
+    protected Cursor reset(boolean moveForward) {
       _ownedPagesCursor.reset(moveForward);
-      super.reset(moveForward);
+      return super.reset(moveForward);
     }
 
     @Override
-    protected void restorePosition(Position curPos, Position prevPos)
+    protected void restorePositionImpl(Position curPos, Position prevPos)
       throws IOException
     {
       if(!(curPos instanceof ScanPosition) ||
@@ -829,9 +881,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         throw new IllegalArgumentException(
             "Restored positions must be scan positions");
       }
-      super.restorePosition(curPos, prevPos);
       _ownedPagesCursor.restorePosition(curPos.getRowId().getPageNumber(),
                                         prevPos.getRowId().getPageNumber());
+      super.restorePositionImpl(curPos, prevPos);
     }
 
     @Override
@@ -957,15 +1009,14 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     /** Cursor over the entries of the relvant index */
     private final Index.EntryCursor _entryCursor;
 
-    private IndexCursor(Table table, Index index)
+    private IndexCursor(Table table, Index index,
+                        Index.EntryCursor entryCursor)
       throws IOException
     {
-      super(table, FIRST_INDEX_POSITION, LAST_INDEX_POSITION);
-      if(table != index.getTable()) {
-        throw new IllegalArgumentException(
-            "Given index is not for given table: " + index + ", " + table);
-      }
-      _entryCursor = index.cursor();
+      super(table,
+            new IndexPosition(entryCursor.getFirstEntry()),
+            new IndexPosition(entryCursor.getLastEntry()));
+      _entryCursor = entryCursor;
     }
 
     @Override
@@ -979,13 +1030,13 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     @Override
-    protected void reset(boolean moveForward) {
+    protected Cursor reset(boolean moveForward) {
       _entryCursor.reset(moveForward);
-      super.reset(moveForward);
+      return super.reset(moveForward);
     }
 
     @Override
-    protected void restorePosition(Position curPos, Position prevPos)
+    protected void restorePositionImpl(Position curPos, Position prevPos)
       throws IOException
     {
       if(!(curPos instanceof IndexPosition) ||
@@ -993,9 +1044,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         throw new IllegalArgumentException(
             "Restored positions must be index positions");
       }
-      super.restorePosition(curPos, prevPos);
       _entryCursor.restorePosition(((IndexPosition)curPos).getEntry(),
                                    ((IndexPosition)prevPos).getEntry());
+      super.restorePositionImpl(curPos, prevPos);
     }
 
     @Override

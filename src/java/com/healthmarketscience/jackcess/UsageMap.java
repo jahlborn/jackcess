@@ -147,12 +147,6 @@ public class UsageMap
     return new PageCursor();
   }
 
-  public PageCursor cursorAtEnd() {
-    PageCursor cursor = new PageCursor();
-    cursor.afterLast();
-    return cursor;
-  }
-  
   protected short getRowStart() {
     return _rowStart;
   }
@@ -784,48 +778,50 @@ public class UsageMap
      * After calling this method, getNextPage will return the first page in
      * the map
      */
-    public void reset() {
-      beforeFirst();
+    public PageCursor reset() {
+      return beforeFirst();
     }
 
     /**
      * After calling this method, {@link #getNextPage} will return the first
      * page in the map
      */
-    public void beforeFirst() {
-      reset(true);
+    public PageCursor beforeFirst() {
+      return reset(true);
     }
 
     /**
      * After calling this method, {@link #getPreviousPage} will return the
      * last page in the map
      */
-    public void afterLast() {
-      reset(false);
+    public PageCursor afterLast() {
+      return reset(false);
     }
 
     /**
      * Resets this page cursor for traversing the given direction.
      */
-    protected void reset(boolean moveForward) {
+    protected PageCursor reset(boolean moveForward) {
       _curPageNumber = getDirHandler(moveForward).getBeginningPageNumber();
       _prevPageNumber = _curPageNumber;
       _lastModCount = UsageMap.this._modCount;
+      return this;
     }
 
     /**
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    private void restorePosition(int curPageNumber)
+    private PageCursor restorePosition(int curPageNumber)
     {
-      restorePosition(curPageNumber, _curPageNumber);
+      return restorePosition(curPageNumber, _curPageNumber);
     }
     
     /**
      * Restores a current and previous position for the cursor.
      */
-    protected void restorePosition(int curPageNumber, int prevPageNumber) {
+    protected PageCursor restorePosition(int curPageNumber, int prevPageNumber)
+    {
       if((curPageNumber != _curPageNumber) ||
          (prevPageNumber != _prevPageNumber))
       {
@@ -835,6 +831,7 @@ public class UsageMap
       } else {
         checkForModification();
       }
+      return this;
     }
 
     /**

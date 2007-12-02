@@ -18,8 +18,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -368,13 +368,13 @@ public class DatabaseTest extends TestCase {
   public void testReadWithDeletedCols() throws Exception {
     Table table = Database.open(new File("test/data/delColTest.mdb")).getTable("Table1");
 
-    Map<String, Object> expectedRow0 = new HashMap<String, Object>();
+    Map<String, Object> expectedRow0 = new LinkedHashMap<String, Object>();
     expectedRow0.put("id", 0);
     expectedRow0.put("id2", 2);
     expectedRow0.put("data", "foo");
     expectedRow0.put("data2", "foo2");
 
-    Map<String, Object> expectedRow1 = new HashMap<String, Object>();
+    Map<String, Object> expectedRow1 = new LinkedHashMap<String, Object>();
     expectedRow1.put("id", 3);
     expectedRow1.put("id2", 5);
     expectedRow1.put("data", "bar");
@@ -687,7 +687,7 @@ public class DatabaseTest extends TestCase {
     Table t = db.getTable("test");
 
     List<String> row = new ArrayList<String>();
-    Map<String,Object> expectedRowData = new HashMap<String, Object>();
+    Map<String,Object> expectedRowData = new LinkedHashMap<String, Object>();
     for(int i = 0; i < numColumns; ++i) {
       String value = "" + i + " some row data";
       row.add(value);
@@ -838,7 +838,7 @@ public class DatabaseTest extends TestCase {
   }
   
   static Map<String, Object> createExpectedRow(Object... rowElements) {
-    Map<String, Object> row = new HashMap<String, Object>();
+    Map<String, Object> row = new LinkedHashMap<String, Object>();
     for(int i = 0; i < rowElements.length; i += 2) {
       row.put((String)rowElements[i],
               rowElements[i + 1]);

@@ -33,6 +33,17 @@ public class CursorTest extends TestCase {
     }
     return expectedRows;
   }
+
+  private static List<Map<String,Object>> createTestTableData(
+      int startIdx,
+      int endIdx)
+    throws Exception
+  {
+    List<Map<String,Object>> expectedRows = createTestTableData();
+    expectedRows.subList(endIdx, expectedRows.size()).clear();
+    expectedRows.subList(0, startIdx).clear();
+    return expectedRows;
+  }
   
   private static Database createTestTable() throws Exception {
     Database db = create();
@@ -85,6 +96,17 @@ public class CursorTest extends TestCase {
     return db;
   }
 
+  private static Cursor createIndexSubRangeCursor(Table table,
+                                                  Index idx,
+                                                  int type)
+    throws Exception
+  {
+    return Cursor.createIndexCursor(
+        table, idx,
+        idx.constructIndexRow(3 - type), (type == 0),
+        idx.constructIndexRow(8 + type), (type == 0));
+  }
+  
   public void testRowId() throws Exception {
     // test special cases
     RowId rowId1 = new RowId(1, 2);
@@ -105,12 +127,17 @@ public class CursorTest extends TestCase {
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestSimple(table, cursor);
+    doTestSimple(table, cursor, null);
     db.close();
   }
 
-  private void doTestSimple(Table table, Cursor cursor) throws Exception {  
-    List<Map<String,Object>> expectedRows = createTestTableData();
+  private void doTestSimple(Table table, Cursor cursor,
+                            List<Map<String,Object>> expectedRows)
+    throws Exception
+  {
+    if(expectedRows == null) {
+      expectedRows = createTestTableData();
+    }
 
     List<Map<String, Object>> foundRows =
       new ArrayList<Map<String, Object>>();
@@ -125,13 +152,18 @@ public class CursorTest extends TestCase {
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestMove(table, cursor);
+    doTestMove(table, cursor, null);
     
     db.close();
   }
 
-  private void doTestMove(Table table, Cursor cursor) throws Exception {
-    List<Map<String,Object>> expectedRows = createTestTableData();
+  private void doTestMove(Table table, Cursor cursor,
+                          List<Map<String,Object>> expectedRows)
+    throws Exception
+  {
+    if(expectedRows == null) {
+      expectedRows = createTestTableData();
+    }
     expectedRows.subList(1, 4).clear();
 
     List<Map<String, Object>> foundRows =
@@ -177,12 +209,13 @@ public class CursorTest extends TestCase {
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestSearch(table, cursor, null);
+    doTestSearch(table, cursor, null, 42, -13);
     
     db.close();
   }
 
-  private void doTestSearch(Table table, Cursor cursor, Index index)
+  private void doTestSearch(Table table, Cursor cursor, Index index,
+                            Integer... outOfRangeValues)
     throws Exception
   {
     assertTrue(cursor.findRow(table.getColumn("id"), 3));
@@ -211,28 +244,38 @@ public class CursorTest extends TestCase {
                                    "value", "data" + 7),
                  cursor.getCurrentRow());
     
-    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 2));
-    assertEquals(createExpectedRow("id", 2,
-                                   "value", "data" + 2),
+    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 4));
+    assertEquals(createExpectedRow("id", 4,
+                                   "value", "data" + 4),
                  cursor.getCurrentRow());
+
+    for(Integer outOfRangeValue : outOfRangeValues) {
+      assertFalse(cursor.findRow(table.getColumn("id"),
+                                 outOfRangeValue));
+      assertFalse(cursor.findRow(table.getColumn("value"),
+                                 "data" + outOfRangeValue));
+      assertFalse(cursor.findRow(createExpectedRow(
+                                     "id", outOfRangeValue,
+                                     "value", "data" + outOfRangeValue)));
+    }
     
-    assertEquals("data" + 9,
+    assertEquals("data" + 5,
                  Cursor.findValue(table,
                                   table.getColumn("value"),
-                                  table.getColumn("id"), 9));
-    assertEquals(createExpectedRow("id", 9,
-                                   "value", "data" + 9),
+                                  table.getColumn("id"), 5));
+    assertEquals(createExpectedRow("id", 5,
+                                   "value", "data" + 5),
                  Cursor.findRow(table,
-                                createExpectedRow("id", 9)));
+                                createExpectedRow("id", 5)));
     if(index != null) {
-      assertEquals("data" + 9,
+      assertEquals("data" + 5,
                    Cursor.findValue(table, index,
                                     table.getColumn("value"),
-                                    table.getColumn("id"), 9));
-      assertEquals(createExpectedRow("id", 9,
-                                     "value", "data" + 9),
+                                    table.getColumn("id"), 5));
+      assertEquals(createExpectedRow("id", 5,
+                                     "value", "data" + 5),
                    Cursor.findRow(table, index,
-                                  createExpectedRow("id", 9)));
+                                  createExpectedRow("id", 5)));
     }
   }
 
@@ -241,13 +284,18 @@ public class CursorTest extends TestCase {
 
     Table table = db.getTable("test");
     Cursor cursor = Cursor.createCursor(table);
-    doTestReverse(table, cursor);
+    doTestReverse(table, cursor, null);
 
     db.close();
   }
 
-  private void doTestReverse(Table table, Cursor cursor) throws Exception {
-    List<Map<String,Object>> expectedRows = createTestTableData();
+  private void doTestReverse(Table table, Cursor cursor,
+                             List<Map<String,Object>> expectedRows)
+    throws Exception
+  {
+    if(expectedRows == null) {
+      expectedRows = createTestTableData();
+    }
     Collections.reverse(expectedRows);
 
     List<Map<String, Object>> foundRows =
@@ -265,14 +313,15 @@ public class CursorTest extends TestCase {
 
     Cursor cursor1 = Cursor.createCursor(table);
     Cursor cursor2 = Cursor.createCursor(table);
-    doTestLiveAddition(table, cursor1, cursor2);
+    doTestLiveAddition(table, cursor1, cursor2, 11);
     
     db.close();
   }
 
   private void doTestLiveAddition(Table table,
                                   Cursor cursor1,
-                                  Cursor cursor2) throws Exception
+                                  Cursor cursor2,
+                                  Integer newRowNum) throws Exception
   {
     cursor1.moveNextRows(11);
     cursor2.moveNextRows(11);
@@ -280,7 +329,6 @@ public class CursorTest extends TestCase {
     assertTrue(cursor1.isAfterLast());
     assertTrue(cursor2.isAfterLast());
 
-    int newRowNum = 11;
     table.addRow(newRowNum, "data" + newRowNum);
     Map<String,Object> expectedRow = 
       createExpectedRow("id", newRowNum, "value", "data" + newRowNum);
@@ -306,7 +354,7 @@ public class CursorTest extends TestCase {
     Cursor cursor2 = Cursor.createCursor(table);
     Cursor cursor3 = Cursor.createCursor(table);
     Cursor cursor4 = Cursor.createCursor(table);
-    doTestLiveDeletion(table, cursor1, cursor2, cursor3, cursor4);
+    doTestLiveDeletion(table, cursor1, cursor2, cursor3, cursor4, 1);
     
     db.close();
   }
@@ -315,20 +363,23 @@ public class CursorTest extends TestCase {
                                   Cursor cursor1,
                                   Cursor cursor2,
                                   Cursor cursor3,
-                                  Cursor cursor4) throws Exception
+                                  Cursor cursor4,
+                                  int firstValue) throws Exception
   {
-    cursor1.moveNextRows(2);
-    cursor2.moveNextRows(3);
-    cursor3.moveNextRows(3);
-    cursor4.moveNextRows(4);
+    assertEquals(2, cursor1.moveNextRows(2));
+    assertEquals(3, cursor2.moveNextRows(3));
+    assertEquals(3, cursor3.moveNextRows(3));
+    assertEquals(4, cursor4.moveNextRows(4));
 
     Map<String,Object> expectedPrevRow =
-      createExpectedRow("id", 1, "value", "data" + 1);
+      createExpectedRow("id", firstValue, "value", "data" + firstValue);
+    ++firstValue;
     Map<String,Object> expectedDeletedRow =
-      createExpectedRow("id", 2, "value", "data" + 2);
+      createExpectedRow("id", firstValue, "value", "data" + firstValue);
+    ++firstValue;
     Map<String,Object> expectedNextRow =
-      createExpectedRow("id", 3, "value", "data" + 3);
-    
+      createExpectedRow("id", firstValue, "value", "data" + firstValue);
+
     assertEquals(expectedDeletedRow, cursor2.getCurrentRow());
     assertEquals(expectedDeletedRow, cursor3.getCurrentRow());
     
@@ -356,7 +407,7 @@ public class CursorTest extends TestCase {
     assertTable(createUnorderedTestTableData(), table);
 
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestSimple(table, cursor);
+    doTestSimple(table, cursor, null);
 
     db.close();
   }
@@ -367,7 +418,7 @@ public class CursorTest extends TestCase {
     Table table = db.getTable("test");
     Index idx = table.getIndexes().get(0);
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestMove(table, cursor);
+    doTestMove(table, cursor, null);
     
     db.close();
   }
@@ -378,7 +429,7 @@ public class CursorTest extends TestCase {
     Table table = db.getTable("test");
     Index idx = table.getIndexes().get(0);
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestReverse(table, cursor);
+    doTestReverse(table, cursor, null);
 
     db.close();
   }
@@ -389,7 +440,7 @@ public class CursorTest extends TestCase {
     Table table = db.getTable("test");
     Index idx = table.getIndexes().get(0);
     Cursor cursor = Cursor.createIndexCursor(table, idx);
-    doTestSearch(table, cursor, idx);
+    doTestSearch(table, cursor, idx, 42, -13);
     
     db.close();
   }
@@ -402,7 +453,7 @@ public class CursorTest extends TestCase {
 
     Cursor cursor1 = Cursor.createIndexCursor(table, idx);
     Cursor cursor2 = Cursor.createIndexCursor(table, idx);
-    doTestLiveAddition(table, cursor1, cursor2);
+    doTestLiveAddition(table, cursor1, cursor2, 11);
     
     db.close();
   }
@@ -417,9 +468,113 @@ public class CursorTest extends TestCase {
     Cursor cursor2 = Cursor.createIndexCursor(table, idx);
     Cursor cursor3 = Cursor.createIndexCursor(table, idx);
     Cursor cursor4 = Cursor.createIndexCursor(table, idx);
-    doTestLiveDeletion(table, cursor1, cursor2, cursor3, cursor4);
+    doTestLiveDeletion(table, cursor1, cursor2, cursor3, cursor4, 1);
     
     db.close();
   }
+
+  public void testSimpleIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+
+      List<Map<String,Object>> expectedRows =
+        createTestTableData(3, 9);
+
+      doTestSimple(table, cursor, expectedRows);
+    
+      db.close();
+    }
+  }
+  
+  public void testMoveIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+
+      List<Map<String,Object>> expectedRows =
+        createTestTableData(3, 9);
+
+      doTestMove(table, cursor, expectedRows);
+    
+      db.close();
+    }
+  }
+  
+  public void testSearchIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+
+      doTestSearch(table, cursor, idx, 2, 9);
+    
+      db.close();
+    }
+  }
+
+  public void testReverseIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+
+      List<Map<String,Object>> expectedRows =
+        createTestTableData(3, 9);
+
+      doTestReverse(table, cursor, expectedRows);
+
+      db.close();
+    }
+  }
+
+  public void testLiveAdditionIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
+      Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
+
+      doTestLiveAddition(table, cursor1, cursor2, 8);
+    
+      db.close();
+    }
+  }
+  
+  public void testLiveDeletionIndexSubRange() throws Exception {
+    for(int i = 0; i < 2; ++i) {
+      Database db = createTestIndexTable();
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
+      Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
+      Cursor cursor3 = createIndexSubRangeCursor(table, idx, i);
+      Cursor cursor4 = createIndexSubRangeCursor(table, idx, i);
+
+      doTestLiveDeletion(table, cursor1, cursor2, cursor3, cursor4, 4);
+
+      db.close();
+    }    
+  }
+
   
 }
