@@ -276,6 +276,13 @@ public class CursorTest extends TestCase {
                                      "value", "data" + 5),
                    Cursor.findRow(table, index,
                                   createExpectedRow("id", 5)));
+
+      assertNull(Cursor.findValue(table, index,
+                                  table.getColumn("value"),
+                                  table.getColumn("id"),
+                                  -17));
+      assertNull(Cursor.findRow(table, index,
+                                createExpectedRow("id", 13)));
     }
   }
 
@@ -396,6 +403,44 @@ public class CursorTest extends TestCase {
     assertEquals(expectedNextRow, cursor3.getNextRow());
     
     assertEquals(expectedPrevRow, cursor3.getPreviousRow());
+
+    assertTrue(cursor3.moveToNextRow());
+    cursor3.deleteCurrentRow();
+    assertTrue(cursor3.isCurrentRowDeleted());
+
+    firstValue += 2;
+    expectedNextRow =
+      createExpectedRow("id", firstValue, "value", "data" + firstValue);
+    assertTrue(cursor3.moveToNextRow());
+    assertEquals(expectedNextRow, cursor3.getNextRow());
+
+    cursor1.beforeFirst();
+    assertTrue(cursor1.moveToNextRow());
+    cursor1.deleteCurrentRow();
+    assertFalse(cursor1.isBeforeFirst());
+    assertFalse(cursor1.isAfterLast());
+    assertFalse(cursor1.moveToPreviousRow());
+    assertTrue(cursor1.isBeforeFirst());
+    assertFalse(cursor1.isAfterLast());
+
+    cursor1.afterLast();
+    assertTrue(cursor1.moveToPreviousRow());
+    cursor1.deleteCurrentRow();
+    assertFalse(cursor1.isBeforeFirst());
+    assertFalse(cursor1.isAfterLast());
+    assertFalse(cursor1.moveToNextRow());
+    assertFalse(cursor1.isBeforeFirst());
+    assertTrue(cursor1.isAfterLast());
+
+    cursor1.beforeFirst();
+    while(cursor1.moveToNextRow()) {
+      cursor1.deleteCurrentRow();
+    }
+
+    assertTrue(cursor1.isAfterLast());
+    assertTrue(cursor2.isCurrentRowDeleted());
+    assertTrue(cursor3.isCurrentRowDeleted());
+    assertTrue(cursor4.isCurrentRowDeleted());
   }
 
   public void testSimpleIndex() throws Exception {
