@@ -4,4 +4,5 @@ Missing pieces:
   and various other index handling issues
 - determine when/when not to inline memo/ole data for a row of data depending
   on how much will be written in the current row
+- implement index creation
 
