@@ -705,7 +705,7 @@ public class Index implements Comparable<Index> {
    * @throws IllegalArgumentException if the wrong number of values are
    *         provided
    */
-  public Object[] constructIndexRow(Object... values)
+  public Object[] constructIndexRowFromEntry(Object... values)
   {
     if(values.length != _columns.size()) {
       throw new IllegalArgumentException(
@@ -1509,19 +1509,19 @@ public class Index implements Comparable<Index> {
       return(Index.this._modCount == _lastModCount);
     }
         
-    public EntryCursor reset() {
-      return beforeFirst();
+    public void reset() {
+      beforeFirst();
     }
 
-    public EntryCursor beforeFirst() {
-      return reset(true);
+    public void beforeFirst() {
+      reset(true);
     }
 
-    public EntryCursor afterLast() {
-      return reset(false);
+    public void afterLast() {
+      reset(false);
     }
 
-    protected EntryCursor reset(boolean moveForward) {
+    protected void reset(boolean moveForward) {
       _curPos = getDirHandler(moveForward).getBeginningPosition();
       _prevPos = _curPos;
       if(!isUpToDate()) {
@@ -1529,27 +1529,26 @@ public class Index implements Comparable<Index> {
         updateBounds();
         _lastModCount = Index.this._modCount;
       }
-      return this;
     }
 
     /**
      * Repositions the cursor so that the next row will be the first entry
      * >= the given row.
      */
-    public EntryCursor beforeEntry(Object[] row)
+    public void beforeEntry(Object[] row)
       throws IOException
     {
-      return restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
+      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
     }
     
     /**
      * Repositions the cursor so that the previous row will be the first
      * entry <= the given row.
      */
-    public EntryCursor afterEntry(Object[] row)
+    public void afterEntry(Object[] row)
       throws IOException
     {
-      return restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
+      restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
     }
     
     /**
@@ -1572,14 +1571,14 @@ public class Index implements Comparable<Index> {
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    private EntryCursor restorePosition(Entry curEntry) {
-      return restorePosition(curEntry, _curPos.getEntry());
+    private void restorePosition(Entry curEntry) {
+      restorePosition(curEntry, _curPos.getEntry());
     }
     
     /**
      * Restores a current and previous position for the cursor.
      */
-    protected EntryCursor restorePosition(Entry curEntry, Entry prevEntry)
+    protected void restorePosition(Entry curEntry, Entry prevEntry)
     {
       if(!curEntry.equals(_curPos.getEntry()) ||
          !prevEntry.equals(_prevPos.getEntry()))
@@ -1593,7 +1592,6 @@ public class Index implements Comparable<Index> {
       } else {
         checkForModification();
       }
-      return this;
     }
 
     /**

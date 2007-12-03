@@ -22,6 +22,11 @@ import org.apache.commons.logging.LogFactory;
  * traversed, row updates may or may not be seen).  Multiple cursors may
  * traverse the same table simultaneously.
  * <p>
+ * The Cursor provides a variety of static utility methods to construct
+ * cursors with given characteristics or easily search for specific values.
+ * For even friendlier and more flexible construction, see
+ * {@link CursorBuilder}.
+ * <p>
  * Is not thread-safe.
  *
  * @author james
@@ -240,6 +245,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Returns the current state of the cursor which can be restored at a future
    * point in time by a call to {@link #restoreSavepoint}.
+   * <p>
+   * Savepoints may be used across different cursor instances for the same
+   * table, but they must be of the same type (index based vs. non-index
+   * based).
    */
   public Savepoint getSavepoint() {
     return new Savepoint(_curPos, _prevPos);
@@ -249,11 +258,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Moves the cursor to a savepoint previously returned from
    * {@link #getSavepoint}.
    */
-  public Cursor restoreSavepoint(Savepoint savepoint)
+  public void restoreSavepoint(Savepoint savepoint)
     throws IOException
   {
-    return restorePosition(savepoint.getCurrentPosition(),
-                           savepoint.getPreviousPosition());
+    restorePosition(savepoint.getCurrentPosition(),
+                    savepoint.getPreviousPosition());
   }
   
   /**
@@ -273,24 +282,24 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Resets this cursor for forward traversal.  Calls {@link #beforeFirst}.
    */
-  public Cursor reset() {
-    return beforeFirst();
+  public void reset() {
+    beforeFirst();
   }  
 
   /**
    * Resets this cursor for forward traversal (sets cursor to before the first
    * row).
    */
-  public Cursor beforeFirst() {
-    return reset(true);
+  public void beforeFirst() {
+    reset(true);
   }
   
   /**
    * Resets this cursor for reverse traversal (sets cursor to after the last
    * row).
    */
-  public Cursor afterLast() {
-    return reset(false);
+  public void afterLast() {
+    reset(false);
   }
 
   /**
@@ -335,11 +344,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Resets this cursor for traversing the given direction.
    */
-  protected Cursor reset(boolean moveForward) {
+  protected void reset(boolean moveForward) {
     _curPos = getDirHandler(moveForward).getBeginningPosition();
     _prevPos = _curPos;
     _rowState.reset();
-    return this;
   }  
 
   /**
@@ -511,23 +519,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Restores a current position for the cursor (current position becomes
    * previous position).
    */
-  protected Cursor restorePosition(Position curPos)
+  protected void restorePosition(Position curPos)
     throws IOException
   {
-    return restorePosition(curPos, _curPos);
+    restorePosition(curPos, _curPos);
   }
     
   /**
    * Restores a current and previous position for the cursor if the given
    * positions are different from the current positions.
    */
-  protected final Cursor restorePosition(Position curPos, Position prevPos)
+  protected final void restorePosition(Position curPos, Position prevPos)
     throws IOException
   {
     if(!curPos.equals(_curPos) || !prevPos.equals(_prevPos)) {
       restorePositionImpl(curPos, prevPos);
     }
-    return this;
   }
 
   /**
@@ -867,9 +874,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     @Override
-    protected Cursor reset(boolean moveForward) {
+    protected void reset(boolean moveForward) {
       _ownedPagesCursor.reset(moveForward);
-      return super.reset(moveForward);
+      super.reset(moveForward);
     }
 
     @Override
@@ -1030,9 +1037,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
     
     @Override
-    protected Cursor reset(boolean moveForward) {
+    protected void reset(boolean moveForward) {
       _entryCursor.reset(moveForward);
-      return super.reset(moveForward);
+      super.reset(moveForward);
     }
 
     @Override

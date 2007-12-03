@@ -101,10 +101,13 @@ public class CursorTest extends TestCase {
                                                   int type)
     throws Exception
   {
-    return Cursor.createIndexCursor(
-        table, idx,
-        idx.constructIndexRow(3 - type), (type == 0),
-        idx.constructIndexRow(8 + type), (type == 0));
+    return new CursorBuilder(table)
+      .setIndex(idx)
+      .setStartEntry(3 - type)
+      .setStartRowInclusive(type == 0)
+      .setEndEntry(8 + type)
+      .setEndRowInclusive(type == 0)
+      .toCursor();
   }
   
   public void testRowId() throws Exception {

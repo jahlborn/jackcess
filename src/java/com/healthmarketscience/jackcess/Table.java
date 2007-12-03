@@ -1047,7 +1047,8 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    UsageMap.PageCursor revPageCursor = _ownedPages.cursor().afterLast();
+    UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
+    revPageCursor.afterLast();
     while(true) {
       int tmpPageNumber = revPageCursor.getPreviousPage();
       if(tmpPageNumber < 0) {

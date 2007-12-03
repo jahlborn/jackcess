@@ -778,49 +778,48 @@ public class UsageMap
      * After calling this method, getNextPage will return the first page in
      * the map
      */
-    public PageCursor reset() {
-      return beforeFirst();
+    public void reset() {
+      beforeFirst();
     }
 
     /**
      * After calling this method, {@link #getNextPage} will return the first
      * page in the map
      */
-    public PageCursor beforeFirst() {
-      return reset(true);
+    public void beforeFirst() {
+      reset(true);
     }
 
     /**
      * After calling this method, {@link #getPreviousPage} will return the
      * last page in the map
      */
-    public PageCursor afterLast() {
-      return reset(false);
+    public void afterLast() {
+      reset(false);
     }
 
     /**
      * Resets this page cursor for traversing the given direction.
      */
-    protected PageCursor reset(boolean moveForward) {
+    protected void reset(boolean moveForward) {
       _curPageNumber = getDirHandler(moveForward).getBeginningPageNumber();
       _prevPageNumber = _curPageNumber;
       _lastModCount = UsageMap.this._modCount;
-      return this;
     }
 
     /**
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    private PageCursor restorePosition(int curPageNumber)
+    private void restorePosition(int curPageNumber)
     {
-      return restorePosition(curPageNumber, _curPageNumber);
+      restorePosition(curPageNumber, _curPageNumber);
     }
     
     /**
      * Restores a current and previous position for the cursor.
      */
-    protected PageCursor restorePosition(int curPageNumber, int prevPageNumber)
+    protected void restorePosition(int curPageNumber, int prevPageNumber)
     {
       if((curPageNumber != _curPageNumber) ||
          (prevPageNumber != _prevPageNumber))
@@ -831,7 +830,6 @@ public class UsageMap
       } else {
         checkForModification();
       }
-      return this;
     }
 
     /**
