@@ -649,5 +649,43 @@ public class CursorTest extends TestCase {
     }    
   }
 
+  public void testId() throws Exception
+  {
+    Database db = createTestIndexTable();
+
+    Table table = db.getTable("test");
+    Index idx = table.getIndexes().get(0);
+
+    Cursor tCursor = Cursor.createCursor(table);
+    Cursor iCursor = Cursor.createIndexCursor(table, idx);
+
+    Cursor.Savepoint tSave = tCursor.getSavepoint();
+    Cursor.Savepoint iSave = iCursor.getSavepoint();
+
+    tCursor.restoreSavepoint(tSave);
+    iCursor.restoreSavepoint(iSave);
+
+    try {
+      tCursor.restoreSavepoint(iSave);
+      fail("IllegalArgumentException should have been thrown");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+    try {
+      iCursor.restoreSavepoint(tSave);
+      fail("IllegalArgumentException should have been thrown");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+    Cursor tCursor2 = Cursor.createCursor(table);
+    Cursor iCursor2 = Cursor.createIndexCursor(table, idx);
+
+    tCursor2.restoreSavepoint(tSave);
+    iCursor2.restoreSavepoint(iSave);
+
+    db.close();
+  }
   
 }

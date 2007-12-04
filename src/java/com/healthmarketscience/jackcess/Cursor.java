@@ -67,6 +67,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   private static final ScanPosition LAST_SCAN_POSITION =
     new ScanPosition(RowId.LAST_ROW_ID);
 
+  /** identifier for this cursor */
+  private final Id _id;
   /** owning table */
   private final Table _table;
   /** State used for reading the table rows */
@@ -81,7 +83,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   private Position _curPos;
   
 
-  protected Cursor(Table table, Position firstPos, Position lastPos) {
+  protected Cursor(Id id, Table table, Position firstPos, Position lastPos) {
+    _id = id;
     _table = table;
     _rowState = _table.createRowState();
     _firstPos = firstPos;
@@ -255,6 +258,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return null;
   }
   
+  public Id getId() {
+    return _id;
+  }
+
   public Table getTable() {
     return _table;
   }
@@ -272,20 +279,26 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * point in time by a call to {@link #restoreSavepoint}.
    * <p>
    * Savepoints may be used across different cursor instances for the same
-   * table, but they must be of the same type (index based vs. non-index
-   * based).
+   * table, but they must have the same {@link Id}.
    */
   public Savepoint getSavepoint() {
-    return new Savepoint(_curPos, _prevPos);
+    return new Savepoint(_id, _curPos, _prevPos);
   }
 
   /**
    * Moves the cursor to a savepoint previously returned from
    * {@link #getSavepoint}.
+   * @throws IllegalArgumentException if the given savepoint does not have a
+   *         cursorId equal to this cursor's id
    */
   public void restoreSavepoint(Savepoint savepoint)
     throws IOException
   {
+    if(!_id.equals(savepoint.getCursorId())) {
+      throw new IllegalArgumentException(
+          "Savepoint " + savepoint + " is not valid for this cursor with id "
+          + _id);
+    }
     restorePosition(savepoint.getCurrentPosition(),
                     savepoint.getPreviousPosition());
   }
@@ -884,7 +897,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     private final UsageMap.PageCursor _ownedPagesCursor;
     
     private TableScanCursor(Table table) {
-      super(table, FIRST_SCAN_POSITION, LAST_SCAN_POSITION);
+      super(new Id(table, null), table,
+            FIRST_SCAN_POSITION, LAST_SCAN_POSITION);
       _ownedPagesCursor = table.getOwnedPagesCursor();
     }
 
@@ -1045,7 +1059,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
                         Index.EntryCursor entryCursor)
       throws IOException
     {
-      super(table,
+      super(new Id(table, index), table,
             new IndexPosition(entryCursor.getFirstEntry()),
             new IndexPosition(entryCursor.getLastEntry()));
       _entryCursor = entryCursor;
@@ -1218,16 +1232,56 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
+   * Identifier for a cursor.  Will be equal to any other cursor of the same
+   * type for the same table.  Primarily used to check the validity of a
+   * Savepoint.
+   */
+  public static final class Id
+  {
+    private final String _tableName;
+    private final String _indexName;
+
+    private Id(Table table, Index index) {
+      _tableName = table.getName();
+      _indexName = ((index != null) ? index.getName() : null);
+    }
+
+    @Override
+    public int hashCode() {
+      return _tableName.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return((this == o) ||
+             ((o != null) && (getClass() == o.getClass()) &&
+              ObjectUtils.equals(_tableName, ((Id)o)._tableName) &&
+              ObjectUtils.equals(_indexName, ((Id)o)._indexName)));
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + " " + _tableName + ":" + _indexName;
+    }
+  }
+
+  /**
    * Value object which represents a complete save state of the cursor.
    */
   public static final class Savepoint
   {
+    private final Id _cursorId;
     private final Position _curPos;
     private final Position _prevPos;
 
-    private Savepoint(Position curPos, Position prevPos) {
+    private Savepoint(Id cursorId, Position curPos, Position prevPos) {
+      _cursorId = cursorId;
       _curPos = curPos;
       _prevPos = prevPos;
+    }
+
+    public Id getCursorId() {
+      return _cursorId;
     }
 
     public Position getCurrentPosition() {
@@ -1240,8 +1294,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
     @Override
     public String toString() {
-      return getClass().getSimpleName() + " CurPosition " + _curPos +
-        ", PrevPosition " + _prevPos;
+      return getClass().getSimpleName() + " " + _cursorId + " CurPosition " + 
+        _curPos + ", PrevPosition " + _prevPos;
     }
   }
   
