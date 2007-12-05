@@ -104,7 +104,7 @@ public class CursorTest extends TestCase {
     return expectedRows;
   }  
   
-  private static Database createTestIndexTable() throws Exception {
+  static Database createTestIndexTable() throws Exception {
     File srcFile = new File("test/data/indexCursorTest.mdb");
     File dbFile = File.createTempFile("databaseTest", ".mdb");
     dbFile.deleteOnExit();

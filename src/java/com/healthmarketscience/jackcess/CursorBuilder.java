@@ -105,19 +105,7 @@ public class CursorBuilder {
    *         with the given name
    */
   public CursorBuilder setIndexByName(String indexName) {
-    boolean found = false;
-    for(Index index : _table.getIndexes()) {
-      if(ObjectUtils.equals(indexName, index.getName())) {
-        _index = index;
-        found = true;
-        break;
-      }
-    }
-    if(!found) {
-      throw new IllegalArgumentException("Index with name " + indexName +
-                                         " does not exist in table " + _table);
-    }
-    return this;
+    return setIndex(_table.getIndex(indexName));
   }
 
   /**

@@ -265,6 +265,10 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Table getTable() {
     return _table;
   }
+
+  public Index getIndex() {
+    return null;
+  }
   
   public JetFormat getFormat() {
     return getTable().getFormat();
@@ -1065,6 +1069,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       _entryCursor = entryCursor;
     }
 
+    @Override
+    public Index getIndex() {
+      return _entryCursor.getIndex();
+    }
+    
     @Override
     protected IndexDirHandler getDirHandler(boolean moveForward) {
       return (moveForward ? _forwardDirHandler : _reverseDirHandler);

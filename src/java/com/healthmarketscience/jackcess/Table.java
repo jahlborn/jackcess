@@ -249,6 +249,19 @@ public class Table
   }
 
   /**
+   * @return the index with the given name
+   */
+  public Index getIndex(String name) {
+    for(Index index : _indexes) {
+      if(index.getName().equals(name)) {
+        return index;
+      }
+    }
+    throw new IllegalArgumentException("Index with name " + name +
+                                       " does not exist on this table");
+  }
+    
+  /**
    * Only called by unit tests
    */
   int getIndexSlotCount() {
