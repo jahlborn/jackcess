@@ -6,7 +6,12 @@
   </properties>
   <body>
     <release version="1.1.10" date="TBD">
-      <action dev="jahlborn" type="update">
+      <action dev="jahlborn" type="add">
+        Add index based table traversal support to Cursor with optional
+        sub-range narrowing.  Add position save/restore, row find, and a
+        variety of other features.
+      </action>
+      <action dev="jahlborn" type="add">
         Move table iteration out of Table and into Cursor.  First stage in
         offering more complicated table access.
       </action>
