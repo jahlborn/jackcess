@@ -5,7 +5,7 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
-    <release version="1.1.10" date="TBD">
+    <release version="1.1.10" date="2007-12-26">
       <action dev="jahlborn" type="add">
         Add index based table traversal support to Cursor with optional
         sub-range narrowing.  Add position save/restore, row find, and a
