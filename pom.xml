@@ -9,7 +9,7 @@
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>1.1.10-SNAPSHOT</version>
+  <version>1.1.10</version>
   <url>http://jackcess.sf.net</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
@@ -44,6 +44,7 @@
     <developerConnection>scm:cvs:ext:username@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</developerConnection>
     <!-- Note, the added '?viewvc' makes this url work with ViewSCM -->
     <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/?viewvc</url>
+    <tag>rel_1_1_10</tag>
   </scm>
   <build>
     <defaultGoal>install</defaultGoal>
