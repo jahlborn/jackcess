@@ -39,11 +39,10 @@
     <url>http://sourceforge.net/tracker/?group_id=134943&amp;atid=731445</url>
   </issueManagement>
   <scm>
-    <connection>scm:cvs:pserver:anonymous:@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</connection>
-    <!-- read/write cvs connection -->
-    <developerConnection>scm:cvs:ext:username@jackcess.cvs.sourceforge.net:/cvsroot/jackcess/:jackcess</developerConnection>
-    <!-- Note, the added '?viewvc' makes this url work with ViewSCM -->
-    <url>http://jackcess.cvs.sourceforge.net/jackcess/jackcess/?viewvc</url>
+    <connection>scm:svn:http://jackcess.svn.sourceforge.net/svnroot/jackcess/jackcess/trunk/</connection>
+    <!-- read/write svn connection -->
+    <developerConnection>scm:svn:https://jackcess.svn.sourceforge.net/svnroot/jackcess/jackcess/trunk/</developerConnection>
+    <url>http://jackcess.svn.sourceforge.net/viewvc/jackcess/jackcess/trunk/</url>
   </scm>
   <build>
     <defaultGoal>install</defaultGoal>
