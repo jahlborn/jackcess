@@ -5,6 +5,11 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.11" date="TBD">
+      <action dev="jahlborn" type="update">
+        Move from cvs to subversion.
+      </action>
+    </release>
     <release version="1.1.10" date="2007-12-26">
       <action dev="jahlborn" type="add">
         Add index based table traversal support to Cursor with optional
