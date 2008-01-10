@@ -20,7 +20,6 @@
       </p>
     </section>
     <section name="Sample code">
-      <p>
         <ul>
           <li>Displaying the contents of a table:
             <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());</source>
@@ -45,7 +44,6 @@ external database) into a new table:
             <source>Database.open(new File("my.mdb")).importFile("Imported2", new File("my.csv"), ",");</source>
           </li>
         </ul>
-      </p>
     </section>
     <section name="Other Resources">
       Some other jackcess related projects:
