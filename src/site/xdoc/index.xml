@@ -23,10 +23,10 @@
       <p>
         <ul>
           <li>Displaying the contents of a table:
-            <pre>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());</pre>
+            <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());</source>
           </li>
           <li>Creating a new table and writing data into it:
-            <pre>Database db = Database.create(new File("new.mdb"));
+            <source>Database db = Database.create(new File("new.mdb"));
 Column a = new Column();
 a.setName("a");
 a.setSQLType(Types.INTEGER);
@@ -35,14 +35,14 @@ b.setName("b");
 b.setSQLType(Types.VARCHAR);
 db.createTable("NewTable", Arrays.asList(a, b));
 Table newTable = db.getTable("NewTable");
-newTable.addRow(new Object[] {1, "foo"});</pre>
+newTable.addRow(new Object[] {1, "foo"});</source>
           </li>
           <li>Copying the contents of a JDBC ResultSet (e.g. from an
 external database) into a new table:
-            <pre>Database.open(new File("my.mdb")).copyTable("Imported", resultSet);</pre>
+            <source>Database.open(new File("my.mdb")).copyTable("Imported", resultSet);</source>
           </li>
           <li>Copying the contents of a CSV file into a new table:
-            <pre>Database.open(new File("my.mdb")).importFile("Imported2", new File("my.csv"), ",");</pre>
+            <source>Database.open(new File("my.mdb")).importFile("Imported2", new File("my.csv"), ",");</source>
           </li>
         </ul>
       </p>
