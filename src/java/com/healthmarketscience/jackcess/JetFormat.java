@@ -62,6 +62,7 @@ public abstract class JetFormat {
   
   /** Database page size in bytes */
   public final int PAGE_SIZE;
+  public final long MAX_DATABASE_SIZE;
   
   public final int MAX_ROW_SIZE;
   
@@ -145,6 +146,7 @@ public abstract class JetFormat {
     _name = name;
     
     PAGE_SIZE = definePageSize();
+    MAX_DATABASE_SIZE = defineMaxDatabaseSize();
     
     MAX_ROW_SIZE = defineMaxRowSize();
     
@@ -206,6 +208,7 @@ public abstract class JetFormat {
   }
   
   protected abstract int definePageSize();
+  protected abstract long defineMaxDatabaseSize();
   
   protected abstract int defineMaxRowSize();
   
@@ -278,6 +281,11 @@ public abstract class JetFormat {
 
     @Override
     protected int definePageSize() { return 4096; }
+    
+    @Override
+    protected long defineMaxDatabaseSize() {
+      return (2L * 1024L * 1024L * 1024L);
+    }
     
     @Override
     protected int defineMaxRowSize() { return PAGE_SIZE - 16; }
