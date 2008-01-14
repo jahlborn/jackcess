@@ -69,15 +69,19 @@ public class DatabaseTest extends TestCase {
   }
 
   static Database create(boolean keep) throws Exception {
-    File tmp = File.createTempFile("databaseTest", ".mdb");
-    if(keep) {
-      System.out.println("Created " + tmp);
-    } else {
-      tmp.deleteOnExit();
-    }
-    return Database.create(tmp);
+    return Database.create(createTempFile(keep));
   }
 
+  static Database openCopy(File srcFile) throws Exception {
+    return openCopy(srcFile, false);
+  }
+  
+  static Database openCopy(File srcFile, boolean keep) throws Exception {
+    File tmp = createTempFile(keep);
+    copyFile(srcFile, tmp);
+    return Database.open(tmp);
+  }
+  
   public void testInvalidTableDefs() throws Exception {
     Database db = create();
 
@@ -555,12 +559,7 @@ public class DatabaseTest extends TestCase {
 
   public void testFixedNumeric() throws Exception
   {
-    File srcFile = new File("test/data/fixedNumericTest.mdb");
-    File dbFile = File.createTempFile("databaseTest", ".mdb");
-    dbFile.deleteOnExit();
-    copyFile(srcFile, dbFile);
-    
-    Database db = Database.open(dbFile);
+    Database db = openCopy(new File("test/data/fixedNumericTest.mdb"));
     Table t = db.getTable("test");
 
     boolean first = true;
@@ -668,12 +667,7 @@ public class DatabaseTest extends TestCase {
 
 
   public void testUsageMapPromotion() throws Exception {
-    File srcFile = new File("test/data/testPromotion.mdb");
-    File dbFile = File.createTempFile("databaseTest", ".mdb");
-    dbFile.deleteOnExit();
-    copyFile(srcFile, dbFile);
-    
-    Database db = Database.open(dbFile);
+    Database db = openCopy(new File("test/data/testPromotion.mdb"));
     Table t = db.getTable("jobDB1");
 
     String lval = createString(255); // "--255 chars long text--";
@@ -929,6 +923,16 @@ public class DatabaseTest extends TestCase {
     } finally {
       ostream.close();
     }
+  }
+
+  static File createTempFile(boolean keep) throws Exception {
+    File tmp = File.createTempFile("databaseTest", ".mdb");
+    if(keep) {
+      System.out.println("Created " + tmp);
+    } else {
+      tmp.deleteOnExit();
+    }
+    return tmp;
   }
 
   static byte[] toByteArray(File file)
