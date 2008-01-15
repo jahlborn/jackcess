@@ -38,6 +38,8 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Types;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -771,7 +773,44 @@ public class DatabaseTest extends TestCase {
     
     db.close();
   }  
-  
+
+  public void testWriteAndReadDate() throws Exception {
+    Database db = create();
+
+    List<Column> columns = new ArrayList<Column>();
+    Column col = new Column();
+    col.setName("name");
+    col.setType(DataType.TEXT);
+    columns.add(col);
+    col = new Column();
+    col.setName("date");
+    col.setType(DataType.SHORT_DATE_TIME);
+    columns.add(col);
+
+    db.createTable("test", columns);
+    Table table = db.getTable("test");
+    
+    DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+    List<Date> dates =
+      Arrays.asList(
+          df.parse("19801231 00:00:00"),
+          df.parse("19930513 14:43:27"),
+          null,
+          df.parse("20210102 02:37:00"),
+          new Date());
+
+    for(Date d : dates) {
+      table.addRow("row " + d, d);
+    }
+
+    List<Date> foundDates = new ArrayList<Date>();
+    for(Map<String,Object> row : table) {
+      foundDates.add((Date)row.get("date"));
+    }
+
+    assertEquals(dates, foundDates);
+  }
+    
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,
         777.88f, (short) 999, new Date()};
