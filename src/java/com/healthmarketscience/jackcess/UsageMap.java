@@ -57,7 +57,7 @@ public class UsageMap
   /** Offset of the data page at which the usage map data starts */
   private int _startOffset;
   /** Offset of the data page at which the usage map declaration starts */
-  private short _rowStart;
+  private final short _rowStart;
   /** First page that this usage map applies to */
   private int _startPage;
   /** Last page that this usage map applies to */
@@ -150,7 +150,11 @@ public class UsageMap
   protected short getRowStart() {
     return _rowStart;
   }
-  
+
+  protected int getRowEnd() {
+    return getTableBuffer().limit();
+  }
+
   protected void setStartOffset(int startOffset) {
     _startOffset = startOffset;
   }
@@ -240,9 +244,9 @@ public class UsageMap
     _endPage = 0;
     ++_modCount;
     
-    // clear out the table data
-    int tableStart = getRowStart() + getFormat().OFFSET_USAGE_MAP_START - 4;
-    int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH + 4;
+    // clear out the table data (everything except map type)
+    int tableStart = getRowStart() + 1;
+    int tableEnd = getRowEnd();
     ByteUtil.clearRange(_tableBuffer, tableStart, tableEnd);
   }
   
@@ -265,6 +269,15 @@ public class UsageMap
         for (int i = 0; i < 8; i++) {
           if ((b & (1 << i)) != 0) {
             int pageNumberOffset = (byteCount * 8 + i) + bufferStartPage;
+            int pageNumber = bitIndexToPageNumber(
+                pageNumberOffset,
+                PageChannel.INVALID_PAGE_NUMBER);
+            if(!isPageWithinRange(pageNumber)) {
+              throw new IllegalStateException(
+                  "found page number " + pageNumber
+                  + " in usage map outside of expected range " +
+                  _startPage + " to " + _endPage);
+            }
             _pageNumbers.set(pageNumberOffset);
           }
         }
@@ -402,8 +415,8 @@ public class UsageMap
 
   /**
    * Usage map whose map is written inline in the same page.  For Jet4, this
-   * type of map can contain a maximum of 512 pages.  Free space maps are
-   * always inline, used space maps may be inline or reference.  It has a
+   * type of map can usually contains a maximum of 512 pages.  Free space maps
+   * are always inline, used space maps may be inline or reference.  It has a
    * start page, which all page numbers in its map are calculated as starting
    * from.
    * @author Tim McCune
@@ -411,18 +424,28 @@ public class UsageMap
   private class InlineHandler extends Handler
   {
     private final boolean _assumeOutOfRangeBitsOn;
+    private final int _maxInlinePages;
     
     private InlineHandler(boolean assumeOutOfRangeBitsOn)
       throws IOException
     {
       _assumeOutOfRangeBitsOn = assumeOutOfRangeBitsOn;
+      _maxInlinePages = (getInlineDataEnd() - getInlineDataStart()) * 8;
       int startPage = getTableBuffer().getInt(getRowStart() + 1);
       setInlinePageRange(startPage);
       processMap(getTableBuffer(), 0);
     }
 
     private int getMaxInlinePages() {
-      return(getFormat().USAGE_MAP_TABLE_BYTE_LENGTH * 8);
+      return _maxInlinePages;
+    }
+
+    private int getInlineDataStart() {
+      return getRowStart() + getFormat().OFFSET_USAGE_MAP_START;
+    }
+
+    private int getInlineDataEnd() {
+      return getRowEnd();
     }
     
     /**
@@ -577,9 +600,8 @@ public class UsageMap
       if(firstPage == PageChannel.INVALID_PAGE_NUMBER) {
         
         // this is the common case where we left everything behind
-        int tableStart = getRowStart() + getFormat().OFFSET_USAGE_MAP_START;
-        int tableEnd = tableStart + getFormat().USAGE_MAP_TABLE_BYTE_LENGTH;
-        ByteUtil.fillRange(_tableBuffer, tableStart, tableEnd);
+        ByteUtil.fillRange(_tableBuffer, getInlineDataStart(),
+                           getInlineDataEnd());
 
         // write out the updated table
         writeTable();
@@ -616,7 +638,7 @@ public class UsageMap
     private ReferenceHandler()
       throws IOException
     {
-      int numUsagePages = (getFormat().USAGE_MAP_TABLE_BYTE_LENGTH / 4) + 1;
+      int numUsagePages = (getRowEnd() - getRowStart() - 1) / 4;
       setStartOffset(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
       setPageRange(0, (numUsagePages * getMaxPagesPerUsagePage()));
       

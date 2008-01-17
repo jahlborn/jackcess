@@ -7,6 +7,9 @@
   <body>
     <release version="1.1.11" date="TBD">
       <action dev="jahlborn" type="fix">
+        Support reading inline usage maps with more than 512 pages.
+      </action>
+      <action dev="jahlborn" type="fix">
         Fix some problems with sporadic usage map corruption.
       </action>
       <action dev="jahlborn" type="update">
