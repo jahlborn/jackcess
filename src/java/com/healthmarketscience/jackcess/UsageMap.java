@@ -657,12 +657,14 @@ public class UsageMap
       int pageIndex = (int)(pageNumber / getMaxPagesPerUsagePage());
       int mapPageNum = getTableBuffer().getInt(
           calculateMapPagePointerOffset(pageIndex));
-      if(mapPageNum <= 0) {
+      ByteBuffer mapPageBuffer = null;
+      if(mapPageNum > 0) {
+        mapPageBuffer = _mapPageHolder.setPage(getPageChannel(), mapPageNum);
+      } else {
         // Need to create a new usage map page
-        mapPageNum  = createNewUsageMapPage(pageIndex);
+        mapPageBuffer = createNewUsageMapPage(pageIndex);
+        mapPageNum = _mapPageHolder.getPageNumber();
       }
-      ByteBuffer mapPageBuffer = _mapPageHolder.setPage(getPageChannel(),
-                                                        mapPageNum);
       updateMap(pageNumber,
                 (pageNumber - (getMaxPagesPerUsagePage() * pageIndex)),
                 mapPageBuffer, add);
@@ -674,19 +676,17 @@ public class UsageMap
      * pointer to it.
      * @param pageIndex Index of the page reference within the map declaration 
      */
-    private int createNewUsageMapPage(int pageIndex) throws IOException {
+    private ByteBuffer createNewUsageMapPage(int pageIndex) throws IOException
+    {
       ByteBuffer mapPageBuffer = _mapPageHolder.setNewPage(getPageChannel());
       mapPageBuffer.put(PageTypes.USAGE_MAP);
       mapPageBuffer.put((byte) 0x01);  //Unknown
       mapPageBuffer.putShort((short) 0); //Unknown
-      for(int i = 0; i < mapPageBuffer.limit(); ++i) {
-        mapPageBuffer.get(i);
-      }
       int mapPageNum = _mapPageHolder.getPageNumber();
       getTableBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
                              mapPageNum);
       writeTable();
-      return mapPageNum;
+      return mapPageBuffer;
     }
   
     private int calculateMapPagePointerOffset(int pageIndex) {
