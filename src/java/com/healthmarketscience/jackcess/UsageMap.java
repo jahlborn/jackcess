@@ -401,10 +401,11 @@ public class UsageMap
   }
 
   /**
-   * Usage map whose map is written inline in the same page.  This type of map
-   * can contain a maximum of 512 pages, and is always used for free space
-   * maps.  It has a start page, which all page numbers in its map are
-   * calculated as starting from.
+   * Usage map whose map is written inline in the same page.  For Jet4, this
+   * type of map can contain a maximum of 512 pages.  Free space maps are
+   * always inline, used space maps may be inline or reference.  It has a
+   * start page, which all page numbers in its map are calculated as starting
+   * from.
    * @author Tim McCune
    */
   private class InlineHandler extends Handler
@@ -601,9 +602,9 @@ public class UsageMap
 
   /**
    * Usage map whose map is written across one or more entire separate pages
-   * of page type USAGE_MAP.  This type of map can contain 32736 pages per
-   * reference page, and a maximum of 16 reference map pages for a total
-   * maximum of 523776 pages (2 GB).
+   * of page type USAGE_MAP.  For Jet4, this type of map can contain 32736
+   * pages per reference page, and a maximum of 17 reference map pages for a
+   * total maximum of 556512 pages (2 GB).
    * @author Tim McCune
    */
   private class ReferenceHandler extends Handler
