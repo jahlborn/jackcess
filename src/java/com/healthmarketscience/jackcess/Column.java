@@ -37,7 +37,6 @@ import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -640,19 +639,14 @@ public class Column implements Comparable<Column> {
   {
     // seems access stores dates in the local timezone.  guess you just hope
     // you read it in the same timezone in which it was written!
-    double dval = buffer.getDouble();
-    dval *= MILLISECONDS_PER_DAY;
-    dval -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
-    long time = (long)dval;
-    TimeZone tz = TimeZone.getDefault();
-    Date date = new Date(time - tz.getRawOffset());
-    if (tz.inDaylightTime(date))
-    {
-      date = new Date(date.getTime() - tz.getDSTSavings());
-    }
-    return date;
+    double dTime = buffer.getDouble();
+    dTime *= MILLISECONDS_PER_DAY;
+    dTime -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
+    long time = (long)dTime;
+    time -= getTimeZoneOffset(time);
+    return new Date(time);
   }
-
+  
   /**
    * Writes a date value.
    */
@@ -663,15 +657,25 @@ public class Column implements Comparable<Column> {
     } else {
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
-      Calendar cal = Calendar.getInstance();
-      cal.setTime((Date) value);
-      long ms = cal.getTimeInMillis();
-      ms += (long) TimeZone.getDefault().getOffset(ms);
-      buffer.putDouble((double) ms / MILLISECONDS_PER_DAY +
-                       DAYS_BETWEEN_EPOCH_AND_1900);
+      long time = ((Date)value).getTime();
+      time += getTimeZoneOffset(time);
+      
+      double dTime = (((double)time) / MILLISECONDS_PER_DAY) +
+        DAYS_BETWEEN_EPOCH_AND_1900;
+      buffer.putDouble(dTime);
     }
   }
 
+  /**
+   * Gets the timezone offset from UTC for the given time (including DST).
+   */
+  private static long getTimeZoneOffset(long time)
+  {
+    Calendar c = Calendar.getInstance();
+    c.setTimeInMillis(time);
+    return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
+  }  
+  
   /**
    * Decodes a GUID value.
    */

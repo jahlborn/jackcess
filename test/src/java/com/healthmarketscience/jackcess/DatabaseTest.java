@@ -190,6 +190,10 @@ public class DatabaseTest extends TestCase {
     assertEquals(Calendar.SEPTEMBER, cal.get(Calendar.MONTH));
     assertEquals(21, cal.get(Calendar.DAY_OF_MONTH));
     assertEquals(1974, cal.get(Calendar.YEAR));
+    assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
+    assertEquals(0, cal.get(Calendar.MINUTE));
+    assertEquals(0, cal.get(Calendar.SECOND));
+    assertEquals(0, cal.get(Calendar.MILLISECOND));
     assertEquals(Boolean.TRUE, row.get("I"));
     
     row = table.getNextRow();
@@ -204,6 +208,10 @@ public class DatabaseTest extends TestCase {
     assertEquals(Calendar.DECEMBER, cal.get(Calendar.MONTH));
     assertEquals(12, cal.get(Calendar.DAY_OF_MONTH));
     assertEquals(1981, cal.get(Calendar.YEAR));
+    assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
+    assertEquals(0, cal.get(Calendar.MINUTE));
+    assertEquals(0, cal.get(Calendar.SECOND));
+    assertEquals(0, cal.get(Calendar.MILLISECOND));
     assertEquals(Boolean.FALSE, row.get("I"));
   }
   
@@ -792,12 +800,26 @@ public class DatabaseTest extends TestCase {
     
     DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
     List<Date> dates =
-      Arrays.asList(
-          df.parse("19801231 00:00:00"),
-          df.parse("19930513 14:43:27"),
-          null,
-          df.parse("20210102 02:37:00"),
-          new Date());
+      new ArrayList<Date>(
+          Arrays.asList(
+              df.parse("19801231 00:00:00"),
+              df.parse("19930513 14:43:27"),
+              null,
+              df.parse("20210102 02:37:00"),
+              new Date()));
+
+    Calendar c = Calendar.getInstance();
+    for(int year = 1801; year < 2050; year +=3) {
+      for(int month = 0; month <= 12; ++month) {
+        for(int day = 1; day < 29; day += 3) {
+          c.clear();
+          c.set(Calendar.YEAR, year);
+          c.set(Calendar.MONTH, month);
+          c.set(Calendar.DAY_OF_MONTH, day);
+          dates.add(c.getTime());
+        }
+      }
+    }
 
     for(Date d : dates) {
       table.addRow("row " + d, d);
@@ -808,7 +830,16 @@ public class DatabaseTest extends TestCase {
       foundDates.add((Date)row.get("date"));
     }
 
-    assertEquals(dates, foundDates);
+    assertEquals(dates.size(), foundDates.size());
+    for(int i = 0; i < dates.size(); ++i) {
+      try {
+        assertEquals(dates.get(i), foundDates.get(i));
+      } catch(Error e) {
+        System.err.println("Expected " + dates.get(i).getTime() + ", found " +
+                           foundDates.get(i).getTime());
+        throw e;
+      }
+    }
   }
     
   static Object[] createTestRow(String col1Val) {

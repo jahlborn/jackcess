@@ -5,6 +5,11 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.12" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Resolve more edge cases around date handling.
+      </action>
+    </release>
     <release version="1.1.11" date="2008-01-20">
       <action dev="jahlborn" type="fix">
         Support reading inline usage maps with more than 512 pages.
