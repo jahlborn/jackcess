@@ -120,6 +120,7 @@
       <artifactId>log4j</artifactId>
       <version>1.2.7</version>
       <scope>runtime</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
