@@ -736,7 +736,8 @@ public class Column implements Comparable<Column> {
     // determine which type to write
     byte type = 0;
     int lvalDefLen = getFormat().SIZE_LONG_VALUE_DEF;
-    if((getFormat().SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength) {
+    if(((getFormat().SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength)
+       && (value.length <= getFormat().MAX_INLINE_LONG_VALUE_SIZE)) {
       type = LONG_VALUE_TYPE_THIS_PAGE;
       lvalDefLen += value.length;
     } else if(Table.getRowSpaceUsage(value.length, getFormat()) <=

@@ -113,6 +113,7 @@ public abstract class JetFormat {
   public final int SIZE_COLUMN_HEADER;
   public final int SIZE_ROW_LOCATION;
   public final int SIZE_LONG_VALUE_DEF;
+  public final int MAX_INLINE_LONG_VALUE_SIZE;
   public final int SIZE_TDEF_HEADER;
   public final int SIZE_TDEF_TRAILER;
   public final int SIZE_COLUMN_DEF_BLOCK;
@@ -197,6 +198,7 @@ public abstract class JetFormat {
     SIZE_COLUMN_HEADER = defineSizeColumnHeader();
     SIZE_ROW_LOCATION = defineSizeRowLocation();
     SIZE_LONG_VALUE_DEF = defineSizeLongValueDef();
+    MAX_INLINE_LONG_VALUE_SIZE = defineMaxInlineLongValueSize();
     SIZE_TDEF_HEADER = defineSizeTdefHeader();
     SIZE_TDEF_TRAILER = defineSizeTdefTrailer();
     SIZE_COLUMN_DEF_BLOCK = defineSizeColumnDefBlock();
@@ -259,6 +261,7 @@ public abstract class JetFormat {
   protected abstract int defineSizeColumnHeader();
   protected abstract int defineSizeRowLocation();
   protected abstract int defineSizeLongValueDef();
+  protected abstract int defineMaxInlineLongValueSize();
   protected abstract int defineSizeTdefHeader();
   protected abstract int defineSizeTdefTrailer();
   protected abstract int defineSizeColumnDefBlock();
@@ -375,6 +378,8 @@ public abstract class JetFormat {
     protected int defineSizeRowLocation() { return 2; }
     @Override
     protected int defineSizeLongValueDef() { return 12; }
+    @Override
+    protected int defineMaxInlineLongValueSize() { return 64; }
     @Override
     protected int defineSizeTdefHeader() { return 63; }
     @Override
