@@ -314,8 +314,7 @@ public class Table
     }
     
     // make sure table def gets updated
-    --_rowCount;
-    updateTableDefinition();
+    updateTableDefinition(-1);
   }
   
   /**
@@ -1107,20 +1106,20 @@ public class Table
     writeDataPage(dataPage, pageNumber);
     
     //Update tdef page
-    _rowCount += rows.size();
-    updateTableDefinition();
+    updateTableDefinition(rows.size());
   }
 
   /**
    * Updates the table definition after rows are modified.
    */
-  private void updateTableDefinition() throws IOException
+  private void updateTableDefinition(int rowCountInc) throws IOException
   {
     // load table definition
     ByteBuffer tdefPage = getPageChannel().createPageBuffer();
     getPageChannel().readPage(tdefPage, _tableDefPageNumber);
     
     // make sure rowcount and autonumber are up-to-date
+    _rowCount += rowCountInc;
     tdefPage.putInt(getFormat().OFFSET_NUM_ROWS, _rowCount);
     tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
 
