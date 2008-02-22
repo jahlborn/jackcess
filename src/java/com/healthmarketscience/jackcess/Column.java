@@ -62,14 +62,17 @@ public class Column implements Comparable<Column> {
   public static final Object AUTO_NUMBER = "<AUTO_NUMBER>";
   
   /**
-   * Access starts counting dates at Jan 1, 1900.  Java starts counting
-   * at Jan 1, 1970.  This is the # of days between them for conversion.
-   */
-  private static final double DAYS_BETWEEN_EPOCH_AND_1900 = 25569d;
-  /**
    * Access stores numeric dates in days.  Java stores them in milliseconds.
    */
-  private static final double MILLISECONDS_PER_DAY = 86400000d;
+  private static final double MILLISECONDS_PER_DAY =
+    (24L * 60L * 60L * 1000L);
+
+  /**
+   * Access starts counting dates at Jan 1, 1900.  Java starts counting
+   * at Jan 1, 1970.  This is the # of millis between them for conversion.
+   */
+  private static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
+    25569L * (long)MILLISECONDS_PER_DAY;
   
   /**
    * Long value (LVAL) type that indicates that the value is stored on the same page
@@ -639,10 +642,8 @@ public class Column implements Comparable<Column> {
   {
     // seems access stores dates in the local timezone.  guess you just hope
     // you read it in the same timezone in which it was written!
-    double dTime = buffer.getDouble();
-    dTime *= MILLISECONDS_PER_DAY;
-    dTime -= (DAYS_BETWEEN_EPOCH_AND_1900 * MILLISECONDS_PER_DAY);
-    long time = (long)dTime;
+    long time = (long)(buffer.getDouble() * MILLISECONDS_PER_DAY);
+    time -= MILLIS_BETWEEN_EPOCH_AND_1900;
     time -= getTimeZoneOffset(time);
     return new Date(time);
   }
@@ -659,9 +660,8 @@ public class Column implements Comparable<Column> {
       // hope you read it in the same timezone in which it was written!
       long time = ((Date)value).getTime();
       time += getTimeZoneOffset(time);
-      
-      double dTime = (((double)time) / MILLISECONDS_PER_DAY) +
-        DAYS_BETWEEN_EPOCH_AND_1900;
+      time += MILLIS_BETWEEN_EPOCH_AND_1900;
+      double dTime = ((double)time) / MILLISECONDS_PER_DAY;
       buffer.putDouble(dTime);
     }
   }
