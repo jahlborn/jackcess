@@ -68,11 +68,13 @@ public class Database
 {
   
   private static final Log LOG = LogFactory.getLog(Database.class);
-  
-  private static final byte[] SID = new byte[2];
+
+  /** this is the default "userId" used if we cannot find existing info.  this
+      seems to be some standard "Admin" userId for access files */
+  private static final byte[] SYS_DEFAULT_SID = new byte[2];
   static {
-    SID[0] = (byte) 0xA6;
-    SID[1] = (byte) 0x33;
+    SYS_DEFAULT_SID[0] = (byte) 0xA6;
+    SYS_DEFAULT_SID[1] = (byte) 0x33;
   }
 
   /** default value for the auto-sync value ({@code true}).  this is slower,
@@ -84,8 +86,11 @@ public class Database
   
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
-  
-  private static final int ACM = 1048319;
+
+  /** this is the access control bit field for created tables.  the value used
+      is equivalent to full access (Visual Basic DAO PermissionEnum constant:
+      dbSecFullAccess) */
+  private static final Integer SYS_FULL_ACCESS_ACM = 1048575;
   
   private static final String COL_ACM = "ACM";
   /** System catalog column name of the date a system object was created */
@@ -187,6 +192,8 @@ public class Database
   private Table _systemCatalog;
   /** System access control entries table */
   private Table _accessControlEntries;
+  /** SIDs to use for the ACEs added for new tables */
+  private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -340,6 +347,16 @@ public class Database
         _tableParentId = (Integer) row.get(COL_ID);
       }
     }
+
+    // check for required system values
+    if(_accessControlEntries == null) {
+      throw new IOException("Did not find required " + TABLE_SYSTEM_ACES +
+                            " table");
+    }
+    if(_tableParentId == null) {
+      throw new IOException("Did not find required parent table id");
+    }
+    
     if (LOG.isDebugEnabled()) {
       LOG.debug("Finished reading system catalog.  Tables: " +
                 getTableNames());
@@ -355,8 +372,9 @@ public class Database
     _pageChannel.readPage(buffer, pageNum);
     byte pageType = buffer.get();
     if (pageType != PageTypes.TABLE_DEF) {
-      throw new IOException("Looking for MSysACEs at page " + pageNum +
-          ", but page type is " + pageType);
+      throw new IOException("Looking for " + TABLE_SYSTEM_ACES +
+                            " at page " + pageNum +
+                            ", but page type is " + pageType);
     }
     _accessControlEntries = new Table(this, buffer, pageNum,
                                       "Access Control Entries");
@@ -484,23 +502,49 @@ public class Database
    * @param pageNumber Page number that contains the table definition
    */
   private void addToAccessControlEntries(int pageNumber) throws IOException {
-    Object[] aceRow = new Object[_accessControlEntries.getColumns().size()];
-    int idx = 0;
-    for (Iterator<Column> iter = _accessControlEntries.getColumns().iterator();
-         iter.hasNext(); idx++)
-    {
-      Column col = iter.next();
-      if (col.getName().equals(COL_ACM)) {
-        aceRow[idx] = ACM;
-      } else if (col.getName().equals(COL_F_INHERITABLE)) {
-        aceRow[idx] = Boolean.FALSE;
-      } else if (col.getName().equals(COL_OBJECT_ID)) {
-        aceRow[idx] = Integer.valueOf(pageNumber);
-      } else if (col.getName().equals(COL_SID)) {
-        aceRow[idx] = SID;
+    
+    if(_newTableSIDs.isEmpty()) {
+      initNewTableSIDs();
+    }
+
+    Column acmCol = _accessControlEntries.getColumn(COL_ACM);
+    Column inheritCol = _accessControlEntries.getColumn(COL_F_INHERITABLE);
+    Column objIdCol = _accessControlEntries.getColumn(COL_OBJECT_ID);
+    Column sidCol = _accessControlEntries.getColumn(COL_SID);
+
+    // construct a collection of ACE entries mimicing those of our parent, the
+    // "Tables" system object
+    List<Object[]> aceRows = new ArrayList<Object[]>(_newTableSIDs.size());
+    for(byte[] sid : _newTableSIDs) {
+      Object[] aceRow = new Object[_accessControlEntries.getColumns().size()];
+      aceRow[acmCol.getColumnIndex()] = SYS_FULL_ACCESS_ACM;
+      aceRow[inheritCol.getColumnIndex()] = Boolean.FALSE;
+      aceRow[objIdCol.getColumnIndex()] = Integer.valueOf(pageNumber);
+      aceRow[sidCol.getColumnIndex()] = sid;
+      aceRows.add(aceRow);
+    }
+    _accessControlEntries.addRows(aceRows);  
+  }
+
+  /**
+   * Determines the collection of SIDs which need to be added to new tables.
+   */
+  private void initNewTableSIDs() throws IOException
+  {
+    // search for ACEs matching the tableParentId.
+    // FIXME we could potentially use an index to do this, but index handling
+    // support is sketchy enough that i wouldn't want to trust it just now.
+    for(Map<String, Object> row : Cursor.createCursor(_accessControlEntries)) {
+      Integer objId = (Integer)row.get(COL_OBJECT_ID);
+      if(_tableParentId.equals(objId)) {
+        _newTableSIDs.add((byte[])row.get(COL_SID));
       }
     }
-    _accessControlEntries.addRow(aceRow);  
+
+    if(_newTableSIDs.isEmpty()) {
+      // if all else fails, use the hard-coded default
+      _newTableSIDs.add(SYS_DEFAULT_SID);
+    }
   }
   
   /**

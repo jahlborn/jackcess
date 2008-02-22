@@ -13,6 +13,11 @@
         Fix writing of large memo/ole fields.  Apparently Access does not like
         "inline" fields longer than 64 bytes.
       </action>
+      <action dev="jahlborn" type="fix" issue="1898793">
+        Fix generation of security access control entries.  Use userIds
+        already existing in the database file instead of hard-coded userIds,
+        if possible.
+      </action>
     </release>
     <release version="1.1.11" date="2008-01-20">
       <action dev="jahlborn" type="fix">
