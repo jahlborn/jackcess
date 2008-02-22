@@ -469,6 +469,7 @@ public class Database
   private void addToSystemCatalog(String name, int pageNumber) throws IOException {
     Object[] catalogRow = new Object[_systemCatalog.getColumns().size()];
     int idx = 0;
+    Date creationTime = new Date();
     for (Iterator<Column> iter = _systemCatalog.getColumns().iterator();
          iter.hasNext(); idx++)
     {
@@ -482,7 +483,7 @@ public class Database
       } else if (COL_DATE_CREATE.equals(col.getName()) ||
           COL_DATE_UPDATE.equals(col.getName()))
       {
-        catalogRow[idx] = new Date();
+        catalogRow[idx] = creationTime;
       } else if (COL_PARENT_ID.equals(col.getName())) {
         catalogRow[idx] = _tableParentId;
       } else if (COL_FLAGS.equals(col.getName())) {
