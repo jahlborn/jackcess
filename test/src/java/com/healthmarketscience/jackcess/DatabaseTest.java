@@ -797,6 +797,11 @@ public class DatabaseTest extends TestCase {
 
     db.createTable("test", columns);
     Table table = db.getTable("test");
+
+    // since jackcess does not really store millis, shave them off before
+    // storing the current date/time
+    long curTimeNoMillis = (System.currentTimeMillis() / 1000L);
+    curTimeNoMillis *= 1000L;
     
     DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
     List<Date> dates =
@@ -806,7 +811,7 @@ public class DatabaseTest extends TestCase {
               df.parse("19930513 14:43:27"),
               null,
               df.parse("20210102 02:37:00"),
-              new Date()));
+              new Date(curTimeNoMillis)));
 
     Calendar c = Calendar.getInstance();
     for(int year = 1801; year < 2050; year +=3) {
