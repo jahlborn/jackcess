@@ -1328,7 +1328,7 @@ public class Index implements Comparable<Index> {
       /** extra column bytes */
       private byte[] _extraBytes;
       /** whether or not the trailing bytes were found */
-      private boolean _hasTrailingBytes;
+      private boolean _hasTrailingBytes = true;
     
       private TextEntryColumn(Column col) throws IOException {
         super(col);
@@ -1370,7 +1370,6 @@ public class Index implements Comparable<Index> {
         if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
 
           int endPos = buffer.position();
-          _hasTrailingBytes = true;
           while(buffer.get(endPos) != (byte) 1) {
             if(endPos == maxPos) {
               _hasTrailingBytes = false;
