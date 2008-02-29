@@ -28,7 +28,6 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;

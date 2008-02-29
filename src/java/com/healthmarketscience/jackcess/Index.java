@@ -515,7 +515,6 @@ public class Index implements Comparable<Index> {
         if ((entryMask & (1 << j)) != 0) {
           int length = (i * 8) + j - lastStart;
           indexPage.position(entryPos + lastStart);
-          int startReadPos = indexPage.position();
 
           // determine if we can read straight from the index page (if no
           // valuePrefix).  otherwise, create temp buf with complete entry.
@@ -584,8 +583,7 @@ public class Index implements Comparable<Index> {
    * Forces index initialization.
    * 
    * @param row Row to add
-   * @param pageNumber Page number on which the row is stored
-   * @param rowNumber Row number at which the row is stored
+   * @param rowId rowId of the row to be added
    */
   public void addRow(Object[] row, RowId rowId)
     throws IOException
@@ -609,8 +607,7 @@ public class Index implements Comparable<Index> {
    * Forces index initialization.
    * 
    * @param row Row to remove
-   * @param pageNumber Page number on which the row is removed
-   * @param rowNumber Row number at which the row is removed
+   * @param rowId rowId of the row to be removed
    */
   public void deleteRow(Object[] row, RowId rowId)
     throws IOException
@@ -1225,7 +1222,7 @@ public class Index implements Comparable<Index> {
     private final class FixedEntryColumn extends EntryColumn
     {
       /** Column value */
-      private Comparable _value;
+      private Comparable<?> _value;
     
       private FixedEntryColumn(Column col) throws IOException {
         super(col);
@@ -1241,7 +1238,7 @@ public class Index implements Comparable<Index> {
       protected EntryColumn initFromValue(Object value, byte flags)
         throws IOException
       {
-        _value = (Comparable)value;
+        _value = (Comparable<?>)value;
       
         return this;
       }
@@ -1262,15 +1259,15 @@ public class Index implements Comparable<Index> {
         if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
           byte[] data = new byte[_column.getType().getFixedSize()];
           buffer.get(data);
-          _value = (Comparable) _column.read(data, ByteOrder.BIG_ENDIAN);
+          _value = (Comparable<?>) _column.read(data, ByteOrder.BIG_ENDIAN);
           
           //ints and shorts are stored in index as value + 2147483648
           if (_value instanceof Integer) {
             _value = Integer.valueOf((int) (((Integer) _value).longValue() +
-                                        (long) Integer.MAX_VALUE + 1L)); 
+                                            Integer.MAX_VALUE + 1L)); 
           } else if (_value instanceof Short) {
             _value = Short.valueOf((short) (((Short) _value).longValue() +
-                                        (long) Integer.MAX_VALUE + 1L));
+                                            Integer.MAX_VALUE + 1L));
           }
         }
         
@@ -1287,13 +1284,13 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
-        Comparable value = _value;
+        Comparable<?> value = _value;
         if (value instanceof Integer) {
           value = Integer.valueOf((int) (((Integer) value).longValue() -
-                                     ((long) Integer.MAX_VALUE + 1L)));
+                                         (Integer.MAX_VALUE + 1L)));
         } else if (value instanceof Short) {
           value = Short.valueOf((short) (((Short) value).longValue() -
-                                     ((long) Integer.MAX_VALUE + 1L)));
+                                         (Integer.MAX_VALUE + 1L)));
         }
         buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
       }
@@ -1379,8 +1376,6 @@ public class Index implements Comparable<Index> {
           }
 
           // read index bytes
-          int numPrefixBytes = 0;
-          int dataOffset = 0;
           _valueBytes = new byte[endPos - buffer.position()];
           buffer.get(_valueBytes);
 
