@@ -1026,6 +1026,10 @@ public class Index implements Comparable<Index> {
         }
         colEntryLen -= curEntryLen;
       }
+      if(colEntryLen > 0) {
+        LOG.warn("Unhandled index bytes " + colEntryLen);
+        buffer.position(buffer.position() + colEntryLen);
+      }
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       int row = buffer.get();
       _rowId = new RowId(page, row);
