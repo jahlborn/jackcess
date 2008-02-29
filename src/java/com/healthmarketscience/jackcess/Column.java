@@ -1099,7 +1099,8 @@ public class Column implements Comparable<Column> {
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
-    rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type.getValue()));
+    rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type.getValue()) +
+               " (" + _type + ")");
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);
     rtn.append("\n\tVariable length: " + _variableLength);
