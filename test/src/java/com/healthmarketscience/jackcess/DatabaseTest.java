@@ -961,6 +961,11 @@ public class DatabaseTest extends TestCase {
   }
 
   static void dumpTable(Table table, PrintWriter writer) throws Exception {
+    // make sure all indexes are read
+    for(Index index : table.getIndexes()) {
+      index.initialize();
+    }
+    
     writer.println("TABLE: " + table.getName());
     List<String> colNames = new ArrayList<String>();
     for(Column col : table.getColumns()) {
