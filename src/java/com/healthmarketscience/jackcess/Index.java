@@ -425,7 +425,7 @@ public class Index implements Comparable<Index> {
         break;
       }
     }
-    
+
     // read all leaf pages
     while(true) {
 
@@ -507,16 +507,32 @@ public class Index implements Comparable<Index> {
     int lastStart = 0;
     byte[] valuePrefix = null;
     boolean firstEntry = true;
+    ByteBuffer tmpEntryBuffer = null;
+
     for (int i = 0; i < entryMaskLength; i++) {
       byte entryMask = indexPage.get(entryMaskPos + i);
       for (int j = 0; j < 8; j++) {
         if ((entryMask & (1 << j)) != 0) {
-          int length = i * 8 + j - lastStart;
+          int length = (i * 8) + j - lastStart;
           indexPage.position(entryPos + lastStart);
+          int startReadPos = indexPage.position();
+
+          // determine if we can read straight from the index page (if no
+          // valuePrefix).  otherwise, create temp buf with complete entry.
+          ByteBuffer curEntryBuffer = indexPage;
+          int curEntryLen = length;
+          if(valuePrefix != null) {
+            tmpEntryBuffer = getTempEntryBuffer(
+                indexPage, length, valuePrefix, tmpEntryBuffer);
+            curEntryBuffer = tmpEntryBuffer;
+            curEntryLen += valuePrefix.length;
+          }
+          
           if(isLeaf) {
-            entries.add(new Entry(indexPage, valuePrefix, _columns));
+            entries.add(new Entry(curEntryBuffer, curEntryLen, _columns));
           } else {
-            nodeEntries.add(new NodeEntry(indexPage, valuePrefix, _columns));
+            nodeEntries.add(new NodeEntry(
+                                curEntryBuffer, curEntryLen, _columns));
           }
 
           // read any shared "compressed" bytes
@@ -537,7 +553,30 @@ public class Index implements Comparable<Index> {
       }
     }
   }
-  
+
+  /**
+   * Returns an entry buffer containing the relevant data for an entry given
+   * the valuePrefix.
+   */
+  private ByteBuffer getTempEntryBuffer(
+      ByteBuffer indexPage, int entryLen, byte[] valuePrefix,
+      ByteBuffer tmpEntryBuffer)
+  {
+    int totalLen = entryLen + valuePrefix.length;
+    if((tmpEntryBuffer == null) || (tmpEntryBuffer.capacity() < totalLen)) {
+      tmpEntryBuffer = ByteBuffer.allocate(totalLen);
+    } else {
+      tmpEntryBuffer.clear();
+    }
+
+    // combine valuePrefix and rest of entry from indexPage, then prep for
+    // reading
+    tmpEntryBuffer.put(valuePrefix);
+    tmpEntryBuffer.put(indexPage.array(), indexPage.position(), entryLen);
+    tmpEntryBuffer.flip();
+    
+    return tmpEntryBuffer;
+  }
   
   /**
    * Adds a row to this index
@@ -949,20 +988,43 @@ public class Index implements Comparable<Index> {
         }
       }
     }
+
+    /**
+     * Read an existing entry in from a buffer
+     */
+    private Entry(ByteBuffer buffer, int entryLen, 
+                  Map<Column, Byte> columns)
+      throws IOException
+    {
+      this(buffer, entryLen, columns, 0);
+    }
     
     /**
      * Read an existing entry in from a buffer
      */
-    private Entry(ByteBuffer buffer, byte[] valuePrefix,
-                  Map<Column, Byte> columns)
+    private Entry(ByteBuffer buffer, int entryLen, 
+                  Map<Column, Byte> columns, int extraTrailingLen)
       throws IOException
     {
+      // we need 4 trailing bytes for the rowId, plus whatever the caller
+      // wants
+      int trailingByteLen = 4 + extraTrailingLen;
+
+      int colEntryLen = entryLen - trailingByteLen;
+      
       _entryColumns = new ArrayList<EntryColumn>();
       for(Map.Entry<Column, Byte> entry : columns.entrySet()) {
         Column col = entry.getKey();
         Byte flags = entry.getValue();
+        int startCurEntryPos = buffer.position();
         _entryColumns.add(newEntryColumn(col)
-                          .initFromBuffer(buffer, flags, valuePrefix));
+                          .initFromBuffer(buffer, flags, colEntryLen));
+        int curEntryLen = buffer.position() - startCurEntryPos;
+        if(curEntryLen > colEntryLen) {
+          throw new IOException("could not parse entry column, expected " +
+                                colEntryLen + ", read " + curEntryLen);
+        }
+        colEntryLen -= curEntryLen;
       }
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       int row = buffer.get();
@@ -1123,7 +1185,7 @@ public class Index implements Comparable<Index> {
        */
       protected abstract EntryColumn initFromBuffer(ByteBuffer buffer,
                                                     byte flags,
-                                                    byte[] valuePrefix)
+                                                    int colEntryLen)
         throws IOException;
 
       protected abstract boolean isNullValue();
@@ -1136,6 +1198,7 @@ public class Index implements Comparable<Index> {
         if(isNullValue()) {
           buffer.put((byte)0);
         } else {
+          buffer.put((byte) 0x7F);
           writeNonNullValue(buffer);
         }
       }
@@ -1185,22 +1248,16 @@ public class Index implements Comparable<Index> {
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
                                            byte flags,
-                                           byte[] valuePrefix)
+                                           int colEntryLen)
         throws IOException
       {
+        // FIXME, eventually take colEntryLen into account
         
-        
-        byte flag = ((valuePrefix == null) ? buffer.get() : valuePrefix[0]);
+        byte flag = buffer.get();
         // FIXME, reverse is 0x80, reverse null is 0xFF
-        if (flag != (byte) 0) {
+        if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
           byte[] data = new byte[_column.getType().getFixedSize()];
-          int dataOffset = 0;
-          if((valuePrefix != null) && (valuePrefix.length > 1)) {
-            System.arraycopy(valuePrefix, 1, data, 0,
-                             (valuePrefix.length - 1));
-            dataOffset += (valuePrefix.length - 1);
-          }
-          buffer.get(data, dataOffset, (data.length - dataOffset));
+          buffer.get(data);
           _value = (Comparable) _column.read(data, ByteOrder.BIG_ENDIAN);
           
           //ints and shorts are stored in index as value + 2147483648
@@ -1226,7 +1283,6 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
-        buffer.put((byte) 0x7F);
         Comparable value = _value;
         if (value instanceof Integer) {
           value = Integer.valueOf((int) (((Integer) value).longValue() -
@@ -1267,6 +1323,8 @@ public class Index implements Comparable<Index> {
       private byte[] _valueBytes;
       /** extra column bytes */
       private byte[] _extraBytes;
+      /** whether or not the trailing bytes were found */
+      private boolean _hasTrailingBytes;
     
       private TextEntryColumn(Column col) throws IOException {
         super(col);
@@ -1295,54 +1353,55 @@ public class Index implements Comparable<Index> {
       @Override
       protected EntryColumn initFromBuffer(ByteBuffer buffer,
                                            byte flags,
-                                           byte[] valuePrefix)
+                                           int colEntryLen)
         throws IOException
       {
-        byte flag = ((valuePrefix == null) ? buffer.get() : valuePrefix[0]);
+        // can't read more than colEntryLen
+        int maxPos = buffer.position() + colEntryLen;
+
+        byte flag = buffer.get();
         // FIXME, reverse is 0x80, reverse null is 0xFF
         // end flag is FE, post extra bytes is FF 00
         // extra bytes are inverted, so are normal bytes
-        if (flag != (byte) 0) {
+        if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
 
           int endPos = buffer.position();
+          _hasTrailingBytes = true;
           while(buffer.get(endPos) != (byte) 1) {
+            if(endPos == maxPos) {
+              _hasTrailingBytes = false;
+              break;
+            }
             ++endPos;
           }
 
-          // FIXME, prefix could probably include extraBytes...
-          
           // read index bytes
-          int numPrefixBytes = ((valuePrefix == null) ? 0 :
-                                (valuePrefix.length - 1));
+          int numPrefixBytes = 0;
           int dataOffset = 0;
-          _valueBytes = new byte[(endPos - buffer.position()) +
-                                 numPrefixBytes];
-          if(numPrefixBytes > 0) {
-            System.arraycopy(valuePrefix, 1, _valueBytes, 0, numPrefixBytes);
-            dataOffset += numPrefixBytes;
-          }
-          buffer.get(_valueBytes, dataOffset,
-                     (_valueBytes.length - dataOffset));
+          _valueBytes = new byte[endPos - buffer.position()];
+          buffer.get(_valueBytes);
 
-          // read end codes byte
-          buffer.get();
-          
-          //Forward past 0x00 (in some cases, there is more data here, which
-          //we don't currently understand)
-          byte endByte = buffer.get();
-          if(endByte != (byte)0x00) {
-            endPos = buffer.position() - 1;
-            buffer.position(endPos);
-            while(buffer.get(endPos) != (byte)0x00) {
-              ++endPos;
-            }
-            _extraBytes = new byte[endPos - buffer.position()];
-            buffer.get(_extraBytes);
-
-            // re-get endByte
+          if(_hasTrailingBytes) {
+            
+            // read end codes byte
             buffer.get();
-          }
           
+            //Forward past 0x00 (in some cases, there is more data here, which
+            //we don't currently understand)
+            byte endByte = buffer.get();
+            if(endByte != (byte)0x00) {
+              endPos = buffer.position() - 1;
+              buffer.position(endPos);
+              while(buffer.get(endPos) != (byte)0x00) {
+                ++endPos;
+              }
+              _extraBytes = new byte[endPos - buffer.position()];
+              buffer.get(_extraBytes);
+
+              // re-get endByte
+              buffer.get();
+            }
+          }
         }
 
         return this;
@@ -1358,20 +1417,24 @@ public class Index implements Comparable<Index> {
        */
       @Override
       protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
-        buffer.put((byte) 0x7F);
         buffer.put(_valueBytes);
-        buffer.put((byte) 1);
-        if(_extraBytes != null) {
-          buffer.put(_extraBytes);
+        if(_hasTrailingBytes) {
+          buffer.put((byte) 1);
+          if(_extraBytes != null) {
+            buffer.put(_extraBytes);
+          }
+          buffer.put((byte) 0);
         }
-        buffer.put((byte) 0);
       }
 
       @Override
       protected int nonNullSize() {
-        int rtn = _valueBytes.length + 2;
-        if(_extraBytes != null) {
-          rtn += _extraBytes.length;
+        int rtn = _valueBytes.length;
+        if(_hasTrailingBytes) {
+          rtn += 2;
+          if(_extraBytes != null) {
+            rtn += _extraBytes.length;
+          }
         }
         return rtn;
       }
@@ -1400,6 +1463,9 @@ public class Index implements Comparable<Index> {
         if(rtn != 0) {
           return rtn;
         }
+        if(_hasTrailingBytes != textOther._hasTrailingBytes) {
+          return(_hasTrailingBytes ? 1 : -1);
+        }
         return BYTE_CODE_COMPARATOR.compare(
             _extraBytes, textOther._extraBytes);
       }
@@ -1419,15 +1485,16 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing node entry in from a buffer
      */
-    private NodeEntry(ByteBuffer buffer, byte[] valuePrefix,
+    private NodeEntry(ByteBuffer buffer, int entryLen,
                       Map<Column, Byte> columns)
       throws IOException
     {
-      super(buffer, valuePrefix, columns);
+      // we need 4 trailing bytes for the sub-page number
+      super(buffer, entryLen, columns, 4);
 
       _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
     }
-
+    
     public int getSubPageNumber() {
       return _subPageNumber;
     }
