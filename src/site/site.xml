@@ -6,6 +6,7 @@
       <item name="About" href="index.html"/>
       <item name="Downloads" href="http://sourceforge.net/project/showfiles.php?group_id=134943"/>
       <item name="SourceForge Project" href="http://sourceforge.net/projects/jackcess/"/>
+      <item name="FAQ" href="faq.html"/>
     </menu>
 
     <menu ref="reports"/>
