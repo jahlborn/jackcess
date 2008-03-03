@@ -138,9 +138,8 @@ public abstract class JetFormat {
     byte version = buffer.get();
     if (version == CODE_VERSION_4) {
       return VERSION_4;
-    } else {
-      throw new IOException("Unsupported version: " + version);
     }
+    throw new IOException("Unsupported version: " + version);
   }
   
   private JetFormat(String name) {

@@ -204,9 +204,8 @@ public enum DataType {
   public int getFixedSize() {
     if(_fixedSize != null) {
       return _fixedSize;
-    } else {
-      throw new IllegalArgumentException("FIX ME");
     }
+    throw new IllegalArgumentException("FIX ME");
   }
 
   public int getMinSize() {
@@ -224,9 +223,8 @@ public enum DataType {
   public int getSQLType() throws SQLException {
     if (_sqlType != null) {
       return _sqlType;
-    } else {
-      throw new SQLException("Unsupported data type: " + toString());
     }
+    throw new SQLException("Unsupported data type: " + toString());
   }
 
   public int getMinScale() {
@@ -277,9 +275,8 @@ public enum DataType {
     DataType rtn = DATA_TYPES.get(b);
     if (rtn != null) {
       return rtn;
-    } else {
-      throw new IOException("Unrecognized data type: " + b);
     }
+    throw new IOException("Unrecognized data type: " + b);
   }
   
   public static DataType fromSQLType(int sqlType)

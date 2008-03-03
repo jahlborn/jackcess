@@ -252,9 +252,9 @@ public final class ByteUtil {
       byte h = (byte) (b & 0xF0);
       h = (byte) (h >>> 4);
       h = (byte) (h & 0x0F);
-      rtn.append(HEX_CHARS[(int) h]);
+      rtn.append(HEX_CHARS[h]);
       h = (byte) (b & 0x0F);
-      rtn.append(HEX_CHARS[(int) h]);
+      rtn.append(HEX_CHARS[h]);
 
       if (formatted == true)
       {

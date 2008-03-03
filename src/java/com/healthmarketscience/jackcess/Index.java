@@ -960,8 +960,8 @@ public class Index implements Comparable<Index> {
     /**
      * Create a new entry
      * @param values Indexed row values
-     * @param page Page number on which the row is stored
-     * @param rowNumber Row number at which the row is stored
+     * @param rowId rowId in which the row is stored
+     * @param columns map of columns for this index
      */
     private Entry(Object[] values, RowId rowId,
                   Map<Column, Byte> columns)

@@ -128,11 +128,10 @@ public class Table
   }
   
   /**
+   * @param database database which owns this table
    * @param tableBuffer Buffer to read the table with
-   * @param pageChannel Page channel to get database pages from
-   * @param format Format of the database that contains this table
    * @param pageNumber Page number of the table definition
-	 * @param name Table name
+   * @param name Table name
    */
   protected Table(Database database, ByteBuffer tableBuffer,
                   int pageNumber, String name)
@@ -277,7 +276,7 @@ public class Table
   }
   
   /**
-   * Delete the current row (retrieved by a call to {@link #getNextRow}).
+   * Delete the current row (retrieved by a call to {@link #getNextRow()}).
    */
   public void deleteCurrentRow() throws IOException {
     _cursor.deleteCurrentRow();
@@ -782,7 +781,7 @@ public class Table
     // variable length values so that we have a better chance of fitting it
     // all (because "long variable" values can go in separate pages)
     short longVariableOffset =
-      (short) Column.countNonLongVariableLength(columns);
+      Column.countNonLongVariableLength(columns);
     for (Column col : columns) {
       int position = buffer.position();
       buffer.put(col.getType().getValue());
@@ -801,8 +800,8 @@ public class Table
       }
       buffer.putShort(columnNumber); //Column Number again
       if(col.getType().getHasScalePrecision()) {
-        buffer.put((byte) col.getPrecision());  // numeric precision
-        buffer.put((byte) col.getScale());  // numeric scale
+        buffer.put(col.getPrecision());  // numeric precision
+        buffer.put(col.getScale());  // numeric scale
       } else {
         buffer.put((byte) 0x00); //unused
         buffer.put((byte) 0x00); //unused
@@ -882,10 +881,10 @@ public class Table
       rtn.putShort(getRowStartOffset(i, format), (short)rowStart);
       if(i == 0) {
         // initial "usage pages" map definition
-        rtn.put(rowStart, (byte)UsageMap.MAP_TYPE_REFERENCE);
+        rtn.put(rowStart, UsageMap.MAP_TYPE_REFERENCE);
       } else {
         // initial "pages with free space" map definition
-        rtn.put(rowStart, (byte)UsageMap.MAP_TYPE_INLINE);
+        rtn.put(rowStart, UsageMap.MAP_TYPE_INLINE);
       }
       rowStart -= usageMapRowLength;
     }
@@ -941,12 +940,12 @@ public class Table
     }
     offset += columnCount * getFormat().SIZE_COLUMN_HEADER;
     for (int i = 0; i < columnCount; i++) {
-      column = (Column) _columns.get(i);
+      column = _columns.get(i);
       short nameLength = tableBuffer.getShort(offset);
       offset += 2;
       byte[] nameBytes = new byte[nameLength];
       tableBuffer.position(offset);
-      tableBuffer.get(nameBytes, 0, (int) nameLength);
+      tableBuffer.get(nameBytes, 0, nameLength);
       column.setName(getFormat().CHARSET.decode(ByteBuffer.wrap(nameBytes)).toString());
       offset += nameLength;
     }
@@ -1162,7 +1161,7 @@ public class Table
    */
   ByteBuffer createRow(Object[] rowArray, int maxRowSize) throws IOException {
     ByteBuffer buffer = getPageChannel().createPageBuffer();
-    buffer.putShort((short) _maxColumnCount);
+    buffer.putShort(_maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
     
     List<Object> row = new ArrayList<Object>(_columns.size());
@@ -1259,7 +1258,7 @@ public class Table
       for (int i = _maxVarColumnCount - 1; i >= 0; i--) {
         buffer.putShort(varColumnOffsets[i]);
       }
-      buffer.putShort((short) _maxVarColumnCount);  //Number of var length columns
+      buffer.putShort(_maxVarColumnCount);  //Number of var length columns
     }
     
     buffer.put(nullMask.wrap());  //Null mask
@@ -1279,7 +1278,8 @@ public class Table
     // note, the saved value is the last one handed out, so pre-increment
     return ++_lastAutoNumber;
   }
-  
+
+  @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("Type: " + _tableType);

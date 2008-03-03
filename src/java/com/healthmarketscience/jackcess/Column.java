@@ -148,7 +148,6 @@ public class Column implements Comparable<Column> {
    * @param table owning table
    * @param buffer Buffer containing column definition
    * @param offset Offset in the buffer at which the column definition starts
-   * @param format Format that the containing database is in
    */
   public Column(Table table, ByteBuffer buffer, int offset)
     throws IOException
@@ -420,8 +419,6 @@ public class Column implements Comparable<Column> {
 
   /**
    * @param lvalDefinition Column value that points to an LVAL record
-   * @param outType optional 1 element array for returning the
-   *                <code>LONG_VALUE_TYPE_*</code>
    * @return The LVAL data
    */
   private byte[] readLongValue(byte[] lvalDefinition)
@@ -530,7 +527,7 @@ public class Column implements Comparable<Column> {
   /**
    * Decodes "Currency" values.
    * 
-   * @param valueBytes Column value that points to currency data
+   * @param buffer Column value that points to currency data
    * @return BigDecimal representing the monetary value
    * @throws IOException if the value cannot be parsed 
    */
@@ -661,7 +658,7 @@ public class Column implements Comparable<Column> {
       long time = ((Date)value).getTime();
       time += getTimeZoneOffset(time);
       time += MILLIS_BETWEEN_EPOCH_AND_1900;
-      double dTime = ((double)time) / MILLISECONDS_PER_DAY;
+      double dTime = time / MILLISECONDS_PER_DAY;
       buffer.putDouble(dTime);
     }
   }
@@ -1099,7 +1096,7 @@ public class Column implements Comparable<Column> {
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: " + _name);
-    rtn.append("\n\tType: 0x" + Integer.toHexString((int)_type.getValue()) +
+    rtn.append("\n\tType: 0x" + Integer.toHexString(_type.getValue()) +
                " (" + _type + ")");
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);

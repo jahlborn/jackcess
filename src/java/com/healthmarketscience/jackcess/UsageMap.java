@@ -87,7 +87,7 @@ public class UsageMap
     _tableBuffer = tableBuffer;
     _tablePageNum = pageNum;
     _rowStart = rowStart;
-    _tableBuffer.position((int) _rowStart + getFormat().OFFSET_USAGE_MAP_START);
+    _tableBuffer.position(_rowStart + getFormat().OFFSET_USAGE_MAP_START);
     _startOffset = _tableBuffer.position();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_tableBuffer, _rowStart,
@@ -380,7 +380,8 @@ public class UsageMap
       addPageNumber(newPageNumber);
     }
   }
-  
+
+  @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("page numbers: [");
     PageCursor pCursor = cursor();
@@ -676,7 +677,7 @@ public class UsageMap
         throw new IOException("Page number " + pageNumber +
                               " is out of supported range");
       }
-      int pageIndex = (int)(pageNumber / getMaxPagesPerUsagePage());
+      int pageIndex = (pageNumber / getMaxPagesPerUsagePage());
       int mapPageNum = getTableBuffer().getInt(
           calculateMapPagePointerOffset(pageIndex));
       ByteBuffer mapPageBuffer = null;

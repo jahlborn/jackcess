@@ -146,7 +146,7 @@ public class PageChannel implements Channel, Flushable {
     page.rewind();
     page.position(pageOffset);
     _channel.write(page, (((long) pageNumber * (long) getFormat().PAGE_SIZE) +
-                          (long) pageOffset));
+                          pageOffset));
     if(_autoSync) {
       flush();
     }
@@ -177,7 +177,7 @@ public class PageChannel implements Channel, Flushable {
 
   /**
    * Allocates a new page in the database.  Data in the page is undefined
-   * until it is written in a call to {@link #writePage}.
+   * until it is written in a call to {@link #writePage(ByteBuffer,int)}.
    */
   public int allocateNewPage() throws IOException {
     // this will force the file to be extended with mostly undefined bytes

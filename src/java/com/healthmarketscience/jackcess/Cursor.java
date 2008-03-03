@@ -775,7 +775,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Returns the current row in this cursor (Column name -> Column value).
-   * @param columnNames Only column names in this collection will be returned
    */
   public Map<String, Object> getCurrentRow()
     throws IOException

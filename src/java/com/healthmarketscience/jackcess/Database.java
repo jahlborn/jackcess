@@ -44,6 +44,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -273,7 +274,7 @@ public class Database
     FileChannel channel = openChannel(mdbFile, false);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
-        EMPTY_MDB)), 0, (long) Integer.MAX_VALUE);
+            EMPTY_MDB)), 0, Integer.MAX_VALUE);
     return new Database(channel, autoSync);
   }
   
