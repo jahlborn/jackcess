@@ -113,15 +113,15 @@
       <question>What version of the JDK does this require?</question>
       <answer>
         <p>
-          Version 1.0 requires JDK 1.4 or higher.  The version in CVS HEAD and future releases
-          will require JDK 1.5 or higher.
+          Version 1.0 requires JDK 1.4 or higher.  The version in SVN trunk
+          and all future releases will require JDK 1.5 or higher.
         </p>
         <p>
           However, some users have contributed patches to make later versions
           compatible with JDK 1.4.  Please check the contributions/ directory
-          for any such patches.  Note that any code in this directory is
-          untested and unsupported, so please use at your own risk and do not
-          file bugs based on that code.
+          in the source repository for any such patches.  Note that any code
+          in this directory is untested and unsupported, so please use at your
+          own risk and do not file bugs based on that code.
         </p>
       </answer>
     </faq>
@@ -153,6 +153,35 @@
           So, modifying this option essentially trades off speed for
           recoverability.
         </p>
+      </answer>
+    </faq>
+    
+    <faq id="international">
+      <question>Why am I getting an IOException with the message "unmapped
+                string index value"?</question>
+      <answer>
+        <p>
+          Jackcess cannot currently update a text column index with values
+          which contain non-ascii characters.  This situation often arises
+          when tables are created with names which contain international
+          characters.  Access stores the table names in another table which
+          has an index on the table name column.  The index encoding is not
+          simple to reverse engineer, so it is not likely that Jackcess will
+          support this anytime soon.
+        </p>
+        <p>
+          Some suggestions:
+        </p>
+        <ul>
+          <li>Use only ascii characters in table names if at all
+          possible</li>
+          <li>If tables with international characters are required, create
+          the tables using Access, then update the tables using
+          jackcess.</li>
+          <li>For indexes on user created tables, populate the table
+          without indexes in jackcess, then add the index using
+          Access.</li>
+        </ul>
       </answer>
     </faq>
     
