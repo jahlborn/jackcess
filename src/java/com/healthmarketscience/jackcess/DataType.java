@@ -38,25 +38,106 @@ import java.util.Map;
  * @author Tim McCune
  */
 public enum DataType {
-  
+
+  /**
+   * Corresponds to a java Boolean.  Accepts Boolean or {@code null} (which is
+   * considered {@code false}).  Equivalent to SQL {@link Types#BOOLEAN}.
+   */
   BOOLEAN((byte) 0x01, Types.BOOLEAN, 0),
+  /**
+   * Corresponds to a java Byte.  Accepts any Number (using
+   * {@link Number#byteValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#TINYINT}, {@link Types#BIT}.
+   */
   BYTE((byte) 0x02, Types.TINYINT, 1),
+  /**
+   * Corresponds to a java Short.  Accepts any Number (using
+   * {@link Number#shortValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#SMALLINT}.
+   */
   INT((byte) 0x03, Types.SMALLINT, 2),
+  /**
+   * Corresponds to a java Integer.  Accepts any Number (using
+   * {@link Number#intValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#INTEGER}, {@link Types#BIGINT}.
+   */
   LONG((byte) 0x04, Types.INTEGER, 4),
+  /**
+   * Corresponds to a java BigDecimal with at most 4 decimal places.  Accepts
+   * any Number (using {@link Number#doubleValue}), a BigInteger, a BigDecimal
+   * (with at most 4 decimal places), Boolean as 1 or 0, any Object converted
+   * to a String and parsed as BigDecimal, or {@code null}.  Equivalent to SQL
+   * {@link Types#DECIMAL}.
+   */
   MONEY((byte) 0x05, Types.DECIMAL, 8),
+  /**
+   * Corresponds to a java Float.  Accepts any Number (using
+   * {@link Number#floatValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#FLOAT}.
+   */
   FLOAT((byte) 0x06, Types.FLOAT, 4),
+  /**
+   * Corresponds to a java Double.  Accepts any Number (using
+   * {@link Number#doubleValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#DOUBLE}, {@link Types#REAL}.
+   */
   DOUBLE((byte) 0x07, Types.DOUBLE, 8),
+  /**
+   * Corresponds to a java Date.  Accepts a Date, any Number (using
+   * {@link Number#longValue}), or {@code null}.  Equivalent to SQL
+   * {@link Types#TIMESTAMP}, {@link Types#DATE}, {@link Types#TIME}.
+   */
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
+  /**
+   * Corresponds to a java {@code byte[]} of max length 255 bytes.  Accepts a
+   * {@code byte[]}, or {@code null}.  Equivalent to SQL {@link Types#BINARY},
+   * {@link Types#VARBINARY}.
+   */
   BINARY((byte) 0x09, Types.BINARY, null, true, false, 0, 255, 255, 1),
+  /**
+   * Corresponds to a java String of max length 255 chars.  Accepts any
+   * CharSequence, any Object converted to a String , or {@code null}.
+   * Equivalent to SQL {@link Types#VARCHAR}, {@link Types#CHAR}.
+   */
   TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
        50 * JetFormat.TEXT_FIELD_UNIT_SIZE,
        (int)JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_UNIT_SIZE),
+  /**
+   * Corresponds to a java {@code byte[]} of max length 16777215 bytes.
+   * Accepts a {@code byte[]}, or {@code null}.  Equivalent to SQL
+   * {@link Types#LONGVARBINARY}, {@link Types#BLOB}.
+   */
   OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0xFFFFFF,
       1),
+  /**
+   * Corresponds to a java String of max length 8388607 chars.  Accepts any
+   * CharSequence, any Object converted to a String , or {@code null}.
+   * Equivalent to SQL {@link Types#LONGVARCHAR}, {@link Types#CLOB}.
+   */
   MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
+  /**
+   * Unknown data.  Accepts {@code null}.
+   */
   UNKNOWN_0D((byte) 0x0D),
+  /**
+   * Corresponds to a java String with the pattern
+   * <code>"{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"</code>.  Accepts any
+   * Object converted to a String matching this pattern (surrounding "{}" are
+   * optional, so {@link java.util.UUID}s are supported), or {@code null}.
+   */
   GUID((byte) 0x0F, null, 16),
+  /**
+   * Corresponds to a java BigDecimal.  Accepts any Number (using
+   * {@link Number#doubleValue}), a BigInteger, a BigDecimal, Boolean as 1 or
+   * 0, any Object converted to a String and parsed as BigDecimal, or
+   * {@code null}.  Equivalent to SQL {@link Types#NUMERIC}.
+   */
   // for some reason numeric is "var len" even though it has a fixed size...
   NUMERIC((byte) 0x10, Types.NUMERIC, 17, true, false, 17, 17, 17,
           true, 0, 0, 28, 1, 18, 28, 1);

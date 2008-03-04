@@ -96,7 +96,7 @@ public class Column implements Comparable<Column> {
   /** mask for the unknown bit */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
   
-  private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]\\s*");
+  private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]?([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]?\\s*");
 
   /** owning table */
   private final Table _table;
@@ -655,7 +655,9 @@ public class Column implements Comparable<Column> {
     } else {
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
-      long time = ((Date)value).getTime();
+      long time = ((value instanceof Date) ?
+                   ((Date)value).getTime() :
+                   ((Number)value).longValue());
       time += getTimeZoneOffset(time);
       time += MILLIS_BETWEEN_EPOCH_AND_1900;
       double dTime = time / MILLISECONDS_PER_DAY;
@@ -947,19 +949,19 @@ public class Column implements Comparable<Column> {
       //Do nothing
       break;
     case  BYTE:
-      buffer.put(obj != null ? ((Number) obj).byteValue() : (byte) 0);
+      buffer.put(toNumber(obj).byteValue());
       break;
     case INT:
-      buffer.putShort(obj != null ? ((Number) obj).shortValue() : (short) 0);
+      buffer.putShort(toNumber(obj).shortValue());
       break;
     case LONG:
-      buffer.putInt(obj != null ? ((Number) obj).intValue() : 0);
+      buffer.putInt(toNumber(obj).intValue());
       break;
     case DOUBLE:
-      buffer.putDouble(obj != null ? ((Number) obj).doubleValue() : (double) 0);
+      buffer.putDouble(toNumber(obj).doubleValue());
       break;
     case FLOAT:
-      buffer.putFloat(obj != null ? ((Number) obj).floatValue() : (float) 0);
+      buffer.putFloat(toNumber(obj).floatValue());
       break;
     case SHORT_DATE_TIME:
       writeDateValue(buffer, obj);
@@ -1160,11 +1162,25 @@ public class Column implements Comparable<Column> {
       return new BigDecimal((BigInteger)value);
     } else if(value instanceof Number) {
       return new BigDecimal(((Number)value).doubleValue());
-    } else {
-      return new BigDecimal(value.toString());
     }
+    return new BigDecimal(value.toString());
   }
 
+  /**
+   * @return an appropriate Number representation of the given object.
+   *         <code>null</code> is returned as 0 and Strings are parsed as
+   *         Doubles.
+   */
+  private static Number toNumber(Object value)
+  {
+    if(value == null) {
+      return BigDecimal.ZERO;
+    } if(value instanceof Number) {
+      return (Number)value;
+    }
+    return Double.valueOf(value.toString());
+  }
+  
   /**
    * @return an appropriate CharSequence representation of the given object.
    */
@@ -1174,9 +1190,8 @@ public class Column implements Comparable<Column> {
       return null;
     } else if(value instanceof CharSequence) {
       return (CharSequence)value;
-    } else {
-      return value.toString();
     }
+    return value.toString();
   }
 
   /**

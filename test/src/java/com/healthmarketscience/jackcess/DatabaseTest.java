@@ -50,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import junit.framework.TestCase;
 
@@ -485,7 +486,8 @@ public class DatabaseTest extends TestCase {
     table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
     table.addRow("{32a59f01-aa34-3e29-453f-4523453cd2e6}");
     table.addRow("{11111111-1111-1111-1111-111111111111}");
-    table.addRow("{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}");
+    table.addRow("   {FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}   ");
+    table.addRow(UUID.fromString("32a59f01-1234-3e29-4aaf-4523453cd2e6"));
 
     table.reset();
 
@@ -499,7 +501,8 @@ public class DatabaseTest extends TestCase {
                      "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
                      "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
                      "{11111111-1111-1111-1111-111111111111}",
-                     "{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}"),
+                     "{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}",
+                     "{32A59F01-1234-3E29-4AAF-4523453CD2E6}"),
                  foundValues);
 
     try {

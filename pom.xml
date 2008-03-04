@@ -155,6 +155,7 @@
           <source>1.5</source>
           <excludePackageNames>com.healthmarketscience.jackcess.scsu</excludePackageNames>
           <show>public</show>
+          <quiet>true</quiet>
         </configuration>
       </plugin>
     </plugins>
