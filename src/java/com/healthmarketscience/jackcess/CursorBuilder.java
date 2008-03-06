@@ -119,16 +119,16 @@ public class CursorBuilder {
     boolean found = false;
     for(Index index : _table.getIndexes()) {
       
-      Collection<Column> indexColumns = index.getColumns();
+      Collection<Index.ColumnDescriptor> indexColumns = index.getColumns();
       if(indexColumns.size() != searchColumns.size()) {
         continue;
       }
       Iterator<Column> sIter = searchColumns.iterator();
-      Iterator<Column> iIter = indexColumns.iterator();
+      Iterator<Index.ColumnDescriptor> iIter = indexColumns.iterator();
       boolean matches = true;
       while(sIter.hasNext()) {
         Column sCol = sIter.next();
-        Column iCol = iIter.next();
+        Index.ColumnDescriptor iCol = iIter.next();
         if(!ObjectUtils.equals(sCol.getName(), iCol.getName())) {
           matches = false;
           break;

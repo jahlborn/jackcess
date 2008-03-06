@@ -104,16 +104,36 @@ public class IndexTest extends TestCase {
     Database mdb = Database.open(new File("test/data/indexTest.mdb"));
 
     Table table = mdb.getTable("Table1");
+    for(Index idx : table.getIndexes()) {
+      idx.initialize();
+    }
     assertEquals(4, table.getIndexes().size());
     assertEquals(4, table.getIndexSlotCount());
-
+    checkIndexColumns(table,
+                      "id", "id",
+                      "PrimaryKey", "id",
+                      "Table2Table1", "otherfk1",
+                      "Table3Table1", "otherfk2");
+    
     table = mdb.getTable("Table2");
+    for(Index idx : table.getIndexes()) {
+      idx.initialize();
+    }
     assertEquals(2, table.getIndexes().size());
     assertEquals(3, table.getIndexSlotCount());
+    checkIndexColumns(table,
+                      "id", "id",
+                      "PrimaryKey", "id");
 
     table = mdb.getTable("Table3");
+    for(Index idx : table.getIndexes()) {
+      idx.initialize();
+    }
     assertEquals(2, table.getIndexes().size());
     assertEquals(3, table.getIndexSlotCount());
+    checkIndexColumns(table,
+                      "id", "id",
+                      "PrimaryKey", "id");
   }
 
   public void testComplexIndex() throws Exception
@@ -184,6 +204,26 @@ public class IndexTest extends TestCase {
 
     for(Index index : table.getIndexes()) {
       assertEquals(8, index.getEntryCount());
+    }
+  }
+
+  private void checkIndexColumns(Table table, String... idxInfo)
+    throws Exception
+  {
+    Map<String, String> expectedIndexes = new HashMap<String, String>();
+    for(int i = 0; i < idxInfo.length; i+=2) {
+      expectedIndexes.put(idxInfo[i], idxInfo[i+1]);
+    }
+
+    for(Index idx : table.getIndexes()) {
+      String colName = expectedIndexes.get(idx.getName());
+      assertEquals(1, idx.getColumns().size());
+      assertEquals(colName, idx.getColumns().get(0).getName());
+      if("PrimaryKey".equals(idx.getName())) {
+        assertTrue(idx.isPrimaryKey());
+      } else {
+        assertFalse(idx.isPrimaryKey());
+      }
     }
   }
   

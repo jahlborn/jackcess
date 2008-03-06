@@ -53,8 +53,20 @@ public final class ByteUtil {
    */    
   public static void put3ByteInt(ByteBuffer buffer, int val)
   {
+    put3ByteInt(buffer, val, buffer.order());
+  }
+  
+  /**
+   * Put an integer into the given buffer at the given offset as a 3-byte
+   * integer.
+   * @param buffer buffer into which to insert the int
+   * @param val Int to convert
+   * @param order  the order to insert the bytes of the int
+   */    
+  public static void put3ByteInt(ByteBuffer buffer, int val, ByteOrder order)
+  {
     int pos = buffer.position();
-    put3ByteInt(buffer, val, pos);
+    put3ByteInt(buffer, val, pos, order);
     buffer.position(pos + 3);
   }
   
@@ -64,11 +76,13 @@ public final class ByteUtil {
    * @param buffer buffer into which to insert the int
    * @param val Int to convert
    * @param offset offset at which to insert the int
+   * @param order  the order to insert the bytes of the int
    */    
-  public static void put3ByteInt(ByteBuffer buffer, int val, int offset) {
+  public static void put3ByteInt(ByteBuffer buffer, int val, int offset,
+                                 ByteOrder order) {
 
     int offInc = 1;
-    if(buffer.order() == ByteOrder.BIG_ENDIAN) {
+    if(order == ByteOrder.BIG_ENDIAN) {
       offInc = -1;
       offset += 2;
     }
@@ -210,6 +224,21 @@ public final class ByteUtil {
       buffer.put(i, b);
     }
   }
+
+  /**
+   * Matches a pattern of bytes against the given buffer starting at the given
+   * offset.
+   */
+  public static boolean matchesRange(ByteBuffer buffer, int start,
+                                     byte[] pattern)
+  {
+    for(int i = 0; i < pattern.length; ++i) {
+      if(pattern[i] != buffer.get(start + i)) {
+        return false;
+      }
+    }
+    return true;
+  }
   
   /**
    * Convert a byte buffer to a hexadecimal string for display
@@ -313,7 +342,7 @@ public final class ByteUtil {
    * @return the byte value converted to an unsigned int value
    */
   public static int toUnsignedInt(byte b) { 
-    return (int)b & 0xFF;
+    return b & 0xFF;
   }
   
 }

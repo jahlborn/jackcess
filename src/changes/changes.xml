@@ -5,6 +5,12 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.13" date="TBD">
+      <action dev="jahlborn" type="fix">
+        More fixes for index parsing.  Believe index names are now correctly
+        matched up with indexes.
+      </action>
+    </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">
         Resolve more edge cases around date handling.

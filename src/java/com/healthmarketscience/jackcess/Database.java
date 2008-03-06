@@ -468,7 +468,7 @@ public class Database
    * @param pageNumber Page number that contains the table definition
    */
   private void addToSystemCatalog(String name, int pageNumber) throws IOException {
-    Object[] catalogRow = new Object[_systemCatalog.getColumns().size()];
+    Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
     int idx = 0;
     Date creationTime = new Date();
     for (Iterator<Column> iter = _systemCatalog.getColumns().iterator();
@@ -518,7 +518,7 @@ public class Database
     // "Tables" system object
     List<Object[]> aceRows = new ArrayList<Object[]>(_newTableSIDs.size());
     for(byte[] sid : _newTableSIDs) {
-      Object[] aceRow = new Object[_accessControlEntries.getColumns().size()];
+      Object[] aceRow = new Object[_accessControlEntries.getColumnCount()];
       aceRow[acmCol.getColumnIndex()] = SYS_FULL_ACCESS_ACM;
       aceRow[inheritCol.getColumnIndex()] = Boolean.FALSE;
       aceRow[objIdCol.getColumnIndex()] = Integer.valueOf(pageNumber);

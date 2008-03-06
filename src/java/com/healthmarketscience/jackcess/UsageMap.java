@@ -534,7 +534,9 @@ public class UsageMap
             // this should not happen, we are removing a page which is not in
             // the map
             throw new IOException("Page number " + pageNumber +
-                                  " already removed from usage map");
+                                  " already removed from usage map" +
+                                  ", expected range " +
+                                  _startPage + " to " + _endPage);
           }
         }
 

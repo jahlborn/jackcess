@@ -173,6 +173,10 @@ public class Table
     return _maxColumnCount;
   }
   
+  public int getColumnCount() {
+    return _columns.size();
+  }
+  
   public Database getDatabase() {
     return _database;
   }
@@ -910,7 +914,7 @@ public class Table
     short columnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_COLS);
     _indexSlotCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
-    
+
     byte rowNum = tableBuffer.get(getFormat().OFFSET_OWNED_PAGES);
     int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
     _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
@@ -927,9 +931,8 @@ public class Table
     
     int offset = getFormat().OFFSET_INDEX_DEF_BLOCK +
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
-    Column column;
     for (int i = 0; i < columnCount; i++) {
-      column = new Column(this, tableBuffer,
+      Column column = new Column(this, tableBuffer,
           offset + i * getFormat().SIZE_COLUMN_HEADER);
       _columns.add(column);
       if(column.isVariableLength()) {
@@ -940,7 +943,7 @@ public class Table
     }
     offset += columnCount * getFormat().SIZE_COLUMN_HEADER;
     for (int i = 0; i < columnCount; i++) {
-      column = _columns.get(i);
+      Column column = _columns.get(i);
       short nameLength = tableBuffer.getShort(offset);
       offset += 2;
       byte[] nameBytes = new byte[nameLength];
@@ -948,7 +951,7 @@ public class Table
       tableBuffer.get(nameBytes, 0, nameLength);
       column.setName(getFormat().CHARSET.decode(ByteBuffer.wrap(nameBytes)).toString());
       offset += nameLength;
-    }
+    }    
     Collections.sort(_columns);
 
     // setup the data index for the columns
@@ -965,38 +968,45 @@ public class Table
     tableBuffer.position(idxOffset +
                      (getFormat().OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
 
-    // there are _indexSlotCount blocks here, we ignore any slot with an index
-    // number greater than the number of actual indexes
-    int curIndex = 0;
+    // if there are more index slots than indexes, the initial slots are
+    // always empty/invalid, so we skip that data
+    int firstRealIdx = (_indexSlotCount - _indexCount);
+    
     for (int i = 0; i < _indexSlotCount; i++) {
-      
+
       tableBuffer.getInt(); //Forward past Unknown
+      tableBuffer.getInt(); //Forward past alternate index number
       int indexNumber = tableBuffer.getInt();
-      tableBuffer.position(tableBuffer.position() + 15);
+      tableBuffer.position(tableBuffer.position() + 11);
       byte indexType = tableBuffer.get();
       tableBuffer.position(tableBuffer.position() + 4);
 
-      if(indexNumber < _indexCount) {
-        Index index = _indexes.get(curIndex++);
-        index.setIndexNumber(indexNumber);
-        index.setPrimaryKey(indexType == 1);
+      if(i < firstRealIdx) {
+        // ignore this info
+        continue;
       }
-    }
 
-    // for each empty index slot, there is some weird sort of name
-    for(int i = 0; i < (_indexSlotCount - _indexCount); ++i) {
-      int skipBytes = tableBuffer.getShort();
-      tableBuffer.position(tableBuffer.position() + skipBytes);
+      Index index = _indexes.get(i - firstRealIdx);
+      index.setIndexNumber(indexNumber);
+      index.setIndexType(indexType);
     }
 
     // read actual index names
-    // FIXME, we still are not always getting the names matched correctly with
-    // the index info, some weird indexing we are not figuring out yet
-    for (int i = 0; i < _indexCount; i++) {
-      byte[] nameBytes = new byte[tableBuffer.getShort()];
+    for (int i = 0; i < _indexSlotCount; i++) {
+      int nameLen = tableBuffer.getShort();
+
+      if(i < firstRealIdx) {
+        // for each empty index slot, there is some weird sort of name, skip
+        // it
+        tableBuffer.position(tableBuffer.position() + nameLen);
+        continue;
+      }
+        
+      byte[] nameBytes = new byte[nameLen];
       tableBuffer.get(nameBytes);
-      _indexes.get(i).setName(getFormat().CHARSET.decode(ByteBuffer.wrap(
-          nameBytes)).toString());
+      _indexes.get(i - firstRealIdx)
+        .setName(getFormat().CHARSET.decode(
+                     ByteBuffer.wrap(nameBytes)).toString());
     }
     int idxEndOffset = tableBuffer.position();
     

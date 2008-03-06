@@ -942,6 +942,8 @@ public class Column implements Comparable<Column> {
     // create buffer for data
     ByteBuffer buffer = getPageChannel().createBuffer(size, order);
 
+    // since booleans are not written by this method, it's safe to convert any
+    // incoming boolean into an integer.
     obj = booleanToInteger(obj);
 
     switch(getType()) {
@@ -1221,7 +1223,7 @@ public class Column implements Comparable<Column> {
   /**
    * Treat booleans as integers (C-style).
    */
-  private Object booleanToInteger(Object obj) {
+  private static Object booleanToInteger(Object obj) {
     if (obj instanceof Boolean) {
       obj = ((Boolean) obj) ? 1 : 0;
     }

@@ -36,18 +36,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import static com.healthmarketscience.jackcess.IndexCodes.*;
 
 
 /**
@@ -86,7 +84,18 @@ public class Index implements Comparable<Index> {
 
   private static final byte INDEX_NODE_PAGE_TYPE = (byte)0x03;
   private static final byte INDEX_LEAF_PAGE_TYPE = (byte)0x04;
+
+  private static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
+
+  private static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
+  private static final byte IGNORE_NULLS_INDEX_FLAG = (byte)0x02;
+
+  /** index type for primary key indexes */
+  private static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
   
+  /** index type for foreign key indexes */
+  private static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
+    
   static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
       public int compare(byte[] left, byte[] right) {
@@ -115,97 +124,6 @@ public class Index implements Comparable<Index> {
     };
         
   
-  /**
-   * Map of character to byte[] that Access uses in indexes (not ASCII)
-   *    (Character -> byte[]) as codes to order text
-   */
-  private static final Map<Character, byte[]> CODES =
-    new HashMap<Character, byte[]>();
-  /**
-   * Map of character to byte[] that Access uses in indexes (not ASCII)
-   *    (Character -> byte[]), in the extended portion
-   */
-  private static final Map<Character, byte[]> CODES_EXT =
-    new HashMap<Character, byte[]>();
-  static {
-
-    CODES.put('^', new byte[]{(byte)43, (byte)2});
-    CODES.put('_', new byte[]{(byte)43, (byte)3});
-    CODES.put('`', new byte[]{(byte)43, (byte)7});
-    CODES.put('{', new byte[]{(byte)43, (byte)9});
-    CODES.put('|', new byte[]{(byte)43, (byte)11});
-    CODES.put('}', new byte[]{(byte)43, (byte)13});
-    CODES.put('~', new byte[]{(byte)43, (byte)15});
-    
-    CODES.put('\t', new byte[]{(byte)8, (byte)3});
-    CODES.put('\r', new byte[]{(byte)8, (byte)4});
-    CODES.put('\n', new byte[]{(byte)8, (byte)7});
-        
-    CODES.put(' ', new byte[]{(byte)7});
-    CODES.put('!', new byte[]{(byte)9});
-    CODES.put('"', new byte[]{(byte)10});
-    CODES.put('#', new byte[]{(byte)12});
-    CODES.put('$', new byte[]{(byte)14});
-    CODES.put('%', new byte[]{(byte)16});
-    CODES.put('&', new byte[]{(byte)18});
-    CODES.put('(', new byte[]{(byte)20});
-    CODES.put(')', new byte[]{(byte)22});
-    CODES.put('*', new byte[]{(byte)24});
-    CODES.put(',', new byte[]{(byte)26});
-    CODES.put('.', new byte[]{(byte)28});
-    CODES.put('/', new byte[]{(byte)30});
-    CODES.put(':', new byte[]{(byte)32});
-    CODES.put(';', new byte[]{(byte)34});
-    CODES.put('?', new byte[]{(byte)36});
-    CODES.put('@', new byte[]{(byte)38});    
-    CODES.put('[', new byte[]{(byte)39});
-    CODES.put('\\', new byte[]{(byte)41});
-    CODES.put(']', new byte[]{(byte)42});
-    CODES.put('+', new byte[]{(byte)44});
-    CODES.put('<', new byte[]{(byte)46});
-    CODES.put('=', new byte[]{(byte)48});
-    CODES.put('>', new byte[]{(byte)50});
-    CODES.put('0', new byte[]{(byte)54});
-    CODES.put('1', new byte[]{(byte)56});
-    CODES.put('2', new byte[]{(byte)58});
-    CODES.put('3', new byte[]{(byte)60});
-    CODES.put('4', new byte[]{(byte)62});
-    CODES.put('5', new byte[]{(byte)64});
-    CODES.put('6', new byte[]{(byte)66});
-    CODES.put('7', new byte[]{(byte)68});
-    CODES.put('8', new byte[]{(byte)70});
-    CODES.put('9', new byte[]{(byte)72});
-    CODES.put('A', new byte[]{(byte)74});
-    CODES.put('B', new byte[]{(byte)76});
-    CODES.put('C', new byte[]{(byte)77});
-    CODES.put('D', new byte[]{(byte)79});
-    CODES.put('E', new byte[]{(byte)81});
-    CODES.put('F', new byte[]{(byte)83});
-    CODES.put('G', new byte[]{(byte)85});
-    CODES.put('H', new byte[]{(byte)87});
-    CODES.put('I', new byte[]{(byte)89});
-    CODES.put('J', new byte[]{(byte)91});
-    CODES.put('K', new byte[]{(byte)92});
-    CODES.put('L', new byte[]{(byte)94});
-    CODES.put('M', new byte[]{(byte)96});
-    CODES.put('N', new byte[]{(byte)98});
-    CODES.put('O', new byte[]{(byte)100});
-    CODES.put('P', new byte[]{(byte)102});
-    CODES.put('Q', new byte[]{(byte)104});
-    CODES.put('R', new byte[]{(byte)105});
-    CODES.put('S', new byte[]{(byte)107});
-    CODES.put('T', new byte[]{(byte)109});
-    CODES.put('U', new byte[]{(byte)111});
-    CODES.put('V', new byte[]{(byte)113});
-    CODES.put('W', new byte[]{(byte)115});
-    CODES.put('X', new byte[]{(byte)117});
-    CODES.put('Y', new byte[]{(byte)118});
-    CODES.put('Z', new byte[]{(byte)120});
-
-    CODES_EXT.put('\'', new byte[]{(byte)6, (byte)128});
-    CODES_EXT.put('-', new byte[]{(byte)6, (byte)130});
-  }
-
   /** owning table */
   private final Table _table;
   /** Page number of the index data */
@@ -217,14 +135,17 @@ public class Index implements Comparable<Index> {
   /** sorted collection of index entries.  this is kept in a list instead of a
       SortedSet because the SortedSet has lame traversal utilities */
   private final List<Entry> _entries = new ArrayList<Entry>();
-  /** Map of columns to flags */
-  private final Map<Column, Byte> _columns = new LinkedHashMap<Column, Byte>();
+  /** List of columns and flags */
+  private final List<ColumnDescriptor> _columns =
+    new ArrayList<ColumnDescriptor>();
   /** 0-based index number */
   private int _indexNumber;
+  /** flags for this index */
+  private byte _indexFlags;
+  /** the type of the index */
+  private byte _indexType;
   /** Index name */
   private String _name;
-  /** is this index a primary key */
-  private boolean _primaryKey;
   /** <code>true</code> if the index entries have been initialized,
       <code>false</code> otherwise */
   private boolean _initialized;
@@ -252,8 +173,17 @@ public class Index implements Comparable<Index> {
   public void setIndexNumber(int indexNumber) {
     _indexNumber = indexNumber;
   }
+
   public int getIndexNumber() {
     return _indexNumber;
+  }
+
+  public void setIndexType(byte indexType) {
+    _indexType = indexType;
+  }
+
+  public byte getIndexFlags() {
+    return _indexFlags;
   }
   
   public void setRowCount(int rowCount) {
@@ -264,15 +194,6 @@ public class Index implements Comparable<Index> {
     return _rowCount;
   }
 
-  /**
-   * Note, there may still be some issues around the name of an index, this
-   * information may not be correct.  I've done a variety of testing comparing
-   * the index name to what ms access shows, and i think the data is being
-   * parsed correctly, but sometimes access comes up with a completely
-   * different index name, hence my lack of confidence in this method.  (of
-   * course, access could also just be doing some monkeying under the
-   * hood...).
-   */
   public String getName() {
     return _name;
   }
@@ -282,18 +203,26 @@ public class Index implements Comparable<Index> {
   }
 
   public boolean isPrimaryKey() {
-    return _primaryKey;
+    return _indexType == PRIMARY_KEY_INDEX_TYPE;
   }
 
-  public void setPrimaryKey(boolean newPrimaryKey) {
-    _primaryKey = newPrimaryKey;
+  public boolean isForeignKey() {
+    return _indexType == FOREIGN_KEY_INDEX_TYPE;
   }
 
+  public boolean shouldIgnoreNulls() {
+    return((_indexFlags & IGNORE_NULLS_INDEX_FLAG) != 0);
+  }
+  
+  public boolean isUnique() {
+    return(isPrimaryKey() || ((_indexFlags & UNIQUE_INDEX_FLAG) != 0));
+  }
+  
   /**
    * Returns the Columns for this index (unmodifiable)
    */
-  public Collection<Column> getColumns() {
-    return Collections.unmodifiableCollection(_columns.keySet());
+  public List<ColumnDescriptor> getColumns() {
+    return Collections.unmodifiableList(_columns);
   }
 
   /**
@@ -387,14 +316,29 @@ public class Index implements Comparable<Index> {
   {
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = tableBuffer.getShort();
-      Byte flags = Byte.valueOf(tableBuffer.get());
+      byte colFlags = tableBuffer.get();
       if (columnNumber != COLUMN_UNUSED) {
-        _columns.put(availableColumns.get(columnNumber), flags);
+        // find the desired column by column number (which is not necessarily
+        // the same as the column index)
+        Column idxCol = null;
+        for(Column col : availableColumns) {
+          if(col.getColumnNumber() == columnNumber) {
+            idxCol = col;
+            break;
+          }
+        }
+        if(idxCol == null) {
+          throw new IOException("Could not find column with number "
+                                + columnNumber + " for index " + getName());
+        }
+        _columns.add(newColumnDescriptor(idxCol, colFlags));
       }
     }
     tableBuffer.getInt(); //Forward past Unknown
     _pageNumber = tableBuffer.getInt();
-    tableBuffer.position(tableBuffer.position() + 10);  //Forward past other stuff
+    tableBuffer.getInt(); //Forward past Unknown
+    _indexFlags = tableBuffer.get();
+    tableBuffer.position(tableBuffer.position() + 5);  //Forward past other stuff
   }
 
   /**
@@ -591,7 +535,8 @@ public class Index implements Comparable<Index> {
     // make sure we've parsed the entries
     initialize();
 
-    Entry newEntry = new Entry(row, rowId, _columns);
+    Entry newEntry = new Entry(row, rowId, _columns,
+                               _table.getMaxColumnCount());
     if(addEntry(newEntry)) {
       ++_rowCount;
       ++_modCount;
@@ -615,7 +560,8 @@ public class Index implements Comparable<Index> {
     // make sure we've parsed the entries
     initialize();
 
-    Entry oldEntry = new Entry(row, rowId, _columns);
+    Entry oldEntry = new Entry(row, rowId, _columns,
+                               _table.getMaxColumnCount());
     if(removeEntry(oldEntry)) {
       --_rowCount;
       ++_modCount;
@@ -661,7 +607,7 @@ public class Index implements Comparable<Index> {
       Entry startEntry = new Entry(startRow,
                                    (startInclusive ?
                                     RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID),
-                                   _columns);
+                                   _columns, _table.getMaxColumnCount());
       startPos = new Position(FIRST_ENTRY_IDX, startEntry);
     }
     Position endPos = LAST_POSITION;
@@ -669,7 +615,7 @@ public class Index implements Comparable<Index> {
       Entry endEntry = new Entry(endRow,
                                  (endInclusive ?
                                   RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID),
-                                 _columns);
+                                 _columns, _table.getMaxColumnCount());
       endPos = new Position(LAST_ENTRY_IDX, endEntry);
     }
     return new EntryCursor(startPos, endPos);
@@ -750,7 +696,7 @@ public class Index implements Comparable<Index> {
     }
     int valIdx = 0;
     Object[] idxRow = new Object[getTable().getMaxColumnCount()];
-    for(Column col : _columns.keySet()) {
+    for(ColumnDescriptor col : _columns) {
       idxRow[col.getColumnNumber()] = values[valIdx++];
     }
     return idxRow;
@@ -775,14 +721,14 @@ public class Index implements Comparable<Index> {
    */
   public Object[] constructIndexRow(Map<String,Object> row)
   {
-    for(Column col : _columns.keySet()) {
+    for(ColumnDescriptor col : _columns) {
       if(!row.containsKey(col.getName())) {
         return null;
       }
     }
 
     Object[] idxRow = new Object[getTable().getMaxColumnCount()];
-    for(Column col : _columns.keySet()) {
+    for(ColumnDescriptor col : _columns) {
       idxRow[col.getColumnNumber()] = row.get(col.getName());
     }
     return idxRow;
@@ -794,7 +740,7 @@ public class Index implements Comparable<Index> {
     rtn.append("\tName: " + _name);
     rtn.append("\n\tNumber: " + _indexNumber);
     rtn.append("\n\tPage number: " + _pageNumber);
-    rtn.append("\n\tIs Primary Key: " + _primaryKey);
+    rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
     rtn.append("\n\tColumns: " + _columns);
     rtn.append("\n\tInitialized: " + _initialized);
     rtn.append("\n\tEntries: " + _entries);
@@ -812,88 +758,91 @@ public class Index implements Comparable<Index> {
     }
   }
 
-  private static void checkColumnType(Column col)
-    throws IOException
-  {
-    if(col.isVariableLength() && !isTextualColumn(col)) {
-      throw new IOException("unsupported index column type: " +
-                            col.getType());
-    }
-  }      
-
-  private static boolean isTextualColumn(Column col) {
+  /**
+   * Determines if the given column is a text based column.
+   */
+  private static boolean isTextColumn(Column col) {
     return((col.getType() == DataType.TEXT) ||
            (col.getType() == DataType.MEMO));
   }
 
-  // FIXME
-//   private static boolean isFloatingPointColumn(Column col) {
-//     return((col.getType() == DataType.FLOAT) ||
-//            (col.getType() == DataType.DOUBLE));
-//   }
-
   /**
-   * Converts an index value for a fixed column into the index bytes
+   * Determines if the given column is a boolean column.
    */
-  // FIXME
-//   private static void toIndexFixedValue(
-//       Entry.FixedEntryColumn entryCol,
-//       Object value,
-//       byte flags)
-//     throws IOException
-//   {
-//     if(value == null) {
-//       // nothing more to do
-//       return;
-//     }
-
-//     Column column = entryCol._column;
-    
-// //     if (value instanceof Integer) {
-// //       value = Integer.valueOf((int) (((Integer) value).longValue() -
-// //                                  ((long) Integer.MAX_VALUE + 1L)));
-// //     } else if (value instanceof Short) {
-// //       value = Short.valueOf((short) (((Short) value).longValue() -
-// //                                  ((long) Integer.MAX_VALUE + 1L)));
-// //     }
-
-//     byte[] value = column.write(value, 0, ByteOrder.BIG_ENDIAN);
-    
-//     if(isFloatingPointColumn(column)) {
-//       if(((Number)value).doubleValue() < 0) {
-//         // invert all the bits
-//         for(int i = 0; i < value.length; ++i) {
-//           value[i] = (byte)~value[i];
-//         }
-//       }
-//     } else {
-//       // invert the highest bit
-//       value[0] = (byte)((value[0] ^ 0x80) & 0xFF);
-//     }
-    
-    
-//   }
+  private static boolean isBooleanColumn(Column col) {
+    return(col.getType() == DataType.BOOLEAN);
+  }
   
   /**
-   * Converts an index value for a text column into the value which
-   * is based on a variety of nifty codes.
+   * Determines if the given column is a integer based column.
    */
-  private static void toIndexTextValue(
-      Entry.TextEntryColumn entryCol,
-      Object value,
-      byte flags)
+  private static boolean isIntegerColumn(Column col) {
+    return((col.getType() == DataType.BYTE) ||
+           (col.getType() == DataType.INT) ||
+           (col.getType() == DataType.LONG));
+  }
+
+  /**
+   * Determines if the given column is a floating point based column.
+   */
+  private static boolean isFloatingPointColumn(Column col) {
+    return((col.getType() == DataType.NUMERIC) ||
+           (col.getType() == DataType.MONEY) ||
+           (col.getType() == DataType.FLOAT) ||
+           (col.getType() == DataType.DOUBLE));
+  }
+
+  /**
+   * Flips the first bit in the byte at the given index.
+   */
+  private static byte[] flipFirstBitInByte(byte[] value, int index)
+  {
+    value[index] = (byte)(value[index] ^ 0x80);
+
+    return value;
+  }
+
+  /**
+   * Flips all the bits in the byte array.
+   */
+  private static byte[] flipBytes(byte[] value) {
+    for(int i = 0; i < value.length; ++i) {
+      value[i] = (byte)(~value[i]);
+    } 
+    return value;
+  }
+
+  /**
+   * Writes the value of the given column type to a byte array and returns it.
+   */
+  private static byte[] encodeNumberColumnValue(Object value, Column column)
     throws IOException
   {
-    if(value == null) {
-      // nothing more to do
-      return;
-    }
+    // always write in big endian order
+    return column.write(value, 0, ByteOrder.BIG_ENDIAN).array();
+  }    
+  
+  /**
+   * Updates the given array as appropriate for the given index order and
+   * returns it.
+   */
+  private static byte[] handleOrder(byte[] value, boolean isAscending) {
+    // descending order is achieved by negating all the bits
+    return (isAscending ? value : flipBytes(value));
+  }
 
-    // first, convert to uppercase string (all text characters are uppercase)
-    String str = Column.toCharSequence(value).toString().toUpperCase();
+  /**
+   * Converts an index value for a text column into the entry value (which
+   * is based on a variety of nifty codes).
+   */
+  private static void writeNonNullIndexTextValue(
+      Object value, ByteArrayOutputStream bout, boolean isAscending)
+    throws IOException
+  {
+    // first, convert to string
+    String str = Column.toCharSequence(value).toString();
 
     // now, convert each character to a "code" of one or more bytes
-    ByteArrayOutputStream bout = new ByteArrayOutputStream(str.length());
     ByteArrayOutputStream boutExt = null;
     for(int i = 0; i < str.length(); ++i) {
       char c = str.charAt(i);
@@ -902,7 +851,7 @@ public class Index implements Comparable<Index> {
       if(bytes != null) {
         bout.write(bytes);
       } else {
-        bytes = CODES_EXT.get(c);
+        bytes = UNPRINTABLE_CODES.get(c);
         if(bytes != null) {
           // add extra chars
           if(boutExt == null) {
@@ -928,9 +877,13 @@ public class Index implements Comparable<Index> {
       
     }
 
-    entryCol._valueBytes = bout.toByteArray();
+    // write end text flag
+    bout.write(getEndTextEntryFlag(isAscending));
+    
     if(boutExt != null) {
-      entryCol._extraBytes = boutExt.toByteArray();
+      // write extra text
+      bout.write(boutExt.toByteArray());
+      bout.write(getEndExtraTextEntryFlags(isAscending));
     }
   }
 
@@ -939,23 +892,236 @@ public class Index implements Comparable<Index> {
    */
   private static Entry createSpecialEntry(RowId rowId) {
     try {
-      return new Entry(null, rowId, null);
+      return new Entry(null, rowId, null, 0);
     } catch(IOException e) {
       // should never happen
       throw new IllegalStateException(e);
     }
   }
+
+  /**
+   * Constructs a ColumnDescriptor of the relevant type for the given Column.
+   */
+  private ColumnDescriptor newColumnDescriptor(Column col, byte flags)
+    throws IOException
+  {
+    if(isTextColumn(col)) {
+      return new TextColumnDescriptor(col, flags);
+    } else if(isIntegerColumn(col)) {
+      return new IntegerColumnDescriptor(col, flags);
+    } else if(isFloatingPointColumn(col)) {
+      return new FloatingPointColumnDescriptor(col, flags);
+    } else if(isBooleanColumn(col)) {
+      return new BooleanColumnDescriptor(col, flags);
+    }
+    // FIXME we can't modify this index at this point in time
+    _readOnly = true;
+    return new ReadOnlyColumnDescriptor(col, flags);
+  }
+
   
+  /**
+   * Information about the columns in an index.  Also encodes new index
+   * values.
+   */
+  public static abstract class ColumnDescriptor
+  {
+    private final Column _column;
+    private final byte _flags;
+
+    private ColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      _column = column;
+      _flags = flags;
+    }
+
+    public Column getColumn() {
+      return _column;
+    }
+
+    public byte getFlags() {
+      return _flags;
+    }
+
+    public boolean isAscending() {
+      return((getFlags() & ASCENDING_COLUMN_FLAG) != 0);
+    }
+    
+    public int getColumnNumber() {
+      return getColumn().getColumnNumber();
+    }
+    
+    public int getColumnIndex() {
+      return getColumn().getColumnIndex();
+    }
+    
+    public String getName() {
+      return getColumn().getName();
+    }
+
+    protected void writeValue(Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      if(value == null) {
+        // write null value
+        bout.write(getNullEntryFlag(isAscending()));
+        return;
+      }
+      
+      // write the start flag
+      bout.write(getStartEntryFlag(isAscending()));
+      // write the rest of the value
+      writeNonNullValue(value, bout);
+    }
+
+    protected abstract void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException; 
+    
+    @Override
+    public String toString() {
+      return "ColumnDescriptor " + getColumn() + "\nflags: " + getFlags();
+    }
+  }
+
+  /**
+   * ColumnDescriptor for integer based columns.
+   */
+  private static final class IntegerColumnDescriptor extends ColumnDescriptor
+  {
+    private IntegerColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      bout.write(
+          handleOrder(
+              flipFirstBitInByte(
+                  encodeNumberColumnValue(value, getColumn()), 0),
+              isAscending()));
+    }    
+  }
+  
+  /**
+   * ColumnDescriptor for floating point based columns.
+   */
+  private static final class FloatingPointColumnDescriptor
+    extends ColumnDescriptor
+  {
+    private FloatingPointColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+      // if the number is negative, the first bit is set.  in this case, we
+      // flip all the bits
+      if((valueBytes[0] & 0x80) != 0) {
+        flipBytes(valueBytes);
+      }
+      bout.write(handleOrder(valueBytes, isAscending()));
+    }    
+  }
+  
+  /**
+   * ColumnDescriptor for boolean columns.
+   */
+  private static final class BooleanColumnDescriptor extends ColumnDescriptor
+  {
+    private BooleanColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+
+    @Override
+    protected void writeValue(Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      // null values are handled as booleans
+      bout.write(
+          Column.toBooleanValue(value) ?
+          (isAscending() ? ASC_BOOLEAN_TRUE : DESC_BOOLEAN_TRUE) :
+          (isAscending() ? ASC_BOOLEAN_FALSE : DESC_BOOLEAN_FALSE));
+    }
+
+    @Override
+    protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      throw new UnsupportedOperationException("should not be called");
+    }
+  }
+  
+  /**
+   * ColumnDescriptor for text based columns.
+   */
+  private static final class TextColumnDescriptor extends ColumnDescriptor
+  {
+    private TextColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      writeNonNullIndexTextValue(value, bout, isAscending());
+    }    
+  }
+
+  /**
+   * ColumnDescriptor for columns which we cannot currently write.
+   */
+  private static final class ReadOnlyColumnDescriptor extends ColumnDescriptor
+  {
+    private ReadOnlyColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+
+    @Override
+    protected void writeValue(Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      throw new UnsupportedOperationException(
+          "FIXME cannot write indexes of this type yet");
+    }    
+
+    @Override
+    protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      throw new UnsupportedOperationException("should not be called");
+    }
+  }
+    
   /**
    * A single leaf entry in an index (points to a single row)
    */
   public static class Entry implements Comparable<Entry>
   {
-    
     /** page/row on which this row is stored */
     private final RowId _rowId;
-    /** Columns that are indexed */
-    private final List<EntryColumn> _entryColumns;
+    /** the entry value */
+    private final byte[] _entryBytes;
     
     /**
      * Create a new entry
@@ -963,23 +1129,27 @@ public class Index implements Comparable<Index> {
      * @param rowId rowId in which the row is stored
      * @param columns map of columns for this index
      */
-    private Entry(Object[] values, RowId rowId,
-                  Map<Column, Byte> columns)
+    private Entry(Object[] values, RowId rowId, List<ColumnDescriptor> columns,
+                  int maxTableColumnCount)
       throws IOException
     {
       _rowId = rowId;
       if(values != null) {
-        _entryColumns = new ArrayList<EntryColumn>();
-        for(Map.Entry<Column, Byte> entry : columns.entrySet()) {
-          Column col = entry.getKey();
-          Byte flags = entry.getValue();
-          Object value = values[col.getColumnNumber()];
-          _entryColumns.add(newEntryColumn(col).initFromValue(value, flags));
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        // annoyingly, the values array could come from different sources, one
+        // of which will make it a different size than the other.  we need to
+        // handle both situations.
+        boolean useColNumber = (values.length >= maxTableColumnCount);
+        for(ColumnDescriptor col : columns) {
+          Object value = values[
+              useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
+          col.writeValue(value, bout);
         }
+        _entryBytes = bout.toByteArray();
       } else {
         if(!_rowId.isValid()) {
           // this is a "special" entry (first/last)
-          _entryColumns = null;
+          _entryBytes = null;
         } else {
           throw new IllegalArgumentException("Values was null");
         }
@@ -990,7 +1160,7 @@ public class Index implements Comparable<Index> {
      * Read an existing entry in from a buffer
      */
     private Entry(ByteBuffer buffer, int entryLen, 
-                  Map<Column, Byte> columns)
+                  List<ColumnDescriptor> columns)
       throws IOException
     {
       this(buffer, entryLen, columns, 0);
@@ -1000,51 +1170,21 @@ public class Index implements Comparable<Index> {
      * Read an existing entry in from a buffer
      */
     private Entry(ByteBuffer buffer, int entryLen, 
-                  Map<Column, Byte> columns, int extraTrailingLen)
+                  List<ColumnDescriptor> columns, int extraTrailingLen)
       throws IOException
     {
       // we need 4 trailing bytes for the rowId, plus whatever the caller
       // wants
-      int trailingByteLen = 4 + extraTrailingLen;
+      int colEntryLen = entryLen - (4 + extraTrailingLen);
 
-      int colEntryLen = entryLen - trailingByteLen;
-      
-      _entryColumns = new ArrayList<EntryColumn>();
-      for(Map.Entry<Column, Byte> entry : columns.entrySet()) {
-        Column col = entry.getKey();
-        Byte flags = entry.getValue();
-        int startCurEntryPos = buffer.position();
-        _entryColumns.add(newEntryColumn(col)
-                          .initFromBuffer(buffer, flags, colEntryLen));
-        int curEntryLen = buffer.position() - startCurEntryPos;
-        if(curEntryLen > colEntryLen) {
-          throw new IOException("could not parse entry column, expected " +
-                                colEntryLen + ", read " + curEntryLen);
-        }
-        colEntryLen -= curEntryLen;
-      }
-      if(colEntryLen > 0) {
-        LOG.warn("Unhandled index bytes " + colEntryLen);
-        buffer.position(buffer.position() + colEntryLen);
-      }
+      // read the entry bytes
+      _entryBytes = new byte[colEntryLen];
+      buffer.get(_entryBytes);
+
+      // read the rowId
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       int row = buffer.get();
       _rowId = new RowId(page, row);
-    }
-
-    /**
-     * Instantiate the correct EntryColumn for the given column type
-     */
-    private EntryColumn newEntryColumn(Column col) throws IOException
-    {
-      if(isTextualColumn(col)) {
-        return new TextEntryColumn(col);
-      }
-      return new FixedEntryColumn(col);
-    }
-    
-    protected List<EntryColumn> getEntryColumns() {
-      return _entryColumns;
     }
 
     public RowId getRowId() {
@@ -1052,37 +1192,39 @@ public class Index implements Comparable<Index> {
     }
 
     public boolean isValid() {
-      return(_entryColumns != null);
+      return(_entryBytes != null);
+    }
+
+    protected final byte[] getEntryBytes() {
+      return _entryBytes;
     }
     
     /**
      * Size of this entry in the db.
      */
     protected int size() {
-      int rtn = 4;
-      for(EntryColumn entryCol : _entryColumns) {
-        rtn += entryCol.size();
-      }
-      return rtn;
+      // need 4 trailing bytes for the rowId
+      return _entryBytes.length + 4;
     }
     
     /**
      * Write this entry into a buffer
      */
     protected void write(ByteBuffer buffer) throws IOException {
-      for(EntryColumn entryCol : _entryColumns) {
-        entryCol.write(buffer);
-      }
-      int page = getRowId().getPageNumber();
-      buffer.put((byte) (page >>> 16));
-      buffer.put((byte) (page >>> 8));
-      buffer.put((byte) page);
+      buffer.put(_entryBytes);
+      ByteUtil.put3ByteInt(buffer, getRowId().getPageNumber(),
+                           ByteOrder.BIG_ENDIAN);
       buffer.put((byte)getRowId().getRowNumber());
     }
     
     @Override
     public String toString() {
-      return ("RowId = " + _rowId + ", Columns = " + _entryColumns + "\n");
+      String entryStr = (isValid() ?
+                         ", Bytes = " +
+                         ByteUtil.toHexString(ByteBuffer.wrap(_entryBytes),
+                                              _entryBytes.length) :
+                         "");
+      return "RowId = " + _rowId + entryStr + "\n";
     }
 
     @Override
@@ -1107,22 +1249,13 @@ public class Index implements Comparable<Index> {
       if(isValid() && other.isValid()) {
 
         // comparing two normal entries
-        Iterator<EntryColumn> myIter = _entryColumns.iterator();
-        Iterator<EntryColumn> otherIter = other.getEntryColumns().iterator();
-        while (myIter.hasNext()) {
-          if (!otherIter.hasNext()) {
-            throw new IllegalArgumentException(
-                "Trying to compare index entries with a different number of entry columns");
-          }
-          EntryColumn myCol = myIter.next();
-          EntryColumn otherCol = otherIter.next();
-          int i = myCol.compareTo(otherCol);
-          if (i != 0) {
-            return i;
-          }
+        int entryCmp = BYTE_CODE_COMPARATOR.compare(
+            _entryBytes, other._entryBytes);
+        if(entryCmp != 0) {
+          return entryCmp;
         }
 
-        // if entry columns are equal, sort by rowIds
+        // if entries are equal, sort by rowIds
         return _rowId.compareTo(other.getRowId());
       }
 
@@ -1151,325 +1284,6 @@ public class Index implements Comparable<Index> {
       return (cmp * (invalid.equals(FIRST_ENTRY) ? 1 : -1));
     }
     
-
-    /**
-     * A single column value within an index Entry; encapsulates column
-     * definition and column value.
-     */
-    private abstract class EntryColumn implements Comparable<EntryColumn>
-    {
-      /** Column definition */
-      protected Column _column;
-    
-      protected EntryColumn(Column col) throws IOException {
-        checkColumnType(col);
-        _column = col;
-      }
-
-      public int size() {
-        int size = 1;
-        if (!isNullValue()) {
-          size += nonNullSize();
-        }
-        return size;
-      }
-
-      /**
-       * Initialize using a new value
-       */
-      protected abstract EntryColumn initFromValue(Object value,
-                                                   byte flags)
-        throws IOException;
-
-      /**
-       * Initialize from a buffer
-       */
-      protected abstract EntryColumn initFromBuffer(ByteBuffer buffer,
-                                                    byte flags,
-                                                    int colEntryLen)
-        throws IOException;
-
-      protected abstract boolean isNullValue();
-      
-      /**
-       * Write this entry column to a buffer
-       */
-      public void write(ByteBuffer buffer) throws IOException
-      {
-        if(isNullValue()) {
-          buffer.put((byte)0);
-        } else {
-          buffer.put((byte) 0x7F);
-          writeNonNullValue(buffer);
-        }
-      }
-
-      /**
-       * Write this non-null entry column to a buffer
-       */
-      protected abstract void writeNonNullValue(ByteBuffer buffer)
-          throws IOException;
-      
-      protected abstract int nonNullSize();
-
-      public abstract int compareTo(EntryColumn other);
-    }
-
-    /**
-     * A single fixed column value within an index Entry; encapsulates column
-     * definition and column value.
-     */
-    private final class FixedEntryColumn extends EntryColumn
-    {
-      /** Column value */
-      private Comparable<?> _value;
-    
-      private FixedEntryColumn(Column col) throws IOException {
-        super(col);
-        if(isTextualColumn(col)) {
-          throw new IOException("must be fixed column");
-        }
-      }
-
-      /**
-       * Initialize using a new value
-       */
-      @Override
-      protected EntryColumn initFromValue(Object value, byte flags)
-        throws IOException
-      {
-        _value = (Comparable<?>)value;
-      
-        return this;
-      }
-
-      /**
-       * Initialize from a buffer
-       */
-      @Override
-      protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           byte flags,
-                                           int colEntryLen)
-        throws IOException
-      {
-        // FIXME, eventually take colEntryLen into account
-        
-        byte flag = buffer.get();
-        // FIXME, reverse is 0x80, reverse null is 0xFF
-        if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
-          byte[] data = new byte[_column.getType().getFixedSize()];
-          buffer.get(data);
-          _value = (Comparable<?>) _column.read(data, ByteOrder.BIG_ENDIAN);
-          
-          //ints and shorts are stored in index as value + 2147483648
-          if (_value instanceof Integer) {
-            _value = Integer.valueOf((int) (((Integer) _value).longValue() +
-                                            Integer.MAX_VALUE + 1L)); 
-          } else if (_value instanceof Short) {
-            _value = Short.valueOf((short) (((Short) _value).longValue() +
-                                            Integer.MAX_VALUE + 1L));
-          }
-        }
-        
-        return this;
-      }
-
-      @Override
-      protected boolean isNullValue() {
-        return(_value == null);
-      }
-      
-      /**
-       * Write this entry column to a buffer
-       */
-      @Override
-      protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
-        Comparable<?> value = _value;
-        if (value instanceof Integer) {
-          value = Integer.valueOf((int) (((Integer) value).longValue() -
-                                         (Integer.MAX_VALUE + 1L)));
-        } else if (value instanceof Short) {
-          value = Short.valueOf((short) (((Short) value).longValue() -
-                                         (Integer.MAX_VALUE + 1L)));
-        }
-        buffer.put(_column.write(value, 0, ByteOrder.BIG_ENDIAN));
-      }
-    
-      @Override
-      protected int nonNullSize() {
-        return _column.getType().getFixedSize();
-      }
-
-      @Override
-      public String toString() {
-        return String.valueOf(_value);
-      }
-        
-      @Override
-      public int compareTo(EntryColumn other) {
-        return new CompareToBuilder()
-          .append(_value, ((FixedEntryColumn)other)._value)
-          .toComparison();
-      }
-    }
-
-  
-    /**
-     * A single textual column value within an index Entry; encapsulates
-     * column definition and column value.
-     */
-    private final class TextEntryColumn extends EntryColumn
-    {
-      /** the string byte codes */
-      private byte[] _valueBytes;
-      /** extra column bytes */
-      private byte[] _extraBytes;
-      /** whether or not the trailing bytes were found */
-      private boolean _hasTrailingBytes = true;
-    
-      private TextEntryColumn(Column col) throws IOException {
-        super(col);
-        if(!isTextualColumn(col)) {
-          throw new IOException("must be textual column");
-        }
-      }
-
-      /**
-       * Initialize using a new value
-       */
-      @Override
-      protected EntryColumn initFromValue(Object value,
-                                          byte flags)
-        throws IOException
-      {
-        // convert string to byte array
-        toIndexTextValue(this, value, flags);
-      
-        return this;
-      }
-
-      /**
-       * Initialize from a buffer
-       */
-      @Override
-      protected EntryColumn initFromBuffer(ByteBuffer buffer,
-                                           byte flags,
-                                           int colEntryLen)
-        throws IOException
-      {
-        // can't read more than colEntryLen
-        int maxPos = buffer.position() + colEntryLen;
-
-        byte flag = buffer.get();
-        // FIXME, reverse is 0x80, reverse null is 0xFF
-        // end flag is FE, post extra bytes is FF 00
-        // extra bytes are inverted, so are normal bytes
-        if ((flag != (byte) 0) && (flag != (byte)0xFF)) {
-
-          int endPos = buffer.position();
-          while(buffer.get(endPos) != (byte) 1) {
-            if(endPos == maxPos) {
-              _hasTrailingBytes = false;
-              break;
-            }
-            ++endPos;
-          }
-
-          // read index bytes
-          _valueBytes = new byte[endPos - buffer.position()];
-          buffer.get(_valueBytes);
-
-          if(_hasTrailingBytes) {
-            
-            // read end codes byte
-            buffer.get();
-          
-            //Forward past 0x00 (in some cases, there is more data here, which
-            //we don't currently understand)
-            byte endByte = buffer.get();
-            if(endByte != (byte)0x00) {
-              endPos = buffer.position() - 1;
-              buffer.position(endPos);
-              while(buffer.get(endPos) != (byte)0x00) {
-                ++endPos;
-              }
-              _extraBytes = new byte[endPos - buffer.position()];
-              buffer.get(_extraBytes);
-
-              // re-get endByte
-              buffer.get();
-            }
-          }
-        }
-
-        return this;
-      }
-
-      @Override
-      protected boolean isNullValue() {
-        return(_valueBytes == null);
-      }
-      
-      /**
-       * Write this entry column to a buffer
-       */
-      @Override
-      protected void writeNonNullValue(ByteBuffer buffer) throws IOException {
-        buffer.put(_valueBytes);
-        if(_hasTrailingBytes) {
-          buffer.put((byte) 1);
-          if(_extraBytes != null) {
-            buffer.put(_extraBytes);
-          }
-          buffer.put((byte) 0);
-        }
-      }
-
-      @Override
-      protected int nonNullSize() {
-        int rtn = _valueBytes.length;
-        if(_hasTrailingBytes) {
-          rtn += 2;
-          if(_extraBytes != null) {
-            rtn += _extraBytes.length;
-          }
-        }
-        return rtn;
-      }
-
-      @Override
-      public String toString() {
-        if(_valueBytes == null) {
-          return String.valueOf(_valueBytes);
-        }
-
-        String rtn = ByteUtil.toHexString(ByteBuffer.wrap(_valueBytes),
-                                          _valueBytes.length);
-        if(_extraBytes != null) {
-          rtn += " (" + ByteUtil.toHexString(ByteBuffer.wrap(_extraBytes),
-                                             _extraBytes.length) + ")";
-        }
-        
-        return rtn;
-      }
-        
-      @Override
-      public int compareTo(EntryColumn other) {
-        TextEntryColumn textOther = (TextEntryColumn)other;
-        int rtn = BYTE_CODE_COMPARATOR.compare(
-            _valueBytes, textOther._valueBytes);
-        if(rtn != 0) {
-          return rtn;
-        }
-        if(_hasTrailingBytes != textOther._hasTrailingBytes) {
-          return(_hasTrailingBytes ? 1 : -1);
-        }
-        return BYTE_CODE_COMPARATOR.compare(
-            _extraBytes, textOther._extraBytes);
-      }
-    
-    }
-    
   }
 
   /**
@@ -1484,7 +1298,7 @@ public class Index implements Comparable<Index> {
      * Read an existing node entry in from a buffer
      */
     private NodeEntry(ByteBuffer buffer, int entryLen,
-                      Map<Column, Byte> columns)
+                      List<ColumnDescriptor> columns)
       throws IOException
     {
       // we need 4 trailing bytes for the sub-page number
@@ -1498,10 +1312,24 @@ public class Index implements Comparable<Index> {
     }
 
     @Override
+    protected int size() {
+      // need 4 trailing bytes for the sub-page number
+      return super.size() + 4;
+    }
+    
+    @Override
+    protected void write(ByteBuffer buffer) throws IOException {
+      super.write(buffer);
+      ByteUtil.putInt(buffer, _subPageNumber, ByteOrder.BIG_ENDIAN);
+    }
+    
+    @Override
     public String toString() {
       return ("Node RowId = " + getRowId() +
               ", SubPage = " + _subPageNumber +
-              ", Columns = " + getEntryColumns() + "\n");
+              ", Bytes = " +
+              ByteUtil.toHexString(ByteBuffer.wrap(getEntryBytes()),
+                                   getEntryBytes().length) + "\n");
     }
         
   }
@@ -1603,7 +1431,8 @@ public class Index implements Comparable<Index> {
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns));
+      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns,
+                                _table.getMaxColumnCount()));
     }
     
     /**
@@ -1613,7 +1442,8 @@ public class Index implements Comparable<Index> {
     public void afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns));
+      restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns,
+                                _table.getMaxColumnCount()));
     }
     
     /**

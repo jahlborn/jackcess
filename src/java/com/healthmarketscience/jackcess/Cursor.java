@@ -1153,7 +1153,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
       Map<String,Object> indexRowPattern =
         new LinkedHashMap<String,Object>();
-      for(Column idxCol : _entryCursor.getIndex().getColumns()) {
+      for(Index.ColumnDescriptor idxCol : _entryCursor.getIndex().getColumns())
+      {
         indexRowPattern.put(idxCol.getName(),
                             rowValues[idxCol.getColumnNumber()]);
       }
