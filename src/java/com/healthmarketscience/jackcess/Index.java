@@ -1216,15 +1216,16 @@ public class Index implements Comparable<Index> {
                            ByteOrder.BIG_ENDIAN);
       buffer.put((byte)getRowId().getRowNumber());
     }
+
+    protected final String entryBytesToString() {
+      return (isValid() ? ", Bytes = " + ByteUtil.toHexString(
+                  ByteBuffer.wrap(_entryBytes), _entryBytes.length) :
+              "");
+    }
     
     @Override
     public String toString() {
-      String entryStr = (isValid() ?
-                         ", Bytes = " +
-                         ByteUtil.toHexString(ByteBuffer.wrap(_entryBytes),
-                                              _entryBytes.length) :
-                         "");
-      return "RowId = " + _rowId + entryStr + "\n";
+      return "RowId = " + _rowId + entryBytesToString() + "\n";
     }
 
     @Override
@@ -1326,10 +1327,7 @@ public class Index implements Comparable<Index> {
     @Override
     public String toString() {
       return ("Node RowId = " + getRowId() +
-              ", SubPage = " + _subPageNumber +
-              ", Bytes = " +
-              ByteUtil.toHexString(ByteBuffer.wrap(getEntryBytes()),
-                                   getEntryBytes().length) + "\n");
+              ", SubPage = " + _subPageNumber + entryBytesToString() + "\n");
     }
         
   }
