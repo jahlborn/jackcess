@@ -948,6 +948,7 @@ public class Index implements Comparable<Index> {
             ++charOffset;
           }
           tmpBout.write(extraCodes._extraCodes);
+          ++charOffset;
         }
       }
 
@@ -988,7 +989,7 @@ public class Index implements Comparable<Index> {
     }
 
     // write end extra text
-    tmpBout.write(END_EXTRA_TEXT);    
+    bout.write(END_EXTRA_TEXT);    
   }
 
   /**
@@ -1295,7 +1296,8 @@ public class Index implements Comparable<Index> {
 
       // read the rowId
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
-      int row = buffer.get();
+      int row = ByteUtil.toUnsignedInt(buffer.get());
+      
       _rowId = new RowId(page, row);
       _type = EntryType.NORMAL;
     }

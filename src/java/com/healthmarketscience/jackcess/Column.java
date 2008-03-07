@@ -451,7 +451,7 @@ public class Column implements Comparable<Column> {
                               lvalDefinition.length);
       }
 
-      byte rowNum = def.get();
+      int rowNum = ByteUtil.toUnsignedInt(def.get());
       int pageNum = ByteUtil.get3ByteInt(def, def.position());
       ByteBuffer lvalPage = getPageChannel().createPageBuffer();
       
@@ -485,7 +485,7 @@ public class Column implements Comparable<Column> {
           
           // read next page information
           lvalPage.position(rowStart);
-          rowNum = lvalPage.get();
+          rowNum = ByteUtil.toUnsignedInt(lvalPage.get());
           pageNum = ByteUtil.get3ByteInt(lvalPage);
 
           // update rowEnd and remainingLen based on chunkLength

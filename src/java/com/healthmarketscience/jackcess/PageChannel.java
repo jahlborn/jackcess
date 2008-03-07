@@ -52,6 +52,8 @@ public class PageChannel implements Channel, Flushable {
   
   /** Global usage map always lives on page 1 */
   private static final int PAGE_GLOBAL_USAGE_MAP = 1;
+  /** Global usage map always lives at row 0 */
+  private static final int ROW_GLOBAL_USAGE_MAP = 0;
   
   /** Channel containing the database */
   private final FileChannel _channel;
@@ -82,8 +84,8 @@ public class PageChannel implements Channel, Flushable {
   {
     // note the global usage map is a special map where any page outside of
     // the current range is assumed to be "on"
-    _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP, (byte) 0,
-                                    true);
+    _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP,
+                                    ROW_GLOBAL_USAGE_MAP, true);
   }
   
   /**

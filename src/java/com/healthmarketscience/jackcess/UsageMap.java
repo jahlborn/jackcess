@@ -115,7 +115,7 @@ public class UsageMap
    *         which type of map is found
    */
   public static UsageMap read(Database database, int pageNum,
-                              byte rowNum, boolean assumeOutOfRangeBitsOn)
+                              int rowNum, boolean assumeOutOfRangeBitsOn)
     throws IOException
   {
     JetFormat format = database.getFormat();

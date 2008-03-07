@@ -18,6 +18,9 @@
         Expand the characters supported in index updates to all of the
         ISO-8859-1 character set.
       </action>
+      <action dev="jahlborn" type="update">
+        Fix bug caused by sign extension when reading single-byte row numbers.
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">

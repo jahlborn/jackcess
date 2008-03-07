@@ -580,7 +580,7 @@ public class Table
       
         // Overflow page.  the "row" data in the current page points to
         // another page/row
-        int overflowRowNum = rowBuffer.get(rowStart);
+        int overflowRowNum = ByteUtil.toUnsignedInt(rowBuffer.get(rowStart));
         int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer, rowStart + 1);
         rowBuffer = rowState.setOverflowRow(
             new RowId(overflowPageNum, overflowRowNum));
@@ -915,10 +915,12 @@ public class Table
     _indexSlotCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
 
-    byte rowNum = tableBuffer.get(getFormat().OFFSET_OWNED_PAGES);
+    int rowNum = ByteUtil.toUnsignedInt(
+        tableBuffer.get(getFormat().OFFSET_OWNED_PAGES));
     int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
     _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
-    rowNum = tableBuffer.get(getFormat().OFFSET_FREE_SPACE_PAGES);
+    rowNum = ByteUtil.toUnsignedInt(
+        tableBuffer.get(getFormat().OFFSET_FREE_SPACE_PAGES));
     pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
     _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     
