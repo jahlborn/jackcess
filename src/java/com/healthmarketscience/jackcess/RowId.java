@@ -47,6 +47,19 @@ public class RowId implements Comparable<RowId>
   /** special row number representing an invalid row number */
   public static final int INVALID_ROW_NUMBER = -1;
 
+  /** type attributes for RowIds which simplify comparisons */
+  public enum Type {
+    /** comparable type indicating this RowId should always compare less than
+        normal RowIds */
+    ALWAYS_FIRST,
+    /** comparable type indicating this RowId should always compare
+        normally */
+    NORMAL,
+    /** comparable type indicating this RowId should always compare greater
+        than normal RowIds */
+    ALWAYS_LAST;
+  }
+  
   /** special rowId which will sort before any other valid rowId */
   public static final RowId FIRST_ROW_ID = new RowId(
       FIRST_PAGE_NUMBER, INVALID_ROW_NUMBER);
@@ -57,6 +70,7 @@ public class RowId implements Comparable<RowId>
 
   private final int _pageNumber;
   private final int _rowNumber;
+  private final Type _type;
   
   /**
    * Creates a new <code>RowId</code> instance.
@@ -65,6 +79,9 @@ public class RowId implements Comparable<RowId>
   public RowId(int pageNumber,int rowNumber) {
     _pageNumber = pageNumber;
     _rowNumber = rowNumber;
+    _type = ((_pageNumber == FIRST_PAGE_NUMBER) ? Type.ALWAYS_FIRST :
+             ((_pageNumber == LAST_PAGE_NUMBER) ? Type.ALWAYS_LAST :
+              Type.NORMAL));
   }
 
   public int getPageNumber() {
@@ -83,20 +100,14 @@ public class RowId implements Comparable<RowId>
     return((getRowNumber() >= 0) && (getPageNumber() >= 0));
   }
 
-  /**
-   * Returns the page number comparable as a normal integer, handling
-   * "special" page numbers (e.g. first, last).
-   */
-  private int getComparablePageNumber() {
-    // using max int is valid for last page number because it is way out of
-    // range for any valid access database file
-    return((getPageNumber() >= FIRST_PAGE_NUMBER) ?
-           getPageNumber() : Integer.MAX_VALUE);
+  public Type getType() {
+    return _type;
   }
   
   public int compareTo(RowId other) {
     return new CompareToBuilder()
-      .append(getComparablePageNumber(), other.getComparablePageNumber())
+      .append(getType(), other.getType())
+      .append(getPageNumber(), other.getPageNumber())
       .append(getRowNumber(), other.getRowNumber())
       .toComparison();
   }

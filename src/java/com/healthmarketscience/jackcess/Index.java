@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -95,7 +96,26 @@ public class Index implements Comparable<Index> {
   
   /** index type for foreign key indexes */
   private static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
-    
+
+  /** type attributes for Entries which simplify comparisons */
+  public enum EntryType {
+    /** comparable type indicating this Entry should always compare less than
+        valid RowIds */
+    ALWAYS_FIRST,
+    /** comparable type indicating this Entry should always compare less than
+        other valid entries with equal entryBytes */
+    FIRST_VALID,
+    /** comparable type indicating this RowId should always compare
+        normally */
+    NORMAL,
+    /** comparable type indicating this Entry should always compare greater
+        than other valid entries with equal entryBytes */
+    LAST_VALID,
+    /** comparable type indicating this Entry should always compare greater
+        than valid RowIds */
+    ALWAYS_LAST;
+  }
+  
   static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
       public int compare(byte[] left, byte[] right) {
@@ -789,7 +809,8 @@ public class Index implements Comparable<Index> {
     return((col.getType() == DataType.NUMERIC) ||
            (col.getType() == DataType.MONEY) ||
            (col.getType() == DataType.FLOAT) ||
-           (col.getType() == DataType.DOUBLE));
+           (col.getType() == DataType.DOUBLE) ||
+           (col.getType() == DataType.SHORT_DATE_TIME));
   }
 
   /**
@@ -842,49 +863,132 @@ public class Index implements Comparable<Index> {
     // first, convert to string
     String str = Column.toCharSequence(value).toString();
 
+    // FIXME, i believe access limits the indexed portion of the text to the first 255 chars
+    
+    ByteArrayOutputStream tmpBout = bout;
+    if(!isAscending) {
+      // we need to accumulate the bytes in a temp array in order to negate
+      // them before writing them to the final array
+      tmpBout = new ByteArrayOutputStream();
+    }
+    
     // now, convert each character to a "code" of one or more bytes
-    ByteArrayOutputStream boutExt = null;
+    List<ExtraCodes> unprintableCodes = null;
+    List<ExtraCodes> internationalCodes = null;
+    int charOffset = 0;
     for(int i = 0; i < str.length(); ++i) {
       char c = str.charAt(i);
+      Character cKey = c;
 
-      byte[] bytes = CODES.get(c);
+      byte[] bytes = CODES.get(cKey);
       if(bytes != null) {
-        bout.write(bytes);
-      } else {
-        bytes = UNPRINTABLE_CODES.get(c);
-        if(bytes != null) {
-          // add extra chars
-          if(boutExt == null) {
-            boutExt = new ByteArrayOutputStream(7);
-            // setup funky extra bytes
-            boutExt.write(1);
-            boutExt.write(1);
-            boutExt.write(1);
-          }
-
-          // FIXME, complete me..
-          
-          // no clue where this comes from...
-          int offset = 7 + (i * 4);
-          boutExt.write((byte)0x80);
-          boutExt.write((byte)offset);
-          boutExt.write(bytes);
-            
-        } else {
-          throw new IOException("unmapped string index value");
-        }
+        // simple case, write the codes we found
+        tmpBout.write(bytes);
+        ++charOffset;
+        continue;
       }
-      
+
+      bytes = UNPRINTABLE_CODES.get(cKey);
+      if(bytes != null) {
+        // we do not write anything to tmpBout
+        if(bytes.length > 0) {
+          if(unprintableCodes == null) {
+            unprintableCodes = new LinkedList<ExtraCodes>();
+          }
+          
+          // keep track of the extra codes for later
+          unprintableCodes.add(new ExtraCodes(charOffset, bytes));
+        }
+
+        // note, we do _not_ increment the charOffset for unprintable chars
+        continue;
+      }
+
+      InternationalCodes inatCodes = INTERNATIONAL_CODES.get(cKey);
+      if(inatCodes != null) {
+
+        // we write the "inline" portion of the international codes
+        // immediately, and queue the extra codes for later
+        tmpBout.write(inatCodes._inlineCodes);
+
+        if(internationalCodes == null) {
+          internationalCodes = new LinkedList<ExtraCodes>();
+        }
+
+        // keep track of the extra codes for later
+        internationalCodes.add(new ExtraCodes(charOffset,
+                                              inatCodes._extraCodes));
+
+        ++charOffset;
+        continue;
+      }
+
+      // bummer, out of luck
+      throw new IOException("unmapped string index value " + c);
     }
 
     // write end text flag
-    bout.write(getEndTextEntryFlag(isAscending));
-    
-    if(boutExt != null) {
-      // write extra text
-      bout.write(boutExt.toByteArray());
-      bout.write(getEndExtraTextEntryFlags(isAscending));
+    tmpBout.write(END_TEXT);
+
+    boolean hasExtraText = ((unprintableCodes != null) ||
+                            (internationalCodes != null));
+    if(hasExtraText) {
+
+      // we write all the international extra bytes first
+      if(internationalCodes != null) {
+
+        // we write a placeholder char for each non-international char before
+        // the extra chars for the international char
+        charOffset = 0;
+        Iterator<ExtraCodes> iter = internationalCodes.iterator();
+        while(iter.hasNext()) {
+          ExtraCodes extraCodes = iter.next();
+          while(charOffset < extraCodes._charOffset) {
+            tmpBout.write(INTERNATIONAL_EXTRA_PLACEHOLDER);
+            ++charOffset;
+          }
+          tmpBout.write(extraCodes._extraCodes);
+        }
+      }
+
+      // then we write all the unprintable extra bytes
+      if(unprintableCodes != null) {
+
+        // write a single prefix for all unprintable chars
+        tmpBout.write(UNPRINTABLE_COMMON_PREFIX);
+        
+        // we write a whacky combo of bytes for each unprintable char which
+        // includes a funky offset and extra char itself
+        Iterator<ExtraCodes> iter = unprintableCodes.iterator();
+        while(iter.hasNext()) {
+          ExtraCodes extraCodes = iter.next();
+          tmpBout.write(UNPRINTABLE_PREFIX);
+          int offset =
+            (UNPRINTABLE_COUNT_START +
+             (UNPRINTABLE_COUNT_MULTIPLIER * extraCodes._charOffset));
+          tmpBout.write(offset);
+          tmpBout.write(UNPRINTABLE_MIDFIX);
+          tmpBout.write(extraCodes._extraCodes);
+        }
+      }
+
     }
+
+    // handle descending order by inverting the bytes
+    if(!isAscending) {
+
+      // we actually write the end byte before flipping the bytes, and write
+      // another one after flipping
+      tmpBout.write(END_EXTRA_TEXT);
+      
+      // we actually wrote into a temporary array so that we can invert the
+      // bytes before writing them to the final array
+      bout.write(flipBytes(tmpBout.toByteArray()));
+
+    }
+
+    // write end extra text
+    tmpBout.write(END_EXTRA_TEXT);    
   }
 
   /**
@@ -1122,6 +1226,8 @@ public class Index implements Comparable<Index> {
     private final RowId _rowId;
     /** the entry value */
     private final byte[] _entryBytes;
+    /** comparable type for the entry */
+    private final EntryType _type;
     
     /**
      * Create a new entry
@@ -1146,10 +1252,16 @@ public class Index implements Comparable<Index> {
           col.writeValue(value, bout);
         }
         _entryBytes = bout.toByteArray();
+        _type = ((_rowId.getType() == RowId.Type.NORMAL) ?
+                 EntryType.NORMAL :
+                 ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+                  EntryType.FIRST_VALID : EntryType.LAST_VALID));
       } else {
         if(!_rowId.isValid()) {
           // this is a "special" entry (first/last)
           _entryBytes = null;
+          _type = ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+                   EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
         } else {
           throw new IllegalArgumentException("Values was null");
         }
@@ -1185,12 +1297,17 @@ public class Index implements Comparable<Index> {
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
       int row = buffer.get();
       _rowId = new RowId(page, row);
+      _type = EntryType.NORMAL;
     }
-
+    
     public RowId getRowId() {
       return _rowId;
     }
 
+    public EntryType getType() {
+      return _type;
+    }
+    
     public boolean isValid() {
       return(_entryBytes != null);
     }
@@ -1245,44 +1362,27 @@ public class Index implements Comparable<Index> {
         return 0;
       }
 
-      // note, if the one or both of the entries are not valid, they are
-      // "special" entries, which are handled below
       if(isValid() && other.isValid()) {
 
-        // comparing two normal entries
+        // comparing two valid entries.  first, compare by actual byte values
         int entryCmp = BYTE_CODE_COMPARATOR.compare(
             _entryBytes, other._entryBytes);
         if(entryCmp != 0) {
           return entryCmp;
         }
 
-        // if entries are equal, sort by rowIds
-        return _rowId.compareTo(other.getRowId());
-      }
-
-      // this is the odd case where mixed entries are being compared.  if both
-      // entries are invalid or the rowIds are not equal, then use the rowId
-      // comparison.
-      int rowCmp = _rowId.compareTo(other.getRowId());
-      if((isValid() == other.isValid()) || (rowCmp != 0)) {
-        return rowCmp;
-      }
-
-      // at this point, the rowId's are equal, but the validity is not.  this
-      // will happen when a "special" entry is compared to something created
-      // by EntryCursor.afterEntry or EntryCursor.beforeEntry.  in this case,
-      // the FIRST_ENTRY is always least and the LAST_ENTRY is always
-      // greatest.
-      int cmp = 0;
-      Entry invalid = null;
-      if(!isValid()) {
-        cmp = -1;
-        invalid = this;
       } else {
-        cmp = 1;
-        invalid = other;
+
+        // if the entries are of mixed validity (or both invalid), we defer
+        // next to the EntryType
+        int typeCmp = _type.compareTo(other._type);
+        if(typeCmp != 0) {
+          return typeCmp;
+        }
       }
-      return (cmp * (invalid.equals(FIRST_ENTRY) ? 1 : -1));
+      
+      // at this point we let the RowId decide the final result
+      return _rowId.compareTo(other.getRowId());
     }
     
   }
@@ -1699,6 +1799,16 @@ public class Index implements Comparable<Index> {
     public String toString() {
       return "Idx = " + _idx + ", Entry = " + _entry + ", Between = " +
         _between;
+    }
+  }
+
+  private static final class ExtraCodes {
+    public final int _charOffset;
+    public final byte[] _extraCodes;
+
+    private ExtraCodes(int charOffset, byte[] extraCodes) {
+      _charOffset = charOffset;
+      _extraCodes = extraCodes;
     }
   }
   

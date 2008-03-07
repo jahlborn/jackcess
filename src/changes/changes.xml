@@ -10,6 +10,14 @@
         More fixes for index parsing.  Believe index names are now correctly
         matched up with indexes.
       </action>
+      <action dev="jahlborn" type="update">
+        Simplify comparison algorithms for RowId and Index.Entry using type
+        attributes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Expand the characters supported in index updates to all of the
+        ISO-8859-1 character set.
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">
