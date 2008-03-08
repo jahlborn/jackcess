@@ -59,14 +59,14 @@ public class IndexCodes {
 
   // unprintable char is removed from normal text.
   // pattern for unprintable chars in the extra bytes:
-  // 01 01 01 ( 80 <pos> 06  <code> )
-  // <pos> = 7 + (4 * char_pos)
+  // 01 01 01 <pos> 06  <code> )
+  // <pos> = 7 + (4 * char_pos) | 0x8000 (as short)
   // <code> = char code
   static final int UNPRINTABLE_COUNT_START = 7;
   static final int UNPRINTABLE_COUNT_MULTIPLIER = 4;
   static final byte[] UNPRINTABLE_COMMON_PREFIX =
     new byte[]{(byte)0x01, (byte)0x01, (byte)0x01};
-  static final byte UNPRINTABLE_PREFIX = (byte)0x80;
+  static final int UNPRINTABLE_OFFSET_FLAGS = 0x8000;
   static final byte UNPRINTABLE_MIDFIX = (byte)0x06;
 
   // international char is replaced with ascii char.

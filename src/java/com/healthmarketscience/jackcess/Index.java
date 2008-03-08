@@ -45,7 +45,6 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.Index.ColumnDescriptor;
 
 import static com.healthmarketscience.jackcess.IndexCodes.*;
 
@@ -98,6 +97,9 @@ public class Index implements Comparable<Index> {
   /** index type for foreign key indexes */
   private static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
 
+  private static final int MAX_TEXT_INDEX_CHAR_LENGTH =
+    (JetFormat.TEXT_FIELD_MAX_LENGTH / JetFormat.TEXT_FIELD_UNIT_SIZE);
+  
   /** type attributes for Entries which simplify comparisons */
   public enum EntryType {
     /** comparable type indicating this Entry should always compare less than
@@ -820,7 +822,11 @@ public class Index implements Comparable<Index> {
     // first, convert to string
     String str = Column.toCharSequence(value).toString();
 
-    // FIXME, i believe access limits the indexed portion of the text to the first 255 chars
+    // all text columns (including memos) are only indexed up to the max
+    // number of chars in a VARCHAR column
+    if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
+      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
+    }
     
     ByteArrayOutputStream tmpBout = bout;
     if(!isAscending) {
@@ -920,11 +926,15 @@ public class Index implements Comparable<Index> {
         Iterator<ExtraCodes> iter = unprintableCodes.iterator();
         while(iter.hasNext()) {
           ExtraCodes extraCodes = iter.next();
-          tmpBout.write(UNPRINTABLE_PREFIX);
           int offset =
             (UNPRINTABLE_COUNT_START +
-             (UNPRINTABLE_COUNT_MULTIPLIER * extraCodes._charOffset));
-          tmpBout.write(offset);
+             (UNPRINTABLE_COUNT_MULTIPLIER * extraCodes._charOffset))
+            | UNPRINTABLE_OFFSET_FLAGS;
+
+          // write offset as big-endian short
+          tmpBout.write((offset >> 8) & 0xFF);
+          tmpBout.write(offset & 0xFF);
+          
           tmpBout.write(UNPRINTABLE_MIDFIX);
           tmpBout.write(extraCodes._extraCodes);
         }
