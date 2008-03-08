@@ -28,6 +28,7 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.io.ObjectStreamException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -613,12 +614,14 @@ public class Column implements Comparable<Column> {
     
       // convert to unscaled BigInteger, big-endian bytes
       byte[] intValBytes = decVal.unscaledValue().toByteArray();
-      if(intValBytes.length > 16) {
+      int maxByteLen = getType().getFixedSize() - 1;
+      if(intValBytes.length > maxByteLen) {
         throw new IOException("Too many bytes for valid BigInteger?");
       }
-      if(intValBytes.length < 16) {
-        byte[] tmpBytes = new byte[16];
-        System.arraycopy(intValBytes, 0, tmpBytes, (16 - intValBytes.length),
+      if(intValBytes.length < maxByteLen) {
+        byte[] tmpBytes = new byte[maxByteLen];
+        System.arraycopy(intValBytes, 0, tmpBytes,
+                         (maxByteLen - intValBytes.length),
                          intValBytes.length);
         intValBytes = tmpBytes;
       }
@@ -639,10 +642,12 @@ public class Column implements Comparable<Column> {
   {
     // seems access stores dates in the local timezone.  guess you just hope
     // you read it in the same timezone in which it was written!
-    long time = (long)(buffer.getDouble() * MILLISECONDS_PER_DAY);
+    long dateBits = buffer.getLong();
+    long time = (long)(Double.longBitsToDouble(dateBits)
+                       * MILLISECONDS_PER_DAY);
     time -= MILLIS_BETWEEN_EPOCH_AND_1900;
     time -= getTimeZoneOffset(time);
-    return new Date(time);
+    return new DateExt(time, dateBits);
   }
   
   /**
@@ -652,7 +657,14 @@ public class Column implements Comparable<Column> {
   {
     if(value == null) {
       buffer.putDouble(0d);
+    } if(value instanceof DateExt) {
+      
+      // this is a Date value previously read from readDateValue().  use the
+      // original bits to store the value so we don't lose any precision
+      buffer.putLong(((DateExt)value).getDateBits());
+      
     } else {
+      
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
       long time = ((value instanceof Date) ?
@@ -883,7 +895,8 @@ public class Column implements Comparable<Column> {
       switch(getType()) {
       case NUMERIC:
         // don't ask me why numerics are "var length" columns...
-        ByteBuffer buffer = getPageChannel().createBuffer(getLength(), order);
+        ByteBuffer buffer = getPageChannel().createBuffer(
+            getType().getFixedSize(), order);
         writeNumericValue(buffer, obj);
         buffer.flip();
         return buffer;
@@ -1230,4 +1243,31 @@ public class Column implements Comparable<Column> {
     return obj;
   }
 
+  /**
+   * Date subclass which stashes the original date bits, in case we attempt to
+   * re-write the value (will not lose precision).
+   */
+  private static final class DateExt extends Date
+  {
+    private static final long serialVersionUID = 0L;
+
+    /** cached bits of the original date value */
+    private transient final long _dateBits;
+
+    private DateExt(long time, long dateBits) {
+      super(time);
+      _dateBits = dateBits;
+    }
+
+    public long getDateBits() {
+      return _dateBits;
+    }
+    
+    private Object writeReplace() throws ObjectStreamException {
+      // if we are going to serialize this Date, convert it back to a normal
+      // Date (in case it is restored outside of the context of jackcess)
+      return new Date(super.getTime());
+    }
+  }
+  
 }

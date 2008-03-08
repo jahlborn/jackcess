@@ -45,6 +45,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.Index.ColumnDescriptor;
 
 import static com.healthmarketscience.jackcess.IndexCodes.*;
 
@@ -779,41 +780,6 @@ public class Index implements Comparable<Index> {
   }
 
   /**
-   * Determines if the given column is a text based column.
-   */
-  private static boolean isTextColumn(Column col) {
-    return((col.getType() == DataType.TEXT) ||
-           (col.getType() == DataType.MEMO));
-  }
-
-  /**
-   * Determines if the given column is a boolean column.
-   */
-  private static boolean isBooleanColumn(Column col) {
-    return(col.getType() == DataType.BOOLEAN);
-  }
-  
-  /**
-   * Determines if the given column is a integer based column.
-   */
-  private static boolean isIntegerColumn(Column col) {
-    return((col.getType() == DataType.BYTE) ||
-           (col.getType() == DataType.INT) ||
-           (col.getType() == DataType.LONG));
-  }
-
-  /**
-   * Determines if the given column is a floating point based column.
-   */
-  private static boolean isFloatingPointColumn(Column col) {
-    return((col.getType() == DataType.NUMERIC) ||
-           (col.getType() == DataType.MONEY) ||
-           (col.getType() == DataType.FLOAT) ||
-           (col.getType() == DataType.DOUBLE) ||
-           (col.getType() == DataType.SHORT_DATE_TIME));
-  }
-
-  /**
    * Flips the first bit in the byte at the given index.
    */
   private static byte[] flipFirstBitInByte(byte[] value, int index)
@@ -842,15 +808,6 @@ public class Index implements Comparable<Index> {
     // always write in big endian order
     return column.write(value, 0, ByteOrder.BIG_ENDIAN).array();
   }    
-  
-  /**
-   * Updates the given array as appropriate for the given index order and
-   * returns it.
-   */
-  private static byte[] handleOrder(byte[] value, boolean isAscending) {
-    // descending order is achieved by negating all the bits
-    return (isAscending ? value : flipBytes(value));
-  }
 
   /**
    * Converts an index value for a text column into the entry value (which
@@ -1010,18 +967,30 @@ public class Index implements Comparable<Index> {
   private ColumnDescriptor newColumnDescriptor(Column col, byte flags)
     throws IOException
   {
-    if(isTextColumn(col)) {
+    switch(col.getType()) {
+    case TEXT:
+    case MEMO:
       return new TextColumnDescriptor(col, flags);
-    } else if(isIntegerColumn(col)) {
+    case INT:
+    case LONG:
+    case MONEY:
       return new IntegerColumnDescriptor(col, flags);
-    } else if(isFloatingPointColumn(col)) {
+    case FLOAT:
+    case DOUBLE:
+    case SHORT_DATE_TIME:
       return new FloatingPointColumnDescriptor(col, flags);
-    } else if(isBooleanColumn(col)) {
+    case NUMERIC:
+      return new FixedPointColumnDescriptor(col, flags);
+    case BYTE:
+      return new ByteColumnDescriptor(col, flags);
+    case BOOLEAN:
       return new BooleanColumnDescriptor(col, flags);
+
+    default:
+      // FIXME we can't modify this index at this point in time
+      _readOnly = true;
+      return new ReadOnlyColumnDescriptor(col, flags);
     }
-    // FIXME we can't modify this index at this point in time
-    _readOnly = true;
-    return new ReadOnlyColumnDescriptor(col, flags);
   }
 
   
@@ -1106,11 +1075,18 @@ public class Index implements Comparable<Index> {
         Object value, ByteArrayOutputStream bout)
       throws IOException
     {
-      bout.write(
-          handleOrder(
-              flipFirstBitInByte(
-                  encodeNumberColumnValue(value, getColumn()), 0),
-              isAscending()));
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+      
+      // bit twiddling rules:
+      // - isAsc  => flipFirstBit
+      // - !isAsc => flipFirstBit, flipBytes
+      
+      flipFirstBitInByte(valueBytes, 0);
+      if(!isAscending()) {
+        flipBytes(valueBytes);
+      }
+      
+      bout.write(valueBytes);
     }    
   }
   
@@ -1132,12 +1108,94 @@ public class Index implements Comparable<Index> {
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-      // if the number is negative, the first bit is set.  in this case, we
-      // flip all the bits
-      if((valueBytes[0] & 0x80) != 0) {
+      
+      // determine if the number is negative by testing if the first bit is
+      // set
+      boolean isNegative = ((valueBytes[0] & 0x80) != 0);
+
+      // bit twiddling rules:
+      // isAsc && !isNeg => flipFirstBit
+      // isAsc && isNeg => flipBytes
+      // !isAsc && !isNeg => flipFirstBit, flipBytes
+      // !isAsc && isNeg => nothing
+      
+      if(!isNegative) {
+        flipFirstBitInByte(valueBytes, 0);
+      }
+      if(isNegative == isAscending()) {
         flipBytes(valueBytes);
       }
-      bout.write(handleOrder(valueBytes, isAscending()));
+      
+      bout.write(valueBytes);
+    }    
+  }
+  
+  /**
+   * ColumnDescriptor for fixed point based columns.
+   */
+  private static final class FixedPointColumnDescriptor
+    extends ColumnDescriptor
+  {
+    private FixedPointColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+      
+      // determine if the number is negative by testing if the first bit is
+      // set
+      boolean isNegative = ((valueBytes[0] & 0x80) != 0);
+
+      // bit twiddling rules:
+      // isAsc && !isNeg => setReverseSignByte
+      // isAsc && isNeg => flipBytes, setReverseSignByte
+      // !isAsc && !isNeg => flipBytes, setReverseSignByte
+      // !isAsc && isNeg => setReverseSignByte
+      
+      if(isNegative == isAscending()) {
+        flipBytes(valueBytes);
+      }
+
+      // reverse the sign byte (after any previous byte flipping)
+      valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);
+      
+      bout.write(valueBytes);
+    }    
+  }
+  
+  /**
+   * ColumnDescriptor for byte based columns.
+   */
+  private static final class ByteColumnDescriptor extends ColumnDescriptor
+  {
+    private ByteColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+      
+      // bit twiddling rules:
+      // - isAsc  => nothing
+      // - !isAsc => flipBytes
+      if(!isAscending()) {
+        flipBytes(valueBytes);
+      }
+      
+      bout.write(valueBytes);
     }    
   }
   
