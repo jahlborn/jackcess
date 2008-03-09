@@ -140,14 +140,38 @@ public final class ByteUtil {
       offset += 2;
     }
     
-    int rtn = toUnsignedInt(buffer.get(offset));
-    rtn += (toUnsignedInt(buffer.get(offset + (1 * offInc))) << 8);
-    rtn += (toUnsignedInt(buffer.get(offset + (2 * offInc))) << 16);
-    rtn &= 0xFFFFFF;
+    int rtn = getUnsignedByte(buffer, offset);
+    rtn += (getUnsignedByte(buffer, offset + (1 * offInc)) << 8);
+    rtn += (getUnsignedByte(buffer, offset + (2 * offInc)) << 16);
     return rtn;
   }
 
   /**
+   * Read a 3 byte int from a buffer
+   * @param buffer Buffer containing the bytes
+   * @return The int
+   */
+  public static int getUnsignedByte(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int rtn = getUnsignedByte(buffer, pos);
+    buffer.position(pos + 1);
+    return rtn;
+  }
+
+  /**
+   * Read a 3 byte int from a buffer
+   * @param buffer Buffer containing the bytes
+   * @param offset Offset at which to read the byte
+   * @return The int
+   */
+  public static int getUnsignedByte(ByteBuffer buffer, int offset) {  
+    return asUnsignedByte(buffer.get(offset));
+  }
+
+  
+  /**
+   * @param buffer Buffer containing the bytes
+   * @param order  the order of the bytes of the int
    * @return an int from the current position in the given buffer, read using
    *         the given ByteOrder
    */
@@ -159,6 +183,9 @@ public final class ByteUtil {
   }
   
   /**
+   * @param buffer Buffer containing the bytes
+   * @param offset Offset at which to start reading the int
+   * @param order  the order of the bytes of the int
    * @return an int from the given position in the given buffer, read using
    *         the given ByteOrder
    */
@@ -174,6 +201,9 @@ public final class ByteUtil {
   /**
    * Writes an int at the current position in the given buffer, using the
    * given ByteOrder
+   * @param buffer buffer into which to insert the int
+   * @param val Int to insert
+   * @param order the order to insert the bytes of the int
    */
   public static void putInt(ByteBuffer buffer, int val, ByteOrder order) {
     int offset = buffer.position();
@@ -184,6 +214,10 @@ public final class ByteUtil {
   /**
    * Writes an int at the given position in the given buffer, using the
    * given ByteOrder
+   * @param buffer buffer into which to insert the int
+   * @param val Int to insert
+   * @param offset offset at which to insert the int
+   * @param order the order to insert the bytes of the int
    */
   public static void putInt(ByteBuffer buffer, int val, int offset,
                            ByteOrder order)
@@ -248,6 +282,15 @@ public final class ByteUtil {
    */
   public static String toHexString(ByteBuffer buffer, int size) {
     return toHexString(buffer, 0, size);
+  }
+  
+  /**
+   * Convert a byte array to a hexadecimal string for display
+   * @param buffer Buffer to display, starting at offset 0
+   * @return The display String
+   */
+  public static String toHexString(byte[] array) {
+    return toHexString(ByteBuffer.wrap(array), 0, array.length);
   }
   
   /**
@@ -341,7 +384,7 @@ public final class ByteUtil {
   /**
    * @return the byte value converted to an unsigned int value
    */
-  public static int toUnsignedInt(byte b) { 
+  public static int asUnsignedByte(byte b) { 
     return b & 0xFF;
   }
   

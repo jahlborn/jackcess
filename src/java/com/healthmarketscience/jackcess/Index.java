@@ -138,8 +138,8 @@ public class Index implements Comparable<Index> {
           ++pos;
         }
         if(pos < len) {
-          return ((ByteUtil.toUnsignedInt(left[pos]) <
-                   ByteUtil.toUnsignedInt(right[pos])) ? -1 : 1);
+          return ((ByteUtil.asUnsignedByte(left[pos]) <
+                   ByteUtil.asUnsignedByte(right[pos])) ? -1 : 1);
         }
         return ((left.length < right.length) ? -1 :
                 ((left.length > right.length) ? 1 : 0));
@@ -466,8 +466,8 @@ public class Index implements Comparable<Index> {
   {
     // note, "header" data is in LITTLE_ENDIAN format, entry data is in
     // BIG_ENDIAN format
-    int numCompressedBytes = indexPage.get(
-        getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
+    int numCompressedBytes = ByteUtil.getUnsignedByte(
+        indexPage, getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
     int entryMaskLength = getFormat().SIZE_INDEX_ENTRY_MASK;
     int entryMaskPos = getFormat().OFFSET_INDEX_ENTRY_MASK;
     int entryPos = entryMaskPos + getFormat().SIZE_INDEX_ENTRY_MASK;
@@ -1364,7 +1364,7 @@ public class Index implements Comparable<Index> {
 
       // read the rowId
       int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
-      int row = ByteUtil.toUnsignedInt(buffer.get());
+      int row = ByteUtil.getUnsignedByte(buffer);
       
       _rowId = new RowId(page, row);
       _type = EntryType.NORMAL;

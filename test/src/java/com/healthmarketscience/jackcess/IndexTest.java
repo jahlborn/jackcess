@@ -60,10 +60,10 @@ public class IndexTest extends TestCase {
     byte b4 = (byte)0x80;
     byte b5 = (byte)0xFF;
 
-    assertTrue(ByteUtil.toUnsignedInt(b1) < ByteUtil.toUnsignedInt(b2));
-    assertTrue(ByteUtil.toUnsignedInt(b2) < ByteUtil.toUnsignedInt(b3));
-    assertTrue(ByteUtil.toUnsignedInt(b3) < ByteUtil.toUnsignedInt(b4));
-    assertTrue(ByteUtil.toUnsignedInt(b4) < ByteUtil.toUnsignedInt(b5));
+    assertTrue(ByteUtil.asUnsignedByte(b1) < ByteUtil.asUnsignedByte(b2));
+    assertTrue(ByteUtil.asUnsignedByte(b2) < ByteUtil.asUnsignedByte(b3));
+    assertTrue(ByteUtil.asUnsignedByte(b3) < ByteUtil.asUnsignedByte(b4));
+    assertTrue(ByteUtil.asUnsignedByte(b4) < ByteUtil.asUnsignedByte(b5));
   }
   
   public void testByteCodeComparator() {

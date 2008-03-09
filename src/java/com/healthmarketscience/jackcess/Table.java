@@ -580,7 +580,7 @@ public class Table
       
         // Overflow page.  the "row" data in the current page points to
         // another page/row
-        int overflowRowNum = ByteUtil.toUnsignedInt(rowBuffer.get(rowStart));
+        int overflowRowNum = ByteUtil.getUnsignedByte(rowBuffer, rowStart);
         int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer, rowStart + 1);
         rowBuffer = rowState.setOverflowRow(
             new RowId(overflowPageNum, overflowRowNum));
@@ -915,12 +915,12 @@ public class Table
     _indexSlotCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
 
-    int rowNum = ByteUtil.toUnsignedInt(
-        tableBuffer.get(getFormat().OFFSET_OWNED_PAGES));
+    int rowNum = ByteUtil.getUnsignedByte(
+        tableBuffer, getFormat().OFFSET_OWNED_PAGES);
     int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
     _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
-    rowNum = ByteUtil.toUnsignedInt(
-        tableBuffer.get(getFormat().OFFSET_FREE_SPACE_PAGES));
+    rowNum = ByteUtil.getUnsignedByte(
+        tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES);
     pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
     _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     
@@ -1340,7 +1340,7 @@ public class Table
         Object obj = iter.next();
         if (obj instanceof byte[]) {
           byte[] b = (byte[]) obj;
-          rtn.append(ByteUtil.toHexString(ByteBuffer.wrap(b), b.length));
+          rtn.append(ByteUtil.toHexString(b));
           //This block can be used to easily dump a binary column to a file
           /*java.io.File f = java.io.File.createTempFile("ole", ".bin");
             java.io.FileOutputStream out = new java.io.FileOutputStream(f);
