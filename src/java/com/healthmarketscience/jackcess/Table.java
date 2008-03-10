@@ -1039,6 +1039,21 @@ public class Table
     // up-to-date
     ++_modCount;
   }
+
+  /**
+   * Converts a map of columnName -> columnValue to an array of row values
+   * appropriate for a call to {@link #addRow(Object...)}.
+   */
+  public Object[] asRow(Map<String,Object> rowMap) {
+    Object[] row = new Object[_columns.size()];
+    if(rowMap == null) {
+      return row;
+    }
+    for(Column col : _columns) {
+      row[col.getColumnIndex()] = rowMap.get(col.getName());
+    }
+    return row;
+  }
   
   /**
    * Add a single row to this table and write it to disk
