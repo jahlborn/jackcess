@@ -170,17 +170,20 @@
           support this anytime soon.
         </p>
         <p>
+          Update: As of the 1.1.13 release, the text index handling supports
+          the entire ISO-8859-1 character set.  Consequently table names can
+          (as of this release) contain any character in this character set.
+        </p>
+        <p>
           Some suggestions:
         </p>
         <ul>
-          <li>Use only ascii characters in table names if at all
-          possible</li>
-          <li>If tables with international characters are required, create
-          the tables using Access, then update the tables using
-          jackcess.</li>
-          <li>For indexes on user created tables, populate the table
-          without indexes in jackcess, then add the index using
-          Access.</li>
+          <li>Use only ascii (or ISO-8859-1 as of 1.1.13) characters in table
+              names if at all possible</li>
+          <li>If tables with international characters are required, create the
+              tables using Access, then update the tables using jackcess.</li>
+          <li>For indexes on user created tables, populate the table without
+              indexes in jackcess, then add the index using Access.</li>
         </ul>
       </answer>
     </faq>
