@@ -166,6 +166,12 @@ public class PageChannel implements Channel, Flushable {
       throw new IOException("Database is at maximum size " +
                             getFormat().MAX_DATABASE_SIZE);
     }
+    if((size % getFormat().PAGE_SIZE) != 0L) {
+      throw new IOException("Database corrupted, file size " + size +
+                            " is not multiple of page size " +
+                            getFormat().PAGE_SIZE);
+    }
+    
     page.rewind();
     // push the buffer to the end of the page, so that a full page's worth of
     // data is written regardless of the incoming buffer size (we use a tiny
