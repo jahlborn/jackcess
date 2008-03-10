@@ -325,7 +325,8 @@ public class UsageMap
     if(isOn == add) {
       throw new IOException("Page number " + absolutePageNumber + " already " +
                             ((add) ? "added to" : "removed from") +
-                            " usage map");
+                            " usage map, expected range " +
+                            _startPage + " to " + _endPage);
     }
     
     //Apply the bitmask
