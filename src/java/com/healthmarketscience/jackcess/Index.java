@@ -260,7 +260,10 @@ public class Index implements Comparable<Index> {
     initialize();
     return _entries.size();
   }
-  
+
+  /**
+   * Whether or not the complete index state has been read.
+   */
   public boolean isInitialized() {
     return _initialized;
   }
@@ -555,11 +558,15 @@ public class Index implements Comparable<Index> {
   public void addRow(Object[] row, RowId rowId)
     throws IOException
   {
+    if(shouldIgnoreNulls() && isNullEntry(row)) {
+      // nothing to do
+      return;
+    }
+    
     // make sure we've parsed the entries
     initialize();
 
-    Entry newEntry = new Entry(row, rowId, _columns,
-                               _table.getMaxColumnCount());
+    Entry newEntry = new Entry(row, rowId, this);
     if(addEntry(newEntry)) {
       ++_rowCount;
       ++_modCount;
@@ -580,11 +587,15 @@ public class Index implements Comparable<Index> {
   public void deleteRow(Object[] row, RowId rowId)
     throws IOException
   {
+    if(shouldIgnoreNulls() && isNullEntry(row)) {
+      // nothing to do
+      return;
+    }
+    
     // make sure we've parsed the entries
     initialize();
 
-    Entry oldEntry = new Entry(row, rowId, _columns,
-                               _table.getMaxColumnCount());
+    Entry oldEntry = new Entry(row, rowId, this);
     if(removeEntry(oldEntry)) {
       --_rowCount;
       ++_modCount;
@@ -630,7 +641,7 @@ public class Index implements Comparable<Index> {
       Entry startEntry = new Entry(startRow,
                                    (startInclusive ?
                                     RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID),
-                                   _columns, _table.getMaxColumnCount());
+                                   this);
       startPos = new Position(FIRST_ENTRY_IDX, startEntry);
     }
     Position endPos = LAST_POSITION;
@@ -638,7 +649,7 @@ public class Index implements Comparable<Index> {
       Entry endEntry = new Entry(endRow,
                                  (endInclusive ?
                                   RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID),
-                                 _columns, _table.getMaxColumnCount());
+                                 this);
       endPos = new Position(LAST_ENTRY_IDX, endEntry);
     }
     return new EntryCursor(startPos, endPos);
@@ -663,11 +674,27 @@ public class Index implements Comparable<Index> {
   /**
    * Adds an entry to the _entries list, maintaining the order.
    */
-  private boolean addEntry(Entry newEntry) {
+  private boolean addEntry(Entry newEntry)
+    throws IOException
+  {
     int idx = findEntry(newEntry);
     if(idx < 0) {
       // this is a new entry
       idx = missingIndexToInsertionPoint(idx);
+
+      // determine if the addition of this entry would break the uniqueness
+      // constraint
+      if(isUnique() &&
+         (((idx > 0) &&
+           newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
+          ((idx < _entries.size()) &&
+           newEntry.equalsEntryBytes(_entries.get(idx)))))
+      {
+        throw new IOException(
+            "New entry " + newEntry +
+            " violates uniqueness constrain for index " + this);
+      }
+      
       _entries.add(idx, newEntry);
       return true;
     }
@@ -781,6 +808,54 @@ public class Index implements Comparable<Index> {
     }
   }
 
+  /**
+   * Determines if all values for this index from the given row are
+   * {@code null}.
+   */
+  private boolean isNullEntry(Object[] values)
+  {
+    if(values == null) {
+      return true;
+    }
+    
+    // annoyingly, the values array could come from different sources, one
+    // of which will make it a different size than the other.  we need to
+    // handle both situations.
+    boolean useColNumber = (values.length >= _table.getMaxColumnCount());
+    for(ColumnDescriptor col : _columns) {
+      Object value = values[
+          useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
+      if(!col.isNullValue(value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Creates the entry bytes for a row of values.
+   */
+  private byte[] createEntryBytes(Object[] values) throws IOException
+  {
+    if(values == null) {
+      return null;
+    }
+    
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    
+    // annoyingly, the values array could come from different sources, one
+    // of which will make it a different size than the other.  we need to
+    // handle both situations.
+    boolean useColNumber = (values.length >= _table.getMaxColumnCount());
+    for(ColumnDescriptor col : _columns) {
+      Object value = values[
+          useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
+      col.writeValue(value, bout);
+    }
+    
+    return bout.toByteArray();
+  }
+  
   /**
    * Flips the first bit in the byte at the given index.
    */
@@ -964,7 +1039,7 @@ public class Index implements Comparable<Index> {
    */
   private static Entry createSpecialEntry(RowId rowId) {
     try {
-      return new Entry(null, rowId, null, 0);
+      return new Entry(null, rowId, null);
     } catch(IOException e) {
       // should never happen
       throw new IllegalStateException(e);
@@ -1044,10 +1119,14 @@ public class Index implements Comparable<Index> {
       return getColumn().getName();
     }
 
-    protected void writeValue(Object value, ByteArrayOutputStream bout)
+    protected boolean isNullValue(Object value) {
+      return (value == null);
+    }
+    
+    protected final void writeValue(Object value, ByteArrayOutputStream bout)
       throws IOException
     {
-      if(value == null) {
+      if(isNullValue(value)) {
         // write null value
         bout.write(getNullEntryFlag(isAscending()));
         return;
@@ -1221,21 +1300,19 @@ public class Index implements Comparable<Index> {
     }
 
     @Override
-    protected void writeValue(Object value, ByteArrayOutputStream bout)
-      throws IOException
-    {
+    protected boolean isNullValue(Object value) {
       // null values are handled as booleans
-      bout.write(
-          Column.toBooleanValue(value) ?
-          (isAscending() ? ASC_BOOLEAN_TRUE : DESC_BOOLEAN_TRUE) :
-          (isAscending() ? ASC_BOOLEAN_FALSE : DESC_BOOLEAN_FALSE));
+      return false;
     }
-
+    
     @Override
     protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
       throws IOException
     {
-      throw new UnsupportedOperationException("should not be called");
+      bout.write(
+          Column.toBooleanValue(value) ?
+          (isAscending() ? ASC_BOOLEAN_TRUE : DESC_BOOLEAN_TRUE) :
+          (isAscending() ? ASC_BOOLEAN_FALSE : DESC_BOOLEAN_FALSE));
     }
   }
   
@@ -1271,14 +1348,6 @@ public class Index implements Comparable<Index> {
     }
 
     @Override
-    protected void writeValue(Object value, ByteArrayOutputStream bout)
-      throws IOException
-    {
-      throw new UnsupportedOperationException(
-          "FIXME cannot write indexes of this type yet");
-    }    
-
-    @Override
     protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
       throws IOException
     {
@@ -1304,23 +1373,12 @@ public class Index implements Comparable<Index> {
      * @param rowId rowId in which the row is stored
      * @param columns map of columns for this index
      */
-    private Entry(Object[] values, RowId rowId, List<ColumnDescriptor> columns,
-                  int maxTableColumnCount)
+    private Entry(Object[] values, RowId rowId, Index parent)
       throws IOException
     {
       _rowId = rowId;
       if(values != null) {
-        ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        // annoyingly, the values array could come from different sources, one
-        // of which will make it a different size than the other.  we need to
-        // handle both situations.
-        boolean useColNumber = (values.length >= maxTableColumnCount);
-        for(ColumnDescriptor col : columns) {
-          Object value = values[
-              useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
-          col.writeValue(value, bout);
-        }
-        _entryBytes = bout.toByteArray();
+        _entryBytes = parent.createEntryBytes(values);
         _type = ((_rowId.getType() == RowId.Type.NORMAL) ?
                  EntryType.NORMAL :
                  ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
@@ -1425,6 +1483,14 @@ public class Index implements Comparable<Index> {
       return((this == o) ||
              ((o != null) && (getClass() == o.getClass()) &&
               (compareTo((Entry)o) == 0)));
+    }
+
+    /**
+     * @return {@code true} iff the entryBytes are equal between this
+     *         Entry and the given Entry
+     */
+    public boolean equalsEntryBytes(Entry o) {
+      return(BYTE_CODE_COMPARATOR.compare(_entryBytes, o._entryBytes) == 0);
     }
     
     public int compareTo(Entry other) {
@@ -1599,8 +1665,7 @@ public class Index implements Comparable<Index> {
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, _columns,
-                                _table.getMaxColumnCount()));
+      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, Index.this));
     }
     
     /**
@@ -1610,8 +1675,7 @@ public class Index implements Comparable<Index> {
     public void afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.LAST_ROW_ID, _columns,
-                                _table.getMaxColumnCount()));
+      restorePosition(new Entry(row, RowId.LAST_ROW_ID, Index.this));
     }
     
     /**

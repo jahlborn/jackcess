@@ -46,15 +46,11 @@ public class IndexCodes {
 
   static final byte END_EXTRA_TEXT = (byte)0x00;
 
-  static final byte[] ASC_BOOLEAN_TRUE =
-    new byte[]{ASC_START_FLAG, (byte)0x00};
-  static final byte[] ASC_BOOLEAN_FALSE =
-    new byte[]{ASC_START_FLAG, (byte)0xFF};
+  static final byte ASC_BOOLEAN_TRUE = (byte)0x00;
+  static final byte ASC_BOOLEAN_FALSE = (byte)0xFF;
   
-  static final byte[] DESC_BOOLEAN_TRUE =
-    new byte[]{DESC_START_FLAG, (byte)0xFF};
-  static final byte[] DESC_BOOLEAN_FALSE =
-    new byte[]{DESC_START_FLAG, (byte)0x00};
+  static final byte DESC_BOOLEAN_TRUE = ASC_BOOLEAN_FALSE;
+  static final byte DESC_BOOLEAN_FALSE = ASC_BOOLEAN_TRUE;
   
 
   // unprintable char is removed from normal text.

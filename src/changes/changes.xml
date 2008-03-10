@@ -21,6 +21,10 @@
       <action dev="jahlborn" type="update">
         Fix bug caused by sign extension when reading single-byte row numbers.
       </action>
+      <action dev="jahlborn" type="update">
+        Modify Index update support so that it honors the "unique" and
+        "ignoreNulls" properties for the Index.
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">
