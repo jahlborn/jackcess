@@ -1,8 +1,17 @@
 Missing pieces:
 
-- large index update support (can read large indexes, but not update them),
-  and various other index handling issues
+- large index update support (can read large indexes, but not update them)
+  * HARD (all the knowledge exists, but lots of coding remains)
+- handle more text index entry types (extended charsets, alternate encodings)
+  * MEDIUM
 - determine when/when not to inline memo/ole data for a row of data depending
   on how much will be written in the current row
+  * MEDIUM
 - implement index creation
+  * VERY HARD (still missing knowledge about all the magic bits in index meta
+    data)
+- implement table, column, index renaming
+  * EASY
+- implement table, column, index deletion
+  * EASY - MEDIUM
 
