@@ -150,6 +150,31 @@ public class CursorBuilder {
   }
 
   /**
+   * Sets the starting and ending row for a range based index cursor.
+   * <p>
+   * A valid index must be specified before calling this method.
+   */
+  public CursorBuilder setSpecificRow(Object[] specificRow) {
+    setStartRow(specificRow);
+    setEndRow(specificRow);
+    return this;
+  }
+  
+  /**
+   * Sets the starting and ending row for a range based index cursor to the
+   * given entry (where the given values correspond to the index's columns).
+   * <p>
+   * A valid index must be specified before calling this method.
+   */
+  public CursorBuilder setSpecificEntry(Object... specificEntry) {
+    if(specificEntry != null) {
+      setSpecificRow(_index.constructIndexRowFromEntry(specificEntry));
+    }
+    return this;
+  }
+
+  
+  /**
    * Sets the starting row for a range based index cursor.
    * <p>
    * A valid index must be specified before calling this method.
@@ -161,7 +186,7 @@ public class CursorBuilder {
   
   /**
    * Sets the starting row for a range based index cursor to the given entry
-   * (where the given values correspond to the indexes columns).
+   * (where the given values correspond to the index's columns).
    * <p>
    * A valid index must be specified before calling this method.
    */
@@ -193,7 +218,7 @@ public class CursorBuilder {
   
   /**
    * Sets the ending row for a range based index cursor to the given entry
-   * (where the given values correspond to the indexes columns).
+   * (where the given values correspond to the index's columns).
    * <p>
    * A valid index must be specified before calling this method.
    */

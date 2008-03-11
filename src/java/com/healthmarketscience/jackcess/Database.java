@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,33 +88,57 @@ public class Database
   
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
+  /** Name of the system catalog */
+  private static final String TABLE_SYSTEM_CATALOG = "MSysObjects";
 
   /** this is the access control bit field for created tables.  the value used
       is equivalent to full access (Visual Basic DAO PermissionEnum constant:
       dbSecFullAccess) */
   private static final Integer SYS_FULL_ACCESS_ACM = 1048575;
+
+  /** ACE table column name of the actual access control entry */
+  private static final String ACE_COL_ACM = "ACM";
+  /** ACE table column name of the inheritable attributes flag */
+  private static final String ACE_COL_F_INHERITABLE = "FInheritable";
+  /** ACE table column name of the relevant objectId */
+  private static final String ACE_COL_OBJECT_ID = "ObjectId";
+  /** ACE table column name of the relevant userId */
+  private static final String ACE_COL_SID = "SID";
+
+  /** Relationship table column name of the column count */
+  private static final String REL_COL_COLUMN_COUNT = "ccolumn";
+  /** Relationship table column name of the flags */
+  private static final String REL_COL_FLAGS = "grbit";
+  /** Relationship table column name of the index of the columns */
+  private static final String REL_COL_COLUMN_INDEX = "icolumn";
+  /** Relationship table column name of the "to" column name */
+  private static final String REL_COL_TO_COLUMN = "szColumn";
+  /** Relationship table column name of the "to" table name */
+  private static final String REL_COL_TO_TABLE = "szObject";
+  /** Relationship table column name of the "from" column name */
+  private static final String REL_COL_FROM_COLUMN = "szReferencedColumn";
+  /** Relationship table column name of the "from" table name */
+  private static final String REL_COL_FROM_TABLE = "szReferencedObject";
+  /** Relationship table column name of the relationship */
+  private static final String REL_COL_NAME = "szRelationship";
   
-  private static final String COL_ACM = "ACM";
-  /** System catalog column name of the date a system object was created */
-  private static final String COL_DATE_CREATE = "DateCreate";
-  /** System catalog column name of the date a system object was updated */
-  private static final String COL_DATE_UPDATE = "DateUpdate";
-  private static final String COL_F_INHERITABLE = "FInheritable";
-  private static final String COL_FLAGS = "Flags";
-  /**
-   * System catalog column name of the page on which system object definitions
-   * are stored
-   */
-  private static final String COL_ID = "Id";
+  /** System catalog column name of the page on which system object definitions
+      are stored */
+  private static final String CAT_COL_ID = "Id";
   /** System catalog column name of the name of a system object */
-  private static final String COL_NAME = "Name";
-  private static final String COL_OBJECT_ID = "ObjectId";
-  private static final String COL_OWNER = "Owner";
+  private static final String CAT_COL_NAME = "Name";
+  private static final String CAT_COL_OWNER = "Owner";
   /** System catalog column name of a system object's parent's id */
-  private static final String COL_PARENT_ID = "ParentId";
-  private static final String COL_SID = "SID";
+  private static final String CAT_COL_PARENT_ID = "ParentId";
   /** System catalog column name of the type of a system object */
-  private static final String COL_TYPE = "Type";
+  private static final String CAT_COL_TYPE = "Type";
+  /** System catalog column name of the date a system object was created */
+  private static final String CAT_COL_DATE_CREATE = "DateCreate";
+  /** System catalog column name of the date a system object was updated */
+  private static final String CAT_COL_DATE_UPDATE = "DateUpdate";
+  /** System catalog column name of the flags column */
+  private static final String CAT_COL_FLAGS = "Flags";
+  
   /** Empty database template for creating new databases */
   private static final String EMPTY_MDB = "com/healthmarketscience/jackcess/empty.mdb";
   /** Prefix for column or table names that are reserved words */
@@ -124,12 +149,14 @@ public class Database
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
   /** Name of the table that contains system access control entries */
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
+  /** Name of the table that contains table relationships */
+  private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
 
   /** the columns to read when reading system catalog initially */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
-    new HashSet<String>(Arrays.asList(COL_NAME, COL_TYPE, COL_ID));
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID));
   
   
   /**
@@ -193,6 +220,10 @@ public class Database
   private Table _systemCatalog;
   /** System access control entries table */
   private Table _accessControlEntries;
+  /** page number of the system relationships table */
+  private Integer _relationshipsPageNumber;
+  /** System relationships table (initialized on first use) */
+  private Table _relationships;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   
@@ -318,6 +349,9 @@ public class Database
     return _systemCatalog;
   }
   
+  /**
+   * @return The system Access Control Entries table
+   */
   public Table getAccessControlEntries() {
     return _accessControlEntries;
   }
@@ -326,26 +360,23 @@ public class Database
    * Read the system catalog
    */
   private void readSystemCatalog() throws IOException {
-    _pageChannel.readPage(_buffer, PAGE_SYSTEM_CATALOG);
-    byte pageType = _buffer.get();
-    if (pageType != PageTypes.TABLE_DEF) {
-      throw new IOException("Looking for system catalog at page " +
-          PAGE_SYSTEM_CATALOG + ", but page type is " + pageType);
-    }
-    _systemCatalog = new Table(this, _buffer, PAGE_SYSTEM_CATALOG,
-                               "System Catalog");
-    Map<String,Object> row;
-    while ( (row = _systemCatalog.getNextRow(SYSTEM_CATALOG_COLUMNS)) != null)
+    _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG);
+    for(Map<String,Object> row :
+          Cursor.createCursor(_systemCatalog).iterable(
+              SYSTEM_CATALOG_COLUMNS))
     {
-      String name = (String) row.get(COL_NAME);
-      if (name != null && TYPE_TABLE.equals(row.get(COL_TYPE))) {
+      String name = (String) row.get(CAT_COL_NAME);
+      if (name != null && TYPE_TABLE.equals(row.get(CAT_COL_TYPE))) {
         if (!name.startsWith(PREFIX_SYSTEM)) {
-          addTable((String) row.get(COL_NAME), (Integer) row.get(COL_ID));
-        } else if (TABLE_SYSTEM_ACES.equals(name)) {
-          readAccessControlEntries(((Integer) row.get(COL_ID)).intValue());
+          addTable((String) row.get(CAT_COL_NAME), (Integer) row.get(CAT_COL_ID));
+        } else if(TABLE_SYSTEM_ACES.equals(name)) {
+          int pageNumber = (Integer)row.get(CAT_COL_ID);
+          _accessControlEntries = readTable(TABLE_SYSTEM_ACES, pageNumber);
+        } else if(TABLE_SYSTEM_RELATIONSHIPS.equals(name)) {
+          _relationshipsPageNumber = (Integer)row.get(CAT_COL_ID);
         }
       } else if (SYSTEM_OBJECT_NAME_TABLES.equals(name)) {
-        _tableParentId = (Integer) row.get(COL_ID);
+        _tableParentId = (Integer) row.get(CAT_COL_ID);
       }
     }
 
@@ -362,23 +393,6 @@ public class Database
       LOG.debug("Finished reading system catalog.  Tables: " +
                 getTableNames());
     }
-  }
-  
-  /**
-   * Read the system access control entries table
-   * @param pageNum Page number of the table def
-   */
-  private void readAccessControlEntries(int pageNum) throws IOException {
-    ByteBuffer buffer = _pageChannel.createPageBuffer();
-    _pageChannel.readPage(buffer, pageNum);
-    byte pageType = buffer.get();
-    if (pageType != PageTypes.TABLE_DEF) {
-      throw new IOException("Looking for " + TABLE_SYSTEM_ACES +
-                            " at page " + pageNum +
-                            ", but page type is " + pageType);
-    }
-    _accessControlEntries = new Table(this, buffer, pageNum,
-                                      "Access Control Entries");
   }
   
   /**
@@ -416,10 +430,8 @@ public class Database
     if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
     }
-    
-    int pageNumber = tableInfo.pageNumber.intValue();
-    _pageChannel.readPage(_buffer, pageNumber);
-    return new Table(this, _buffer, pageNumber, tableInfo.tableName);
+
+    return readTable(tableInfo.tableName, tableInfo.pageNumber);
   }
   
   /**
@@ -461,13 +473,95 @@ public class Database
     addToSystemCatalog(name, tdefPageNumber);
     addToAccessControlEntries(tdefPageNumber);    
   }
+
+  /**
+   * Finds all the relationships in the database between the given tables.
+   */
+  public List<Relationship> getRelationships(Table table1, Table table2)
+    throws IOException
+  {
+    // the relationships table does not get loaded until first accessed
+    if(_relationships == null) {
+      if(_relationshipsPageNumber == null) {
+        throw new IOException("Could not find system relationships table");
+      }
+      _relationships = readTable(TABLE_SYSTEM_RELATIONSHIPS,
+                                 _relationshipsPageNumber);
+    }
     
+    if(ObjectUtils.equals(table1.getName(), table2.getName())) {
+      throw new IllegalArgumentException("Must provide two different tables");
+    }
+
+    List<Relationship> relationships = new ArrayList<Relationship>();
+    Cursor cursor = createCursorWithOptionalIndex(
+        _relationships, REL_COL_FROM_TABLE, table1.getName());
+    collectRelationships(cursor, table1, table2, relationships);
+    cursor = createCursorWithOptionalIndex(
+        _relationships, REL_COL_TO_TABLE, table1.getName());
+    collectRelationships(cursor, table2, table1, relationships);
+    
+    return relationships;
+  }
+
+  /**
+   * Finds the relationships matching the given from and to tables from the
+   * given cursor and adds them to the given list.
+   */
+  private void collectRelationships(
+      Cursor cursor, Table fromTable, Table toTable,
+      List<Relationship> relationships)
+  {
+    for(Map<String,Object> row : cursor) {
+      String fromName = (String)row.get(REL_COL_FROM_TABLE);
+      String toName = (String)row.get(REL_COL_TO_TABLE);
+      
+      if(fromTable.getName().equals(fromName) &&
+         toTable.getName().equals(toName))
+      {
+
+        String relName = (String)row.get(REL_COL_NAME);
+        
+        // found more info for a relationship.  see if we already have some
+        // info for this relationship
+        Relationship rel = null;
+        for(Relationship tmp : relationships) {
+          if(tmp.getName().equals(relName)) {
+            rel = tmp;
+            break;
+          }
+        }
+
+        if(rel == null) {
+          // new relationship
+          int numCols = (Integer)row.get(REL_COL_COLUMN_COUNT);
+          int flags = (Integer)row.get(REL_COL_FLAGS);
+          rel = new Relationship(relName, fromTable, toTable,
+                                 flags, numCols);
+          relationships.add(rel);
+        }
+
+        // add column info
+        int colIdx = (Integer)row.get(REL_COL_COLUMN_INDEX);
+        Column fromCol = fromTable.getColumn(
+            (String)row.get(REL_COL_FROM_COLUMN));
+        Column toCol = toTable.getColumn(
+            (String)row.get(REL_COL_TO_COLUMN));
+
+        rel.getFromColumns().set(colIdx, fromCol);
+        rel.getToColumns().set(colIdx, toCol);
+      }
+    }    
+  }
+  
   /**
    * Add a new table to the system catalog
    * @param name Table name
    * @param pageNumber Page number that contains the table definition
    */
-  private void addToSystemCatalog(String name, int pageNumber) throws IOException {
+  private void addToSystemCatalog(String name, int pageNumber)
+    throws IOException
+  {
     Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
     int idx = 0;
     Date creationTime = new Date();
@@ -475,21 +569,20 @@ public class Database
          iter.hasNext(); idx++)
     {
       Column col = iter.next();
-      if (COL_ID.equals(col.getName())) {
+      if (CAT_COL_ID.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(pageNumber);
-      } else if (COL_NAME.equals(col.getName())) {
+      } else if (CAT_COL_NAME.equals(col.getName())) {
         catalogRow[idx] = name;
-      } else if (COL_TYPE.equals(col.getName())) {
+      } else if (CAT_COL_TYPE.equals(col.getName())) {
         catalogRow[idx] = TYPE_TABLE;
-      } else if (COL_DATE_CREATE.equals(col.getName()) ||
-          COL_DATE_UPDATE.equals(col.getName()))
-      {
+      } else if (CAT_COL_DATE_CREATE.equals(col.getName()) ||
+                 CAT_COL_DATE_UPDATE.equals(col.getName())) {
         catalogRow[idx] = creationTime;
-      } else if (COL_PARENT_ID.equals(col.getName())) {
+      } else if (CAT_COL_PARENT_ID.equals(col.getName())) {
         catalogRow[idx] = _tableParentId;
-      } else if (COL_FLAGS.equals(col.getName())) {
+      } else if (CAT_COL_FLAGS.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(0);
-      } else if (COL_OWNER.equals(col.getName())) {
+      } else if (CAT_COL_OWNER.equals(col.getName())) {
         byte[] owner = new byte[2];
         catalogRow[idx] = owner;
         owner[0] = (byte) 0xcf;
@@ -509,10 +602,10 @@ public class Database
       initNewTableSIDs();
     }
 
-    Column acmCol = _accessControlEntries.getColumn(COL_ACM);
-    Column inheritCol = _accessControlEntries.getColumn(COL_F_INHERITABLE);
-    Column objIdCol = _accessControlEntries.getColumn(COL_OBJECT_ID);
-    Column sidCol = _accessControlEntries.getColumn(COL_SID);
+    Column acmCol = _accessControlEntries.getColumn(ACE_COL_ACM);
+    Column inheritCol = _accessControlEntries.getColumn(ACE_COL_F_INHERITABLE);
+    Column objIdCol = _accessControlEntries.getColumn(ACE_COL_OBJECT_ID);
+    Column sidCol = _accessControlEntries.getColumn(ACE_COL_SID);
 
     // construct a collection of ACE entries mimicing those of our parent, the
     // "Tables" system object
@@ -533,13 +626,15 @@ public class Database
    */
   private void initNewTableSIDs() throws IOException
   {
-    // search for ACEs matching the tableParentId.
-    // FIXME we could potentially use an index to do this, but index handling
-    // support is sketchy enough that i wouldn't want to trust it just now.
-    for(Map<String, Object> row : Cursor.createCursor(_accessControlEntries)) {
-      Integer objId = (Integer)row.get(COL_OBJECT_ID);
+    // search for ACEs matching the tableParentId.  use the index on the
+    // objectId column if found (should be there)
+    Cursor cursor = createCursorWithOptionalIndex(
+        _accessControlEntries, ACE_COL_OBJECT_ID, _tableParentId);
+    
+    for(Map<String, Object> row : cursor) {
+      Integer objId = (Integer)row.get(ACE_COL_OBJECT_ID);
       if(_tableParentId.equals(objId)) {
-        _newTableSIDs.add((byte[])row.get(COL_SID));
+        _newTableSIDs.add((byte[])row.get(ACE_COL_SID));
       }
     }
 
@@ -547,6 +642,41 @@ public class Database
       // if all else fails, use the hard-coded default
       _newTableSIDs.add(SYS_DEFAULT_SID);
     }
+  }
+
+  /**
+   * Reads a table with the given name from the given pageNumber.
+   */
+  private Table readTable(String name, int pageNumber)
+    throws IOException
+  {
+    _pageChannel.readPage(_buffer, pageNumber);
+    byte pageType = _buffer.get(0);
+    if (pageType != PageTypes.TABLE_DEF) {
+      throw new IOException("Looking for " + name + " at page " + pageNumber +
+                            ", but page type is " + pageType);
+    }
+    return new Table(this, _buffer, pageNumber, name);
+  }
+
+  /**
+   * Creates a Cursor restricted to the given column value if possible (using
+   * an existing index), otherwise a simple table cursor.
+   */
+  private static Cursor createCursorWithOptionalIndex(
+      Table table, String colName, Object colValue)
+    throws IOException
+  {
+    try {
+      return new CursorBuilder(table)
+        .setIndexByColumns(table.getColumn(colName))
+        .setSpecificEntry(colValue)
+        .toCursor();
+    } catch(IllegalArgumentException e) {
+      LOG.info("Could not find expected index on table " + table.getName());
+    }
+    // use table scan instead
+    return Cursor.createCursor(table);
   }
   
   /**

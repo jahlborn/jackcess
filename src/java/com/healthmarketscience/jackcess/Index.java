@@ -643,15 +643,22 @@ public class Index implements Comparable<Index> {
   {
     initialize();
     Position startPos = FIRST_POSITION;
+    byte[] startEntryBytes = null;
     if(startRow != null) {
-      Entry startEntry = new Entry(createEntryBytes(startRow),
+      startEntryBytes = createEntryBytes(startRow);
+      Entry startEntry = new Entry(startEntryBytes,
                                    (startInclusive ?
                                     RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
       startPos = new Position(FIRST_ENTRY_IDX, startEntry);
     }
     Position endPos = LAST_POSITION;
     if(endRow != null) {
-      Entry endEntry = new Entry(createEntryBytes(endRow),
+      // reuse startEntryBytes if startRow and endRow are same array.  this is
+      // common for "lookup" code
+      byte[] endEntryBytes = ((startRow == endRow) ?
+                              startEntryBytes :
+                              createEntryBytes(endRow));
+      Entry endEntry = new Entry(endEntryBytes,
                                  (endInclusive ?
                                   RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
       endPos = new Position(LAST_ENTRY_IDX, endEntry);

@@ -25,6 +25,9 @@
         Modify Index update support so that it honors the "unique" and
         "ignoreNulls" properties for the Index.
       </action>
+      <action dev="jahlborn" type="update">
+        Add support for reading table relationships.
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">

@@ -112,7 +112,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     return createIndexCursor(table, index, null, null);
   }
-
+  
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
    * range.
@@ -162,7 +162,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern.  See {@link #findRow(Map)} for details on the
+   * given row "pattern".  See {@link #findRow(Map)} for details on the
    * rowPattern.
    * 
    * @param table the table to search
@@ -182,7 +182,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern.  See {@link #findRow(Column,Object)} for details on
+   * given row "pattern".  See {@link #findRow(Column,Object)} for details on
    * the pattern.
    * <p>
    * Note, a {@code null} result value is ambiguous in that it could imply no
@@ -210,7 +210,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in an indexed table which
-   * matches a given row "pattern.  See {@link #findRow(Map)} for details on
+   * matches a given row "pattern".  See {@link #findRow(Map)} for details on
    * the rowPattern.
    * 
    * @param table the table to search
@@ -231,7 +231,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern.  See {@link #findRow(Column,Object)} for details on
+   * given row "pattern".  See {@link #findRow(Column,Object)} for details on
    * the pattern.
    * <p>
    * Note, a {@code null} result value is ambiguous in that it could imply no
@@ -703,6 +703,30 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       }
     }
   }
+
+  /**
+   * Returns {@code true} if the current row matches the given pattern.
+   * @param columnPattern column from the table for this cursor which is being
+   *                      matched by the valuePattern
+   * @param valuePattern value which is tested for equality with the
+   *                     corresponding value in the current row
+   */
+  public boolean currentRowMatches(Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    return ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern));
+  }
+  
+  /**
+   * Returns {@code true} if the current row matches the given pattern.
+   * @param rowPattern column names and values which must be equal to the
+   *                   corresponding values in the current row
+   */
+  public boolean currentRowMatches(Map<String,Object> rowPattern)
+    throws IOException
+  {
+    return ObjectUtils.equals(rowPattern, getCurrentRow(rowPattern.keySet()));
+  }
   
   /**
    * Moves to the first row (as defined by the cursor) where the given column
@@ -722,8 +746,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     beforeFirst();
     while(moveToNextRow()) {
-      if(ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern)))
-      {
+      if(currentRowMatches(columnPattern, valuePattern)) {
         return true;
       }
     }
@@ -745,9 +768,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     beforeFirst();
-    Collection<String> columnNames = rowPattern.keySet();
     while(moveToNextRow()) {
-      if(ObjectUtils.equals(rowPattern, getCurrentRow(columnNames))) {
+      if(currentRowMatches(rowPattern)) {
         return true;
       }
     }
@@ -849,7 +871,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   protected abstract DirHandler getDirHandler(boolean moveForward);
 
   /**
-   * Row iterator for this table, supports modification.
+   * Row iterator for this table, unmodifiable.
    */
   private final class RowIterator implements Iterator<Map<String, Object>>
   {
@@ -1142,8 +1164,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       // either we found a row with the given value, or none exist in the
       // table
       restorePosition(new IndexPosition(startEntry));
-      return ObjectUtils.equals(getCurrentRowValue(columnPattern),
-                                valuePattern);
+      return currentRowMatches(columnPattern, valuePattern);
     }
 
     @Override
@@ -1167,27 +1188,35 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       }
       restorePosition(new IndexPosition(startEntry));
 
-      Map<String,Object> indexRowPattern =
-        new LinkedHashMap<String,Object>();
-      for(Index.ColumnDescriptor idxCol : _entryCursor.getIndex().getColumns())
-      {
-        indexRowPattern.put(idxCol.getName(),
-                            rowValues[idxCol.getColumnNumber()]);
+      Map<String,Object> indexRowPattern = null;
+      if(rowPattern.size() == index.getColumns().size()) {
+        // the rowPattern matches our index columns exactly, so we can
+        // streamline our testing below
+        indexRowPattern = rowPattern;
+      } else {
+        // the rowPattern has more columns than just the index, so we need to
+        // do more work when testing below
+        indexRowPattern =
+          new LinkedHashMap<String,Object>();
+        for(Index.ColumnDescriptor idxCol : index.getColumns()) {
+          indexRowPattern.put(idxCol.getName(),
+                              rowValues[idxCol.getColumnNumber()]);
+        }
       }
-        
+      
       // there may be multiple columns which fit the pattern subset used by
-      // the index, so we need to keep checking until we no longer our index
-      // values no longer match
+      // the index, so we need to keep checking until our index values no
+      // longer match
       do {
 
-        if(!ObjectUtils.equals(getCurrentRow(indexRowPattern.keySet()),
-                               indexRowPattern)) {
+        if(!currentRowMatches(indexRowPattern)) {
           // there are no more rows which could possibly match
           break;
         }
 
-        if(ObjectUtils.equals(getCurrentRow(rowPattern.keySet()),
-                              rowPattern)) {
+        // note, if rowPattern == indexRowPattern, no need to do an extra
+        // comparison with the current row
+        if((rowPattern == indexRowPattern) || currentRowMatches(rowPattern)) {
           // found it!
           return true;
         }
