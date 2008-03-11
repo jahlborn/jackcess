@@ -498,10 +498,9 @@ public class Index implements Comparable<Index> {
           }
           
           if(isLeaf) {
-            entries.add(new Entry(curEntryBuffer, curEntryLen, _columns));
+            entries.add(new Entry(curEntryBuffer, curEntryLen));
           } else {
-            nodeEntries.add(new NodeEntry(
-                                curEntryBuffer, curEntryLen, _columns));
+            nodeEntries.add(new NodeEntry(curEntryBuffer, curEntryLen));
           }
 
           // read any shared "compressed" bytes
@@ -558,16 +557,22 @@ public class Index implements Comparable<Index> {
   public void addRow(Object[] row, RowId rowId)
     throws IOException
   {
-    if(shouldIgnoreNulls() && isNullEntry(row)) {
+    int nullCount = countNullValues(row);
+    boolean isNullEntry = (nullCount == _columns.size());
+    if(shouldIgnoreNulls() && isNullEntry) {
       // nothing to do
       return;
+    }
+    if(isPrimaryKey() && (nullCount > 0)) {
+      throw new IOException("Null value found in row " + Arrays.asList(row)
+                            + " for primary key index " + this);
     }
     
     // make sure we've parsed the entries
     initialize();
 
-    Entry newEntry = new Entry(row, rowId, this);
-    if(addEntry(newEntry)) {
+    Entry newEntry = new Entry(createEntryBytes(row), rowId);
+    if(addEntry(newEntry, isNullEntry, row)) {
       ++_rowCount;
       ++_modCount;
     } else {
@@ -587,7 +592,8 @@ public class Index implements Comparable<Index> {
   public void deleteRow(Object[] row, RowId rowId)
     throws IOException
   {
-    if(shouldIgnoreNulls() && isNullEntry(row)) {
+    int nullCount = countNullValues(row);
+    if(shouldIgnoreNulls() && (nullCount == _columns.size())) {
       // nothing to do
       return;
     }
@@ -595,7 +601,7 @@ public class Index implements Comparable<Index> {
     // make sure we've parsed the entries
     initialize();
 
-    Entry oldEntry = new Entry(row, rowId, this);
+    Entry oldEntry = new Entry(createEntryBytes(row), rowId);
     if(removeEntry(oldEntry)) {
       --_rowCount;
       ++_modCount;
@@ -638,18 +644,16 @@ public class Index implements Comparable<Index> {
     initialize();
     Position startPos = FIRST_POSITION;
     if(startRow != null) {
-      Entry startEntry = new Entry(startRow,
+      Entry startEntry = new Entry(createEntryBytes(startRow),
                                    (startInclusive ?
-                                    RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID),
-                                   this);
+                                    RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
       startPos = new Position(FIRST_ENTRY_IDX, startEntry);
     }
     Position endPos = LAST_POSITION;
     if(endRow != null) {
-      Entry endEntry = new Entry(endRow,
+      Entry endEntry = new Entry(createEntryBytes(endRow),
                                  (endInclusive ?
-                                  RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID),
-                                 this);
+                                  RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
       endPos = new Position(LAST_ENTRY_IDX, endEntry);
     }
     return new EntryCursor(startPos, endPos);
@@ -674,7 +678,7 @@ public class Index implements Comparable<Index> {
   /**
    * Adds an entry to the _entries list, maintaining the order.
    */
-  private boolean addEntry(Entry newEntry)
+  private boolean addEntry(Entry newEntry, boolean isNullEntry, Object[] row)
     throws IOException
   {
     int idx = findEntry(newEntry);
@@ -683,16 +687,17 @@ public class Index implements Comparable<Index> {
       idx = missingIndexToInsertionPoint(idx);
 
       // determine if the addition of this entry would break the uniqueness
-      // constraint
-      if(isUnique() &&
+      // constraint (note, access does not seem to consider multiple null
+      // entries invalid for a "unique" index)
+      if(isUnique() && !isNullEntry &&
          (((idx > 0) &&
            newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
           ((idx < _entries.size()) &&
            newEntry.equalsEntryBytes(_entries.get(idx)))))
       {
         throw new IOException(
-            "New entry " + newEntry +
-            " violates uniqueness constrain for index " + this);
+            "New row " + Arrays.asList(row) +
+            " violates uniqueness constraint for index " + this);
       }
       
       _entries.add(idx, newEntry);
@@ -787,7 +792,7 @@ public class Index implements Comparable<Index> {
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: " + _name);
+    rtn.append("\tName: (" + _table.getName() + ") " + _name);
     rtn.append("\n\tNumber: " + _indexNumber);
     rtn.append("\n\tPage number: " + _pageNumber);
     rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
@@ -809,27 +814,29 @@ public class Index implements Comparable<Index> {
   }
 
   /**
-   * Determines if all values for this index from the given row are
-   * {@code null}.
+   * Determines the number of {@code null} values for this index from the
+   * given row.
    */
-  private boolean isNullEntry(Object[] values)
+  private int countNullValues(Object[] values)
   {
     if(values == null) {
-      return true;
+      return _columns.size();
     }
     
     // annoyingly, the values array could come from different sources, one
     // of which will make it a different size than the other.  we need to
     // handle both situations.
     boolean useColNumber = (values.length >= _table.getMaxColumnCount());
+    int nullCount = 0;
     for(ColumnDescriptor col : _columns) {
       Object value = values[
           useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
-      if(!col.isNullValue(value)) {
-        return false;
+      if(col.isNullValue(value)) {
+        ++nullCount;
       }
     }
-    return true;
+    
+    return nullCount;
   }
 
   /**
@@ -1039,7 +1046,7 @@ public class Index implements Comparable<Index> {
    */
   private static Entry createSpecialEntry(RowId rowId) {
     try {
-      return new Entry(null, rowId, null);
+      return new Entry((byte[])null, rowId);
     } catch(IOException e) {
       // should never happen
       throw new IllegalStateException(e);
@@ -1369,47 +1376,41 @@ public class Index implements Comparable<Index> {
     
     /**
      * Create a new entry
-     * @param values Indexed row values
+     * @param entryBytes encoded bytes for this index entry
      * @param rowId rowId in which the row is stored
-     * @param columns map of columns for this index
      */
-    private Entry(Object[] values, RowId rowId, Index parent)
+    private Entry(byte[] entryBytes, RowId rowId)
       throws IOException
     {
       _rowId = rowId;
-      if(values != null) {
-        _entryBytes = parent.createEntryBytes(values);
+      _entryBytes = entryBytes;
+      if(_entryBytes != null) {
         _type = ((_rowId.getType() == RowId.Type.NORMAL) ?
                  EntryType.NORMAL :
                  ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
                   EntryType.FIRST_VALID : EntryType.LAST_VALID));
+      } else if(!_rowId.isValid()) {
+        // this is a "special" entry (first/last)
+        _type = ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+                 EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
       } else {
-        if(!_rowId.isValid()) {
-          // this is a "special" entry (first/last)
-          _entryBytes = null;
-          _type = ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
-                   EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
-        } else {
-          throw new IllegalArgumentException("Values was null");
-        }
+        throw new IllegalArgumentException("Values was null for valid entry");
       }
     }
 
     /**
      * Read an existing entry in from a buffer
      */
-    private Entry(ByteBuffer buffer, int entryLen, 
-                  List<ColumnDescriptor> columns)
+    private Entry(ByteBuffer buffer, int entryLen)
       throws IOException
     {
-      this(buffer, entryLen, columns, 0);
+      this(buffer, entryLen, 0);
     }
     
     /**
      * Read an existing entry in from a buffer
      */
-    private Entry(ByteBuffer buffer, int entryLen, 
-                  List<ColumnDescriptor> columns, int extraTrailingLen)
+    private Entry(ByteBuffer buffer, int entryLen, int extraTrailingLen)
       throws IOException
     {
       // we need 4 trailing bytes for the rowId, plus whatever the caller
@@ -1439,7 +1440,7 @@ public class Index implements Comparable<Index> {
     public boolean isValid() {
       return(_entryBytes != null);
     }
-
+    
     protected final byte[] getEntryBytes() {
       return _entryBytes;
     }
@@ -1534,12 +1535,11 @@ public class Index implements Comparable<Index> {
     /**
      * Read an existing node entry in from a buffer
      */
-    private NodeEntry(ByteBuffer buffer, int entryLen,
-                      List<ColumnDescriptor> columns)
+    private NodeEntry(ByteBuffer buffer, int entryLen)
       throws IOException
     {
       // we need 4 trailing bytes for the sub-page number
-      super(buffer, entryLen, columns, 4);
+      super(buffer, entryLen, 4);
 
       _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
     }
@@ -1665,7 +1665,8 @@ public class Index implements Comparable<Index> {
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.FIRST_ROW_ID, Index.this));
+      restorePosition(
+          new Entry(Index.this.createEntryBytes(row), RowId.FIRST_ROW_ID));
     }
     
     /**
@@ -1675,7 +1676,8 @@ public class Index implements Comparable<Index> {
     public void afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(row, RowId.LAST_ROW_ID, Index.this));
+      restorePosition(
+          new Entry(Index.this.createEntryBytes(row), RowId.LAST_ROW_ID));
     }
     
     /**

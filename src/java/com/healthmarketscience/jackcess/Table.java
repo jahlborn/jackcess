@@ -1094,14 +1094,17 @@ public class Table
       }
       getPageChannel().readPage(dataPage, tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
-        // found last data page
-        pageNumber = tmpPageNumber;
+        // found last data page, only use if actually listed in free space
+        // pages
+        if(_freeSpacePages.containsPageNumber(tmpPageNumber)) {
+          pageNumber = tmpPageNumber;
+        }
         break;
       }
     }
 
     if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
-      //No data pages exist.  Create a new one.
+      // No data pages exist (with free space).  Create a new one.
       pageNumber = newDataPage(dataPage);
     }
     
@@ -1111,12 +1114,13 @@ public class Table
       short freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       if (freeSpaceInPage < rowSpaceUsage) {
 
-        //Last data page is full.  Create a new one.
+        // Last data page is full.  Create a new one.
         writeDataPage(dataPage, pageNumber);
-        dataPage.clear();
         _freeSpacePages.removePageNumber(pageNumber);
 
+        dataPage.clear();
         pageNumber = newDataPage(dataPage);
+        
         freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       }
 
@@ -1131,7 +1135,7 @@ public class Table
     }
     writeDataPage(dataPage, pageNumber);
     
-    //Update tdef page
+    // Update tdef page
     updateTableDefinition(rows.size());
   }
 

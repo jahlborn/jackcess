@@ -31,7 +31,6 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -376,7 +375,7 @@ public class IndexCodesTest extends TestCase {
     return builder.toString();
   }
   
-  private static String entryToString(Cursor.Position curPos)
+  static String entryToString(Cursor.Position curPos)
     throws Exception
   {
     Field eField = curPos.getClass().getDeclaredField("_entry");

@@ -1112,7 +1112,7 @@ public class Column implements Comparable<Column> {
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: " + _name);
+    rtn.append("\tName: (" + _table.getName() + ") " + _name);
     rtn.append("\n\tType: 0x" + Integer.toHexString(_type.getValue()) +
                " (" + _type + ")");
     rtn.append("\n\tNumber: " + _columnNumber);

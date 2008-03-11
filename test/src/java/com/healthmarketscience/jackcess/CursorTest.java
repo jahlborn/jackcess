@@ -105,12 +105,7 @@ public class CursorTest extends TestCase {
   }  
   
   static Database createTestIndexTable() throws Exception {
-    File srcFile = new File("test/data/indexCursorTest.mdb");
-    File dbFile = File.createTempFile("databaseTest", ".mdb");
-    dbFile.deleteOnExit();
-    copyFile(srcFile, dbFile);
-    
-    Database db = Database.open(dbFile);
+    Database db = openCopy(new File("test/data/indexCursorTest.mdb"));
 
     Table table = db.getTable("test");
 

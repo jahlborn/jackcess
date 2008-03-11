@@ -384,7 +384,8 @@ public class UsageMap
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder("page numbers: [");
+    StringBuilder builder = new StringBuilder(
+        "page numbers (range " + _startPage + " " + _endPage + "): [");
     PageCursor pCursor = cursor();
     while(true) {
       int nextPage = pCursor.getNextPage();
