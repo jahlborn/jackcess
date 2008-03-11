@@ -437,6 +437,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #iterator(Collection<String>)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> iterable(
+      final Collection<String> columnNames)
+  {
+    return new Iterable<Map<String, Object>>() {
+      public Iterator<Map<String, Object>> iterator() {
+        return Cursor.this.iterator(columnNames);
+      }
+    };
+  }
+  
+  /**
    * Calls <code>beforeFirst</code> on this table and returns an unmodifiable
    * Iterator which will iterate through all the rows of this table, returning
    * only the given columns.  Use of the Iterator follows the same
