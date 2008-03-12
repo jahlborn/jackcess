@@ -106,4 +106,17 @@ public class Relationship {
     return((getFlags() & flagMask) != 0);
   }
 
+  @Override
+  public String toString() {
+    StringBuilder rtn = new StringBuilder();
+    rtn.append("\tName: " + _name);
+    rtn.append("\n\tFromTable: " + _fromTable.getName());
+    rtn.append("\n\tFromColumns: " + _fromColumns);
+    rtn.append("\n\tToTable: " + _toTable.getName());
+    rtn.append("\n\tToColumns: " + _toColumns);
+    rtn.append("\n\tFlags: " + Integer.toHexString(_flags));
+    rtn.append("\n\n");
+    return rtn.toString();
+  }
+  
 }
