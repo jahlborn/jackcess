@@ -488,10 +488,20 @@ public class Database
       _relationships = readTable(TABLE_SYSTEM_RELATIONSHIPS,
                                  _relationshipsPageNumber);
     }
-    
-    if(ObjectUtils.equals(table1.getName(), table2.getName())) {
+
+    int nameCmp = table1.getName().compareTo(table2.getName());
+    if(nameCmp == 0) {
       throw new IllegalArgumentException("Must provide two different tables");
     }
+    if(nameCmp > 0) {
+      // we "order" the two tables given so that we will return a collection
+      // of relationships in the same order regardless of whether we are given
+      // (TableFoo, TableBar) or (TableBar, TableFoo).
+      Table tmp = table1;
+      table1 = table2;
+      table2 = tmp;
+    }
+      
 
     List<Relationship> relationships = new ArrayList<Relationship>();
     Cursor cursor = createCursorWithOptionalIndex(
