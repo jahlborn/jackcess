@@ -67,7 +67,7 @@ public class IndexCodesTest extends TestCase {
 
   public void testIndexCodes() throws Exception
   {
-    Database db = Database.open(new File("test/data/testIndexCodes.mdb"));
+    Database db = open(new File("test/data/testIndexCodes.mdb"));
 
     for(Table t : db) {
       for(Index index : t.getIndexes()) {
@@ -182,10 +182,10 @@ public class IndexCodesTest extends TestCase {
 
   public void x_testReadIsoMdb() throws Exception
   {
-//     Database db = Database.open(new File("/tmp/test_ind.mdb"));
-//     Database db = Database.open(new File("/tmp/test_ind2.mdb"));
-    Database db = Database.open(new File("/tmp/test_ind3.mdb"));
-//     Database db = Database.open(new File("/tmp/test_ind4.mdb"));
+//     Database db = open(new File("/tmp/test_ind.mdb"));
+//     Database db = open(new File("/tmp/test_ind2.mdb"));
+    Database db = open(new File("/tmp/test_ind3.mdb"));
+//     Database db = open(new File("/tmp/test_ind4.mdb"));
 
     Table t = db.getTable("Table1");
     Index index = t.getIndex("B");
@@ -204,11 +204,11 @@ public class IndexCodesTest extends TestCase {
     
   public void x_testReverseIsoMdb() throws Exception
   {
-//     Database db = Database.open(new File("/tmp/test_ind.mdb"));
-    Database db = Database.open(new File("/tmp/test_ind2.mdb"));
-//     Database db = Database.open(new File("/tmp/databaseTest14366_ind.mdb"));
-//     Database db = Database.open(new File("/tmp/databaseTest56165_ind.mdb"));
-//     Database db = Database.open(new File("/tmp/databaseTest53970_ind.mdb"));
+//     Database db = open(new File("/tmp/test_ind.mdb"));
+    Database db = open(new File("/tmp/test_ind2.mdb"));
+//     Database db = open(new File("/tmp/databaseTest14366_ind.mdb"));
+//     Database db = open(new File("/tmp/databaseTest56165_ind.mdb"));
+//     Database db = open(new File("/tmp/databaseTest53970_ind.mdb"));
 
     Table t = db.getTable("Table1");
     Index index = t.getIndex("B");

@@ -64,7 +64,11 @@ public class DatabaseTest extends TestCase {
   }
    
   static Database open() throws Exception {
-    return Database.open(new File("test/data/test.mdb"));
+    return open(new File("test/data/test.mdb"));
+  }
+  
+  static Database open(File file) throws Exception {
+    return Database.open(file, true, Database.DEFAULT_AUTO_SYNC);
   }
   
   static Database create() throws Exception {
@@ -143,7 +147,7 @@ public class DatabaseTest extends TestCase {
   }
       
   public void testReadDeletedRows() throws Exception {
-    Table table = Database.open(new File("test/data/delTest.mdb")).getTable("Table");
+    Table table = open(new File("test/data/delTest.mdb")).getTable("Table");
     int rows = 0;
     while (table.getNextRow() != null) {
       rows++;
@@ -332,7 +336,7 @@ public class DatabaseTest extends TestCase {
 
   public void testReadLongValue() throws Exception {
 
-    Database db = Database.open(new File("test/data/test2.mdb"));
+    Database db = open(new File("test/data/test2.mdb"));
     Table table = db.getTable("MSP_PROJECTS");
     Map<String, Object> row = table.getNextRow();
     assertEquals("Jon Iles this is a a vawesrasoih aksdkl fas dlkjflkasjd flkjaslkdjflkajlksj dfl lkasjdf lkjaskldfj lkas dlk lkjsjdfkl; aslkdf lkasjkldjf lka skldf lka sdkjfl;kasjd falksjdfljaslkdjf laskjdfk jalskjd flkj aslkdjflkjkjasljdflkjas jf;lkasjd fjkas dasdf asd fasdf asdf asdmhf lksaiyudfoi jasodfj902384jsdf9 aw90se fisajldkfj lkasj dlkfslkd jflksjadf as", row.get("PROJ_PROP_AUTHOR"));
@@ -398,7 +402,7 @@ public class DatabaseTest extends TestCase {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
     try {
-      Database db = Database.open(bogusFile);
+      Database db = open(bogusFile);
       fail("FileNotFoundException should have been thrown");
     } catch(FileNotFoundException e) {
     }
@@ -406,7 +410,7 @@ public class DatabaseTest extends TestCase {
   }
 
   public void testReadWithDeletedCols() throws Exception {
-    Table table = Database.open(new File("test/data/delColTest.mdb")).getTable("Table1");
+    Table table = open(new File("test/data/delColTest.mdb")).getTable("Table1");
 
     Map<String, Object> expectedRow0 = new LinkedHashMap<String, Object>();
     expectedRow0.put("id", 0);
@@ -624,7 +628,7 @@ public class DatabaseTest extends TestCase {
 
   public void testOverflow() throws Exception
   {
-    Database mdb = Database.open(new File("test/data/overflowTest.mdb"));
+    Database mdb = open(new File("test/data/overflowTest.mdb"));
     Table table = mdb.getTable("Table1");
 
     // 7 rows, 3 and 5 are overflow

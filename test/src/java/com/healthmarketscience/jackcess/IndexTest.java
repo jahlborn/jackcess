@@ -102,7 +102,7 @@ public class IndexTest extends TestCase {
   
   public void testIndexSlots() throws Exception
   {
-    Database mdb = Database.open(new File("test/data/indexTest.mdb"));
+    Database mdb = open(new File("test/data/indexTest.mdb"));
 
     Table table = mdb.getTable("Table1");
     for(Index idx : table.getIndexes()) {
@@ -141,7 +141,7 @@ public class IndexTest extends TestCase {
   {
     // this file has an index with "compressed" entries and node pages
     File origFile = new File("test/data/compIndexTest.mdb");
-    Database db = Database.open(origFile);
+    Database db = open(origFile);
     Table t = db.getTable("Table1");
     Index index = t.getIndexes().get(0);
     assertFalse(index.isInitialized());
