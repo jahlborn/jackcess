@@ -1118,7 +1118,12 @@ public class Column implements Comparable<Column> {
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);
     rtn.append("\n\tVariable length: " + _variableLength);
-    rtn.append("\n\tCompressed Unicode: " + _compressedUnicode);
+    if(_variableLength) {
+      rtn.append("\n\tCompressed Unicode: " + _compressedUnicode);
+    }
+    if(_autoNumber) {
+      rtn.append("\n\tNext AutoNumber: " + (_table.getLastAutoNumber() + 1));
+    }
     rtn.append("\n\n");
     return rtn.toString();
   }
