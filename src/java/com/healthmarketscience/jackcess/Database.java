@@ -462,6 +462,11 @@ public class Database
       }
     }
 
+    if(Table.countAutoNumberColumns(columns) > 1) {
+      throw new IllegalArgumentException(
+          "Can have at most one AutoNumber column per table");
+    }
+    
     //Write the tdef page to disk.
     int tdefPageNumber = Table.writeTableDefinition(columns, _pageChannel,
                                                     _format);
@@ -925,8 +930,8 @@ public class Database
    */
   private static class TableInfo
   {
-    public Integer pageNumber;
-    public String tableName;
+    public final Integer pageNumber;
+    public final String tableName;
 
     private TableInfo(Integer newPageNumber,
                       String newTableName) {
