@@ -735,7 +735,12 @@ public class Table
     buffer.putShort((short) 0); //Unknown
     buffer.putInt(0);  //Number of rows
     buffer.putInt(0); //Last Autonumber
-    for (int i = 0; i < 16; i++) {  //Unknown
+    if(countAutoNumberColumns(columns) > 0) {
+      buffer.put((byte) 1);
+    } else {
+      buffer.put((byte) 0);
+    }
+    for (int i = 0; i < 15; i++) {  //Unknown
       buffer.put((byte) 0);
     }
     buffer.put(Table.TYPE_USER); //Table type
@@ -1310,6 +1315,11 @@ public class Table
     return ++_lastAutoNumber;
   }
 
+  int getLastAutoNumber() {
+    // gets the last used auto number (does not modify)
+    return _lastAutoNumber;
+  }
+  
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
@@ -1491,6 +1501,20 @@ public class Table
     return rowSize + format.SIZE_ROW_LOCATION;
   }
 
+  /**
+   * @return the number of "AutoNumber" columns in the given collection of
+   *         columns.
+   */
+  public static int countAutoNumberColumns(Collection<Column> columns) {
+    int numAutoNumCols = 0;
+    for(Column c : columns) {
+      if(c.isAutoNumber()) {
+        ++numAutoNumCols;
+      }
+    }
+    return numAutoNumCols;
+  }
+  
   /** various statuses for the row data */
   private enum RowStatus {
     INIT, INVALID_PAGE, INVALID_ROW, VALID, DELETED, NORMAL, OVERFLOW;
