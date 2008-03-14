@@ -439,7 +439,6 @@ public class Database
    * @param name Name of the table to create
    * @param columns List of Columns in the table
    */
-   //XXX Set up 1-page rollback buffer?
   public void createTable(String name, List<Column> columns)
     throws IOException
   {
@@ -889,12 +888,20 @@ public class Database
    * @return A table or column name escaped for Access
    */
   private String escape(String s) {
-    if (RESERVED_WORDS.contains(s.toLowerCase())) {
+    if (isReservedWord(s)) {
       return ESCAPE_PREFIX + s; 
     }
     return s;
   }
 
+  /**
+   * @return {@code true} if the given string is a reserved word,
+   *         {@code false} otherwise
+   */
+  public static boolean isReservedWord(String s) {
+    return RESERVED_WORDS.contains(s.toLowerCase());
+  }
+  
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this);
