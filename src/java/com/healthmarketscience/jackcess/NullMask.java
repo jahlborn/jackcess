@@ -60,14 +60,15 @@ public class NullMask {
   public ByteBuffer wrap() {
     return ByteBuffer.wrap(_mask);
   }
-  
+
   /**
-   * @param columnNumber 0-based column number in this mask's row
+   * @param column column to test for {@code null}
    * @return Whether or not the value for that column is null.  For boolean
    *    columns, returns the actual value of the column (where
    *    non-{@code null} == {@code true})
    */
-  public boolean isNull(int columnNumber) {
+  public boolean isNull(Column column) {
+    int columnNumber = column.getColumnNumber();
     int maskIndex = columnNumber / 8;
     // if new columns were added to the table, old null masks may not include
     // them (meaning the field is null)
@@ -81,9 +82,10 @@ public class NullMask {
   /**
    * Indicate that the column with the given number is not {@code null} (or a
    * boolean value is {@code true}).
-   * @param columnNumber 0-based column number in this mask's row
+   * @param column column to be marked non-{@code null}
    */
-  public void markNotNull(int columnNumber) {
+  public void markNotNull(Column column) {
+    int columnNumber = column.getColumnNumber();
     int maskIndex = columnNumber / 8;
     _mask[maskIndex] = (byte) (_mask[maskIndex] | (byte) (1 << (columnNumber % 8)));
   }

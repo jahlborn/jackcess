@@ -359,7 +359,7 @@ public class Table
     // deletion.  note, most of the returned values are immutable, except
     // for binary data (returned as byte[]), but binary data shouldn't be
     // indexed anyway.
-    rowState.setRowValue(column.getColumnNumber(), value);
+    rowState.setRowValue(column.getColumnIndex(), value);
 
     return value;
   }
@@ -407,7 +407,7 @@ public class Table
         // deletion.  note, most of the returned values are immutable, except
         // for binary data (returned as byte[]), but binary data shouldn't be
         // indexed anyway.
-        rowState.setRowValue(column.getColumnNumber(), value);
+        rowState.setRowValue(column.getColumnIndex(), value);
       }
     }
     return rtn;
@@ -421,7 +421,7 @@ public class Table
                                      Column column)
     throws IOException
   {
-    boolean isNull = nullMask.isNull(column.getColumnNumber());
+    boolean isNull = nullMask.isNull(column);
     if(column.getType() == DataType.BOOLEAN) {
       return Boolean.valueOf(!isNull);  //Boolean values are stored in the null mask
     } else if(isNull) {
@@ -1244,7 +1244,7 @@ public class Table
         
           if(Column.toBooleanValue(rowValue)) {
             //Booleans are stored in the null mask
-            nullMask.markNotNull(col.getColumnNumber());
+            nullMask.markNotNull(col);
           }
         
         } else {
@@ -1257,7 +1257,7 @@ public class Table
           if(rowValue != null) {
         
             // we have a value
-            nullMask.markNotNull(col.getColumnNumber());
+            nullMask.markNotNull(col);
 
             //remainingRowLength is ignored when writing fixed length data
             buffer.position(fixedDataStart + col.getFixedDataOffset());
@@ -1292,7 +1292,7 @@ public class Table
         Object rowValue = row.get(varCol.getColumnIndex());
         if (rowValue != null) {
           // we have a value
-          nullMask.markNotNull(varCol.getColumnNumber());
+          nullMask.markNotNull(varCol);
 
           ByteBuffer varDataBuf = varCol.write(rowValue, maxRowSize);
           maxRowSize -= varDataBuf.remaining();
@@ -1582,7 +1582,7 @@ public class Table
     
     private RowState(boolean hardRowBuffer) {
       _headerRowBufferH = TempPageHolder.newHolder(hardRowBuffer);
-      _rowValues = new Object[Table.this.getMaxColumnCount()];
+      _rowValues = new Object[Table.this.getColumnCount()];
       _lastModCount = Table.this._modCount;
     }
 

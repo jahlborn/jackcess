@@ -1200,7 +1200,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
           new LinkedHashMap<String,Object>();
         for(Index.ColumnDescriptor idxCol : index.getColumns()) {
           indexRowPattern.put(idxCol.getName(),
-                              rowValues[idxCol.getColumnNumber()]);
+                              rowValues[idxCol.getColumnIndex()]);
         }
       }
       

@@ -757,9 +757,9 @@ public class Index implements Comparable<Index> {
           ", expected " + _columns.size());
     }
     int valIdx = 0;
-    Object[] idxRow = new Object[getTable().getMaxColumnCount()];
+    Object[] idxRow = new Object[getTable().getColumnCount()];
     for(ColumnDescriptor col : _columns) {
-      idxRow[col.getColumnNumber()] = values[valIdx++];
+      idxRow[col.getColumnIndex()] = values[valIdx++];
     }
     return idxRow;
   }
@@ -789,9 +789,9 @@ public class Index implements Comparable<Index> {
       }
     }
 
-    Object[] idxRow = new Object[getTable().getMaxColumnCount()];
+    Object[] idxRow = new Object[getTable().getColumnCount()];
     for(ColumnDescriptor col : _columns) {
-      idxRow[col.getColumnNumber()] = row.get(col.getName());
+      idxRow[col.getColumnIndex()] = row.get(col.getName());
     }
     return idxRow;
   }  
@@ -833,11 +833,9 @@ public class Index implements Comparable<Index> {
     // annoyingly, the values array could come from different sources, one
     // of which will make it a different size than the other.  we need to
     // handle both situations.
-    boolean useColNumber = (values.length >= _table.getMaxColumnCount());
     int nullCount = 0;
     for(ColumnDescriptor col : _columns) {
-      Object value = values[
-          useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
+      Object value = values[col.getColumnIndex()];
       if(col.isNullValue(value)) {
         ++nullCount;
       }
@@ -860,10 +858,8 @@ public class Index implements Comparable<Index> {
     // annoyingly, the values array could come from different sources, one
     // of which will make it a different size than the other.  we need to
     // handle both situations.
-    boolean useColNumber = (values.length >= _table.getMaxColumnCount());
     for(ColumnDescriptor col : _columns) {
-      Object value = values[
-          useColNumber ? col.getColumnNumber() : col.getColumnIndex()];
+      Object value = values[col.getColumnIndex()];
       col.writeValue(value, bout);
     }
     
@@ -1119,10 +1115,6 @@ public class Index implements Comparable<Index> {
 
     public boolean isAscending() {
       return((getFlags() & ASCENDING_COLUMN_FLAG) != 0);
-    }
-    
-    public int getColumnNumber() {
-      return getColumn().getColumnNumber();
     }
     
     public int getColumnIndex() {
