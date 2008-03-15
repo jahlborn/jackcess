@@ -907,7 +907,7 @@ public class Column implements Comparable<Column> {
         if (text.length() > maxChars) {
           throw new IOException("Text is too big for column");
         }
-        byte[] encodedData = encodeUncompressedText(text).array();
+        byte[] encodedData = encodeUncompressedText(text, getFormat()).array();
         obj = encodedData;
         break;
         
@@ -930,7 +930,7 @@ public class Column implements Comparable<Column> {
       // should already be "encoded"
       break;
     case MEMO:
-      obj = encodeUncompressedText(toCharSequence(obj)).array();
+      obj = encodeUncompressedText(toCharSequence(obj), getFormat()).array();
       break;
     default:
       throw new RuntimeException("unexpected var length, long value type: " +
@@ -1046,7 +1046,7 @@ public class Column implements Comparable<Column> {
         
       }
       
-      return decodeUncompressedText(data);
+      return decodeUncompressedText(data, getFormat());
       
     } catch (IllegalInputException e) {
       throw (IOException)
@@ -1079,34 +1079,19 @@ public class Column implements Comparable<Column> {
       textBuf.append(expander.expand(tmpData));
     } else {
       // handle uncompressed data
-      textBuf.append(decodeUncompressedText(data, dataStart, dataLength));
+      textBuf.append(decodeUncompressedText(data, dataStart, dataLength,
+                                            getFormat()));
     }
   }
 
   /**
-   * @param text Text to encode
-   * @return A buffer with the text encoded
-   */
-  private ByteBuffer encodeUncompressedText(CharSequence text) {
-    return getFormat().CHARSET.encode(CharBuffer.wrap(text));
-  }
-
-  /**
    * @param textBytes bytes of text to decode
    * @return the decoded string
    */
-  private String decodeUncompressedText(byte[] textBytes) {
-    return decodeUncompressedText(textBytes, 0, textBytes.length).toString();
-  }
-  
-  /**
-   * @param textBytes bytes of text to decode
-   * @return the decoded string
-   */
-  private CharBuffer decodeUncompressedText(byte[] textBytes, int startPost,
-                                            int length) {
-    return getFormat().CHARSET.decode(ByteBuffer.wrap(textBytes, startPost,
-                                                  length));
+  private static CharBuffer decodeUncompressedText(
+      byte[] textBytes, int startPos, int length, JetFormat format)
+  {
+    return format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPos, length));
   }  
 
   @Override
@@ -1127,6 +1112,30 @@ public class Column implements Comparable<Column> {
     rtn.append("\n\n");
     return rtn.toString();
   }
+  
+  /**
+   * @param textBytes bytes of text to decode
+   * @param format relevant db format
+   * @return the decoded string
+   */
+  public static String decodeUncompressedText(byte[] textBytes,
+                                              JetFormat format)
+  {
+    return decodeUncompressedText(textBytes, 0, textBytes.length, format)
+      .toString();
+  }
+
+  /**
+   * @param text Text to encode
+   * @param format relevant db format
+   * @return A buffer with the text encoded
+   */
+  public static ByteBuffer encodeUncompressedText(CharSequence text,
+                                                  JetFormat format)
+  {
+    return format.CHARSET.encode(CharBuffer.wrap(text));
+  }
+
   
   public int compareTo(Column other) {
     if (_columnNumber > other.getColumnNumber()) {

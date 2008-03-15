@@ -842,10 +842,21 @@ public class Table
       }
     }
     for (Column col : columns) {
-      ByteBuffer colName = format.CHARSET.encode(col.getName());
-      buffer.putShort((short) colName.remaining());
-      buffer.put(colName);
+      writeName(buffer, col.getName(), format);
     }
+  }
+
+  /**
+   * Writes the given name into the given buffer in the format as expected by
+   * {@link #readName}.
+   */
+  private static void writeName(ByteBuffer buffer, String name,
+                                JetFormat format)
+  {
+      ByteBuffer encName = Column.encodeUncompressedText(
+          name, format);
+      buffer.putShort((short) encName.remaining());
+      buffer.put(encName);
   }
 
   /**
@@ -936,11 +947,11 @@ public class Table
           i * getFormat().SIZE_INDEX_DEFINITION + 4));
     }
     
-    int offset = getFormat().OFFSET_INDEX_DEF_BLOCK +
+    int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
     for (int i = 0; i < columnCount; i++) {
       Column column = new Column(this, tableBuffer,
-          offset + i * getFormat().SIZE_COLUMN_HEADER);
+          colOffset + (i * getFormat().SIZE_COLUMN_HEADER));
       _columns.add(column);
       if(column.isVariableLength()) {
         // also shove it in the variable columns list, which is ordered
@@ -948,16 +959,11 @@ public class Table
         _varColumns.add(column);
       }
     }
-    offset += columnCount * getFormat().SIZE_COLUMN_HEADER;
+    tableBuffer.position(colOffset +
+                         (columnCount * getFormat().SIZE_COLUMN_HEADER));
     for (int i = 0; i < columnCount; i++) {
       Column column = _columns.get(i);
-      short nameLength = tableBuffer.getShort(offset);
-      offset += 2;
-      byte[] nameBytes = new byte[nameLength];
-      tableBuffer.position(offset);
-      tableBuffer.get(nameBytes, 0, nameLength);
-      column.setName(getFormat().CHARSET.decode(ByteBuffer.wrap(nameBytes)).toString());
-      offset += nameLength;
+      column.setName(readName(tableBuffer));
     }    
     Collections.sort(_columns);
 
@@ -1000,20 +1006,15 @@ public class Table
 
     // read actual index names
     for (int i = 0; i < _indexSlotCount; i++) {
-      int nameLen = tableBuffer.getShort();
-
       if(i < firstRealIdx) {
         // for each empty index slot, there is some weird sort of name, skip
         // it
-        tableBuffer.position(tableBuffer.position() + nameLen);
+        skipName(tableBuffer);
         continue;
       }
         
-      byte[] nameBytes = new byte[nameLen];
-      tableBuffer.get(nameBytes);
       _indexes.get(i - firstRealIdx)
-        .setName(getFormat().CHARSET.decode(
-                     ByteBuffer.wrap(nameBytes)).toString());
+        .setName(readName(tableBuffer));
     }
     int idxEndOffset = tableBuffer.position();
     
@@ -1045,6 +1046,27 @@ public class Table
     ++_modCount;
   }
 
+  /**
+   * Returns a name read from the buffer at the current position.  The
+   * expected name format is the name length as a short followed by (length *
+   * 2) bytes encoded using the {@link JetFormat#CHARSET}
+   */
+  private String readName(ByteBuffer buffer) {
+    short nameLength = buffer.getShort();
+    byte[] nameBytes = new byte[nameLength];
+    buffer.get(nameBytes);
+    return Column.decodeUncompressedText(nameBytes, getFormat());
+  }
+  
+  /**
+   * Skips past a name int the buffer at the current position.  The
+   * expected name format is the same as that for {@link #readName}.
+   */
+  private void skipName(ByteBuffer buffer) {
+    short nameLength = buffer.getShort();
+    buffer.position(buffer.position() + nameLength);
+  }
+  
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}.
