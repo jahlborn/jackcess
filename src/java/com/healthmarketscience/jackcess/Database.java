@@ -833,11 +833,9 @@ public class Database
     String[] columnNames = line.split(delim);
       
     for (int i = 0; i < columnNames.length; i++) {
-      Column column = new Column();
-      column.setName(escape(columnNames[i]));
-      column.setType(DataType.TEXT);
-      column.setLength((short)DataType.TEXT.getMaxSize());
-      columns.add(column);
+      columns.add(new ColumnBuilder(escape(columnNames[i]), DataType.TEXT)
+                  .setLength((short)DataType.TEXT.getMaxSize())
+                  .toColumn());
     }
 
     try {

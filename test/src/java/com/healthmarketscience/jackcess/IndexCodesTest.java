@@ -143,14 +143,8 @@ public class IndexCodesTest extends TestCase {
     Database db = create(true);
 
     List<Column> columns = new ArrayList<Column>();
-    Column col = new Column();
-    col.setName("row");
-    col.setType(DataType.TEXT);
-    columns.add(col);
-    col = new Column();
-    col.setName("data");
-    col.setType(DataType.TEXT);
-    columns.add(col);
+    columns.add(new ColumnBuilder("row", DataType.TEXT).toColumn());
+    columns.add(new ColumnBuilder("data", DataType.TEXT).toColumn());
     
     db.createTable("test", columns);
 

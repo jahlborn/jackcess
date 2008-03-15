@@ -74,14 +74,8 @@ public class CursorTest extends TestCase {
     Database db = create();
 
     List<Column> columns = new ArrayList<Column>();
-    Column col = new Column();
-    col.setName("id");
-    col.setType(DataType.LONG);
-    columns.add(col);
-    col = new Column();
-    col.setName("value");
-    col.setType(DataType.TEXT);
-    columns.add(col);
+    columns.add(new ColumnBuilder("id", DataType.LONG).toColumn());
+    columns.add(new ColumnBuilder("value", DataType.TEXT).toColumn());
     db.createTable("test", columns);
 
     Table table = db.getTable("test");
