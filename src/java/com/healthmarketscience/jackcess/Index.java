@@ -233,10 +233,25 @@ public class Index implements Comparable<Index> {
     return _indexType == FOREIGN_KEY_INDEX_TYPE;
   }
 
+  /**
+   * Whether or not {@code null} values are actually recorded in the index.
+   */
   public boolean shouldIgnoreNulls() {
     return((_indexFlags & IGNORE_NULLS_INDEX_FLAG) != 0);
   }
-  
+
+  /**
+   * Whether or not index entries must be unique.
+   * <p>
+   * Some notes about uniqueness:
+   * <ul>
+   * <li>Access does not seem to consider multiple {@code null} entries
+   *     invalid for a unique index</li>
+   * <li>text indexes collapse case, and Access seems to compare <b>only</b>
+   *     the index entry bytes, therefore two strings which differ only in
+   *     case <i>will violate</i> the unique constraint</li>
+   * </ul>
+   */
   public boolean isUnique() {
     return(isPrimaryKey() || ((_indexFlags & UNIQUE_INDEX_FLAG) != 0));
   }
@@ -694,8 +709,8 @@ public class Index implements Comparable<Index> {
       idx = missingIndexToInsertionPoint(idx);
 
       // determine if the addition of this entry would break the uniqueness
-      // constraint (note, access does not seem to consider multiple null
-      // entries invalid for a "unique" index)
+      // constraint.  See isUnique() for some notes about uniqueness as
+      // defined by Access.
       if(isUnique() && !isNullEntry &&
          (((idx > 0) &&
            newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
