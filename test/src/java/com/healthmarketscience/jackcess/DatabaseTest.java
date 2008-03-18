@@ -789,12 +789,23 @@ public class DatabaseTest extends TestCase {
 
     assertEquals(dates.size(), foundDates.size());
     for(int i = 0; i < dates.size(); ++i) {
-      try {
-        assertEquals(dates.get(i), foundDates.get(i));
-      } catch(Error e) {
-        System.err.println("Expected " + dates.get(i).getTime() + ", found " +
-                           foundDates.get(i).getTime());
-        throw e;
+      Date expected = dates.get(i);
+      Date found = foundDates.get(i);
+      if(expected == null) {
+        assertNull(found);
+      } else {
+        // there are some rounding issues due to dates being stored as
+        // doubles, but it results in a 1 millisecond difference, so i'm not
+        // going to worry about it
+        long expTime = expected.getTime();
+        long foundTime = found.getTime();
+        try {
+          assertTrue((expTime == foundTime) ||
+                     (Math.abs(expTime - foundTime) <= 1));
+        } catch(Error e) {
+          System.err.println("Expected " + expTime + ", found " + foundTime);
+          throw e;
+        }
       }
     }
   }
