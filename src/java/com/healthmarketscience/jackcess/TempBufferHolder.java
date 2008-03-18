@@ -2,7 +2,6 @@
 
 package com.healthmarketscience.jackcess;
 
-import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
