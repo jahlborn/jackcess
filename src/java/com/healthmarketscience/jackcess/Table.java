@@ -950,10 +950,11 @@ public class Table
     _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     
     for (int i = 0; i < _indexCount; i++) {
-      Index index = new Index(this);
-      _indexes.add(index);
-      index.setRowCount(tableBuffer.getInt(getFormat().OFFSET_INDEX_DEF_BLOCK +
-          i * getFormat().SIZE_INDEX_DEFINITION + 4));
+      int uniqueEntryCountOffset =
+        (getFormat().OFFSET_INDEX_DEF_BLOCK +
+         (i * getFormat().SIZE_INDEX_DEFINITION) + 4);
+      int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
+      _indexes.add(new Index(this, uniqueEntryCount, uniqueEntryCountOffset));
     }
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
@@ -1202,9 +1203,12 @@ public class Table
     // write any index changes
     Iterator<Index> indIter = _indexes.iterator();
     for (int i = 0; i < _indexes.size(); i++) {
-      tdefPage.putInt(getFormat().OFFSET_INDEX_DEF_BLOCK +
-          (i * getFormat().SIZE_INDEX_DEFINITION) + 4, _rowCount);
       Index index = indIter.next();
+      // write the unique entry count for the index to the table definition
+      // page
+      tdefPage.putInt(index.getUniqueEntryCountOffset(),
+                      index.getUniqueEntryCount());
+      // write the entry page for the index
       index.update();
     }
 

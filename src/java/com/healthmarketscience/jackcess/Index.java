@@ -151,10 +151,13 @@ public class Index implements Comparable<Index> {
   private final Table _table;
   /** Page number of the index data */
   private int _pageNumber;
-  /** Number of rows in the index
-      NOTE: this does not actually seem to be the row count, unclear what the
-      value means*/
-  private int _rowCount;
+  /** offset within the tableDefinition buffer of the uniqueEntryCount for
+      this index */
+  private final int _uniqueEntryCountOffset;
+  /** The number of unique entries which have been added to this index.  note,
+      however, that it is never decremented, only incremented (as observed in
+      Access). */
+  private int _uniqueEntryCount;
   /** sorted collection of index entries.  this is kept in a list instead of a
       SortedSet because the SortedSet has lame traversal utilities */
   private final List<Entry> _entries = new ArrayList<Entry>();
@@ -180,8 +183,10 @@ public class Index implements Comparable<Index> {
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
-  public Index(Table table) {
+  public Index(Table table, int uniqueEntryCount, int uniqueEntryCountOffset) {
     _table  = table;
+    _uniqueEntryCount = uniqueEntryCount;
+    _uniqueEntryCountOffset = uniqueEntryCountOffset;
   }
 
   public Table getTable() {
@@ -212,12 +217,12 @@ public class Index implements Comparable<Index> {
     return _indexFlags;
   }
   
-  public void setRowCount(int rowCount) {
-    _rowCount = rowCount;
+  public int getUniqueEntryCount() {
+    return _uniqueEntryCount;
   }
 
-  public int getRowCount() {
-    return _rowCount;
+  public int getUniqueEntryCountOffset() {
+    return _uniqueEntryCountOffset;
   }
 
   public String getName() {
@@ -587,7 +592,6 @@ public class Index implements Comparable<Index> {
 
     Entry newEntry = new Entry(createEntryBytes(row), rowId);
     if(addEntry(newEntry, isNullEntry, row)) {
-      ++_rowCount;
       ++_modCount;
     } else {
       LOG.warn("Added duplicate index entry " + newEntry + " for row: " +
@@ -617,7 +621,6 @@ public class Index implements Comparable<Index> {
 
     Entry oldEntry = new Entry(createEntryBytes(row), rowId);
     if(removeEntry(oldEntry)) {
-      --_rowCount;
       ++_modCount;
     } else {
       LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
@@ -710,15 +713,20 @@ public class Index implements Comparable<Index> {
       // determine if the addition of this entry would break the uniqueness
       // constraint.  See isUnique() for some notes about uniqueness as
       // defined by Access.
-      if(isUnique() && !isNullEntry &&
-         (((idx > 0) &&
-           newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
+      boolean isDupeEntry =
+        (((idx > 0) &&
+          newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
           ((idx < _entries.size()) &&
-           newEntry.equalsEntryBytes(_entries.get(idx)))))
+           newEntry.equalsEntryBytes(_entries.get(idx))));
+      if(isUnique() && !isNullEntry && isDupeEntry)
       {
         throw new IOException(
             "New row " + Arrays.asList(row) +
             " violates uniqueness constraint for index " + this);
+      }
+
+      if(!isDupeEntry) {
+        ++_uniqueEntryCount;
       }
       
       _entries.add(idx, newEntry);
