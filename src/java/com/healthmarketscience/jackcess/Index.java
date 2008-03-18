@@ -41,7 +41,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -396,9 +395,6 @@ public class Index implements Comparable<Index> {
   private void readIndexEntries()
     throws IOException
   {
-    // use sorted set initially to do the bulk of the sorting
-    SortedSet<Entry> tmpEntries = new TreeSet<Entry>();
-    
     ByteBuffer indexPage = getPageChannel().createPageBuffer();
 
     // find first leaf page
@@ -419,10 +415,11 @@ public class Index implements Comparable<Index> {
       }
     }
 
-    // read all leaf pages
+    // read all leaf pages.  since we read all the entries in sort order, we
+    // can insert them directly into the _entries list
     while(true) {
 
-      leafPageNumber = readLeafPage(indexPage, tmpEntries);
+      leafPageNumber = readLeafPage(indexPage, _entries);
       if(leafPageNumber != 0) {
         // FIXME we can't modify this index at this point in time
         _readOnly = true;
@@ -436,8 +433,15 @@ public class Index implements Comparable<Index> {
       }
     }
 
-    // dump all the entries (sorted) into the actual _entries list
-    _entries.addAll(tmpEntries);
+    // check the entry order, just to be safe
+    for(int i = 0; i < (_entries.size() - 1); ++i) {
+      Entry e1 = _entries.get(i);
+      Entry e2 = _entries.get(i + 1);
+      if(e1.compareTo(e2) > 0) {
+        throw new IOException("Unexpected order in index entries, " +
+                              e1 + " is greater than " + e2);
+      }
+    }
   }
 
   /**
