@@ -56,9 +56,12 @@ public class NullMask {
   public void read(ByteBuffer buffer) {
     buffer.get(_mask);
   }
-  
-  public ByteBuffer wrap() {
-    return ByteBuffer.wrap(_mask);
+
+  /**
+   * Write a mask to a buffer
+   */
+  public void write(ByteBuffer buffer) {
+    buffer.put(_mask);
   }
 
   /**

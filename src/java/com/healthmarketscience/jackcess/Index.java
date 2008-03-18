@@ -174,6 +174,9 @@ public class Index implements Comparable<Index> {
   private boolean _initialized;
   /** modification count for the table, keeps cursors up-to-date */
   private int _modCount;
+  /** temp buffer used to writing the index */
+  private final TempBufferHolder _indexBufferH =
+    TempBufferHolder.newHolder(false, true);
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
@@ -315,7 +318,7 @@ public class Index implements Comparable<Index> {
    * Write this index out to a buffer
    */
   private ByteBuffer write() throws IOException {
-    ByteBuffer buffer = getPageChannel().createPageBuffer();
+    ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
     buffer.put((byte) 0x04);  //Page type
     buffer.put((byte) 0x01);  //Unknown
     buffer.putShort((short) 0); //Free space
@@ -492,7 +495,8 @@ public class Index implements Comparable<Index> {
     int lastStart = 0;
     byte[] valuePrefix = null;
     boolean firstEntry = true;
-    ByteBuffer tmpEntryBuffer = null;
+    TempBufferHolder tmpEntryBufferH =
+      TempBufferHolder.newHolder(true, true, ByteOrder.BIG_ENDIAN);
 
     for (int i = 0; i < entryMaskLength; i++) {
       byte entryMask = indexPage.get(entryMaskPos + i);
@@ -506,9 +510,8 @@ public class Index implements Comparable<Index> {
           ByteBuffer curEntryBuffer = indexPage;
           int curEntryLen = length;
           if(valuePrefix != null) {
-            tmpEntryBuffer = getTempEntryBuffer(
-                indexPage, length, valuePrefix, tmpEntryBuffer);
-            curEntryBuffer = tmpEntryBuffer;
+            curEntryBuffer = getTempEntryBuffer(
+                indexPage, length, valuePrefix, tmpEntryBufferH);
             curEntryLen += valuePrefix.length;
           }
           
@@ -543,14 +546,10 @@ public class Index implements Comparable<Index> {
    */
   private ByteBuffer getTempEntryBuffer(
       ByteBuffer indexPage, int entryLen, byte[] valuePrefix,
-      ByteBuffer tmpEntryBuffer)
+      TempBufferHolder tmpEntryBufferH)
   {
-    int totalLen = entryLen + valuePrefix.length;
-    if((tmpEntryBuffer == null) || (tmpEntryBuffer.capacity() < totalLen)) {
-      tmpEntryBuffer = ByteBuffer.allocate(totalLen);
-    } else {
-      tmpEntryBuffer.clear();
-    }
+    ByteBuffer tmpEntryBuffer = tmpEntryBufferH.getBuffer(
+        getPageChannel(), valuePrefix.length + entryLen);
 
     // combine valuePrefix and rest of entry from indexPage, then prep for
     // reading

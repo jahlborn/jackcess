@@ -66,7 +66,8 @@ public class TableTest extends TestCase {
     row[0] = new Short((short) 9);
     row[1] = "Tim";
     row[2] = "McCune";
-    ByteBuffer buffer = table.createRow(row, format.MAX_ROW_SIZE);
+    ByteBuffer buffer = table.createRow(row, format.MAX_ROW_SIZE,
+                                        pageChannel.createPageBuffer());
     assertEquals((short) colCount, buffer.getShort());
     assertEquals((short) 9, buffer.getShort());
     assertEquals((byte) 'T', buffer.get());

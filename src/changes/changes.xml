@@ -31,6 +31,13 @@
       <action dev="jahlborn" type="fix">
         Fix creation of tables with auto-number columns.
       </action>
+      <action dev="jahlborn" type="fix">
+        Completely fix problems with sporadic usage map corruption.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add some soft buffer caching in various places to avoid excessive
+        buffer reallocation.
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">

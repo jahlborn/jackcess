@@ -109,6 +109,15 @@ public class Table
   private UsageMap _freeSpacePages;
   /** modification count for the table, keeps row-states up-to-date */
   private int _modCount;
+  /** page buffer used to update data pages when adding rows */
+  private final TempPageHolder _addRowBufferH =
+    TempPageHolder.newHolder(false);
+  /** page buffer used to update the table def page */
+  private final TempPageHolder _tableDefBufferH =
+    TempPageHolder.newHolder(false);
+  /** buffer used to writing single rows of data */
+  private final TempBufferHolder _singleRowBufferH =
+    TempBufferHolder.newHolder(false, true);
   
   /** common cursor for iterating through the table, kept here for historic
       reasons */
@@ -1041,6 +1050,10 @@ public class Table
     // write the page data
     getPageChannel().writePage(pageBuffer, pageNumber);
 
+    // possibly invalidate the add row buffer if a different data buffer is
+    // being written (e.g. this happens during deleteRow)
+    _addRowBufferH.possiblyInvalidate(pageNumber, pageBuffer);
+    
     // update modification count so any active RowStates can keep themselves
     // up-to-date
     ++_modCount;
@@ -1096,11 +1109,15 @@ public class Table
    * @param rows List of Object[] row values
    */
   public void addRows(List<? extends Object[]> rows) throws IOException {
-    ByteBuffer dataPage = getPageChannel().createPageBuffer();
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
-      rowData[i] = createRow(iter.next(), getFormat().MAX_ROW_SIZE);
+      // note, use the cached _singleRowBufferH for the first row.  this will
+      // speed up single row writes
+      rowData[i] = createRow(
+          iter.next(), getFormat().MAX_ROW_SIZE,
+          ((i == 0) ? _singleRowBufferH.getPageBuffer(getPageChannel()) :
+           getPageChannel().createPageBuffer()));
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
@@ -1112,6 +1129,7 @@ public class Table
 
     // find last data page (Not bothering to check other pages for free
     // space.)
+    ByteBuffer dataPage = null;
     UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
     revPageCursor.afterLast();
     while(true) {
@@ -1119,7 +1137,7 @@ public class Table
       if(tmpPageNumber < 0) {
         break;
       }
-      getPageChannel().readPage(dataPage, tmpPageNumber);
+      dataPage = _addRowBufferH.setPage(getPageChannel(), tmpPageNumber);
       if(dataPage.get() == PageTypes.DATA) {
         // found last data page, only use if actually listed in free space
         // pages
@@ -1132,7 +1150,8 @@ public class Table
 
     if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
       // No data pages exist (with free space).  Create a new one.
-      pageNumber = newDataPage(dataPage);
+      dataPage = newDataPage();
+      pageNumber = _addRowBufferH.getPageNumber();
     }
     
     for (int i = 0; i < rowData.length; i++) {
@@ -1145,8 +1164,8 @@ public class Table
         writeDataPage(dataPage, pageNumber);
         _freeSpacePages.removePageNumber(pageNumber);
 
-        dataPage.clear();
-        pageNumber = newDataPage(dataPage);
+        dataPage = newDataPage();
+        pageNumber = _addRowBufferH.getPageNumber();
         
         freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       }
@@ -1172,8 +1191,8 @@ public class Table
   private void updateTableDefinition(int rowCountInc) throws IOException
   {
     // load table definition
-    ByteBuffer tdefPage = getPageChannel().createPageBuffer();
-    getPageChannel().readPage(tdefPage, _tableDefPageNumber);
+    ByteBuffer tdefPage = _tableDefBufferH.setPage(getPageChannel(),
+                                                   _tableDefPageNumber);
     
     // make sure rowcount and autonumber are up-to-date
     _rowCount += rowCountInc;
@@ -1197,10 +1216,11 @@ public class Table
    * Create a new data page
    * @return Page number of the new page
    */
-  private int newDataPage(ByteBuffer dataPage) throws IOException {
+  private ByteBuffer newDataPage() throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating new data page");
     }
+    ByteBuffer dataPage = _addRowBufferH.setNewPage(getPageChannel());
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
     dataPage.putShort((short)getRowSpaceUsage(getFormat().MAX_ROW_SIZE,
@@ -1208,17 +1228,19 @@ public class Table
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putInt(0); //Number of records on this page
-    int pageNumber = getPageChannel().writeNewPage(dataPage);
+    int pageNumber = _addRowBufferH.getPageNumber();
+    getPageChannel().writePage(dataPage, pageNumber);
     _ownedPages.addPageNumber(pageNumber);
     _freeSpacePages.addPageNumber(pageNumber);
-    return pageNumber;
+    return dataPage;
   }
   
   /**
    * Serialize a row of Objects into a byte buffer
    */
-  ByteBuffer createRow(Object[] rowArray, int maxRowSize) throws IOException {
-    ByteBuffer buffer = getPageChannel().createPageBuffer();
+  ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer)
+    throws IOException
+  {
     buffer.putShort(_maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
     
@@ -1318,8 +1340,8 @@ public class Table
       }
       buffer.putShort(_maxVarColumnCount);  //Number of var length columns
     }
-    
-    buffer.put(nullMask.wrap());  //Null mask
+
+    nullMask.write(buffer);  //Null mask
     buffer.limit(buffer.position());
     buffer.flip();
     if (LOG.isDebugEnabled()) {

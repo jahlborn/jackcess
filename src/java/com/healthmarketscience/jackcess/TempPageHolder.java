@@ -28,7 +28,6 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
 /**
@@ -36,14 +35,18 @@ import java.nio.ByteBuffer;
  *
  * @author James Ahlborn
  */
-public abstract class TempPageHolder {
+public final class TempPageHolder {
 
-  private static final SoftReference<ByteBuffer> EMPTY_BUFFER_REF =
-    new SoftReference<ByteBuffer>(null);
+  private int _pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+  private final TempBufferHolder _buffer;
+  /** the last "modification" count of the buffer that this holder observed.
+      this is tracked so that the page data can be re-read if the underlying
+      buffer has been discarded since the last page read */
+  private int _bufferModCount;
   
-  protected int _pageNumber = PageChannel.INVALID_PAGE_NUMBER;
-  
-  protected TempPageHolder() {
+  private TempPageHolder(boolean hard) {
+    _buffer = TempBufferHolder.newHolder(hard, false);
+    _bufferModCount = _buffer.getModCount();
   }
 
   /**
@@ -53,10 +56,7 @@ public abstract class TempPageHolder {
    *             SoftReference.
    */
   public static TempPageHolder newHolder(boolean hard) {
-    if(hard) {
-      return new HardTempPageHolder();
-    }
-    return new SoftTempPageHolder();
+    return new TempPageHolder(hard);
   }
 
   /**
@@ -91,9 +91,11 @@ public abstract class TempPageHolder {
                              boolean rewind)
     throws IOException
   {
-    ByteBuffer buffer = getBuffer(pageChannel);
-    if(pageNumber != _pageNumber) {
+    ByteBuffer buffer = _buffer.getPageBuffer(pageChannel);
+    int modCount = _buffer.getModCount();
+    if((pageNumber != _pageNumber) || (_bufferModCount != modCount)) {
       _pageNumber = pageNumber;
+      _bufferModCount = modCount;
       pageChannel.readPage(buffer, _pageNumber);
     } else if(rewind) {
       buffer.rewind();
@@ -114,7 +116,7 @@ public abstract class TempPageHolder {
     // allocate a new page in the database
     _pageNumber = pageChannel.allocateNewPage();
     // return a new buffer
-    return getBuffer(pageChannel);
+    return _buffer.getPageBuffer(pageChannel);
   }
 
   /**
@@ -134,7 +136,7 @@ public abstract class TempPageHolder {
    */
   public void possiblyInvalidate(int modifiedPageNumber,
                                  ByteBuffer modifiedBuffer) {
-    if(modifiedBuffer == getExistingBuffer()) {
+    if(modifiedBuffer == _buffer.getExistingBuffer()) {
       // no worries, our buffer was the one modified (or is null, either way
       // we'll need to reload)
       return;
@@ -151,67 +153,7 @@ public abstract class TempPageHolder {
    */
   public void clear() {
     invalidate();
+    _buffer.clear();
   }
 
-  protected abstract ByteBuffer getExistingBuffer();
-  
-  protected abstract ByteBuffer getBuffer(PageChannel pageChannel);
-
-  /**
-   * TempPageHolder which has a hard reference to the page buffer.
-   */
-  private static class HardTempPageHolder extends TempPageHolder
-  {
-    private ByteBuffer _buffer;
-
-    @Override
-    protected ByteBuffer getExistingBuffer() {
-      return _buffer;
-    }
-    
-    @Override
-    protected ByteBuffer getBuffer(PageChannel pageChannel) {
-      if(_buffer == null) {
-        _buffer = pageChannel.createPageBuffer();
-      }
-      return _buffer;
-    }
-
-    @Override
-    public void clear() {
-      super.clear();
-      _buffer = null;
-    }
-  }
-  
-  /**
-   * TempPageHolder which has a soft reference to the page buffer.
-   */
-  private static class SoftTempPageHolder extends TempPageHolder
-  {
-    private SoftReference<ByteBuffer> _buffer = EMPTY_BUFFER_REF;
-
-    @Override
-    protected ByteBuffer getExistingBuffer() {
-      return _buffer.get();
-    }
-    
-    @Override
-    protected ByteBuffer getBuffer(PageChannel pageChannel) {
-      ByteBuffer buffer = _buffer.get();
-      if(buffer == null) {
-        buffer = pageChannel.createPageBuffer();
-        _buffer = new SoftReference<ByteBuffer>(buffer);
-      }
-      return buffer;
-    }
-
-    @Override
-    public void clear() {
-      super.clear();
-      _buffer.clear();
-    }
-  }
-  
-  
 }

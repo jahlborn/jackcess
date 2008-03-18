@@ -47,6 +47,8 @@ public class PageChannel implements Channel, Flushable {
   
   static final int INVALID_PAGE_NUMBER = -1;
 
+  static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
+  
   /** dummy buffer used when allocating new pages */
   private static final ByteBuffer FORCE_BYTES = ByteBuffer.allocate(1);
   
@@ -107,10 +109,8 @@ public class PageChannel implements Channel, Flushable {
   /**
    * @param buffer Buffer to read the page into
    * @param pageNumber Number of the page to read in (starting at 0)
-   * @return True if the page was successfully read into the buffer, false if
-   *    that page doesn't exist.
    */
-  public boolean readPage(ByteBuffer buffer, int pageNumber)
+  public void readPage(ByteBuffer buffer, int pageNumber)
     throws IOException
   {
     if(pageNumber == INVALID_PAGE_NUMBER) {
@@ -120,9 +120,14 @@ public class PageChannel implements Channel, Flushable {
       LOG.debug("Reading in page " + Integer.toHexString(pageNumber));
     }
     buffer.clear();
-    boolean rtn = _channel.read(buffer, (long) pageNumber * (long) getFormat().PAGE_SIZE) != -1;
+    int bytesRead = _channel.read(
+        buffer, (long) pageNumber * (long) getFormat().PAGE_SIZE);
     buffer.flip();
-    return rtn;
+    if(bytesRead != getFormat().PAGE_SIZE) {
+      throw new IOException("Failed attempting to read " +
+                            getFormat().PAGE_SIZE + " bytes from page " +
+                            pageNumber + ", only read " + bytesRead);
+    }
   }
   
   /**

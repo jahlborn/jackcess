@@ -711,7 +711,7 @@ public class UsageMap
       mapPageBuffer.putShort((short) 0); //Unknown
       int mapPageNum = _mapPageHolder.getPageNumber();
       getTableBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
-                             mapPageNum);
+                              mapPageNum);
       writeTable();
       return mapPageBuffer;
     }
