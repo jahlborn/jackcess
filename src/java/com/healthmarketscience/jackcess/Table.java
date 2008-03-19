@@ -1125,12 +1125,11 @@ public class Table
       }
     }
     
+    ByteBuffer dataPage = null;
     int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
-    int rowSize;
 
     // find last data page (Not bothering to check other pages for free
     // space.)
-    ByteBuffer dataPage = null;
     UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
     revPageCursor.afterLast();
     while(true) {
@@ -1156,7 +1155,7 @@ public class Table
     }
     
     for (int i = 0; i < rowData.length; i++) {
-      rowSize = rowData[i].remaining();
+      int rowSize = rowData[i].remaining();
       int rowSpaceUsage = getRowSpaceUsage(rowSize, getFormat());
       short freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       if (freeSpaceInPage < rowSpaceUsage) {
