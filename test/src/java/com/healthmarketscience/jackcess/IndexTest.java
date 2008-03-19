@@ -307,7 +307,60 @@ public class IndexTest extends TestCase {
       }
     }
   }
-  
+
+  public void testUniqueEntryCount() throws Exception {
+    Database db = openCopy(new File("test/data/test.mdb"));
+    Table table = db.getTable("Table1");
+    Index indA = table.getIndex("PrimaryKey");
+    Index indB = table.getIndex("B");
+
+    assertEquals(2, indA.getUniqueEntryCount());
+    assertEquals(2, indB.getUniqueEntryCount());
+
+    List<String> bElems = Arrays.asList("bar", null, "baz", "argle", null,
+                                        "bazzle", "37", "bar", "bar", "BAZ");
+    
+    for(int i = 0; i < 10; ++i) {
+      table.addRow("foo" + i, bElems.get(i), (byte)42 + i, (short)53 + i,
+                   13 * i, (6.7d / i), null, null, true);
+    }
+
+    assertEquals(12, indA.getEntryCount());
+    assertEquals(12, indB.getEntryCount());
+    
+    assertEquals(12, indA.getUniqueEntryCount());
+    assertEquals(8, indB.getUniqueEntryCount());
+
+    table = null;
+    indA = null;
+    indB = null;
+
+    table = db.getTable("Table1");
+    indA = table.getIndex("PrimaryKey");
+    indB = table.getIndex("B");
+    
+    assertEquals(12, indA.getEntryCount());
+    assertEquals(12, indB.getEntryCount());
+    
+    assertEquals(12, indA.getUniqueEntryCount());
+    assertEquals(8, indB.getUniqueEntryCount());    
+
+    Cursor c = Cursor.createCursor(table);
+    assertTrue(c.moveToNextRow());
+    Map<String,Object> row = c.getCurrentRow();
+    assertEquals("abcdefg", row.get("A"));
+    assertEquals("hijklmnop", row.get("B"));
+    c.deleteCurrentRow();
+
+    assertEquals(11, indA.getEntryCount());
+    assertEquals(11, indB.getEntryCount());
+    
+    assertEquals(12, indA.getUniqueEntryCount());
+    assertEquals(8, indB.getUniqueEntryCount());        
+    
+    db.close();
+  }
+    
   private void checkIndexColumns(Table table, String... idxInfo)
     throws Exception
   {
