@@ -73,12 +73,11 @@ public class CursorTest extends TestCase {
   private static Database createTestTable() throws Exception {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("id", DataType.LONG).toColumn());
-    columns.add(new ColumnBuilder("value", DataType.TEXT).toColumn());
-    db.createTable("test", columns);
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("id", DataType.LONG).toColumn())
+      .addColumn(new ColumnBuilder("value", DataType.TEXT).toColumn())
+      .toTable(db);
 
-    Table table = db.getTable("test");
     for(Map<String,Object> row : createTestTableData()) {
       table.addRow(row.get("id"), row.get("value"));
     }

@@ -38,6 +38,10 @@
         Add some soft buffer caching in various places to avoid excessive
         buffer reallocation.
       </action>
+      <action dev="jahlborn" type="add">
+        Add some builder-style utilities for table creation (ColumnBuilder,
+        TableBuilder).
+      </action>
     </release>
     <release version="1.1.12" date="2008-02-27">
       <action dev="jahlborn" type="fix">

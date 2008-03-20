@@ -98,35 +98,36 @@ public class DatabaseTest extends TestCase {
     } catch(IllegalArgumentException e) {
       // success
     }
-    
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("a", DataType.MEMO).toColumn());
 
     try {
-      db.createTable("test", columns);
+      new TableBuilder("test")
+        .addColumn(new ColumnBuilder("A", DataType.TEXT).toColumn())
+        .addColumn(new ColumnBuilder("a", DataType.MEMO).toColumn())
+        .toTable(db);
       fail("created table with duplicate column names?");
     } catch(IllegalArgumentException e) {
       // success
     }
 
-    columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.TEXT)
-                .setLengthInUnits(352).toColumn());
-    
     try {
-      db.createTable("test", columns);
+      new TableBuilder("test")
+        .addColumn(new ColumnBuilder("A", DataType.TEXT)
+                   .setLengthInUnits(352).toColumn())
+        .toTable(db);
       fail("created table with invalid column length?");
     } catch(IllegalArgumentException e) {
       // success
     }
 
-    columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.TEXT).toColumn());
-    db.createTable("test", columns);
+    new TableBuilder("test")
+      .addColumn(new ColumnBuilder("A", DataType.TEXT).toColumn())
+      .toTable(db);
+
     
     try {
-      db.createTable("Test", columns);
+      new TableBuilder("Test")
+        .addColumn(new ColumnBuilder("A", DataType.TEXT).toColumn())
+        .toTable(db);
       fail("create duplicate tables?");
     } catch(IllegalArgumentException e) {
       // success
@@ -341,11 +342,12 @@ public class DatabaseTest extends TestCase {
 
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("B", DataType.MEMO).toColumn());
-    columns.add(new ColumnBuilder("C", DataType.OLE).toColumn());
-    db.createTable("test", columns);
+    Table table = 
+    new TableBuilder("test")
+      .addColumn(new ColumnBuilder("A", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("B", DataType.MEMO).toColumn())
+      .addColumn(new ColumnBuilder("C", DataType.OLE).toColumn())
+      .toTable(db);
 
     String testStr = "This is a test";
     StringBuilder strBuf = new StringBuilder();
@@ -357,7 +359,6 @@ public class DatabaseTest extends TestCase {
     byte[] oleValue = toByteArray(new File("test/data/test2BinData.dat"));
     
     
-    Table table = db.getTable("Test");
     table.addRow(testStr, testStr, null);
     table.addRow(testStr, longMemo, oleValue);
 
@@ -420,11 +421,10 @@ public class DatabaseTest extends TestCase {
   public void testCurrency() throws Exception {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.MONEY).toColumn());
-    db.createTable("test", columns);
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("A", DataType.MONEY).toColumn())
+      .toTable(db);
 
-    Table table = db.getTable("Test");
     table.addRow(new BigDecimal("-2341234.03450"));
     table.addRow(37L);
     table.addRow("10000.45");
@@ -455,11 +455,10 @@ public class DatabaseTest extends TestCase {
   {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.GUID).toColumn());
-    db.createTable("test", columns);
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("A", DataType.GUID).toColumn())
+      .toTable(db);
 
-    Table table = db.getTable("Test");
     table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
     table.addRow("{32a59f01-aa34-3e29-453f-4523453cd2e6}");
     table.addRow("{11111111-1111-1111-1111-111111111111}");
@@ -494,17 +493,16 @@ public class DatabaseTest extends TestCase {
   {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
     Column col = new ColumnBuilder("A", DataType.NUMERIC)
       .setScale(4).setPrecision(8).toColumn();
-    columns.add(col);
     assertTrue(col.isVariableLength());
     
-    columns.add(new ColumnBuilder("B", DataType.NUMERIC)
-                .setScale(8).setPrecision(28).toColumn());
-    db.createTable("test", columns);
+    Table table = new TableBuilder("test")
+      .addColumn(col)
+      .addColumn(new ColumnBuilder("B", DataType.NUMERIC)
+                 .setScale(8).setPrecision(28).toColumn())
+      .toTable(db);
 
-    Table table = db.getTable("Test");
     table.addRow(new BigDecimal("-1234.03450"),
                  new BigDecimal("23923434453436.36234219"));
     table.addRow(37L, 37L);
@@ -624,11 +622,11 @@ public class DatabaseTest extends TestCase {
   {
 
     Database db = create();
-    Column a = new ColumnBuilder("a").setSQLType(Types.INTEGER).toColumn();
-    Column b = new ColumnBuilder("b").setSQLType(Types.LONGVARCHAR).toColumn();
-    Column c = new ColumnBuilder("c").setSQLType(Types.VARCHAR).toColumn();
-    db.createTable("NewTable", Arrays.asList(a, b, c));
-    Table newTable = db.getTable("NewTable");
+    Table newTable = new TableBuilder("NewTable")
+      .addColumn(new ColumnBuilder("a").setSQLType(Types.INTEGER).toColumn())
+      .addColumn(new ColumnBuilder("b").setSQLType(Types.LONGVARCHAR).toColumn())
+      .addColumn(new ColumnBuilder("c").setSQLType(Types.VARCHAR).toColumn())
+      .toTable(db);
     
     String lval = createString(2000); // "--2000 chars long text--";
     String tval = createString(40); // "--40chars long text--";
@@ -698,14 +696,12 @@ public class DatabaseTest extends TestCase {
   public void testAutoNumber() throws Exception {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("a", DataType.LONG)
-                .setAutoNumber(true).toColumn());
-    columns.add(new ColumnBuilder("b", DataType.TEXT).toColumn());
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("a", DataType.LONG)
+                .setAutoNumber(true).toColumn())
+      .addColumn(new ColumnBuilder("b", DataType.TEXT).toColumn())
+      .toTable(db);
 
-    db.createTable("test", columns);
-
-    Table table = db.getTable("test");
     table.addRow(null, "row1");
     table.addRow(13, "row2");
     table.addRow("flubber", "row3");
@@ -743,13 +739,12 @@ public class DatabaseTest extends TestCase {
   public void testWriteAndReadDate() throws Exception {
     Database db = create();
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("name", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("date", DataType.SHORT_DATE_TIME).toColumn());
-
-    db.createTable("test", columns);
-    Table table = db.getTable("test");
-
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("name", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME)
+                 .toColumn())
+      .toTable(db);
+    
     // since jackcess does not really store millis, shave them off before
     // storing the current date/time
     long curTimeNoMillis = (System.currentTimeMillis() / 1000L);
@@ -820,17 +815,17 @@ public class DatabaseTest extends TestCase {
   }
   
   static void createTestTable(Database db) throws Exception {
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("A", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("B", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("C", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("D", DataType.LONG).toColumn());
-    columns.add(new ColumnBuilder("E", DataType.BYTE).toColumn());
-    columns.add(new ColumnBuilder("F", DataType.DOUBLE).toColumn());
-    columns.add(new ColumnBuilder("G", DataType.FLOAT).toColumn());
-    columns.add(new ColumnBuilder("H", DataType.INT).toColumn());
-    columns.add(new ColumnBuilder("I", DataType.SHORT_DATE_TIME).toColumn());
-    db.createTable("test", columns);
+    new TableBuilder("test")
+      .addColumn(new ColumnBuilder("A", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("B", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("C", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("D", DataType.LONG).toColumn())
+      .addColumn(new ColumnBuilder("E", DataType.BYTE).toColumn())
+      .addColumn(new ColumnBuilder("F", DataType.DOUBLE).toColumn())
+      .addColumn(new ColumnBuilder("G", DataType.FLOAT).toColumn())
+      .addColumn(new ColumnBuilder("H", DataType.INT).toColumn())
+      .addColumn(new ColumnBuilder("I", DataType.SHORT_DATE_TIME).toColumn())
+      .toTable(db);
   }
     
   static String createString(int len) {

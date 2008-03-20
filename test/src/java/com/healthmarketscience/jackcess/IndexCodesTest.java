@@ -142,14 +142,11 @@ public class IndexCodesTest extends TestCase {
   {
     Database db = create(true);
 
-    List<Column> columns = new ArrayList<Column>();
-    columns.add(new ColumnBuilder("row", DataType.TEXT).toColumn());
-    columns.add(new ColumnBuilder("data", DataType.TEXT).toColumn());
+    Table t = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("row", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+      .toTable(db);
     
-    db.createTable("test", columns);
-
-    Table t = db.getTable("test");
-
     for(int i = 0; i < 256; ++i) {
       String str = "AA" + ((char)i) + "AA";
       t.addRow("row" + i, str);
