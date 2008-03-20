@@ -22,19 +22,21 @@
     <section name="Sample code">
         <ul>
           <li>Displaying the contents of a table:
-            <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());</source>
+            <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());
+</source>
           </li>
           <li>Creating a new table and writing data into it:
             <source>Database db = Database.create(new File("new.mdb"));
-Column a = new Column();
-a.setName("a");
-a.setSQLType(Types.INTEGER);
-Column b = new Column();
-b.setName("b");
-b.setSQLType(Types.VARCHAR);
-db.createTable("NewTable", Arrays.asList(a, b));
-Table newTable = db.getTable("NewTable");
-newTable.addRow(new Object[] {1, "foo"});</source>
+Table newTable = new TableBuilder("NewTable")
+  .addColumn(new ColumnBuilder("a")
+             .setSQLType(Types.INTEGER)
+             .toColumn())
+  .addColumn(new ColumnBuilder("b")
+             .setSQLType(Types.VARCHAR)
+             .toColumn())
+  .toTable(db);
+newTable.addRow(1, "foo");
+</source>
           </li>
           <li>Copying the contents of a JDBC ResultSet (e.g. from an
 external database) into a new table:
