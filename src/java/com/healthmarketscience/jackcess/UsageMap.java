@@ -638,7 +638,7 @@ public class UsageMap
   {
     /** Buffer that contains the current reference map page */ 
     private final TempPageHolder _mapPageHolder =
-      TempPageHolder.newHolder(false);
+      TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   
     private ReferenceHandler()
       throws IOException

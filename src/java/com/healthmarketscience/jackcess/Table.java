@@ -111,13 +111,17 @@ public class Table
   private int _modCount;
   /** page buffer used to update data pages when adding rows */
   private final TempPageHolder _addRowBufferH =
-    TempPageHolder.newHolder(false);
+    TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   /** page buffer used to update the table def page */
   private final TempPageHolder _tableDefBufferH =
-    TempPageHolder.newHolder(false);
+    TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   /** buffer used to writing single rows of data */
   private final TempBufferHolder _singleRowBufferH =
-    TempBufferHolder.newHolder(false, true);
+    TempBufferHolder.newHolder(TempBufferHolder.Type.SOFT, true);
+  /** "buffer" used to writing multi rows of data (will create new buffer on
+      every call) */
+  private final TempBufferHolder _multiRowBufferH =
+    TempBufferHolder.newHolder(TempBufferHolder.Type.NONE, true);
   
   /** common cursor for iterating through the table, kept here for historic
       reasons */
@@ -203,7 +207,7 @@ public class Table
   }
 
   public RowState createRowState() {
-    return new RowState(true);
+    return new RowState(TempBufferHolder.Type.HARD);
   }
 
   protected UsageMap.PageCursor getOwnedPagesCursor() {
@@ -1100,7 +1104,7 @@ public class Table
    * Add a single row to this table and write it to disk
    */
   public void addRow(Object... row) throws IOException {
-    addRows(Collections.singletonList(row));
+    addRows(Collections.singletonList(row), _singleRowBufferH);
   }
   
   /**
@@ -1110,15 +1114,26 @@ public class Table
    * @param rows List of Object[] row values
    */
   public void addRows(List<? extends Object[]> rows) throws IOException {
+    addRows(rows, _multiRowBufferH);
+  }
+  
+  /**
+   * Add multiple rows to this table, only writing to disk after all
+   * rows have been written, and every time a data page is filled.  This
+   * is much more efficient than calling <code>addRow</code> multiple times.
+   * @param rows List of Object[] row values
+   * @param writeRowBufferH TempBufferHolder used to generate buffers for
+   *                        writing the row data
+   */
+  private void addRows(List<? extends Object[]> rows,
+                       TempBufferHolder writeRowBufferH)
+    throws IOException
+  {
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     Iterator<? extends Object[]> iter = rows.iterator();
     for (int i = 0; iter.hasNext(); i++) {
-      // note, use the cached _singleRowBufferH for the first row.  this will
-      // speed up single row writes
-      rowData[i] = createRow(
-          iter.next(), getFormat().MAX_ROW_SIZE,
-          ((i == 0) ? _singleRowBufferH.getPageBuffer(getPageChannel()) :
-           getPageChannel().createPageBuffer()));
+      rowData[i] = createRow(iter.next(), getFormat().MAX_ROW_SIZE,
+                             writeRowBufferH.getPageBuffer(getPageChannel()));
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
@@ -1589,7 +1604,7 @@ public class Table
     private RowStatus _rowStatus = RowStatus.INIT;
     /** buffer used for reading overflow pages */
     private final TempPageHolder _overflowRowBufferH =
-      TempPageHolder.newHolder(false);
+      TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
     /** the row buffer which contains the final data (after following any
         overflow pointers) */
     private ByteBuffer _finalRowBuffer;
@@ -1605,8 +1620,8 @@ public class Table
         data */
     private int _lastModCount;
     
-    private RowState(boolean hardRowBuffer) {
-      _headerRowBufferH = TempPageHolder.newHolder(hardRowBuffer);
+    private RowState(TempBufferHolder.Type headerType) {
+      _headerRowBufferH = TempPageHolder.newHolder(headerType);
       _rowValues = new Object[Table.this.getColumnCount()];
       _lastModCount = Table.this._modCount;
     }

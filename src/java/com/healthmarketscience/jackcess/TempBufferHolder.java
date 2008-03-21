@@ -17,6 +17,20 @@ public abstract class TempBufferHolder {
   private static final Reference<ByteBuffer> EMPTY_BUFFER_REF =
     new SoftReference<ByteBuffer>(null);
 
+  /**
+   * The caching type for the buffer holder.
+   */
+  public enum Type {
+    /** a hard reference is maintained to the created buffer */
+    HARD,
+    /** a soft reference is maintained to the created buffer (may be garbage
+        collected if memory gets tight) */
+    SOFT,
+    /** no reference is maintained to a created buffer (new buffer every
+        time) */
+    NONE;
+  }
+  
   /** whether or not every get automatically rewinds the buffer */
   private final boolean _autoRewind;
   /** ByteOrder for all allocated buffers */
@@ -39,32 +53,34 @@ public abstract class TempBufferHolder {
   
   /**
    * Creates a new TempBufferHolder.
-   * @param hard iff true, the TempBufferHolder will maintain a hard reference
-   *             to the current buffer, otherwise will maintain a
-   *             SoftReference.
+   * @param type the type of reference desired for any created buffer
    * @param autoRewind whether or not every get automatically rewinds the
    *                   buffer
    */
-  public static TempBufferHolder newHolder(boolean hard, boolean autoRewind) {
-    return newHolder(hard, autoRewind, PageChannel.DEFAULT_BYTE_ORDER);
+  public static TempBufferHolder newHolder(Type type, boolean autoRewind) {
+    return newHolder(type, autoRewind, PageChannel.DEFAULT_BYTE_ORDER);
   }
   
   /**
    * Creates a new TempBufferHolder.
-   * @param hard iff true, the TempBufferHolder will maintain a hard reference
-   *             to the current buffer, otherwise will maintain a
-   *             SoftReference.
+   * @param type the type of reference desired for any created buffer
    * @param autoRewind whether or not every get automatically rewinds the
    *                   buffer
    * @param order byte order for all allocated buffers
    */
-  public static TempBufferHolder newHolder(boolean hard, boolean autoRewind,
+  public static TempBufferHolder newHolder(Type type, boolean autoRewind,
                                            ByteOrder order)
   {
-    if(hard) {
+    switch(type) {
+    case HARD:
       return new HardTempBufferHolder(autoRewind, order);
+    case SOFT:
+      return new SoftTempBufferHolder(autoRewind, order);
+    case NONE:
+      return new NoneTempBufferHolder(autoRewind, order);
+    default:
+      throw new IllegalStateException("Unknown type " + type);
     }
-    return new SoftTempBufferHolder(autoRewind, order);
   }
 
   /**
@@ -112,7 +128,7 @@ public abstract class TempBufferHolder {
   protected abstract void setNewBuffer(ByteBuffer newBuffer);
   
   /**
-   * TempBufferHolder which has a hard reference to the buffer buffer.
+   * TempBufferHolder which has a hard reference to the buffer.
    */
   private static final class HardTempBufferHolder extends TempBufferHolder
   {
@@ -139,7 +155,7 @@ public abstract class TempBufferHolder {
   }
   
   /**
-   * TempBufferHolder which has a soft reference to the buffer buffer.
+   * TempBufferHolder which has a soft reference to the buffer.
    */
   private static final class SoftTempBufferHolder extends TempBufferHolder
   {
@@ -158,8 +174,6 @@ public abstract class TempBufferHolder {
     protected void setNewBuffer(ByteBuffer newBuffer) {
       _buffer.clear();
       _buffer = new SoftReference<ByteBuffer>(newBuffer);
-//       // FIXME, enable for testing (make this automatic)
-//       _buffer = new PhantomReference<ByteBuffer>(newBuffer, null);
     }
 
     @Override
@@ -168,5 +182,29 @@ public abstract class TempBufferHolder {
     }
   }
   
+  /**
+   * TempBufferHolder which has a no reference to the buffer.
+   */
+  private static final class NoneTempBufferHolder extends TempBufferHolder
+  {
+    private NoneTempBufferHolder(boolean autoRewind, ByteOrder order) {
+      super(autoRewind, order);
+    }
+    
+    @Override
+    public ByteBuffer getExistingBuffer() {
+      return null;
+    }
+    
+    @Override
+    protected void setNewBuffer(ByteBuffer newBuffer) {
+      // nothing to do
+    }
+
+    @Override
+    public void clear() {
+      // nothing to do
+    }
+  }
   
 }

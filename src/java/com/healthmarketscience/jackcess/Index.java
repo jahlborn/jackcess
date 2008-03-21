@@ -177,7 +177,7 @@ public class Index implements Comparable<Index> {
   private int _modCount;
   /** temp buffer used to writing the index */
   private final TempBufferHolder _indexBufferH =
-    TempBufferHolder.newHolder(false, true);
+    TempBufferHolder.newHolder(TempBufferHolder.Type.SOFT, true);
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
@@ -504,7 +504,8 @@ public class Index implements Comparable<Index> {
     byte[] valuePrefix = null;
     boolean firstEntry = true;
     TempBufferHolder tmpEntryBufferH =
-      TempBufferHolder.newHolder(true, true, ByteOrder.BIG_ENDIAN);
+      TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
+                                 ByteOrder.BIG_ENDIAN);
 
     for (int i = 0; i < entryMaskLength; i++) {
       byte entryMask = indexPage.get(entryMaskPos + i);

@@ -44,19 +44,17 @@ public final class TempPageHolder {
       buffer has been discarded since the last page read */
   private int _bufferModCount;
   
-  private TempPageHolder(boolean hard) {
-    _buffer = TempBufferHolder.newHolder(hard, false);
+  private TempPageHolder(TempBufferHolder.Type type) {
+    _buffer = TempBufferHolder.newHolder(type, false);
     _bufferModCount = _buffer.getModCount();
   }
 
   /**
    * Creates a new TempPageHolder.
-   * @param hard iff true, the TempPageHolder will maintain a hard reference
-   *             to the current page buffer, otherwise will maintain a
-   *             SoftReference.
+   * @param type the type of reference desired for any create page buffers
    */
-  public static TempPageHolder newHolder(boolean hard) {
-    return new TempPageHolder(hard);
+  public static TempPageHolder newHolder(TempBufferHolder.Type type) {
+    return new TempPageHolder(type);
   }
 
   /**
