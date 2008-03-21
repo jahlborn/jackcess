@@ -302,6 +302,7 @@ public class Database
     throws IOException
   {    
     FileChannel channel = openChannel(mdbFile, false);
+    channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
             EMPTY_MDB)), 0, Integer.MAX_VALUE);
