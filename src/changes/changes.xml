@@ -5,8 +5,8 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
-    <release version="1.1.13" date="TBD">
-      <action dev="jahlborn" type="fix">
+    <release version="1.1.13" date="2008-03-21">
+      <action dev="jahlborn" type="fix" issue="1913775">
         More fixes for index parsing.  Believe index names are now correctly
         matched up with indexes.
       </action>
@@ -14,11 +14,11 @@
         Simplify comparison algorithms for RowId and Index.Entry using type
         attributes.
       </action>
-      <action dev="jahlborn" type="update">
+      <action dev="jahlborn" type="fix" issue="1906160">
         Expand the characters supported in index updates to all of the
         ISO-8859-1 character set.
       </action>
-      <action dev="jahlborn" type="update">
+      <action dev="jahlborn" type="fix">
         Fix bug caused by sign extension when reading single-byte row numbers.
       </action>
       <action dev="jahlborn" type="update">
@@ -31,7 +31,7 @@
       <action dev="jahlborn" type="fix">
         Fix creation of tables with auto-number columns.
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1832723">
         Completely fix problems with sporadic usage map corruption.
       </action>
       <action dev="jahlborn" type="update">
@@ -61,7 +61,7 @@
       <action dev="jahlborn" type="fix">
         Support reading inline usage maps with more than 512 pages.
       </action>
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1832723">
         Fix some problems with sporadic usage map corruption.
       </action>
       <action dev="jahlborn" type="update">
