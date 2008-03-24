@@ -1391,7 +1391,6 @@ public class Table
     }
 
     nullMask.write(buffer);  //Null mask
-    buffer.limit(buffer.position());
     buffer.flip();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating new data block:\n" + ByteUtil.toHexString(buffer, buffer.limit()));
