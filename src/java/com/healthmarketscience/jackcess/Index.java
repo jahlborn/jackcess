@@ -1677,7 +1677,6 @@ public class Index implements Comparable<Index> {
       _curPos = getDirHandler(moveForward).getBeginningPosition();
       _prevPos = _curPos;
       if(!isUpToDate()) {
-        // update bounds
         updateBounds();
         _lastModCount = Index.this._modCount;
       }
@@ -1737,12 +1736,12 @@ public class Index implements Comparable<Index> {
       if(!curEntry.equals(_curPos.getEntry()) ||
          !prevEntry.equals(_prevPos.getEntry()))
       {
-        _prevPos = updatePosition(prevEntry);
-        _curPos = updatePosition(curEntry);
         if(!isUpToDate()) {
           updateBounds();
           _lastModCount = Index.this._modCount;
         }
+        _prevPos = updatePosition(prevEntry);
+        _curPos = updatePosition(curEntry);
       } else {
         checkForModification();
       }
@@ -1753,9 +1752,9 @@ public class Index implements Comparable<Index> {
      */
     private void checkForModification() {
       if(!isUpToDate()) {
+        updateBounds();
         _prevPos = updatePosition(_prevPos.getEntry());
         _curPos = updatePosition(_curPos.getEntry());
-        updateBounds();
         _lastModCount = Index.this._modCount;
       }
     }
