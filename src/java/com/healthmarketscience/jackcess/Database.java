@@ -851,9 +851,7 @@ public class Database
         // may have null fields.  We always want to add the
         // same number of columns to the table each time.
         //
-        Object[] data = new Object[columnNames.length];
-        String[] splitData = line.split(delim);
-        System.arraycopy(splitData, 0, data, 0, splitData.length);
+        Object[] data = Table.dupeRow(line.split(delim), columnNames.length);
         rows.add(filter.filterRow(data));
         if (rows.size() == COPY_TABLE_BATCH_SIZE) {
           table.addRows(rows);

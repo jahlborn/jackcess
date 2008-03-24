@@ -5,6 +5,12 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.14" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Need to store auto-number values back into row so that indexes can be
+        updated correctly.
+      </action>
+    </release>
     <release version="1.1.13" date="2008-03-21">
       <action dev="jahlborn" type="fix" issue="1913775">
         More fixes for index parsing.  Believe index names are now correctly

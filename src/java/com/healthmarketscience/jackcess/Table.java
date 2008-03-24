@@ -1102,6 +1102,13 @@ public class Table
   
   /**
    * Add a single row to this table and write it to disk
+   * <p>
+   * Note, if this table has an auto-number column, the value written will be
+   * put back into the given row array.
+   *
+   * @param row row values for a single row.  the row will be modified if
+   *            this table contains an auto-number column, otherwise it
+   *            will not be modified.
    */
   public void addRow(Object... row) throws IOException {
     addRows(Collections.singletonList(row), _singleRowBufferH);
@@ -1111,7 +1118,13 @@ public class Table
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.  This
    * is much more efficient than calling <code>addRow</code> multiple times.
-   * @param rows List of Object[] row values
+   * <p>
+   * Note, if this table has an auto-number column, the values written will be
+   * put back into the given row arrays.
+   * 
+   * @param rows List of Object[] row values.  the rows will be modified if
+   *             this table contains an auto-number column, otherwise they
+   *             will not be modified.
    */
   public void addRows(List<? extends Object[]> rows) throws IOException {
     addRows(rows, _multiRowBufferH);
@@ -1119,21 +1132,35 @@ public class Table
   
   /**
    * Add multiple rows to this table, only writing to disk after all
-   * rows have been written, and every time a data page is filled.  This
-   * is much more efficient than calling <code>addRow</code> multiple times.
-   * @param rows List of Object[] row values
+   * rows have been written, and every time a data page is filled.
+   * @param inRows List of Object[] row values
    * @param writeRowBufferH TempBufferHolder used to generate buffers for
    *                        writing the row data
    */
-  private void addRows(List<? extends Object[]> rows,
+  private void addRows(List<? extends Object[]> inRows,
                        TempBufferHolder writeRowBufferH)
     throws IOException
   {
+    // copy the input rows to a modifiable list so we can update the elements
+    List<Object[]> rows = new ArrayList<Object[]>(inRows);
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
-    Iterator<? extends Object[]> iter = rows.iterator();
-    for (int i = 0; iter.hasNext(); i++) {
-      rowData[i] = createRow(iter.next(), getFormat().MAX_ROW_SIZE,
+    for (int i = 0; i < rows.size(); i++) {
+
+      // we need to make sure the row is the right length (fill with null).
+      // note, if the row is copied the caller will not be able to access any
+      // generated auto-number value, but if they need that info they should
+      // use a row array of the right size!
+      Object[] row = rows.get(i);
+      if(row.length < _columns.size()) {
+        row = dupeRow(row, _columns.size());
+        // we copied the row, so put the copy back into the rows list
+        rows.set(i, row);
+      }
+
+      // write the row of data to a temporary buffer
+      rowData[i] = createRow(row, getFormat().MAX_ROW_SIZE,
                              writeRowBufferH.getPageBuffer(getPageChannel()));
+      
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
@@ -1254,7 +1281,15 @@ public class Table
   }
   
   /**
-   * Serialize a row of Objects into a byte buffer
+   * Serialize a row of Objects into a byte buffer.
+   * <p>
+   * Note, if this table has an auto-number column, the value written will be
+   * put back into the given row array.
+   * 
+   * @param rowArray row data, expected to be correct length for this table
+   * @param maxRowSize max size the data can be for this row
+   * @param buffer buffer to which to write the row data
+   * @return the given buffer, filled with the row data
    */
   ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer)
     throws IOException
@@ -1262,15 +1297,6 @@ public class Table
     buffer.putShort(_maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
     
-    List<Object> row = new ArrayList<Object>(_columns.size());
-    for(Object rowValue : rowArray) {
-      row.add(rowValue);
-    }
-    //Append null for arrays that are too small
-    for (int i = rowArray.length; i < _columns.size(); i++) {
-      row.add(null);
-    }
-
     //Fixed length column data comes first
     int fixedDataStart = buffer.position();
     int fixedDataEnd = fixedDataStart;
@@ -1278,7 +1304,7 @@ public class Table
 
       if(!col.isVariableLength()) {
         
-        Object rowValue = row.get(col.getColumnIndex());
+        Object rowValue = rowArray[col.getColumnIndex()];
 
         if (col.getType() == DataType.BOOLEAN) {
         
@@ -1290,8 +1316,13 @@ public class Table
         } else {
 
           if(col.isAutoNumber()) {
+            
             // ignore given row value, use next autonumber
             rowValue = getNextAutoNumber();
+
+            // we need to stick this back in the row so that the indexes get
+            // updated correctly (and caller can get the generated value)
+            rowArray[col.getColumnIndex()] = rowValue;
           }
           
           if(rowValue != null) {
@@ -1329,7 +1360,7 @@ public class Table
       int varColumnOffsetsIndex = 0;
       for (Column varCol : _varColumns) {
         short offset = (short) buffer.position();
-        Object rowValue = row.get(varCol.getColumnIndex());
+        Object rowValue = rowArray[varCol.getColumnIndex()];
         if (rowValue != null) {
           // we have a value
           nullMask.markNotNull(varCol);
@@ -1576,6 +1607,16 @@ public class Table
     }
     return numAutoNumCols;
   }
+
+  /**
+   * Duplicates and returns a row of data, optionally with a longer length
+   * filled with {@code null}.
+   */
+  static Object[] dupeRow(Object[] row, int newRowLength) {
+    Object[] copy = new Object[newRowLength];
+    System.arraycopy(row, 0, copy, 0, row.length);
+    return copy;
+  }
   
   /** various statuses for the row data */
   private enum RowStatus {
@@ -1714,9 +1755,7 @@ public class Table
     }
     
     public Object[] getRowValues() {
-      Object[] copy = new Object[_rowValues.length];
-      System.arraycopy(_rowValues, 0, copy, 0, _rowValues.length);
-      return copy;
+      return dupeRow(_rowValues, _rowValues.length);
     }
     
     public RowId getHeaderRowId() {

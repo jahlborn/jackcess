@@ -169,7 +169,7 @@ public class DatabaseTest extends TestCase {
   
   public void testGetNextRow() throws Exception {
     Database db = open();
-    assertEquals(2, db.getTableNames().size());
+    assertEquals(3, db.getTableNames().size());
     Table table = db.getTable("Table1");
     
     Map<String, Object> row = table.getNextRow();
@@ -702,6 +702,23 @@ public class DatabaseTest extends TestCase {
       .addColumn(new ColumnBuilder("b", DataType.TEXT).toColumn())
       .toTable(db);
 
+    doTestAutoNumber(table);
+    
+    db.close();
+  }  
+
+  public void testAutoNumberPK() throws Exception {
+    Database db = openCopy(new File("test/data/test.mdb"));
+
+    Table table = db.getTable("Table3");
+
+    doTestAutoNumber(table);
+    
+    db.close();
+  }  
+
+  private void doTestAutoNumber(Table table) throws Exception
+  {
     table.addRow(null, "row1");
     table.addRow(13, "row2");
     table.addRow("flubber", "row3");
@@ -732,10 +749,8 @@ public class DatabaseTest extends TestCase {
               "b", "row5"));
 
     assertTable(expectedRows, table);    
-    
-    db.close();
-  }  
-
+  }
+  
   public void testWriteAndReadDate() throws Exception {
     Database db = create();
 
