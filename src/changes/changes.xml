@@ -6,7 +6,7 @@
   </properties>
   <body>
     <release version="1.1.14" date="TBD">
-      <action dev="jahlborn" type="fix">
+      <action dev="jahlborn" type="fix" issue="1924705">
         Need to store auto-number values back into row so that indexes can be
         updated correctly.
       </action>
