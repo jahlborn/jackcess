@@ -334,15 +334,16 @@ public class Index implements Comparable<Index> {
     buffer.put((byte) 0); //Unknown
     buffer.put((byte) 0); //Unknown
     byte[] entryMask = new byte[getFormat().SIZE_INDEX_ENTRY_MASK];
+    int maxTotalSize = getFormat().PAGE_SIZE -
+      (getFormat().OFFSET_INDEX_ENTRY_MASK + entryMask.length);
     int totalSize = 0;
     for(Entry entry : _entries) {
-      int size = entry.size();
-      totalSize += size;
-      int idx = totalSize  / 8;
-      if(idx >= entryMask.length) {
+      totalSize += entry.size();
+      if(totalSize > maxTotalSize) {
         throw new UnsupportedOperationException(
             "FIXME cannot write large index yet");
       }
+      int idx = totalSize / 8;
       entryMask[idx] |= (1 << (totalSize % 8));
     }
     buffer.put(entryMask);
@@ -499,7 +500,7 @@ public class Index implements Comparable<Index> {
         indexPage, getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
     int entryMaskLength = getFormat().SIZE_INDEX_ENTRY_MASK;
     int entryMaskPos = getFormat().OFFSET_INDEX_ENTRY_MASK;
-    int entryPos = entryMaskPos + getFormat().SIZE_INDEX_ENTRY_MASK;
+    int entryPos = entryMaskPos + entryMaskLength;
     int lastStart = 0;
     byte[] valuePrefix = null;
     boolean firstEntry = true;
