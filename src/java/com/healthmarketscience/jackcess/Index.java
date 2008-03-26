@@ -1553,7 +1553,7 @@ public class Index implements Comparable<Index> {
   /**
    * A single node entry in an index (points to a sub-page in the index)
    */
-  private final class NodeEntry extends Entry {
+  private static final class NodeEntry extends Entry {
 
     /** index page number of the page to which this node entry refers */
     private final int _subPageNumber;
