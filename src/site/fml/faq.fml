@@ -134,7 +134,7 @@
           your classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The "compile" and
           "runtime" dependencies are necessary for using Jackcess in your
           application.  One great place to track down these dependencies is in
-          the <a href="http://www.ibiblio.org/maven">Ibiblio Maven
+          the <a href="http://repo1.maven.org/maven2/">Ibiblio Maven
           Repository</a>.
         </p>
       </answer>
