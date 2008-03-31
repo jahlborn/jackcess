@@ -130,12 +130,12 @@
       <question>Why do I get a NoClassDefFoundError?</question>
       <answer>
         <p>
-          Probably because you're missing a jar that Jackcess depends on from your
-          classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The first 3 are required for both building and running
-          and can be found either at the <a href="http://commons.apache.org/">
-          Apache Commons</a> or the <a href="http://www.ibiblio.org/maven">Ibiblio
-          Maven Repository</a>.  The others are only required for building, in which
-          case, Maven will find them for you.
+          Probably because you're missing a jar that Jackcess depends on from
+          your classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The "compile" and
+          "runtime" dependencies are necessary for using Jackcess in your
+          application.  One great place to track down these dependencies is in
+          the <a href="http://www.ibiblio.org/maven">Ibiblio Maven
+          Repository</a>.
         </p>
       </answer>
     </faq>
