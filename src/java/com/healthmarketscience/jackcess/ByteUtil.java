@@ -147,9 +147,9 @@ public final class ByteUtil {
   }
 
   /**
-   * Read a 3 byte int from a buffer
+   * Read an unsigned byte from a buffer
    * @param buffer Buffer containing the bytes
-   * @return The int
+   * @return The unsigned byte as an int
    */
   public static int getUnsignedByte(ByteBuffer buffer) {
     int pos = buffer.position();
@@ -159,13 +159,35 @@ public final class ByteUtil {
   }
 
   /**
-   * Read a 3 byte int from a buffer
+   * Read an unsigned byte from a buffer
    * @param buffer Buffer containing the bytes
    * @param offset Offset at which to read the byte
-   * @return The int
+   * @return The unsigned byte as an int
    */
   public static int getUnsignedByte(ByteBuffer buffer, int offset) {  
     return asUnsignedByte(buffer.get(offset));
+  }
+  
+  /**
+   * Read an unsigned short from a buffer
+   * @param buffer Buffer containing the short
+   * @return The unsigned short as an int
+   */
+  public static int getUnsignedShort(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int rtn = getUnsignedShort(buffer, pos);
+    buffer.position(pos + 2);
+    return rtn;
+  }
+
+  /**
+   * Read an unsigned short from a buffer
+   * @param buffer Buffer containing the short
+   * @param offset Offset at which to read the short
+   * @return The unsigned short as an int
+   */
+  public static int getUnsignedShort(ByteBuffer buffer, int offset) {  
+    return asUnsignedShort(buffer.getShort(offset));
   }
 
   
@@ -386,6 +408,13 @@ public final class ByteUtil {
    */
   public static int asUnsignedByte(byte b) { 
     return b & 0xFF;
+  }
+  
+  /**
+   * @return the short value converted to an unsigned int value
+   */
+  public static int asUnsignedShort(short s) { 
+    return s & 0xFFFF;
   }
   
 }

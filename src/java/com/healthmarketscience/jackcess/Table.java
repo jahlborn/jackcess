@@ -1070,7 +1070,7 @@ public class Table
    * 2) bytes encoded using the {@link JetFormat#CHARSET}
    */
   private String readName(ByteBuffer buffer) {
-    short nameLength = buffer.getShort();
+    int nameLength = ByteUtil.getUnsignedShort(buffer);
     byte[] nameBytes = new byte[nameLength];
     buffer.get(nameBytes);
     return Column.decodeUncompressedText(nameBytes, getFormat());
@@ -1081,7 +1081,7 @@ public class Table
    * expected name format is the same as that for {@link #readName}.
    */
   private void skipName(ByteBuffer buffer) {
-    short nameLength = buffer.getShort();
+    int nameLength = ByteUtil.getUnsignedShort(buffer);
     buffer.position(buffer.position() + nameLength);
   }
   
