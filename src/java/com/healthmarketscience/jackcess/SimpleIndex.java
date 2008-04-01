@@ -67,9 +67,6 @@ public class SimpleIndex extends Index {
     writeDataPage(_dataPage);
   }
 
-  /**
-   * Reads the actual index entries.
-   */
   @Override
   protected void readIndexEntries()
     throws IOException
@@ -141,9 +138,6 @@ public class SimpleIndex extends Index {
     return Collections.binarySearch(getEntries(), entry);
   }
 
-  /**
-   * Adds an entry to the entries list, maintaining the order.
-   */
   @Override
   protected boolean addEntry(Entry newEntry, boolean isNullEntry, Object[] row)
     throws IOException
@@ -178,11 +172,6 @@ public class SimpleIndex extends Index {
     return false;
   }
 
-  /**
-   * Removes an entry from the entries list, maintaining the order.  Will
-   * search by RowId if entry is not found in case a partial entry was
-   * provided.
-   */
   @Override
   protected boolean removeEntry(Entry oldEntry)
   {
