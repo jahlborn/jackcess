@@ -107,7 +107,9 @@ public abstract class JetFormat {
   
   public final int OFFSET_INDEX_COMPRESSED_BYTE_COUNT;
   public final int OFFSET_INDEX_ENTRY_MASK;
-  public final int OFFSET_NEXT_INDEX_LEAF_PAGE;
+  public final int OFFSET_PREV_INDEX_PAGE;
+  public final int OFFSET_NEXT_INDEX_PAGE;
+  public final int OFFSET_CHILD_TAIL_INDEX_PAGE;
   
   public final int SIZE_INDEX_DEFINITION;
   public final int SIZE_COLUMN_HEADER;
@@ -191,7 +193,9 @@ public abstract class JetFormat {
     
     OFFSET_INDEX_COMPRESSED_BYTE_COUNT = defineOffsetIndexCompressedByteCount();
     OFFSET_INDEX_ENTRY_MASK = defineOffsetIndexEntryMask();
-    OFFSET_NEXT_INDEX_LEAF_PAGE = defineOffsetNextIndexLeafPage();
+    OFFSET_PREV_INDEX_PAGE = defineOffsetPrevIndexPage();
+    OFFSET_NEXT_INDEX_PAGE = defineOffsetNextIndexPage();
+    OFFSET_CHILD_TAIL_INDEX_PAGE = defineOffsetChildTailIndexPage();
     
     SIZE_INDEX_DEFINITION = defineSizeIndexDefinition();
     SIZE_COLUMN_HEADER = defineSizeColumnHeader();
@@ -254,7 +258,9 @@ public abstract class JetFormat {
   
   protected abstract int defineOffsetIndexCompressedByteCount();
   protected abstract int defineOffsetIndexEntryMask();
-  protected abstract int defineOffsetNextIndexLeafPage();
+  protected abstract int defineOffsetPrevIndexPage();
+  protected abstract int defineOffsetNextIndexPage();
+  protected abstract int defineOffsetChildTailIndexPage();
   
   protected abstract int defineSizeIndexDefinition();
   protected abstract int defineSizeColumnHeader();
@@ -367,7 +373,11 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetIndexEntryMask() { return 27; }
     @Override
-    protected int defineOffsetNextIndexLeafPage() { return 16; }
+    protected int defineOffsetPrevIndexPage() { return 12; }
+    @Override
+    protected int defineOffsetNextIndexPage() { return 16; }
+    @Override
+    protected int defineOffsetChildTailIndexPage() { return 20; }
     
     @Override
     protected int defineSizeIndexDefinition() { return 12; }

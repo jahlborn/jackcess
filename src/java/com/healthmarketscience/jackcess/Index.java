@@ -33,7 +33,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -51,9 +50,9 @@ import static com.healthmarketscience.jackcess.IndexCodes.*;
  * Access table index
  * @author Tim McCune
  */
-public class Index implements Comparable<Index> {
+public abstract class Index implements Comparable<Index> {
   
-  private static final Log LOG = LogFactory.getLog(Index.class);
+  protected static final Log LOG = LogFactory.getLog(Index.class);
 
   /** special entry which is less than any other entry */
   public static final Entry FIRST_ENTRY =
@@ -64,20 +63,27 @@ public class Index implements Comparable<Index> {
     createSpecialEntry(RowId.LAST_ROW_ID);
   
   /** index of the first (exclusive) index entry */
-  private static final int FIRST_ENTRY_IDX = -1;
+  protected static final int FIRST_ENTRY_IDX = -1;
   /** index of the last (exclusive) index entry */
-  private static final int LAST_ENTRY_IDX = -2;
-
+  protected static final int LAST_ENTRY_IDX = -2;
+  
   /** the first position for a cursor */
   private static final Position FIRST_POSITION =
-    new Position(FIRST_ENTRY_IDX, FIRST_ENTRY);
+    new Position(RowId.FIRST_ROW_ID.getPageNumber(), FIRST_ENTRY_IDX,
+                 FIRST_ENTRY);
   
   /** the last position for a cursor */
   private static final Position LAST_POSITION =
-    new Position(LAST_ENTRY_IDX, LAST_ENTRY);
+    new Position(RowId.LAST_ROW_ID.getPageNumber(), LAST_ENTRY_IDX,
+                 LAST_ENTRY);
+          
   
   /** Max number of columns in an index */
   private static final int MAX_COLUMNS = 10;
+  
+  protected static final byte[] EMPTY_PREFIX = new byte[0];
+
+  protected static final int INVALID_INDEX_PAGE_NUMBER = 0;
   
   private static final short COLUMN_UNUSED = -1;
 
@@ -147,8 +153,8 @@ public class Index implements Comparable<Index> {
   
   /** owning table */
   private final Table _table;
-  /** Page number of the index data */
-  private int _pageNumber;
+  /** Page number of the root index data */
+  private int _rootPageNumber;
   /** offset within the tableDefinition buffer of the uniqueEntryCount for
       this index */
   private final int _uniqueEntryCountOffset;
@@ -175,16 +181,23 @@ public class Index implements Comparable<Index> {
   private boolean _initialized;
   /** modification count for the table, keeps cursors up-to-date */
   private int _modCount;
-  /** temp buffer used to writing the index */
+  /** temp buffer used to read/write the index pages */
   private final TempBufferHolder _indexBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.SOFT, true);
+  /** max size for all the entries written to a given index data page */
+  private final int _maxPageEntrySize;
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
   boolean _readOnly;
   
-  public Index(Table table, int uniqueEntryCount, int uniqueEntryCountOffset) {
+  protected Index(Table table, int uniqueEntryCount,
+                  int uniqueEntryCountOffset)
+  {
     _table  = table;
     _uniqueEntryCount = uniqueEntryCount;
     _uniqueEntryCountOffset = uniqueEntryCountOffset;
+    _maxPageEntrySize = getFormat().PAGE_SIZE -
+      (getFormat().OFFSET_INDEX_ENTRY_MASK +
+       getFormat().SIZE_INDEX_ENTRY_MASK);
   }
 
   public Table getTable() {
@@ -270,25 +283,28 @@ public class Index implements Comparable<Index> {
   }
 
   /**
-   * Returns the number of index entries in the index.  Only called by unit
-   * tests.
-   * <p>
-   * Forces index initialization.
-   */
-  int getEntryCount()
-    throws IOException
-  {
-    initialize();
-    return _entries.size();
-  }
-
-  /**
    * Whether or not the complete index state has been read.
    */
   public boolean isInitialized() {
     return _initialized;
   }
 
+  protected int getRootPageNumber() {
+    return _rootPageNumber;
+  }
+
+  protected void addedUniqueEntry() {
+    ++_uniqueEntryCount;
+  }
+
+  protected void setReadOnly() {
+    _readOnly = true;
+  }
+
+  protected int getMaxPageEntrySize() {
+    return _maxPageEntrySize;
+  }
+  
   /**
    * Forces initialization of this index (actual parsing of index pages).
    * normally, the index will not be initialized until the entries are
@@ -306,7 +322,8 @@ public class Index implements Comparable<Index> {
    * <p>
    * Forces index initialization.
    */
-  public void update() throws IOException {
+  public void update() throws IOException
+  {
     // make sure we've parsed the entries
     initialize();
     
@@ -314,46 +331,9 @@ public class Index implements Comparable<Index> {
       throw new UnsupportedOperationException(
           "FIXME cannot write indexes of this type yet");
     }
-    getPageChannel().writePage(write(), _pageNumber);
+    updateImpl();
   }
 
-  /**
-   * Write this index out to a buffer
-   */
-  private ByteBuffer write() throws IOException {
-    ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
-    buffer.put((byte) 0x04);  //Page type
-    buffer.put((byte) 0x01);  //Unknown
-    buffer.putShort((short) 0); //Free space
-    buffer.putInt(getTable().getTableDefPageNumber());
-    buffer.putInt(0); //Prev page
-    buffer.putInt(0); //Next page
-    buffer.putInt(0); //Leaf page
-    buffer.putInt(0); //Unknown
-    buffer.put((byte) 0); // compressed byte count
-    buffer.put((byte) 0); //Unknown
-    buffer.put((byte) 0); //Unknown
-    byte[] entryMask = new byte[getFormat().SIZE_INDEX_ENTRY_MASK];
-    int maxTotalSize = getFormat().PAGE_SIZE -
-      (getFormat().OFFSET_INDEX_ENTRY_MASK + entryMask.length);
-    int totalSize = 0;
-    for(Entry entry : _entries) {
-      totalSize += entry.size();
-      if(totalSize > maxTotalSize) {
-        throw new UnsupportedOperationException(
-            "FIXME cannot write large index yet");
-      }
-      int idx = totalSize / 8;
-      entryMask[idx] |= (1 << (totalSize % 8));
-    }
-    buffer.put(entryMask);
-    for(Entry entry : _entries) {
-      entry.write(buffer);
-    }
-    buffer.putShort(2, (short) (getFormat().PAGE_SIZE - buffer.position()));
-    return buffer;
-  }
-  
   /**
    * Read the index info from a tableBuffer
    * @param tableBuffer table definition buffer to read from initial info
@@ -383,193 +363,12 @@ public class Index implements Comparable<Index> {
       }
     }
     tableBuffer.getInt(); //Forward past Unknown
-    _pageNumber = tableBuffer.getInt();
+    _rootPageNumber = tableBuffer.getInt();
     tableBuffer.getInt(); //Forward past Unknown
     _indexFlags = tableBuffer.get();
     tableBuffer.position(tableBuffer.position() + 5);  //Forward past other stuff
   }
 
-  /**
-   * Reads the actual index entries.
-   */
-  private void readIndexEntries()
-    throws IOException
-  {
-    ByteBuffer indexPage = getPageChannel().createPageBuffer();
-
-    // find first leaf page
-    int leafPageNumber = _pageNumber;
-    while(true) {
-      getPageChannel().readPage(indexPage, leafPageNumber);
-
-      if(indexPage.get(0) == INDEX_NODE_PAGE_TYPE) {
-        // FIXME we can't modify this index at this point in time
-        _readOnly = true;
-
-        // found another node page
-        leafPageNumber = readNodePage(indexPage);
-      } else {
-        // found first leaf
-        indexPage.rewind();
-        break;
-      }
-    }
-
-    // read all leaf pages.  since we read all the entries in sort order, we
-    // can insert them directly into the _entries list
-    while(true) {
-
-      leafPageNumber = readLeafPage(indexPage, _entries);
-      if(leafPageNumber != 0) {
-        // FIXME we can't modify this index at this point in time
-        _readOnly = true;
-        
-        // found another one 
-        getPageChannel().readPage(indexPage, leafPageNumber);
-        
-      } else {
-        // all done
-        break;
-      }
-    }
-
-    // check the entry order, just to be safe
-    for(int i = 0; i < (_entries.size() - 1); ++i) {
-      Entry e1 = _entries.get(i);
-      Entry e2 = _entries.get(i + 1);
-      if(e1.compareTo(e2) > 0) {
-        throw new IOException("Unexpected order in index entries, " +
-                              e1 + " is greater than " + e2);
-      }
-    }
-  }
-
-  /**
-   * Reads the first entry off of an index node page and returns the next page
-   * number.
-   */
-  private int readNodePage(ByteBuffer nodePage)
-    throws IOException
-  {
-    if(nodePage.get(0) != INDEX_NODE_PAGE_TYPE) {
-      throw new IOException("expected index node page, found " +
-                            nodePage.get(0));
-    }
-    
-    List<NodeEntry> nodeEntries = new ArrayList<NodeEntry>();
-    readIndexPage(nodePage, false, null, nodeEntries);
-
-    // grab the first entry
-    // FIXME, need to parse all...?
-    return nodeEntries.get(0).getSubPageNumber();
-  }
-
-  /**
-   * Reads an index leaf page.
-   * @return the next leaf page number, 0 if none
-   */
-  private int readLeafPage(ByteBuffer leafPage, Collection<Entry> entries)
-    throws IOException
-  {
-    if(leafPage.get(0) != INDEX_LEAF_PAGE_TYPE) {
-      throw new IOException("expected index leaf page, found " +
-                            leafPage.get(0));
-    }
-    
-    // note, "header" data is in LITTLE_ENDIAN format, entry data is in
-    // BIG_ENDIAN format
-
-    int nextLeafPage = leafPage.getInt(getFormat().OFFSET_NEXT_INDEX_LEAF_PAGE);
-    readIndexPage(leafPage, true, entries, null);
-
-    return nextLeafPage;
-  }
-
-  /**
-   * Reads an index page, populating the correct collection based on the page
-   * type (node or leaf).
-   */
-  private void readIndexPage(ByteBuffer indexPage, boolean isLeaf,
-                             Collection<Entry> entries,
-                             Collection<NodeEntry> nodeEntries)
-    throws IOException
-  {
-    // note, "header" data is in LITTLE_ENDIAN format, entry data is in
-    // BIG_ENDIAN format
-    int numCompressedBytes = ByteUtil.getUnsignedByte(
-        indexPage, getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
-    int entryMaskLength = getFormat().SIZE_INDEX_ENTRY_MASK;
-    int entryMaskPos = getFormat().OFFSET_INDEX_ENTRY_MASK;
-    int entryPos = entryMaskPos + entryMaskLength;
-    int lastStart = 0;
-    byte[] valuePrefix = null;
-    boolean firstEntry = true;
-    TempBufferHolder tmpEntryBufferH =
-      TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
-                                 ByteOrder.BIG_ENDIAN);
-
-    for (int i = 0; i < entryMaskLength; i++) {
-      byte entryMask = indexPage.get(entryMaskPos + i);
-      for (int j = 0; j < 8; j++) {
-        if ((entryMask & (1 << j)) != 0) {
-          int length = (i * 8) + j - lastStart;
-          indexPage.position(entryPos + lastStart);
-
-          // determine if we can read straight from the index page (if no
-          // valuePrefix).  otherwise, create temp buf with complete entry.
-          ByteBuffer curEntryBuffer = indexPage;
-          int curEntryLen = length;
-          if(valuePrefix != null) {
-            curEntryBuffer = getTempEntryBuffer(
-                indexPage, length, valuePrefix, tmpEntryBufferH);
-            curEntryLen += valuePrefix.length;
-          }
-          
-          if(isLeaf) {
-            entries.add(new Entry(curEntryBuffer, curEntryLen));
-          } else {
-            nodeEntries.add(new NodeEntry(curEntryBuffer, curEntryLen));
-          }
-
-          // read any shared "compressed" bytes
-          if(firstEntry) {
-            firstEntry = false;
-            if(numCompressedBytes > 0) {
-              // FIXME we can't modify this index at this point in time
-              _readOnly = true;
-
-              valuePrefix = new byte[numCompressedBytes];
-              indexPage.position(entryPos + lastStart);
-              indexPage.get(valuePrefix);
-            }
-          }
-
-          lastStart += length;          
-        }
-      }
-    }
-  }
-
-  /**
-   * Returns an entry buffer containing the relevant data for an entry given
-   * the valuePrefix.
-   */
-  private ByteBuffer getTempEntryBuffer(
-      ByteBuffer indexPage, int entryLen, byte[] valuePrefix,
-      TempBufferHolder tmpEntryBufferH)
-  {
-    ByteBuffer tmpEntryBuffer = tmpEntryBufferH.getBuffer(
-        getPageChannel(), valuePrefix.length + entryLen);
-
-    // combine valuePrefix and rest of entry from indexPage, then prep for
-    // reading
-    tmpEntryBuffer.put(valuePrefix);
-    tmpEntryBuffer.put(indexPage.array(), indexPage.position(), entryLen);
-    tmpEntryBuffer.flip();
-    
-    return tmpEntryBuffer;
-  }
-  
   /**
    * Adds a row to this index
    * <p>
@@ -671,7 +470,8 @@ public class Index implements Comparable<Index> {
       Entry startEntry = new Entry(startEntryBytes,
                                    (startInclusive ?
                                     RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
-      startPos = new Position(FIRST_ENTRY_IDX, startEntry);
+      startPos = new Position(RowId.FIRST_ROW_ID.getPageNumber(),
+                              FIRST_ENTRY_IDX, startEntry);
     }
     Position endPos = LAST_POSITION;
     if(endRow != null) {
@@ -683,90 +483,18 @@ public class Index implements Comparable<Index> {
       Entry endEntry = new Entry(endEntryBytes,
                                  (endInclusive ?
                                   RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
-      endPos = new Position(LAST_ENTRY_IDX, endEntry);
+      endPos = new Position(RowId.LAST_ROW_ID.getPageNumber(), LAST_ENTRY_IDX,
+                            endEntry);
     }
-    return new EntryCursor(startPos, endPos);
-  }
-  
-  /**
-   * Finds the index of given entry in the _entries list.
-   * @return the index if found, (-<insertion_point> - 1) if not found
-   */
-  private int findEntry(Entry entry) {
-    return Collections.binarySearch(_entries, entry);
+    return cursor(startPos, endPos);
   }
 
   /**
    * Returns the valid insertion point for an index indicating a missing
    * entry.
    */
-  private static int missingIndexToInsertionPoint(int idx) {
+  protected static int missingIndexToInsertionPoint(int idx) {
     return -(idx + 1);
-  }
-  
-  /**
-   * Adds an entry to the _entries list, maintaining the order.
-   */
-  private boolean addEntry(Entry newEntry, boolean isNullEntry, Object[] row)
-    throws IOException
-  {
-    int idx = findEntry(newEntry);
-    if(idx < 0) {
-      // this is a new entry
-      idx = missingIndexToInsertionPoint(idx);
-
-      // determine if the addition of this entry would break the uniqueness
-      // constraint.  See isUnique() for some notes about uniqueness as
-      // defined by Access.
-      boolean isDupeEntry =
-        (((idx > 0) &&
-          newEntry.equalsEntryBytes(_entries.get(idx - 1))) ||
-          ((idx < _entries.size()) &&
-           newEntry.equalsEntryBytes(_entries.get(idx))));
-      if(isUnique() && !isNullEntry && isDupeEntry)
-      {
-        throw new IOException(
-            "New row " + Arrays.asList(row) +
-            " violates uniqueness constraint for index " + this);
-      }
-
-      if(!isDupeEntry) {
-        ++_uniqueEntryCount;
-      }
-      
-      _entries.add(idx, newEntry);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Removes an entry from the _entries list, maintaining the order.  Will
-   * search by RowId if entry is not found in case a partial entry was
-   * provided.
-   */
-  private boolean removeEntry(Entry oldEntry)
-  {
-    int idx = findEntry(oldEntry);
-    boolean removed = false;
-    if(idx < 0) {
-      // the caller may have only read some of the row data, if this is the
-      // case, just search for the page/row numbers
-      for(Iterator<Entry> iter = _entries.iterator(); iter.hasNext(); ) {
-        Entry entry = iter.next();
-        if(entry.getRowId().equals(oldEntry.getRowId())) {
-          iter.remove();
-          removed = true;
-          break;
-        }
-      }
-    } else {
-      // found it!
-      _entries.remove(idx);
-      removed = true;
-    }
-    
-    return removed;
   }
 
   /**
@@ -828,7 +556,7 @@ public class Index implements Comparable<Index> {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: (" + _table.getName() + ") " + _name);
     rtn.append("\n\tNumber: " + _indexNumber);
-    rtn.append("\n\tPage number: " + _pageNumber);
+    rtn.append("\n\tPage number: " + _rootPageNumber);
     rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
     rtn.append("\n\tColumns: " + _columns);
     rtn.append("\n\tInitialized: " + _initialized);
@@ -847,6 +575,193 @@ public class Index implements Comparable<Index> {
     }
   }
 
+  /**
+   * Write the given index page out to a buffer
+   */
+  protected void writeDataPage(DataPage dataPage)
+    throws IOException
+  {
+    if(dataPage.getCompressedEntrySize() > _maxPageEntrySize) {
+      if(this instanceof SimpleIndex) {
+        throw new UnsupportedOperationException(
+            "FIXME cannot write large index yet");
+      }
+      throw new IllegalStateException("data page is too large");
+    }
+    
+    ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
+    buffer.put(dataPage.isLeaf() ?
+               INDEX_LEAF_PAGE_TYPE :
+               INDEX_NODE_PAGE_TYPE );  //Page type
+    buffer.put((byte) 0x01);  //Unknown
+    buffer.putShort((short) 0); //Free space
+    buffer.putInt(getTable().getTableDefPageNumber());
+
+    buffer.putInt(0); //Unknown
+    buffer.putInt(dataPage.getPrevPageNumber()); //Prev page
+    buffer.putInt(dataPage.getNextPageNumber()); //Next page
+    buffer.putInt(dataPage.getChildTailPageNumber()); //ChildTail page
+
+    byte[] entryPrefix = dataPage.getEntryPrefix();
+    buffer.putShort((short) entryPrefix.length); // entry prefix byte count
+    buffer.put((byte) 0); //Unknown
+
+    byte[] entryMask = new byte[getFormat().SIZE_INDEX_ENTRY_MASK];
+    // first entry includes the prefix
+    int totalSize = entryPrefix.length;
+    for(Entry entry : dataPage.getEntries()) {
+      totalSize += (entry.size() - entryPrefix.length);
+      int idx = totalSize / 8;
+      entryMask[idx] |= (1 << (totalSize % 8));
+    }
+    buffer.put(entryMask);
+
+    // first entry includes the prefix
+    buffer.put(entryPrefix);
+    
+    for(Entry entry : dataPage.getEntries()) {
+      entry.write(buffer, entryPrefix);
+    }
+
+    // update free space
+    buffer.putShort(2, (short) (getFormat().PAGE_SIZE - buffer.position()));
+
+    getPageChannel().writePage(buffer, dataPage.getPageNumber());
+  }
+
+  /**
+   * Reads an index page, populating the correct collection based on the page
+   * type (node or leaf).
+   */
+  protected void readDataPage(DataPage dataPage)
+    throws IOException
+  {
+    ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
+    getPageChannel().readPage(buffer, dataPage.getPageNumber());
+
+    boolean isLeaf = isLeafPage(buffer);
+    dataPage.setLeaf(isLeaf);
+
+    // note, "header" data is in LITTLE_ENDIAN format, entry data is in
+    // BIG_ENDIAN format
+    int entryPrefixLength = ByteUtil.getUnsignedShort(
+        buffer, getFormat().OFFSET_INDEX_COMPRESSED_BYTE_COUNT);
+    int entryMaskLength = getFormat().SIZE_INDEX_ENTRY_MASK;
+    int entryMaskPos = getFormat().OFFSET_INDEX_ENTRY_MASK;
+    int entryPos = entryMaskPos + entryMaskLength;
+    int lastStart = 0;
+    int totalEntrySize = 0;
+    byte[] entryPrefix = null;
+    List<Entry> entries = new ArrayList<Entry>();
+    TempBufferHolder tmpEntryBufferH =
+      TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
+                                 ByteOrder.BIG_ENDIAN);
+
+    for (int i = 0; i < entryMaskLength; i++) {
+      byte entryMask = buffer.get(entryMaskPos + i);
+      for (int j = 0; j < 8; j++) {
+        if ((entryMask & (1 << j)) != 0) {
+          int length = (i * 8) + j - lastStart;
+          buffer.position(entryPos + lastStart);
+
+          // determine if we can read straight from the index page (if no
+          // entryPrefix).  otherwise, create temp buf with complete entry.
+          ByteBuffer curEntryBuffer = buffer;
+          int curEntryLen = length;
+          if(entryPrefix != null) {
+            curEntryBuffer = getTempEntryBuffer(
+                buffer, length, entryPrefix, tmpEntryBufferH);
+            curEntryLen += entryPrefix.length;
+          }
+          totalEntrySize += curEntryLen;
+          
+          entries.add(newEntry(curEntryBuffer, curEntryLen, isLeaf));
+
+          if(entries.size() == 1) {
+            if(entryPrefixLength > 0) {
+              // read any shared entry prefix
+              entryPrefix = new byte[entryPrefixLength];
+              buffer.position(entryPos + lastStart);
+              buffer.get(entryPrefix);
+            }
+          }
+
+          lastStart += length;
+        }
+      }
+    }
+    
+    // check the entry order, just to be safe
+    for(int i = 0; i < (entries.size() - 1); ++i) {
+      Entry e1 = entries.get(i);
+      Entry e2 = entries.get(i + 1);
+      if(e1.compareTo(e2) > 0) {
+        throw new IOException("Unexpected order in index entries, " +
+                              e1 + " is greater than " + e2);
+      }
+    }
+
+    dataPage.setEntryPrefix(entryPrefix != null ? entryPrefix : EMPTY_PREFIX);
+    dataPage.setEntries(entries);
+    dataPage.setTotalEntrySize(totalEntrySize);
+    
+    int prevPageNumber = buffer.getInt(getFormat().OFFSET_PREV_INDEX_PAGE);
+    int nextPageNumber = buffer.getInt(getFormat().OFFSET_NEXT_INDEX_PAGE);
+    int childTailPageNumber =
+      buffer.getInt(getFormat().OFFSET_CHILD_TAIL_INDEX_PAGE);
+
+    dataPage.setPrevPageNumber(prevPageNumber);
+    dataPage.setNextPageNumber(nextPageNumber);
+    dataPage.setChildTailPageNumber(childTailPageNumber);
+  }
+
+  /**
+   * Returns a new Entry of the correct type for the given data and page type.
+   */
+  private Entry newEntry(ByteBuffer buffer, int entryLength, boolean isLeaf)
+    throws IOException
+  {
+    if(isLeaf) {
+      return new Entry(buffer, entryLength);
+    }
+    return new NodeEntry(buffer, entryLength);
+  }
+
+  /**
+   * Returns an entry buffer containing the relevant data for an entry given
+   * the valuePrefix.
+   */
+  private ByteBuffer getTempEntryBuffer(
+      ByteBuffer indexPage, int entryLen, byte[] valuePrefix,
+      TempBufferHolder tmpEntryBufferH)
+  {
+    ByteBuffer tmpEntryBuffer = tmpEntryBufferH.getBuffer(
+        getPageChannel(), valuePrefix.length + entryLen);
+
+    // combine valuePrefix and rest of entry from indexPage, then prep for
+    // reading
+    tmpEntryBuffer.put(valuePrefix);
+    tmpEntryBuffer.put(indexPage.array(), indexPage.position(), entryLen);
+    tmpEntryBuffer.flip();
+    
+    return tmpEntryBuffer;
+  }
+    
+  /**
+   * Determines if the given index page is a leaf or node page.
+   */
+  private static boolean isLeafPage(ByteBuffer buffer)
+    throws IOException
+  {
+    byte pageType = buffer.get(0);
+    if(pageType == INDEX_LEAF_PAGE_TYPE) {
+      return true;
+    } else if(pageType == INDEX_NODE_PAGE_TYPE) {
+      return false;
+    }
+    throw new IOException("Unexpected page type " + pageType);
+  }
+  
   /**
    * Determines the number of {@code null} values for this index from the
    * given row.
@@ -891,8 +806,54 @@ public class Index implements Comparable<Index> {
     }
     
     return bout.toByteArray();
-  }
+  }  
   
+  /**
+   * Returns the number of index entries in the index.  Only called by unit
+   * tests.
+   * <p>
+   * Forces index initialization.
+   */
+  protected abstract int getEntryCount() throws IOException;
+  
+  /**
+   * Writes the current index state to the database.  Index has already been
+   * initialized.
+   */
+  protected abstract void updateImpl() throws IOException;
+  
+  /**
+   * Reads the actual index entries.
+   */
+  protected abstract void readIndexEntries()
+    throws IOException;
+
+  /**
+   * Gets a new cursor for this index, narrowed to the range defined by the
+   * given startPos and endPos.
+   * <p>
+   * Forces index initialization.
+   * 
+   * @param startPos start position
+   * @param endPos end position
+   */
+  protected abstract EntryCursor cursor(Position startPos, Position endPos);
+  
+  /**
+   * Adds an entry to the _entries list, maintaining the order.
+   */
+  protected abstract boolean addEntry(Entry newEntry, boolean isNullEntry,
+                                      Object[] row)
+    throws IOException;
+
+  /**
+   * Removes an entry from the _entries list, maintaining the order.  Will
+   * search by RowId if entry is not found in case a partial entry was
+   * provided.
+   */
+  protected abstract boolean removeEntry(Entry oldEntry)
+    throws IOException;
+
   /**
    * Flips the first bit in the byte at the given index.
    */
@@ -1075,12 +1036,7 @@ public class Index implements Comparable<Index> {
    * Creates one of the special index entries.
    */
   private static Entry createSpecialEntry(RowId rowId) {
-    try {
-      return new Entry((byte[])null, rowId);
-    } catch(IOException e) {
-      // should never happen
-      throw new IllegalStateException(e);
-    }
+    return new Entry((byte[])null, rowId);
   }
 
   /**
@@ -1113,6 +1069,24 @@ public class Index implements Comparable<Index> {
       _readOnly = true;
       return new ReadOnlyColumnDescriptor(col, flags);
     }
+  }
+
+  /**
+   * Returns the EntryType based on the given entry info.
+   */
+  private static EntryType determineEntryType(byte[] entryBytes, RowId rowId)
+  {
+    if(entryBytes != null) {
+      return ((rowId.getType() == RowId.Type.NORMAL) ?
+              EntryType.NORMAL :
+              ((rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+               EntryType.FIRST_VALID : EntryType.LAST_VALID));
+    } else if(!rowId.isValid()) {
+      // this is a "special" entry (first/last)
+      return ((rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+              EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
+    }
+    throw new IllegalArgumentException("Values was null for valid entry");
   }
 
   
@@ -1404,24 +1378,22 @@ public class Index implements Comparable<Index> {
      * Create a new entry
      * @param entryBytes encoded bytes for this index entry
      * @param rowId rowId in which the row is stored
+     * @param type the type of the entry
      */
-    private Entry(byte[] entryBytes, RowId rowId)
-      throws IOException
-    {
+    private Entry(byte[] entryBytes, RowId rowId, EntryType type) {
       _rowId = rowId;
       _entryBytes = entryBytes;
-      if(_entryBytes != null) {
-        _type = ((_rowId.getType() == RowId.Type.NORMAL) ?
-                 EntryType.NORMAL :
-                 ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
-                  EntryType.FIRST_VALID : EntryType.LAST_VALID));
-      } else if(!_rowId.isValid()) {
-        // this is a "special" entry (first/last)
-        _type = ((_rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
-                 EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
-      } else {
-        throw new IllegalArgumentException("Values was null for valid entry");
-      }
+      _type = type;
+    }
+    
+    /**
+     * Create a new entry
+     * @param entryBytes encoded bytes for this index entry
+     * @param rowId rowId in which the row is stored
+     */
+    private Entry(byte[] entryBytes, RowId rowId)
+    {
+      this(entryBytes, rowId, determineEntryType(entryBytes, rowId));
     }
 
     /**
@@ -1462,11 +1434,19 @@ public class Index implements Comparable<Index> {
     public EntryType getType() {
       return _type;
     }
+
+    public Integer getSubPageNumber() {
+      throw new UnsupportedOperationException();
+    }
+    
+    public boolean isLeafEntry() {
+      return true;
+    }
     
     public boolean isValid() {
       return(_entryBytes != null);
     }
-    
+
     protected final byte[] getEntryBytes() {
       return _entryBytes;
     }
@@ -1482,10 +1462,38 @@ public class Index implements Comparable<Index> {
     /**
      * Write this entry into a buffer
      */
-    protected void write(ByteBuffer buffer) throws IOException {
-      buffer.put(_entryBytes);
-      ByteUtil.put3ByteInt(buffer, getRowId().getPageNumber(),
-                           ByteOrder.BIG_ENDIAN);
+    protected void write(ByteBuffer buffer,
+                         byte[] prefix)
+      throws IOException
+    {
+      if(prefix.length <= _entryBytes.length) {
+        
+        // write entry bytes, not including prefix
+        buffer.put(_entryBytes, prefix.length,
+                   (_entryBytes.length - prefix.length));
+        ByteUtil.put3ByteInt(buffer, getRowId().getPageNumber(),
+                             ByteOrder.BIG_ENDIAN);
+        
+      } else if(prefix.length <= (_entryBytes.length + 3)) {
+        
+        // the prefix includes part of the page number, write to temp buffer
+        // and copy last bytes to output buffer
+        ByteBuffer tmp = ByteBuffer.allocate(3);
+        ByteUtil.put3ByteInt(tmp, getRowId().getPageNumber(),
+                             ByteOrder.BIG_ENDIAN);
+        tmp.flip();
+        tmp.position(prefix.length - _entryBytes.length);
+        buffer.put(tmp);
+        
+      } else {
+        
+        // since the row number would never be the same if the page number is
+        // the same, nothing past the page number should ever be included in
+        // the prefix.
+        // FIXME, this could happen if page has only one row...
+        throw new IllegalStateException("prefix should never be this long");
+      }
+      
       buffer.put((byte)getRowId().getRowNumber());
     }
 
@@ -1547,6 +1555,14 @@ public class Index implements Comparable<Index> {
       // at this point we let the RowId decide the final result
       return _rowId.compareTo(other.getRowId());
     }
+
+    /**
+     * Returns a copy of this entry as a node Entry with the given
+     * subPageNumber.
+     */
+    Entry asNodeEntry(Integer subPageNumber) {
+      return new NodeEntry(_entryBytes, _rowId, _type, subPageNumber);
+    }
     
   }
 
@@ -1556,8 +1572,21 @@ public class Index implements Comparable<Index> {
   private static final class NodeEntry extends Entry {
 
     /** index page number of the page to which this node entry refers */
-    private final int _subPageNumber;
+    private final Integer _subPageNumber;
 
+    /**
+     * Create a new node entry
+     * @param entryBytes encoded bytes for this index entry
+     * @param rowId rowId in which the row is stored
+     * @param type the type of the entry
+     * @param subPageNumber the sub-page to which this node entry refers
+     */
+    private NodeEntry(byte[] entryBytes, RowId rowId, EntryType type,
+                      Integer subPageNumber) {
+      super(entryBytes, rowId, type);
+      _subPageNumber = subPageNumber;
+    }
+    
     /**
      * Read an existing node entry in from a buffer
      */
@@ -1569,11 +1598,17 @@ public class Index implements Comparable<Index> {
 
       _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
     }
-    
-    public int getSubPageNumber() {
+
+    @Override
+    public Integer getSubPageNumber() {
       return _subPageNumber;
     }
 
+    @Override
+    public boolean isLeafEntry() {
+      return false;
+    }
+    
     @Override
     protected int size() {
       // need 4 trailing bytes for the sub-page number
@@ -1581,11 +1616,19 @@ public class Index implements Comparable<Index> {
     }
     
     @Override
-    protected void write(ByteBuffer buffer) throws IOException {
-      super.write(buffer);
+    protected void write(ByteBuffer buffer, byte[] prefix) throws IOException {
+      super.write(buffer, prefix);
       ByteUtil.putInt(buffer, _subPageNumber, ByteOrder.BIG_ENDIAN);
     }
     
+    @Override
+    public boolean equals(Object o) {
+      return((this == o) ||
+             ((o != null) && (getClass() == o.getClass()) &&
+              (compareTo((Entry)o) == 0) &&
+              (getSubPageNumber().equals(((Entry)o).getSubPageNumber()))));
+    }
+
     @Override
     public String toString() {
       return ("Node RowId = " + getRowId() +
@@ -1598,39 +1641,34 @@ public class Index implements Comparable<Index> {
    * Utility class to traverse the entries in the Index.  Remains valid in the
    * face of index entry modifications.
    */
-  public final class EntryCursor
+  public abstract class EntryCursor
   {
-    /** handler for moving the page cursor forward */
-    private final DirHandler _forwardDirHandler = new ForwardDirHandler();
-    /** handler for moving the page cursor backward */
-    private final DirHandler _reverseDirHandler = new ReverseDirHandler();
     /** the first (exclusive) row id for this cursor */
-    private final Position _firstPos;
+    protected final Position _firstPos;
     /** the last (exclusive) row id for this cursor */
-    private final Position _lastPos;
-    /** the first valid index for this cursor */
-    private int _minIndex;
-    /** the last valid index for this cursor */
-    private int _maxIndex;
+    protected final Position _lastPos;
     /** the current entry */
-    private Position _curPos;
+    protected Position _curPos;
     /** the previous entry */
-    private Position _prevPos;
+    protected Position _prevPos;
     /** the last read modification count on the Index.  we track this so that
         the cursor can detect updates to the index while traversing and act
         accordingly */
-    private int _lastModCount;
+    protected int _lastModCount;
 
-    private EntryCursor(Position firstPos, Position lastPos) {
+    protected EntryCursor(Position firstPos, Position lastPos) {
       _firstPos = firstPos;
       _lastPos = lastPos;
       // force bounds to be updated
-      _lastModCount = Index.this._modCount - 1;
-      reset();
+      _lastModCount = getIndexModCount() - 1;
     }
 
     public Index getIndex() {
       return Index.this;
+    }
+
+    protected final int getIndexModCount() {
+      return Index.this._modCount;
     }
     
     /**
@@ -1646,20 +1684,13 @@ public class Index implements Comparable<Index> {
     public Entry getLastEntry() {
       return _lastPos.getEntry();
     }
-    
-    /**
-     * Returns the DirHandler for the given direction
-     */
-    private DirHandler getDirHandler(boolean moveForward) {
-      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
-    }
 
     /**
      * Returns {@code true} if this cursor is up-to-date with respect to its
      * index.
      */
     public boolean isUpToDate() {
-      return(Index.this._modCount == _lastModCount);
+      return(getIndexModCount() == _lastModCount);
     }
         
     public void reset() {
@@ -1675,11 +1706,11 @@ public class Index implements Comparable<Index> {
     }
 
     protected void reset(boolean moveForward) {
-      _curPos = getDirHandler(moveForward).getBeginningPosition();
+      _curPos = getFirstPosition(moveForward);
       _prevPos = _curPos;
       if(!isUpToDate()) {
         updateBounds();
-        _lastModCount = Index.this._modCount;
+        _lastModCount = getIndexModCount();
       }
     }
 
@@ -1725,7 +1756,7 @@ public class Index implements Comparable<Index> {
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    private void restorePosition(Entry curEntry) {
+    protected void restorePosition(Entry curEntry) {
       restorePosition(curEntry, _curPos.getEntry());
     }
     
@@ -1739,7 +1770,7 @@ public class Index implements Comparable<Index> {
       {
         if(!isUpToDate()) {
           updateBounds();
-          _lastModCount = Index.this._modCount;
+          _lastModCount = getIndexModCount();
         }
         _prevPos = updatePosition(prevEntry);
         _curPos = updatePosition(curEntry);
@@ -1751,86 +1782,13 @@ public class Index implements Comparable<Index> {
     /**
      * Checks the index for modifications and updates state accordingly.
      */
-    private void checkForModification() {
+    protected void checkForModification() {
       if(!isUpToDate()) {
         updateBounds();
         _prevPos = updatePosition(_prevPos.getEntry());
         _curPos = updatePosition(_curPos.getEntry());
-        _lastModCount = Index.this._modCount;
+        _lastModCount = getIndexModCount();
       }
-    }
-
-    private void updateBounds() {
-      int idx = findEntry(_firstPos.getEntry());
-      if(idx < 0) {
-        idx = missingIndexToInsertionPoint(idx);
-      }
-      _minIndex = idx;
-
-      idx = findEntry(_lastPos.getEntry());
-      if(idx < 0) {
-        idx = missingIndexToInsertionPoint(idx) - 1;
-      }
-      _maxIndex = idx;
-    }
-    
-    /**
-     * Gets an up-to-date position for the given entry.
-     */
-    private Position updatePosition(Entry entry) {
-      if(entry.isValid()) {
-        
-        // find the new position for this entry
-        int curIdx = findEntry(entry);
-        boolean between = false;
-        if(curIdx < 0) {
-          // given entry was not found exactly.  our current position is now
-          // really between two indexes, but we cannot support that as an
-          // integer value so we set a flag instead
-          curIdx = missingIndexToInsertionPoint(curIdx);
-          between = true;
-        }
-
-        if(curIdx < _minIndex) {
-          curIdx = _minIndex;
-          between = true;
-        } else if(curIdx > _maxIndex) {
-          curIdx = _maxIndex + 1;
-          between = true;
-        }
-        
-        return new Position(curIdx, entry, between);
-        
-      } else if(entry.equals(_firstPos.getEntry())) {
-        return _firstPos;
-      } else if(entry.equals(_lastPos.getEntry())) {
-        return _lastPos;
-      } else {
-        throw new IllegalArgumentException("Invalid entry given: " + entry);
-      }
-    }
-    
-    /**
-     * Gets another entry in the given direction, returning the new entry.
-     */
-    private Entry getAnotherEntry(boolean moveForward) {
-      DirHandler handler = getDirHandler(moveForward);
-      if(_curPos.equals(handler.getEndPosition())) {
-        if(!isUpToDate()) {
-          restorePosition(_prevPos.getEntry());
-          // drop through and retry moving to another entry
-        } else {
-          // at end, no more
-          return _curPos.getEntry();
-        }
-      }
-
-      checkForModification();
-
-      _prevPos = _curPos;
-      _curPos = handler.getAnotherPosition(_curPos.getIndex(),
-                                           _curPos.isBetween());
-      return _curPos.getEntry();
     }
 
     @Override
@@ -1838,80 +1796,35 @@ public class Index implements Comparable<Index> {
       return getClass().getSimpleName() + " CurPosition " + _curPos +
         ", PrevPosition " + _prevPos;
     }
+
+    /**
+     * Gets the first position for movement in the given direction.
+     */
+    protected abstract Position getFirstPosition(boolean moveForward);
     
     /**
-     * Handles moving the cursor in a given direction.  Separates cursor
-     * logic from value storage.
+     * Updates any boundary maintained boundary info.
      */
-    private abstract class DirHandler {
-      public abstract Position getAnotherPosition(int curIdx, boolean between);
-      public abstract Position getBeginningPosition();
-      public abstract Position getEndPosition();
-      protected final Position newPosition(int curIdx) {
-        return new Position(curIdx, _entries.get(curIdx));
-      }
-      protected final Position newForwardPosition(int curIdx) {
-        return((curIdx <= _maxIndex) ?
-               newPosition(curIdx) : _lastPos);
-      }
-      protected final Position newReversePosition(int curIdx) {
-        return ((curIdx >= _minIndex) ?
-                newPosition(curIdx) : _firstPos);
-      }
-    }
-        
+    protected abstract void updateBounds();
+    
     /**
-     * Handles moving the cursor forward.
+     * Gets an up-to-date position for the given entry.
      */
-    private final class ForwardDirHandler extends DirHandler {
-      @Override
-      public Position getAnotherPosition(int curIdx, boolean between) {
-        // note, curIdx does not need to be advanced if it was pointing at a
-        // between position
-        if(!between) {
-          curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                    _minIndex : (curIdx + 1));
-        }
-        return newForwardPosition(curIdx);
-      }
-      @Override
-      public Position getBeginningPosition() {
-        return _firstPos;
-      }
-      @Override
-      public Position getEndPosition() {
-        return _lastPos;
-      }
-    }
-        
+    protected abstract Position updatePosition(Entry entry);
+    
     /**
-     * Handles moving the cursor backward.
+     * Gets another entry in the given direction, returning the new entry.
      */
-    private final class ReverseDirHandler extends DirHandler {
-      @Override
-      public Position getAnotherPosition(int curIdx, boolean between) {
-        // note, we ignore the between flag here because the index will be
-        // pointing at the correct next index in either the between or
-        // non-between case
-        curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                  _maxIndex : (curIdx - 1));
-        return newReversePosition(curIdx);
-      }
-      @Override
-      public Position getBeginningPosition() {
-        return _lastPos;
-      }
-      @Override
-      public Position getEndPosition() {
-        return _firstPos;
-      }
-    }
+    protected abstract Entry getAnotherEntry(boolean moveForward);
+
   }
 
   /**
    * Simple value object for maintaining some cursor state.
    */
-  private static class Position {
+  protected static final class Position {
+    /** the last known page of the given entry */
+    private final int _pageNumber;
     /** the last known index of the given entry */
     private final int _idx;
     /** the entry at the given index */
@@ -1920,16 +1833,21 @@ public class Index implements Comparable<Index> {
         {@code false} otherwise */
     private final boolean _between;
 
-    private Position(int idx, Entry entry) {
-      this(idx, entry, false);
+    protected Position(int pageNumber, int idx, Entry entry) {
+      this(pageNumber, idx, entry, false);
     }
     
-    private Position(int idx, Entry entry, boolean between) {
+    protected Position(int pageNumber, int idx, Entry entry, boolean between) {
+      _pageNumber = pageNumber;
       _idx = idx;
       _entry = entry;
       _between = between;
     }
 
+    public int getPageNumber() {
+      return _pageNumber;
+    }
+    
     public int getIndex() {
       return _idx;
     }
@@ -1951,6 +1869,7 @@ public class Index implements Comparable<Index> {
     public boolean equals(Object o) {
       return((this == o) ||
              ((o != null) && (getClass() == o.getClass()) &&
+              (_pageNumber == ((Position)o)._pageNumber) &&
               (_idx == ((Position)o)._idx) &&
               _entry.equals(((Position)o)._entry) &&
               (_between == ((Position)o)._between)));
@@ -1958,11 +1877,48 @@ public class Index implements Comparable<Index> {
 
     @Override
     public String toString() {
-      return "Idx = " + _idx + ", Entry = " + _entry + ", Between = " +
-        _between;
+      return "Page = " + _pageNumber + "Idx = " + _idx + ", Entry = " + _entry
+        + ", Between = " + _between;
     }
   }
 
+  /**
+   * Object used to maintain state about an Index page.
+   */
+  protected static abstract class DataPage {
+
+    public abstract int getPageNumber();
+    
+    public abstract boolean isLeaf();
+    public abstract void setLeaf(boolean isLeaf);
+
+    public abstract int getPrevPageNumber();
+    public abstract void setPrevPageNumber(int pageNumber);
+    public abstract int getNextPageNumber();
+    public abstract void setNextPageNumber(int pageNumber);
+    public abstract int getChildTailPageNumber();
+    public abstract void setChildTailPageNumber(int pageNumber);
+    
+    public abstract int getTotalEntrySize();
+    public abstract void setTotalEntrySize(int totalSize);
+    public abstract byte[] getEntryPrefix();
+    public abstract void setEntryPrefix(byte[] entryPrefix);
+
+    public abstract List<Entry> getEntries();
+    public abstract void setEntries(List<Entry> entries);
+    
+    public int getCompressedEntrySize() {
+      // when written to the index page, the entryPrefix bytes will only be
+      // written for the first entry, so we subtract the entry prefix size
+      // from all the other entries to determine the compressed size
+      return getTotalEntrySize() -
+        (getEntryPrefix().length * (getEntries().size() - 1));
+    }
+  }
+  
+  /**
+   * Value struct used during Text index entry encoding.
+   */
   private static final class ExtraCodes {
     public final int _charOffset;
     public final byte[] _extraCodes;
@@ -1972,5 +1928,5 @@ public class Index implements Comparable<Index> {
       _extraCodes = extraCodes;
     }
   }
-  
+
 }

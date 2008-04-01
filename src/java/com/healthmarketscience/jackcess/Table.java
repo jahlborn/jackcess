@@ -958,7 +958,8 @@ public class Table
         (getFormat().OFFSET_INDEX_DEF_BLOCK +
          (i * getFormat().SIZE_INDEX_DEFINITION) + 4);
       int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
-      _indexes.add(new Index(this, uniqueEntryCount, uniqueEntryCountOffset));
+      _indexes.add(new SimpleIndex(this, uniqueEntryCount,
+                                   uniqueEntryCountOffset));
     }
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
