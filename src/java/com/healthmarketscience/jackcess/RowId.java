@@ -33,7 +33,7 @@ import org.apache.commons.lang.builder.CompareToBuilder;
 /**
  * Uniquely identifies a row of data within the access database.
  *
- * @author james
+ * @author James Ahlborn
  */
 public class RowId implements Comparable<RowId>
 {

@@ -36,7 +36,7 @@ import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 
 /**
- * @author james
+ * @author James Ahlborn
  */
 public class RelationshipTest extends TestCase {
 

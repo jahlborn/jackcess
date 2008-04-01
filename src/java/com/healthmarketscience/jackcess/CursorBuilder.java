@@ -40,7 +40,7 @@ import org.apache.commons.lang.ObjectUtils;
  * created at the beginning of the table, and any start/end rows are
  * inclusive.
  *
- * @author james
+ * @author James Ahlborn
  */
 public class CursorBuilder {
   /** the table which the cursor will traverse */

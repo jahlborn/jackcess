@@ -54,7 +54,7 @@ import org.apache.commons.logging.LogFactory;
  * <p>
  * Is not thread-safe.
  *
- * @author james
+ * @author James Ahlborn
  */
 public abstract class Cursor implements Iterable<Map<String, Object>>
 {  
