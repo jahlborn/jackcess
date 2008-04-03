@@ -93,15 +93,18 @@ public class SimpleIndex extends Index {
 
     // save the first leaf page
     _dataPage = indexPage;
+    nextPageNumber = indexPage.getNextPageNumber();
+    _dataPage.setNextPageNumber(INVALID_INDEX_PAGE_NUMBER);
+    indexPage = null;
     
     // read all leaf pages.
-    while(indexPage.getNextPageNumber() != INVALID_INDEX_PAGE_NUMBER) {
+    while(nextPageNumber != INVALID_INDEX_PAGE_NUMBER) {
         
       // FIXME we can't modify this index at this point in time
       setReadOnly();
         
       // found another one
-      indexPage = new SimpleDataPage(indexPage.getNextPageNumber());
+      indexPage = new SimpleDataPage(nextPageNumber);
       readDataPage(indexPage);
 
       // since we read all the entries in sort order, we can insert them
@@ -110,6 +113,7 @@ public class SimpleIndex extends Index {
       int totalSize = (_dataPage.getTotalEntrySize() +
                        indexPage.getTotalEntrySize());
       _dataPage.setTotalEntrySize(totalSize);
+      nextPageNumber = indexPage.getNextPageNumber();
     }
 
     // check the entry order, just to be safe
