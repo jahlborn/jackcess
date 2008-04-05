@@ -60,6 +60,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 {  
   private static final Log LOG = LogFactory.getLog(Cursor.class);  
 
+  /** boolean value indicating forward movement */
+  public static final boolean MOVE_FORWARD = true;
+  /** boolean value indicating reverse movement */
+  public static final boolean MOVE_REVERSE = false;
+  
   /** first position for the TableScanCursor */
   private static final ScanPosition FIRST_SCAN_POSITION =
     new ScanPosition(RowId.FIRST_ROW_ID);
@@ -333,7 +338,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * row).
    */
   public void beforeFirst() {
-    reset(true);
+    reset(MOVE_FORWARD);
   }
   
   /**
@@ -341,7 +346,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * row).
    */
   public void afterLast() {
-    reset(false);
+    reset(MOVE_REVERSE);
   }
 
   /**
@@ -352,7 +357,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     if(getFirstPosition().equals(_curPos)) {
-      return !recheckPosition(false);
+      return !recheckPosition(MOVE_REVERSE);
     }
     return false;
   }
@@ -365,7 +370,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     if(getLastPosition().equals(_curPos)) {
-      return !recheckPosition(true);
+      return !recheckPosition(MOVE_FORWARD);
     }
     return false;
   }
@@ -418,7 +423,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     return new Iterable<Map<String, Object>>() {
       public Iterator<Map<String, Object>> iterator() {
-        return new RowIterator(columnNames, false);
+        return new RowIterator(columnNames, MOVE_REVERSE);
       }
     };
   }
@@ -462,7 +467,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
   {
-    return new RowIterator(columnNames, true);
+    return new RowIterator(columnNames, MOVE_FORWARD);
   }
 
   /**
@@ -492,7 +497,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Map<String, Object> getNextRow(Collection<String> columnNames) 
     throws IOException
   {
-    return getAnotherRow(columnNames, true);
+    return getAnotherRow(columnNames, MOVE_FORWARD);
   }
 
   /**
@@ -513,7 +518,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public Map<String, Object> getPreviousRow(Collection<String> columnNames) 
     throws IOException
   {
-    return getAnotherRow(columnNames, false);
+    return getAnotherRow(columnNames, MOVE_REVERSE);
   }
 
 
@@ -543,7 +548,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean moveToNextRow()
     throws IOException
   {
-    return moveToAnotherRow(true);
+    return moveToAnotherRow(MOVE_FORWARD);
   }
 
   /**
@@ -554,7 +559,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean moveToPreviousRow()
     throws IOException
   {
-    return moveToAnotherRow(false);
+    return moveToAnotherRow(MOVE_REVERSE);
   }
 
   /**
@@ -783,7 +788,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public int moveNextRows(int numRows)
     throws IOException
   {
-    return moveSomeRows(numRows, true);
+    return moveSomeRows(numRows, MOVE_FORWARD);
   }
 
   /**
@@ -793,7 +798,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public int movePreviousRows(int numRows)
     throws IOException
   {
-    return moveSomeRows(numRows, false);
+    return moveSomeRows(numRows, MOVE_REVERSE);
   }
 
   /**
@@ -1244,7 +1249,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * cursor logic from value storage.
      */
     private abstract class IndexDirHandler extends DirHandler {
-      public abstract Index.Entry getAnotherEntry();
+      public abstract Index.Entry getAnotherEntry()
+        throws IOException;
     }
     
     /**
@@ -1260,7 +1266,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         return getLastPosition();
       }
       @Override
-      public Index.Entry getAnotherEntry() {
+      public Index.Entry getAnotherEntry() throws IOException {
         return _entryCursor.getNextEntry();
       }
     }
@@ -1278,7 +1284,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         return getFirstPosition();
       }
       @Override
-      public Index.Entry getAnotherEntry() {
+      public Index.Entry getAnotherEntry() throws IOException {
         return _entryCursor.getPreviousEntry();
       }
     }    
