@@ -50,18 +50,6 @@ public class SimpleIndex extends Index {
     super(table, uniqueEntryCount, uniqueEntryCountOffset);
   }
 
-  private List<Entry> getEntries() {
-    return _dataPage.getEntries();
-  }
-  
-  @Override
-  protected int getEntryCount()
-    throws IOException
-  {
-    initialize();
-    return getEntries().size();
-  }
-
   @Override
   protected void updateImpl() throws IOException {
     writeDataPage(_dataPage);
@@ -128,73 +116,6 @@ public class SimpleIndex extends Index {
     }
   }
 
-  /**
-   * Finds the index of given entry in the entries list.
-   * @return the index if found, (-<insertion_point> - 1) if not found
-   */
-  private int findEntry(Entry entry) {
-    return Collections.binarySearch(getEntries(), entry);
-  }
-
-  @Override
-  protected boolean addEntry(Entry newEntry, boolean isNullEntry, Object[] row)
-    throws IOException
-  {
-    int idx = findEntry(newEntry);
-    if(idx < 0) {
-      // this is a new entry
-      idx = missingIndexToInsertionPoint(idx);
-
-      // determine if the addition of this entry would break the uniqueness
-      // constraint.  See isUnique() for some notes about uniqueness as
-      // defined by Access.
-      boolean isDupeEntry =
-        (((idx > 0) &&
-          newEntry.equalsEntryBytes(getEntries().get(idx - 1))) ||
-          ((idx < getEntries().size()) &&
-           newEntry.equalsEntryBytes(getEntries().get(idx))));
-      if(isUnique() && !isNullEntry && isDupeEntry)
-      {
-        throw new IOException(
-            "New row " + Arrays.asList(row) +
-            " violates uniqueness constraint for index " + this);
-      }
-
-      if(!isDupeEntry) {
-        addedUniqueEntry();
-      }
-      
-      getEntries().add(idx, newEntry);
-      return true;
-    }
-    return false;
-  }
-
-  @Override
-  protected boolean removeEntry(Entry oldEntry)
-  {
-    int idx = findEntry(oldEntry);
-    boolean removed = false;
-    if(idx < 0) {
-      // the caller may have only read some of the row data, if this is the
-      // case, just search for the page/row numbers
-      for(Iterator<Entry> iter = getEntries().iterator(); iter.hasNext(); ) {
-        Entry entry = iter.next();
-        if(entry.getRowId().equals(oldEntry.getRowId())) {
-          iter.remove();
-          removed = true;
-          break;
-        }
-      }
-    } else {
-      // found it!
-      getEntries().remove(idx);
-      removed = true;
-    }
-    
-    return removed;
-  }
-    
   @Override
   protected DataPage findDataPage(Entry entry)
     throws IOException
@@ -286,6 +207,16 @@ public class SimpleIndex extends Index {
       
       _entries = entries;
     }
+
+    @Override
+    public void addEntry(int idx, Entry entry) {
+      _entries.add(idx, entry);
+    }
+
+    public void removeEntry(int idx) {
+      _entries.remove(idx);
+    }
+    
   }
   
 }
