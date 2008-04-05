@@ -128,12 +128,6 @@ public class SimpleIndex extends Index {
     }
   }
 
-  @Override
-  protected EntryCursor cursor(Position startPos, Position endPos)
-  {
-    return new SimpleEntryCursor(startPos, endPos);
-  }
-  
   /**
    * Finds the index of given entry in the entries list.
    * @return the index if found, (-<insertion_point> - 1) if not found
@@ -201,187 +195,20 @@ public class SimpleIndex extends Index {
     return removed;
   }
     
-
-  /**
-   * Utility class to traverse the entries in the Index.  Remains valid in the
-   * face of index entry modifications.
-   */
-  protected final class SimpleEntryCursor extends EntryCursor
+  @Override
+  protected DataPage findDataPage(Entry entry)
+    throws IOException
   {
-    /** handler for moving the page cursor forward */
-    private final DirHandler _forwardDirHandler = new ForwardDirHandler();
-    /** handler for moving the page cursor backward */
-    private final DirHandler _reverseDirHandler = new ReverseDirHandler();
-    /** the first valid index for this cursor */
-    private int _minIndex;
-    /** the last valid index for this cursor */
-    private int _maxIndex;
-
-    private SimpleEntryCursor(Position firstPos, Position lastPos) {
-      super(firstPos, lastPos);
-      reset();
-    }
-
-    /**
-     * Returns the DirHandler for the given direction
-     */
-    private DirHandler getDirHandler(boolean moveForward) {
-      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
-    }
-
-    @Override
-    protected Position getFirstPosition(boolean moveForward) {
-      return getDirHandler(moveForward).getBeginningPosition();
-    }
-
-    @Override
-    protected void updateBounds() {
-      int idx = findEntry(_firstPos.getEntry());
-      if(idx < 0) {
-        idx = missingIndexToInsertionPoint(idx);
-      }
-      _minIndex = idx;
-
-      idx = findEntry(_lastPos.getEntry());
-      if(idx < 0) {
-        idx = missingIndexToInsertionPoint(idx) - 1;
-      }
-      _maxIndex = idx;
-    }
-    
-    @Override
-    protected Position updatePosition(Entry entry) {
-      if(entry.isValid()) {
-        
-        // find the new position for this entry
-        int curIdx = findEntry(entry);
-        boolean between = false;
-        if(curIdx < 0) {
-          // given entry was not found exactly.  our current position is now
-          // really between two indexes, but we cannot support that as an
-          // integer value so we set a flag instead
-          curIdx = missingIndexToInsertionPoint(curIdx);
-          between = true;
-        }
-
-        if(curIdx < _minIndex) {
-          curIdx = _minIndex;
-          between = true;
-        } else if(curIdx > _maxIndex) {
-          curIdx = _maxIndex + 1;
-          between = true;
-        }
-        
-        return new Position(getRootPageNumber(), curIdx, entry, between);
-        
-      } else if(entry.equals(_firstPos.getEntry())) {
-        return _firstPos;
-      } else if(entry.equals(_lastPos.getEntry())) {
-        return _lastPos;
-      } else {
-        throw new IllegalArgumentException("Invalid entry given: " + entry);
-      }
-    }
-    
-    /**
-     * Gets another entry in the given direction, returning the new entry.
-     */
-    @Override
-    protected Entry getAnotherEntry(boolean moveForward) {
-      DirHandler handler = getDirHandler(moveForward);
-      if(_curPos.equals(handler.getEndPosition())) {
-        if(!isUpToDate()) {
-          restorePosition(_prevPos.getEntry());
-          // drop through and retry moving to another entry
-        } else {
-          // at end, no more
-          return _curPos.getEntry();
-        }
-      }
-
-      checkForModification();
-
-      _prevPos = _curPos;
-      _curPos = handler.getAnotherPosition(_curPos.getIndex(),
-                                           _curPos.isBetween());
-      return _curPos.getEntry();
-    }
-
-    @Override
-    public String toString() {
-      return getClass().getSimpleName() + " CurPosition " + _curPos +
-        ", PrevPosition " + _prevPos;
-    }
-    
-    /**
-     * Handles moving the cursor in a given direction.  Separates cursor
-     * logic from value storage.
-     */
-    private abstract class DirHandler {
-      public abstract Position getAnotherPosition(int curIdx, boolean between);
-      public abstract Position getBeginningPosition();
-      public abstract Position getEndPosition();
-      protected final Position newPosition(int curIdx) {
-        return new Position(getRootPageNumber(), curIdx,
-                            getEntries().get(curIdx));
-      }
-      protected final Position newForwardPosition(int curIdx) {
-        return((curIdx <= _maxIndex) ?
-               newPosition(curIdx) : _lastPos);
-      }
-      protected final Position newReversePosition(int curIdx) {
-        return ((curIdx >= _minIndex) ?
-                newPosition(curIdx) : _firstPos);
-      }
-    }
-        
-    /**
-     * Handles moving the cursor forward.
-     */
-    private final class ForwardDirHandler extends DirHandler {
-      @Override
-      public Position getAnotherPosition(int curIdx, boolean between) {
-        // note, curIdx does not need to be advanced if it was pointing at a
-        // between position
-        if(!between) {
-          curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                    _minIndex : (curIdx + 1));
-        }
-        return newForwardPosition(curIdx);
-      }
-      @Override
-      public Position getBeginningPosition() {
-        return _firstPos;
-      }
-      @Override
-      public Position getEndPosition() {
-        return _lastPos;
-      }
-    }
-        
-    /**
-     * Handles moving the cursor backward.
-     */
-    private final class ReverseDirHandler extends DirHandler {
-      @Override
-      public Position getAnotherPosition(int curIdx, boolean between) {
-        // note, we ignore the between flag here because the index will be
-        // pointing at the correct next index in either the between or
-        // non-between case
-        curIdx = ((curIdx == getBeginningPosition().getIndex()) ?
-                  _maxIndex : (curIdx - 1));
-        return newReversePosition(curIdx);
-      }
-      @Override
-      public Position getBeginningPosition() {
-        return _lastPos;
-      }
-      @Override
-      public Position getEndPosition() {
-        return _firstPos;
-      }
-    }
+    return _dataPage;
   }
+
+  @Override
+  protected DataPage getDataPage(int pageNumber)
+    throws IOException
+  {
+    throw new UnsupportedOperationException();
+  }
+  
 
   /**
    * Simple implementation of a DataPage

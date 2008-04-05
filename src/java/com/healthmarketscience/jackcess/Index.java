@@ -62,29 +62,13 @@ public abstract class Index implements Comparable<Index> {
   public static final Entry LAST_ENTRY =
     createSpecialEntry(RowId.LAST_ROW_ID);
   
-  /** index of the first (exclusive) index entry */
-  protected static final int FIRST_ENTRY_IDX = -1;
-  /** index of the last (exclusive) index entry */
-  protected static final int LAST_ENTRY_IDX = -2;
-  
-  /** the first position for a cursor */
-  private static final Position FIRST_POSITION =
-    new Position(RowId.FIRST_ROW_ID.getPageNumber(), FIRST_ENTRY_IDX,
-                 FIRST_ENTRY);
-  
-  /** the last position for a cursor */
-  private static final Position LAST_POSITION =
-    new Position(RowId.LAST_ROW_ID.getPageNumber(), LAST_ENTRY_IDX,
-                 LAST_ENTRY);
-          
+  protected static final int INVALID_INDEX_PAGE_NUMBER = 0;          
   
   /** Max number of columns in an index */
   private static final int MAX_COLUMNS = 10;
   
   protected static final byte[] EMPTY_PREFIX = new byte[0];
 
-  protected static final int INVALID_INDEX_PAGE_NUMBER = 0;
-  
   private static final short COLUMN_UNUSED = -1;
 
   private static final byte INDEX_NODE_PAGE_TYPE = (byte)0x03;
@@ -463,30 +447,106 @@ public abstract class Index implements Comparable<Index> {
     throws IOException
   {
     initialize();
-    Position startPos = FIRST_POSITION;
+    Entry startEntry = FIRST_ENTRY;
     byte[] startEntryBytes = null;
     if(startRow != null) {
       startEntryBytes = createEntryBytes(startRow);
-      Entry startEntry = new Entry(startEntryBytes,
-                                   (startInclusive ?
-                                    RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
-      startPos = new Position(RowId.FIRST_ROW_ID.getPageNumber(),
-                              FIRST_ENTRY_IDX, startEntry);
+      startEntry = new Entry(startEntryBytes,
+                             (startInclusive ?
+                              RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
     }
-    Position endPos = LAST_POSITION;
+    Entry endEntry = LAST_ENTRY;
     if(endRow != null) {
       // reuse startEntryBytes if startRow and endRow are same array.  this is
       // common for "lookup" code
       byte[] endEntryBytes = ((startRow == endRow) ?
                               startEntryBytes :
                               createEntryBytes(endRow));
-      Entry endEntry = new Entry(endEntryBytes,
-                                 (endInclusive ?
-                                  RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
-      endPos = new Position(RowId.LAST_ROW_ID.getPageNumber(), LAST_ENTRY_IDX,
-                            endEntry);
+      endEntry = new Entry(endEntryBytes,
+                           (endInclusive ?
+                            RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
     }
-    return cursor(startPos, endPos);
+    return new EntryCursor(findEntryPosition(startEntry),
+                           findEntryPosition(endEntry));
+  }
+
+  private Position findEntryPosition(Entry entry)
+    throws IOException
+  {
+    DataPage dataPage = findDataPage(entry);
+    int idx = dataPage.findEntry(entry);
+    boolean between = false;
+    if(idx < 0) {
+      // given entry was not found exactly.  our current position is now
+      // really between two indexes, but we cannot support that as an integer
+      // value, so we set a flag instead
+      idx = missingIndexToInsertionPoint(idx);
+      between = true;
+    }
+    return new Position(dataPage, idx, entry, between);
+  }
+
+  private Position getNextPosition(Position curPos, Position lastPos)
+    throws IOException
+  {
+    // get the next index (between-ness is handled internally)
+    int nextIdx = curPos.getNextIndex();
+    Position nextPos = null;
+    if(nextIdx < curPos.getDataPage().getEntries().size()) {
+      nextPos = new Position(curPos.getDataPage(), nextIdx);
+    } else {
+      int nextPageNumber = curPos.getDataPage().getNextPageNumber();
+      DataPage nextDataPage = null;
+      while(nextPageNumber != INVALID_INDEX_PAGE_NUMBER) {
+        DataPage dp = getDataPage(nextPageNumber);
+        if(!dp.getEntries().isEmpty()) {
+          nextDataPage = dp;
+          break;
+        }
+        nextPageNumber = dp.getNextPageNumber();
+      }
+      if(nextDataPage != null) {
+        nextPos = new Position(nextDataPage, nextIdx);
+      } else {
+        nextPos = lastPos;
+      }
+    }
+    if(nextPos.compareTo(lastPos) >= 0) {
+      nextPos = lastPos;
+    }
+    return nextPos;
+  }
+  
+  private Position getPreviousPosition(Position curPos, Position firstPos)
+    throws IOException
+  {
+    // get the previous index (between-ness is handled internally)
+    int prevIdx = curPos.getPrevIndex();
+    Position prevPos = null;
+    if(prevIdx >= 0) {
+      prevPos = new Position(curPos.getDataPage(), prevIdx);
+    } else {
+      int prevPageNumber = curPos.getDataPage().getPrevPageNumber();
+      DataPage prevDataPage = null;
+      while(prevPageNumber != INVALID_INDEX_PAGE_NUMBER) {
+        DataPage dp = getDataPage(prevPageNumber);
+        if(!dp.getEntries().isEmpty()) {
+          prevDataPage = dp;
+          break;
+        }
+        prevPageNumber = dp.getPrevPageNumber();
+      }
+      if(prevDataPage != null) {
+        prevPos = new Position(prevDataPage,
+                               (prevDataPage.getEntries().size() - 1));
+      } else {
+        prevPos = firstPos;
+      }
+    }
+    if(prevPos.compareTo(firstPos) <= 0) {
+      prevPos = firstPos;
+    }
+    return prevPos;
   }
 
   /**
@@ -827,17 +887,6 @@ public abstract class Index implements Comparable<Index> {
    */
   protected abstract void readIndexEntries()
     throws IOException;
-
-  /**
-   * Gets a new cursor for this index, narrowed to the range defined by the
-   * given startPos and endPos.
-   * <p>
-   * Forces index initialization.
-   * 
-   * @param startPos start position
-   * @param endPos end position
-   */
-  protected abstract EntryCursor cursor(Position startPos, Position endPos);
   
   /**
    * Adds an entry to the _entries list, maintaining the order.
@@ -854,6 +903,18 @@ public abstract class Index implements Comparable<Index> {
   protected abstract boolean removeEntry(Entry oldEntry)
     throws IOException;
 
+  /**
+   * Finds the data page for the given entry.
+   */
+  protected abstract DataPage findDataPage(Entry entry)
+    throws IOException;
+  
+  /**
+   * Gets the data page for the pageNumber.
+   */
+  protected abstract DataPage getDataPage(int pageNumber)
+    throws IOException;
+  
   /**
    * Flips the first bit in the byte at the given index.
    */
@@ -1641,33 +1702,45 @@ public abstract class Index implements Comparable<Index> {
    * Utility class to traverse the entries in the Index.  Remains valid in the
    * face of index entry modifications.
    */
-  public abstract class EntryCursor
+  public final class EntryCursor
   {
+    /** handler for moving the page cursor forward */
+    private final DirHandler _forwardDirHandler = new ForwardDirHandler();
+    /** handler for moving the page cursor backward */
+    private final DirHandler _reverseDirHandler = new ReverseDirHandler();
     /** the first (exclusive) row id for this cursor */
-    protected final Position _firstPos;
+    private Position _firstPos;
     /** the last (exclusive) row id for this cursor */
-    protected final Position _lastPos;
+    private Position _lastPos;
     /** the current entry */
-    protected Position _curPos;
+    private Position _curPos;
     /** the previous entry */
-    protected Position _prevPos;
+    private Position _prevPos;
     /** the last read modification count on the Index.  we track this so that
         the cursor can detect updates to the index while traversing and act
         accordingly */
-    protected int _lastModCount;
+    private int _lastModCount;
 
-    protected EntryCursor(Position firstPos, Position lastPos) {
+    private EntryCursor(Position firstPos, Position lastPos)
+    {
       _firstPos = firstPos;
       _lastPos = lastPos;
-      // force bounds to be updated
-      _lastModCount = getIndexModCount() - 1;
+      _lastModCount = getIndexModCount();
+      reset();
+    }
+
+    /**
+     * Returns the DirHandler for the given direction
+     */
+    private DirHandler getDirHandler(boolean moveForward) {
+      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
     }
 
     public Index getIndex() {
       return Index.this;
     }
 
-    protected final int getIndexModCount() {
+    private final int getIndexModCount() {
       return Index.this._modCount;
     }
     
@@ -1698,20 +1771,17 @@ public abstract class Index implements Comparable<Index> {
     }
 
     public void beforeFirst() {
-      reset(true);
+      reset(Cursor.MOVE_FORWARD);
     }
 
     public void afterLast() {
-      reset(false);
+      reset(Cursor.MOVE_REVERSE);
     }
 
-    protected void reset(boolean moveForward) {
-      _curPos = getFirstPosition(moveForward);
+    protected void reset(boolean moveForward)
+    {
+      _curPos = getDirHandler(moveForward).getBeginningPosition();
       _prevPos = _curPos;
-      if(!isUpToDate()) {
-        updateBounds();
-        _lastModCount = getIndexModCount();
-      }
     }
 
     /**
@@ -1740,23 +1810,25 @@ public abstract class Index implements Comparable<Index> {
      * @return valid entry if there was a next entry,
      *         {@code #getLastEntry} otherwise
      */
-    public Entry getNextEntry() {
-      return getAnotherEntry(true);
+    public Entry getNextEntry() throws IOException {
+      return getAnotherEntry(Cursor.MOVE_FORWARD);
     }
 
     /**
      * @return valid entry if there was a next entry,
      *         {@code #getFirstEntry} otherwise
      */
-    public Entry getPreviousEntry() {
-      return getAnotherEntry(false);
+    public Entry getPreviousEntry() throws IOException {
+      return getAnotherEntry(Cursor.MOVE_REVERSE);
     }
 
     /**
      * Restores a current position for the cursor (current position becomes
      * previous position).
      */
-    protected void restorePosition(Entry curEntry) {
+    protected void restorePosition(Entry curEntry)
+      throws IOException
+    {
       restorePosition(curEntry, _curPos.getEntry());
     }
     
@@ -1764,9 +1836,10 @@ public abstract class Index implements Comparable<Index> {
      * Restores a current and previous position for the cursor.
      */
     protected void restorePosition(Entry curEntry, Entry prevEntry)
+      throws IOException
     {
-      if(!curEntry.equals(_curPos.getEntry()) ||
-         !prevEntry.equals(_prevPos.getEntry()))
+      if(!_curPos.equalsEntry(curEntry) ||
+         !_prevPos.equalsEntry(prevEntry))
       {
         if(!isUpToDate()) {
           updateBounds();
@@ -1778,11 +1851,37 @@ public abstract class Index implements Comparable<Index> {
         checkForModification();
       }
     }
+    
+    /**
+     * Gets another entry in the given direction, returning the new entry.
+     */
+    private Entry getAnotherEntry(boolean moveForward)
+      throws IOException
+    {
+      DirHandler handler = getDirHandler(moveForward);
+      if(_curPos.equals(handler.getEndPosition())) {
+        if(!isUpToDate()) {
+          restorePosition(_prevPos.getEntry());
+          // drop through and retry moving to another entry
+        } else {
+          // at end, no more
+          return _curPos.getEntry();
+        }
+      }
+
+      checkForModification();
+
+      _prevPos = _curPos;
+      _curPos = handler.getAnotherPosition(_curPos);
+      return _curPos.getEntry();
+    }
 
     /**
      * Checks the index for modifications and updates state accordingly.
      */
-    protected void checkForModification() {
+    private void checkForModification()
+      throws IOException
+    {
       if(!isUpToDate()) {
         updateBounds();
         _prevPos = updatePosition(_prevPos.getEntry());
@@ -1791,67 +1890,149 @@ public abstract class Index implements Comparable<Index> {
       }
     }
 
+    /**
+     * Updates the given position, taking boundaries into account.
+     */
+    private Position updatePosition(Entry entry)
+      throws IOException
+    {
+      if(!entry.isValid()) {
+        // no use searching if "updating" the first/last pos
+        if(_firstPos.equalsEntry(entry)) {
+          return _firstPos;
+        } else if(_lastPos.equalsEntry(entry)) {
+          return _lastPos;
+        } else {
+          throw new IllegalArgumentException("Invalid entry given " + entry);
+        }
+      }
+      
+      Position pos = findEntryPosition(entry);
+      if(pos.compareTo(_lastPos) >= 0) {
+        return _lastPos;
+      } else if(pos.compareTo(_firstPos) <= 0) {
+        return _firstPos;
+      }
+      return pos;
+    }
+    
+    /**
+     * Updates any the boundary info (_firstPos/_lastPos).
+     */
+    private void updateBounds()
+      throws IOException
+    {
+      _firstPos = findEntryPosition(_firstPos.getEntry());
+      _lastPos = findEntryPosition(_lastPos.getEntry());
+    }
+        
     @Override
     public String toString() {
       return getClass().getSimpleName() + " CurPosition " + _curPos +
         ", PrevPosition " + _prevPos;
     }
-
-    /**
-     * Gets the first position for movement in the given direction.
-     */
-    protected abstract Position getFirstPosition(boolean moveForward);
     
     /**
-     * Updates any boundary maintained boundary info.
+     * Handles moving the cursor in a given direction.  Separates cursor
+     * logic from value storage.
      */
-    protected abstract void updateBounds();
-    
+    private abstract class DirHandler {
+      public abstract Position getAnotherPosition(Position curPos)
+        throws IOException;
+      public abstract Position getBeginningPosition();
+      public abstract Position getEndPosition();
+    }
+        
     /**
-     * Gets an up-to-date position for the given entry.
+     * Handles moving the cursor forward.
      */
-    protected abstract Position updatePosition(Entry entry);
-    
+    private final class ForwardDirHandler extends DirHandler {
+      @Override
+      public Position getAnotherPosition(Position curPos)
+        throws IOException
+      {
+        return getNextPosition(curPos, _lastPos);
+      }
+      @Override
+      public Position getBeginningPosition() {
+        return _firstPos;
+      }
+      @Override
+      public Position getEndPosition() {
+        return _lastPos;
+      }
+    }
+        
     /**
-     * Gets another entry in the given direction, returning the new entry.
+     * Handles moving the cursor backward.
      */
-    protected abstract Entry getAnotherEntry(boolean moveForward);
-
+    private final class ReverseDirHandler extends DirHandler {
+      @Override
+      public Position getAnotherPosition(Position curPos)
+        throws IOException
+      {
+        return getPreviousPosition(curPos, _firstPos);
+      }
+      @Override
+      public Position getBeginningPosition() {
+        return _lastPos;
+      }
+      @Override
+      public Position getEndPosition() {
+        return _firstPos;
+      }
+    }
   }
 
   /**
    * Simple value object for maintaining some cursor state.
    */
-  protected static final class Position {
+  private static final class Position implements Comparable<Position> {
     /** the last known page of the given entry */
-    private final int _pageNumber;
+    private final DataPage _dataPage;
     /** the last known index of the given entry */
     private final int _idx;
     /** the entry at the given index */
     private final Entry _entry;
     /** {@code true} if this entry does not currently exist in the entry list,
-        {@code false} otherwise */
+        {@code false} otherwise (this is equivalent to adding -0.5 to the
+        _idx) */
     private final boolean _between;
 
-    protected Position(int pageNumber, int idx, Entry entry) {
-      this(pageNumber, idx, entry, false);
+    private Position(DataPage dataPage, int idx)
+    {
+      this(dataPage, idx, dataPage.getEntries().get(idx), false);
     }
     
-    protected Position(int pageNumber, int idx, Entry entry, boolean between) {
-      _pageNumber = pageNumber;
+    private Position(DataPage dataPage, int idx, Entry entry, boolean between)
+    {
+      _dataPage = dataPage;
       _idx = idx;
       _entry = entry;
       _between = between;
     }
 
-    public int getPageNumber() {
-      return _pageNumber;
+    public DataPage getDataPage() {
+      return _dataPage;
     }
     
     public int getIndex() {
       return _idx;
     }
 
+    public int getNextIndex() {
+      // note, _idx does not need to be advanced if it was pointing at a
+      // between position
+      return(_between ? _idx : (_idx + 1));
+    }
+
+    public int getPrevIndex() {
+      // note, we ignore the between flag here because the index will be
+      // pointing at the correct next index in either the between or
+      // non-between case
+      return(_idx - 1);
+    }
+    
     public Entry getEntry() {
       return _entry;
     }
@@ -1860,6 +2041,31 @@ public abstract class Index implements Comparable<Index> {
       return _between;
     }
 
+    public boolean equalsEntry(Entry entry) {
+      return _entry.equals(entry);
+    }
+    
+    public int compareTo(Position other)
+    {
+      if(this == other) {
+        return 0;
+      }
+
+      if(_dataPage.equals(other._dataPage)) {
+        // "simple" index comparison (handle between-ness)
+        int idxCmp = ((_idx < other._idx) ? -1 :
+                      ((_idx > other._idx) ? 1 :
+                       ((_between == other._between) ? 0 :
+                        (_between ? -1 : 1))));
+        if(idxCmp != 0) {
+          return idxCmp;
+        }
+      }
+      
+      // compare the entries.
+      return _entry.compareTo(other._entry);
+    }
+    
     @Override
     public int hashCode() {
       return _entry.hashCode();
@@ -1869,16 +2075,13 @@ public abstract class Index implements Comparable<Index> {
     public boolean equals(Object o) {
       return((this == o) ||
              ((o != null) && (getClass() == o.getClass()) &&
-              (_pageNumber == ((Position)o)._pageNumber) &&
-              (_idx == ((Position)o)._idx) &&
-              _entry.equals(((Position)o)._entry) &&
-              (_between == ((Position)o)._between)));
+              (compareTo((Position)o) == 0)));
     }
 
     @Override
     public String toString() {
-      return "Page = " + _pageNumber + "Idx = " + _idx + ", Entry = " + _entry
-        + ", Between = " + _between;
+      return "Page = " + _dataPage + ", Idx = " + _idx +
+        ", Entry = " + _entry + ", Between = " + _between;
     }
   }
 
@@ -1907,12 +2110,33 @@ public abstract class Index implements Comparable<Index> {
     public abstract List<Entry> getEntries();
     public abstract void setEntries(List<Entry> entries);
     
-    public int getCompressedEntrySize() {
+    public final int getCompressedEntrySize() {
       // when written to the index page, the entryPrefix bytes will only be
       // written for the first entry, so we subtract the entry prefix size
       // from all the other entries to determine the compressed size
       return getTotalEntrySize() -
         (getEntryPrefix().length * (getEntries().size() - 1));
+    }
+
+    public final int findEntry(Entry entry) {
+      return Collections.binarySearch(getEntries(), entry);
+    }
+
+    @Override
+    public final int hashCode() {
+      return getPageNumber();
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+      return((this == o) ||
+             ((o != null) && (getClass() == o.getClass()) &&
+              (getPageNumber() == ((DataPage)o).getPageNumber())));
+    }
+
+    @Override
+    public final String toString() {
+      return "DataPage[" + getPageNumber() + "]";
     }
   }
   
