@@ -146,9 +146,6 @@ public abstract class Index implements Comparable<Index> {
       however, that it is never decremented, only incremented (as observed in
       Access). */
   private int _uniqueEntryCount;
-  /** sorted collection of index entries.  this is kept in a list instead of a
-      SortedSet because the SortedSet has lame traversal utilities */
-  private final List<Entry> _entries = new ArrayList<Entry>();
   /** List of columns and flags */
   private final List<ColumnDescriptor> _columns =
     new ArrayList<ColumnDescriptor>();
@@ -179,9 +176,13 @@ public abstract class Index implements Comparable<Index> {
     _table  = table;
     _uniqueEntryCount = uniqueEntryCount;
     _uniqueEntryCountOffset = uniqueEntryCountOffset;
-    _maxPageEntrySize = getFormat().PAGE_SIZE -
-      (getFormat().OFFSET_INDEX_ENTRY_MASK +
-       getFormat().SIZE_INDEX_ENTRY_MASK);
+    // the max data we can fit on a page is the min of the space on the page
+    // vs the number of bytes which can be encoded in the entry mask
+    _maxPageEntrySize = Math.min(
+        (getFormat().PAGE_SIZE -
+         (getFormat().OFFSET_INDEX_ENTRY_MASK +
+          getFormat().SIZE_INDEX_ENTRY_MASK)),
+        (getFormat().SIZE_INDEX_ENTRY_MASK * 8));
   }
 
   public Table getTable() {
@@ -601,7 +602,7 @@ public abstract class Index implements Comparable<Index> {
         nextPageNumber = dp.getNextPageNumber();
       }
       if(nextDataPage != null) {
-        nextPos = new Position(nextDataPage, nextIdx);
+        nextPos = new Position(nextDataPage, 0);
       }
     }
     return nextPos;
@@ -708,7 +709,13 @@ public abstract class Index implements Comparable<Index> {
     rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
     rtn.append("\n\tColumns: " + _columns);
     rtn.append("\n\tInitialized: " + _initialized);
-    rtn.append("\n\tEntries: " + _entries);
+    if(_initialized) {
+      try {
+        rtn.append("\n\tEntryCount: " + getEntryCount());
+      } catch(IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
     rtn.append("\n\n");
     return rtn.toString();
   }
@@ -1192,7 +1199,7 @@ public abstract class Index implements Comparable<Index> {
 
     default:
       // FIXME we can't modify this index at this point in time
-      _readOnly = true;
+      setReadOnly();
       return new ReadOnlyColumnDescriptor(col, flags);
     }
   }
@@ -2153,7 +2160,7 @@ public abstract class Index implements Comparable<Index> {
 
     @Override
     public String toString() {
-      return "Page = " + _dataPage + ", Idx = " + _idx +
+      return "Page = " + _dataPage.getPageNumber() + ", Idx = " + _idx +
         ", Entry = " + _entry + ", Between = " + _between;
     }
   }
@@ -2183,8 +2190,10 @@ public abstract class Index implements Comparable<Index> {
     public abstract List<Entry> getEntries();
     public abstract void setEntries(List<Entry> entries);
 
-    public abstract void addEntry(int idx, Entry entry);
-    public abstract void removeEntry(int idx);
+    public abstract void addEntry(int idx, Entry entry)
+      throws IOException;
+    public abstract void removeEntry(int idx)
+      throws IOException;
     
     public final int getCompressedEntrySize() {
       // when written to the index page, the entryPrefix bytes will only be
@@ -2212,7 +2221,9 @@ public abstract class Index implements Comparable<Index> {
 
     @Override
     public final String toString() {
-      return "DataPage[" + getPageNumber() + "]";
+      return (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
+        "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
+        getChildTailPageNumber() + "), " + getEntries();
     }
   }
   

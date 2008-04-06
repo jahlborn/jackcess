@@ -108,6 +108,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Creates an indexed cursor for the given table.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
    * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
@@ -121,6 +126,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
    * range.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
    * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
@@ -139,6 +149,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
    * range.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
    * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
