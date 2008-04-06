@@ -75,6 +75,8 @@ public class IndexPageCache
 
   public void setRootPageNumber(int pageNumber) throws IOException {
     _rootPage = getDataPage(pageNumber);
+    // root page has no parent
+    _rootPage.setParentPage(INVALID_INDEX_PAGE_NUMBER, false);
   }
   
   public void write()
@@ -104,6 +106,19 @@ public class IndexPageCache
   {
     DataPageMain main = getDataPage(pageNumber);
     return((main != null) ? new CacheDataPage(main) : null);
+  }
+
+  private DataPageMain getChildDataPage(Integer childPageNumber,
+                                        DataPageMain parent,
+                                        boolean isTail)
+    throws IOException
+  {
+    DataPageMain child = getDataPage(childPageNumber);
+    if(child != null) {
+      // set the parent info for this child (if necessary)
+      child.setParentPage(parent._pageNumber, isTail);
+    }
+    return child;
   }
   
   private DataPageMain getDataPage(Integer pageNumber)
@@ -146,8 +161,8 @@ public class IndexPageCache
     return cacheDataPage;
   }  
 
-  private void removeEntry(CacheDataPage cacheDataPage,
-                           int entryIdx)
+  private void removeEntry(CacheDataPage cacheDataPage, int entryIdx)
+    throws IOException
   {
     DataPageMain dpMain = cacheDataPage._main;
     DataPageExtra dpExtra = cacheDataPage._extra;
@@ -165,28 +180,10 @@ public class IndexPageCache
     
     if(dpExtra._entries.isEmpty()) {
       // this page is dead
-      if(dpMain.isRoot()) {
-        // clear out this page
-        dpMain._firstEntry = null;
-        dpMain._lastEntry = null;
-        dpExtra._entryPrefix = EMPTY_PREFIX;
-        if(dpExtra._totalEntrySize != 0) {
-          throw new IllegalStateException("Empty page but size is not 0?");
-        }
-      } else {
-        // FIXME, remove from parent
-        Entry oldParentEntry = oldEntry.asNodeEntry(dpMain._pageNumber);
-        // FIXME, update next/prev/childTail links
-        throw new UnsupportedOperationException();
-      }
+      deleteDataPage(cacheDataPage);
     } else {
       if(updateFirst) {
-        dpMain._firstEntry = dpExtra.getFirstEntry();
-        Entry oldParentEntry = oldEntry.asNodeEntry(dpMain._pageNumber);
-        Entry newParentEntry =
-          dpMain._firstEntry.asNodeEntry(dpMain._pageNumber);
-        // FIXME, need to update parent
-        throw new UnsupportedOperationException();
+        updateFirstEntry(cacheDataPage);
       }
       if(updateLast) {
         dpMain._lastEntry = dpExtra.getLastEntry();
@@ -195,6 +192,120 @@ public class IndexPageCache
     
   }
 
+  private void deleteDataPage(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
+
+    if(dpMain.isRoot()) {
+      // clear out this page (we don't actually delete it)
+      dpMain._firstEntry = null;
+      dpMain._lastEntry = null;
+      dpExtra._entryPrefix = EMPTY_PREFIX;
+      if(dpExtra._totalEntrySize != 0) {
+        throw new IllegalStateException("Empty page but size is not 0? " +
+                                        cacheDataPage);
+      }
+      return;
+    }
+
+    // remove this page from it's parent page
+    removeFromParent(cacheDataPage);
+
+    // remove this page from any next/prev pages
+    removeFromPeers(cacheDataPage);
+
+    // FIXME, deallocate index page?
+  }
+
+  private void removeFromParent(CacheDataPage childDataPage)
+    throws IOException
+  {
+    DataPageMain childMain = childDataPage._main;
+    DataPageExtra childExtra = childDataPage._extra;
+
+    CacheDataPage parentDataPage =
+      new CacheDataPage(childMain.getParentPage());
+
+    setModified(parentDataPage);
+    
+    DataPageMain parentMain = parentDataPage._main;
+    DataPageExtra parentExtra = parentDataPage._extra;
+
+    if(childMain.isTail()) {
+      parentMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
+    } else {
+      Entry oldParentEntry = childMain._firstEntry.asNodeEntry(
+          childMain._pageNumber);
+      int idx = parentExtra.findEntry(oldParentEntry);
+      if(idx < 0) {
+        throw new IllegalStateException(
+            "Could not find child entry in parent; child " + childDataPage +
+            "; parent " + parentDataPage);
+      }
+      removeEntry(parentDataPage, idx);
+    }
+  }
+
+  private void removeFromPeers(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
+
+    Integer prevPageNumber = dpMain._prevPageNumber;
+    Integer nextPageNumber = dpMain._nextPageNumber;
+    
+    DataPageMain prevMain = dpMain.getPrevPage();
+    if(prevMain != null) {
+      setModified(new CacheDataPage(prevMain));
+      prevMain._nextPageNumber = nextPageNumber;
+    }
+
+    DataPageMain nextMain = dpMain.getNextPage();
+    if(nextMain != null) {
+      setModified(new CacheDataPage(nextMain));
+      nextMain._prevPageNumber = prevPageNumber;
+    }
+  }
+
+  private void updateFirstEntry(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
+
+    Entry oldEntry = dpMain._firstEntry;
+    dpMain._firstEntry = dpExtra.getFirstEntry();
+    DataPageMain parentMain = dpMain.getParentPage();
+    if(parentMain != null) {
+      Entry oldParentEntry = oldEntry.asNodeEntry(dpMain._pageNumber);
+      Entry newParentEntry =
+        dpMain._firstEntry.asNodeEntry(dpMain._pageNumber);
+      updateParentEntry(new CacheDataPage(parentMain),
+                        oldParentEntry, newParentEntry);
+    }
+  }
+  
+  private void updateParentEntry(CacheDataPage parentDataPage,
+                                 Entry oldEntry, Entry newEntry)
+    throws IOException
+  {
+    DataPageMain parentMain = parentDataPage._main;
+    DataPageExtra parentExtra = parentDataPage._extra;
+
+    setModified(parentDataPage);
+
+    int idx = parentExtra.findEntry(oldEntry);
+    if(idx < 0) {
+      throw new IllegalStateException(
+          "Could not find child entry in parent; childEntry " + oldEntry +
+          "; parent " + parentDataPage);
+    }
+    replaceEntry(parentDataPage, idx, newEntry);
+  }
+  
   private void addEntry(CacheDataPage cacheDataPage,
                         int entryIdx,
                         Entry newEntry)
@@ -242,17 +353,7 @@ public class IndexPageCache
     }
     
     if(updateFirst) {
-      Entry oldFirstEntry = dpMain._firstEntry;
-      dpMain._firstEntry = newEntry;
-      if(!dpMain.isRoot()) {
-        // FIXME, handle null oldFirstEntry
-        Entry oldParentEntry = oldFirstEntry.asNodeEntry(
-            dpMain._pageNumber);
-        Entry newParentEntry =
-          dpMain._firstEntry.asNodeEntry(dpMain._pageNumber);
-        // FIXME, need to update parent
-        throw new UnsupportedOperationException();
-      }
+      updateFirstEntry(cacheDataPage);
     }
     if(updateLast) {
       dpMain._lastEntry = newEntry;
@@ -281,7 +382,7 @@ public class IndexPageCache
 
         // find first leaf
         while(!curPage._leaf) {
-          curPage = getDataPage(curPage._firstEntry.getSubPageNumber());
+          curPage = curPage.getChildPage(curPage._firstEntry);
         }
         return new CacheDataPage(curPage);
         
@@ -294,7 +395,7 @@ public class IndexPageCache
              (childTailPage.compareToPage(e) >= 0)) {
             curPage = childTailPage;
           } else {
-            curPage = getDataPage(curPage._lastEntry.getSubPageNumber());
+            curPage = curPage.getChildPage(curPage._lastEntry);
           }
         } else {
           return new CacheDataPage(curPage);
@@ -322,7 +423,7 @@ public class IndexPageCache
         }
 
         Entry nodeEntry = extra._entries.get(idx);
-        curPage = getDataPage(nodeEntry.getSubPageNumber());
+        curPage = curPage.getChildPage(nodeEntry);
         
       }
     }
@@ -409,40 +510,48 @@ public class IndexPageCache
       return(this == _rootPage);
     }
     
-    public boolean isTail()
-      throws IOException
+    public boolean isTail() throws IOException
     {
       resolveParent();
       return _tail;
     }
     
-    public DataPageMain getParentPage()
-      throws IOException
+    public DataPageMain getParentPage() throws IOException
     {
       resolveParent();
       return IndexPageCache.this.getDataPage(_parentPageNumber);
     }
+
+    public void setParentPage(Integer parentPageNumber, boolean isTail) {
+      if(_parentPageNumber == null) {
+        _parentPageNumber = parentPageNumber;
+        _tail = isTail;
+      }
+    }
     
-    public DataPageMain getPrevPage()
-      throws IOException
+    public DataPageMain getPrevPage() throws IOException
     {
       return IndexPageCache.this.getDataPage(_prevPageNumber);
     }
     
-    public DataPageMain getNextPage()
-      throws IOException
+    public DataPageMain getNextPage() throws IOException
     {
       return IndexPageCache.this.getDataPage(_nextPageNumber);
     }
     
-    public DataPageMain getChildTailPage()
-      throws IOException
+    public DataPageMain getChildPage(Entry e) throws IOException
     {
-      return IndexPageCache.this.getDataPage(_childTailPageNumber);
+      return IndexPageCache.this.getChildDataPage(
+          e.getSubPageNumber(), this, false);
     }
     
-    public DataPageExtra getExtra()
-      throws IOException
+    public DataPageMain getChildTailPage() throws IOException
+    {
+      return IndexPageCache.this.getChildDataPage(
+          _childTailPageNumber, this, true);
+    }
+    
+    public DataPageExtra getExtra() throws IOException
     {
       DataPageExtra extra = _extra.get();
       if(extra == null) {
@@ -453,8 +562,7 @@ public class IndexPageCache
       return extra;
     }
 
-    public void setExtra(DataPageExtra extra, boolean isNew)
-      throws IOException
+    public void setExtra(DataPageExtra extra, boolean isNew) throws IOException
     {
 
       if(isNew) {
@@ -496,11 +604,14 @@ public class IndexPageCache
       return _firstEntry.compareTo(other._firstEntry);
     }
 
-    private void resolveParent() {
-      if((_parentPageNumber == null) && !isRoot()) {
-        // FIXME, writeme
-        // need to determine _parentPageNumber and _tail
-        throw new UnsupportedOperationException();
+    private void resolveParent() throws IOException {
+      if(_parentPageNumber == null) {
+        // the act of searching for the first entry should resolve any parent
+        // pages along the path
+        findCacheDataPage(_firstEntry);
+        if(_parentPageNumber == null) {
+          throw new IllegalStateException("Parent was not resolved");
+        }
       }
     }
 

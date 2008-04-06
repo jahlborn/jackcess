@@ -1693,7 +1693,7 @@ public abstract class Index implements Comparable<Index> {
      * Returns a copy of this entry as a node Entry with the given
      * subPageNumber.
      */
-    Entry asNodeEntry(Integer subPageNumber) {
+    protected Entry asNodeEntry(Integer subPageNumber) {
       return new NodeEntry(_entryBytes, _rowId, _type, subPageNumber);
     }
     
