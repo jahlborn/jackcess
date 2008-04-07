@@ -122,6 +122,8 @@ public class Table
       every call) */
   private final TempBufferHolder _multiRowBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.NONE, true);
+  /** for now, "big index support" is optional */
+  private final boolean _useBigIndex;
   
   /** common cursor for iterating through the table, kept here for historic
       reasons */
@@ -137,6 +139,7 @@ public class Table
     _database = null;
     _tableDefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     _name = null;
+    _useBigIndex = false;
     setColumns(columns);
   }
   
@@ -145,14 +148,17 @@ public class Table
    * @param tableBuffer Buffer to read the table with
    * @param pageNumber Page number of the table definition
    * @param name Table name
+   * @param useBigIndex whether or not "big index support" should be enabled
+   *                    for the table
    */
   protected Table(Database database, ByteBuffer tableBuffer,
-                  int pageNumber, String name)
+                  int pageNumber, String name, boolean useBigIndex)
   throws IOException
   {
     _database = database;
     _tableDefPageNumber = pageNumber;
     _name = name;
+    _useBigIndex = useBigIndex; 
     int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
     ByteBuffer nextPageBuffer = null;
     while (nextPage != 0) {
@@ -182,6 +188,10 @@ public class Table
     return _name;
   }
 
+  public boolean doUseBigIndex() {
+    return _useBigIndex;
+  }
+  
   public int getMaxColumnCount() {
     return _maxColumnCount;
   }
@@ -958,8 +968,7 @@ public class Table
         (getFormat().OFFSET_INDEX_DEF_BLOCK +
          (i * getFormat().SIZE_INDEX_DEFINITION) + 4);
       int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
-      _indexes.add(new SimpleIndex(this, uniqueEntryCount,
-                                   uniqueEntryCountOffset));
+      _indexes.add(createIndex(uniqueEntryCount, uniqueEntryCountOffset));
     }
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
@@ -1044,6 +1053,16 @@ public class Table
 
     // reset to end of index info
     tableBuffer.position(idxEndOffset);
+  }
+
+  /**
+   * Creates an index with the given initial info.
+   */
+  private Index createIndex(int uniqueEntryCount, int uniqueEntryCountOffset)
+  {
+    return(_useBigIndex ?
+           new BigIndex(this, uniqueEntryCount, uniqueEntryCountOffset) :
+           new SimpleIndex(this, uniqueEntryCount, uniqueEntryCountOffset));
   }
   
   /**

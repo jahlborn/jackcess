@@ -154,6 +154,7 @@ public class IndexTest extends TestCase {
     t = db.getTable("Table1");
     index = t.getIndexes().get(0);
 
+    System.out.println("Index type: " + index.getClass());
     try {
       // we don't support writing these indexes
       t.addRow(99, "abc", "def");

@@ -81,6 +81,11 @@ public class Database
   /** default value for the auto-sync value ({@code true}).  this is slower,
       but leaves more chance of a useable database in the face of failures. */
   public static final boolean DEFAULT_AUTO_SYNC = true;
+
+  /** system property which can be used to make big index support the
+      default. */
+  public static final String USE_BIG_INDEX_PROPERTY =
+    "com.healthmarketscience.jackcess.bigIndex";
   
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
@@ -225,6 +230,8 @@ public class Database
   private Table _relationships;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
+  /** for now, "big index support" is optional */
+  private boolean _useBigIndex;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -355,12 +362,27 @@ public class Database
   public Table getAccessControlEntries() {
     return _accessControlEntries;
   }
+
+  /**
+   * Whether or not big index support is enabled for tables.
+   */
+  public boolean doUseBigIndex() {
+    return _useBigIndex;
+  }
+
+  /**
+   * Set whether or not big index support is enabled for tables.
+   */
+  public void setUseBigIndex(boolean useBigIndex) {
+    _useBigIndex = useBigIndex;
+  }
   
   /**
    * Read the system catalog
    */
   private void readSystemCatalog() throws IOException {
-    _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG);
+    _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
+                               defaultUseBigIndex());
     for(Map<String,Object> row :
           Cursor.createCursor(_systemCatalog).iterable(
               SYSTEM_CATALOG_COLUMNS))
@@ -371,7 +393,8 @@ public class Database
           addTable((String) row.get(CAT_COL_NAME), (Integer) row.get(CAT_COL_ID));
         } else if(TABLE_SYSTEM_ACES.equals(name)) {
           int pageNumber = (Integer)row.get(CAT_COL_ID);
-          _accessControlEntries = readTable(TABLE_SYSTEM_ACES, pageNumber);
+          _accessControlEntries = readTable(TABLE_SYSTEM_ACES, pageNumber,
+                                            defaultUseBigIndex());
         } else if(TABLE_SYSTEM_RELATIONSHIPS.equals(name)) {
           _relationshipsPageNumber = (Integer)row.get(CAT_COL_ID);
         }
@@ -418,12 +441,23 @@ public class Database
   public Iterator<Table> iterator() {
     return new TableIterator();
   }
-  
+
   /**
    * @param name Table name
    * @return The table, or null if it doesn't exist
    */
   public Table getTable(String name) throws IOException {
+    return getTable(name, defaultUseBigIndex());
+  }
+  
+  /**
+   * @param name Table name
+   * @param useBigIndex whether or not "big index support" should be enabled
+   *                    for the table (this value will override any other
+   *                    settings)
+   * @return The table, or null if it doesn't exist
+   */
+  public Table getTable(String name, boolean useBigIndex) throws IOException {
 
     TableInfo tableInfo = lookupTable(name);
     
@@ -431,7 +465,7 @@ public class Database
       return null;
     }
 
-    return readTable(tableInfo.tableName, tableInfo.pageNumber);
+    return readTable(tableInfo.tableName, tableInfo.pageNumber, useBigIndex);
   }
   
   /**
@@ -490,7 +524,8 @@ public class Database
         throw new IOException("Could not find system relationships table");
       }
       _relationships = readTable(TABLE_SYSTEM_RELATIONSHIPS,
-                                 _relationshipsPageNumber);
+                                 _relationshipsPageNumber,
+                                 defaultUseBigIndex());
     }
 
     int nameCmp = table1.getName().compareTo(table2.getName());
@@ -661,7 +696,7 @@ public class Database
   /**
    * Reads a table with the given name from the given pageNumber.
    */
-  private Table readTable(String name, int pageNumber)
+  private Table readTable(String name, int pageNumber, boolean useBigIndex)
     throws IOException
   {
     _pageChannel.readPage(_buffer, pageNumber);
@@ -670,7 +705,7 @@ public class Database
       throw new IOException("Looking for " + name + " at page " + pageNumber +
                             ", but page type is " + pageType);
     }
-    return new Table(this, _buffer, pageNumber, name);
+    return new Table(this, _buffer, pageNumber, name, useBigIndex);
   }
 
   /**
@@ -928,6 +963,14 @@ public class Database
     return ((tableName != null) ? tableName.toUpperCase() : null);
   }
 
+  /**
+   * Returns {@code true} if "big index support" has been enabled explicity on
+   * the this Database or via a system property, {@code false} otherwise.
+   */
+  public boolean defaultUseBigIndex() {
+    return doUseBigIndex() || Boolean.getBoolean(USE_BIG_INDEX_PROPERTY);
+  }
+  
   /**
    * Utility class for storing table page number and actual name.
    */

@@ -66,6 +66,10 @@
                 <name>log4j.configuration</name>
                 <value>com/healthmarketscience/jackcess/log4j.properties</value>
               </property>
+              <property>
+                <name>com.healthmarketscience.jackcess.bigIndex</name>
+                <value>${jackcess.bigIndex}</value>
+              </property>
             </systemProperties>
           </configuration>
         </plugin>
