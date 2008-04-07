@@ -152,13 +152,19 @@ public class IndexTest extends TestCase {
     // copy to temp file and attemp to edit
     db = openCopy(origFile);
     t = db.getTable("Table1");
-    
+    index = t.getIndexes().get(0);
+
     try {
       // we don't support writing these indexes
       t.addRow(99, "abc", "def");
-      fail("Should have thrown IOException");
+      if(index instanceof SimpleIndex) {
+        fail("Should have thrown UnsupportedOperationException");
+      }
     } catch(UnsupportedOperationException e) {
       // success
+      if(index instanceof BigIndex) {
+        throw e;
+      }
     }
   }
 

@@ -46,6 +46,10 @@ import static com.healthmarketscience.jackcess.Index.*;
  */
 public class IndexPageCache
 {
+  private enum UpdateType {
+    ADD, REMOVE, REPLACE;
+  }
+
   /** the index whose pages this cache is managing */
   private final BigIndex _index;
   /** the root page for the index */
@@ -96,7 +100,12 @@ public class IndexPageCache
     throws IOException
   {
     for(CacheDataPage cacheDataPage : _modifiedPages) {
-      writeDataPage(cacheDataPage);
+      if(!cacheDataPage.getEntries().isEmpty() ||
+         cacheDataPage._main.isRoot()) {
+        writeDataPage(cacheDataPage);
+      } else {
+        deleteDataPage(cacheDataPage);
+      }
     }
     _modifiedPages.clear();
   }
@@ -145,6 +154,18 @@ public class IndexPageCache
   }
   
   /**
+   * Deletes the given index page from the file (clears the page).
+   */
+  private void deleteDataPage(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    // FIXME, clear/deallocate index page?
+
+    // lastly, mark the page as no longer modified
+    cacheDataPage._extra._modified = false;    
+  }
+  
+  /**
    * Reads the given index page from the file.
    */
   private CacheDataPage readDataPage(Integer pageNumber)
@@ -164,23 +185,75 @@ public class IndexPageCache
   private void removeEntry(CacheDataPage cacheDataPage, int entryIdx)
     throws IOException
   {
+    updateEntry(cacheDataPage, entryIdx, null, UpdateType.REMOVE);
+  }
+
+  private void addEntry(CacheDataPage cacheDataPage,
+                        int entryIdx,
+                        Entry newEntry)
+    throws IOException
+  {
+    updateEntry(cacheDataPage, entryIdx, newEntry, UpdateType.ADD);
+  }
+  
+  private void replaceEntry(CacheDataPage cacheDataPage,
+                            int entryIdx,
+                            Entry newEntry)
+    throws IOException
+  {
+    updateEntry(cacheDataPage, entryIdx, newEntry, UpdateType.REPLACE);
+  }
+
+  private void updateEntry(CacheDataPage cacheDataPage,
+                           int entryIdx,
+                           Entry newEntry,
+                           UpdateType upType)
+    throws IOException
+  {
     DataPageMain dpMain = cacheDataPage._main;
     DataPageExtra dpExtra = cacheDataPage._extra;
 
-    setModified(cacheDataPage);
+    if(newEntry != null) {
+      validateEntryForPage(dpMain, newEntry);
+    }
     
-    boolean updateFirst = (entryIdx == 0);
-    boolean updateLast = (entryIdx == (dpExtra._entries.size() - 1));
+    setModified(cacheDataPage);
 
-    Entry oldEntry = dpExtra._entries.remove(entryIdx);
-    dpExtra._totalEntrySize -= oldEntry.size();
+    boolean updateFirst = false;
+    boolean updateLast = false;
 
-    // note, we don't need to futz with the _entryPrefix because a prefix is
-    // always still valid on removal
+    switch(upType) {
+    case ADD: {
+      updateFirst = (entryIdx == 0);
+      updateLast = (entryIdx == dpExtra._entries.size());
+
+      dpExtra._entries.add(entryIdx, newEntry);
+      dpExtra._totalEntrySize += newEntry.size();
+      break;
+    }
+    case REPLACE: {
+      updateFirst = (entryIdx == 0);
+      updateLast = (entryIdx == (dpExtra._entries.size() - 1));
+
+      Entry oldEntry = dpExtra._entries.set(entryIdx, newEntry);
+      dpExtra._totalEntrySize += newEntry.size() - oldEntry.size();
+      break;
+    }
+    case REMOVE: {
+      updateFirst = (entryIdx == 0);
+      updateLast = (entryIdx == (dpExtra._entries.size() - 1));
+
+      Entry oldEntry = dpExtra._entries.remove(entryIdx);
+      dpExtra._totalEntrySize -= oldEntry.size();
+      break;
+    }
+    default:
+      throw new RuntimeException("unknown update type " + upType);
+    }
     
     if(dpExtra._entries.isEmpty()) {
       // this page is dead
-      deleteDataPage(cacheDataPage);
+      removeDataPage(cacheDataPage);
     } else {
       if(updateFirst) {
         updateFirstEntry(cacheDataPage);
@@ -188,18 +261,23 @@ public class IndexPageCache
       if(updateLast) {
         dpMain._lastEntry = dpExtra.getLastEntry();
       }
+      // note, we don't need to futz with the _entryPrefix on removal because
+      // the prefix is always still valid after removal
+      if((upType != UpdateType.REMOVE) && (updateFirst || updateLast)) {
+        // update the prefix
+        dpExtra._entryPrefix = findNewPrefix(dpExtra._entryPrefix, newEntry);
+      }
     }
-    
   }
 
-  private void deleteDataPage(CacheDataPage cacheDataPage)
+  private void removeDataPage(CacheDataPage cacheDataPage)
     throws IOException
   {
     DataPageMain dpMain = cacheDataPage._main;
     DataPageExtra dpExtra = cacheDataPage._extra;
 
     if(dpMain.isRoot()) {
-      // clear out this page (we don't actually delete it)
+      // clear out this page (we don't actually remove it)
       dpMain._firstEntry = null;
       dpMain._lastEntry = null;
       dpExtra._entryPrefix = EMPTY_PREFIX;
@@ -215,15 +293,12 @@ public class IndexPageCache
 
     // remove this page from any next/prev pages
     removeFromPeers(cacheDataPage);
-
-    // FIXME, deallocate index page?
   }
 
   private void removeFromParent(CacheDataPage childDataPage)
     throws IOException
   {
     DataPageMain childMain = childDataPage._main;
-    DataPageExtra childExtra = childDataPage._extra;
 
     CacheDataPage parentDataPage =
       new CacheDataPage(childMain.getParentPage());
@@ -252,7 +327,6 @@ public class IndexPageCache
     throws IOException
   {
     DataPageMain dpMain = cacheDataPage._main;
-    DataPageExtra dpExtra = cacheDataPage._extra;
 
     Integer prevPageNumber = dpMain._prevPageNumber;
     Integer nextPageNumber = dpMain._nextPageNumber;
@@ -292,7 +366,6 @@ public class IndexPageCache
                                  Entry oldEntry, Entry newEntry)
     throws IOException
   {
-    DataPageMain parentMain = parentDataPage._main;
     DataPageExtra parentExtra = parentDataPage._extra;
 
     setModified(parentDataPage);
@@ -306,64 +379,6 @@ public class IndexPageCache
     replaceEntry(parentDataPage, idx, newEntry);
   }
   
-  private void addEntry(CacheDataPage cacheDataPage,
-                        int entryIdx,
-                        Entry newEntry)
-    throws IOException
-  {
-    addOrReplaceEntry(cacheDataPage, entryIdx, newEntry, true);
-  }
-  
-  private void replaceEntry(CacheDataPage cacheDataPage,
-                            int entryIdx,
-                            Entry newEntry)
-    throws IOException
-  {
-    addOrReplaceEntry(cacheDataPage, entryIdx, newEntry, false);
-  }
-  
-  private void addOrReplaceEntry(CacheDataPage cacheDataPage,
-                                 int entryIdx,
-                                 Entry newEntry,
-                                 boolean isAdd)
-    throws IOException
-  {
-    DataPageMain dpMain = cacheDataPage._main;
-    DataPageExtra dpExtra = cacheDataPage._extra;
-
-    validateEntryForPage(dpMain, newEntry);
-    
-    setModified(cacheDataPage);
-
-    boolean updateFirst = false;
-    boolean updateLast = false;
-
-    if(isAdd) {
-      updateFirst = (entryIdx == 0);
-      updateLast = (entryIdx == dpExtra._entries.size());
-
-      dpExtra._entries.add(entryIdx, newEntry);
-      dpExtra._totalEntrySize += newEntry.size();
-    } else {
-      updateFirst = (entryIdx == 0);
-      updateLast = (entryIdx == (dpExtra._entries.size() - 1));
-
-      Entry oldEntry = dpExtra._entries.set(entryIdx, newEntry);
-      dpExtra._totalEntrySize += newEntry.size() - oldEntry.size();
-    }
-    
-    if(updateFirst) {
-      updateFirstEntry(cacheDataPage);
-    }
-    if(updateLast) {
-      dpMain._lastEntry = newEntry;
-    }
-    if(updateFirst || updateLast) {
-      // update the prefix
-      dpExtra._entryPrefix = findNewPrefix(dpExtra._entryPrefix, newEntry);
-    }
-  }
-
   private void validateEntryForPage(DataPageMain dataPage, Entry entry) {
     if(dataPage._leaf != entry.isLeafEntry()) {
       throw new IllegalStateException(
