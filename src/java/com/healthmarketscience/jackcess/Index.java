@@ -71,9 +71,6 @@ public abstract class Index implements Comparable<Index> {
 
   private static final short COLUMN_UNUSED = -1;
 
-  private static final byte INDEX_NODE_PAGE_TYPE = (byte)0x03;
-  private static final byte INDEX_LEAF_PAGE_TYPE = (byte)0x04;
-
   private static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
 
   private static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
@@ -176,13 +173,7 @@ public abstract class Index implements Comparable<Index> {
     _table  = table;
     _uniqueEntryCount = uniqueEntryCount;
     _uniqueEntryCountOffset = uniqueEntryCountOffset;
-    // the max data we can fit on a page is the min of the space on the page
-    // vs the number of bytes which can be encoded in the entry mask
-    _maxPageEntrySize = Math.min(
-        (getFormat().PAGE_SIZE -
-         (getFormat().OFFSET_INDEX_ENTRY_MASK +
-          getFormat().SIZE_INDEX_ENTRY_MASK)),
-        (getFormat().SIZE_INDEX_ENTRY_MASK * 8));
+    _maxPageEntrySize = calcMaxPageEntrySize(_table.getFormat());
   }
 
   public Table getTable() {
@@ -746,8 +737,8 @@ public abstract class Index implements Comparable<Index> {
     
     ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
     buffer.put(dataPage.isLeaf() ?
-               INDEX_LEAF_PAGE_TYPE :
-               INDEX_NODE_PAGE_TYPE );  //Page type
+               PageTypes.INDEX_LEAF :
+               PageTypes.INDEX_NODE );  //Page type
     buffer.put((byte) 0x01);  //Unknown
     buffer.putShort((short) 0); //Free space
     buffer.putInt(getTable().getTableDefPageNumber());
@@ -909,9 +900,9 @@ public abstract class Index implements Comparable<Index> {
     throws IOException
   {
     byte pageType = buffer.get(0);
-    if(pageType == INDEX_LEAF_PAGE_TYPE) {
+    if(pageType == PageTypes.INDEX_LEAF) {
       return true;
-    } else if(pageType == INDEX_NODE_PAGE_TYPE) {
+    } else if(pageType == PageTypes.INDEX_NODE) {
       return false;
     }
     throw new IOException("Unexpected page type " + pageType);
@@ -1222,6 +1213,20 @@ public abstract class Index implements Comparable<Index> {
     throw new IllegalArgumentException("Values was null for valid entry");
   }
 
+  /**
+   * Returns the maximum amount of entry data which can be encoded on any
+   * index page.
+   */
+  private static int calcMaxPageEntrySize(JetFormat format)
+  {
+    // the max data we can fit on a page is the min of the space on the page
+    // vs the number of bytes which can be encoded in the entry mask
+    int pageDataSize = (format.PAGE_SIZE -
+                        (format.OFFSET_INDEX_ENTRY_MASK +
+                         format.SIZE_INDEX_ENTRY_MASK));
+    int entryMaskSize = (format.SIZE_INDEX_ENTRY_MASK * 8);
+    return Math.min(pageDataSize, entryMaskSize);
+  }
   
   /**
    * Information about the columns in an index.  Also encodes new index
