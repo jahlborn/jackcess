@@ -34,8 +34,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang.ObjectUtils;
 
 import static com.healthmarketscience.jackcess.Index.*;
@@ -86,26 +88,56 @@ public class IndexPageCache
   public void write()
     throws IOException
   {
+    // first discard any empty pages
+    handleEmptyPages();
+    // next, handle any necessary page splitting
     preparePagesForWriting();
+    // finally, write all the modified pages (which are not being deleted)
     writeDataPages();
   }
 
-  private void preparePagesForWriting()
-    throws IOException
+  private void handleEmptyPages() throws IOException
   {
-    // FIXME, writeme
+    for(Iterator<CacheDataPage> iter = _modifiedPages.iterator();
+        iter.hasNext(); ) {
+      CacheDataPage cacheDataPage = iter.next();
+      if(cacheDataPage.isEmpty()) {
+        if(!cacheDataPage._main.isRoot()) {
+          deleteDataPage(cacheDataPage);
+        } else {
+          writeDataPage(cacheDataPage);
+        }
+        iter.remove();
+      }
+    }
+  }
+  
+  private void preparePagesForWriting() throws IOException
+  {
+    boolean splitPages = false;
+    int maxPageEntrySize = getIndex().getMaxPageEntrySize();
+    do {
+      splitPages = false;
+
+      for(CacheDataPage cacheDataPage : _modifiedPages) {
+        if(cacheDataPage.getCompressedEntrySize() > maxPageEntrySize) {
+          // need to split this page
+          splitPages = true;
+          splitDataPage(cacheDataPage);
+        }
+      }
+      
+    } while(splitPages);
   }
 
-  private void writeDataPages()
-    throws IOException
+  private void writeDataPages() throws IOException
   {
     for(CacheDataPage cacheDataPage : _modifiedPages) {
-      if(!cacheDataPage.getEntries().isEmpty() ||
-         cacheDataPage._main.isRoot()) {
-        writeDataPage(cacheDataPage);
-      } else {
-        deleteDataPage(cacheDataPage);
+      if(cacheDataPage.isEmpty()) {
+        throw new IllegalStateException("Unexpected empty page " +
+                                        cacheDataPage);
       }
+      writeDataPage(cacheDataPage);
     }
     _modifiedPages.clear();
   }
@@ -219,12 +251,12 @@ public class IndexPageCache
     
     setModified(cacheDataPage);
 
-    boolean updateFirst = false;
+    boolean updateFirst = (entryIdx == 0);
     boolean updateLast = false;
+    boolean mayUpdatePrefix = true;
 
     switch(upType) {
     case ADD: {
-      updateFirst = (entryIdx == 0);
       updateLast = (entryIdx == dpExtra._entries.size());
 
       dpExtra._entries.add(entryIdx, newEntry);
@@ -232,7 +264,6 @@ public class IndexPageCache
       break;
     }
     case REPLACE: {
-      updateFirst = (entryIdx == 0);
       updateLast = (entryIdx == (dpExtra._entries.size() - 1));
 
       Entry oldEntry = dpExtra._entries.set(entryIdx, newEntry);
@@ -240,18 +271,20 @@ public class IndexPageCache
       break;
     }
     case REMOVE: {
-      updateFirst = (entryIdx == 0);
       updateLast = (entryIdx == (dpExtra._entries.size() - 1));
 
       Entry oldEntry = dpExtra._entries.remove(entryIdx);
       dpExtra._totalEntrySize -= oldEntry.size();
+      // note, we don't need to futz with the _entryPrefix on removal because
+      // the prefix is always still valid after removal
+      mayUpdatePrefix = false;
       break;
     }
     default:
       throw new RuntimeException("unknown update type " + upType);
     }
     
-    if(dpExtra._entries.isEmpty()) {
+    if(cacheDataPage.isEmpty()) {
       // this page is dead
       removeDataPage(cacheDataPage);
     } else {
@@ -261,9 +294,7 @@ public class IndexPageCache
       if(updateLast) {
         dpMain._lastEntry = dpExtra.getLastEntry();
       }
-      // note, we don't need to futz with the _entryPrefix on removal because
-      // the prefix is always still valid after removal
-      if((upType != UpdateType.REMOVE) && (updateFirst || updateLast)) {
+      if(mayUpdatePrefix && (updateFirst || updateLast)) {
         // update the prefix
         dpExtra._entryPrefix = findNewPrefix(dpExtra._entryPrefix, newEntry);
       }
@@ -306,20 +337,12 @@ public class IndexPageCache
     setModified(parentDataPage);
     
     DataPageMain parentMain = parentDataPage._main;
-    DataPageExtra parentExtra = parentDataPage._extra;
 
     if(childMain.isTail()) {
       parentMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
     } else {
-      Entry oldParentEntry = childMain._firstEntry.asNodeEntry(
-          childMain._pageNumber);
-      int idx = parentExtra.findEntry(oldParentEntry);
-      if(idx < 0) {
-        throw new IllegalStateException(
-            "Could not find child entry in parent; child " + childDataPage +
-            "; parent " + parentDataPage);
-      }
-      removeEntry(parentDataPage, idx);
+      updateParentEntry(parentDataPage, childDataPage,
+                        childMain._firstEntry, null, UpdateType.REMOVE);
     }
   }
 
@@ -354,30 +377,64 @@ public class IndexPageCache
     dpMain._firstEntry = dpExtra.getFirstEntry();
     DataPageMain parentMain = dpMain.getParentPage();
     if(parentMain != null) {
-      Entry oldParentEntry = oldEntry.asNodeEntry(dpMain._pageNumber);
-      Entry newParentEntry =
-        dpMain._firstEntry.asNodeEntry(dpMain._pageNumber);
       updateParentEntry(new CacheDataPage(parentMain),
-                        oldParentEntry, newParentEntry);
+                        cacheDataPage,
+                        oldEntry, dpMain._firstEntry,
+                        UpdateType.REPLACE);
     }
   }
   
   private void updateParentEntry(CacheDataPage parentDataPage,
-                                 Entry oldEntry, Entry newEntry)
+                                 CacheDataPage childDataPage,
+                                 Entry oldEntry, Entry newEntry,
+                                 UpdateType upType)
     throws IOException
   {
+    DataPageMain childMain = childDataPage._main;
     DataPageExtra parentExtra = parentDataPage._extra;
 
-    setModified(parentDataPage);
-
-    int idx = parentExtra.findEntry(oldEntry);
-    if(idx < 0) {
-      throw new IllegalStateException(
-          "Could not find child entry in parent; childEntry " + oldEntry +
-          "; parent " + parentDataPage);
+    if(oldEntry != null) {
+      oldEntry = oldEntry.asNodeEntry(childMain._pageNumber);
     }
-    replaceEntry(parentDataPage, idx, newEntry);
+    if(newEntry != null) {
+      newEntry = newEntry.asNodeEntry(childMain._pageNumber);
+    }
+
+    boolean expectFound = true;
+    int idx = 0;
+    
+    switch(upType) {
+    case ADD:
+      expectFound = false;
+      idx = parentExtra.findEntry(newEntry);
+      break;
+
+    case REPLACE:
+    case REMOVE:
+      idx = parentExtra.findEntry(oldEntry);
+      break;
+    
+    default:
+      throw new RuntimeException("unknown update type " + upType);
+    }
+        
+    if(idx < 0) {
+      if(expectFound) {
+        throw new IllegalStateException(
+            "Could not find child entry in parent; childEntry " + oldEntry +
+            "; parent " + parentDataPage);
+      }
+      idx = missingIndexToInsertionPoint(idx);
+    } else {
+      if(!expectFound) {
+        throw new IllegalStateException(
+            "Unexpectedly found child entry in parent; childEntry " +
+            newEntry + "; parent " + parentDataPage);
+      }
+    }
+    updateEntry(parentDataPage, idx, newEntry, upType);
   }
+  
   
   private void validateEntryForPage(DataPageMain dataPage, Entry entry) {
     if(dataPage._leaf != entry.isLeafEntry()) {
@@ -385,6 +442,12 @@ public class IndexPageCache
           "Trying to update page with wrong entry type; pageLeaf " +
           dataPage._leaf + ", entryLeaf " + entry.isLeafEntry());
     }
+  }
+
+  private void splitDataPage(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    // FIXME, writeme
   }
   
   public CacheDataPage findCacheDataPage(Entry e)

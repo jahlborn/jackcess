@@ -586,7 +586,7 @@ public abstract class Index implements Comparable<Index> {
       DataPage nextDataPage = null;
       while(nextPageNumber != INVALID_INDEX_PAGE_NUMBER) {
         DataPage dp = getDataPage(nextPageNumber);
-        if(!dp.getEntries().isEmpty()) {
+        if(!dp.isEmpty()) {
           nextDataPage = dp;
           break;
         }
@@ -615,7 +615,7 @@ public abstract class Index implements Comparable<Index> {
       DataPage prevDataPage = null;
       while(prevPageNumber != INVALID_INDEX_PAGE_NUMBER) {
         DataPage dp = getDataPage(prevPageNumber);
-        if(!dp.getEntries().isEmpty()) {
+        if(!dp.isEmpty()) {
           prevDataPage = dp;
           break;
         }
@@ -2199,6 +2199,10 @@ public abstract class Index implements Comparable<Index> {
       throws IOException;
     public abstract void removeEntry(int idx)
       throws IOException;
+
+    public final boolean isEmpty() {
+      return getEntries().isEmpty();
+    }
     
     public final int getCompressedEntrySize() {
       // when written to the index page, the entryPrefix bytes will only be
