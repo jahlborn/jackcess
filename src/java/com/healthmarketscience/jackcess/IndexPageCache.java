@@ -320,30 +320,10 @@ public class IndexPageCache
     }
 
     // remove this page from it's parent page
-    removeFromParent(cacheDataPage);
+    removeParentEntry(cacheDataPage);
 
     // remove this page from any next/prev pages
     removeFromPeers(cacheDataPage);
-  }
-
-  private void removeFromParent(CacheDataPage childDataPage)
-    throws IOException
-  {
-    DataPageMain childMain = childDataPage._main;
-
-    CacheDataPage parentDataPage =
-      new CacheDataPage(childMain.getParentPage());
-
-    setModified(parentDataPage);
-    
-    DataPageMain parentMain = parentDataPage._main;
-
-    if(childMain.isTail()) {
-      parentMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
-    } else {
-      updateParentEntry(parentDataPage, childDataPage,
-                        childMain._firstEntry, null, UpdateType.REMOVE);
-    }
   }
 
   private void removeFromPeers(CacheDataPage cacheDataPage)
@@ -371,17 +351,43 @@ public class IndexPageCache
     throws IOException
   {
     DataPageMain dpMain = cacheDataPage._main;
-    DataPageExtra dpExtra = cacheDataPage._extra;
+    if(!dpMain.isRoot()) {
+      DataPageExtra dpExtra = cacheDataPage._extra;
 
-    Entry oldEntry = dpMain._firstEntry;
-    dpMain._firstEntry = dpExtra.getFirstEntry();
-    DataPageMain parentMain = dpMain.getParentPage();
-    if(parentMain != null) {
-      updateParentEntry(new CacheDataPage(parentMain),
-                        cacheDataPage,
-                        oldEntry, dpMain._firstEntry,
-                        UpdateType.REPLACE);
+      Entry oldEntry = dpMain._firstEntry;
+      dpMain._firstEntry = dpExtra.getFirstEntry();
+      DataPageMain parentMain = dpMain.getParentPage();
+      replaceParentEntry(new CacheDataPage(parentMain),
+                         cacheDataPage,
+                         oldEntry, dpMain._firstEntry);
     }
+  }
+
+  private void removeParentEntry(CacheDataPage childDataPage)
+    throws IOException
+  {
+    DataPageMain childMain = childDataPage._main;
+    updateParentEntry(new CacheDataPage(childMain.getParentPage()),
+                      childDataPage, childMain._firstEntry,
+                      null, UpdateType.REMOVE);
+  }
+  
+  private void addParentEntry(CacheDataPage parentDataPage,
+                              CacheDataPage childDataPage,
+                              Entry newEntry)
+    throws IOException
+  {
+    updateParentEntry(parentDataPage, childDataPage, null, newEntry,
+                      UpdateType.ADD);
+  }
+  
+  private void replaceParentEntry(CacheDataPage parentDataPage,
+                                 CacheDataPage childDataPage,
+                                 Entry oldEntry, Entry newEntry)
+    throws IOException
+  {
+    updateParentEntry(parentDataPage, childDataPage, oldEntry, newEntry,
+                      UpdateType.REPLACE);
   }
   
   private void updateParentEntry(CacheDataPage parentDataPage,
@@ -391,8 +397,23 @@ public class IndexPageCache
     throws IOException
   {
     DataPageMain childMain = childDataPage._main;
+    DataPageMain parentMain = parentDataPage._main;
     DataPageExtra parentExtra = parentDataPage._extra;
 
+    if(childMain.isTail()) {
+      int newChildTailPageNumber =
+        ((upType == UpdateType.REMOVE) ?
+         INVALID_INDEX_PAGE_NUMBER :
+         childMain._pageNumber);
+      if((int)parentMain._childTailPageNumber != newChildTailPageNumber) {
+        setModified(parentDataPage);
+        parentMain._childTailPageNumber = newChildTailPageNumber;
+      }
+
+      // nothing more to do
+      return;
+    }
+    
     if(oldEntry != null) {
       oldEntry = oldEntry.asNodeEntry(childMain._pageNumber);
     }
