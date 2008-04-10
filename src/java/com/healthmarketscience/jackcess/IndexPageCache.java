@@ -82,7 +82,7 @@ public class IndexPageCache
   public void setRootPageNumber(int pageNumber) throws IOException {
     _rootPage = getDataPage(pageNumber);
     // root page has no parent
-    _rootPage.setParentPage(INVALID_INDEX_PAGE_NUMBER, false);
+    _rootPage.initParentPage(INVALID_INDEX_PAGE_NUMBER, false);
   }
   
   public void write()
@@ -119,11 +119,29 @@ public class IndexPageCache
     do {
       splitPages = false;
 
-      for(CacheDataPage cacheDataPage : _modifiedPages) {
-        if(cacheDataPage.getCompressedEntrySize() > maxPageEntrySize) {
-          // need to split this page
-          splitPages = true;
-          splitDataPage(cacheDataPage);
+        // we might be adding to this list while iterating, so we can't use an
+        // iteratoor
+      for(int i = 0; i < _modifiedPages.size(); ++i) {
+
+        CacheDataPage cacheDataPage = _modifiedPages.get(i);
+        
+        // look for pages with more enties than can fit on a page
+        if(cacheDataPage.getTotalEntrySize() > maxPageEntrySize) {
+
+          // make sure the prefix is up-to-date (this may have gotten
+          // discarded by one of the update entry methods)
+          if(cacheDataPage._extra._entryPrefix.length == 0) {
+            cacheDataPage._extra._entryPrefix =
+              findCommonPrefix(cacheDataPage._main._firstEntry,
+                               cacheDataPage._main._lastEntry);
+          }
+
+          // now, see if the page will fit when compressed
+          if(cacheDataPage.getCompressedEntrySize() > maxPageEntrySize) {
+            // need to split this page
+            splitPages = true;
+            splitDataPage(cacheDataPage);
+          }
         }
       }
       
@@ -157,7 +175,7 @@ public class IndexPageCache
     DataPageMain child = getDataPage(childPageNumber);
     if(child != null) {
       // set the parent info for this child (if necessary)
-      child.setParentPage(parent._pageNumber, isTail);
+      child.initParentPage(parent._pageNumber, isTail);
     }
     return child;
   }
@@ -295,8 +313,8 @@ public class IndexPageCache
         dpMain._lastEntry = dpExtra.getLastEntry();
       }
       if(mayUpdatePrefix && (updateFirst || updateLast)) {
-        // update the prefix
-        dpExtra._entryPrefix = findNewPrefix(dpExtra._entryPrefix, newEntry);
+        // for now, just clear the prefix, we'll fix it later
+        dpExtra._entryPrefix = EMPTY_PREFIX;
       }
     }
   }
@@ -373,12 +391,12 @@ public class IndexPageCache
   }
   
   private void addParentEntry(CacheDataPage parentDataPage,
-                              CacheDataPage childDataPage,
-                              Entry newEntry)
+                              CacheDataPage childDataPage)
     throws IOException
   {
-    updateParentEntry(parentDataPage, childDataPage, null, newEntry,
-                      UpdateType.ADD);
+    DataPageMain childMain = childDataPage._main;
+    updateParentEntry(parentDataPage, childDataPage, null,
+                      childMain._firstEntry, UpdateType.ADD);
   }
   
   private void replaceParentEntry(CacheDataPage parentDataPage,
@@ -465,10 +483,206 @@ public class IndexPageCache
     }
   }
 
-  private void splitDataPage(CacheDataPage cacheDataPage)
+  private void splitDataPage(CacheDataPage origDataPage)
     throws IOException
   {
-    // FIXME, writeme
+    DataPageMain origMain = origDataPage._main;
+    DataPageExtra origExtra = origDataPage._extra;
+
+    int numEntries = origExtra._entries.size();
+    if(numEntries < 2) {
+      throw new IllegalStateException(
+          "Cannot split page with less than 2 entries " + origDataPage);
+    }
+    
+    if(origMain.isRoot()) {
+      // we can't split the root page directly, so we need to put another page
+      // between the root page and its sub-pages, and then split that page.
+      CacheDataPage newDataPage = nestRootDataPage(origDataPage);
+
+      if(!newDataPage._main._leaf) {
+        // we need to re-parent all the child pages
+        reparentChildren(newDataPage);
+      }
+      
+      // now, split this new page instead
+      origDataPage = newDataPage;
+      origMain = newDataPage._main;
+      origExtra = newDataPage._extra;
+    }
+
+    // note, there are many, many ways this could be improved/tweaked.  for
+    // now, we just want it to be functional...
+    // so, we will naively move half the entries from one page to a new page.
+
+    DataPageMain parentMain = origMain.getParentPage();
+    boolean origWasTail = origMain.isTail();
+    CacheDataPage newDataPage = allocateNewCacheDataPage(
+        parentMain._pageNumber, origMain._leaf, origWasTail);
+    DataPageMain newMain = newDataPage._main;
+    DataPageExtra newExtra = newDataPage._extra;
+    
+    List<Entry> tailEntries =
+      origExtra._entries.subList(((numEntries + 1) / 2), numEntries);
+
+    // move last half of the entries from old page to new page (any child tail
+    // gets moved to the new page as well)
+    for(Entry tailEntry : tailEntries) {
+      newExtra._totalEntrySize += tailEntry.size();
+      newExtra._entries.add(tailEntry);
+    }
+    newMain.setExtra(newExtra, true);
+    newMain._childTailPageNumber = origMain._childTailPageNumber;
+
+    // remove the moved entries from the old page
+    tailEntries.clear();
+    origExtra._entryPrefix = EMPTY_PREFIX;
+    origExtra._totalEntrySize -= newExtra._totalEntrySize;
+    origMain.setExtra(origExtra, true);
+    origMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
+
+    // insert this new page between the old page and any next page
+    addToPeersAfter(origDataPage, newDataPage);
+
+    if(!newMain._leaf) {
+      // reparent the children pages of the new page
+      reparentChildren(newDataPage);
+
+      // if the children of this page are also node pages, then the next/prev
+      // links should not cross parent boundaries (the leaf pages are linked
+      // from beginning to end, but child node pages are only linked within
+      // the same parent)
+      DataPageMain childMain = newMain.getChildPage(newMain._firstEntry);
+      if(!childMain._leaf) {
+        separateFromPreviousPeer(new CacheDataPage(childMain));
+      }
+    }
+
+    // lastly, we need to update the parent page's entries
+    CacheDataPage parentDataPage = new CacheDataPage(parentMain);    
+    if(origWasTail) {
+      // the old page was the parent's tail, so we need to add an entry to the
+      // parent for the old page
+      addParentEntry(parentDataPage, origDataPage);
+    }
+    addParentEntry(parentDataPage, newDataPage);
+  }
+
+  private CacheDataPage nestRootDataPage(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
+
+    if(!dpMain.isRoot()) {
+      throw new IllegalArgumentException("should be called with root, duh");
+    }
+    
+    CacheDataPage newCacheDataPage =
+      allocateNewCacheDataPage(dpMain._pageNumber, dpMain._leaf, false);
+    DataPageMain newMain = newCacheDataPage._main;
+    DataPageExtra newExtra = newCacheDataPage._extra;
+
+    // move entries to new page
+    newMain._childTailPageNumber = dpMain._childTailPageNumber;
+    newExtra._entries = dpExtra._entries;
+    newExtra._entryPrefix = dpExtra._entryPrefix;
+    newExtra._totalEntrySize = dpExtra._totalEntrySize;
+    newMain.setExtra(newExtra, true);
+
+    // clear the root page
+    dpMain._leaf = false;
+    dpExtra._entries = new ArrayList<Entry>();
+    dpExtra._entryPrefix = EMPTY_PREFIX;
+    dpExtra._totalEntrySize = 0;
+    dpMain.setExtra(dpExtra, true);
+
+    // add the new page as the first child of the root page
+    addParentEntry(cacheDataPage, newCacheDataPage);
+
+    return newCacheDataPage;
+  }
+  
+  private CacheDataPage allocateNewCacheDataPage(Integer parentPageNumber,
+                                                 boolean isLeaf,
+                                                 boolean isTail)
+    throws IOException
+  {
+    DataPageMain dpMain = new DataPageMain(getPageChannel().allocateNewPage());
+    DataPageExtra dpExtra = new DataPageExtra();
+    dpMain.initParentPage(parentPageNumber, isTail);
+    dpMain._leaf = isLeaf;
+    dpMain._prevPageNumber = INVALID_INDEX_PAGE_NUMBER;
+    dpMain._nextPageNumber = INVALID_INDEX_PAGE_NUMBER;
+    dpMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
+    dpExtra._entries = new ArrayList<Entry>();
+    dpExtra._entryPrefix = EMPTY_PREFIX;
+    dpMain.setExtra(dpExtra, true);
+
+    // add to our page cache
+    _dataPages.put(dpMain._pageNumber, dpMain);
+
+    // needs to be written out
+    CacheDataPage cacheDataPage = new CacheDataPage(dpMain, dpExtra);
+    setModified(cacheDataPage);
+
+    return cacheDataPage;
+  }
+
+  private void addToPeersAfter(CacheDataPage origDataPage,
+                               CacheDataPage newDataPage)
+    throws IOException
+  {
+    DataPageMain origMain = origDataPage._main;
+    DataPageMain newMain = newDataPage._main;
+
+    DataPageMain nextMain = origMain.getNextPage();
+
+    newMain._nextPageNumber = origMain._nextPageNumber;
+    newMain._prevPageNumber = origMain._pageNumber;
+    origMain._nextPageNumber = newMain._pageNumber;
+    
+    if(nextMain != null) {
+      setModified(new CacheDataPage(nextMain));
+      nextMain._prevPageNumber = newMain._pageNumber;
+    }
+  }
+
+  private void separateFromPreviousPeer(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+
+    setModified(cacheDataPage);
+
+    DataPageMain prevMain = dpMain.getPrevPage();
+    setModified(new CacheDataPage(prevMain));
+
+    prevMain._nextPageNumber = INVALID_INDEX_PAGE_NUMBER;
+    dpMain._prevPageNumber = INVALID_INDEX_PAGE_NUMBER;
+  }
+  
+  private void reparentChildren(CacheDataPage cacheDataPage)
+    throws IOException
+  {
+    DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
+
+    // note, the "parent" page number is not actually persisted, so we do not
+    // need to mark any updated pages as modified.  for the same reason, we
+    // don't need to load the pages if not already loaded
+    for(Entry entry : dpExtra._entries) {
+      DataPageMain childMain = _dataPages.get(entry.getSubPageNumber());
+      if(childMain != null) {
+        childMain.setParentPage(dpMain._pageNumber, false);
+      }
+    }
+
+    // lastly, don't forget about the tail page
+    DataPageMain childMain = _dataPages.get(dpMain._childTailPageNumber);
+    if(childMain != null) {
+      childMain.setParentPage(dpMain._pageNumber, true);
+    }
   }
   
   public CacheDataPage findCacheDataPage(Entry e)
@@ -621,11 +835,16 @@ public class IndexPageCache
       return IndexPageCache.this.getDataPage(_parentPageNumber);
     }
 
-    public void setParentPage(Integer parentPageNumber, boolean isTail) {
+    public void initParentPage(Integer parentPageNumber, boolean isTail) {
+      // only set if not already set
       if(_parentPageNumber == null) {
-        _parentPageNumber = parentPageNumber;
-        _tail = isTail;
+        setParentPage(parentPageNumber, isTail);
       }
+    }
+    
+    public void setParentPage(Integer parentPageNumber, boolean isTail) {
+      _parentPageNumber = parentPageNumber;
+      _tail = isTail;
     }
     
     public DataPageMain getPrevPage() throws IOException

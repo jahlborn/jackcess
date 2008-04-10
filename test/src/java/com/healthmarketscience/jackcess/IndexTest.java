@@ -149,16 +149,16 @@ public class IndexTest extends TestCase {
     assertEquals(512, index.getEntryCount());
     db.close();
 
-    // copy to temp file and attemp to edit
+    // copy to temp file and attempt to edit
     db = openCopy(origFile);
     t = db.getTable("Table1");
     index = t.getIndexes().get(0);
 
-    System.out.println("Index type: " + index.getClass());
+    System.out.println("IndexTest: Index type: " + index.getClass());
     try {
-      // we don't support writing these indexes
       t.addRow(99, "abc", "def");
       if(index instanceof SimpleIndex) {
+        // SimpleIndex doesn't support writing these indexes
         fail("Should have thrown UnsupportedOperationException");
       }
     } catch(UnsupportedOperationException e) {
