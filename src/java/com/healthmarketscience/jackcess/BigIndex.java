@@ -70,5 +70,10 @@ public class BigIndex extends Index {
   {
     return _pageCache.getCacheDataPage(pageNumber);
   }
+
+  @Override
+  public String toString() {
+    return super.toString() + "\n" + _pageCache.toString();
+  }
   
 }

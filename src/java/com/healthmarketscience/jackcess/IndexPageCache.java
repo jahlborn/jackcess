@@ -517,8 +517,10 @@ public class IndexPageCache
 
     DataPageMain parentMain = origMain.getParentPage();
     boolean origWasTail = origMain.isTail();
+    boolean newIsTail = (origWasTail ||
+       ((int)origMain._nextPageNumber == INVALID_INDEX_PAGE_NUMBER));
     CacheDataPage newDataPage = allocateNewCacheDataPage(
-        parentMain._pageNumber, origMain._leaf, origWasTail);
+        parentMain._pageNumber, origMain._leaf, newIsTail);
     DataPageMain newMain = newDataPage._main;
     DataPageExtra newExtra = newDataPage._extra;
     
@@ -796,7 +798,36 @@ public class IndexPageCache
 
     return prefix;
   }
+
+  private void dumpPage(StringBuilder rtn, DataPageMain dpMain) {
+    try {
+      CacheDataPage cacheDataPage = new CacheDataPage(dpMain);
+      rtn.append(cacheDataPage).append("\n");
+      if(!dpMain._leaf) {
+        for(Entry e : cacheDataPage._extra._entries) {
+          DataPageMain childMain = dpMain.getChildPage(e);
+          dumpPage(rtn, childMain);
+        }
+        DataPageMain childTailMain = dpMain.getChildTailPage();
+        if(childTailMain != null) {
+          dumpPage(rtn, childTailMain);
+        }
+      }
+    } catch(IOException e) {
+      rtn.append("Page[" + dpMain._pageNumber + "]: " + e);
+    }
+  }
   
+  @Override
+  public String toString() {
+    if(_rootPage == null) {
+      return "Cache: (uninitialized)";
+    }
+    
+    StringBuilder rtn = new StringBuilder("Cache: \n");
+    dumpPage(rtn, _rootPage);
+    return rtn.toString();
+  }
 
   private class DataPageMain implements Comparable<DataPageMain>
   {
