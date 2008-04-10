@@ -38,8 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
+import static com.healthmarketscience.jackcess.DatabaseTest.*;
 
 /** 
  *  @author Rob Di Marco
@@ -47,17 +47,8 @@ import org.apache.commons.logging.LogFactory;
 public class ImportTest extends TestCase
 {
 
-  /** The logger to use. */
-  private static final Log LOG = LogFactory.getLog(ImportTest.class);
-  public ImportTest(String name)
-  {
+  public ImportTest(String name) {
     super(name);
-  }
-
-  private Database create() throws Exception {
-    File tmp = File.createTempFile("databaseTest", ".mdb");
-    tmp.deleteOnExit();
-    return Database.create(tmp);
   }
 
   public void testImportFromFile() throws Exception

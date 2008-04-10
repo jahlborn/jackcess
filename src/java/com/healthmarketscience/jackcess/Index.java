@@ -698,6 +698,9 @@ public abstract class Index implements Comparable<Index> {
     rtn.append("\n\tNumber: " + _indexNumber);
     rtn.append("\n\tPage number: " + _rootPageNumber);
     rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
+    rtn.append("\n\tIs Foreign Key: " + isForeignKey());
+    rtn.append("\n\tIs Unique: " + isUnique());
+    rtn.append("\n\tIgnore Nulls: " + shouldIgnoreNulls());
     rtn.append("\n\tColumns: " + _columns);
     rtn.append("\n\tInitialized: " + _initialized);
     if(_initialized) {
