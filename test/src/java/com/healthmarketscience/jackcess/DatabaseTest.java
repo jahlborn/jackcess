@@ -58,6 +58,8 @@ import junit.framework.TestCase;
  * @author Tim McCune
  */
 public class DatabaseTest extends TestCase {
+
+  static boolean _autoSync = Database.DEFAULT_AUTO_SYNC;
   
   public DatabaseTest(String name) throws Exception {
     super(name);
@@ -68,7 +70,7 @@ public class DatabaseTest extends TestCase {
   }
   
   static Database open(File file) throws Exception {
-    return Database.open(file, true, Database.DEFAULT_AUTO_SYNC);
+    return Database.open(file, true, _autoSync);
   }
   
   static Database create() throws Exception {
@@ -76,7 +78,7 @@ public class DatabaseTest extends TestCase {
   }
 
   static Database create(boolean keep) throws Exception {
-    return Database.create(createTempFile(keep));
+    return Database.create(createTempFile(keep), _autoSync);
   }
 
   static Database openCopy(File srcFile) throws Exception {
@@ -86,7 +88,7 @@ public class DatabaseTest extends TestCase {
   static Database openCopy(File srcFile, boolean keep) throws Exception {
     File tmp = createTempFile(keep);
     copyFile(srcFile, tmp);
-    return Database.open(tmp);
+    return Database.open(tmp, false, _autoSync);
   }
   
   public void testInvalidTableDefs() throws Exception {
