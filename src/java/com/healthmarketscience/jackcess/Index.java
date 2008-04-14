@@ -2233,9 +2233,12 @@ public abstract class Index implements Comparable<Index> {
 
     @Override
     public final String toString() {
+      List<Entry> entries = getEntries();
       return (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
-        getChildTailPageNumber() + "), " + getEntries();
+        getChildTailPageNumber() + "), " +
+        (isLeaf() ? ("[" + entries.get(0) + ", " +
+                     entries.get(entries.size() - 1) + "]") : entries);
     }
   }
   
