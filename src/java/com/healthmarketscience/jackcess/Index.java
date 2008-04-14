@@ -2237,8 +2237,10 @@ public abstract class Index implements Comparable<Index> {
       return (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
         getChildTailPageNumber() + "), " +
-        (isLeaf() ? ("[" + entries.get(0) + ", " +
-                     entries.get(entries.size() - 1) + "]") : entries);
+        ((isLeaf() && !entries.isEmpty()) ?
+         ("[" + entries.get(0) + ", " +
+          entries.get(entries.size() - 1) + "]") :
+         entries);
     }
   }
   
