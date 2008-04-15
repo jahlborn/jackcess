@@ -806,6 +806,7 @@ public abstract class Index implements Comparable<Index> {
       TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
                                  ByteOrder.BIG_ENDIAN);
 
+    Entry prevEntry = FIRST_ENTRY;
     for (int i = 0; i < entryMaskLength; i++) {
       byte entryMask = buffer.get(entryMaskPos + i);
       for (int j = 0; j < 8; j++) {
@@ -823,8 +824,14 @@ public abstract class Index implements Comparable<Index> {
             curEntryLen += entryPrefix.length;
           }
           totalEntrySize += curEntryLen;
+
+          Entry entry = newEntry(curEntryBuffer, curEntryLen, isLeaf);
+          if(prevEntry.compareTo(entry) >= 0) {
+            throw new IOException("Unexpected order in index entries, " +
+                                  prevEntry + " >= " + entry);
+          }
           
-          entries.add(newEntry(curEntryBuffer, curEntryLen, isLeaf));
+          entries.add(entry);
 
           if(entries.size() == 1) {
             if(entryPrefixLength > 0) {
@@ -836,17 +843,8 @@ public abstract class Index implements Comparable<Index> {
           }
 
           lastStart += length;
+          prevEntry = entry;
         }
-      }
-    }
-    
-    // check the entry order, just to be safe
-    for(int i = 0; i < (entries.size() - 1); ++i) {
-      Entry e1 = entries.get(i);
-      Entry e2 = entries.get(i + 1);
-      if(e1.compareTo(e2) > 0) {
-        throw new IOException("Unexpected order in index entries, " +
-                              e1 + " is greater than " + e2);
       }
     }
 
