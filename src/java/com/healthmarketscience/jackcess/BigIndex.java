@@ -75,5 +75,12 @@ public class BigIndex extends Index {
   public String toString() {
     return super.toString() + "\n" + _pageCache.toString();
   }
+
+  /**
+   * Used by unit tests to validate the internal status of the index.
+   */
+  void validate() throws IOException {
+    _pageCache.validate();
+  }
   
 }

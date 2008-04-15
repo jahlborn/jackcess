@@ -196,6 +196,13 @@ public class PageChannel implements Channel, Flushable {
     // this will force the file to be extended with mostly undefined bytes
     return writeNewPage(FORCE_BYTES);
   }
+
+  /**
+   * Deallocate a previously used page in the database.
+   */
+  public void deallocatePage(int pageNumber) throws IOException {
+    // FIXME, writeme
+  }
   
   /**
    * @return A newly-allocated buffer that can be passed to readPage

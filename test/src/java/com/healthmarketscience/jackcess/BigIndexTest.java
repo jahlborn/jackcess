@@ -96,6 +96,8 @@ public class BigIndexTest extends TestCase {
                  "this is some more row data " + nextInt);
       }
 
+      ((BigIndex)index).validate();
+      
       db.flush();
       t = db.getTable("Table1");
       index = t.getIndex("CD_AGENTE");
@@ -118,6 +120,8 @@ public class BigIndexTest extends TestCase {
 
       assertEquals(10512, rowCount);
 
+      ((BigIndex)index).validate();
+      
       // remove all but the first two entries
       Cursor cursor = new CursorBuilder(t).setIndex(index)
         .afterLast().toCursor();
@@ -126,7 +130,7 @@ public class BigIndexTest extends TestCase {
         cursor.deleteCurrentRow();
       }
 
-//       System.out.println("FOO: " + index);
+      ((BigIndex)index).validate();
       
       List<Integer> found = new ArrayList<Integer>();
       for(Map<String,Object> row : Cursor.createIndexCursor(t, index)) {
@@ -135,18 +139,17 @@ public class BigIndexTest extends TestCase {
 
       assertEquals(firstTwo, found);
 
-      // FIXME, last entry removal still borked
       // remove remaining entries
-//       cursor = Cursor.createCursor(t);
-//       for(int i = 0; i < 2; ++i) {
-//         assertTrue(cursor.moveToNextRow());
-//         cursor.deleteCurrentRow();
-//       }
+      cursor = Cursor.createCursor(t);
+      for(int i = 0; i < 2; ++i) {
+        assertTrue(cursor.moveToNextRow());
+        cursor.deleteCurrentRow();
+      }
 
-//       assertFalse(cursor.moveToNextRow());
-//       assertFalse(cursor.moveToPreviousRow());
+      assertFalse(cursor.moveToNextRow());
+      assertFalse(cursor.moveToPreviousRow());
       
-//       System.out.println("FOO: " + index);
+      ((BigIndex)index).validate();
       
       db.close();
       
