@@ -92,8 +92,6 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_FIXED_DATA_OFFSET;
   
   public final int OFFSET_TABLE_DEF_LOCATION;
-  public final int OFFSET_NUM_ROWS_ON_PAGE;
-  public final int OFFSET_ROW_LOCATION_BLOCK;
   
   public final int OFFSET_ROW_START;
   public final int OFFSET_USAGE_MAP_START;
@@ -104,6 +102,7 @@ public abstract class JetFormat {
   
   public final int OFFSET_FREE_SPACE;
   public final int OFFSET_NUM_ROWS_ON_DATA_PAGE;
+  public final int MAX_NUM_ROWS_ON_DATA_PAGE;
   
   public final int OFFSET_INDEX_COMPRESSED_BYTE_COUNT;
   public final int OFFSET_INDEX_ENTRY_MASK;
@@ -178,8 +177,6 @@ public abstract class JetFormat {
     OFFSET_COLUMN_FIXED_DATA_OFFSET = defineOffsetColumnFixedDataOffset();
     
     OFFSET_TABLE_DEF_LOCATION = defineOffsetTableDefLocation();
-    OFFSET_NUM_ROWS_ON_PAGE = defineOffsetNumRowsOnPage();
-    OFFSET_ROW_LOCATION_BLOCK = defineOffsetRowLocationBlock();
     
     OFFSET_ROW_START = defineOffsetRowStart();
     OFFSET_USAGE_MAP_START = defineOffsetUsageMapStart();
@@ -190,6 +187,7 @@ public abstract class JetFormat {
     
     OFFSET_FREE_SPACE = defineOffsetFreeSpace();
     OFFSET_NUM_ROWS_ON_DATA_PAGE = defineOffsetNumRowsOnDataPage();
+    MAX_NUM_ROWS_ON_DATA_PAGE = defineMaxNumRowsOnDataPage();
     
     OFFSET_INDEX_COMPRESSED_BYTE_COUNT = defineOffsetIndexCompressedByteCount();
     OFFSET_INDEX_ENTRY_MASK = defineOffsetIndexEntryMask();
@@ -243,8 +241,6 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnFixedDataOffset();
   
   protected abstract int defineOffsetTableDefLocation();
-  protected abstract int defineOffsetNumRowsOnPage();
-  protected abstract int defineOffsetRowLocationBlock();
   
   protected abstract int defineOffsetRowStart();
   protected abstract int defineOffsetUsageMapStart();
@@ -255,6 +251,7 @@ public abstract class JetFormat {
   
   protected abstract int defineOffsetFreeSpace();
   protected abstract int defineOffsetNumRowsOnDataPage();
+  protected abstract int defineMaxNumRowsOnDataPage();
   
   protected abstract int defineOffsetIndexCompressedByteCount();
   protected abstract int defineOffsetIndexEntryMask();
@@ -347,10 +344,6 @@ public abstract class JetFormat {
   
     @Override
     protected int defineOffsetTableDefLocation() { return 4; }
-    @Override
-    protected int defineOffsetNumRowsOnPage() { return 12; }
-    @Override
-    protected int defineOffsetRowLocationBlock() { return 16; }
     
     @Override
     protected int defineOffsetRowStart() { return 14; }
@@ -367,6 +360,8 @@ public abstract class JetFormat {
     protected int defineOffsetFreeSpace() { return 2; }
     @Override
     protected int defineOffsetNumRowsOnDataPage() { return 12; }
+    @Override
+    protected int defineMaxNumRowsOnDataPage() { return 256; }
     
     @Override
     protected int defineOffsetIndexCompressedByteCount() { return 24; }

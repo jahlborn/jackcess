@@ -1220,7 +1220,9 @@ public class Table
       int rowSize = rowData[i].remaining();
       int rowSpaceUsage = getRowSpaceUsage(rowSize, getFormat());
       short freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
-      if (freeSpaceInPage < rowSpaceUsage) {
+      int rowsOnPage = getRowsOnDataPage(dataPage, getFormat());
+      if((freeSpaceInPage < rowSpaceUsage) ||
+         (rowsOnPage >= getFormat().MAX_NUM_ROWS_ON_DATA_PAGE)) {
 
         // Last data page is full.  Create a new one.
         writeDataPage(dataPage, pageNumber);
@@ -1292,7 +1294,7 @@ public class Table
                                               getFormat())); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
-    dataPage.putInt(0); //Number of records on this page
+    dataPage.putShort((short)0); //Number of rows on this page
     int pageNumber = _addRowBufferH.getPageNumber();
     getPageChannel().writePage(dataPage, pageNumber);
     _ownedPages.addPageNumber(pageNumber);

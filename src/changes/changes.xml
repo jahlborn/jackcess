@@ -10,6 +10,9 @@
         Need to store auto-number values back into row so that indexes can be
         updated correctly.
       </action>
+      <action dev="jahlborn" type="fix" issue="1942330">
+        Access seems to limit data pages to a max of 256 rows.
+      </action>
     </release>
     <release version="1.1.13" date="2008-03-21">
       <action dev="jahlborn" type="fix" issue="1913775">
