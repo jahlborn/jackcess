@@ -195,7 +195,7 @@ public class Expand extends SCSU
 
             // output a Unicode character
             char ch = charFromTwoBytes(in[iCur], in[iCur+1]);
-            sb.append((char)ch);
+            sb.append(ch);
             iOut++;
         }
 
@@ -375,7 +375,7 @@ public class Expand extends SCSU
                     char ch = charFromTwoBytes(in[iCur-1], in[iCur]);
 
                     Debug.out("Quoted: ", ch);
-                    sb.append((char)ch);
+                    sb.append(ch);
                     iOut++;
                 }
                 break;
