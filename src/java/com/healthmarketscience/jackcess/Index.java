@@ -833,13 +833,11 @@ public abstract class Index implements Comparable<Index> {
           
           entries.add(entry);
 
-          if(entries.size() == 1) {
-            if(entryPrefixLength > 0) {
-              // read any shared entry prefix
-              entryPrefix = new byte[entryPrefixLength];
-              buffer.position(entryPos + lastStart);
-              buffer.get(entryPrefix);
-            }
+          if((entries.size() == 1) && (entryPrefixLength > 0)) {
+            // read any shared entry prefix
+            entryPrefix = new byte[entryPrefixLength];
+            buffer.position(entryPos + lastStart);
+            buffer.get(entryPrefix);
           }
 
           lastStart += length;
@@ -1818,7 +1816,7 @@ public abstract class Index implements Comparable<Index> {
       return Index.this;
     }
 
-    private final int getIndexModCount() {
+    private int getIndexModCount() {
       return Index.this._modCount;
     }
     
