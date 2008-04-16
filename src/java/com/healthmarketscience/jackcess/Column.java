@@ -657,7 +657,7 @@ public class Column implements Comparable<Column> {
   {
     if(value == null) {
       buffer.putDouble(0d);
-    } if(value instanceof DateExt) {
+    } else if(value instanceof DateExt) {
       
       // this is a Date value previously read from readDateValue().  use the
       // original bits to store the value so we don't lose any precision
