@@ -320,7 +320,7 @@ public abstract class Index implements Comparable<Index> {
     
     if(_readOnly) {
       throw new UnsupportedOperationException(
-          "FIXME cannot write indexes of this type yet");
+          "FIXME cannot write indexes of this type yet, see Database javadoc for info on enabling large index support");
     }
     updateImpl();
   }
@@ -733,7 +733,7 @@ public abstract class Index implements Comparable<Index> {
     if(dataPage.getCompressedEntrySize() > _maxPageEntrySize) {
       if(this instanceof SimpleIndex) {
         throw new UnsupportedOperationException(
-            "FIXME cannot write large index yet");
+            "FIXME cannot write large index yet, see Database javadoc for info on enabling large index support");
       }
       throw new IllegalStateException("data page is too large");
     }

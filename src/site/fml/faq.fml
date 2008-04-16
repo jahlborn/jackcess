@@ -187,6 +187,20 @@
         </ul>
       </answer>
     </faq>
+
+    <faq id="bigindex">
+      <question>Why am I getting an UnsupportedOperationException (or
+                IOException) when updating an indexed table?</question>
+      <answer>
+        Previously index update support only handled tables with small numbers
+        of rows.  When the index size limit was reached an
+        UnsupportedOperationException (or possibly an IOException) was thrown.
+        As of the 1.1.14 release, experimental, optional large index support
+        has been added.  This support is disabled by default but can be
+        enabled via a few different means.  Please see the <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database javadocs</a>
+        for details on enabling large index support.
+      </answer>
+    </faq>
     
     <faq id="hms">
       <question>Who is Health Market Science?</question>

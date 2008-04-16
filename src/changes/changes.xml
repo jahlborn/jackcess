@@ -13,6 +13,11 @@
       <action dev="jahlborn" type="fix" issue="1942330">
         Access seems to limit data pages to a max of 256 rows.
       </action>
+      <action dev="jahlborn" type="fix" issue="1564870">
+        Added experimental support for "large" indexes.  The current support
+        is optional.  It can be enabled via a varity of means, see the
+        Database javadoc for more details.
+      </action>
     </release>
     <release version="1.1.13" date="2008-03-21">
       <action dev="jahlborn" type="fix" issue="1913775">

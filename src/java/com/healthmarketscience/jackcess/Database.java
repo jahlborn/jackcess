@@ -61,6 +61,19 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * An Access database.
+ * <p>
+ * There is now experimental, optional support for large indexes (disabled by
+ * default).  This optional support can be enabled via a few different means:
+ * <ul>
+ * <li>Setting the system property {@value #USE_BIG_INDEX_PROPERTY} to
+ *     {@code "true"} will enable "large" index support accross the jvm</li>
+ * <li>Calling {@link #setUseBigIndex} with {@code true} on a Database
+ *     instance will enable "large" index support for all tables subsequently
+ *     created from that instance</li>
+ * <li>Calling {@link #getTable(String,boolean)} can selectively
+ *     enable/disable "large" index support on a per-table basis (overriding
+ *     any Database or system property setting)</li>
+ * </ul>
  *
  * @author Tim McCune
  */
