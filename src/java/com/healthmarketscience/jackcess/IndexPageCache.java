@@ -610,6 +610,7 @@ public class IndexPageCache
       
     // clear the root page
     rootMain._leaf = false;
+    rootMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
     rootExtra._entries = new ArrayList<Entry>();
     rootExtra._entryPrefix = EMPTY_PREFIX;
     rootExtra._totalEntrySize = 0;
@@ -869,6 +870,7 @@ public class IndexPageCache
         throw new IllegalStateException("Prev page " + prevMain +
                                         " does not ref " + dpMain);
       }
+      validatePeerStatus(dpMain, prevMain);
     }
     
     DataPageMain nextMain = _dataPages.get(dpMain._nextPageNumber);
@@ -876,6 +878,25 @@ public class IndexPageCache
       if((int)nextMain._prevPageNumber != dpMain._pageNumber) {
         throw new IllegalStateException("Next page " + nextMain +
                                         " does not ref " + dpMain);
+      }
+      validatePeerStatus(dpMain, nextMain);
+    }
+  }
+
+  private void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
+    throws IOException
+  {
+    if(dpMain._leaf != peerMain._leaf) {
+      throw new IllegalStateException("Mismatched peer status " +
+                                      dpMain._leaf + " " + peerMain._leaf);
+    }
+    if(!dpMain._leaf) {
+      if((dpMain._parentPageNumber != null) &&
+         (peerMain._parentPageNumber != null) &&
+         ((int)dpMain._parentPageNumber != (int)peerMain._parentPageNumber)) {
+        throw new IllegalStateException("Mismatched node parents " +
+                                        dpMain._parentPageNumber + " " +
+                                        peerMain._parentPageNumber);
       }
     }
   }

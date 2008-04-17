@@ -65,60 +65,75 @@ public class BigIndexTest extends TestCase {
   public void testComplexIndex() throws Exception
   {
     // this file has an index with "compressed" entries and node pages
-    File origFile = new File("test/data/compIndexTest.mdb");
-    Database db = open(origFile);
+    Database db = open(new File("test/data/compIndexTest.mdb"));
     Table t = db.getTable("Table1");
     Index index = t.getIndex("CD_AGENTE");
     assertFalse(index.isInitialized());
     assertEquals(512, countRows(t));
     assertEquals(512, index.getEntryCount());
     db.close();
+  }
+
+  public void testBigIndex() throws Exception
+  {
+    // this file has an index with "compressed" entries and node pages
+    File origFile = new File("test/data/bigIndexTest.mdb");
+    Database db = open(origFile);
+    Table t = db.getTable("Table1");
+    Index index = t.getIndex("col1");
+    assertFalse(index.isInitialized());
+    assertEquals(0, countRows(t));
+    assertEquals(0, index.getEntryCount());
+    db.close();
 
     DatabaseTest._autoSync = false;
     try {
+
+      String extraText = " some random text to fill out the index and make it fill up pages";
       
       // copy to temp file and attempt to edit
       db = openCopy(origFile);
       t = db.getTable("Table1");
-      index = t.getIndex("CD_AGENTE");
+      index = t.getIndex("col1");
 
       System.out.println("BigIndexTest: Index type: " + index.getClass());
 
       // add 10,000 (pseudo) random entries to the table
       Random rand = new Random(13L);
-      for(int i = 0; i < 10000; ++i) {
-        Integer nextInt = rand.nextInt();
+      for(int i = 0; i < 2000; ++i) {
+        int nextInt = rand.nextInt(Integer.MAX_VALUE);
+        String nextVal = "" + nextInt + extraText;
         if(((i + 1) % 3333) == 0) {
-          nextInt = null;
+          nextVal = null;
         }
-        t.addRow(nextInt,
-                 "this is some row data " + nextInt,
-                 "this is some more row data " + nextInt);
+        t.addRow(nextVal, "this is some row data " + nextInt);
       }
 
       ((BigIndex)index).validate();
       
       db.flush();
       t = db.getTable("Table1");
-      index = t.getIndex("CD_AGENTE");
+      index = t.getIndex("col1");
 
       // make sure all entries are there and correctly ordered
-      int lastValue = Integer.MAX_VALUE;
+      String lastValue = "      ";
       int rowCount = 0;
-      List<Integer> firstTwo = new ArrayList<Integer>();
+      List<String> firstTwo = new ArrayList<String>();
       for(Map<String,Object> row : Cursor.createIndexCursor(t, index)) {
-        Integer tmpVal = (Integer)row.get("CD_AGENTE");
-        int val = ((tmpVal != null) ? (int)tmpVal : Integer.MIN_VALUE);
+        String val = (String)row.get("col1");
+        if(val == null) {
+          val = "ZZZZZZZ";
+        }
         assertTrue("" + val + " <= " + lastValue + " " + rowCount,
-                   val <= lastValue);
+                   lastValue.compareTo(val) <= 0);
         if(firstTwo.size() < 2) {
-          firstTwo.add(tmpVal);
+          firstTwo.add(val);
         }
         lastValue = val;
         ++rowCount;
       }
 
-      assertEquals(10512, rowCount);
+      assertEquals(2000, rowCount);
 
       ((BigIndex)index).validate();
       
@@ -132,9 +147,9 @@ public class BigIndexTest extends TestCase {
 
       ((BigIndex)index).validate();
       
-      List<Integer> found = new ArrayList<Integer>();
+      List<String> found = new ArrayList<String>();
       for(Map<String,Object> row : Cursor.createIndexCursor(t, index)) {
-        found.add((Integer)row.get("CD_AGENTE"));
+        found.add((String)row.get("col1"));
       }      
 
       assertEquals(firstTwo, found);
@@ -158,17 +173,19 @@ public class BigIndexTest extends TestCase {
     }
   }
 
-  public void x_testBigIndex() throws Exception
-  {
-    File f = new File("test/data/databaseTest19731_ind.mdb");
-    Database db = open(f);
-    Table t = db.getTable("test");
-    System.out.println("FOO reading index");
-    Index index = t.getIndexes().get(0);
-    index.initialize();
-    System.out.println(index);
-    db.close();
-  }
+//   public void testBigIndex2() throws Exception
+//   {
+//     File f = new File("test/data/databaseTest19731_ind.mdb");
+//     Database db = open(f);
+//     Table t = db.getTable("test");
+//     System.out.println("FOO reading index");
+//     Index index = t.getIndexes().get(0);
+//     index.initialize();
+//     index.forceInit();
+//     index.validate();
+//     System.out.println(index);
+//     db.close();
+//   }
 
 
 }
