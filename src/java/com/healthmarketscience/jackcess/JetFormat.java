@@ -361,7 +361,7 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetNumRowsOnDataPage() { return 12; }
     @Override
-    protected int defineMaxNumRowsOnDataPage() { return 256; }
+    protected int defineMaxNumRowsOnDataPage() { return 255; }
     
     @Override
     protected int defineOffsetIndexCompressedByteCount() { return 24; }
