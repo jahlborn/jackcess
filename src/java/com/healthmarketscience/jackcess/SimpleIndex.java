@@ -208,10 +208,13 @@ public class SimpleIndex extends Index {
     @Override
     public void addEntry(int idx, Entry entry) {
       _entries.add(idx, entry);
+      _totalEntrySize += entry.size();
     }
 
+    @Override
     public void removeEntry(int idx) {
-      _entries.remove(idx);
+      Entry oldEntry = _entries.remove(idx);
+      _totalEntrySize -= oldEntry.size();
     }
     
   }
