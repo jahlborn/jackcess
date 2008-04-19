@@ -101,7 +101,7 @@ public class IndexPageCache
     for(Iterator<CacheDataPage> iter = _modifiedPages.iterator();
         iter.hasNext(); ) {
       CacheDataPage cacheDataPage = iter.next();
-      if(cacheDataPage.isEmpty()) {
+      if(cacheDataPage._extra._entryView.isEmpty()) {
         if(!cacheDataPage._main.isRoot()) {
           deleteDataPage(cacheDataPage);
         } else {
@@ -162,7 +162,7 @@ public class IndexPageCache
   private void writeDataPages() throws IOException
   {
     for(CacheDataPage cacheDataPage : _modifiedPages) {
-      if(cacheDataPage.isEmpty()) {
+      if(cacheDataPage._extra._entryView.isEmpty()) {
         throw new IllegalStateException("Unexpected empty page " +
                                         cacheDataPage);
       }
@@ -705,10 +705,16 @@ public class IndexPageCache
     // there's only one entry on the page, and it's the tail.  make it a
     // normal entry
     DataPageMain dpMain = cacheDataPage._main;
+    DataPageExtra dpExtra = cacheDataPage._extra;
 
     DataPageMain tailMain = dpMain.getChildTailPage();
     CacheDataPage tailDataPage = new CacheDataPage(tailMain);
-    removeParentEntry(tailDataPage);
+
+    // note, we can't just call removeParentEntry here cause that will attempt
+    // to delete the parent page (since it would be empty), so we have to
+    // remove the parent entry manually
+    updateParentTail(cacheDataPage, tailDataPage, UpdateType.REMOVE);
+    dpExtra._entryView.clear();
     
     tailMain.setParentPage(dpMain._pageNumber, false);
 
@@ -834,9 +840,12 @@ public class IndexPageCache
     int childTailPageNumber = dpMain._childTailPageNumber;
     if(dpMain._leaf) {
       if(childTailPageNumber != INVALID_INDEX_PAGE_NUMBER) {
-        throw new IllegalStateException("Leaf page has tail");
+        throw new IllegalStateException("Leaf page has tail " + dpMain);
       }
       return;
+    }
+    if((dpExtra._entryView.size() == 1) && dpMain.hasChildTail()) {
+      throw new IllegalStateException("Single child is tail " + dpMain);
     }
     for(Entry e : dpExtra._entryView) {
       validateEntryForPage(dpMain, e);
@@ -1194,9 +1203,13 @@ public class IndexPageCache
       _extra = extra;
     }
 
+    private List<Entry> getEntries() {
+      return _extra._entries;
+    }
+    
     @Override
     public int size() {
-      int size = _extra._entries.size();
+      int size = getEntries().size();
       if(hasChildTail()) {
         ++size;
       }
@@ -1207,14 +1220,14 @@ public class IndexPageCache
     public Entry get(int idx) {
       return (isCurrentChildTailIndex(idx) ?
               _childTailEntry :
-              _extra._entries.get(idx));
+              getEntries().get(idx));
     }
 
     @Override
     public Entry set(int idx, Entry newEntry) {
       return (isCurrentChildTailIndex(idx) ?
               setChildTailEntry(newEntry) :
-              _extra._entries.set(idx, newEntry));
+              getEntries().set(idx, newEntry));
     }
     
     @Override
@@ -1222,7 +1235,7 @@ public class IndexPageCache
       if(isNewChildTailIndex(idx)) {
         setChildTailEntry(newEntry);
       } else {
-        _extra._entries.add(idx, newEntry);
+        getEntries().add(idx, newEntry);
       }
     }
     
@@ -1230,9 +1243,15 @@ public class IndexPageCache
     public Entry remove(int idx) {
       return (isCurrentChildTailIndex(idx) ?
               setChildTailEntry(null) :
-              _extra._entries.remove(idx));
+              getEntries().remove(idx));
     }
 
+    @Override
+    public void clear() {
+      getEntries().clear();
+      _childTailEntry = null;
+    }
+    
     public Entry setChildTailEntry(Entry newEntry) {
       Entry old = _childTailEntry;
       _childTailEntry = newEntry;
@@ -1248,17 +1267,17 @@ public class IndexPageCache
     }
     
     private boolean isCurrentChildTailIndex(int idx) {
-      return(idx == _extra._entries.size());
+      return(idx == getEntries().size());
     }
 
     private boolean isNewChildTailIndex(int idx) {
-      return(idx == (_extra._entries.size() + 1));
+      return(idx == (getEntries().size() + 1));
     }
 
     public Entry getLast() {
       return(hasChildTail() ? _childTailEntry :
-             (!_extra._entries.isEmpty() ?
-              _extra._entries.get(_extra._entries.size() - 1) : null));
+             (!getEntries().isEmpty() ?
+              getEntries().get(getEntries().size() - 1) : null));
     }
 
     public int find(Entry e) {

@@ -98,7 +98,7 @@ public class BigIndexTest extends TestCase {
 
       System.out.println("BigIndexTest: Index type: " + index.getClass());
 
-      // add 10,000 (pseudo) random entries to the table
+      // add 2,000 (pseudo) random entries to the table
       Random rand = new Random(13L);
       for(int i = 0; i < 2000; ++i) {
         int nextInt = rand.nextInt(Integer.MAX_VALUE);
@@ -163,6 +163,26 @@ public class BigIndexTest extends TestCase {
 
       assertFalse(cursor.moveToNextRow());
       assertFalse(cursor.moveToPreviousRow());
+      
+      ((BigIndex)index).validate();
+
+      // add 50 (pseudo) random entries to the table
+      rand = new Random(42L);
+      for(int i = 0; i < 50; ++i) {
+        int nextInt = rand.nextInt(Integer.MAX_VALUE);
+        String nextVal = "" + nextInt + extraText;
+        if(((i + 1) % 3333) == 0) {
+          nextVal = null;
+        }
+        t.addRow(nextVal, "this is some row data " + nextInt);
+      }
+
+      ((BigIndex)index).validate();
+
+      cursor = Cursor.createIndexCursor(t, index);
+      while(cursor.moveToNextRow()) {
+        cursor.deleteCurrentRow();
+      }
       
       ((BigIndex)index).validate();
       
