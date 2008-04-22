@@ -71,10 +71,6 @@ public class IndexPageCache
     return _index;
   }
   
-  public JetFormat getFormat() {
-    return getIndex().getFormat();
-  }
-
   public PageChannel getPageChannel() {
     return getIndex().getPageChannel();
   }
@@ -119,8 +115,8 @@ public class IndexPageCache
     do {
       splitPages = false;
 
-        // we might be adding to this list while iterating, so we can't use an
-        // iteratoor
+      // we might be adding to this list while iterating, so we can't use an
+      // iterator
       for(int i = 0; i < _modifiedPages.size(); ++i) {
 
         CacheDataPage cacheDataPage = _modifiedPages.get(i);
@@ -261,14 +257,6 @@ public class IndexPageCache
     updateEntry(cacheDataPage, entryIdx, newEntry, UpdateType.ADD);
   }
   
-  private void replaceEntry(CacheDataPage cacheDataPage,
-                            int entryIdx,
-                            Entry newEntry)
-    throws IOException
-  {
-    updateEntry(cacheDataPage, entryIdx, newEntry, UpdateType.REPLACE);
-  }
-
   private void updateEntry(CacheDataPage cacheDataPage,
                            int entryIdx,
                            Entry newEntry,
@@ -282,6 +270,12 @@ public class IndexPageCache
       validateEntryForPage(dpMain, newEntry);
     }
 
+    // note, it's slightly ucky, but we need to load the parent page before we
+    // start mucking with our entries because our parent may use our entries.
+    CacheDataPage parentDataPage = (!dpMain.isRoot() ?
+                                    new CacheDataPage(dpMain.getParentPage()) :
+                                    null);
+    
     Entry oldLastEntry = dpExtra._entryView.getLast();
     Entry oldEntry = null;
     int entrySizeDiff = 0;
@@ -319,7 +313,7 @@ public class IndexPageCache
 
     if(dpExtra._entryView.isEmpty()) {
       // this page is dead
-      removeDataPage(cacheDataPage, oldLastEntry);
+      removeDataPage(parentDataPage, cacheDataPage, oldLastEntry);
       return;
     }
 
@@ -330,11 +324,11 @@ public class IndexPageCache
     }
 
     // the update to the last entry needs to be propagated to our parent
-    replaceParentEntry(new CacheDataPage(dpMain.getParentPage()),
-                       cacheDataPage, oldLastEntry);
+    replaceParentEntry(parentDataPage, cacheDataPage, oldLastEntry);
   }
 
-  private void removeDataPage(CacheDataPage cacheDataPage,
+  private void removeDataPage(CacheDataPage parentDataPage,
+                              CacheDataPage cacheDataPage,
                               Entry oldLastEntry)
     throws IOException
   {
@@ -360,8 +354,8 @@ public class IndexPageCache
     }
 
     // remove this page from its parent page
-    updateParentEntry(new CacheDataPage(dpMain.getParentPage()),
-                      cacheDataPage, oldLastEntry, null, UpdateType.REMOVE);
+    updateParentEntry(parentDataPage, cacheDataPage, oldLastEntry, null,
+                      UpdateType.REMOVE);
 
     // remove this page from any next/prev pages
     removeFromPeers(cacheDataPage);
@@ -388,16 +382,6 @@ public class IndexPageCache
     }
   }
 
-  private void removeParentEntry(CacheDataPage childDataPage)
-    throws IOException
-  {
-    DataPageMain childMain = childDataPage._main;
-    DataPageExtra childExtra = childDataPage._extra;
-    updateParentEntry(new CacheDataPage(childMain.getParentPage()),
-                      childDataPage, childExtra._entryView.getLast(),
-                      null, UpdateType.REMOVE);
-  }
-  
   private void addParentEntry(CacheDataPage parentDataPage,
                               CacheDataPage childDataPage)
     throws IOException
@@ -464,10 +448,6 @@ public class IndexPageCache
             "; parent " + parentDataPage);
       }
       idx = missingIndexToInsertionPoint(idx);
-      if(childMain.isTail() && (upType == UpdateType.ADD)) {
-        // we add a tail entry by using the index (size + 1)
-        ++idx;
-      }
     } else {
       if(!expectFound) {
         throw new IllegalStateException(
@@ -516,6 +496,8 @@ public class IndexPageCache
     DataPageMain origMain = origDataPage._main;
     DataPageExtra origExtra = origDataPage._extra;
 
+    setModified(origDataPage);
+    
     int numEntries = origExtra._entries.size();
     if(numEntries < 2) {
       throw new IllegalStateException(
@@ -533,11 +515,15 @@ public class IndexPageCache
       origExtra = newDataPage._extra;
     }
 
+    // note, it's slightly ucky, but we need to load the parent page before we
+    // start mucking with our entries because our parent may use our entries.
+    DataPageMain parentMain = origMain.getParentPage();
+    CacheDataPage parentDataPage = new CacheDataPage(parentMain);
+    
     // note, there are many, many ways this could be improved/tweaked.  for
     // now, we just want it to be functional...
     // so, we will naively move half the entries from one page to a new page.
 
-    DataPageMain parentMain = origMain.getParentPage();
     CacheDataPage newDataPage = allocateNewCacheDataPage(
         parentMain._pageNumber, origMain._leaf);
     DataPageMain newMain = newDataPage._main;
@@ -577,7 +563,6 @@ public class IndexPageCache
     }
 
     // lastly, we need to add the new page to the parent page's entries
-    CacheDataPage parentDataPage = new CacheDataPage(parentMain);    
     addParentEntry(parentDataPage, newDataPage);
   }
 
@@ -707,18 +692,18 @@ public class IndexPageCache
     DataPageMain dpMain = cacheDataPage._main;
     DataPageExtra dpExtra = cacheDataPage._extra;
 
+    setModified(cacheDataPage);
+    
     DataPageMain tailMain = dpMain.getChildTailPage();
     CacheDataPage tailDataPage = new CacheDataPage(tailMain);
 
-    // note, we can't just call removeParentEntry here cause that will attempt
-    // to delete the parent page (since it would be empty), so we have to
-    // remove the parent entry manually
+    // move the tail entry to the last normal entry
     updateParentTail(cacheDataPage, tailDataPage, UpdateType.REMOVE);
-    dpExtra._entryView.clear();
+    Entry tailEntry = dpExtra._entryView.demoteTail();
+    dpExtra._totalEntrySize += tailEntry.size();
+    dpExtra._entryPrefix = EMPTY_PREFIX;
     
     tailMain.setParentPage(dpMain._pageNumber, false);
-
-    addParentEntry(cacheDataPage, tailDataPage);
   }
   
   private void promoteTail(CacheDataPage cacheDataPage)
@@ -728,13 +713,18 @@ public class IndexPageCache
     DataPageMain dpMain = cacheDataPage._main;
     DataPageExtra dpExtra = cacheDataPage._extra;
 
+    setModified(cacheDataPage);
+    
     DataPageMain lastMain = dpMain.getChildPage(dpExtra._entryView.getLast());
     CacheDataPage lastDataPage = new CacheDataPage(lastMain);
-    removeParentEntry(lastDataPage);
-    
-    lastMain.setParentPage(dpMain._pageNumber, true);
 
-    addParentEntry(cacheDataPage, lastDataPage);
+    // move the "last" normal entry to the tail entry
+    updateParentTail(cacheDataPage, lastDataPage, UpdateType.ADD);
+    Entry lastEntry = dpExtra._entryView.promoteTail();
+    dpExtra._totalEntrySize -= lastEntry.size();
+    dpExtra._entryPrefix = EMPTY_PREFIX;
+
+    lastMain.setParentPage(dpMain._pageNumber, true);
   }
   
   public CacheDataPage findCacheDataPage(Entry e)
@@ -1232,11 +1222,9 @@ public class IndexPageCache
     
     @Override
     public void add(int idx, Entry newEntry) {
-      if(isNewChildTailIndex(idx)) {
-        setChildTailEntry(newEntry);
-      } else {
-        getEntries().add(idx, newEntry);
-      }
+      // note, we will never add to the "tail" entry, that will always be
+      // handled through promoteTail
+      getEntries().add(idx, newEntry);
     }
     
     @Override
@@ -1244,12 +1232,6 @@ public class IndexPageCache
       return (isCurrentChildTailIndex(idx) ?
               setChildTailEntry(null) :
               getEntries().remove(idx));
-    }
-
-    @Override
-    public void clear() {
-      getEntries().clear();
-      _childTailEntry = null;
     }
     
     public Entry setChildTailEntry(Entry newEntry) {
@@ -1270,16 +1252,25 @@ public class IndexPageCache
       return(idx == getEntries().size());
     }
 
-    private boolean isNewChildTailIndex(int idx) {
-      return(idx == (getEntries().size() + 1));
-    }
-
     public Entry getLast() {
       return(hasChildTail() ? _childTailEntry :
              (!getEntries().isEmpty() ?
               getEntries().get(getEntries().size() - 1) : null));
     }
 
+    public Entry demoteTail() {
+      Entry tail = _childTailEntry;
+      _childTailEntry = null;
+      getEntries().add(tail);
+      return tail;
+    }
+    
+    public Entry promoteTail() {
+      Entry last = getEntries().remove(getEntries().size() - 1);
+      _childTailEntry = last;
+      return last;
+    }
+    
     public int find(Entry e) {
       return Collections.binarySearch(this, e);
     }

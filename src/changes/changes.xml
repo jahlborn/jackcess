@@ -15,7 +15,7 @@
       </action>
       <action dev="jahlborn" type="fix" issue="1564870">
         Added experimental support for "large" indexes.  The current support
-        is optional.  It can be enabled via a varity of means, see the
+        is optional.  It can be enabled via a variety of means, see the
         Database javadoc for more details.
       </action>
     </release>

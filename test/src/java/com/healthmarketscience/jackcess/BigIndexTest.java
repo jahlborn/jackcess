@@ -89,7 +89,7 @@ public class BigIndexTest extends TestCase {
     DatabaseTest._autoSync = false;
     try {
 
-      String extraText = " some random text to fill out the index and make it fill up pages";
+      String extraText = " some random text to fill out the index and make it fill up pages with lots of extra bytes so i will keep typing until i think that i probably have enough text in the index entry so that i do not need to add as many entries in order";
       
       // copy to temp file and attempt to edit
       db = openCopy(origFile);
@@ -137,9 +137,16 @@ public class BigIndexTest extends TestCase {
 
       ((BigIndex)index).validate();
       
-      // remove all but the first two entries
-      Cursor cursor = new CursorBuilder(t).setIndex(index)
-        .afterLast().toCursor();
+      // delete an entry in the middle
+      Cursor cursor = Cursor.createIndexCursor(t, index);
+      for(int i = 0; i < (rowCount / 2); ++i) {
+        assertTrue(cursor.moveToNextRow());
+      }
+      cursor.deleteCurrentRow();
+      --rowCount;
+      
+      // remove all but the first two entries (from the end)
+      cursor.afterLast();
       for(int i = 0; i < (rowCount - 2); ++i) {
         assertTrue(cursor.moveToPreviousRow());
         cursor.deleteCurrentRow();
@@ -192,20 +199,5 @@ public class BigIndexTest extends TestCase {
       DatabaseTest._autoSync = Database.DEFAULT_AUTO_SYNC;
     }
   }
-
-//   public void testBigIndex2() throws Exception
-//   {
-//     File f = new File("test/data/databaseTest19731_ind.mdb");
-//     Database db = open(f);
-//     Table t = db.getTable("test");
-//     System.out.println("FOO reading index");
-//     Index index = t.getIndexes().get(0);
-//     index.initialize();
-//     index.forceInit();
-//     index.validate();
-//     System.out.println(index);
-//     db.close();
-//   }
-
 
 }
