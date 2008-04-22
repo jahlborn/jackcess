@@ -608,8 +608,9 @@ public class Column implements Comparable<Column> {
 
       // check precision
       if(decVal.precision() > getPrecision()) {
-        throw new IOException("Numeric value is too big for specified precision "
-                              + getPrecision() + ": " + decVal);
+        throw new IOException(
+            "Numeric value is too big for specified precision "
+            + getPrecision() + ": " + decVal);
       }
     
       // convert to unscaled BigInteger, big-endian bytes
@@ -741,7 +742,9 @@ public class Column implements Comparable<Column> {
                                    int remainingRowLength) throws IOException
   {
     if(value.length > getType().getMaxSize()) {
-      throw new IOException("value too big for column");
+      throw new IOException("value too big for column, max " +
+                            getType().getMaxSize() + ", got " +
+                            value.length);
     }
 
     // determine which type to write
@@ -905,7 +908,8 @@ public class Column implements Comparable<Column> {
         CharSequence text = toCharSequence(obj);
         int maxChars = getLengthInUnits();
         if (text.length() > maxChars) {
-          throw new IOException("Text is too big for column");
+          throw new IOException("Text is too big for column, max " + maxChars
+                                + ", got " + text.length());
         }
         byte[] encodedData = encodeUncompressedText(text, getFormat()).array();
         obj = encodedData;
