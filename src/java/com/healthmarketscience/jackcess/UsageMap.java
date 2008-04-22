@@ -376,7 +376,7 @@ public class UsageMap
       addPageNumber(oldStartPage + i);
     }
 
-    if(newPageNumber != PageChannel.INVALID_PAGE_NUMBER) {
+    if(newPageNumber > PageChannel.INVALID_PAGE_NUMBER) {
       // and then add the new page
       addPageNumber(newPageNumber);
     }
@@ -494,7 +494,7 @@ public class UsageMap
           if(!_assumeOutOfRangeBitsOn) {
             
             // we are adding, can we shift the bits and stay inline?
-            if(firstPage == PageChannel.INVALID_PAGE_NUMBER) {
+            if(firstPage <= PageChannel.INVALID_PAGE_NUMBER) {
               // no pages currently
               firstPage = pageNumber;
               lastPage = pageNumber;
@@ -523,7 +523,7 @@ public class UsageMap
             // within the current range is "on".  so, if we attempt to set a
             // bit which is before the current page, ignore it, we are not
             // going back for it.
-            if((firstPage == PageChannel.INVALID_PAGE_NUMBER) ||
+            if((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ||
                (pageNumber > lastPage)) {
 
               // move to new start page, filling in as we move
@@ -589,21 +589,17 @@ public class UsageMap
                                              int newPageNumber)
       throws IOException
     {
-      int newStartPage = firstPage;
-      if(newStartPage == PageChannel.INVALID_PAGE_NUMBER) {
-        newStartPage = newPageNumber;
-      } else if((newPageNumber - newStartPage + 1) >=
-                getMaxInlinePages()) {
-        // this will not move us far enough to hold the new page.  just
-        // discard any initial unused pages
-        newStartPage += (newPageNumber - getMaxInlinePages() + 1);
-      }
-      
+      int oldEndPage = getEndPage();
+      int newStartPage = 
+        ((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ? newPageNumber :
+         // just shift a little and discard any initial unused pages.
+         (newPageNumber - (getMaxInlinePages() / 2)));
+
       // move the current data
       moveToNewStartPage(newStartPage, PageChannel.INVALID_PAGE_NUMBER);
 
-      if(firstPage == PageChannel.INVALID_PAGE_NUMBER) {
-        
+      if(firstPage <= PageChannel.INVALID_PAGE_NUMBER) {
+
         // this is the common case where we left everything behind
         ByteUtil.fillRange(_tableBuffer, getInlineDataStart(),
                            getInlineDataEnd());
@@ -617,7 +613,7 @@ public class UsageMap
       } else {
 
         // add every new page manually
-        for(int i = (lastPage + 1); i < getEndPage(); ++i) {
+        for(int i = oldEndPage; i < getEndPage(); ++i) {
           addPageNumber(i);
         }
       }

@@ -49,8 +49,11 @@ public class PageChannel implements Channel, Flushable {
 
   static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
   
-  /** dummy buffer used when allocating new pages */
-  private static final ByteBuffer FORCE_BYTES = ByteBuffer.allocate(1);
+  /** invalid page header, used when deallocating old pages.  data pages
+      generally have 4 interesting bytes at the beginning which we want to
+      reset. */
+  private static final byte[] INVALID_PAGE_BYTE_HEADER =
+    new byte[]{PageTypes.INVALID, (byte)0, (byte)0, (byte)0};
   
   /** Global usage map always lives on page 1 */
   private static final int PAGE_GLOBAL_USAGE_MAP = 1;
@@ -63,6 +66,12 @@ public class PageChannel implements Channel, Flushable {
   private final JetFormat _format;
   /** whether or not to force all writes to disk immediately */
   private final  boolean _autoSync;
+  /** buffer used when deallocating old pages.  data pages generally have 4
+      interesting bytes at the beginning which we want to reset. */
+  private final ByteBuffer _invalidPageBytes =
+    ByteBuffer.wrap(INVALID_PAGE_BYTE_HEADER);
+  /** dummy buffer used when allocating new pages */
+  private final ByteBuffer _forceBytes = ByteBuffer.allocate(1);
   /** Tracks free pages in the database. */
   private UsageMap _globalUsageMap;
   
@@ -105,6 +114,32 @@ public class PageChannel implements Channel, Flushable {
   public JetFormat getFormat() {
     return _format;
   }
+
+  /**
+   * Returns the next page number based on the given file size.
+   */
+  private int getNextPageNumber(long size) {
+    return (int)(size / getFormat().PAGE_SIZE);
+  }
+
+  /**
+   * Returns the offset for a page within the file.
+   */
+  private long getPageOffset(int pageNumber) {
+    return((long) pageNumber * (long) getFormat().PAGE_SIZE);
+  }
+  
+  /**
+   * Validates that the given pageNumber is valid for this database.
+   */
+  private void validatePageNumber(int pageNumber)
+    throws IOException
+  {
+    int nextPageNumber = getNextPageNumber(_channel.size());
+    if((pageNumber <= INVALID_PAGE_NUMBER) || (pageNumber >= nextPageNumber)) {
+      throw new IllegalStateException("invalid page number " + pageNumber);
+    }
+  }
   
   /**
    * @param buffer Buffer to read the page into
@@ -113,9 +148,7 @@ public class PageChannel implements Channel, Flushable {
   public void readPage(ByteBuffer buffer, int pageNumber)
     throws IOException
   {
-    if(pageNumber == INVALID_PAGE_NUMBER) {
-      throw new IllegalStateException("invalid page number");
-    }
+    validatePageNumber(pageNumber);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Reading in page " + Integer.toHexString(pageNumber));
     }
@@ -150,10 +183,17 @@ public class PageChannel implements Channel, Flushable {
                         int pageOffset)
     throws IOException
   {
+    validatePageNumber(pageNumber);
+    
     page.rewind();
+
+    if((page.remaining() - pageOffset) > getFormat().PAGE_SIZE) {
+      throw new IllegalArgumentException(
+          "Page buffer is too large, size " + (page.remaining() - pageOffset));
+    }
+    
     page.position(pageOffset);
-    _channel.write(page, (((long) pageNumber * (long) getFormat().PAGE_SIZE) +
-                          pageOffset));
+    _channel.write(page, (getPageOffset(pageNumber) + pageOffset));
     if(_autoSync) {
       flush();
     }
@@ -178,12 +218,18 @@ public class PageChannel implements Channel, Flushable {
     }
     
     page.rewind();
+
+    if(page.remaining() > getFormat().PAGE_SIZE) {
+      throw new IllegalArgumentException("Page buffer is too large, size " +
+                                         page.remaining());
+    }
+    
     // push the buffer to the end of the page, so that a full page's worth of
     // data is written regardless of the incoming buffer size (we use a tiny
     // buffer in allocateNewPage)
     long offset = size + (getFormat().PAGE_SIZE - page.remaining());
     _channel.write(page, offset);
-    int pageNumber = (int) (size / getFormat().PAGE_SIZE);
+    int pageNumber = getNextPageNumber(size);
     _globalUsageMap.removePageNumber(pageNumber);  //force is done here
     return pageNumber;
   }
@@ -194,14 +240,21 @@ public class PageChannel implements Channel, Flushable {
    */
   public int allocateNewPage() throws IOException {
     // this will force the file to be extended with mostly undefined bytes
-    return writeNewPage(FORCE_BYTES);
+    return writeNewPage(_forceBytes);
   }
 
   /**
    * Deallocate a previously used page in the database.
    */
   public void deallocatePage(int pageNumber) throws IOException {
-    // FIXME, writeme
+    validatePageNumber(pageNumber);
+    
+    // don't write the whole page, just wipe out the header (which should be
+    // enough to let us know if we accidentally try to use an invalid page)
+    _invalidPageBytes.rewind();
+    _channel.write(_invalidPageBytes, getPageOffset(pageNumber));
+    
+    _globalUsageMap.addPageNumber(pageNumber);  //force is done here
   }
   
   /**
