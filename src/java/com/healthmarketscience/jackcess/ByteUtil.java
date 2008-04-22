@@ -308,7 +308,7 @@ public final class ByteUtil {
   
   /**
    * Convert a byte array to a hexadecimal string for display
-   * @param buffer Buffer to display, starting at offset 0
+   * @param array byte array to display, starting at offset 0
    * @return The display String
    */
   public static String toHexString(byte[] array) {

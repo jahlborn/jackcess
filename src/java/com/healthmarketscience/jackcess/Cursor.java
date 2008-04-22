@@ -458,7 +458,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
-   * to {@link #iterator(Collection<String>)}
+   * to {@link #iterator(Collection)}
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */

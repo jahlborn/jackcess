@@ -113,7 +113,7 @@ public abstract class TempBufferHolder {
   }
 
   /**
-   * @returns the currently referenced buffer, {@code null} if none
+   * @return the currently referenced buffer, {@code null} if none
    */
   public abstract ByteBuffer getExistingBuffer();
   
