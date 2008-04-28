@@ -43,6 +43,8 @@ import static com.healthmarketscience.jackcess.DatabaseTest.*;
  */
 public class BigIndexTest extends TestCase {
 
+  private String _oldBigIndexValue = null;
+  
   /**
    * Creates a new <code>IndexTest</code> instance.
    *
@@ -53,13 +55,14 @@ public class BigIndexTest extends TestCase {
 
   @Override
   protected void setUp() {
+    _oldBigIndexValue = System.getProperty(Database.USE_BIG_INDEX_PROPERTY);
     System.setProperty(Database.USE_BIG_INDEX_PROPERTY,
                        Boolean.TRUE.toString());
   }
   
   @Override
   protected void tearDown() {
-    System.clearProperty(Database.USE_BIG_INDEX_PROPERTY);
+    System.setProperty(Database.USE_BIG_INDEX_PROPERTY, _oldBigIndexValue);
   }
   
   public void testComplexIndex() throws Exception
