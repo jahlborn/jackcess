@@ -527,7 +527,7 @@ public class UsageMap
                (pageNumber > lastPage)) {
 
               // move to new start page, filling in as we move
-              moveToNewStartPageForRemove(firstPage, lastPage, pageNumber);
+              moveToNewStartPageForRemove(firstPage, pageNumber);
               
             }
             
@@ -580,13 +580,10 @@ public class UsageMap
      * firstPage (if valid), otherwise the newPageNumber.  Any page numbers
      * added to the end of the usage map are set to "on".
      * @param firstPage current first used page
-     * @param lastPage current last used page
      * @param newPageNumber page number to remove once the map has been
      *                      shifted to the new start page
      */
-    private void moveToNewStartPageForRemove(int firstPage,
-                                             int lastPage,
-                                             int newPageNumber)
+    private void moveToNewStartPageForRemove(int firstPage, int newPageNumber)
       throws IOException
     {
       int oldEndPage = getEndPage();
