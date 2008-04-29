@@ -104,12 +104,28 @@ public class BigIndexTest extends TestCase {
       // add 2,000 (pseudo) random entries to the table
       Random rand = new Random(13L);
       for(int i = 0; i < 2000; ++i) {
-        int nextInt = rand.nextInt(Integer.MAX_VALUE);
-        String nextVal = "" + nextInt + extraText;
-        if(((i + 1) % 3333) == 0) {
-          nextVal = null;
+        if((i == 850) || (i == 1850)) {
+          int end = i + 50;
+          List<Object[]> rows = new ArrayList<Object[]>(50);
+          for(; i < end; ++i) {
+            int nextInt = rand.nextInt(Integer.MAX_VALUE);
+            String nextVal = "" + nextInt + extraText;
+            if(((i + 1) % 333) == 0) {
+              nextVal = null;
+            }
+            rows.add(new Object[]{nextVal,
+                                  "this is some row data " + nextInt});
+          }
+          t.addRows(rows);
+          --i;
+        } else {
+          int nextInt = rand.nextInt(Integer.MAX_VALUE);
+          String nextVal = "" + nextInt + extraText;
+          if(((i + 1) % 333) == 0) {
+            nextVal = null;
+          }
+          t.addRow(nextVal, "this is some row data " + nextInt);
         }
-        t.addRow(nextVal, "this is some row data " + nextInt);
       }
 
       ((BigIndex)index).validate();
@@ -119,20 +135,22 @@ public class BigIndexTest extends TestCase {
       index = t.getIndex("col1");
 
       // make sure all entries are there and correctly ordered
-      String lastValue = "      ";
+      String firstValue = "      ";
+      String prevValue = firstValue;
       int rowCount = 0;
       List<String> firstTwo = new ArrayList<String>();
       for(Map<String,Object> row : Cursor.createIndexCursor(t, index)) {
-        String val = (String)row.get("col1");
+        String origVal = (String)row.get("col1");
+        String val = origVal;
         if(val == null) {
-          val = "ZZZZZZZ";
+          val = firstValue;
         }
-        assertTrue("" + val + " <= " + lastValue + " " + rowCount,
-                   lastValue.compareTo(val) <= 0);
+        assertTrue("" + prevValue + " <= " + val + " " + rowCount,
+                   prevValue.compareTo(val) <= 0);
         if(firstTwo.size() < 2) {
-          firstTwo.add(val);
+          firstTwo.add(origVal);
         }
-        lastValue = val;
+        prevValue = val;
         ++rowCount;
       }
 
