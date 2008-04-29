@@ -198,7 +198,7 @@ public class BigIndexTest extends TestCase {
       rand = new Random(42L);
       for(int i = 0; i < 50; ++i) {
         int nextInt = rand.nextInt(Integer.MAX_VALUE);
-        String nextVal = "" + nextInt + extraText;
+        String nextVal = "some prefix " + nextInt + extraText;
         if(((i + 1) % 3333) == 0) {
           nextVal = null;
         }
