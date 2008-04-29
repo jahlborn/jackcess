@@ -1286,7 +1286,7 @@ public class IndexPageCache
   }
 
   /**
-   * IndexPageCache implementation of an {@link Index.DataPage}.
+   * IndexPageCache implementation of an Index {@link DataPage}.
    */
   public static final class CacheDataPage
     extends Index.DataPage

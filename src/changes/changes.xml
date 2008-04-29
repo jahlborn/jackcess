@@ -5,13 +5,13 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
-    <release version="1.1.14" date="TBD">
+    <release version="1.1.14" date="2008-04-29">
       <action dev="jahlborn" type="fix" issue="1924705">
         Need to store auto-number values back into row so that indexes can be
         updated correctly.
       </action>
       <action dev="jahlborn" type="fix" issue="1942330">
-        Access seems to limit data pages to a max of 256 rows.
+        Access seems to limit data pages to a max of 255 rows.
       </action>
       <action dev="jahlborn" type="fix" issue="1564870">
         Added experimental support for "large" indexes.  The current support
