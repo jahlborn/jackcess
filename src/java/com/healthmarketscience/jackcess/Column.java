@@ -754,9 +754,7 @@ public class Column implements Comparable<Column> {
        && (value.length <= getFormat().MAX_INLINE_LONG_VALUE_SIZE)) {
       type = LONG_VALUE_TYPE_THIS_PAGE;
       lvalDefLen += value.length;
-    } else if(Table.getRowSpaceUsage(value.length, getFormat()) <=
-              getFormat().MAX_ROW_SIZE)
-    {
+    } else if(value.length <= getFormat().MAX_LONG_VALUE_ROW_SIZE) {
       type = LONG_VALUE_TYPE_OTHER_PAGE;
     } else {
       type = LONG_VALUE_TYPE_OTHER_PAGES;
@@ -802,7 +800,7 @@ public class Column implements Comparable<Column> {
           writeLongValueHeader(lvalPage);
 
           // figure out how much we will put in this page
-          int chunkLength = Math.min(getFormat().MAX_ROW_SIZE - 4,
+          int chunkLength = Math.min(getFormat().MAX_LONG_VALUE_ROW_SIZE - 4,
                                      remainingLen);
           nextLvalPageNum = ((chunkLength < remainingLen) ?
                              getPageChannel().allocateNewPage() : 0);
