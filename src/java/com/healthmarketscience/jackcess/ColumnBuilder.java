@@ -115,6 +115,13 @@ public class ColumnBuilder {
   }
   
   /**
+   * Sets the length for the new column to the max length for the type.
+   */
+  public ColumnBuilder setMaxLength() {
+    return setLength(_type.getMaxSize());
+  }
+  
+  /**
    * Sets whether of not the new column is an auto-number column.
    */
   public ColumnBuilder setAutoNumber(boolean autoNumber) {
