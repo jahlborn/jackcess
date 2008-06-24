@@ -904,10 +904,9 @@ public class Table
       PageChannel pageChannel, JetFormat format)
     throws IOException
   {
-    // USAGE_MAP_DEF_FREE_SPACE = 3940;
     int usageMapRowLength = format.OFFSET_USAGE_MAP_START +
       format.USAGE_MAP_TABLE_BYTE_LENGTH;
-    int freeSpace = getRowSpaceUsage(format.MAX_ROW_SIZE, format)
+    int freeSpace = format.PAGE_INITIAL_FREE_SPACE
       - (2 * getRowSpaceUsage(usageMapRowLength, format));
     
     ByteBuffer rtn = pageChannel.createPageBuffer();
@@ -1290,8 +1289,7 @@ public class Table
     ByteBuffer dataPage = _addRowBufferH.setNewPage(getPageChannel());
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
-    dataPage.putShort((short)getRowSpaceUsage(getFormat().MAX_ROW_SIZE,
-                                              getFormat())); //Free space in this page
+    dataPage.putShort((short)getFormat().PAGE_INITIAL_FREE_SPACE); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putShort((short)0); //Number of rows on this page

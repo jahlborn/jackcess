@@ -65,6 +65,7 @@ public abstract class JetFormat {
   public final long MAX_DATABASE_SIZE;
   
   public final int MAX_ROW_SIZE;
+  public final int PAGE_INITIAL_FREE_SPACE;
   
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
@@ -151,6 +152,7 @@ public abstract class JetFormat {
     MAX_DATABASE_SIZE = defineMaxDatabaseSize();
     
     MAX_ROW_SIZE = defineMaxRowSize();
+    PAGE_INITIAL_FREE_SPACE = definePageInitialFreeSpace();
     
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
@@ -216,6 +218,7 @@ public abstract class JetFormat {
   protected abstract long defineMaxDatabaseSize();
   
   protected abstract int defineMaxRowSize();
+  protected abstract int definePageInitialFreeSpace();
   
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
@@ -296,7 +299,9 @@ public abstract class JetFormat {
     }
     
     @Override
-    protected int defineMaxRowSize() { return PAGE_SIZE - 16; }
+    protected int defineMaxRowSize() { return 4060; }
+    @Override
+    protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
     
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
