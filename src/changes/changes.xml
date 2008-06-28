@@ -5,7 +5,7 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
-    <release version="1.1.15" date="TBD">
+    <release version="1.1.15" date="2008-06-27">
       <action dev="jahlborn" type="fix" issue="1998225">
         Fix writing of large memo/ole fields.  Apparently Access does not like
         long value fields longer than 4076 bytes.
