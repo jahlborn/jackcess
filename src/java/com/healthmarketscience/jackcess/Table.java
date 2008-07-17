@@ -1374,7 +1374,17 @@ public class Table
       maxRowSize -= buffer.position();
       // now, account for trailer space
       maxRowSize -= (nullMask.byteSize() + 4 + (_maxVarColumnCount * 2));
-    
+
+      // for each non-null long value column we need to reserve a small
+      // amount of space so that we don't end up running out of row space
+      // later by being too greedy
+      for (Column varCol : _varColumns) {
+        if((varCol.getType().isLongValue()) &&
+           (rowArray[varCol.getColumnIndex()] != null)) {
+          maxRowSize -= getFormat().SIZE_LONG_VALUE_DEF;
+        }
+      }
+      
       //Now write out variable length column data
       short[] varColumnOffsets = new short[_maxVarColumnCount];
       int varColumnOffsetsIndex = 0;

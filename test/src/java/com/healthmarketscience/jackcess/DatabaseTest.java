@@ -380,6 +380,32 @@ public class DatabaseTest extends TestCase {
     
   }
 
+  public void testManyMemos() throws Exception {
+    final int numColumns = 126;
+    Database db = create();
+    TableBuilder bigTableBuilder = new TableBuilder("myBigTable"); 
+ 
+    for (int i = 0; i < numColumns; i++) 
+    { 
+      Column column = new ColumnBuilder("column_" + i, DataType.MEMO)
+        .toColumn(); 
+      bigTableBuilder.addColumn(column); 
+    } 
+ 
+    Table bigTable = bigTableBuilder.toTable(db); 
+
+    for (int j = 999; j < 1010; j++) 
+    { 
+      Object[] rowData = new String[numColumns];
+      for (int i = 0; i < numColumns; i++) 
+      {
+        rowData[i] = "v_" + i + ";" + j;
+      } 
+      bigTable.addRow(rowData); 
+    } 
+    db.close();     
+  }
+  
   public void testMissingFile() throws Exception {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
