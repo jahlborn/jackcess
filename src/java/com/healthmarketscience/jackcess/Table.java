@@ -1397,6 +1397,11 @@ public class Table
 
           ByteBuffer varDataBuf = varCol.write(rowValue, maxRowSize);
           maxRowSize -= varDataBuf.remaining();
+          if(varCol.getType().isLongValue()) {
+            // we already accounted for some amount of the long value data
+            // above.  add that space back so we don't double count
+            maxRowSize += getFormat().SIZE_LONG_VALUE_DEF;
+          }
           buffer.put(varDataBuf);
         }
 
