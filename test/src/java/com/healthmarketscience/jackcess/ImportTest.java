@@ -74,6 +74,7 @@ public class ImportTest extends TestCase
     rs.addColumn(Types.BINARY, "col4", 128, 0, 0);
     rs.addColumn(Types.BINARY, "col5", 512, 0, 0);
     rs.addColumn(Types.NUMERIC, "col6", 0, 7, 15);
+    rs.addColumn(Types.VARCHAR, "col7", Integer.MAX_VALUE, 0, 0);
 
     Database db = create();
     db.copyTable("Test1", (ResultSet)Proxy.newProxyInstance(
@@ -83,7 +84,7 @@ public class ImportTest extends TestCase
 
     Table t = db.getTable("Test1");
     List<Column> columns = t.getColumns();
-    assertEquals(6, columns.size());
+    assertEquals(7, columns.size());
 
     Column c = columns.get(0);
     assertEquals("col1", c.getName());
@@ -116,6 +117,11 @@ public class ImportTest extends TestCase
     assertEquals(7, c.getScale());
     assertEquals(15, c.getPrecision());
     
+    c = columns.get(6);
+    assertEquals("col7", c.getName());
+    assertEquals(DataType.MEMO, c.getType());
+    assertEquals(0, c.getLength());
+
   }
 
 

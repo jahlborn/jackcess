@@ -377,9 +377,11 @@ public enum DataType {
     // make sure size is reasonable
     int size = lengthInUnits * rtn.getUnitSize();
     if(rtn.isVariableLength() && !rtn.isValidSize(size)) {
-      // try alternate type
+      // try alternate type.  we always accept alternate "long value" types
+      // regardless of the given lengthInUnits
       DataType altRtn = ALT_SQL_TYPES.get(sqlType);
-      if((altRtn != null) && altRtn.isValidSize(size)) {
+      if((altRtn != null) &&
+         (altRtn.isLongValue() || altRtn.isValidSize(size))) {
         // use alternate type
         rtn = altRtn;
       }
