@@ -123,6 +123,11 @@ public abstract class JetFormat {
   public final int SIZE_INDEX_ENTRY_MASK;
   
   public final int USAGE_MAP_TABLE_BYTE_LENGTH;
+
+  public final int MAX_COLUMNS_PER_TABLE;
+  public final int MAX_TABLE_NAME_LENGTH;
+  public final int MAX_COLUMN_NAME_LENGTH;
+  public final int MAX_INDEX_NAME_LENGTH;
   
   public final Charset CHARSET;
   
@@ -210,6 +215,12 @@ public abstract class JetFormat {
     SIZE_INDEX_ENTRY_MASK = defineSizeIndexEntryMask();
     
     USAGE_MAP_TABLE_BYTE_LENGTH = defineUsageMapTableByteLength();
+
+    MAX_COLUMNS_PER_TABLE = defineMaxColumnsPerTable();
+    MAX_TABLE_NAME_LENGTH = defineMaxTableNameLength();
+    MAX_COLUMN_NAME_LENGTH = defineMaxColumnNameLength();
+    MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
+
     
     CHARSET = defineCharset();
   }
@@ -276,7 +287,12 @@ public abstract class JetFormat {
   protected abstract int defineSizeIndexEntryMask();
   
   protected abstract int defineUsageMapTableByteLength();
-    
+
+  protected abstract int defineMaxColumnsPerTable();
+  protected abstract int defineMaxTableNameLength();
+  protected abstract int defineMaxColumnNameLength();
+  protected abstract int defineMaxIndexNameLength();
+  
   protected abstract Charset defineCharset();
 
   @Override
@@ -405,6 +421,18 @@ public abstract class JetFormat {
     
     @Override
     protected int defineUsageMapTableByteLength() { return 64; }
+      
+    @Override
+    protected int defineMaxColumnsPerTable() { return 255; }
+      
+    @Override
+    protected int defineMaxTableNameLength() { return 64; }
+      
+    @Override
+    protected int defineMaxColumnNameLength() { return 64; }
+      
+    @Override
+    protected int defineMaxIndexNameLength() { return 64; }
       
     @Override
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }

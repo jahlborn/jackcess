@@ -321,9 +321,9 @@ public class Column implements Comparable<Column> {
     if(getType() == null) {
       throw new IllegalArgumentException("must have type");
     }
-    if((getName() == null) || (getName().trim().length() == 0)) {
-      throw new IllegalArgumentException("must have valid name");
-    }
+    Database.validateIdentifierName(getName(), format.MAX_COLUMN_NAME_LENGTH,
+                                    "column");
+    
     if(isVariableLength() != getType().isVariableLength()) {
       throw new IllegalArgumentException("invalid variable length setting");
     }

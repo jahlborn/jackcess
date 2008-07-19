@@ -489,15 +489,23 @@ public class Database
   public void createTable(String name, List<Column> columns)
     throws IOException
   {
+    validateIdentifierName(name, _format.MAX_TABLE_NAME_LENGTH, "table");
+    
     if(getTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
     }
+    
     if(columns.isEmpty()) {
       throw new IllegalArgumentException(
           "Cannot create table with no columns");
     }
-
+    if(columns.size() > _format.MAX_COLUMNS_PER_TABLE) {
+      throw new IllegalArgumentException(
+          "Cannot create table with more than " +
+          _format.MAX_COLUMNS_PER_TABLE + " columns");
+    }
+    
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(Column column : columns) {
@@ -944,6 +952,24 @@ public class Database
    */
   public static boolean isReservedWord(String s) {
     return RESERVED_WORDS.contains(s.toLowerCase());
+  }
+
+  /**
+   * Validates an identifier name.
+   */
+  public static void validateIdentifierName(String name,
+                                            int maxLength,
+                                            String identifierType)
+  {
+    if((name == null) || (name.trim().length() == 0)) {
+      throw new IllegalArgumentException(
+          identifierType + " must have non-empty name");
+    }
+    if(name.length() > maxLength) {
+      throw new IllegalArgumentException(
+          identifierType + " name is longer than max length of " + maxLength +
+          ": " + name);
+    }
   }
   
   @Override

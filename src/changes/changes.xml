@@ -14,6 +14,10 @@
         Better column type translation for very large MEMO/OLE types in the
         Database.copyTable logic.
       </action>
+      <action dev="jahlborn" type="fix" issue="2019244">
+        Add some more limit checking into table creation based on what access
+        supports (max rows per table, max identifier lengths).
+      </action>
     </release>
     <release version="1.1.15" date="2008-06-27">
       <action dev="jahlborn" type="fix" issue="1998225">
