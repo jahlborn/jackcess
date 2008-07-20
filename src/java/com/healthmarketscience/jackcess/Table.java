@@ -122,6 +122,9 @@ public class Table
       every call) */
   private final TempBufferHolder _multiRowBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.NONE, true);
+  /** page buffer used to write out-of-line "long value" data */
+  private final TempPageHolder _longValueBufferH =
+    TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   /** for now, "big index support" is optional */
   private final boolean _useBigIndex;
   
@@ -224,6 +227,10 @@ public class Table
     return _ownedPages.cursor();
   }
   
+  protected TempPageHolder getLongValueBuffer() {
+    return _longValueBufferH;
+  }
+
   /**
    * @return All of the columns in this table (unmodifiable List)
    */
@@ -1217,11 +1224,7 @@ public class Table
     
     for (int i = 0; i < rowData.length; i++) {
       int rowSize = rowData[i].remaining();
-      int rowSpaceUsage = getRowSpaceUsage(rowSize, getFormat());
-      short freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
-      int rowsOnPage = getRowsOnDataPage(dataPage, getFormat());
-      if((freeSpaceInPage < rowSpaceUsage) ||
-         (rowsOnPage >= getFormat().MAX_NUM_ROWS_ON_DATA_PAGE)) {
+      if(!rowFitsOnDataPage(rowSize, dataPage, getFormat())) {
 
         // Last data page is full.  Create a new one.
         writeDataPage(dataPage, pageNumber);
@@ -1229,8 +1232,6 @@ public class Table
 
         dataPage = newDataPage();
         pageNumber = _addRowBufferH.getPageNumber();
-        
-        freeSpaceInPage = dataPage.getShort(getFormat().OFFSET_FREE_SPACE);
       }
 
       // write out the row data
@@ -1640,6 +1641,21 @@ public class Table
       }
     }
     return numAutoNumCols;
+  }
+
+  /**
+   * Returns {@code true} if a row of the given size will fit on the given
+   * data page, {@code false} otherwise.
+   */
+  public static boolean rowFitsOnDataPage(
+      int rowLength, ByteBuffer dataPage, JetFormat format)
+    throws IOException
+  {
+    int rowSpaceUsage = getRowSpaceUsage(rowLength, format);
+    short freeSpaceInPage = dataPage.getShort(format.OFFSET_FREE_SPACE);
+    int rowsOnPage = getRowsOnDataPage(dataPage, format);
+    return ((rowSpaceUsage <= freeSpaceInPage) &&
+            (rowsOnPage < format.MAX_NUM_ROWS_ON_DATA_PAGE));
   }
 
   /**

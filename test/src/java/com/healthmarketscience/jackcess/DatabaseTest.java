@@ -46,6 +46,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +118,16 @@ public class DatabaseTest extends TestCase {
                    .setLengthInUnits(352).toColumn())
         .toTable(db);
       fail("created table with invalid column length?");
+    } catch(IllegalArgumentException e) {
+      // success
+    }
+
+    try {
+      new TableBuilder("test")
+        .addColumn(new ColumnBuilder("A_" + createString(70), DataType.TEXT)
+                   .toColumn())
+        .toTable(db);
+      fail("created table with too long column name?");
     } catch(IllegalArgumentException e) {
       // success
     }
@@ -352,12 +363,7 @@ public class DatabaseTest extends TestCase {
       .toTable(db);
 
     String testStr = "This is a test";
-    StringBuilder strBuf = new StringBuilder();
-    for(int i = 0; i < 2030; ++i) {
-      char c = (char)('a' + (i % 26));
-      strBuf.append(c);
-    }
-    String longMemo = strBuf.toString();
+    String longMemo = createString(2030);
     byte[] oleValue = toByteArray(new File("test/data/test2BinData.dat"));
     
     
@@ -383,7 +389,7 @@ public class DatabaseTest extends TestCase {
   public void testManyMemos() throws Exception {
     final int numColumns = 126;
     Database db = create();
-    TableBuilder bigTableBuilder = new TableBuilder("myBigTable"); 
+    TableBuilder bigTableBuilder = new TableBuilder("test"); 
  
     for (int i = 0; i < numColumns; i++) 
     { 
@@ -394,15 +400,58 @@ public class DatabaseTest extends TestCase {
  
     Table bigTable = bigTableBuilder.toTable(db); 
 
-    for (int j = 999; j < 1010; j++) 
+    List<Object[]> expectedRows = new ArrayList<Object[]>();
+ 
+    for (int j = 0; j < 3; j++) 
     { 
       Object[] rowData = new String[numColumns];
       for (int i = 0; i < numColumns; i++) 
       {
-        rowData[i] = "v_" + i + ";" + j;
+        rowData[i] = "v_" + i + ";" + (j + 999);
       } 
+      expectedRows.add(rowData);
       bigTable.addRow(rowData); 
     } 
+
+    String extra1 = createString(100);
+    String extra2 = createString(2050);
+
+    for (int j = 0; j < 1; j++) 
+    { 
+      Object[] rowData = new String[numColumns];
+      for (int i = 0; i < numColumns; i++) 
+      {
+        rowData[i] = "v_" + i + ";" + (j + 999) + extra2;
+      } 
+      expectedRows.add(rowData);
+      bigTable.addRow(rowData); 
+    } 
+
+    for (int j = 0; j < 2; j++) 
+    { 
+      Object[] rowData = new String[numColumns];
+      for (int i = 0; i < numColumns; i++) 
+      {
+        String tmp = "v_" + i + ";" + (j + 999);
+        if((i % 3) == 0) {
+          tmp += extra1;
+        } else if((i % 7) == 0) {
+          tmp += extra2;
+        }
+        rowData[i] = tmp;
+      } 
+      expectedRows.add(rowData);
+      bigTable.addRow(rowData); 
+    } 
+
+    bigTable.reset();
+    Iterator<Object[]> expIter = expectedRows.iterator();
+    for(Map<?,?> row : bigTable) {
+      Object[] expectedRow = expIter.next();
+      assertEquals(Arrays.asList(expectedRow),
+                   new ArrayList<Object>(row.values()));
+    }
+
     db.close();     
   }
   
@@ -876,8 +925,7 @@ public class DatabaseTest extends TestCase {
     for(int i = 0; i < len; ++i) {
       builder.append((char)('a' + (i % 26)));
     }
-    String str = builder.toString();
-    return str;
+    return builder.toString();
   }
 
   static void assertRowCount(int expectedRowCount, Table table)

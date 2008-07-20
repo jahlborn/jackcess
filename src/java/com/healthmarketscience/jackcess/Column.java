@@ -771,20 +771,20 @@ public class Column implements Comparable<Column> {
       def.put(value);
     } else {
       
+      TempPageHolder lvalBufferH = getTable().getLongValueBuffer();
+      ByteBuffer lvalPage = null;
       int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
       byte firstLvalRow = 0;
 
-      ByteBuffer lvalPage = getPageChannel().createPageBuffer();
-      
       // write other page(s)
       switch(type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        writeLongValueHeader(lvalPage);
-        firstLvalRow = (byte)Table.addDataPageRow(lvalPage,
-                                                  value.length,
+        lvalPage = getLongValuePage(value.length, lvalBufferH);
+        firstLvalPageNum = lvalBufferH.getPageNumber();
+        firstLvalRow = (byte)Table.addDataPageRow(lvalPage, value.length,
                                                   getFormat());
         lvalPage.put(value);
-        firstLvalPageNum = getPageChannel().writeNewPage(lvalPage);
+        getPageChannel().writePage(lvalPage, firstLvalPageNum);
         break;
 
       case LONG_VALUE_TYPE_OTHER_PAGES:
@@ -792,22 +792,35 @@ public class Column implements Comparable<Column> {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         int remainingLen = buffer.remaining();
         buffer.limit(0);
-        int lvalPageNum = getPageChannel().allocateNewPage();
-        byte lvalRow = 0;
+        lvalPage = getLongValuePage(getFormat().MAX_LONG_VALUE_ROW_SIZE,
+                                    lvalBufferH);
+        firstLvalPageNum = lvalBufferH.getPageNumber();
+        int lvalPageNum = firstLvalPageNum;
+        ByteBuffer nextLvalPage = null;
         int nextLvalPageNum = 0;
         while(remainingLen > 0) {
           lvalPage.clear();
-          writeLongValueHeader(lvalPage);
 
-          // figure out how much we will put in this page
+          // figure out how much we will put in this page (we need 4 bytes for
+          // the next page pointer)
           int chunkLength = Math.min(getFormat().MAX_LONG_VALUE_ROW_SIZE - 4,
                                      remainingLen);
-          nextLvalPageNum = ((chunkLength < remainingLen) ?
-                             getPageChannel().allocateNewPage() : 0);
+
+          // figure out if we will need another page, and if so, allocate it
+          if(chunkLength < remainingLen) {
+            // force a new page to be allocated
+            lvalBufferH.clear();
+            nextLvalPage = getLongValuePage(
+                getFormat().MAX_LONG_VALUE_ROW_SIZE, lvalBufferH);
+            nextLvalPageNum = lvalBufferH.getPageNumber();
+          } else {
+            nextLvalPage = null;
+            nextLvalPageNum = 0;
+          }
 
           // add row to this page
-          lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
-                                               getFormat());
+          byte lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
+                                                    getFormat());
           
           // write next page info (we'll always be writing into row 0 for
           // newly created pages)
@@ -821,14 +834,20 @@ public class Column implements Comparable<Column> {
 
           // write new page to database
           getPageChannel().writePage(lvalPage, lvalPageNum);
-          
-          // hang onto first page info
-          if(firstLvalPageNum == PageChannel.INVALID_PAGE_NUMBER) {
-            firstLvalPageNum = lvalPageNum;
-            firstLvalRow = lvalRow;
-          }
 
+          if(lvalPageNum == firstLvalPageNum) {
+            // save initial row info
+            firstLvalRow = lvalRow;
+          } else {
+            // check assertion that we wrote to row 0 for all subsequent pages
+            if(lvalRow != (byte)0) {
+              throw new IllegalStateException("Expected row 0, but was " +
+                                              lvalRow);
+            }
+          }
+          
           // move to next page
+          lvalPage = nextLvalPage;
           lvalPageNum = nextLvalPageNum;
         }
         break;
@@ -855,14 +874,35 @@ public class Column implements Comparable<Column> {
   {
     lvalPage.put(PageTypes.DATA); //Page type
     lvalPage.put((byte) 1); //Unknown
-    lvalPage.putShort((short) (getFormat().PAGE_SIZE -
-                               getFormat().OFFSET_ROW_START)); //Free space
+    lvalPage.putShort((short)getFormat().PAGE_INITIAL_FREE_SPACE); //Free space
     lvalPage.put((byte) 'L');
     lvalPage.put((byte) 'V');
     lvalPage.put((byte) 'A');
     lvalPage.put((byte) 'L');
-    lvalPage.putShort((short)0); // num rows in page
     lvalPage.putInt(0); //unknown
+    lvalPage.putShort((short)0); // num rows in page
+  }
+
+  /**
+   * Returns a long value data page with space for data of the given length.
+   */
+  private ByteBuffer getLongValuePage(int dataLength,
+                                      TempPageHolder lvalBufferH)
+    throws IOException
+  {
+    ByteBuffer lvalPage = null;
+    if(lvalBufferH.getPageNumber() != PageChannel.INVALID_PAGE_NUMBER) {
+      lvalPage = lvalBufferH.getPage(getPageChannel());
+      if(Table.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
+        // the current page has space
+        return lvalPage;
+      }
+    }
+
+    // need new page
+    lvalPage = lvalBufferH.setNewPage(getPageChannel());
+    writeLongValueHeader(lvalPage);
+    return lvalPage;
   }
   
   /**

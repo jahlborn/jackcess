@@ -18,6 +18,10 @@
         Add some more limit checking into table creation based on what access
         supports (max rows per table, max identifier lengths).
       </action>
+      <action dev="jahlborn" type="fix" issue="2019244">
+        Share out-of-line long value pages in order to generate more compact
+        database files.
+      </action>
     </release>
     <release version="1.1.15" date="2008-06-27">
       <action dev="jahlborn" type="fix" issue="1998225">
