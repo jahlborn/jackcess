@@ -156,7 +156,7 @@ public class Expand extends SCSU
     @param sb string buffer to which to append expanded input
     @return the index for the lastc byte processed
     **/
-    protected int expandUnicode(byte []in, int iCur, StringBuffer sb)
+    protected int expandUnicode(byte []in, int iCur, StringBuilder sb)
         throws IllegalInputException, EndOfInputException
     {
         for( ; iCur < in.length-1; iCur+=2 ) // step by 2:
@@ -231,7 +231,7 @@ public class Expand extends SCSU
         output. Using in.length as an intial allocation length should avoid
         the need to reallocate in mid-stream. The exception to this rule are
         surrogates. */
-        StringBuffer sb = new StringBuffer(in.length);
+        StringBuilder sb = new StringBuilder(in.length);
         iOut = 0;
 
         // Loop until all input is exhausted or an error occurred

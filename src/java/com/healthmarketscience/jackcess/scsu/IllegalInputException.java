@@ -36,7 +36,7 @@ package com.healthmarketscience.jackcess.scsu;
 public class IllegalInputException extends java.lang.Exception
 {
   
-   private static final long serialVersionUID = 1;
+   private static final long serialVersionUID = 1L;
   
    public IllegalInputException(){
     super("The input character array or input byte array contained illegal sequences of bytes or characters");

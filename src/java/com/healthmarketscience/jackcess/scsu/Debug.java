@@ -53,7 +53,7 @@ public class Debug
     public static void out(char [] chars, int iStart)
     {
         if (!LOG.isDebugEnabled()) return;
-        StringBuffer msg = new StringBuffer();
+        StringBuilder msg = new StringBuilder();
 
         for (int i = iStart; i < chars.length; i++)
         {
@@ -80,7 +80,7 @@ public class Debug
     public static void out(byte [] bytes, int iStart)
     {
         if (!LOG.isDebugEnabled()) return;
-        StringBuffer msg = new StringBuffer();
+        StringBuilder msg = new StringBuilder();
 
         for (int i = iStart; i < bytes.length; i++)
         {
