@@ -411,6 +411,7 @@ public class Expand extends SCSU
 
     /** reset is called to start with new input, w/o creating a new
         instance */
+    @Override
     public void reset()
     {
         iOut = 0;

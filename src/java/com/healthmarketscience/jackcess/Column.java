@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.scsu.Compress;
 import com.healthmarketscience.jackcess.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.scsu.Expand;
 import com.healthmarketscience.jackcess.scsu.IllegalInputException;
@@ -1196,21 +1197,11 @@ public class Column implements Comparable<Column> {
     // now, see if it is all printable ASCII
     for(int i = 0; i < text.length(); ++i) {
       char c = text.charAt(i);
-      if(!isAsciiCrLfOrTab(c)) {
+      if(!Compress.isAsciiCrLfOrTab(c)) {
         return false;
       }
     }
     return true;
-  }
-
-  /**
-   * Returns true if the character is ASCII, but not a control other than
-   * CR, LF and TAB
-   */
-  private static boolean isAsciiCrLfOrTab(int ch)
-  {
-    return ((ch >= 0x20 && ch <= 0x7F)                  // ASCII (non control)
-            || ch == 0x09 || ch == 0x0A || ch == 0x0D); // CR/LF or TAB
   }
 
   @Override
