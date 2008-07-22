@@ -96,8 +96,14 @@ public class Column implements Comparable<Column> {
   
   /** mask for the unknown bit */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
-  
+
+  /** pattern matching textual guid strings (allows for optional surrounding
+      '{' and '}') */
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]?([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]?\\s*");
+
+  /** header used to indicate unicode text compression */
+  private static final byte[] TEXT_COMPRESSION_HEADER = 
+  { (byte)0xFF, (byte)0XFE };
 
   /** owning table */
   private final Table _table;
@@ -266,6 +272,10 @@ public class Column implements Comparable<Column> {
     return _compressedUnicode;
   }
 
+  public void setCompressedUnicode(boolean newCompessedUnicode) {
+    _compressedUnicode = newCompessedUnicode;
+  }
+
   public byte getPrecision() {
     return _precision;
   }
@@ -355,6 +365,14 @@ public class Column implements Comparable<Column> {
       if(getType() != DataType.LONG) {
         throw new IllegalArgumentException(
             "Auto number column must be long integer");
+      }
+    }
+
+    if(isCompressedUnicode()) {
+      if((getType() != DataType.TEXT) &&
+         (getType() != DataType.MEMO)) {
+        throw new IllegalArgumentException(
+            "Only textual columns allow unicode compression (text/memo)");
       }
     }
   }
@@ -949,7 +967,7 @@ public class Column implements Comparable<Column> {
           throw new IOException("Text is too big for column, max " + maxChars
                                 + ", got " + text.length());
         }
-        byte[] encodedData = encodeUncompressedText(text, getFormat()).array();
+        byte[] encodedData = encodeTextValue(text).array();
         obj = encodedData;
         break;
         
@@ -972,7 +990,7 @@ public class Column implements Comparable<Column> {
       // should already be "encoded"
       break;
     case MEMO:
-      obj = encodeUncompressedText(toCharSequence(obj), getFormat()).array();
+      obj = encodeTextValue(toCharSequence(obj)).array();
       break;
     default:
       throw new RuntimeException("unexpected var length, long value type: " +
@@ -1052,8 +1070,9 @@ public class Column implements Comparable<Column> {
       // see if data is compressed.  the 0xFF, 0xFE sequence indicates that
       // compression is used (sort of, see algorithm below)
       boolean isCompressed = ((data.length > 1) &&
-                              (data[0] == (byte)0xFF) &&
-                              (data[1] == (byte)0xFE));
+                              (data[0] == TEXT_COMPRESSION_HEADER[0]) &&
+                              (data[1] == TEXT_COMPRESSION_HEADER[1]));
+
       if(isCompressed) {
 
         Expand expander = new Expand();
@@ -1063,7 +1082,7 @@ public class Column implements Comparable<Column> {
         // compressed mode)
         StringBuilder textBuf = new StringBuilder(data.length);
         // start after two bytes indicating compression use
-        int dataStart = 2;
+        int dataStart = TEXT_COMPRESSION_HEADER.length;
         int dataEnd = dataStart;
         boolean inCompressedMode = true;
         while(dataEnd < data.length) {
@@ -1135,6 +1154,64 @@ public class Column implements Comparable<Column> {
   {
     return format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPos, length));
   }  
+
+  /**
+   * Encodes a text value, possibly compressing.
+   */
+  private ByteBuffer encodeTextValue(CharSequence text)
+    throws IOException
+  {
+    // may only compress if column type allows it
+    if(isCompressedUnicode()) {
+
+      // for now, only do very simple compression (only compress text which is
+      // all ascii text)
+      if(isAsciiCompressible(text)) {
+
+        byte[] encodedChars = new byte[TEXT_COMPRESSION_HEADER.length + 
+                                       text.length()];
+        encodedChars[0] = TEXT_COMPRESSION_HEADER[0];
+        encodedChars[1] = TEXT_COMPRESSION_HEADER[1];
+        for(int i = 0; i < text.length(); ++i) {
+          encodedChars[i + TEXT_COMPRESSION_HEADER.length] = 
+            (byte)text.charAt(i);
+        }
+        return ByteBuffer.wrap(encodedChars);
+      }
+    }
+
+    return encodeUncompressedText(text, getFormat());
+  }
+
+  /**
+   * Returns {@code true} if the given text can be compressed using simple
+   * ASCII encoding, {@code false} otherwise.
+   */
+  private static boolean isAsciiCompressible(CharSequence text) {
+    // only attempt to compress > 2 chars (compressing less than 3 chars would
+    // not result in a space savings due to the 2 byte compression header)
+    if(text.length() <= TEXT_COMPRESSION_HEADER.length) {
+      return false;
+    }
+    // now, see if it is all printable ASCII
+    for(int i = 0; i < text.length(); ++i) {
+      char c = text.charAt(i);
+      if(!isAsciiCrLfOrTab(c)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns true if the character is ASCII, but not a control other than
+   * CR, LF and TAB
+   */
+  private static boolean isAsciiCrLfOrTab(int ch)
+  {
+    return ((ch >= 0x20 && ch <= 0x7F)                  // ASCII (non control)
+            || ch == 0x09 || ch == 0x0A || ch == 0x0D); // CR/LF or TAB
+  }
 
   @Override
   public String toString() {

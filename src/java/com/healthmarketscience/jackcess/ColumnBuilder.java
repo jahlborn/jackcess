@@ -48,6 +48,8 @@ public class ColumnBuilder {
   private Integer _scale;
   /** whether or not the column is auto-number */
   private boolean _autoNumber;
+  /** whether or not the column allows compressed unicode */
+  private Boolean _compressedUnicode;
 
   public ColumnBuilder(String name) {
     this(name, null);
@@ -130,6 +132,14 @@ public class ColumnBuilder {
   }
 
   /**
+   * Sets whether of not the new column allows unicode compression.
+   */
+  public ColumnBuilder setCompressedUnicode(boolean compressedUnicode) {
+    _compressedUnicode = compressedUnicode;
+    return this;
+  }
+
+  /**
    * Sets all attributes except name from the given Column template.
    */
   public ColumnBuilder setFromColumn(Column template) {
@@ -163,6 +173,9 @@ public class ColumnBuilder {
     }
     if(_autoNumber) {
       col.setAutoNumber(true);
+    }
+    if(_compressedUnicode != null) {
+      col.setCompressedUnicode(_compressedUnicode);
     }
     return col;
   }

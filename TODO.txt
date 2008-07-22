@@ -2,9 +2,6 @@ Missing pieces:
 
 - handle more text index entry types (extended charsets, alternate encodings)
   * MEDIUM
-- determine when/when not to inline memo/ole data for a row of data depending
-  on how much will be written in the current row
-  * MEDIUM
 - handle row "updates": write row data back to current row, handling overflow
   * MEDIUM
 - implement index creation
@@ -14,4 +11,4 @@ Missing pieces:
   * EASY
 - implement table, column, index deletion
   * EASY - MEDIUM
-
+- implement more comprehensive unicode compression write support
