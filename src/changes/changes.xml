@@ -5,7 +5,7 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
-    <release version="1.1.16" date="TBD">
+    <release version="1.1.16" date="2008-07-24">
       <action dev="jahlborn" type="fix" issue="2019244">
         Reserve minimum space for memo/ole fields so that greedy inline row
         usage does not cause spurious write failures for wide tables.
