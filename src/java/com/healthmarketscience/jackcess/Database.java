@@ -989,7 +989,7 @@ public class Database
   }
 
   /**
-   * @returns the tableInfo of the given table, if any
+   * @return the tableInfo of the given table, if any
    */
   private TableInfo lookupTable(String tableName) {
     return _tableLookup.get(toLookupTableName(tableName));
