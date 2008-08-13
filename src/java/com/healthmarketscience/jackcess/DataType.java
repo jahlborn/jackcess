@@ -352,6 +352,23 @@ public enum DataType {
     return((value >= minValue) && (value <= maxValue));
   }
   
+  public int toValidSize(int size) {
+    return toValidRange(size, getMinSize(), getMaxSize());
+  }
+
+  public int toValidScale(int scale) {
+    return toValidRange(scale, getMinScale(), getMaxScale());
+  }
+
+  public int toValidPrecision(int precision) {
+    return toValidRange(precision, getMinPrecision(), getMaxPrecision());
+  }
+
+  private int toValidRange(int value, int minValue, int maxValue) {
+    return((value > maxValue) ? maxValue :
+           ((value < minValue) ? minValue : value));
+  }
+  
   public static DataType fromByte(byte b) throws IOException {
     DataType rtn = DATA_TYPES.get(b);
     if (rtn != null) {
