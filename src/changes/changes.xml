@@ -5,6 +5,11 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.17" date="TBD">
+      <action dev="jahlborn" type="fix" issue="2043499">
+        Fix simple index handling of tail index pages.
+      </action>
+    </release>
     <release version="1.1.16" date="2008-07-24">
       <action dev="jahlborn" type="fix" issue="2019244">
         Reserve minimum space for memo/ole fields so that greedy inline row

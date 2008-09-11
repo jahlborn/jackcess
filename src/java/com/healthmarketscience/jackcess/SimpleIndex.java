@@ -68,7 +68,12 @@ public class SimpleIndex extends Index {
         setReadOnly();
 
         // found another node page
-        nextPageNumber = indexPage.getEntries().get(0).getSubPageNumber();
+        if(!indexPage.getEntries().isEmpty()) {
+          nextPageNumber = indexPage.getEntries().get(0).getSubPageNumber();
+        } else {
+          // try tail page
+          nextPageNumber = indexPage.getChildTailPageNumber();
+        }
         indexPage = null;
       } else {
         // found first leaf
@@ -136,6 +141,7 @@ public class SimpleIndex extends Index {
     private boolean _leaf;
     private int _nextPageNumber;
     private int _totalEntrySize;
+    private int _childTailPageNumber;
     private List<Entry> _entries;
 
     private SimpleDataPage(int pageNumber) {
@@ -171,10 +177,12 @@ public class SimpleIndex extends Index {
       _nextPageNumber = pageNumber;
     }
     @Override
-    public int getChildTailPageNumber() { return 0; }
+    public int getChildTailPageNumber() { 
+      return _childTailPageNumber;
+    }
     @Override
     public void setChildTailPageNumber(int pageNumber) {
-      // ignored
+      _childTailPageNumber = pageNumber;
     }
     
     @Override
