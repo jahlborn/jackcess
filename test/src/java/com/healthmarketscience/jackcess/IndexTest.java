@@ -46,10 +46,6 @@ import static com.healthmarketscience.jackcess.DatabaseTest.*;
  */
 public class IndexTest extends TestCase {
 
-  /**
-   * Creates a new <code>IndexTest</code> instance.
-   *
-   */
   public IndexTest(String name) {
     super(name);
   }

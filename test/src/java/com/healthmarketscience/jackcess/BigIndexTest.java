@@ -45,10 +45,6 @@ public class BigIndexTest extends TestCase {
 
   private String _oldBigIndexValue = null;
   
-  /**
-   * Creates a new <code>IndexTest</code> instance.
-   *
-   */
   public BigIndexTest(String name) {
     super(name);
   }
