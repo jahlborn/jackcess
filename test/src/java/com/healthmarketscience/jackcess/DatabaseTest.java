@@ -896,6 +896,21 @@ public class DatabaseTest extends TestCase {
       }
     }
   }
+
+  public void testSystemTable() throws Exception
+  {
+    Database db = create();
+
+    assertNotNull(db.getSystemTable("MSysAccessObjects"));
+    assertNotNull(db.getSystemTable("MSysObjects"));
+    assertNotNull(db.getSystemTable("MSysQueries"));
+    assertNotNull(db.getSystemTable("MSysACES"));
+    assertNotNull(db.getSystemTable("MSysRelationships"));
+
+    assertNull(db.getSystemTable("MSysBogus"));
+
+    db.close();
+  }
     
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

@@ -9,6 +9,9 @@
       <action dev="jahlborn" type="add">
         Add RowFilter contributed by Patricia Donaldson.
       </action>
+      <action dev="jahlborn" type="update">
+        Add Database.getSystemTable method for accessing system tables.
+      </action>
     </release>
     <release version="1.1.17" date="2008-09-23">
       <action dev="jahlborn" type="fix" issue="2043499">

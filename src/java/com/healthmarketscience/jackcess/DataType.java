@@ -122,9 +122,9 @@ public enum DataType {
   MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
-   * Unknown data.  Accepts {@code null}.
+   * Unknown data.  Handled like BINARY.
    */
-  UNKNOWN_0D((byte) 0x0D),
+  UNKNOWN_0D((byte) 0x0D, null, null, true, false, 0, 255, 255, 1),
   /**
    * Corresponds to a java String with the pattern
    * <code>"{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"</code>.  Accepts any
@@ -140,7 +140,12 @@ public enum DataType {
    */
   // for some reason numeric is "var len" even though it has a fixed size...
   NUMERIC((byte) 0x10, Types.NUMERIC, 17, true, false, 17, 17, 17,
-          true, 0, 0, 28, 1, 18, 28, 1);
+          true, 0, 0, 28, 1, 18, 28, 1),
+  /**
+   * Unknown data (seems to be an alternative OLE type, used by
+   * MSysAccessObjects table).  Handled like a fixed length BINARY/OLE.
+   */
+  UNKNOWN_11((byte) 0x11, null, 3992);
 
   /** Map of SQL types to Access data types */
   private static Map<Integer, DataType> SQL_TYPES = new HashMap<Integer, DataType>();

@@ -237,8 +237,6 @@ public class Database
   private Table _systemCatalog;
   /** System access control entries table */
   private Table _accessControlEntries;
-  /** page number of the system relationships table */
-  private Integer _relationshipsPageNumber;
   /** System relationships table (initialized on first use) */
   private Table _relationships;
   /** SIDs to use for the ACEs added for new tables */
@@ -408,8 +406,6 @@ public class Database
           int pageNumber = (Integer)row.get(CAT_COL_ID);
           _accessControlEntries = readTable(TABLE_SYSTEM_ACES, pageNumber,
                                             defaultUseBigIndex());
-        } else if(TABLE_SYSTEM_RELATIONSHIPS.equals(name)) {
-          _relationshipsPageNumber = (Integer)row.get(CAT_COL_ID);
         }
       } else if (SYSTEM_OBJECT_NAME_TABLES.equals(name)) {
         _tableParentId = (Integer) row.get(CAT_COL_ID);
@@ -541,12 +537,10 @@ public class Database
   {
     // the relationships table does not get loaded until first accessed
     if(_relationships == null) {
-      if(_relationshipsPageNumber == null) {
+      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
+      if(_relationships == null) {
         throw new IOException("Could not find system relationships table");
       }
-      _relationships = readTable(TABLE_SYSTEM_RELATIONSHIPS,
-                                 _relationshipsPageNumber,
-                                 defaultUseBigIndex());
     }
 
     int nameCmp = table1.getName().compareTo(table2.getName());
@@ -572,6 +566,37 @@ public class Database
     collectRelationships(cursor, table2, table1, relationships);
     
     return relationships;
+  }
+
+  /**
+   * Returns a reference to <i>any</i> available table in this access
+   * database, including system tables.
+   * <p>
+   * Warning, this method is not designed for common use, only for the
+   * occassional time when access to a system table is necessary.  Messing
+   * with system tables can strip the paint off your house and give your whole
+   * family a permanent, orange afro.  You have been warned.
+   * 
+   * @param tableName Table name, may be a system table
+   * @return The table, or {@code null} if it doesn't exist
+   */
+  public Table getSystemTable(String tableName)
+    throws IOException
+  {
+    for(Map<String,Object> row :
+          Cursor.createCursor(_systemCatalog).iterable(
+              SYSTEM_CATALOG_COLUMNS))
+    {
+      String name = (String) row.get(CAT_COL_NAME);
+      if (tableName.equalsIgnoreCase(name) && 
+          TYPE_TABLE.equals(row.get(CAT_COL_TYPE))) {
+        Integer pageNumber = (Integer) row.get(CAT_COL_ID);
+        if(pageNumber != null) {
+          return readTable(name, pageNumber, defaultUseBigIndex());
+        }
+      }
+    }
+    return null;
   }
 
   /**

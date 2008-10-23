@@ -430,8 +430,10 @@ public class Column implements Comparable<Column> {
       return readNumericValue(buffer);
     } else if (_type == DataType.GUID) {
       return readGUIDValue(buffer);
-    } else if (_type == DataType.UNKNOWN_0D) {
-      return null;
+    } else if ((_type == DataType.UNKNOWN_0D) || 
+               (_type == DataType.UNKNOWN_11)) {
+      // treat like "binary" data
+      return data;
     } else {
       throw new IOException("Unrecognized data type: " + _type);
     }
@@ -973,6 +975,7 @@ public class Column implements Comparable<Column> {
         break;
         
       case BINARY:
+      case UNKNOWN_0D:
         // should already be "encoded"
         break;
       default:
