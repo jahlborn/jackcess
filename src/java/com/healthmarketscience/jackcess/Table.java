@@ -127,6 +127,8 @@ public class Table
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   /** for now, "big index support" is optional */
   private final boolean _useBigIndex;
+  /** optional error handler to use when row errors are encountered */
+  private ErrorHandler _tableErrorHandler;
   
   /** common cursor for iterating through the table, kept here for historic
       reasons */
@@ -214,6 +216,24 @@ public class Table
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
+
+  /**
+   * Gets the currently configured ErrorHandler (always non-{@code null}).
+   * This will be used to handle all errors unless overridden at the Cursor
+   * level.
+   */
+  public ErrorHandler getErrorHandler() {
+    return((_tableErrorHandler != null) ? _tableErrorHandler :
+           getDatabase().getErrorHandler());
+  }
+
+  /**
+   * Sets a new ErrorHandler.  If {@code null}, resets to using the
+   * ErrorHandler configured at the Database level.
+   */
+  public void setErrorHandler(ErrorHandler newErrorHandler) {
+    _tableErrorHandler = newErrorHandler;
+  }    
 
   protected int getTableDefPageNumber() {
     return _tableDefPageNumber;
@@ -383,7 +403,8 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
     
-    Object value = getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column);
+    Object value = getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column,
+                                rowState);
 
     // cache the row values in order to be able to update the index on row
     // deletion.  note, most of the returned values are immutable, except
@@ -430,7 +451,7 @@ public class Table
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
-        Object value = getRowColumn(rowBuffer, nullMask, column);
+        Object value = getRowColumn(rowBuffer, nullMask, column, rowState);
         rtn.put(column.getName(), value);
 
         // cache the row values in order to be able to update the index on row
@@ -448,51 +469,59 @@ public class Table
    */
   private static Object getRowColumn(ByteBuffer rowBuffer,
                                      NullMask nullMask,
-                                     Column column)
+                                     Column column,
+                                     RowState rowState)
     throws IOException
   {
-    boolean isNull = nullMask.isNull(column);
-    if(column.getType() == DataType.BOOLEAN) {
-      return Boolean.valueOf(!isNull);  //Boolean values are stored in the null mask
-    } else if(isNull) {
-      // well, that's easy!
-      return null;
-    }
+    byte[] columnData = null;
+    try {
 
-    // reset position to row start
-    rowBuffer.reset();
+      boolean isNull = nullMask.isNull(column);
+      if(column.getType() == DataType.BOOLEAN) {
+        return Boolean.valueOf(!isNull);  //Boolean values are stored in the null mask
+      } else if(isNull) {
+        // well, that's easy!
+        return null;
+      }
+
+      // reset position to row start
+      rowBuffer.reset();
     
-    // locate the column data bytes
-    int rowStart = rowBuffer.position();
-    int colDataPos = 0;
-    int colDataLen = 0;
-    if(!column.isVariableLength()) {
+      // locate the column data bytes
+      int rowStart = rowBuffer.position();
+      int colDataPos = 0;
+      int colDataLen = 0;
+      if(!column.isVariableLength()) {
 
-      // read fixed length value (non-boolean at this point)
-      int dataStart = rowStart + 2;
-      colDataPos = dataStart + column.getFixedDataOffset();
-      colDataLen = column.getType().getFixedSize();
+        // read fixed length value (non-boolean at this point)
+        int dataStart = rowStart + 2;
+        colDataPos = dataStart + column.getFixedDataOffset();
+        colDataLen = column.getType().getFixedSize();
       
-    } else {
+      } else {
 
-      // read var length value
-      int varColumnOffsetPos =
-        (rowBuffer.limit() - nullMask.byteSize() - 4) -
-        (column.getVarLenTableIndex() * 2);
+        // read var length value
+        int varColumnOffsetPos =
+          (rowBuffer.limit() - nullMask.byteSize() - 4) -
+          (column.getVarLenTableIndex() * 2);
 
-      short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
-      short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
-      colDataPos = rowStart + varDataStart;
-      colDataLen = varDataEnd - varDataStart;
+        short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
+        short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
+        colDataPos = rowStart + varDataStart;
+        colDataLen = varDataEnd - varDataStart;
+      }
+
+      // grab the column data
+      columnData = new byte[colDataLen];
+      rowBuffer.position(colDataPos);
+      rowBuffer.get(columnData);
+
+      // parse the column data
+      return column.read(columnData);
+
+    } catch(Exception e) {
+      return rowState.handleRowError(column, columnData, e);
     }
-
-    // grab the column data
-    byte[] columnData = new byte[colDataLen];
-    rowBuffer.position(colDataPos);
-    rowBuffer.get(columnData);
-
-    // parse the column data
-    return column.read(columnData);
   }
 
   /**
@@ -1710,7 +1739,9 @@ public class Table
         rowState can detect updates to the table and re-read any buffered
         data */
     private int _lastModCount;
-    
+    /** optional error handler to use when row errors are encountered */
+    private ErrorHandler _errorHandler;
+  
     private RowState(TempBufferHolder.Type headerType) {
       _headerRowBufferH = TempPageHolder.newHolder(headerType);
       _rowValues = new Object[Table.this.getColumnCount()];
@@ -1719,6 +1750,15 @@ public class Table
 
     public Table getTable() {
       return Table.this;
+    }
+
+    public ErrorHandler getErrorHandler() {
+      return((_errorHandler != null) ? _errorHandler :
+             getTable().getErrorHandler());
+    }
+
+    public void setErrorHandler(ErrorHandler newErrorHandler) {
+      _errorHandler = newErrorHandler;
     }
     
     public void reset() {
@@ -1875,6 +1915,21 @@ public class Table
       return _finalRowBuffer;
     }
 
+    private Object handleRowError(Column column,
+                                  byte[] columnData,
+                                  Exception error)
+      throws IOException
+    {
+      return getErrorHandler().handleRowError(column, columnData,
+                                              this, error);
+    }  
+
+    @Override
+    public String toString()
+    {
+      return "RowState: headerRowId = " + _headerRowId + ", finalRowId = " +
+        _finalRowId;
+    }
   }
   
 }

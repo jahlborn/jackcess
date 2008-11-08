@@ -960,9 +960,15 @@ public class DatabaseTest extends TestCase {
 
   static void assertTable(List<Map<String, Object>> expectedTable, Table table)
   {
+    assertCursor(expectedTable, Cursor.createCursor(table));
+  }
+  
+  static void assertCursor(List<Map<String, Object>> expectedTable, 
+                           Cursor cursor)
+  {
     List<Map<String, Object>> foundTable =
       new ArrayList<Map<String, Object>>();
-    for(Map<String, Object> row : Cursor.createCursor(table)) {
+    for(Map<String, Object> row : cursor) {
       foundTable.add(row);
     }
     assertEquals(expectedTable, foundTable);

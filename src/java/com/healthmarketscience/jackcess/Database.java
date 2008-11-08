@@ -99,6 +99,22 @@ public class Database
       default. */
   public static final String USE_BIG_INDEX_PROPERTY =
     "com.healthmarketscience.jackcess.bigIndex";
+
+  /** default error handler used if none provided (just rethrows exception) */
+  public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
+      public Object handleRowError(Column column,
+                                   byte[] columnData,
+                                   Table.RowState rowState,
+                                   Exception error)
+        throws IOException
+      {
+        // really can only be RuntimeException or IOException
+        if(error instanceof IOException) {
+          throw (IOException)error;
+        }
+        throw (RuntimeException)error;
+      }
+    };
   
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
@@ -243,6 +259,8 @@ public class Database
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   /** for now, "big index support" is optional */
   private boolean _useBigIndex;
+  /** optional error handler to use when row errors are encountered */
+  private ErrorHandler _dbErrorHandler;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -387,6 +405,24 @@ public class Database
   public void setUseBigIndex(boolean useBigIndex) {
     _useBigIndex = useBigIndex;
   }
+
+  /**
+   * Gets the currently configured ErrorHandler (always non-{@code null}).
+   * This will be used to handle all errors unless overridden at the Table or
+   * Cursor level.
+   */
+  public ErrorHandler getErrorHandler() {
+    return((_dbErrorHandler != null) ? _dbErrorHandler :
+           DEFAULT_ERROR_HANDLER);
+  }
+
+  /**
+   * Sets a new ErrorHandler.  If {@code null}, resets to the
+   * {@link #DEFAULT_ERROR_HANDLER}.
+   */
+  public void setErrorHandler(ErrorHandler newErrorHandler) {
+    _dbErrorHandler = newErrorHandler;
+  }    
   
   /**
    * Read the system catalog

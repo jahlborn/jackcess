@@ -299,6 +299,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
+   * Gets the currently configured ErrorHandler (always non-{@code null}).
+   * This will be used to handle all errors.
+   */
+  public ErrorHandler getErrorHandler() {
+    return _rowState.getErrorHandler();
+  }
+
+  /**
+   * Sets a new ErrorHandler.  If {@code null}, resets to using the
+   * ErrorHandler configured at the Table level.
+   */
+  public void setErrorHandler(ErrorHandler newErrorHandler) {
+    _rowState.setErrorHandler(newErrorHandler);
+  }    
+
+  /**
    * Returns the current state of the cursor which can be restored at a future
    * point in time by a call to {@link #restoreSavepoint}.
    * <p>

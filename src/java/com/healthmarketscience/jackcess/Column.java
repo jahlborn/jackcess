@@ -144,11 +144,11 @@ public class Column implements Comparable<Column> {
   /**
    * Only used by unit tests
    */
-  Column(boolean testing) {
+  Column(boolean testing, Table table) {
     if(!testing) {
       throw new IllegalArgumentException();
     }
-    _table = null;
+    _table = table;
   }
     
   /**

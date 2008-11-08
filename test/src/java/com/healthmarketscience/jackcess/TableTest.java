@@ -168,7 +168,7 @@ public class TableTest extends TestCase {
   }
 
   private Column newTestColumn() {
-    return new Column(true) {
+    return new Column(true, null) {
         @Override
         public Table getTable() {
           return _testTable;
