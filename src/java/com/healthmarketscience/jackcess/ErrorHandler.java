@@ -49,7 +49,7 @@ public interface ErrorHandler
    *
    * @param column the info for the column being read
    * @param columnData the actual column data for the column being read (which
-   *                   may be {@code null} dependening on when the exception
+   *                   may be {@code null} depending on when the exception
    *                   was thrown during the reading process)
    * @param rowState the current row state for the caller
    * @param error the error that was encountered
