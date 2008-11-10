@@ -46,15 +46,19 @@ public class MakeTableQuery extends BaseSelectQuery
     return getTypeRow().name1;
   }
 
-  public String getRemoteDb() {
+  public String getRemoteDbPath() {
     return getTypeRow().name2;
+  }
+
+  public String getRemoteDbType() {
+    return getTypeRow().expression;
   }
 
   @Override
   protected void toSelectInto(StringBuilder builder) 
   {
     builder.append(" INTO ").append(getTargetTable());
-    toRemoteDb(builder, getRemoteDb());
+    toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
   }
 
   @Override

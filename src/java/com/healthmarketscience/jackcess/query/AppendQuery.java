@@ -46,8 +46,12 @@ public class AppendQuery extends BaseSelectQuery
     return getTypeRow().name1;
   }
 
-  public String getRemoteDb() {
+  public String getRemoteDbPath() {
     return getTypeRow().name2;
+  }
+
+  public String getRemoteDbType() {
+    return getTypeRow().expression;
   }
 
   protected List<Row> getValueRows() {
@@ -71,11 +75,11 @@ public class AppendQuery extends BaseSelectQuery
   protected void toSQLString(StringBuilder builder)
   {
     builder.append("INSERT INTO ").append(getTargetTable());
-    toRemoteDb(builder, getRemoteDb());
+    toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
     builder.append(NEWLINE);
     List<String> values = getValues();
     if(!values.isEmpty()) {
-      builder.append("VALUES (").append(values).append(")");
+      builder.append("VALUES (").append(values).append(')');
     } else {
       toSQLSelectString(builder, true);
     }

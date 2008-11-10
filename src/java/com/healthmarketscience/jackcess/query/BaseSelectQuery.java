@@ -52,7 +52,7 @@ public abstract class BaseSelectQuery extends Query
       builder.append("SELECT ");
       String selectType = getSelectType();
       if(!DEFAULT_TYPE.equals(selectType)) {
-        builder.append(selectType).append(" ");
+        builder.append(selectType).append(' ');
       }
     }
 
@@ -62,7 +62,7 @@ public abstract class BaseSelectQuery extends Query
     List<String> fromTables = getFromTables();
     if(!fromTables.isEmpty()) {
       builder.append(NEWLINE).append("FROM ").append(fromTables);
-      toRemoteDb(builder, getFromRemoteDb());
+      toRemoteDb(builder, getFromRemoteDbPath(), getFromRemoteDbType());
     }
 
     String whereExpr = getWhereExpression();
@@ -135,9 +135,15 @@ public abstract class BaseSelectQuery extends Query
   }
 
   @Override
-  public String getFromRemoteDb() 
+  public String getFromRemoteDbPath() 
   {
-    return super.getFromRemoteDb();
+    return super.getFromRemoteDbPath();
+  }
+
+  @Override
+  public String getFromRemoteDbType() 
+  {
+    return super.getFromRemoteDbType();
   }
 
   @Override

@@ -77,7 +77,7 @@ public class UnionQuery extends Query
       .append("UNION ");
     String unionType = getUnionType();
     if(!DEFAULT_TYPE.equals(unionType)) {
-      builder.append(unionType).append(" ");
+      builder.append(unionType).append(' ');
     }
     builder.append(getUnionString2());
     List<String> orderings = getOrderings();

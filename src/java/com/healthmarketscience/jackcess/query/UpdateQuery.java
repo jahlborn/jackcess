@@ -47,9 +47,14 @@ public class UpdateQuery extends Query
     return super.getFromTables();
   }
 
-  public String getRemoteDb() 
+  public String getRemoteDbPath() 
   {
-    return super.getFromRemoteDb();
+    return super.getFromRemoteDbPath();
+  }
+
+  public String getRemoteDbType() 
+  {
+    return super.getFromRemoteDbType();
   }
 
   public List<String> getNewValues()
@@ -72,7 +77,7 @@ public class UpdateQuery extends Query
   protected void toSQLString(StringBuilder builder)
   {
     builder.append("UPDATE ").append(getTargetTables());
-    toRemoteDb(builder, getRemoteDb());
+    toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
 
     builder.append(NEWLINE).append("SET ").append(getNewValues());
 

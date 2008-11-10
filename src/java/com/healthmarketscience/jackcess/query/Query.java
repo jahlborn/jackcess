@@ -181,7 +181,7 @@ public abstract class Query
     List<String> params = getParameters();
     if(!params.isEmpty()) {
       builder.append("PARAMETERS ").append(params)
-        .append(";").append(NEWLINE);
+        .append(';').append(NEWLINE);
     }
   }
 
@@ -195,9 +195,9 @@ public abstract class Query
             throw new IllegalStateException("Unknown param type " + row.flag);
           }
               
-          builder.append(name).append(" ").append(typeName);
+          builder.append(name).append(' ').append(typeName);
           if((TEXT_FLAG.equals(row.flag)) && (getIntValue(row.extra, 0) > 0)) {
-            builder.append("(").append(row.extra).append(")");
+            builder.append('(').append(row.extra).append(')');
           }
         }
       }).format();
@@ -266,9 +266,14 @@ public abstract class Query
     throw new IllegalStateException("Cannot find join table " + table);
   }
 
-  protected String getFromRemoteDb() 
+  protected String getFromRemoteDbPath() 
   {
     return getRemoteDatabaseRow().name1;
+  }
+
+  protected String getFromRemoteDbType() 
+  {
+    return getRemoteDatabaseRow().expression;
   }
 
   protected String getWhereExpression()
@@ -318,7 +323,7 @@ public abstract class Query
         builder.append(NEWLINE).append(accessType);
       }
       
-      builder.append(";");
+      builder.append(';');
     }
     return builder.toString();
   }
@@ -446,13 +451,22 @@ public abstract class Query
   protected static StringBuilder toQuotedExpr(StringBuilder builder, 
                                               String expr)
   {
-    return builder.append("[").append(expr).append("]");
+    return builder.append('[').append(expr).append(']');
   }
 
   protected static StringBuilder toRemoteDb(StringBuilder builder,
-                                            String remoteDb) {
-    if(remoteDb != null) {
-      builder.append(" IN ").append(remoteDb);
+                                            String remoteDbPath,
+                                            String remoteDbType) {
+    if((remoteDbPath != null) || (remoteDbType != null)) {
+      // note, always include path string, even if empty
+      builder.append(" IN '");
+      if(remoteDbPath != null) {
+        builder.append(remoteDbPath);
+      }
+      builder.append('\'');
+      if(remoteDbType != null) {
+        builder.append(" [").append(remoteDbType).append(']');
+      }
     }
     return builder;
   }
