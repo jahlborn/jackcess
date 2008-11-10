@@ -5,6 +5,11 @@
     <author email="jahlborn@users.sf.net">James Ahlborn</author>
   </properties>
   <body>
+    <release version="1.1.19" date="TBD">
+      <action dev="jahlborn" type="add">
+        Add Query reading support.
+      </action>
+    </release>
     <release version="1.1.18" date="2008-11-08">
       <action dev="jahlborn" type="add">
         Add ErrorHandler utility for customizing error handling during row
