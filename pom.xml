@@ -53,6 +53,11 @@
         <directory>src/resources</directory>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>test/src/resources</directory>
+      </testResource>
+    </testResources>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -64,7 +69,7 @@
             <systemProperties>
               <property>
                 <name>log4j.configuration</name>
-                <value>com/healthmarketscience/jackcess/log4j.properties</value>
+                <value>log4j_test.properties</value>
               </property>
               <property>
                 <name>com.healthmarketscience.jackcess.bigIndex</name>

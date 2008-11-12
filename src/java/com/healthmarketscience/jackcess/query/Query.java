@@ -189,13 +189,12 @@ public abstract class Query
   {
     return (new RowFormatter(getParameterRows()) {
         @Override protected void format(StringBuilder builder, Row row) {
-          String name = row.name1;
           String typeName = PARAM_TYPE_MAP.get(row.flag);
           if(typeName == null) {
             throw new IllegalStateException("Unknown param type " + row.flag);
           }
               
-          builder.append(name).append(' ').append(typeName);
+          builder.append(row.name1).append(' ').append(typeName);
           if((TEXT_FLAG.equals(row.flag)) && (getIntValue(row.extra, 0) > 0)) {
             builder.append('(').append(row.extra).append(')');
           }
