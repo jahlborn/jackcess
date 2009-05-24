@@ -353,7 +353,7 @@ public enum DataType {
     return isWithinRange(precision, getMinPrecision(), getMaxPrecision());
   }
 
-  private boolean isWithinRange(int value, int minValue, int maxValue) {
+  private static boolean isWithinRange(int value, int minValue, int maxValue) {
     return((value >= minValue) && (value <= maxValue));
   }
   
@@ -369,7 +369,7 @@ public enum DataType {
     return toValidRange(precision, getMinPrecision(), getMaxPrecision());
   }
 
-  private int toValidRange(int value, int minValue, int maxValue) {
+  private static int toValidRange(int value, int minValue, int maxValue) {
     return((value > maxValue) ? maxValue :
            ((value < minValue) ? minValue : value));
   }
@@ -383,13 +383,13 @@ public enum DataType {
   }
   
   public static DataType fromSQLType(int sqlType)
-  throws SQLException
+    throws SQLException
   {
     return fromSQLType(sqlType, 0);
   }
   
   public static DataType fromSQLType(int sqlType, int lengthInUnits)
-  throws SQLException
+    throws SQLException
   {
     DataType rtn = SQL_TYPES.get(sqlType);
     if(rtn == null) {
