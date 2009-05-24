@@ -340,7 +340,7 @@ public class Column implements Comparable<Column> {
     }
 
     if(!isVariableLength()) {
-      if(getLength() != getType().getFixedSize()) {
+      if(getLength() < getType().getFixedSize()) {
         throw new IllegalArgumentException("invalid fixed length size");
       }
     } else if(!getType().isLongValue()) {
