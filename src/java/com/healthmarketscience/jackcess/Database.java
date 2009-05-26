@@ -58,6 +58,7 @@ import java.util.Set;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.query.Query;
 
 /**
  * An Access database.
@@ -184,12 +185,21 @@ public class Database
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** Name of the table that contains table relationships */
   private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
+  /** Name of the table that contains queries */
+  private static final String TABLE_SYSTEM_QUERIES = "MSysQueries";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
+  /** System object type for query definitions */
+  private static final Short TYPE_QUERY = (short) 5;
 
   /** the columns to read when reading system catalog initially */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID));
+  
+  /** the columns to read when finding queries */
+  private static Collection<String> SYSTEM_CATALOG_QUERY_COLUMNS =
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
+                                      CAT_COL_FLAGS));
   
   
   /**
@@ -255,6 +265,8 @@ public class Database
   private Table _accessControlEntries;
   /** System relationships table (initialized on first use) */
   private Table _relationships;
+  /** System queries table (initialized on first use) */
+  private Table _queries;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   /** for now, "big index support" is optional */
@@ -602,6 +614,61 @@ public class Database
     collectRelationships(cursor, table2, table1, relationships);
     
     return relationships;
+  }
+
+  /**
+   * Finds all the relationships in the database between the given tables.
+   */
+  public List<Query> getQueries()
+    throws IOException
+  {
+    // the queries table does not get loaded until first accessed
+    if(_queries == null) {
+      _queries = getSystemTable(TABLE_SYSTEM_QUERIES);
+      if(_queries == null) {
+        throw new IOException("Could not find system queries table");
+      }
+    }
+
+    // find all the queries from the system catalog
+    List<Map<String,Object>> queryInfo = new ArrayList<Map<String,Object>>();
+    Map<Integer,List<Query.Row>> queryRowMap = 
+      new HashMap<Integer,List<Query.Row>>();
+    for(Map<String,Object> row :
+          Cursor.createCursor(_systemCatalog).iterable(
+              SYSTEM_CATALOG_QUERY_COLUMNS))
+    {
+      String name = (String) row.get(CAT_COL_NAME);
+      if (name != null && TYPE_QUERY.equals(row.get(CAT_COL_TYPE))) {
+        queryInfo.add(row);
+        Integer id = (Integer)row.get(CAT_COL_ID);
+        queryRowMap.put(id, new ArrayList<Query.Row>());
+      }
+    }
+
+    // find all the query rows
+    for(Map<String,Object> row : Cursor.createCursor(_queries)) {
+      Query.Row queryRow = new Query.Row(row);
+      List<Query.Row> queryRows = queryRowMap.get(queryRow.objectId);
+      if(queryRows == null) {
+        LOG.warn("Found rows for query with id " + queryRow.objectId +
+                 " missing from system catalog");
+        continue;
+      }
+      queryRows.add(queryRow);
+    }
+
+    // lastly, generate all the queries
+    List<Query> queries = new ArrayList<Query>();
+    for(Map<String,Object> row : queryInfo) {
+      String name = (String) row.get(CAT_COL_NAME);
+      Integer id = (Integer)row.get(CAT_COL_ID);
+      int flags = (Integer)row.get(CAT_COL_FLAGS);
+      List<Query.Row> queryRows = queryRowMap.get(id);
+      queries.add(Query.create(flags, name, queryRows, id));
+    }
+
+    return queries;
   }
 
   /**
