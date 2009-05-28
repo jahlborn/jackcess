@@ -202,7 +202,7 @@ public class QueryTest extends TestCase
     Map<String,String> expectedQueries = new HashMap<String,String>();
     expectedQueries.put(
         "SelectQuery", multiline(
-            "SELECT Table1.*, Table2.col1, Table2.col2, Table3.col3",
+            "SELECT DISTINCT Table1.*, Table2.col1, Table2.col2, Table3.col3",
             "FROM (Table1 LEFT OUTER JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col1) AND (Table3.col1 = Table2.col2)",
             "WHERE (((Table2.col2)=\"foo\" Or (Table2.col2) In (\"buzz\",\"bazz\")))",
             "ORDER BY Table2.col1;"));
@@ -218,24 +218,47 @@ public class QueryTest extends TestCase
             "FROM Table3, Table1 INNER JOIN Table2 ON [Table1].[col1]=[Table2].[col1];"));
     expectedQueries.put(
         "UpdateQuery",multiline(
+            "PARAMETERS User Name Text;",
             "UPDATE Table1",
-            "SET Table1.col1 = \"foo\", Table1.col2 = [Table2].[col3]",
-            "WHERE (([Table2].[col1] Is Not Null));"));
+            "SET Table1.col1 = \"foo\", Table1.col2 = [Table2].[col3], [[Table2]].[[col1]] = [User Name]",
+            "WHERE ((([Table2].[col1]) Is Not Null));"));
     expectedQueries.put(
         "MakeTableQuery",multiline(
             "SELECT Max(Table2.col1) AS MaxOfcol1, Table2.col2, Table3.col2 INTO Table4",
             "FROM (Table2 INNER JOIN Table1 ON Table2.col1 = Table1.col2) RIGHT OUTER JOIN Table3 ON Table1.col2 = Table3.col3",
             "GROUP BY Table2.col2, Table3.col2",
             "HAVING (((Max(Table2.col1))=\"buzz\") AND ((Table2.col2)<>\"blah\"));"));
+    expectedQueries.put(
+        "CrosstabQuery", multiline(
+            "TRANSFORM Count([Table2].[col2]) AS CountOfcol2",
+            "SELECT Table2_1.col1, [Table2].[col3], Avg(Table2_1.col2) AS AvgOfcol2",
+            "FROM (Table1 INNER JOIN Table2 ON [Table1].[col1]=[Table2].[col1]) INNER JOIN Table2 AS Table2_1 ON [Table2].[col1]=Table2_1.col3",
+            "WHERE ((([Table1].[col1])>\"10\") And ((Table2_1.col1) Is Not Null) And ((Avg(Table2_1.col2))>\"10\"))",
+            "GROUP BY Table2_1.col1, [Table2].[col3]",
+            "ORDER BY [Table2].[col3]",
+            "PIVOT [Table1].[col1];"));
+    expectedQueries.put(
+        "UnionQuery", multiline(
+            "Select Table1.col1, Table1.col2",
+            "where Table1.col1 = \"foo\"",
+            "UNION",
+            "Select Table2.col1, Table2.col2",
+            "UNION ALL Select Table3.col1, Table3.col2",
+            "where Table3.col3 > \"blah\";"));
+    expectedQueries.put(
+        "PassthroughQuery", multiline(
+            "ALTER TABLE Table4 DROP COLUMN col5;\0"));
+    expectedQueries.put(
+        "DataDefinitionQuery", multiline(
+            "CREATE TABLE Table5 (col1 CHAR, col2 CHAR);\0"));
 
     Database db = DatabaseTest.open(new File("test/data/queryTest.mdb"));
 
-    Map<String,String> foundQueries = new HashMap<String,String>();
     for(Query q : db.getQueries()) {
-      assertNull(foundQueries.put(q.getName(), q.toSQLString()));
+      assertEquals(expectedQueries.remove(q.getName()), q.toSQLString());
     }
 
-    assertEquals(expectedQueries, foundQueries);
+    assertTrue(expectedQueries.isEmpty());
 
     db.close();
   }

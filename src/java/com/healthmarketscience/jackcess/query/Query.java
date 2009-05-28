@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -586,7 +585,7 @@ public abstract class Query
 
     public Map<String,Object> toTableRow()
     {
-      Map<String,Object> tableRow = new HashMap<String,Object>();
+      Map<String,Object> tableRow = new LinkedHashMap<String,Object>();
 
       tableRow.put(COL_ATTRIBUTE, attribute);
       tableRow.put(COL_EXPRESSION, expression);

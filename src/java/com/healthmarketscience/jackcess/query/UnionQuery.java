@@ -63,7 +63,7 @@ public class UnionQuery extends Query
   private String getUnionString(String id) {
     for(Row row : getTableRows()) {
       if(id.equals(row.name2)) {
-        return row.expression;
+        return cleanUnionString(row.expression);
       }
     }
     throw new IllegalStateException(
@@ -84,6 +84,11 @@ public class UnionQuery extends Query
     if(!orderings.isEmpty()) {
       builder.append(NEWLINE).append("ORDER BY ").append(orderings);
     }
+  }
+
+  private static String cleanUnionString(String str)
+  {
+    return str.trim().replaceAll("[\r\n]+", NEWLINE);
   }
 
 }
