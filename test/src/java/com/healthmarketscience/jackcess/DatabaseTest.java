@@ -66,27 +66,29 @@ public class DatabaseTest extends TestCase {
     super(name);
   }
    
-  static Database open() throws Exception {
+  public static Database open() throws Exception {
     return open(new File("test/data/test.mdb"));
   }
   
-  static Database open(File file) throws Exception {
+  public static Database open(File file) throws Exception {
     return Database.open(file, true, _autoSync);
   }
   
-  static Database create() throws Exception {
+  public static Database create() throws Exception {
     return create(false);
   }
 
-  static Database create(boolean keep) throws Exception {
+  public static Database create(boolean keep) throws Exception {
     return Database.create(createTempFile(keep), _autoSync);
   }
 
-  static Database openCopy(File srcFile) throws Exception {
+  public static Database openCopy(File srcFile) throws Exception {
     return openCopy(srcFile, false);
   }
   
-  static Database openCopy(File srcFile, boolean keep) throws Exception {
+  public static Database openCopy(File srcFile, boolean keep) 
+    throws Exception 
+  {
     File tmp = createTempFile(keep);
     copyFile(srcFile, tmp);
     return Database.open(tmp, false, _autoSync);

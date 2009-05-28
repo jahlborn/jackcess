@@ -28,10 +28,12 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -224,7 +226,31 @@ public abstract class Query
     List<Row> joins = getJoinRows();
     if(!joins.isEmpty()) {
 
-      for(Row join : joins) {
+      // combine any multi-column joins
+      Collection<List<Row>> comboJoins = combineJoins(joins);
+      
+      for(List<Row> comboJoin : comboJoins) {
+
+        Row join = comboJoin.get(0);
+        String joinExpr = join.expression;
+
+        if(comboJoin.size() > 1) {
+
+          // combine all the join expressions with "AND"
+          AppendableList<String> comboExprs = new AppendableList<String>() {
+            private static final long serialVersionUID = 0L;
+            @Override
+            protected String getSeparator() {
+              return ") AND (";
+            }
+          };
+          for(Row tmpJoin : comboJoin) {
+            comboExprs.add(tmpJoin.expression);
+          }
+
+          joinExpr = new StringBuilder().append("(")
+            .append(comboExprs).append(")").toString();
+        }
 
         String fromTable = join.name1;
         String toTable = join.name2;
@@ -238,7 +264,7 @@ public abstract class Query
 
         String expr = new StringBuilder().append(fromExpr)
           .append(joinType).append(toExpr).append(" ON ")
-          .append(join.expression).toString();
+          .append(joinExpr).toString();
 
         fromExpr.join(toExpr, expr);
         joinExprs.add(fromExpr);
@@ -263,6 +289,28 @@ public abstract class Query
       }
     }
     throw new IllegalStateException("Cannot find join table " + table);
+  }
+
+  private Collection<List<Row>> combineJoins(List<Row> joins)
+  {
+    // combine joins with the same to/from tables
+    Map<List<String>,List<Row>> comboJoinMap = 
+      new LinkedHashMap<List<String>,List<Row>>();
+    for(Row join : joins) {
+      List<String> key = Arrays.asList(join.name1, join.name2);
+      List<Row> comboJoins = comboJoinMap.get(key);
+      if(comboJoins == null) {
+        comboJoins = new ArrayList<Row>();
+        comboJoinMap.put(key, comboJoins);
+      } else {
+        if(comboJoins.get(0).flag != join.flag) {
+          throw new IllegalStateException(
+              "Mismatched join flags for combo joins");
+        }
+      }
+      comboJoins.add(join);
+    }
+    return comboJoinMap.values();
   }
 
   protected String getFromRemoteDbPath() 
@@ -610,13 +658,17 @@ public abstract class Query
       super(c);
     }
 
+    protected String getSeparator() {
+      return ", ";
+    }
+
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       for(Iterator<E> iter = iterator(); iter.hasNext(); ) {
         builder.append(iter.next().toString());
         if(iter.hasNext()) {
-          builder.append(", ");
+          builder.append(getSeparator());
         }
       }
       return builder.toString();

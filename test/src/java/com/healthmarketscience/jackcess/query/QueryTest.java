@@ -27,12 +27,17 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess.query;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.query.Query.Row;
 import junit.framework.TestCase;
 import org.apache.commons.lang.StringUtils;
@@ -190,6 +195,49 @@ public class QueryTest extends TestCase
       // success
     }
 
+  }
+
+  public void testReadQueries() throws Exception
+  {
+    Map<String,String> expectedQueries = new HashMap<String,String>();
+    expectedQueries.put(
+        "SelectQuery", multiline(
+            "SELECT Table1.*, Table2.col1, Table2.col2, Table3.col3",
+            "FROM (Table1 LEFT OUTER JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col1) AND (Table3.col1 = Table2.col2)",
+            "WHERE (((Table2.col2)=\"foo\" Or (Table2.col2) In (\"buzz\",\"bazz\")))",
+            "ORDER BY Table2.col1;"));
+    expectedQueries.put(
+        "DeleteQuery", multiline(
+            "DELETE Table1.col1, Table1.col2, Table1.col3",
+            "FROM Table1", 
+            "WHERE (((Table1.col1)>\"blah\"));"));
+    expectedQueries.put(
+        "AppendQuery",multiline(
+            "INSERT INTO Table3",
+            "SELECT [Table1].[col2], [Table2].[col2], [Table2].[col3]",
+            "FROM Table3, Table1 INNER JOIN Table2 ON [Table1].[col1]=[Table2].[col1];"));
+    expectedQueries.put(
+        "UpdateQuery",multiline(
+            "UPDATE Table1",
+            "SET Table1.col1 = \"foo\", Table1.col2 = [Table2].[col3]",
+            "WHERE (([Table2].[col1] Is Not Null));"));
+    expectedQueries.put(
+        "MakeTableQuery",multiline(
+            "SELECT Max(Table2.col1) AS MaxOfcol1, Table2.col2, Table3.col2 INTO Table4",
+            "FROM (Table2 INNER JOIN Table1 ON Table2.col1 = Table1.col2) RIGHT OUTER JOIN Table3 ON Table1.col2 = Table3.col3",
+            "GROUP BY Table2.col2, Table3.col2",
+            "HAVING (((Max(Table2.col1))=\"buzz\") AND ((Table2.col2)<>\"blah\"));"));
+
+    Database db = DatabaseTest.open(new File("test/data/queryTest.mdb"));
+
+    Map<String,String> foundQueries = new HashMap<String,String>();
+    for(Query q : db.getQueries()) {
+      assertNull(foundQueries.put(q.getName(), q.toSQLString()));
+    }
+
+    assertEquals(expectedQueries, foundQueries);
+
+    db.close();
   }
 
   private void doTestColumns(SelectQuery query) throws Exception
