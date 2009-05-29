@@ -128,8 +128,8 @@ public class QueryFormat
     new HashMap<Short,String>();
   static {
     JOIN_TYPE_MAP.put((short)1, " INNER JOIN ");
-    JOIN_TYPE_MAP.put((short)2, " LEFT OUTER JOIN ");
-    JOIN_TYPE_MAP.put((short)3, " RIGHT OUTER JOIN ");
+    JOIN_TYPE_MAP.put((short)2, " LEFT JOIN ");
+    JOIN_TYPE_MAP.put((short)3, " RIGHT JOIN ");
   }
 
 }

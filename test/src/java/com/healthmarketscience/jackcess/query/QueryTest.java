@@ -203,7 +203,7 @@ public class QueryTest extends TestCase
     expectedQueries.put(
         "SelectQuery", multiline(
             "SELECT DISTINCT Table1.*, Table2.col1, Table2.col2, Table3.col3",
-            "FROM (Table1 LEFT OUTER JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col1) AND (Table3.col1 = Table2.col2)",
+            "FROM (Table1 LEFT JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col1) AND (Table3.col1 = Table2.col2)",
             "WHERE (((Table2.col2)=\"foo\" Or (Table2.col2) In (\"buzz\",\"bazz\")))",
             "ORDER BY Table2.col1;"));
     expectedQueries.put(
@@ -225,7 +225,7 @@ public class QueryTest extends TestCase
     expectedQueries.put(
         "MakeTableQuery",multiline(
             "SELECT Max(Table2.col1) AS MaxOfcol1, Table2.col2, Table3.col2 INTO Table4",
-            "FROM (Table2 INNER JOIN Table1 ON Table2.col1 = Table1.col2) RIGHT OUTER JOIN Table3 ON Table1.col2 = Table3.col3",
+            "FROM (Table2 INNER JOIN Table1 ON Table2.col1 = Table1.col2) RIGHT JOIN Table3 ON Table1.col2 = Table3.col3",
             "GROUP BY Table2.col2, Table3.col2",
             "HAVING (((Max(Table2.col1))=\"buzz\") AND ((Table2.col2)<>\"blah\"));"));
     expectedQueries.put(
@@ -376,7 +376,7 @@ public class QueryTest extends TestCase
     addRows(query, newRow(JOIN_ATTRIBUTE, "(Table1.id = Table3Val.id)", 2, "Table1", "Table3Val"));
 
     assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
-                           "FROM (Table1 INNER JOIN Table2 AS [Another Table] ON (Table1.id = [Another Table].id)) LEFT OUTER JOIN [Select val from Table3].val AS Table3Val ON (Table1.id = Table3Val.id);"),
+                           "FROM (Table1 INNER JOIN Table2 AS [Another Table] ON (Table1.id = [Another Table].id)) LEFT JOIN [Select val from Table3].val AS Table3Val ON (Table1.id = Table3Val.id);"),
                  query.toSQLString());
 
     addRows(query, newRow(JOIN_ATTRIBUTE, "(Table1.id = Table3Val.id)", 5, "Table1", "Table3Val"));
