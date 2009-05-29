@@ -887,7 +887,8 @@ public class Table
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
-        fixedOffset += col.getType().getFixedSize();
+        fixedOffset += Math.max(col.getType().getFixedSize(),
+                                col.getLength());
       }
       if(!col.getType().isLongValue()) {
         buffer.putShort(col.getLength()); //Column length
