@@ -31,7 +31,7 @@ import java.util.List;
 
 
 /**
- * SQL query which represents a DDL query.
+ * Concrete Query subclass which represents a DDL query.
  * 
  * @author James Ahlborn
  */

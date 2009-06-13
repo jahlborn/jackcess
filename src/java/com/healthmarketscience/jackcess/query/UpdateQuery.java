@@ -33,6 +33,9 @@ import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
+ * Concrete Query subclass which represents a row update query, e.g.:
+ * {@code UPDATE <table> SET <newValues>}
+ * 
  * @author James Ahlborn
  */
 public class UpdateQuery extends Query 

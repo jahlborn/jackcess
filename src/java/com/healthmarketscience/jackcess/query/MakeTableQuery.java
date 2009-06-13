@@ -29,10 +29,11 @@ package com.healthmarketscience.jackcess.query;
 
 import java.util.List;
 
-import static com.healthmarketscience.jackcess.query.QueryFormat.*;
-
 
 /**
+ * Concrete Query subclass which represents an table creation query, e.g.:
+ * {@code SELECT <query> INTO <newTable>}
+ * 
  * @author James Ahlborn
  */
 public class MakeTableQuery extends BaseSelectQuery 

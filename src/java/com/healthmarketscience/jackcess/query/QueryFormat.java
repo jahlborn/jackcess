@@ -35,6 +35,8 @@ import com.healthmarketscience.jackcess.DataType;
 import org.apache.commons.lang.SystemUtils;
 
 /**
+ * Constants used by the query data parsing.
+ * 
  * @author James Ahlborn
  */
 public class QueryFormat 

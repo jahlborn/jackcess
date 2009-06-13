@@ -33,6 +33,9 @@ import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
+ * Concrete Query subclass which represents an append query, e.g.:
+ * {@code INSERT INTO <table> VALUES (<values>)}
+ * 
  * @author James Ahlborn
  */
 public class AppendQuery extends BaseSelectQuery 

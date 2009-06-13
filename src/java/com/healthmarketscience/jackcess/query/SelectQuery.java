@@ -31,6 +31,9 @@ import java.util.List;
 
 
 /**
+ * Concrete Query subclass which represents a select query, e.g.:
+ * {@code SELECT <columns> FROM <tables> WHERE <expression>}
+ * 
  * @author James Ahlborn
  */
 public class SelectQuery extends BaseSelectQuery 

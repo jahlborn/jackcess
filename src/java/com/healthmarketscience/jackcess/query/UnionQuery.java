@@ -33,7 +33,8 @@ import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
- * SQL query which represents a UNION query.
+ * Concrete Query subclass which represents a UNION query, e.g.:
+ * {@code SELECT <query1> UNION SELECT <query2>}
  * 
  * @author James Ahlborn
  */

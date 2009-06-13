@@ -44,6 +44,10 @@ import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
+ * Base class for classes which encapsulate information about an Access query.
+ * The {@link #toSQLString()} method can be used to convert this object into
+ * the actual SQL string which this query data represents.
+ * 
  * @author James Ahlborn
  */
 public abstract class Query 
@@ -103,14 +107,23 @@ public abstract class Query
     }
   }
 
+  /**
+   * Returns the name of the query.
+   */
   public String getName() {
     return _name;
   }
 
+  /**
+   * Returns the type of the query.
+   */
   public Type getType() {
     return _type;
   }
 
+  /**
+   * Returns the unique object id of the query.
+   */
   public int getObjectId() {
     return _objectId;
   }
@@ -119,6 +132,10 @@ public abstract class Query
     return getType().getObjectFlag();
   }
 
+  /**
+   * Returns the rows from the system query table from which the query
+   * information was derived.
+   */
   public List<Row> getRows() {
     return _rows;
   }
@@ -353,6 +370,9 @@ public abstract class Query
     return true;
   }
 
+  /**
+   * Returns the actual SQL string which this query data represents.
+   */
   public String toSQLString() 
   {
     StringBuilder builder = new StringBuilder();
@@ -379,6 +399,17 @@ public abstract class Query
     return ToStringBuilder.reflectionToString(this);
   }
 
+  /**
+   * Creates a concrete Query instance from the given query data.
+   *
+   * @param objectFlag the flag indicating the type of the query
+   * @param name the name of the query
+   * @param rows the rows from the system query table containing the data
+   *             describing this query
+   * @param objectId the unique object id of this query
+   *
+   * @return a Query instance for the given query data
+   */
   public static Query create(int objectFlag, String name, List<Row> rows, 
                              int objectId)
   {
@@ -525,7 +556,7 @@ public abstract class Query
     return builder;
   }
 
-  private static class UnknownQuery extends Query
+  private static final class UnknownQuery extends Query
   {
     private final int _objectFlag;
 
@@ -547,7 +578,11 @@ public abstract class Query
     }
   }
 
-  public static class Row
+  /**
+   * Struct containing the information from a single row of the system query
+   * table.
+   */
+  public static final class Row
   {
     public final Byte attribute;
     public final String expression;
@@ -674,7 +709,7 @@ public abstract class Query
     }
   }
 
-  private static class Join
+  private static final class Join
   {
     public final List<String> tables = new ArrayList<String>();
     public boolean isJoin;

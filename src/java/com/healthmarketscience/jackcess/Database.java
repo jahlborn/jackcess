@@ -618,7 +618,7 @@ public class Database
   }
 
   /**
-   * Finds all the relationships in the database between the given tables.
+   * Finds all the queries in the database.
    */
   public List<Query> getQueries()
     throws IOException

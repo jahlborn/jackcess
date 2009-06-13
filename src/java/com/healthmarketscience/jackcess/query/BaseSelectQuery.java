@@ -27,14 +27,14 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess.query;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
+ * Base class for queries which represent some form of SELECT statement.
+ * 
  * @author James Ahlborn
  */
 public abstract class BaseSelectQuery extends Query 

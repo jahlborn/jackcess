@@ -31,7 +31,8 @@ import java.util.List;
 
 
 /**
- * SQL query which represents a query which will be executed via ODBC.
+ * Concrete Query subclass which represents a query which will be executed via
+ * ODBC.
  * 
  * @author James Ahlborn
  */
