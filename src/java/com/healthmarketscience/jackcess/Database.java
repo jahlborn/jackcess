@@ -54,11 +54,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TreeSet;
 
+import com.healthmarketscience.jackcess.query.Query;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.query.Query;
 
 /**
  * An Access database.
@@ -480,7 +481,7 @@ public class Database
    */
   public Set<String> getTableNames() {
     if(_tableNames == null) {
-      _tableNames = new HashSet<String>();
+      _tableNames = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
       for(TableInfo tableInfo : _tableLookup.values()) {
         _tableNames.add(tableInfo.tableName);
       }
