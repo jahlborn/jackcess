@@ -319,7 +319,7 @@ public abstract class Query
         comboJoins = new ArrayList<Row>();
         comboJoinMap.put(key, comboJoins);
       } else {
-        if(comboJoins.get(0).flag != join.flag) {
+        if((short)comboJoins.get(0).flag != (short)join.flag) {
           throw new IllegalStateException(
               "Mismatched join flags for combo joins");
         }
