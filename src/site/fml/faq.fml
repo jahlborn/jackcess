@@ -66,13 +66,12 @@
 
     <faq id="poi">
       <question>
-        This looks like a logical addition to
-        <a href="http://poi.apache.org/">POI</a>.  Why not integrate
-        with that project?
+        This looks like a logical addition to POI.  Why not integrate with
+        that project?
       </question>
       <answer>
         <p>
-          POI is released under
+          <a href="http://poi.apache.org/">POI</a> is released under
           <a href="http://www.apache.org/foundation/licence-FAQ.html">The Apache License</a>.
           Jackcess is released under
           <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt">The GNU Lesser General Public License</a>.
