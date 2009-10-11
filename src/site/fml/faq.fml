@@ -201,6 +201,19 @@
         for details on enabling large index support.
       </answer>
     </faq>
+
+    <faq id="query">
+      <question>Can Jackcess execute SQL queries?</question>
+      <answer>
+        As of the 1.1.19 release, Jackcess has the ability to <i>read</i> the
+        Queries saved in an Access database (i.e. interpret the data stored in
+        the system Queries table).  However, Jackcess does not have the
+        ability to <i>execute</i> these Queries.  There have been a few
+        attempts to use Jackcess to build JDBC drivers for Access databases,
+        but none of the projects seem to have progressed very far before
+        becoming inactive.
+      </answer>
+    </faq>
     
     <faq id="hms">
       <question>Who is Health Market Science?</question>

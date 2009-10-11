@@ -51,11 +51,6 @@ external database) into a new table:
       Some other jackcess related projects:
       <ul>
         <li>
-          <a href="http://www.tiyukquellmalz.org/jackcess-jdbc/">Jackcess-JDBC</a>
-          - Open Source JDBC driver with read-only support for Access
-          databases (by proxying the data through JavaDB)
-        </li>
-        <li>
           <a href="http://mdbtools.sf.net">mdbtools</a> - Open Source project
           for reading Access files, written in C.
         </li>
