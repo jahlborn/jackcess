@@ -127,7 +127,8 @@ public enum DataType {
   UNKNOWN_0D((byte) 0x0D, null, null, true, false, 0, 255, 255, 1),
   /**
    * Corresponds to a java String with the pattern
-   * <code>"{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"</code>.  Accepts any
+   * <code>"{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"</code>, also known as a
+   * "Replication ID" in Access.  Accepts any
    * Object converted to a String matching this pattern (surrounding "{}" are
    * optional, so {@link java.util.UUID}s are supported), or {@code null}.
    */

@@ -38,6 +38,7 @@ import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -95,6 +96,9 @@ public class Column implements Comparable<Column> {
   /** mask for the auto number bit */
   public static final byte AUTO_NUMBER_FLAG_MASK = (byte)0x04;
   
+  /** mask for the auto number guid bit */
+  public static final byte AUTO_NUMBER_GUID_FLAG_MASK = (byte)0x40;
+  
   /** mask for the unknown bit */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
 
@@ -132,6 +136,8 @@ public class Column implements Comparable<Column> {
   private int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
   private int _varLenTableIndex;
+  /** the auto number generator for this column (if autonumber column) */
+  private AutoNumberGenerator _autoNumberGenerator;
   
   public Column() {
     this(JetFormat.VERSION_4);
@@ -173,7 +179,9 @@ public class Column implements Comparable<Column> {
     }
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
-    _autoNumber = ((flags & AUTO_NUMBER_FLAG_MASK) != 0);
+    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
+    setAutoNumberGenerator();
+        
     _compressedUnicode = ((buffer.get(offset +
         getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
 
@@ -217,6 +225,7 @@ public class Column implements Comparable<Column> {
 
   public void setAutoNumber(boolean autoNumber) {
     _autoNumber = autoNumber;
+    setAutoNumberGenerator();
   }
 
   public short getColumnNumber() {
@@ -323,6 +332,29 @@ public class Column implements Comparable<Column> {
     return _fixedDataOffset;
   }
 
+  private void setAutoNumberGenerator()
+  {
+    if(!_autoNumber || (_type == null)) {
+      _autoNumberGenerator = null;
+      return;
+    }
+
+    switch(_type) {
+    case LONG:
+      _autoNumberGenerator = new LongAutoNumberGenerator();
+      break;
+    case GUID:
+      _autoNumberGenerator = new GuidAutoNumberGenerator();
+      break;
+    default:
+      throw new RuntimeException("Unexpected autoNumber column type " + _type);
+    }
+  }
+
+  public AutoNumberGenerator getAutoNumberGenerator() {
+    return _autoNumberGenerator;
+  }
+
   /**
    * Checks that this column definition is valid.
    *
@@ -368,9 +400,9 @@ public class Column implements Comparable<Column> {
     }
 
     if(isAutoNumber()) {
-      if(getType() != DataType.LONG) {
+      if((getType() != DataType.LONG) && (getType() != DataType.GUID)) {
         throw new IllegalArgumentException(
-            "Auto number column must be long integer");
+            "Auto number column must be long integer or guid");
       }
     }
 
@@ -434,7 +466,7 @@ public class Column implements Comparable<Column> {
     } else if (_type == DataType.NUMERIC) {
       return readNumericValue(buffer);
     } else if (_type == DataType.GUID) {
-      return readGUIDValue(buffer);
+      return readGUIDValue(buffer, order);
     } else if ((_type == DataType.UNKNOWN_0D) || 
                (_type == DataType.UNKNOWN_11)) {
       // treat like "binary" data
@@ -717,8 +749,20 @@ public class Column implements Comparable<Column> {
   /**
    * Decodes a GUID value.
    */
-  private String readGUIDValue(ByteBuffer buffer)
+  private String readGUIDValue(ByteBuffer buffer, ByteOrder order)
   {
+    if(order != ByteOrder.BIG_ENDIAN) {
+      byte[] tmpArr = new byte[16];
+      buffer.get(tmpArr);
+
+        // the first 3 guid components are integer components which need to
+        // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int
+      ByteUtil.swap4Bytes(tmpArr, 0);
+      ByteUtil.swap2Bytes(tmpArr, 4);
+      ByteUtil.swap2Bytes(tmpArr, 6);
+      buffer = ByteBuffer.wrap(tmpArr);
+    }
+
     StringBuilder sb = new StringBuilder(22);
     sb.append("{");
     sb.append(ByteUtil.toHexString(buffer, 0, 4,
@@ -742,16 +786,36 @@ public class Column implements Comparable<Column> {
   /**
    * Writes a GUID value.
    */
-  private void writeGUIDValue(ByteBuffer buffer, Object value)
+  private void writeGUIDValue(ByteBuffer buffer, Object value, 
+                              ByteOrder order)
     throws IOException
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
     if(m.matches()) {
+      ByteBuffer origBuffer = null;
+      byte[] tmpBuf = null;
+      if(order != ByteOrder.BIG_ENDIAN) {
+        // write to a temp buf so we can do some swapping below
+        origBuffer = buffer;
+        tmpBuf = new byte[16];
+        buffer = ByteBuffer.wrap(tmpBuf);
+      }
+
       ByteUtil.writeHexString(buffer, m.group(1));
       ByteUtil.writeHexString(buffer, m.group(2));
       ByteUtil.writeHexString(buffer, m.group(3));
       ByteUtil.writeHexString(buffer, m.group(4));
       ByteUtil.writeHexString(buffer, m.group(5));
+      
+      if(tmpBuf != null) {
+        // the first 3 guid components are integer components which need to
+        // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int
+        ByteUtil.swap4Bytes(tmpBuf, 0);
+        ByteUtil.swap2Bytes(tmpBuf, 4);
+        ByteUtil.swap2Bytes(tmpBuf, 6);
+        origBuffer.put(tmpBuf);
+      }
+
     } else {
       throw new IOException("Invalid GUID: " + value);
     }
@@ -1054,7 +1118,7 @@ public class Column implements Comparable<Column> {
       writeCurrencyValue(buffer, obj);
       break;
     case GUID:
-      writeGUIDValue(buffer, obj);
+      writeGUIDValue(buffer, obj, order);
       break;
     case NUMERIC:
       // yes, that's right, occasionally numeric values are written as fixed
@@ -1225,7 +1289,7 @@ public class Column implements Comparable<Column> {
       rtn.append("\n\tCompressed Unicode: " + _compressedUnicode);
     }
     if(_autoNumber) {
-      rtn.append("\n\tNext AutoNumber: " + (_table.getLastAutoNumber() + 1));
+      rtn.append("\n\tLast AutoNumber: " + _autoNumberGenerator.getLast());
     }
     rtn.append("\n\n");
     return rtn.toString();
@@ -1355,13 +1419,7 @@ public class Column implements Comparable<Column> {
   {
     // fix endianness of each 4 byte segment
     for(int i = 0; i < 4; ++i) {
-      int idx = i * 4;
-      byte b = bytes[idx + 0];
-      bytes[idx + 0] = bytes[idx + 3];
-      bytes[idx + 3] = b;
-      b = bytes[idx + 1];
-      bytes[idx + 1] = bytes[idx + 2];
-      bytes[idx + 2] = b;
+      ByteUtil.swap4Bytes(bytes, i * 4);
     }
   }
 
@@ -1401,5 +1459,65 @@ public class Column implements Comparable<Column> {
       return new Date(super.getTime());
     }
   }
-  
+
+  /**
+   * Base class for the supported autonumber types.
+   */
+  public abstract class AutoNumberGenerator
+  {
+    protected AutoNumberGenerator() {}
+
+    public abstract Object getLast();
+
+    public abstract Object getNext();
+
+    public abstract int getColumnFlags();
+  }
+
+  private final class LongAutoNumberGenerator extends AutoNumberGenerator
+  {
+    private LongAutoNumberGenerator() {}
+
+    @Override
+    public Object getLast() {
+      // the table stores the last long autonumber used
+      return getTable().getLastLongAutoNumber();
+    }
+
+    @Override
+    public Object getNext() {
+      // the table stores the last long autonumber used
+      return getTable().getNextLongAutoNumber();
+    }
+
+    @Override
+    public int getColumnFlags() {
+      return AUTO_NUMBER_FLAG_MASK;
+    }
+  }
+
+  private final class GuidAutoNumberGenerator extends AutoNumberGenerator
+  {
+    private Object _lastAutoNumber;
+
+    private GuidAutoNumberGenerator() {}
+
+    @Override
+    public Object getLast() {
+      return _lastAutoNumber;
+    }
+
+    @Override
+    public Object getNext() {
+      // format guids consistently w/ Column.readGUIDValue()
+      _lastAutoNumber = "{" + UUID.randomUUID() + "}";
+      return _lastAutoNumber;
+    }
+
+    @Override
+    public int getColumnFlags() {
+      return AUTO_NUMBER_GUID_FLAG_MASK;
+    }
+  }
+
 }

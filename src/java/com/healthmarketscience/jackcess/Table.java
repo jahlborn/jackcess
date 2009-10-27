@@ -87,8 +87,8 @@ public class Table
   private int _indexSlotCount;
   /** Number of rows in the table */
   private int _rowCount;
-  /** last auto number for the table */
-  private int _lastAutoNumber;
+  /** last long auto number for the table */
+  private int _lastLongAutoNumber;
   /** page number of the definition of this table */
   private final int _tableDefPageNumber;
   /** max Number of columns in the table (includes previous deletions) */
@@ -794,11 +794,7 @@ public class Table
     buffer.putShort((short) 0); //Unknown
     buffer.putInt(0);  //Number of rows
     buffer.putInt(0); //Last Autonumber
-    if(countAutoNumberColumns(columns) > 0) {
-      buffer.put((byte) 1);
-    } else {
-      buffer.put((byte) 0);
-    }
+    buffer.put((byte) 1); // this makes autonumbering work in access
     for (int i = 0; i < 15; i++) {  //Unknown
       buffer.put((byte) 0);
     }
@@ -928,7 +924,7 @@ public class Table
       flags |= Column.FIXED_LEN_FLAG_MASK;
     }
     if(col.isAutoNumber()) {
-      flags |= Column.AUTO_NUMBER_FLAG_MASK;
+      flags |= col.getAutoNumberGenerator().getColumnFlags();
     }
     return flags;
   }
@@ -982,7 +978,7 @@ public class Table
           getFormat().SIZE_TDEF_HEADER));
     }
     _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
-    _lastAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
+    _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
     _tableType = tableBuffer.get(getFormat().OFFSET_TABLE_TYPE);
     _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
     _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
@@ -1291,7 +1287,7 @@ public class Table
     // make sure rowcount and autonumber are up-to-date
     _rowCount += rowCountInc;
     tdefPage.putInt(getFormat().OFFSET_NUM_ROWS, _rowCount);
-    tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastAutoNumber);
+    tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastLongAutoNumber);
 
     // write any index changes
     Iterator<Index> indIter = _indexes.iterator();
@@ -1369,7 +1365,7 @@ public class Table
           if(col.isAutoNumber()) {
             
             // ignore given row value, use next autonumber
-            rowValue = getNextAutoNumber();
+            rowValue = col.getAutoNumberGenerator().getNext();
 
             // we need to stick this back in the row so that the indexes get
             // updated correctly (and caller can get the generated value)
@@ -1468,14 +1464,14 @@ public class Table
     return _rowCount;
   }
 
-  private int getNextAutoNumber() {
+  int getNextLongAutoNumber() {
     // note, the saved value is the last one handed out, so pre-increment
-    return ++_lastAutoNumber;
+    return ++_lastLongAutoNumber;
   }
 
-  int getLastAutoNumber() {
+  int getLastLongAutoNumber() {
     // gets the last used auto number (does not modify)
-    return _lastAutoNumber;
+    return _lastLongAutoNumber;
   }
   
   @Override
@@ -1660,17 +1656,16 @@ public class Table
   }
 
   /**
-   * @return the number of "AutoNumber" columns in the given collection of
-   *         columns.
+   * @return the "AutoNumber" columns in the given collection of columns.
    */
-  public static int countAutoNumberColumns(Collection<Column> columns) {
-    int numAutoNumCols = 0;
+  public static List<Column> getAutoNumberColumns(Collection<Column> columns) {
+    List<Column> autoCols = new ArrayList<Column>();
     for(Column c : columns) {
       if(c.isAutoNumber()) {
-        ++numAutoNumCols;
+        autoCols.add(c);
       }
     }
-    return numAutoNumCols;
+    return autoCols;
   }
 
   /**

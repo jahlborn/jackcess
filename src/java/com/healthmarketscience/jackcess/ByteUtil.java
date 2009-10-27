@@ -242,7 +242,7 @@ public final class ByteUtil {
    * @param order the order to insert the bytes of the int
    */
   public static void putInt(ByteBuffer buffer, int val, int offset,
-                           ByteOrder order)
+                            ByteOrder order)
   {
     ByteOrder origOrder = buffer.order();
     try {
@@ -415,6 +415,35 @@ public final class ByteUtil {
    */
   public static int asUnsignedShort(short s) { 
     return s & 0xFFFF;
+  }
+
+  /**
+   * Swaps the 4 bytes (changes endianness) of the bytes at the given offset.
+   *
+   * @param bytes buffer containing bytes to swap
+   * @param offset offset of the first byte of the bytes to swap
+   */
+  public static void swap4Bytes(byte[] bytes, int offset)
+  {
+    byte b = bytes[offset + 0];
+    bytes[offset + 0] = bytes[offset + 3];
+    bytes[offset + 3] = b;
+    b = bytes[offset + 1];
+    bytes[offset + 1] = bytes[offset + 2];
+    bytes[offset + 2] = b;
+  }
+
+  /**
+   * Swaps the 2 bytes (changes endianness) of the bytes at the given offset.
+   *
+   * @param bytes buffer containing bytes to swap
+   * @param offset offset of the first byte of the bytes to swap
+   */
+  public static void swap2Bytes(byte[] bytes, int offset)
+  {
+    byte b = bytes[offset + 0];
+    bytes[offset + 0] = bytes[offset + 1];
+    bytes[offset + 1] = b;
   }
   
 }

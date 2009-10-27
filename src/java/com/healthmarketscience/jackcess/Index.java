@@ -1186,6 +1186,8 @@ public abstract class Index implements Comparable<Index> {
       return new ByteColumnDescriptor(col, flags);
     case BOOLEAN:
       return new BooleanColumnDescriptor(col, flags);
+    case GUID:
+      return new GuidColumnDescriptor(col, flags);
 
     default:
       // FIXME we can't modify this index at this point in time
@@ -1479,6 +1481,41 @@ public abstract class Index implements Comparable<Index> {
       writeNonNullIndexTextValue(value, bout, isAscending());
     }    
   }
+
+  /**
+   * ColumnDescriptor for guid columns.
+   */
+  private static final class GuidColumnDescriptor extends ColumnDescriptor
+  {
+    private GuidColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteArrayOutputStream bout)
+      throws IOException
+    {
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+
+      // index format <8-bytes> 0x09 <8-bytes> 0x08
+      
+      // bit twiddling rules:
+      // - isAsc  => nothing
+      // - !isAsc => flipBytes, _but keep 09 unflipped_!      
+      if(!isAscending()) {
+        flipBytes(valueBytes);
+      }
+      
+      bout.write(valueBytes, 0, 8);
+      bout.write(MID_GUID);
+      bout.write(valueBytes, 8, 8);
+      bout.write(isAscending() ? ASC_END_GUID : DESC_END_GUID);
+    }
+  }
+  
 
   /**
    * ColumnDescriptor for columns which we cannot currently write.

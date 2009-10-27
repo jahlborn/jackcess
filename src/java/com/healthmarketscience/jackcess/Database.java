@@ -46,6 +46,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -561,9 +562,16 @@ public class Database
       }
     }
 
-    if(Table.countAutoNumberColumns(columns) > 1) {
-      throw new IllegalArgumentException(
-          "Can have at most one AutoNumber column per table");
+    List<Column> autoCols = Table.getAutoNumberColumns(columns);
+    if(autoCols.size() > 1) {
+      // we can have one of each type
+      Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
+      for(Column c : autoCols) {
+        if(!autoTypes.add(c.getType())) {
+          throw new IllegalArgumentException(
+              "Can have at most one AutoNumber column of type " + c.getType() + " per table");
+        }
+      }
     }
     
     //Write the tdef page to disk.
