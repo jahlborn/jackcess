@@ -363,7 +363,21 @@ public class IndexTest extends TestCase {
     
     db.close();
   }
+  
+  public void testReplId() throws Exception
+  {
+    Database db = openCopy(new File("test/data/test.mdb"));
+    Table table = db.getTable("Table4");
+
+    for(int i = 0; i< 20; ++i) {
+      table.addRow("row" + i, Column.AUTO_NUMBER);
+    }
+
+    assertEquals(20, table.getRowCount());
     
+    db.close();
+  }
+  
   private void checkIndexColumns(Table table, String... idxInfo)
     throws Exception
   {
