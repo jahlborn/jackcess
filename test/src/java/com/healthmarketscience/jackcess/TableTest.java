@@ -119,7 +119,7 @@ public class TableTest extends TestCase {
   {
     return _testTable.createRow(
         row, _testTable.getFormat().MAX_ROW_SIZE,
-        _testTable.getPageChannel().createPageBuffer());
+        _testTable.getPageChannel().createPageBuffer(), false, 0);
   }
 
   private ByteBuffer[] encodeColumns(Object... row)

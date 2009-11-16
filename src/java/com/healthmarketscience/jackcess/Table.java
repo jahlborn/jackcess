@@ -403,16 +403,8 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
     
-    Object value = getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column,
-                                rowState);
-
-    // cache the row values in order to be able to update the index on row
-    // deletion.  note, most of the returned values are immutable, except
-    // for binary data (returned as byte[]), but binary data shouldn't be
-    // indexed anyway.
-    rowState.setRowValue(column.getColumnIndex(), value);
-
-    return value;
+    return getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column,
+                        rowState);
   }
 
   /**
@@ -451,14 +443,8 @@ public class Table
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
-        Object value = getRowColumn(rowBuffer, nullMask, column, rowState);
-        rtn.put(column.getName(), value);
-
-        // cache the row values in order to be able to update the index on row
-        // deletion.  note, most of the returned values are immutable, except
-        // for binary data (returned as byte[]), but binary data shouldn't be
-        // indexed anyway.
-        rowState.setRowValue(column.getColumnIndex(), value);
+        rtn.put(column.getName(), 
+                getRowColumn(rowBuffer, nullMask, column, rowState));
       }
     }
     return rtn;
@@ -466,6 +452,7 @@ public class Table
   
   /**
    * Reads the column data from the given row buffer.  Leaves limit unchanged.
+   * Caches the returned value in the rowState.
    */
   private static Object getRowColumn(ByteBuffer rowBuffer,
                                      NullMask nullMask,
@@ -478,9 +465,12 @@ public class Table
 
       boolean isNull = nullMask.isNull(column);
       if(column.getType() == DataType.BOOLEAN) {
-        return Boolean.valueOf(!isNull);  //Boolean values are stored in the null mask
+          // Boolean values are stored in the null mask.  see note about
+          // caching below
+        return rowState.setRowValue(column.getColumnIndex(),
+                                    Boolean.valueOf(!isNull));
       } else if(isNull) {
-        // well, that's easy!
+        // well, that's easy! (no need to update cache w/ null)
         return null;
       }
 
@@ -516,10 +506,19 @@ public class Table
       rowBuffer.position(colDataPos);
       rowBuffer.get(columnData);
 
-      // parse the column data
-      return column.read(columnData);
+      // parse the column data.  we cache the row values in order to be able
+      // to update the index on row deletion.  note, most of the returned
+      // values are immutable, except for binary data (returned as byte[]),
+      // but binary data shouldn't be indexed anyway.
+      return rowState.setRowValue(column.getColumnIndex(), 
+                                  column.read(columnData));
 
     } catch(Exception e) {
+
+      // cache "raw" row value.  see note about caching above
+      rowState.setRowValue(column.getColumnIndex(), 
+                           Column.rawDataWrapper(columnData));
+
       return rowState.handleRowError(column, columnData, e);
     }
   }
@@ -755,7 +754,7 @@ public class Table
         int curTdefPageNumber = nextTdefPageNumber;
         int writeLen = Math.min(partialTdef.remaining(), buffer.remaining());
         partialTdef.put(buffer.array(), buffer.position(), writeLen);
-        buffer.position(buffer.position() + writeLen);
+        ByteUtil.forward(buffer, writeLen);
 
         if(buffer.hasRemaining()) {
           // need a next page
@@ -1046,9 +1045,9 @@ public class Table
       tableBuffer.getInt(); //Forward past Unknown
       tableBuffer.getInt(); //Forward past alternate index number
       int indexNumber = tableBuffer.getInt();
-      tableBuffer.position(tableBuffer.position() + 11);
+      ByteUtil.forward(tableBuffer, 11);
       byte indexType = tableBuffer.get();
-      tableBuffer.position(tableBuffer.position() + 4);
+      ByteUtil.forward(tableBuffer, 4);
 
       if(i < firstRealIdx) {
         // ignore this info
@@ -1134,7 +1133,7 @@ public class Table
    */
   private void skipName(ByteBuffer buffer) {
     int nameLength = ByteUtil.getUnsignedShort(buffer);
-    buffer.position(buffer.position() + nameLength);
+    ByteUtil.forward(buffer, nameLength);
   }
   
   /**
@@ -1193,6 +1192,10 @@ public class Table
                        TempBufferHolder writeRowBufferH)
     throws IOException
   {
+    if(inRows.isEmpty()) {
+      return;
+    }
+
     // copy the input rows to a modifiable list so we can update the elements
     List<Object[]> rows = new ArrayList<Object[]>(inRows);
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
@@ -1211,70 +1214,209 @@ public class Table
 
       // write the row of data to a temporary buffer
       rowData[i] = createRow(row, getFormat().MAX_ROW_SIZE,
-                             writeRowBufferH.getPageBuffer(getPageChannel()));
+                             writeRowBufferH.getPageBuffer(getPageChannel()),
+                             false, 0);
       
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
                               " is too large");
       }
     }
-    
+
     ByteBuffer dataPage = null;
     int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
-
-    // find last data page (Not bothering to check other pages for free
-    // space.)
-    UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
-    revPageCursor.afterLast();
-    while(true) {
-      int tmpPageNumber = revPageCursor.getPreviousPage();
-      if(tmpPageNumber < 0) {
-        break;
-      }
-      dataPage = _addRowBufferH.setPage(getPageChannel(), tmpPageNumber);
-      if(dataPage.get() == PageTypes.DATA) {
-        // found last data page, only use if actually listed in free space
-        // pages
-        if(_freeSpacePages.containsPageNumber(tmpPageNumber)) {
-          pageNumber = tmpPageNumber;
-        }
-        break;
-      }
-    }
-
-    if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
-      // No data pages exist (with free space).  Create a new one.
-      dataPage = newDataPage();
-      pageNumber = _addRowBufferH.getPageNumber();
-    }
     
     for (int i = 0; i < rowData.length; i++) {
       int rowSize = rowData[i].remaining();
-      if(!rowFitsOnDataPage(rowSize, dataPage, getFormat())) {
 
-        // Last data page is full.  Create a new one.
-        writeDataPage(dataPage, pageNumber);
-        _freeSpacePages.removePageNumber(pageNumber);
-
-        dataPage = newDataPage();
-        pageNumber = _addRowBufferH.getPageNumber();
-      }
+      // get page with space
+      dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
+      pageNumber = _addRowBufferH.getPageNumber();
 
       // write out the row data
-      int rowNum = addDataPageRow(dataPage, rowSize, getFormat());
+      int rowNum = addDataPageRow(dataPage, rowSize, getFormat(), 0);
       dataPage.put(rowData[i]);
 
       // update the indexes
+      RowId rowId = new RowId(pageNumber, rowNum);
       for(Index index : _indexes) {
-        index.addRow(rows.get(i), new RowId(pageNumber, rowNum));
+        index.addRow(rows.get(i), rowId);
       }
     }
+
     writeDataPage(dataPage, pageNumber);
     
     // Update tdef page
     updateTableDefinition(rows.size());
   }
 
+  /**
+   * Updates the current row to the new values.
+   * <p>
+   * Note, if this table has an auto-number column(s), the existing value(s)
+   * will be maintained, unchanged.
+   *
+   * @param row new row values for the current row.
+   */
+  public void updateCurrentRow(Object... row) throws IOException {
+     _cursor.updateCurrentRow(row);
+  }
+  
+  /**
+   * Update the row on which the given rowState is currently positioned.
+   */
+  public void updateRow(RowState rowState, RowId rowId, Object... row) 
+    throws IOException 
+  {
+    requireValidRowId(rowId);
+    
+    // ensure that the relevant row state is up-to-date
+    ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
+    int oldRowSize = rowBuffer.remaining();
+
+    requireNonDeletedRow(rowState, rowId);
+
+    // we need to make sure the row is the right length (fill with null).
+    if(row.length < _columns.size()) {
+      row = dupeRow(row, _columns.size());
+    }
+
+    // fill in any auto-numbers (we don't allow autonumber values to be
+    // modified) or "keep value" fields
+    NullMask nullMask = getRowNullMask(rowBuffer);
+    for(Column column : _columns) {
+      if(column.isAutoNumber() || 
+         (row[column.getColumnIndex()] == Column.KEEP_VALUE)) {
+        row[column.getColumnIndex()] = getRowColumn(rowBuffer, nullMask,
+                                                    column, rowState);
+      }
+    }
+
+    // generate new row bytes
+    ByteBuffer newRowData = createRow(
+        row, getFormat().MAX_ROW_SIZE,
+        _singleRowBufferH.getPageBuffer(getPageChannel()), true, oldRowSize);
+
+    if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
+      throw new IOException("Row size " + newRowData.limit() + 
+                            " is too large");
+    }
+
+    Object[] oldRowValues = (!_indexes.isEmpty() ?
+                             rowState.getRowValues() : null);
+
+    // delete old values from indexes
+    for(Index index : _indexes) {
+      index.deleteRow(oldRowValues, rowId);
+    }
+    
+    // see if we can squeeze the new row data into the existing row
+    rowBuffer.reset();
+    int rowSize = newRowData.remaining();
+
+    ByteBuffer dataPage = null;
+    int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+
+    if(oldRowSize >= rowSize) {
+
+      // awesome, slap it in!
+      rowBuffer.put(newRowData);
+
+      // grab the page we just updated
+      dataPage = rowState.getFinalPage();
+      pageNumber = rowState.getFinalRowId().getPageNumber();
+
+    } else {
+
+      // bummer, need to find a new page for the data
+      dataPage = findFreeRowSpace(rowSize, null, 
+                                  PageChannel.INVALID_PAGE_NUMBER);
+      pageNumber = _addRowBufferH.getPageNumber();
+
+      ByteBuffer oldDataPage = rowState.getFinalPage();
+      int oldPageNumber = rowState.getFinalRowId().getPageNumber();
+      if(pageNumber == oldPageNumber) {
+        // new row is on the same page as current row, share page
+        dataPage = oldDataPage;
+      }
+
+      // write out the new row data (set the deleted flag on the new data row)
+      int rowNum = addDataPageRow(dataPage, rowSize, getFormat(),
+                                  DELETED_ROW_MASK);
+      dataPage.put(newRowData);        
+
+      // write the overflow info into the old row and clear out the remaining
+      // old data
+      rowBuffer.put((byte)rowNum);
+      ByteUtil.put3ByteInt(rowBuffer, pageNumber);
+      ByteUtil.clearRemaining(rowBuffer);
+
+      // set the overflow flag on the old row
+      int oldRowNumber = rowState.getFinalRowId().getRowNumber();
+      int oldRowIndex = getRowStartOffset(oldRowNumber, getFormat());
+      oldDataPage.putShort(oldRowIndex,
+                           (short)(oldDataPage.getShort(oldRowIndex)
+                                   | OVERFLOW_ROW_MASK));
+      if(pageNumber != oldPageNumber) {
+        writeDataPage(oldDataPage, oldPageNumber);
+      }
+    }
+
+    // update the indexes
+    for(Index index : _indexes) {
+      index.addRow(row, rowId);
+    }
+
+    writeDataPage(dataPage, pageNumber);
+
+    updateTableDefinition(0);
+  }
+   
+  private ByteBuffer findFreeRowSpace(int rowSize, ByteBuffer dataPage, 
+                                      int pageNumber)
+    throws IOException
+  {
+    if(dataPage == null) {
+
+      // find last data page (Not bothering to check other pages for free
+      // space.)
+      UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
+      revPageCursor.afterLast();
+      while(true) {
+        int tmpPageNumber = revPageCursor.getPreviousPage();
+        if(tmpPageNumber < 0) {
+          break;
+        }
+        dataPage = _addRowBufferH.setPage(getPageChannel(), tmpPageNumber);
+        if(dataPage.get() == PageTypes.DATA) {
+          // found last data page, only use if actually listed in free space
+          // pages
+          if(_freeSpacePages.containsPageNumber(tmpPageNumber)) {
+            pageNumber = tmpPageNumber;
+          }
+          break;
+        }
+      }
+
+      if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+        // No data pages exist (with free space).  Create a new one.
+        return newDataPage();
+      }
+    
+    }
+
+    if(!rowFitsOnDataPage(rowSize, dataPage, getFormat())) {
+
+      // Last data page is full.  Create a new one.
+      writeDataPage(dataPage, pageNumber);
+      _freeSpacePages.removePageNumber(pageNumber);
+
+      dataPage = newDataPage();
+    }
+
+    return dataPage;
+  }
+ 
   /**
    * Updates the table definition after rows are modified.
    */
@@ -1290,9 +1432,7 @@ public class Table
     tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastLongAutoNumber);
 
     // write any index changes
-    Iterator<Index> indIter = _indexes.iterator();
-    for (int i = 0; i < _indexes.size(); i++) {
-      Index index = indIter.next();
+    for (Index index : _indexes) {
       // write the unique entry count for the index to the table definition
       // page
       tdefPage.putInt(index.getUniqueEntryCountOffset(),
@@ -1338,7 +1478,8 @@ public class Table
    * @param buffer buffer to which to write the row data
    * @return the given buffer, filled with the row data
    */
-  ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer)
+  ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer,
+                       boolean isUpdate, int minRowSize)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);
@@ -1362,7 +1503,7 @@ public class Table
         
         } else {
 
-          if(col.isAutoNumber()) {
+          if(col.isAutoNumber() && !isUpdate) {
             
             // ignore given row value, use next autonumber
             rowValue = col.getAutoNumberGenerator().getNext();
@@ -1400,7 +1541,8 @@ public class Table
       // account for already written space
       maxRowSize -= buffer.position();
       // now, account for trailer space
-      maxRowSize -= (nullMask.byteSize() + 4 + (_maxVarColumnCount * 2));
+      int trailerSize = (nullMask.byteSize() + 4 + (_maxVarColumnCount * 2));
+      maxRowSize -= trailerSize;
 
       // for each non-null long value column we need to reserve a small
       // amount of space so that we don't end up running out of row space
@@ -1443,13 +1585,25 @@ public class Table
         varColumnOffsets[varColumnOffsetsIndex++] = (short) buffer.position();
       }
 
-      buffer.putShort((short) buffer.position()); //EOD marker
+      // record where we stopped writing
+      int eod = buffer.position();
+
+      // insert padding if necessary
+      padRowBuffer(buffer, minRowSize, trailerSize);
+
+      buffer.putShort((short) eod); //EOD marker
+
       //Now write out variable length offsets
       //Offsets are stored in reverse order
       for (int i = _maxVarColumnCount - 1; i >= 0; i--) {
         buffer.putShort(varColumnOffsets[i]);
       }
       buffer.putShort(_maxVarColumnCount);  //Number of var length columns
+
+    } else {
+
+      // insert padding for row w/ no var cols
+      padRowBuffer(buffer, minRowSize, nullMask.byteSize());
     }
 
     nullMask.write(buffer);  //Null mask
@@ -1458,6 +1612,17 @@ public class Table
       LOG.debug("Creating new data block:\n" + ByteUtil.toHexString(buffer, buffer.limit()));
     }
     return buffer;
+  }
+
+  private void padRowBuffer(ByteBuffer buffer, int minRowSize, int trailerSize)
+  {
+    int pos = buffer.position();
+    if((pos + trailerSize) < minRowSize) {
+      // pad the row to get to the min byte size
+      int padSize = minRowSize - (pos + trailerSize);
+      ByteUtil.clearRange(buffer, pos, pos + padSize);
+      ByteUtil.forward(buffer, padSize);
+    }
   }
 
   public int getRowCount() {
@@ -1549,7 +1714,8 @@ public class Table
    */
   public static int addDataPageRow(ByteBuffer dataPage,
                                    int rowSize,
-                                   JetFormat format)
+                                   JetFormat format, 
+                                   int rowFlags)
   {
     int rowSpaceUsage = getRowSpaceUsage(rowSize, format);
     
@@ -1568,7 +1734,8 @@ public class Table
     rowLocation -= rowSize;
 
     // write row position
-    dataPage.putShort(getRowStartOffset(rowCount, format), rowLocation);
+    dataPage.putShort(getRowStartOffset(rowCount, format), 
+                      (short)(rowLocation | rowFlags));
 
     // set position for row data
     dataPage.position(rowLocation);
@@ -1692,7 +1859,7 @@ public class Table
     System.arraycopy(row, 0, copy, 0, row.length);
     return copy;
   }
-  
+
   /** various statuses for the row data */
   private enum RowStatus {
     INIT, INVALID_PAGE, INVALID_ROW, VALID, DELETED, NORMAL, OVERFLOW;
@@ -1702,7 +1869,7 @@ public class Table
   private enum RowStateStatus {
     INIT, AT_HEADER, AT_FINAL;
   }
-  
+
   /**
    * Maintains the state of reading a row of data.
    */
@@ -1835,9 +2002,10 @@ public class Table
       return(_status.ordinal() >= RowStateStatus.AT_FINAL.ordinal());
     }
 
-    private void setRowValue(int idx, Object value) {
+    private Object setRowValue(int idx, Object value) {
       _haveRowValues = true;
       _rowValues[idx] = value;
+      return value;
     }
     
     public Object[] getRowValues() {

@@ -184,7 +184,7 @@ public class DatabaseTest extends TestCase {
   
   public void testGetNextRow() throws Exception {
     Database db = open();
-    assertEquals(3, db.getTableNames().size());
+    assertEquals(4, db.getTableNames().size());
     Table table = db.getTable("Table1");
     
     Map<String, Object> row = table.getNextRow();
@@ -910,6 +910,65 @@ public class DatabaseTest extends TestCase {
     assertNotNull(db.getSystemTable("MSysRelationships"));
 
     assertNull(db.getSystemTable("MSysBogus"));
+
+    db.close();
+  }
+
+  public void testUpdateRow() throws Exception
+  {
+    Database db = create();
+
+    Table t = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("name", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("id", DataType.LONG)
+                 .setAutoNumber(true).toColumn())
+      .addColumn(new ColumnBuilder("data", DataType.TEXT)
+                 .setLength(JetFormat.TEXT_FIELD_MAX_LENGTH).toColumn())
+      .toTable(db);
+
+    for(int i = 0; i < 10; ++i) {
+      t.addRow("row" + i, Column.AUTO_NUMBER, "initial data");
+    }
+
+    t.reset();
+    t.getNextRow();
+    Map<String,Object> row = t.getNextRow();
+
+    assertEquals(createExpectedRow("name", "row1", 
+                                   "id", 2,
+                                   "data", "initial data"),
+                 row);
+
+    t.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "new data");
+
+    t.getNextRow();
+    t.getNextRow();
+    row = t.getNextRow();
+
+    assertEquals(createExpectedRow("name", "row4", 
+                                   "id", 5,
+                                   "data", "initial data"),
+                 row);
+
+    t.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "a larger amount of new data");
+
+    t.reset();
+    t.getNextRow();
+    row = t.getNextRow();
+
+    assertEquals(createExpectedRow("name", "row1", 
+                                   "id", 2,
+                                   "data", "new data"),
+                 row);
+
+    t.getNextRow();
+    t.getNextRow();
+    row = t.getNextRow();
+
+    assertEquals(createExpectedRow("name", "row4", 
+                                   "id", 5,
+                                   "data", "a larger amount of new data"),
+                 row);
 
     db.close();
   }

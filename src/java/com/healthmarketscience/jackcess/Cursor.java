@@ -511,6 +511,15 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
+   * Update the current row.
+   * @throws IllegalStateException if the current row is not valid (at
+   *         beginning or end of table), or deleted.
+   */
+  public void updateCurrentRow(Object... row) throws IOException {
+    _table.updateRow(_rowState, _curPos.getRowId(), row);
+  }
+
+  /**
    * Moves to the next row in the table and returns it.
    * @return The next row in this table (Column name -> Column value), or
    *         {@code null} if no next row is found

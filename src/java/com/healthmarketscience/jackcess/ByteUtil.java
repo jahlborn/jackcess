@@ -253,6 +253,18 @@ public final class ByteUtil {
   }
 
   /**
+   * Sets all bits in the given remaining byte range to 0.
+   */
+  public static void clearRemaining(ByteBuffer buffer)
+  {
+    if(!buffer.hasRemaining()) {
+      return;
+    }
+    int pos = buffer.position();
+    clearRange(buffer, pos, pos + buffer.remaining());
+  }
+
+  /**
    * Sets all bits in the given byte range to 0.
    */
   public static void clearRange(ByteBuffer buffer, int start,
@@ -445,5 +457,17 @@ public final class ByteUtil {
     bytes[offset + 0] = bytes[offset + 1];
     bytes[offset + 1] = b;
   }
-  
+
+  /**
+   * Moves the position of the given buffer the given count from the current
+   * position.
+   * @return the new buffer position
+   */
+  public static int forward(ByteBuffer buffer, int count)
+  {
+    int newPos = buffer.position() + count;
+    buffer.position(newPos);
+    return newPos;
+  }
+
 }

@@ -357,7 +357,7 @@ public abstract class Index implements Comparable<Index> {
     _rootPageNumber = tableBuffer.getInt();
     tableBuffer.getInt(); //Forward past Unknown
     _indexFlags = tableBuffer.get();
-    tableBuffer.position(tableBuffer.position() + 5);  //Forward past other stuff
+    ByteUtil.forward(tableBuffer, 5);  //Forward past other stuff
   }
 
   /**
@@ -942,11 +942,13 @@ public abstract class Index implements Comparable<Index> {
     
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
     
-    // annoyingly, the values array could come from different sources, one
-    // of which will make it a different size than the other.  we need to
-    // handle both situations.
     for(ColumnDescriptor col : _columns) {
       Object value = values[col.getColumnIndex()];
+      if(Column.isRawData(value)) {
+        // ignore it, we could not parse it
+        continue;
+      }
+
       col.writeValue(value, bout);
     }
     
