@@ -486,7 +486,7 @@ public class Table
         // read fixed length value (non-boolean at this point)
         int dataStart = rowStart + 2;
         colDataPos = dataStart + column.getFixedDataOffset();
-        colDataLen = column.getType().getFixedSize();
+        colDataLen = column.getType().getFixedSize(column.getLength());
       
       } else {
 
@@ -882,8 +882,7 @@ public class Table
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
-        fixedOffset += Math.max(col.getType().getFixedSize(),
-                                col.getLength());
+        fixedOffset += col.getType().getFixedSize(col.getLength());
       }
       if(!col.getType().isLongValue()) {
         buffer.putShort(col.getLength()); //Column length

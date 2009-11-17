@@ -1000,6 +1000,30 @@ public class DatabaseTest extends TestCase {
 
     db.close();
   }
+
+  public void testFixedText() throws Exception
+  {
+    Database db = openCopy(new File("test/data/fixedTextTest.mdb"));
+
+    Table t = db.getTable("users");
+    Column c = t.getColumn("c_flag_");
+    assertEquals(DataType.TEXT, c.getType());
+    assertEquals(false, c.isVariableLength());
+    assertEquals(2, c.getLength());
+
+    Map<String,Object> row = t.getNextRow();
+    assertEquals("N", row.get("c_flag_"));
+
+    t.addRow(3, "testFixedText", "boo", "foo", "bob", 3, 5, 9, "Y", 
+             new Date());
+
+    t.getNextRow();
+    row = t.getNextRow();
+    assertEquals("testFixedText", row.get("c_user_login"));
+    assertEquals("Y", row.get("c_flag_"));
+
+    db.close();
+  }
     
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

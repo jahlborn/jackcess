@@ -287,12 +287,23 @@ public enum DataType {
   public boolean getHasScalePrecision() {
     return _hasScalePrecision;
   }
-  
+
   public int getFixedSize() {
+    return getFixedSize(null);
+  }
+  
+  public int getFixedSize(Short colLength) {
     if(_fixedSize != null) {
+      if(colLength != null) {
+        return Math.max(_fixedSize, colLength);
+      }
       return _fixedSize;
     }
-    throw new IllegalArgumentException("FIX ME");
+    if(colLength != null) {
+      return colLength;
+    }
+    throw new IllegalArgumentException("Unexpected fixed length column " + 
+                                       this);
   }
 
   public int getMinSize() {

@@ -9,6 +9,12 @@
         Add support for updating GUID indexes and for auto-number GUID
         fields.
       </action>
+      <action dev="jahlborn" type="update" issue="2802845">
+        Add support for updating rows in a table.
+      </action>
+      <action dev="jahlborn" type="fix" issue="2886370">
+        Support reading/writing fixed length text fields.
+      </action>
     </release>
     <release version="1.1.19" date="2009-06-13">
       <action dev="jahlborn" type="add">
