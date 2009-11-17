@@ -28,6 +28,7 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -885,6 +886,20 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
+   * Updates a single value in the current row.
+   * @throws IllegalStateException if the current row is not valid (at
+   *         beginning or end of table), or deleted.
+   */
+  public void setCurrentRowValue(Column column, Object value)
+    throws IOException
+  {
+    Object[] row = new Object[_table.getColumnCount()];
+    Arrays.fill(row, Column.KEEP_VALUE);
+    row[column.getColumnIndex()] = value;
+    _table.updateRow(_rowState, _curPos.getRowId(), row);
+  }
+
+  /**
    * Returns {@code true} if this cursor is up-to-date with respect to the
    * relevant table and related table objects, {@code false} otherwise.
    */
@@ -902,8 +917,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Finds the next non-deleted row after the given row (as defined by this
    * cursor) and returns the id of the row, where "next" may be backwards if
    * moveForward is {@code false}.  If there are no more rows, the returned
-   * rowId should equal the value returned by {@link #getLastPosition} if moving
-   * forward and {@link #getFirstPosition} if moving backward.
+   * rowId should equal the value returned by {@link #getLastPosition} if
+   * moving forward and {@link #getFirstPosition} if moving backward.
    */
   protected abstract Position findAnotherPosition(RowState rowState,
                                                   Position curPos,

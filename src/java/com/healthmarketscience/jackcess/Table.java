@@ -1152,6 +1152,24 @@ public class Table
   }
   
   /**
+   * Converts a map of columnName -> columnValue to an array of row values
+   * appropriate for a call to {@link #updateCurrentRow(Object...)}.
+   */
+  public Object[] asUpdateRow(Map<String,Object> rowMap) {
+    Object[] row = new Object[_columns.size()];
+    Arrays.fill(row, Column.KEEP_VALUE);
+    if(rowMap == null) {
+      return row;
+    }
+    for(Column col : _columns) {
+      if(rowMap.containsKey(col.getName())) {
+        row[col.getColumnIndex()] = rowMap.get(col.getName());
+      }
+    }
+    return row;
+  }
+  
+  /**
    * Add a single row to this table and write it to disk
    * <p>
    * Note, if this table has an auto-number column, the value written will be

@@ -160,7 +160,7 @@ public class DatabaseTest extends TestCase {
   }
   
   public void testGetColumns() throws Exception {
-    List columns = open().getTable("Table1").getColumns();
+    List<Column> columns = open().getTable("Table1").getColumns();
     assertEquals(9, columns.size());
     checkColumn(columns, 0, "A", DataType.TEXT);
     checkColumn(columns, 1, "B", DataType.TEXT);
@@ -173,11 +173,11 @@ public class DatabaseTest extends TestCase {
     checkColumn(columns, 8, "I", DataType.BOOLEAN);
   }
   
-  static void checkColumn(List columns, int columnNumber, String name,
+  static void checkColumn(List<Column> columns, int columnNumber, String name,
       DataType dataType)
     throws Exception
   {
-    Column column = (Column) columns.get(columnNumber);
+    Column column = columns.get(columnNumber);
     assertEquals(name, column.getName());
     assertEquals(dataType, column.getType());
   }
@@ -461,7 +461,7 @@ public class DatabaseTest extends TestCase {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
     try {
-      Database db = open(bogusFile);
+      open(bogusFile);
       fail("FileNotFoundException should have been thrown");
     } catch(FileNotFoundException e) {
     }
@@ -930,44 +930,72 @@ public class DatabaseTest extends TestCase {
       t.addRow("row" + i, Column.AUTO_NUMBER, "initial data");
     }
 
-    t.reset();
-    t.getNextRow();
-    Map<String,Object> row = t.getNextRow();
+    Cursor c = Cursor.createCursor(t);
+    c.reset();
+    c.moveNextRows(2);
+    Map<String,Object> row = c.getCurrentRow();
 
     assertEquals(createExpectedRow("name", "row1", 
                                    "id", 2,
                                    "data", "initial data"),
                  row);
 
-    t.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "new data");
+    c.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "new data");
 
-    t.getNextRow();
-    t.getNextRow();
-    row = t.getNextRow();
+    c.moveNextRows(3);
+    row = c.getCurrentRow();
 
     assertEquals(createExpectedRow("name", "row4", 
                                    "id", 5,
                                    "data", "initial data"),
                  row);
 
-    t.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "a larger amount of new data");
+    c.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "a larger amount of new data");
 
-    t.reset();
-    t.getNextRow();
-    row = t.getNextRow();
+    c.reset();
+    c.moveNextRows(2);
+    row = c.getCurrentRow();
 
     assertEquals(createExpectedRow("name", "row1", 
                                    "id", 2,
                                    "data", "new data"),
                  row);
 
-    t.getNextRow();
-    t.getNextRow();
-    row = t.getNextRow();
+    c.moveNextRows(3);
+    row = c.getCurrentRow();
 
     assertEquals(createExpectedRow("name", "row4", 
                                    "id", 5,
                                    "data", "a larger amount of new data"),
+                 row);
+
+    t.reset();
+    
+    String str = createString(100);
+    for(int i = 10; i < 50; ++i) {
+      t.addRow("row" + i, Column.AUTO_NUMBER, "big data_" + str);
+    }
+
+    c.reset();
+    c.moveNextRows(9);
+    row = c.getCurrentRow();
+
+    assertEquals(createExpectedRow("name", "row8", 
+                                   "id", 9,
+                                   "data", "initial data"),
+                 row);
+
+    String newText = "updated big data_" + createString(200);
+
+    c.setCurrentRowValue(t.getColumn("data"), newText);
+
+    c.reset();
+    c.moveNextRows(9);
+    row = c.getCurrentRow();
+
+    assertEquals(createExpectedRow("name", "row8", 
+                                   "id", 9,
+                                   "data", newText),
                  row);
 
     db.close();
