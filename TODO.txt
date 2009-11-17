@@ -2,8 +2,6 @@ Missing pieces:
 
 - handle more text index entry types (extended charsets, alternate encodings)
   * MEDIUM
-- handle row "updates": write row data back to current row, handling overflow
-  * MEDIUM
 - implement index creation
   * VERY HARD (still missing knowledge about all the magic bits in index meta
     data)
@@ -12,3 +10,11 @@ Missing pieces:
 - implement table, column, index deletion
   * EASY - MEDIUM
 - implement more comprehensive unicode compression write support
+  * EASY? (have the code, do we trust it?)
+- implement duplicateTable(Table, db, newName), or (oldName, newName)
+  - by doing binary level copy, could maybe workaround missing jackcess
+    features (like create index)
+  - do optional data copy which preserves autonumbers
+  * EASY - MEDIUM
+- implement createReadOnlyTemp(InputStream) (delete temp file on close)
+  * EASY
