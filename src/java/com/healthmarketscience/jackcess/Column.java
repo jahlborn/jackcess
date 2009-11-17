@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -1514,8 +1515,10 @@ public class Column implements Comparable<Column> {
   /**
    * Wrapper for raw column data which can be re-written.
    */
-  private static class RawData
+  private static class RawData implements Serializable
   {
+    private static final long serialVersionUID = 0L;
+
     private final byte[] _bytes;
 
     private RawData(byte[] bytes) {
@@ -1528,7 +1531,13 @@ public class Column implements Comparable<Column> {
 
     @Override
     public String toString() {
-      return "RawData: " + ByteUtil.toHexString(_bytes);
+      return "RawData: " + ByteUtil.toHexString(getBytes());
+    }
+
+    private Object writeReplace() throws ObjectStreamException {
+      // if we are going to serialize this, convert it back to a normal
+      // byte[] (in case it is restored outside of the context of jackcess)
+      return getBytes();
     }
   }
 
