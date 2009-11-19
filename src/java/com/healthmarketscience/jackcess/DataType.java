@@ -353,6 +353,16 @@ public enum DataType {
     return _unitSize;
   }
 
+  public int toUnitSize(int size)
+  {
+    return(size / getUnitSize());
+  }
+
+  public int fromUnitSize(int unitSize)
+  {
+    return(unitSize * getUnitSize());
+  }
+
   public boolean isValidSize(int size) {
     return isWithinRange(size, getMinSize(), getMaxSize());
   }

@@ -317,10 +317,10 @@ public class Column implements Comparable<Column> {
   }
 
   public void setLengthInUnits(short unitLength) {
-    setLength((short)(getType().getUnitSize() * unitLength));
+    setLength((short)getType().fromUnitSize(unitLength));
   }
   public short getLengthInUnits() {
-    return (short)(getLength() / getType().getUnitSize());
+    return (short)getType().toUnitSize(getLength());
   }
 
   public void setVarLenTableIndex(int idx) {
@@ -1055,13 +1055,8 @@ public class Column implements Comparable<Column> {
         return buffer;
 
       case TEXT:
-        CharSequence text = toCharSequence(obj);
-        int maxChars = getLengthInUnits();
-        if (text.length() > maxChars) {
-          throw new IOException("Text is too big for column, max " + maxChars
-                                + ", got " + text.length());
-        }
-        byte[] encodedData = encodeTextValue(text).array();
+        byte[] encodedData = encodeTextValue(
+            obj, 0, getLengthInUnits(), false).array();
         obj = encodedData;
         break;
         
@@ -1085,7 +1080,8 @@ public class Column implements Comparable<Column> {
       // should already be "encoded"
       break;
     case MEMO:
-      obj = encodeTextValue(toCharSequence(obj)).array();
+      int maxMemoChars = DataType.MEMO.toUnitSize(DataType.MEMO.getMaxSize());
+      obj = encodeTextValue(obj, 0, maxMemoChars, false).array();
       break;
     default:
       throw new RuntimeException("unexpected var length, long value type: " +
@@ -1127,30 +1123,24 @@ public class Column implements Comparable<Column> {
     case LONG:
       buffer.putInt(toNumber(obj).intValue());
       break;
-    case DOUBLE:
-      buffer.putDouble(toNumber(obj).doubleValue());
+    case MONEY:
+      writeCurrencyValue(buffer, obj);
       break;
     case FLOAT:
       buffer.putFloat(toNumber(obj).floatValue());
       break;
+    case DOUBLE:
+      buffer.putDouble(toNumber(obj).doubleValue());
+      break;
     case SHORT_DATE_TIME:
       writeDateValue(buffer, obj);
-      break;
-    case MONEY:
-      writeCurrencyValue(buffer, obj);
       break;
     case TEXT:
       // apparently text numeric values are also occasionally written as fixed
       // length...
-      CharSequence text = toCharSequence(obj);
       int numChars = getLengthInUnits();
-      if (text.length() != numChars) {
-        throw new IOException(
-            "Text is invalid for fixed length column, length " + numChars
-            + ", got " + text.length());
-      }
       // force uncompressed encoding for fixed length text
-      buffer.put(encodeUncompressedText(text, getFormat()));
+      buffer.put(encodeTextValue(obj, numChars, numChars, true));
       break;
     case GUID:
       writeGUIDValue(buffer, obj, order);
@@ -1159,6 +1149,16 @@ public class Column implements Comparable<Column> {
       // yes, that's right, occasionally numeric values are written as fixed
       // length...
       writeNumericValue(buffer, obj);
+      break;
+    case BINARY:
+    case UNKNOWN_0D:
+    case UNKNOWN_11:
+      byte[] bytes = (byte[])obj;
+      if(bytes.length != getLength()) {
+        throw new IOException("Invalid fixed size binary data, size "
+                              + getLength() + ", got " + bytes.length);
+      }
+      buffer.put(bytes);
       break;
     default:
       throw new IOException("Unsupported data type: " + getType());
@@ -1266,11 +1266,19 @@ public class Column implements Comparable<Column> {
   /**
    * Encodes a text value, possibly compressing.
    */
-  private ByteBuffer encodeTextValue(CharSequence text)
+  private ByteBuffer encodeTextValue(Object obj, int minChars, int maxChars,
+                                     boolean forceUncompressed)
     throws IOException
   {
+    CharSequence text = toCharSequence(obj);
+    if((text.length() > maxChars) || (text.length() < minChars)) {
+      throw new IOException("Text is wrong length for " + getType() +
+                            " column, max " + maxChars
+                            + ", min " + minChars + ", got " + text.length());
+    }
+    
     // may only compress if column type allows it
-    if(isCompressedUnicode()) {
+    if(!forceUncompressed && isCompressedUnicode()) {
 
       // for now, only do very simple compression (only compress text which is
       // all ascii text)
