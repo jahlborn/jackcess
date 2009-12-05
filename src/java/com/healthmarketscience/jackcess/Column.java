@@ -27,14 +27,20 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
+import java.io.Reader;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
@@ -719,13 +725,21 @@ public class Column implements Comparable<Column> {
     // seems access stores dates in the local timezone.  guess you just hope
     // you read it in the same timezone in which it was written!
     long dateBits = buffer.getLong();
-    long time = (long)(Double.longBitsToDouble(dateBits)
-                       * MILLISECONDS_PER_DAY);
-    time -= MILLIS_BETWEEN_EPOCH_AND_1900;
-    time -= getTimeZoneOffset(time);
+    long time = fromDateDouble(Double.longBitsToDouble(dateBits));
     return new DateExt(time, dateBits);
   }
   
+  /**
+   * Returns a java long time value converted from an access date double.
+   */
+  private static long fromDateDouble(double value)
+  {
+    long time = Math.round(value * MILLISECONDS_PER_DAY);
+    time -= MILLIS_BETWEEN_EPOCH_AND_1900;
+    time -= getTimeZoneOffset(time);
+    return time;
+  }
+
   /**
    * Writes a date value.
    */
@@ -741,16 +755,26 @@ public class Column implements Comparable<Column> {
       
     } else {
       
+      buffer.putDouble(toDateDouble(value));
+    }
+  }
+
+  /**
+   * Returns an access date double converted from a java Date/Calendar/Number
+   * time value.
+   */
+  private static double toDateDouble(Object value)
+  {
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
       long time = ((value instanceof Date) ?
                    ((Date)value).getTime() :
-                   ((Number)value).longValue());
+                   ((value instanceof Calendar) ?
+                    ((Calendar)value).getTimeInMillis() :
+                    ((Number)value).longValue()));
       time += getTimeZoneOffset(time);
       time += MILLIS_BETWEEN_EPOCH_AND_1900;
-      double dTime = time / MILLISECONDS_PER_DAY;
-      buffer.putDouble(dTime);
-    }
+      return time / MILLISECONDS_PER_DAY;
   }
 
   /**
@@ -1069,7 +1093,7 @@ public class Column implements Comparable<Column> {
                                    getType());
       }
 
-      ByteBuffer buffer = ByteBuffer.wrap((byte[])obj);
+      ByteBuffer buffer = ByteBuffer.wrap(toByteArray(obj));
       buffer.order(order);
       return buffer;
     }
@@ -1089,7 +1113,7 @@ public class Column implements Comparable<Column> {
     }    
 
     // create long value buffer
-    return writeLongValue((byte[]) obj, remainingRowLength);
+    return writeLongValue(toByteArray(obj), remainingRowLength);
   }
 
   /**
@@ -1153,7 +1177,7 @@ public class Column implements Comparable<Column> {
     case BINARY:
     case UNKNOWN_0D:
     case UNKNOWN_11:
-      byte[] bytes = (byte[])obj;
+      byte[] bytes = toByteArray(obj);
       if(bytes.length != getLength()) {
         throw new IOException("Invalid fixed size binary data, size "
                               + getLength() + ", got " + bytes.length);
@@ -1439,13 +1463,71 @@ public class Column implements Comparable<Column> {
    * @return an appropriate CharSequence representation of the given object.
    */
   public static CharSequence toCharSequence(Object value)
+    throws IOException
   {
     if(value == null) {
       return null;
     } else if(value instanceof CharSequence) {
       return (CharSequence)value;
+    } else if(value instanceof Clob) {
+      try {
+        Clob c = (Clob)value;
+        // note, start pos is 1-based
+        return c.getSubString(1L, (int)c.length());
+      } catch(SQLException e) {
+        throw (IOException)(new IOException(e.getMessage())).initCause(e);
+      }
+    } else if(value instanceof Reader) {
+      char[] buf = new char[8 * 1024];
+      StringBuilder sout = new StringBuilder();
+      Reader in = (Reader)value;
+      int read = 0;
+      while((read = in.read(buf)) != -1) {
+        sout.append(buf, 0, read);
+      }
+      return sout;
     }
+
     return value.toString();
+  }
+
+  /**
+   * @return an appropriate byte[] representation of the given object.
+   */
+  public static byte[] toByteArray(Object value)
+    throws IOException
+  {
+    if(value == null) {
+      return null;
+    } else if(value instanceof byte[]) {
+      return (byte[])value;
+    } else if(value instanceof Blob) {
+      try {
+        Blob b = (Blob)value;
+        // note, start pos is 1-based
+        return b.getBytes(1L, (int)b.length());
+      } catch(SQLException e) {
+        throw (IOException)(new IOException(e.getMessage())).initCause(e);
+      }
+    }
+
+    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+
+    if(value instanceof InputStream) {
+      byte[] buf = new byte[8 * 1024];
+      InputStream in = (InputStream)value;
+      int read = 0;
+      while((read = in.read(buf)) != -1) {
+        bout.write(buf, 0, read);
+      }
+    } else {
+      // if all else fails, serialize it
+      ObjectOutputStream oos = new ObjectOutputStream(bout);
+      oos.writeObject(value);
+      oos.close();
+    }
+
+    return bout.toByteArray();
   }
 
   /**

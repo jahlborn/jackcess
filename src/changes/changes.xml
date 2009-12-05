@@ -4,6 +4,15 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.1.21" date="TBD">
+      <action dev="jahlborn" type="fix" issue="2899605">
+        Further improvements to date handling.
+      </action>
+      <action dev="jahlborn" type="update">
+        Handler more binary/character input types (Blob, Clob, InputStream,
+        Reader), based on user submitted patch.
+      </action>
+    </release>
     <release version="1.1.20" date="2009-11-18">
       <action dev="jahlborn" type="fix" issue="2884599">
         Add support for updating GUID indexes and for auto-number GUID
