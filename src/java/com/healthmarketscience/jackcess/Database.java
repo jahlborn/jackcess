@@ -31,7 +31,6 @@ import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -39,7 +38,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +48,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -118,9 +115,6 @@ public class Database
         throw (RuntimeException)error;
       }
     };
-  
-  /** Batch commit size for copying other result sets into this database */
-  private static final int COPY_TABLE_BATCH_SIZE = 200;
   
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
@@ -280,7 +274,13 @@ public class Database
    * Open an existing Database.  If the existing file is not writeable, the
    * file will be opened read-only.  Auto-syncing is enabled for the returned
    * Database.
+   * <p>
+   * Equivalent to:
+   * {@code  open(mdbFile, false);}
+   * 
    * @param mdbFile File containing the database
+   * 
+   * @see #open(File,boolean)
    */
   public static Database open(File mdbFile) throws IOException {
     return open(mdbFile, false);
@@ -290,9 +290,15 @@ public class Database
    * Open an existing Database.  If the existing file is not writeable or the
    * readOnly flag is <code>true</code>, the file will be opened read-only.
    * Auto-syncing is enabled for the returned Database.
+   * <p>
+   * Equivalent to:
+   * {@code  open(mdbFile, readOnly, DEFAULT_AUTO_SYNC);}
+   * 
    * @param mdbFile File containing the database
    * @param readOnly iff <code>true</code>, force opening file in read-only
    *                 mode
+   *
+   * @see #open(File,boolean,boolean)
    */
   public static Database open(File mdbFile, boolean readOnly)
     throws IOException
@@ -328,8 +334,14 @@ public class Database
   
   /**
    * Create a new Database
+   * <p>
+   * Equivalent to:
+   * {@code  create(mdbFile, DEFAULT_AUTO_SYNC);}
+   * 
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
+   *
+   * @see #create(File,boolean)
    */
   public static Database create(File mdbFile) throws IOException {
     return create(mdbFile, DEFAULT_AUTO_SYNC);
@@ -888,175 +900,106 @@ public class Database
   
   /**
    * Copy an existing JDBC ResultSet into a new table in this database
+   * 
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
+   *
+   * @return the name of the copied table
+   *
+   * @see ImportUtil#importResultSet(ResultSet,Database,String)
    */
-  public void copyTable(String name, ResultSet source)
+  public String copyTable(String name, ResultSet source)
     throws SQLException, IOException
   {
-    copyTable(name, source, SimpleImportFilter.INSTANCE);
+    return ImportUtil.importResultSet(source, this, name);
   }
   
   /**
    * Copy an existing JDBC ResultSet into a new table in this database
+   * 
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    * @param filter valid import filter
+   *
+   * @return the name of the imported table
+   *
+   * @see ImportUtil#importResultSet(ResultSet,Database,String,ImportFilter)
    */
-  public void copyTable(String name, ResultSet source, ImportFilter filter)
+  public String copyTable(String name, ResultSet source, ImportFilter filter)
     throws SQLException, IOException
   {
-    ResultSetMetaData md = source.getMetaData();
-    List<Column> columns = new LinkedList<Column>();
-    for (int i = 1; i <= md.getColumnCount(); i++) {
-      Column column = new Column();
-      column.setName(escape(md.getColumnName(i)));
-      int lengthInUnits = md.getColumnDisplaySize(i);
-      column.setSQLType(md.getColumnType(i), lengthInUnits);
-      DataType type = column.getType();
-      // we check for isTrueVariableLength here to avoid setting the length
-      // for a NUMERIC column, which pretends to be var-len, even though it
-      // isn't
-      if(type.isTrueVariableLength() && !type.isLongValue()) {
-        column.setLengthInUnits((short)lengthInUnits);
-      }
-      if(type.getHasScalePrecision()) {
-        int scale = md.getScale(i);
-        int precision = md.getPrecision(i);
-        if(type.isValidScale(scale)) {
-          column.setScale((byte)scale);
-        }
-        if(type.isValidPrecision(precision)) {
-          column.setPrecision((byte)precision);
-        }
-      }
-      columns.add(column);
-    }
-    createTable(escape(name), filter.filterColumns(columns, md));
-    Table table = getTable(escape(name));
-    List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
-    while (source.next()) {
-      Object[] row = new Object[md.getColumnCount()];
-      for (int i = 0; i < row.length; i++) {
-        row[i] = source.getObject(i + 1);
-      }
-      rows.add(filter.filterRow(row));
-      if (rows.size() == COPY_TABLE_BATCH_SIZE) {
-        table.addRows(rows);
-        rows.clear();
-      }
-    }
-    if (rows.size() > 0) {
-      table.addRows(rows);
-    }
+    return ImportUtil.importResultSet(source, this, name, filter);
   }
   
   /**
    * Copy a delimited text file into a new table in this database
+   * 
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
+   *
+   * @return the name of the imported table
+   *
+   * @see ImportUtil#importFile(File,Database,String,String)
    */
-  public void importFile(String name, File f, String delim)
+  public String importFile(String name, File f, String delim)
     throws IOException
   {
-    importFile(name, f, delim, SimpleImportFilter.INSTANCE);
+    return ImportUtil.importFile(f, this, name, delim);
   }
 
   /**
    * Copy a delimited text file into a new table in this database
+   * 
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
    * @param filter valid import filter
+   *
+   * @return the name of the imported table
+   *
+   * @see ImportUtil#importFile(File,Database,String,String,ImportFilter)
    */
-  public void importFile(String name, File f, String delim,
-                         ImportFilter filter)
-    throws IOException
-  {
-    BufferedReader in = null;
-    try {
-      in = new BufferedReader(new FileReader(f));
-      importReader(name, in, delim, filter);
-    } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException ex) {
-          LOG.warn("Could not close file " + f.getAbsolutePath(), ex);
-        }
-      }
-    }
-  }
-
-  /**
-   * Copy a delimited text file into a new table in this database
-   * @param name Name of the new table to create
-   * @param in Source reader to import
-   * @param delim Regular expression representing the delimiter string.
-   */
-  public void importReader(String name, BufferedReader in, String delim)
-    throws IOException
-  {
-    importReader(name, in, delim, SimpleImportFilter.INSTANCE);
-  }
-  
-  /**
-   * Copy a delimited text file into a new table in this database
-   * @param name Name of the new table to create
-   * @param in Source reader to import
-   * @param delim Regular expression representing the delimiter string.
-   * @param filter valid import filter
-   */
-  public void importReader(String name, BufferedReader in, String delim,
+  public String importFile(String name, File f, String delim,
                            ImportFilter filter)
     throws IOException
   {
-    String line = in.readLine();
-    if (line == null || line.trim().length() == 0) {
-      return;
-    }
+    return ImportUtil.importFile(f, this, name, delim, filter);
+  }
 
-    String tableName = escape(name);
-    int counter = 0;
-    while(getTable(tableName) != null) {
-      tableName = escape(name + (counter++));
-    }
-
-    List<Column> columns = new LinkedList<Column>();
-    String[] columnNames = line.split(delim);
-      
-    for (int i = 0; i < columnNames.length; i++) {
-      columns.add(new ColumnBuilder(escape(columnNames[i]), DataType.TEXT)
-                  .setLength((short)DataType.TEXT.getMaxSize())
-                  .toColumn());
-    }
-
-    try {
-      createTable(tableName, filter.filterColumns(columns, null));
-      Table table = getTable(tableName);
-      List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
-      
-      while ((line = in.readLine()) != null)
-      {
-        // 
-        // Handle the situation where the end of the line
-        // may have null fields.  We always want to add the
-        // same number of columns to the table each time.
-        //
-        Object[] data = Table.dupeRow(line.split(delim), columnNames.length);
-        rows.add(filter.filterRow(data));
-        if (rows.size() == COPY_TABLE_BATCH_SIZE) {
-          table.addRows(rows);
-          rows.clear();
-        }
-      }
-      if (rows.size() > 0) {
-        table.addRows(rows);
-      }
-    } catch(SQLException e) {
-      throw (IOException)new IOException(e.getMessage()).initCause(e);
-    }
+  /**
+   * Copy a delimited text file into a new table in this database
+   * 
+   * @param name Name of the new table to create
+   * @param in Source reader to import
+   * @param delim Regular expression representing the delimiter string.
+   *
+   * @return the name of the imported table
+   *
+   * @see ImportUtil#importReader(BufferedReader,Database,String,String)
+   */
+  public String importReader(String name, BufferedReader in, String delim)
+    throws IOException
+  {
+    return ImportUtil.importReader(in, this, name, delim);
+  }
+  
+  /**
+   * Copy a delimited text file into a new table in this database
+   * @param name Name of the new table to create
+   * @param in Source reader to import
+   * @param delim Regular expression representing the delimiter string.
+   * @param filter valid import filter
+   *
+   * @return the name of the imported table
+   *
+   * @see ImportUtil#importReader(BufferedReader,Database,String,String,ImportFilter)
+   */
+  public String importReader(String name, BufferedReader in, String delim,
+                             ImportFilter filter)
+    throws IOException
+  {
+    return ImportUtil.importReader(in, this, name, delim, filter);
   }
 
   /**
@@ -1076,7 +1019,7 @@ public class Database
   /**
    * @return A table or column name escaped for Access
    */
-  private String escape(String s) {
+  static String escape(String s) {
     if (isReservedWord(s)) {
       return ESCAPE_PREFIX + s; 
     }
