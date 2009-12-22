@@ -741,6 +741,9 @@ public class IndexPageCache
     // add to our page cache
     _dataPages.put(dpMain._pageNumber, dpMain);
 
+    // update owned pages cache
+    _index.addOwnedPage(dpMain._pageNumber);
+
     // needs to be written out
     CacheDataPage cacheDataPage = new CacheDataPage(dpMain, dpExtra);
     setModified(cacheDataPage);

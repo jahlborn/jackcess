@@ -154,6 +154,8 @@ public abstract class Index implements Comparable<Index> {
   private byte _indexType;
   /** Index name */
   private String _name;
+  /** Usage map of pages that this index owns */
+  private UsageMap _ownedPages;
   /** <code>true</code> if the index entries have been initialized,
       <code>false</code> otherwise */
   private boolean _initialized;
@@ -277,6 +279,10 @@ public abstract class Index implements Comparable<Index> {
     return _maxPageEntrySize;
   }
 
+  void addOwnedPage(int pageNumber) throws IOException {
+    _ownedPages.addPageNumber(pageNumber);
+  }
+
   /**
    * Returns the number of index entries in the index.  Only called by unit
    * tests.
@@ -353,7 +359,12 @@ public abstract class Index implements Comparable<Index> {
         _columns.add(newColumnDescriptor(idxCol, colFlags));
       }
     }
-    tableBuffer.getInt(); //Forward past Unknown
+
+    int umapRowNum = tableBuffer.get();
+    int umapPageNum = ByteUtil.get3ByteInt(tableBuffer);
+    _ownedPages = UsageMap.read(getTable().getDatabase(), umapPageNum,
+                                umapRowNum, false);
+
     _rootPageNumber = tableBuffer.getInt();
     tableBuffer.getInt(); //Forward past Unknown
     _indexFlags = tableBuffer.get();
