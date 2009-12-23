@@ -1353,32 +1353,37 @@ public class Table
                                   PageChannel.INVALID_PAGE_NUMBER);
       pageNumber = _addRowBufferH.getPageNumber();
 
-      ByteBuffer oldDataPage = rowState.getFinalPage();
-      int oldPageNumber = rowState.getFinalRowId().getPageNumber();
-      if(pageNumber == oldPageNumber) {
-        // new row is on the same page as current row, share page
-        dataPage = oldDataPage;
+      RowId headerRowId = rowState.getHeaderRowId();      
+      ByteBuffer headerPage = rowState.getHeaderPage();
+      if(pageNumber == headerRowId.getPageNumber()) {
+        // new row is on the same page as header row, share page
+        dataPage = headerPage;
       }
 
-      // write out the new row data (set the deleted flag on the new data row)
+      // write out the new row data (set the deleted flag on the new data row
+      // so that it is ignored during normal table traversal)
       int rowNum = addDataPageRow(dataPage, rowSize, getFormat(),
                                   DELETED_ROW_MASK);
-      dataPage.put(newRowData);        
+      dataPage.put(newRowData);
 
-      // write the overflow info into the old row and clear out the remaining
-      // old data
+      // write the overflow info into the header row and clear out the
+      // remaining header data
+      rowBuffer = PageChannel.narrowBuffer(
+          headerPage,
+          findRowStart(headerPage, headerRowId.getRowNumber(), getFormat()),
+          findRowEnd(headerPage, headerRowId.getRowNumber(), getFormat()));
       rowBuffer.put((byte)rowNum);
       ByteUtil.put3ByteInt(rowBuffer, pageNumber);
       ByteUtil.clearRemaining(rowBuffer);
 
-      // set the overflow flag on the old row
-      int oldRowNumber = rowState.getFinalRowId().getRowNumber();
-      int oldRowIndex = getRowStartOffset(oldRowNumber, getFormat());
-      oldDataPage.putShort(oldRowIndex,
-                           (short)(oldDataPage.getShort(oldRowIndex)
-                                   | OVERFLOW_ROW_MASK));
-      if(pageNumber != oldPageNumber) {
-        writeDataPage(oldDataPage, oldPageNumber);
+      // set the overflow flag on the header row
+      int headerRowIndex = getRowStartOffset(headerRowId.getRowNumber(),
+                                             getFormat());
+      headerPage.putShort(headerRowIndex,
+                          (short)(headerPage.getShort(headerRowIndex)
+                                  | OVERFLOW_ROW_MASK));
+      if(pageNumber != headerRowId.getPageNumber()) {
+        writeDataPage(headerPage, headerRowId.getPageNumber());
       }
     }
 

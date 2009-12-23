@@ -9,13 +9,16 @@
         Further improvements to date handling.
       </action>
       <action dev="jahlborn" type="update">
-        Handler more binary/character input types (Blob, Clob, InputStream,
+        Handle more binary/character input types (Blob, Clob, InputStream,
         Reader), based on user submitted patch.
       </action>
       <action dev="jahlborn" type="update">
         Refactor import/copy methods from Database into ImportUtil.  Allow
         reuse of existing tables.  make behavior/naming of copy and import
         methods consistent.  (ideas from use submitted patch).
+      </action>
+      <action dev="jahlborn" type="fix" issue="2919216">
+        Set overflow info in header row, not in last data row.
       </action>
     </release>
     <release version="1.1.20" date="2009-11-18">
