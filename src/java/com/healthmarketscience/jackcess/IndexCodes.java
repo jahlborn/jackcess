@@ -27,6 +27,10 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +58,7 @@ public class IndexCodes {
   
   static final byte DESC_BOOLEAN_TRUE = ASC_BOOLEAN_FALSE;
   static final byte DESC_BOOLEAN_FALSE = ASC_BOOLEAN_TRUE;
-  
+
 
   // unprintable char is removed from normal text.
   // pattern for unprintable chars in the extra bytes:
@@ -63,378 +67,358 @@ public class IndexCodes {
   // <code> = char code
   static final int UNPRINTABLE_COUNT_START = 7;
   static final int UNPRINTABLE_COUNT_MULTIPLIER = 4;
-  static final byte[] UNPRINTABLE_COMMON_PREFIX =
-    new byte[]{(byte)0x01, (byte)0x01, (byte)0x01};
   static final int UNPRINTABLE_OFFSET_FLAGS = 0x8000;
   static final byte UNPRINTABLE_MIDFIX = (byte)0x06;
 
   // international char is replaced with ascii char.
   // pattern for international chars in the extra bytes:
   // [ 02 (for each normal char) ] [ <symbol_code> (for each inat char) ]
-  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;
-  
-  /**
-   * Map of character to byte[] that Access uses in indexes (not ASCII)
-   * (Character -> byte[]) as codes to order text
-   */
-  static final Map<Character, byte[]> CODES =
-    new HashMap<Character, byte[]>(150);
+  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;  
 
-  /**
-   * Map of character to byte[] that Access uses in indexes for unprintable
-   * characters (not ASCII) (Character -> byte[]), in the extended portion
-   */
-  static final Map<Character, byte[]> UNPRINTABLE_CODES =
-    new HashMap<Character, byte[]>(100);
-  
-  /**
-   * Map of character to byte[] that Access uses in indexes for international
-   * characters (not ASCII) (Character -> InternationalCodes), in the extended
-   * portion
-   */
-  static final Map<Character, InternationalCodes> INTERNATIONAL_CODES =
-    new HashMap<Character, InternationalCodes>(70);
-  
-  static {
-    
-    registerCodes('\u0000', new byte[]{});
-    registerCodes('\t',     new byte[]{(byte)0x08, (byte)0x03});
-    registerCodes('\n',     new byte[]{(byte)0x08, (byte)0x04});
-    registerCodes('\u000B', new byte[]{(byte)0x08, (byte)0x05});
-    registerCodes('\f',     new byte[]{(byte)0x08, (byte)0x06});
-    registerCodes('\r',     new byte[]{(byte)0x08, (byte)0x07});
-    registerCodes('\u0020', new byte[]{(byte)0x07});
-    registerCodes('\u0021', new byte[]{(byte)0x09});
-    registerCodes('\"',     new byte[]{(byte)0x0A});
-    registerCodes('\u0023', new byte[]{(byte)0x0C});
-    registerCodes('\u0024', new byte[]{(byte)0x0E});
-    registerCodes('\u0025', new byte[]{(byte)0x10});
-    registerCodes('\u0026', new byte[]{(byte)0x12});
-    registerCodes('\u0028', new byte[]{(byte)0x14});
-    registerCodes('\u0029', new byte[]{(byte)0x16});
-    registerCodes('\u002A', new byte[]{(byte)0x18});
-    registerCodes('\u002B', new byte[]{(byte)0x2C});
-    registerCodes('\u002C', new byte[]{(byte)0x1A});
-    registerCodes('\u002E', new byte[]{(byte)0x1C});
-    registerCodes('\u002F', new byte[]{(byte)0x1E});
-    registerCodes('\u0030', new byte[]{(byte)0x36});
-    registerCodes('\u0031', new byte[]{(byte)0x38});
-    registerCodes('\u0032', new byte[]{(byte)0x3A});
-    registerCodes('\u0033', new byte[]{(byte)0x3C});
-    registerCodes('\u0034', new byte[]{(byte)0x3E});
-    registerCodes('\u0035', new byte[]{(byte)0x40});
-    registerCodes('\u0036', new byte[]{(byte)0x42});
-    registerCodes('\u0037', new byte[]{(byte)0x44});
-    registerCodes('\u0038', new byte[]{(byte)0x46});
-    registerCodes('\u0039', new byte[]{(byte)0x48});
-    registerCodes('\u003A', new byte[]{(byte)0x20});
-    registerCodes('\u003B', new byte[]{(byte)0x22});
-    registerCodes('\u003C', new byte[]{(byte)0x2E});
-    registerCodes('\u003D', new byte[]{(byte)0x30});
-    registerCodes('\u003E', new byte[]{(byte)0x32});
-    registerCodes('\u003F', new byte[]{(byte)0x24});
-    registerCodes('\u0040', new byte[]{(byte)0x26});
-    registerCodes('\u0041', new byte[]{(byte)0x4A});
-    registerCodes('\u0042', new byte[]{(byte)0x4C});
-    registerCodes('\u0043', new byte[]{(byte)0x4D});
-    registerCodes('\u0044', new byte[]{(byte)0x4F});
-    registerCodes('\u0045', new byte[]{(byte)0x51});
-    registerCodes('\u0046', new byte[]{(byte)0x53});
-    registerCodes('\u0047', new byte[]{(byte)0x55});
-    registerCodes('\u0048', new byte[]{(byte)0x57});
-    registerCodes('\u0049', new byte[]{(byte)0x59});
-    registerCodes('\u004A', new byte[]{(byte)0x5B});
-    registerCodes('\u004B', new byte[]{(byte)0x5C});
-    registerCodes('\u004C', new byte[]{(byte)0x5E});
-    registerCodes('\u004D', new byte[]{(byte)0x60});
-    registerCodes('\u004E', new byte[]{(byte)0x62});
-    registerCodes('\u004F', new byte[]{(byte)0x64});
-    registerCodes('\u0050', new byte[]{(byte)0x66});
-    registerCodes('\u0051', new byte[]{(byte)0x68});
-    registerCodes('\u0052', new byte[]{(byte)0x69});
-    registerCodes('\u0053', new byte[]{(byte)0x6B});
-    registerCodes('\u0054', new byte[]{(byte)0x6D});
-    registerCodes('\u0055', new byte[]{(byte)0x6F});
-    registerCodes('\u0056', new byte[]{(byte)0x71});
-    registerCodes('\u0057', new byte[]{(byte)0x73});
-    registerCodes('\u0058', new byte[]{(byte)0x75});
-    registerCodes('\u0059', new byte[]{(byte)0x76});
-    registerCodes('\u005A', new byte[]{(byte)0x78});
-    registerCodes('\u005B', new byte[]{(byte)0x27});
-    registerCodes('\\',     new byte[]{(byte)0x29});
-    registerCodes('\u005D', new byte[]{(byte)0x2A});
-    registerCodes('\u005E', new byte[]{(byte)0x2B, (byte)0x02});
-    registerCodes('\u005F', new byte[]{(byte)0x2B, (byte)0x03});
-    registerCodes('\u0060', new byte[]{(byte)0x2B, (byte)0x07});
-    registerCodes('\u0061', new byte[]{(byte)0x4A});
-    registerCodes('\u0062', new byte[]{(byte)0x4C});
-    registerCodes('\u0063', new byte[]{(byte)0x4D});
-    registerCodes('\u0064', new byte[]{(byte)0x4F});
-    registerCodes('\u0065', new byte[]{(byte)0x51});
-    registerCodes('\u0066', new byte[]{(byte)0x53});
-    registerCodes('\u0067', new byte[]{(byte)0x55});
-    registerCodes('\u0068', new byte[]{(byte)0x57});
-    registerCodes('\u0069', new byte[]{(byte)0x59});
-    registerCodes('\u006A', new byte[]{(byte)0x5B});
-    registerCodes('\u006B', new byte[]{(byte)0x5C});
-    registerCodes('\u006C', new byte[]{(byte)0x5E});
-    registerCodes('\u006D', new byte[]{(byte)0x60});
-    registerCodes('\u006E', new byte[]{(byte)0x62});
-    registerCodes('\u006F', new byte[]{(byte)0x64});
-    registerCodes('\u0070', new byte[]{(byte)0x66});
-    registerCodes('\u0071', new byte[]{(byte)0x68});
-    registerCodes('\u0072', new byte[]{(byte)0x69});
-    registerCodes('\u0073', new byte[]{(byte)0x6B});
-    registerCodes('\u0074', new byte[]{(byte)0x6D});
-    registerCodes('\u0075', new byte[]{(byte)0x6F});
-    registerCodes('\u0076', new byte[]{(byte)0x71});
-    registerCodes('\u0077', new byte[]{(byte)0x73});
-    registerCodes('\u0078', new byte[]{(byte)0x75});
-    registerCodes('\u0079', new byte[]{(byte)0x76});
-    registerCodes('\u007A', new byte[]{(byte)0x78});
-    registerCodes('\u007B', new byte[]{(byte)0x2B, (byte)0x09});
-    registerCodes('\u007C', new byte[]{(byte)0x2B, (byte)0x0B});
-    registerCodes('\u007D', new byte[]{(byte)0x2B, (byte)0x0D});
-    registerCodes('\u007E', new byte[]{(byte)0x2B, (byte)0x0F});
-    registerCodes('\u00A0', new byte[]{(byte)0x08, (byte)0x02});
-    registerCodes('\u00A1', new byte[]{(byte)0x2B, (byte)0x10});
-    registerCodes('\u00A2', new byte[]{(byte)0x34, (byte)0xA6});
-    registerCodes('\u00A3', new byte[]{(byte)0x34, (byte)0xA7});
-    registerCodes('\u00A4', new byte[]{(byte)0x34, (byte)0xA8});
-    registerCodes('\u00A5', new byte[]{(byte)0x34, (byte)0xA9});
-    registerCodes('\u00A6', new byte[]{(byte)0x2B, (byte)0x11});
-    registerCodes('\u00A7', new byte[]{(byte)0x34, (byte)0xAA});
-    registerCodes('\u00A8', new byte[]{(byte)0x2B, (byte)0x12});
-    registerCodes('\u00A9', new byte[]{(byte)0x34, (byte)0xAB});
-    registerCodes('\u00AB', new byte[]{(byte)0x33, (byte)0x05});
-    registerCodes('\u00AC', new byte[]{(byte)0x34, (byte)0xAC});
-    registerCodes('\u00AE', new byte[]{(byte)0x34, (byte)0xAD});
-    registerCodes('\u00AF', new byte[]{(byte)0x2B, (byte)0x13});
-    registerCodes('\u00B0', new byte[]{(byte)0x34, (byte)0xAE});
-    registerCodes('\u00B1', new byte[]{(byte)0x33, (byte)0x04});
-    registerCodes('\u00B2', new byte[]{(byte)0x3A});
-    registerCodes('\u00B3', new byte[]{(byte)0x3C});
-    registerCodes('\u00B4', new byte[]{(byte)0x2B, (byte)0x14});
-    registerCodes('\u00B5', new byte[]{(byte)0x34, (byte)0xAF});
-    registerCodes('\u00B6', new byte[]{(byte)0x34, (byte)0xB0});
-    registerCodes('\u00B7', new byte[]{(byte)0x34, (byte)0xB1});
-    registerCodes('\u00B8', new byte[]{(byte)0x2B, (byte)0x15});
-    registerCodes('\u00B9', new byte[]{(byte)0x38});
-    registerCodes('\u00BB', new byte[]{(byte)0x33, (byte)0x07});
-    registerCodes('\u00BC', new byte[]{(byte)0x37, (byte)0x12});
-    registerCodes('\u00BD', new byte[]{(byte)0x37, (byte)0x16});
-    registerCodes('\u00BE', new byte[]{(byte)0x37, (byte)0x1A});
-    registerCodes('\u00BF', new byte[]{(byte)0x2B, (byte)0x16});
-    registerCodes('\u00C6', new byte[]{(byte)0x4A, (byte)0x51});
-    registerCodes('\u00D7', new byte[]{(byte)0x33, (byte)0x09});
-    registerCodes('\u00DE', new byte[]{(byte)0x6D, (byte)0x57});
-    registerCodes('\u00DF', new byte[]{(byte)0x6B, (byte)0x6B});
-    registerCodes('\u00E6', new byte[]{(byte)0x4A, (byte)0x51});
-    registerCodes('\u00F7', new byte[]{(byte)0x33, (byte)0x0A});
-    registerCodes('\u00FE', new byte[]{(byte)0x6D, (byte)0x57});
+  // see Index.writeCrazyCodes for details on writing crazy codes
+  static final byte CRAZY_CODE_START = (byte)0x80;
+  static final byte CRAZY_CODE_1 = (byte)0x02;
+  static final byte CRAZY_CODE_2 = (byte)0x03;
+  static final byte[] CRAZY_CODES_SUFFIX = 
+    new byte[]{(byte)0xFF, (byte)0x02, (byte)0x80, (byte)0xFF, (byte)0x80};
 
-    registerUnprintableCodes('\u0001', new byte[]{(byte)0x03});
-    registerUnprintableCodes('\u0002', new byte[]{(byte)0x04});
-    registerUnprintableCodes('\u0003', new byte[]{(byte)0x05});
-    registerUnprintableCodes('\u0004', new byte[]{(byte)0x06});
-    registerUnprintableCodes('\u0005', new byte[]{(byte)0x07});
-    registerUnprintableCodes('\u0006', new byte[]{(byte)0x08});
-    registerUnprintableCodes('\u0007', new byte[]{(byte)0x09});
-    registerUnprintableCodes('\b',     new byte[]{(byte)0x0A});
-    registerUnprintableCodes('\u000E', new byte[]{(byte)0x0B});
-    registerUnprintableCodes('\u000F', new byte[]{(byte)0x0C});
-    registerUnprintableCodes('\u0010', new byte[]{(byte)0x0D});
-    registerUnprintableCodes('\u0011', new byte[]{(byte)0x0E});
-    registerUnprintableCodes('\u0012', new byte[]{(byte)0x0F});
-    registerUnprintableCodes('\u0013', new byte[]{(byte)0x10});
-    registerUnprintableCodes('\u0014', new byte[]{(byte)0x11});
-    registerUnprintableCodes('\u0015', new byte[]{(byte)0x12});
-    registerUnprintableCodes('\u0016', new byte[]{(byte)0x13});
-    registerUnprintableCodes('\u0017', new byte[]{(byte)0x14});
-    registerUnprintableCodes('\u0018', new byte[]{(byte)0x15});
-    registerUnprintableCodes('\u0019', new byte[]{(byte)0x16});
-    registerUnprintableCodes('\u001A', new byte[]{(byte)0x17});
-    registerUnprintableCodes('\u001B', new byte[]{(byte)0x18});
-    registerUnprintableCodes('\u001C', new byte[]{(byte)0x19});
-    registerUnprintableCodes('\u001D', new byte[]{(byte)0x1A});
-    registerUnprintableCodes('\u001E', new byte[]{(byte)0x1B});
-    registerUnprintableCodes('\u001F', new byte[]{(byte)0x1C});
-    registerUnprintableCodes('\'',     new byte[]{(byte)0x80});
-    registerUnprintableCodes('\u002D', new byte[]{(byte)0x82});
-    registerUnprintableCodes('\u007F', new byte[]{(byte)0x1D});
-    registerUnprintableCodes('\u0080', new byte[]{(byte)0x1E});
-    registerUnprintableCodes('\u0081', new byte[]{(byte)0x1F});
-    registerUnprintableCodes('\u0082', new byte[]{(byte)0x20});
-    registerUnprintableCodes('\u0083', new byte[]{(byte)0x21});
-    registerUnprintableCodes('\u0084', new byte[]{(byte)0x22});
-    registerUnprintableCodes('\u0085', new byte[]{(byte)0x23});
-    registerUnprintableCodes('\u0086', new byte[]{(byte)0x24});
-    registerUnprintableCodes('\u0087', new byte[]{(byte)0x25});
-    registerUnprintableCodes('\u0088', new byte[]{(byte)0x26});
-    registerUnprintableCodes('\u0089', new byte[]{(byte)0x27});
-    registerUnprintableCodes('\u008A', new byte[]{(byte)0x28});
-    registerUnprintableCodes('\u008B', new byte[]{(byte)0x29});
-    registerUnprintableCodes('\u008C', new byte[]{(byte)0x2A});
-    registerUnprintableCodes('\u008D', new byte[]{(byte)0x2B});
-    registerUnprintableCodes('\u008E', new byte[]{(byte)0x2C});
-    registerUnprintableCodes('\u008F', new byte[]{(byte)0x2D});
-    registerUnprintableCodes('\u0090', new byte[]{(byte)0x2E});
-    registerUnprintableCodes('\u0091', new byte[]{(byte)0x2F});
-    registerUnprintableCodes('\u0092', new byte[]{(byte)0x30});
-    registerUnprintableCodes('\u0093', new byte[]{(byte)0x31});
-    registerUnprintableCodes('\u0094', new byte[]{(byte)0x32});
-    registerUnprintableCodes('\u0095', new byte[]{(byte)0x33});
-    registerUnprintableCodes('\u0096', new byte[]{(byte)0x34});
-    registerUnprintableCodes('\u0097', new byte[]{(byte)0x35});
-    registerUnprintableCodes('\u0098', new byte[]{(byte)0x36});
-    registerUnprintableCodes('\u0099', new byte[]{(byte)0x37});
-    registerUnprintableCodes('\u009A', new byte[]{(byte)0x38});
-    registerUnprintableCodes('\u009B', new byte[]{(byte)0x39});
-    registerUnprintableCodes('\u009C', new byte[]{(byte)0x3A});
-    registerUnprintableCodes('\u009D', new byte[]{(byte)0x3B});
-    registerUnprintableCodes('\u009E', new byte[]{(byte)0x3C});
-    registerUnprintableCodes('\u009F', new byte[]{(byte)0x3D});
-    registerUnprintableCodes('\u00AD', new byte[]{(byte)0x83});
+  // stash the codes in some resource files
+  private static final String CODES_FILE = 
+    "com/healthmarketscience/jackcess/index_codes.txt";
+  private static final String EXT_CODES_FILE = 
+    "com/healthmarketscience/jackcess/index_codes_ext.txt";
 
-    registerInternationalCodes('\u00AA', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x03});
-    registerInternationalCodes('\u00BA', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x03});
-    registerInternationalCodes('\u00C0', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00C1', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00C2', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00C3', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00C4', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00C5', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x1A});
-    registerInternationalCodes('\u00C7', new byte[]{(byte)0x4D},
-                               new byte[]{(byte)0x1C});
-    registerInternationalCodes('\u00C8', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00C9', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00CA', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00CB', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00CC', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00CD', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00CE', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00CF', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00D0', new byte[]{(byte)0x4F},
-                               new byte[]{(byte)0x68});
-    registerInternationalCodes('\u00D1', new byte[]{(byte)0x62},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00D2', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00D3', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00D4', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00D5', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00D6', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00D8', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x21});
-    registerInternationalCodes('\u00D9', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00DA', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00DB', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00DC', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00DD', new byte[]{(byte)0x76},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00E0', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00E1', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00E2', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00E3', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00E4', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00E5', new byte[]{(byte)0x4A},
-                               new byte[]{(byte)0x1A});
-    registerInternationalCodes('\u00E7', new byte[]{(byte)0x4D},
-                               new byte[]{(byte)0x1C});
-    registerInternationalCodes('\u00E8', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00E9', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00EA', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00EB', new byte[]{(byte)0x51},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00EC', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00ED', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00EE', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00EF', new byte[]{(byte)0x59},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00F0', new byte[]{(byte)0x4F},
-                               new byte[]{(byte)0x68});
-    registerInternationalCodes('\u00F1', new byte[]{(byte)0x62},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00F2', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00F3', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00F4', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00F5', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x19});
-    registerInternationalCodes('\u00F6', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00F8', new byte[]{(byte)0x64},
-                               new byte[]{(byte)0x21});
-    registerInternationalCodes('\u00F9', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x0F});
-    registerInternationalCodes('\u00FA', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00FB', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x12});
-    registerInternationalCodes('\u00FC', new byte[]{(byte)0x6F},
-                               new byte[]{(byte)0x13});
-    registerInternationalCodes('\u00FD', new byte[]{(byte)0x76},
-                               new byte[]{(byte)0x0E});
-    registerInternationalCodes('\u00FF', new byte[]{(byte)0x76},
-                               new byte[]{(byte)0x13});
-    
+  enum Type {
+    SIMPLE("S") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseSimpleCodes(codeStrings);
+      }
+    },
+    INTERNATIONAL("I") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseInternationalCodes(codeStrings);
+      }
+    },
+    UNPRINTABLE("U") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseUnprintableCodes(codeStrings);
+      }
+    },
+    UNPRINTABLE_EXT("P") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseUnprintableExtCodes(codeStrings);
+      }
+    },
+    INTERNATIONAL_EXT("Z") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseInternationalExtCodes(codeStrings);
+      }
+    },
+    IGNORED("X") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return IGNORED_CHAR_HANDLER;
+      }
+    };
+
+    private final String _prefixCode;
+
+    private Type(String prefixCode) {
+      _prefixCode = prefixCode;
+    }
+
+    public String getPrefixCode() {
+      return _prefixCode;
+    }
+
+    public abstract CharHandler parseCodes(String[] codeStrings);
   }
 
+  abstract static class CharHandler {
+    public abstract Type getType();
+    public byte[] getInlineBytes() {
+      return null;
+    }
+    public byte[] getExtraBytes() {
+      return null;
+    }
+    public byte[] getUnprintableBytes() {
+      return null;
+    }
+    public byte getExtraByteModifier() {
+      return 0;
+    }
+    public byte getCrazyFlag() {
+      return 0;
+    }
+  }
+
+  private static final class SimpleCharHandler extends CharHandler {
+    private byte[] _bytes;
+    private SimpleCharHandler(byte[] bytes) {
+      _bytes = bytes;
+    }
+    @Override public Type getType() {
+      return Type.SIMPLE;
+    }
+    @Override public byte[] getInlineBytes() {
+      return _bytes;
+    }
+  }
+
+  private static final class InternationalCharHandler extends CharHandler {
+    private byte[] _bytes;
+    private byte[] _extraBytes;
+    private InternationalCharHandler(byte[] bytes, byte[] extraBytes) {
+      _bytes = bytes;
+      _extraBytes = extraBytes;
+    }
+    @Override public Type getType() {
+      return Type.INTERNATIONAL;
+    }
+    @Override public byte[] getInlineBytes() {
+      return _bytes;
+    }
+    @Override public byte[] getExtraBytes() {
+      return _extraBytes;
+    }
+  }
+
+  private static final class UnprintableCharHandler extends CharHandler {
+    private byte[] _unprintBytes;
+    private UnprintableCharHandler(byte[] unprintBytes) {
+      _unprintBytes = unprintBytes;
+    }
+    @Override public Type getType() {
+      return Type.UNPRINTABLE;
+    }
+    @Override public byte[] getUnprintableBytes() {
+      return _unprintBytes;
+    }
+  }
+
+  private static final class UnprintableExtCharHandler extends CharHandler {
+    private byte _extraByteMod;
+    private UnprintableExtCharHandler(Byte extraByteMod) {
+      _extraByteMod = extraByteMod;
+    }
+    @Override public Type getType() {
+      return Type.UNPRINTABLE_EXT;
+    }
+    @Override public byte getExtraByteModifier() {
+      return _extraByteMod;
+    }
+  }
+
+  private static final class InternationalExtCharHandler extends CharHandler {
+    private byte[] _bytes;
+    private byte[] _extraBytes;
+    private byte _crazyFlag;
+    private InternationalExtCharHandler(byte[] bytes, byte[] extraBytes,
+                                        byte crazyFlag) {
+      _bytes = bytes;
+      _extraBytes = extraBytes;
+      _crazyFlag = crazyFlag;
+    }
+    @Override public Type getType() {
+      return Type.INTERNATIONAL_EXT;
+    }
+    @Override public byte[] getInlineBytes() {
+      return _bytes;
+    }
+    @Override public byte[] getExtraBytes() {
+      return _extraBytes;
+    }
+    @Override public byte getCrazyFlag() {
+      return _crazyFlag;
+    }
+  }
+
+  static final CharHandler IGNORED_CHAR_HANDLER = new CharHandler() {
+    @Override public Type getType() {
+      return Type.IGNORED;
+    }
+  };
+
+  static final CharHandler SURROGATE_CHAR_HANDLER = new CharHandler() {
+    @Override public Type getType() {
+      return Type.IGNORED;
+    }
+    @Override public byte[] getInlineBytes() {
+      throw new IllegalStateException(
+          "Surrogate pair chars are not handled");
+    }
+  };
+
+  private static final char FIRST_CHAR = (char)0x0000;
+  private static final char LAST_CHAR = (char)0x00FF;
+  private static final char FIRST_EXT_CHAR = LAST_CHAR + 1;
+  private static final char LAST_EXT_CHAR = (char)0xFFFF;
+
+  private static final class Codes
+  {
+    /** handlers for the first 256 chars.  use nested class to lazy load the
+        handlers */
+    private static final CharHandler[] _values = loadCodes(
+        CODES_FILE, FIRST_CHAR, LAST_CHAR);
+  }
+  
+  private static final class ExtCodes
+  {
+    /** handlers for the rest of the chars in BMP 0.  use nested class to
+        lazy load the handlers */
+    private static final CharHandler[] _values = loadCodes(
+        EXT_CODES_FILE, FIRST_EXT_CHAR, LAST_EXT_CHAR);
+  }
   
   private IndexCodes() {
   }
 
-  private static void registerCodes(char c, byte[] codes) {
-    CODES.put(c, codes);
+  static CharHandler getCharHandler(char c)
+  {
+    if(c <= LAST_CHAR) {
+      return Codes._values[c];
+    }
+
+    int extOffset = asUnsignedChar(c) - asUnsignedChar(FIRST_EXT_CHAR);
+    return ExtCodes._values[extOffset];
   }
-  
-  private static void registerUnprintableCodes(char c, byte[] codes) {
-    UNPRINTABLE_CODES.put(c, codes);
+
+  private static CharHandler[] loadCodes(String codesFilePath, 
+                                         char firstChar, char lastChar)
+  {
+    int numCodes = (asUnsignedChar(lastChar) - asUnsignedChar(firstChar)) + 1;
+    CharHandler[] values = new CharHandler[numCodes];
+
+    Map<String,Type> prefixMap = new HashMap<String,Type>();
+    for(Type type : Type.values()) {
+      prefixMap.put(type.getPrefixCode(), type);
+    }
+
+    BufferedReader reader = null;
+    try {
+
+      reader = new BufferedReader(
+          new InputStreamReader(
+              Thread.currentThread().getContextClassLoader()
+              .getResourceAsStream(codesFilePath), "US-ASCII"));
+      
+      int start = asUnsignedChar(firstChar);
+      int end = asUnsignedChar(lastChar);
+      for(int i = start; i <= end; ++i) {
+        char c = (char)i;
+        CharHandler ch = null;
+        if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
+          // surrogate chars are not included in the codes files
+          ch = SURROGATE_CHAR_HANDLER;
+        } else {
+          String codeLine = reader.readLine();
+          ch = parseCodes(prefixMap, codeLine);
+        }
+        values[(i - start)] = ch;
+      }
+
+    } catch(IOException e) {
+      throw new RuntimeException("failed loading index codes file " +
+                                 codesFilePath, e);
+    } finally {
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch (IOException ex) {
+          // ignored
+        }
+      }
+    }
+
+    return values;
   }
-  
-  private static void registerInternationalCodes(
-      char c, byte[] inlineCodes, byte[] extraCodes) {
-    INTERNATIONAL_CODES.put(c,
-                            new InternationalCodes(inlineCodes, extraCodes));
+
+  private static CharHandler parseCodes(Map<String,Type> prefixMap,
+                                        String codeLine)
+  {
+    String prefix = codeLine.substring(0, 1);
+    String suffix = ((codeLine.length() > 1) ? codeLine.substring(2) : "");
+    return prefixMap.get(prefix).parseCodes(suffix.split(",", -1));
   }
-  
+
+  private static CharHandler parseSimpleCodes(String[] codeStrings) 
+  {
+    if(codeStrings.length != 1) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    return new SimpleCharHandler(codesToBytes(codeStrings[0], true));
+  }
+
+  private static CharHandler parseInternationalCodes(String[] codeStrings)
+  {
+    if(codeStrings.length != 2) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    return new InternationalCharHandler(codesToBytes(codeStrings[0], true),
+                                        codesToBytes(codeStrings[1], true));
+  }
+
+  private static CharHandler parseUnprintableCodes(String[] codeStrings)
+  {
+    if(codeStrings.length != 1) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    return new UnprintableCharHandler(codesToBytes(codeStrings[0], true));
+  }
+
+  private static CharHandler parseUnprintableExtCodes(String[] codeStrings) 
+  {
+    if(codeStrings.length != 1) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    byte[] bytes = codesToBytes(codeStrings[0], true);
+    if(bytes.length != 1) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    return new UnprintableExtCharHandler(bytes[0]);
+  }
+
+  private static CharHandler parseInternationalExtCodes(String[] codeStrings) 
+  {
+    if(codeStrings.length != 3) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+
+    byte crazyFlag = ("1".equals(codeStrings[2]) ?
+                      CRAZY_CODE_1 : CRAZY_CODE_2);
+    return new InternationalExtCharHandler(codesToBytes(codeStrings[0], true),
+                                           codesToBytes(codeStrings[1], false),
+                                           crazyFlag);
+  }
+
+  private static byte[] codesToBytes(String codes, boolean required)
+  {
+    if(codes.length() == 0) {
+      if(required) {
+        throw new IllegalStateException("empty code bytes");
+      }
+      return null;
+    }
+    byte[] bytes = new byte[codes.length() / 2];
+    for(int i = 0; i < bytes.length; ++i) {
+      int charIdx = i*2;
+      bytes[i] = (byte)(Integer.parseInt(codes.substring(charIdx, charIdx + 2),
+                                         16));
+    }
+    return bytes;
+  }
+
+  private static int asUnsignedChar(char c)
+  {
+    return c & 0xFFFF;
+  }
+
   static boolean isNullEntry(byte startEntryFlag) {
     return((startEntryFlag == ASC_NULL_FLAG) ||
            (startEntryFlag == DESC_NULL_FLAG));
@@ -446,16 +430,6 @@ public class IndexCodes {
   
   static byte getStartEntryFlag(boolean isAscending) {
     return(isAscending ? ASC_START_FLAG : DESC_START_FLAG);
-  }
-  
-  static final class InternationalCodes {
-    public final byte[] _inlineCodes;
-    public final byte[] _extraCodes;
-
-    private InternationalCodes(byte[] inlineCodes, byte[] extraCodes) {
-      _inlineCodes = inlineCodes;
-      _extraCodes = extraCodes;
-    }
   }
   
 }

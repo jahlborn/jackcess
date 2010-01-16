@@ -35,8 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -1045,110 +1043,96 @@ public abstract class Index implements Comparable<Index> {
     }
     
     // now, convert each character to a "code" of one or more bytes
-    List<ExtraCodes> unprintableCodes = null;
-    List<ExtraCodes> internationalCodes = null;
+    ExtraCodesOutputStream extraCodes = null;
+    ExtraCodesOutputStream unprintableCodes = null;
+    ExtraCodesOutputStream crazyCodes = null;
     int charOffset = 0;
     for(int i = 0; i < str.length(); ++i) {
+
       char c = str.charAt(i);
-      Character cKey = c;
+      CharHandler ch = getCharHandler(c);
 
-      byte[] bytes = CODES.get(cKey);
+      int curCharOffset = charOffset;
+      byte[] bytes = ch.getInlineBytes();
       if(bytes != null) {
-        // simple case, write the codes we found
+        // write the "inline" codes immediately
         tmpBout.write(bytes);
+
+        // only increment the charOffset for chars with inline codes
         ++charOffset;
+      }
+
+      if(ch.getType() == Type.SIMPLE) {
+        // common case, skip further code handling
         continue;
       }
 
-      bytes = UNPRINTABLE_CODES.get(cKey);
-      if(bytes != null) {
-        // we do not write anything to tmpBout
-        if(bytes.length > 0) {
-          if(unprintableCodes == null) {
-            unprintableCodes = new LinkedList<ExtraCodes>();
-          }
-          
-          // keep track of the extra codes for later
-          unprintableCodes.add(new ExtraCodes(charOffset, bytes));
-        }
-
-        // note, we do _not_ increment the charOffset for unprintable chars
-        continue;
-      }
-
-      InternationalCodes inatCodes = INTERNATIONAL_CODES.get(cKey);
-      if(inatCodes != null) {
-
-        // we write the "inline" portion of the international codes
-        // immediately, and queue the extra codes for later
-        tmpBout.write(inatCodes._inlineCodes);
-
-        if(internationalCodes == null) {
-          internationalCodes = new LinkedList<ExtraCodes>();
+      bytes = ch.getExtraBytes();
+      byte extraCodeModifier = ch.getExtraByteModifier();
+      if((bytes != null) || (extraCodeModifier != 0)) {
+        if(extraCodes == null) {
+          extraCodes = new ExtraCodesOutputStream(str.length());
         }
 
         // keep track of the extra codes for later
-        internationalCodes.add(new ExtraCodes(charOffset,
-                                              inatCodes._extraCodes));
-
-        ++charOffset;
-        continue;
+        writeExtraCodes(curCharOffset, bytes, extraCodeModifier, extraCodes);
       }
 
-      // bummer, out of luck
-      throw new IOException("unmapped string index value " + c);
+      bytes = ch.getUnprintableBytes();
+      if(bytes != null) {
+        if(unprintableCodes == null) {
+          unprintableCodes = new ExtraCodesOutputStream();
+        }
+          
+        // keep track of the unprintable codes for later
+        writeUnprintableCodes(curCharOffset, bytes, unprintableCodes);
+      }
+      
+      byte crazyFlag = ch.getCrazyFlag();
+      if(crazyFlag != 0) {
+        if(crazyCodes == null) {
+          crazyCodes = new ExtraCodesOutputStream();
+        }
+
+        // keep track of the crazy flags for later
+        crazyCodes.write(crazyFlag);
+      }
     }
 
     // write end text flag
     tmpBout.write(END_TEXT);
 
-    boolean hasExtraText = ((unprintableCodes != null) ||
-                            (internationalCodes != null));
-    if(hasExtraText) {
+    boolean hasExtraCodes = trimExtraCodes(
+        extraCodes, (byte)0, INTERNATIONAL_EXTRA_PLACEHOLDER);
+    boolean hasUnprintableCodes = (unprintableCodes != null);
+    boolean hasCrazyCodes = (crazyCodes != null);
+    if(hasExtraCodes || hasUnprintableCodes || hasCrazyCodes) {
 
       // we write all the international extra bytes first
-      if(internationalCodes != null) {
-
-        // we write a placeholder char for each non-international char before
-        // the extra chars for the international char
-        charOffset = 0;
-        Iterator<ExtraCodes> iter = internationalCodes.iterator();
-        while(iter.hasNext()) {
-          ExtraCodes extraCodes = iter.next();
-          while(charOffset < extraCodes._charOffset) {
-            tmpBout.write(INTERNATIONAL_EXTRA_PLACEHOLDER);
-            ++charOffset;
-          }
-          tmpBout.write(extraCodes._extraCodes);
-          ++charOffset;
-        }
+      if(hasExtraCodes) {
+        extraCodes.writeTo(tmpBout);
       }
 
-      // then we write all the unprintable extra bytes
-      if(unprintableCodes != null) {
+      if(hasCrazyCodes || hasUnprintableCodes) {
 
-        // write a single prefix for all unprintable chars
-        tmpBout.write(UNPRINTABLE_COMMON_PREFIX);
+        // write 2 more end flags
+        tmpBout.write(END_TEXT);
+        tmpBout.write(END_TEXT);
+
+        // next come the crazy flags
+        if(hasCrazyCodes) {
+          writeCrazyCodes(crazyCodes, tmpBout);
+        }
+
+        // then we write all the unprintable extra bytes
+        if(hasUnprintableCodes) {
+
+          // write another end flag
+          tmpBout.write(END_TEXT);
         
-        // we write a whacky combo of bytes for each unprintable char which
-        // includes a funky offset and extra char itself
-        Iterator<ExtraCodes> iter = unprintableCodes.iterator();
-        while(iter.hasNext()) {
-          ExtraCodes extraCodes = iter.next();
-          int offset =
-            (UNPRINTABLE_COUNT_START +
-             (UNPRINTABLE_COUNT_MULTIPLIER * extraCodes._charOffset))
-            | UNPRINTABLE_OFFSET_FLAGS;
-
-          // write offset as big-endian short
-          tmpBout.write((offset >> 8) & 0xFF);
-          tmpBout.write(offset & 0xFF);
-          
-          tmpBout.write(UNPRINTABLE_MIDFIX);
-          tmpBout.write(extraCodes._extraCodes);
+          unprintableCodes.writeTo(tmpBout);
         }
       }
-
     }
 
     // handle descending order by inverting the bytes
@@ -1166,6 +1150,111 @@ public abstract class Index implements Comparable<Index> {
 
     // write end extra text
     bout.write(END_EXTRA_TEXT);    
+  }
+
+  private static void writeExtraCodes(
+      int charOffset, byte[] bytes, byte extraCodeModifier,
+      ExtraCodesOutputStream extraCodes)
+    throws IOException
+  {
+    // we fill in a placeholder value for any chars w/out extra codes
+    int numChars = extraCodes.getNumChars();
+    if(numChars < charOffset) {
+      int fillChars = charOffset - numChars;
+      extraCodes.write(fillChars, INTERNATIONAL_EXTRA_PLACEHOLDER);
+      extraCodes.incrementNumChars(fillChars);
+    }
+
+    if(bytes != null) {
+      
+      // write the actual extra codes and update the number of chars
+      extraCodes.write(bytes);
+      extraCodes.incrementNumChars(1);
+
+    } else {
+
+      // the extra code modifier is added to the last extra code written.  if
+      // there is no previous extra code, it is made the first extra code.
+      int lastIdx = extraCodes.size() - 1;
+      if(lastIdx >= 0) {
+        byte lastByte = extraCodes.get(lastIdx);
+        lastByte += extraCodeModifier;
+        extraCodes.set(lastIdx, lastByte);
+      } else {
+        extraCodes.write(extraCodeModifier);
+      }
+    }
+  }
+
+  private static boolean trimExtraCodes(ExtraCodesOutputStream extraCodes,
+                                        byte minTrimCode, byte maxTrimCode)
+    throws IOException
+  {
+    if(extraCodes == null) {
+      return false;
+    }
+
+    extraCodes.trimTrailingBytes(minTrimCode, maxTrimCode);
+
+    // anything left?
+    return (extraCodes.size() > 0);
+  }
+
+  private static void writeUnprintableCodes(
+      int charOffset, byte[] bytes, ExtraCodesOutputStream extraCodes)
+    throws IOException
+  {
+    // we write a whacky combo of bytes for each unprintable char which
+    // includes a funky offset and extra char itself
+    int offset =
+      (UNPRINTABLE_COUNT_START +
+       (UNPRINTABLE_COUNT_MULTIPLIER * charOffset))
+      | UNPRINTABLE_OFFSET_FLAGS;
+
+    // write offset as big-endian short
+    extraCodes.write((offset >> 8) & 0xFF);
+    extraCodes.write(offset & 0xFF);
+          
+    extraCodes.write(UNPRINTABLE_MIDFIX);
+    extraCodes.write(bytes);
+  }
+
+  private static void writeCrazyCodes(ExtraCodesOutputStream crazyCodes, 
+                                      ByteArrayOutputStream tmpBout)
+    throws IOException
+  {
+    // CRAZY_CODE_2 flags at the end are ignored, so ditch them
+    trimExtraCodes(crazyCodes, CRAZY_CODE_2, CRAZY_CODE_2);
+
+    if(crazyCodes.size() > 0) {
+
+      // the crazy codes get encoded into 6 bit sequences where each code is 2
+      // bits (where the first 2 bits in the byte are a common prefix).
+      byte curByte = CRAZY_CODE_START;
+      int idx = 0;
+      for(int i = 0; i < crazyCodes.size(); ++i) {
+        byte nextByte = crazyCodes.get(i);
+        nextByte <<= ((2 - idx) * 2);
+        curByte |= nextByte;
+
+        ++idx;
+        if(idx == 3) {
+          // write current byte and reset
+          tmpBout.write(curByte);
+          curByte = CRAZY_CODE_START;
+          idx = 0;
+        }
+      }
+
+      // write last byte
+      if(idx > 0) {
+        tmpBout.write(curByte);
+      }
+    }
+
+    // write crazy code suffix (note, we write this even if all the codes are
+    // trmmed
+    tmpBout.write(CRAZY_CODES_SUFFIX);
   }
 
   /**
@@ -2289,17 +2378,63 @@ public abstract class Index implements Comparable<Index> {
          entries);
     }
   }
-  
-  /**
-   * Value struct used during Text index entry encoding.
-   */
-  private static final class ExtraCodes {
-    public final int _charOffset;
-    public final byte[] _extraCodes;
 
-    private ExtraCodes(int charOffset, byte[] extraCodes) {
-      _charOffset = charOffset;
-      _extraCodes = extraCodes;
+
+  /**
+   * Extension of ByteArrayOutputStream which allows more complex access to
+   * the underlying bytes, as well as keeps track of an additional char count.
+   */
+  private static final class ExtraCodesOutputStream 
+    extends ByteArrayOutputStream
+  {
+    private int numChars;
+
+    private ExtraCodesOutputStream() {
+      super();
+    }
+
+    private ExtraCodesOutputStream(int length) {
+      super(length);
+    }
+
+    public int getNumChars() {
+      return numChars;
+    }
+    
+    public byte get(int offset) {
+      return buf[offset];
+    }
+
+    public void set(int offset, byte b) {
+      buf[offset] = b;
+    }
+
+    public void write(int numBytes, byte b) {
+      for(int i = 0; i < numBytes; ++i) {
+        write(b);
+      }
+    }
+
+    public void incrementNumChars(int inc) {
+      numChars += inc;
+    }
+
+    public void trimTrailingBytes(byte minTrimCode, byte maxTrimCode)
+    {
+      int minTrim = ByteUtil.asUnsignedByte(minTrimCode);
+      int maxTrim = ByteUtil.asUnsignedByte(maxTrimCode);
+
+      int idx = count - 1;
+      while(idx >= 0) {
+        int val = ByteUtil.asUnsignedByte(get(idx));
+        if((val >= minTrim) && (val <= maxTrim)) {
+          --idx;
+        } else {
+          break;
+        }
+      }
+
+      count = idx + 1;
     }
   }
 
