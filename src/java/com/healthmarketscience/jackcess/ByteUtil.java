@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 /**
  * Byte manipulation and display utilities
@@ -468,6 +469,125 @@ public final class ByteUtil {
     int newPos = buffer.position() + count;
     buffer.position(newPos);
     return newPos;
+  }
+
+  /**
+   * Utility byte stream similar to ByteArrayOutputStream but with extended
+   * accessibility to the bytes.
+   */
+  public static class ByteStream
+  {
+    private byte[] _bytes;
+    private int _length;
+    private int _lastLength;
+
+
+    public ByteStream() {
+      this(32);
+    }
+
+    public ByteStream(int capacity) {
+      _bytes = new byte[capacity];
+    }
+
+    public int getLength() {
+      return _length;
+    }
+
+    public byte[] getBytes() {
+      return _bytes;
+    }
+
+    protected void ensureNewCapacity(int numBytes) {
+      int newLength = _length + numBytes;
+      if(newLength > _bytes.length) {
+        byte[] temp = new byte[newLength * 2];
+        System.arraycopy(_bytes, 0, temp, 0, _length);
+        _bytes = temp;
+      }
+    }
+
+    public void write(int b) {
+      ensureNewCapacity(1);
+      _bytes[_length++] = (byte)b;
+    }
+
+    public void write(byte[] b) {
+      write(b, 0, b.length);
+    }
+
+    public void write(byte[] b, int offset, int length) {
+      ensureNewCapacity(length);
+      System.arraycopy(b, offset, _bytes, _length, length);
+      _length += length;
+    }
+
+    public byte get(int offset) {
+      return _bytes[offset];
+    }
+
+    public void set(int offset, byte b) {
+      _bytes[offset] = b;
+    }
+
+    public void writeFill(int length, byte b) {
+      ensureNewCapacity(length);
+      int oldLength = _length;
+      _length += length;
+      Arrays.fill(_bytes, oldLength, _length, b);
+    }
+
+    public void writeTo(ByteStream out) {
+      out.write(_bytes, 0, _length);
+    }
+
+    public byte[] toByteArray() {
+
+      byte[] result = null;
+      if(_length == _bytes.length) {
+        result = _bytes;
+        _bytes = null;
+      } else {
+        result = new byte[_length];
+        System.arraycopy(_bytes, 0, result, 0, _length);
+        if(_lastLength == _length) {
+          // if we get the same result length bytes twice in a row, clear the
+          // _bytes so that the next _bytes will be _lastLength
+          _bytes = null;
+        }
+      }
+
+      // save result length so we can potentially get the right length of the
+      // next byte[] in reset()
+      _lastLength = _length;
+
+      return result;
+    }
+
+    public void reset() {
+      _length = 0;
+      if(_bytes == null) {
+        _bytes = new byte[_lastLength];
+      }
+    }
+
+    public void trimTrailing(byte minTrimCode, byte maxTrimCode)
+    {
+      int minTrim = ByteUtil.asUnsignedByte(minTrimCode);
+      int maxTrim = ByteUtil.asUnsignedByte(maxTrimCode);
+
+      int idx = _length - 1;
+      while(idx >= 0) {
+        int val = asUnsignedByte(get(idx));
+        if((val >= minTrim) && (val <= maxTrim)) {
+          --idx;
+        } else {
+          break;
+        }
+      }
+
+      _length = idx + 1;
+    }
   }
 
 }

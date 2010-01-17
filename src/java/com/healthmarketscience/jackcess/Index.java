@@ -27,7 +27,6 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -42,6 +41,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import static com.healthmarketscience.jackcess.IndexCodes.*;
+import static com.healthmarketscience.jackcess.ByteUtil.ByteStream;
 
 
 /**
@@ -162,6 +162,8 @@ public abstract class Index implements Comparable<Index> {
   /** temp buffer used to read/write the index pages */
   private final TempBufferHolder _indexBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.SOFT, true);
+  /** temp buffer used to create index entries */
+  private ByteStream _entryBuffer;
   /** max size for all the entries written to a given index data page */
   private final int _maxPageEntrySize;
   /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
@@ -949,7 +951,10 @@ public abstract class Index implements Comparable<Index> {
       return null;
     }
     
-    ByteArrayOutputStream bout = new ByteArrayOutputStream();
+    if(_entryBuffer == null) {
+      _entryBuffer = new ByteStream();
+    }
+    _entryBuffer.reset();
     
     for(ColumnDescriptor col : _columns) {
       Object value = values[col.getColumnIndex()];
@@ -958,10 +963,10 @@ public abstract class Index implements Comparable<Index> {
         continue;
       }
 
-      col.writeValue(value, bout);
+      col.writeValue(value, _entryBuffer);
     }
     
-    return bout.toByteArray();
+    return _entryBuffer.toByteArray();
   }  
   
   /**
@@ -1002,7 +1007,14 @@ public abstract class Index implements Comparable<Index> {
    * Flips all the bits in the byte array.
    */
   private static byte[] flipBytes(byte[] value) {
-    for(int i = 0; i < value.length; ++i) {
+    return flipBytes(value, 0, value.length);
+  }
+
+  /**
+   * Flips the bits in the specified bytes in the byte array.
+   */
+  private static byte[] flipBytes(byte[] value, int offset, int length) {
+    for(int i = offset; i < (offset + length); ++i) {
       value[i] = (byte)(~value[i]);
     } 
     return value;
@@ -1023,7 +1035,7 @@ public abstract class Index implements Comparable<Index> {
    * is based on a variety of nifty codes).
    */
   private static void writeNonNullIndexTextValue(
-      Object value, ByteArrayOutputStream bout, boolean isAscending)
+      Object value, ByteStream bout, boolean isAscending)
     throws IOException
   {
     // first, convert to string
@@ -1034,18 +1046,15 @@ public abstract class Index implements Comparable<Index> {
     if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
       str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
     }
-    
-    ByteArrayOutputStream tmpBout = bout;
-    if(!isAscending) {
-      // we need to accumulate the bytes in a temp array in order to negate
-      // them before writing them to the final array
-      tmpBout = new ByteArrayOutputStream();
-    }
+
+    // record pprevious entry length so we can do any post-processing
+    // necessary for this entry (handling descending)
+    int prevLength = bout.getLength();
     
     // now, convert each character to a "code" of one or more bytes
-    ExtraCodesOutputStream extraCodes = null;
-    ExtraCodesOutputStream unprintableCodes = null;
-    ExtraCodesOutputStream crazyCodes = null;
+    ExtraCodesStream extraCodes = null;
+    ByteStream unprintableCodes = null;
+    ByteStream crazyCodes = null;
     int charOffset = 0;
     for(int i = 0; i < str.length(); ++i) {
 
@@ -1056,7 +1065,7 @@ public abstract class Index implements Comparable<Index> {
       byte[] bytes = ch.getInlineBytes();
       if(bytes != null) {
         // write the "inline" codes immediately
-        tmpBout.write(bytes);
+        bout.write(bytes);
 
         // only increment the charOffset for chars with inline codes
         ++charOffset;
@@ -1071,7 +1080,7 @@ public abstract class Index implements Comparable<Index> {
       byte extraCodeModifier = ch.getExtraByteModifier();
       if((bytes != null) || (extraCodeModifier != 0)) {
         if(extraCodes == null) {
-          extraCodes = new ExtraCodesOutputStream(str.length());
+          extraCodes = new ExtraCodesStream(str.length());
         }
 
         // keep track of the extra codes for later
@@ -1081,7 +1090,7 @@ public abstract class Index implements Comparable<Index> {
       bytes = ch.getUnprintableBytes();
       if(bytes != null) {
         if(unprintableCodes == null) {
-          unprintableCodes = new ExtraCodesOutputStream();
+          unprintableCodes = new ByteStream();
         }
           
         // keep track of the unprintable codes for later
@@ -1091,7 +1100,7 @@ public abstract class Index implements Comparable<Index> {
       byte crazyFlag = ch.getCrazyFlag();
       if(crazyFlag != 0) {
         if(crazyCodes == null) {
-          crazyCodes = new ExtraCodesOutputStream();
+          crazyCodes = new ByteStream();
         }
 
         // keep track of the crazy flags for later
@@ -1100,7 +1109,7 @@ public abstract class Index implements Comparable<Index> {
     }
 
     // write end text flag
-    tmpBout.write(END_TEXT);
+    bout.write(END_TEXT);
 
     boolean hasExtraCodes = trimExtraCodes(
         extraCodes, (byte)0, INTERNATIONAL_EXTRA_PLACEHOLDER);
@@ -1110,27 +1119,27 @@ public abstract class Index implements Comparable<Index> {
 
       // we write all the international extra bytes first
       if(hasExtraCodes) {
-        extraCodes.writeTo(tmpBout);
+        extraCodes.writeTo(bout);
       }
 
       if(hasCrazyCodes || hasUnprintableCodes) {
 
         // write 2 more end flags
-        tmpBout.write(END_TEXT);
-        tmpBout.write(END_TEXT);
+        bout.write(END_TEXT);
+        bout.write(END_TEXT);
 
         // next come the crazy flags
         if(hasCrazyCodes) {
-          writeCrazyCodes(crazyCodes, tmpBout);
+          writeCrazyCodes(crazyCodes, bout);
         }
 
         // then we write all the unprintable extra bytes
         if(hasUnprintableCodes) {
 
           // write another end flag
-          tmpBout.write(END_TEXT);
+          bout.write(END_TEXT);
         
-          unprintableCodes.writeTo(tmpBout);
+          unprintableCodes.writeTo(bout);
         }
       }
     }
@@ -1140,12 +1149,10 @@ public abstract class Index implements Comparable<Index> {
 
       // we actually write the end byte before flipping the bytes, and write
       // another one after flipping
-      tmpBout.write(END_EXTRA_TEXT);
+      bout.write(END_EXTRA_TEXT);
       
-      // we actually wrote into a temporary array so that we can invert the
-      // bytes before writing them to the final array
-      bout.write(flipBytes(tmpBout.toByteArray()));
-
+      // flip the bytes that we have written thus far for this text value
+      flipBytes(bout.getBytes(), prevLength, (bout.getLength() - prevLength));
     }
 
     // write end extra text
@@ -1154,14 +1161,14 @@ public abstract class Index implements Comparable<Index> {
 
   private static void writeExtraCodes(
       int charOffset, byte[] bytes, byte extraCodeModifier,
-      ExtraCodesOutputStream extraCodes)
+      ExtraCodesStream extraCodes)
     throws IOException
   {
     // we fill in a placeholder value for any chars w/out extra codes
     int numChars = extraCodes.getNumChars();
     if(numChars < charOffset) {
       int fillChars = charOffset - numChars;
-      extraCodes.write(fillChars, INTERNATIONAL_EXTRA_PLACEHOLDER);
+      extraCodes.writeFill(fillChars, INTERNATIONAL_EXTRA_PLACEHOLDER);
       extraCodes.incrementNumChars(fillChars);
     }
 
@@ -1175,7 +1182,7 @@ public abstract class Index implements Comparable<Index> {
 
       // the extra code modifier is added to the last extra code written.  if
       // there is no previous extra code, it is made the first extra code.
-      int lastIdx = extraCodes.size() - 1;
+      int lastIdx = extraCodes.getLength() - 1;
       if(lastIdx >= 0) {
         byte lastByte = extraCodes.get(lastIdx);
         lastByte += extraCodeModifier;
@@ -1186,7 +1193,7 @@ public abstract class Index implements Comparable<Index> {
     }
   }
 
-  private static boolean trimExtraCodes(ExtraCodesOutputStream extraCodes,
+  private static boolean trimExtraCodes(ByteStream extraCodes,
                                         byte minTrimCode, byte maxTrimCode)
     throws IOException
   {
@@ -1194,14 +1201,14 @@ public abstract class Index implements Comparable<Index> {
       return false;
     }
 
-    extraCodes.trimTrailingBytes(minTrimCode, maxTrimCode);
+    extraCodes.trimTrailing(minTrimCode, maxTrimCode);
 
     // anything left?
-    return (extraCodes.size() > 0);
+    return (extraCodes.getLength() > 0);
   }
 
   private static void writeUnprintableCodes(
-      int charOffset, byte[] bytes, ExtraCodesOutputStream extraCodes)
+      int charOffset, byte[] bytes, ByteStream extraCodes)
     throws IOException
   {
     // we write a whacky combo of bytes for each unprintable char which
@@ -1219,20 +1226,19 @@ public abstract class Index implements Comparable<Index> {
     extraCodes.write(bytes);
   }
 
-  private static void writeCrazyCodes(ExtraCodesOutputStream crazyCodes, 
-                                      ByteArrayOutputStream tmpBout)
+  private static void writeCrazyCodes(ByteStream crazyCodes, ByteStream bout)
     throws IOException
   {
     // CRAZY_CODE_2 flags at the end are ignored, so ditch them
     trimExtraCodes(crazyCodes, CRAZY_CODE_2, CRAZY_CODE_2);
 
-    if(crazyCodes.size() > 0) {
+    if(crazyCodes.getLength() > 0) {
 
       // the crazy codes get encoded into 6 bit sequences where each code is 2
       // bits (where the first 2 bits in the byte are a common prefix).
       byte curByte = CRAZY_CODE_START;
       int idx = 0;
-      for(int i = 0; i < crazyCodes.size(); ++i) {
+      for(int i = 0; i < crazyCodes.getLength(); ++i) {
         byte nextByte = crazyCodes.get(i);
         nextByte <<= ((2 - idx) * 2);
         curByte |= nextByte;
@@ -1240,7 +1246,7 @@ public abstract class Index implements Comparable<Index> {
         ++idx;
         if(idx == 3) {
           // write current byte and reset
-          tmpBout.write(curByte);
+          bout.write(curByte);
           curByte = CRAZY_CODE_START;
           idx = 0;
         }
@@ -1248,13 +1254,13 @@ public abstract class Index implements Comparable<Index> {
 
       // write last byte
       if(idx > 0) {
-        tmpBout.write(curByte);
+        bout.write(curByte);
       }
     }
 
     // write crazy code suffix (note, we write this even if all the codes are
     // trmmed
-    tmpBout.write(CRAZY_CODES_SUFFIX);
+    bout.write(CRAZY_CODES_SUFFIX);
   }
 
   /**
@@ -1371,7 +1377,7 @@ public abstract class Index implements Comparable<Index> {
       return (value == null);
     }
     
-    protected final void writeValue(Object value, ByteArrayOutputStream bout)
+    protected final void writeValue(Object value, ByteStream bout)
       throws IOException
     {
       if(isNullValue(value)) {
@@ -1387,7 +1393,7 @@ public abstract class Index implements Comparable<Index> {
     }
 
     protected abstract void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException; 
     
     @Override
@@ -1409,7 +1415,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1441,7 +1447,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1481,7 +1487,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1520,7 +1526,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1554,7 +1560,7 @@ public abstract class Index implements Comparable<Index> {
     }
     
     @Override
-    protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       bout.write(
@@ -1577,7 +1583,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       writeNonNullIndexTextValue(value, bout, isAscending());
@@ -1597,7 +1603,7 @@ public abstract class Index implements Comparable<Index> {
     
     @Override
     protected void writeNonNullValue(
-        Object value, ByteArrayOutputStream bout)
+        Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1631,7 +1637,7 @@ public abstract class Index implements Comparable<Index> {
     }
 
     @Override
-    protected void writeNonNullValue(Object value, ByteArrayOutputStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       throw new UnsupportedOperationException("should not be called");
@@ -2381,19 +2387,13 @@ public abstract class Index implements Comparable<Index> {
 
 
   /**
-   * Extension of ByteArrayOutputStream which allows more complex access to
-   * the underlying bytes, as well as keeps track of an additional char count.
+   * Extension of ByteStream which keeps track of an additional char count.
    */
-  private static final class ExtraCodesOutputStream 
-    extends ByteArrayOutputStream
+  private static final class ExtraCodesStream extends ByteStream
   {
     private int numChars;
 
-    private ExtraCodesOutputStream() {
-      super();
-    }
-
-    private ExtraCodesOutputStream(int length) {
+    private ExtraCodesStream(int length) {
       super(length);
     }
 
@@ -2401,40 +2401,8 @@ public abstract class Index implements Comparable<Index> {
       return numChars;
     }
     
-    public byte get(int offset) {
-      return buf[offset];
-    }
-
-    public void set(int offset, byte b) {
-      buf[offset] = b;
-    }
-
-    public void write(int numBytes, byte b) {
-      for(int i = 0; i < numBytes; ++i) {
-        write(b);
-      }
-    }
-
     public void incrementNumChars(int inc) {
       numChars += inc;
-    }
-
-    public void trimTrailingBytes(byte minTrimCode, byte maxTrimCode)
-    {
-      int minTrim = ByteUtil.asUnsignedByte(minTrimCode);
-      int maxTrim = ByteUtil.asUnsignedByte(maxTrimCode);
-
-      int idx = count - 1;
-      while(idx >= 0) {
-        int val = ByteUtil.asUnsignedByte(get(idx));
-        if((val >= minTrim) && (val <= maxTrim)) {
-          --idx;
-        } else {
-          break;
-        }
-      }
-
-      count = idx + 1;
     }
   }
 
