@@ -15,10 +15,13 @@
       <action dev="jahlborn" type="update">
         Refactor import/copy methods from Database into ImportUtil.  Allow
         reuse of existing tables.  make behavior/naming of copy and import
-        methods consistent.  (ideas from use submitted patch).
+        methods consistent.  (ideas from submitted patch).
       </action>
       <action dev="jahlborn" type="fix" issue="2919216">
         Set overflow info in header row, not in last data row.
+      </action>
+      <action dev="jahlborn" type="fix" issue="2920092">
+        Add support for indexing strings containing any characters from BMP 0.
       </action>
     </release>
     <release version="1.1.20" date="2009-11-18">
