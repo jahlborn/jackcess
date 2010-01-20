@@ -160,6 +160,14 @@
                 string index value"?</question>
       <answer>
         <p>
+          Update: As of the 1.1.21 release, the <u>text index handling
+          supports the entire Basic Multilingual Plane 0</u> (i.e. any unicode
+          character 0x0000-0xFFFF).  Consequently table names can (as of this
+          release) contain any character in this character set.  Therefore,
+          the rest of this answer should no longer be an issue, but keeping it
+          here for reference.
+        </p>
+        <p>
           Jackcess cannot currently update a text column index with values
           which contain non-ascii characters.  This situation often arises
           when tables are created with names which contain international
@@ -174,7 +182,7 @@
           (as of this release) contain any character in this character set.
         </p>
         <p>
-          Some suggestions:
+          Some suggestions (for older releases):
         </p>
         <ul>
           <li>Use only ascii (or ISO-8859-1 as of 1.1.13) characters in table

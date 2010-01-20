@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.1.21" date="TBD">
+    <release version="1.1.21" date="2010-01-19">
       <action dev="jahlborn" type="fix" issue="2899605">
         Further improvements to date handling.
       </action>

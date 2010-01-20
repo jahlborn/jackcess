@@ -1,10 +1,7 @@
 Missing pieces:
 
-- handle more text index entry types (extended charsets, alternate encodings)
-  * MEDIUM
 - implement index creation
-  * VERY HARD (still missing knowledge about all the magic bits in index meta
-    data)
+  * HARD (still missing knowledge about all the magic bits in index meta data)
 - implement table, column, index renaming
   * EASY
 - implement table, column, index deletion
