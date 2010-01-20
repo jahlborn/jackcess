@@ -81,7 +81,7 @@ public class UsageMap
    */
   private UsageMap(Database database, ByteBuffer tableBuffer,
                    int pageNum, short rowStart)
-  throws IOException
+    throws IOException
   {
     _database = database;
     _tableBuffer = tableBuffer;
@@ -385,7 +385,8 @@ public class UsageMap
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder(
-        "page numbers (range " + _startPage + " " + _endPage + "): [");
+        "(" + _handler.getClass().getSimpleName() +
+        ") page numbers (range " + _startPage + " " + _endPage + "): [");
     PageCursor pCursor = cursor();
     while(true) {
       int nextPage = pCursor.getNextPage();
