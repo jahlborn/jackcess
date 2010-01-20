@@ -81,6 +81,7 @@ public class IndexCodes {
   static final byte CRAZY_CODE_2 = (byte)0x03;
   static final byte[] CRAZY_CODES_SUFFIX = 
     new byte[]{(byte)0xFF, (byte)0x02, (byte)0x80, (byte)0xFF, (byte)0x80};
+  static final byte CRAZY_CODES_UNPRINT_SUFFIX = (byte)0xFF;
 
   // stash the codes in some resource files
   private static final String CODES_FILE = 
@@ -88,6 +89,10 @@ public class IndexCodes {
   private static final String EXT_CODES_FILE = 
     "com/healthmarketscience/jackcess/index_codes_ext.txt";
 
+  /**
+   * Enum which classifies the types of char encoding strategies used when
+   * creating text index entries.
+   */
   enum Type {
     SIMPLE("S") {
       @Override public CharHandler parseCodes(String[] codeStrings) {
@@ -133,6 +138,10 @@ public class IndexCodes {
     public abstract CharHandler parseCodes(String[] codeStrings);
   }
 
+  /**
+   * Base class for the handlers which hold thetext index character encoding
+   * information.
+   */
   abstract static class CharHandler {
     public abstract Type getType();
     public byte[] getInlineBytes() {
@@ -152,6 +161,9 @@ public class IndexCodes {
     }
   }
 
+  /**
+   * CharHandler for Type.SIMPLE
+   */
   private static final class SimpleCharHandler extends CharHandler {
     private byte[] _bytes;
     private SimpleCharHandler(byte[] bytes) {
@@ -165,6 +177,9 @@ public class IndexCodes {
     }
   }
 
+  /**
+   * CharHandler for Type.INTERNATIONAL
+   */
   private static final class InternationalCharHandler extends CharHandler {
     private byte[] _bytes;
     private byte[] _extraBytes;
@@ -183,6 +198,9 @@ public class IndexCodes {
     }
   }
 
+  /**
+   * CharHandler for Type.UNPRINTABLE
+   */
   private static final class UnprintableCharHandler extends CharHandler {
     private byte[] _unprintBytes;
     private UnprintableCharHandler(byte[] unprintBytes) {
@@ -196,6 +214,9 @@ public class IndexCodes {
     }
   }
 
+  /**
+   * CharHandler for Type.UNPRINTABLE_EXT
+   */
   private static final class UnprintableExtCharHandler extends CharHandler {
     private byte _extraByteMod;
     private UnprintableExtCharHandler(Byte extraByteMod) {
@@ -209,6 +230,9 @@ public class IndexCodes {
     }
   }
 
+  /**
+   * CharHandler for Type.INTERNATIONAL_EXT
+   */
   private static final class InternationalExtCharHandler extends CharHandler {
     private byte[] _bytes;
     private byte[] _extraBytes;
@@ -233,12 +257,15 @@ public class IndexCodes {
     }
   }
 
+  /** shared CharHandler instance for Type.IGNORED */
   static final CharHandler IGNORED_CHAR_HANDLER = new CharHandler() {
     @Override public Type getType() {
       return Type.IGNORED;
     }
   };
 
+  /** alternate shared CharHandler instance for "surrogate" chars (which we do
+      not handle) */
   static final CharHandler SURROGATE_CHAR_HANDLER = new CharHandler() {
     @Override public Type getType() {
       return Type.IGNORED;
@@ -273,6 +300,9 @@ public class IndexCodes {
   private IndexCodes() {
   }
 
+  /**
+   * Returns the CharHandler for the given character.
+   */
   static CharHandler getCharHandler(char c)
   {
     if(c <= LAST_CHAR) {
@@ -283,6 +313,10 @@ public class IndexCodes {
     return ExtCodes._values[extOffset];
   }
 
+  /**
+   * Loads the CharHandlers for the given range of characters from the
+   * resource file with the given name.
+   */
   private static CharHandler[] loadCodes(String codesFilePath, 
                                          char firstChar, char lastChar)
   {
@@ -333,6 +367,10 @@ public class IndexCodes {
     return values;
   }
 
+  /**
+   * Returns a CharHandler parsed from the given line from an index codes
+   * file.
+   */
   private static CharHandler parseCodes(Map<String,Type> prefixMap,
                                         String codeLine)
   {
@@ -341,6 +379,9 @@ public class IndexCodes {
     return prefixMap.get(prefix).parseCodes(suffix.split(",", -1));
   }
 
+  /**
+   * Returns a SimpleCharHandler parsed from the given index code strings.
+   */
   private static CharHandler parseSimpleCodes(String[] codeStrings) 
   {
     if(codeStrings.length != 1) {
@@ -350,6 +391,10 @@ public class IndexCodes {
     return new SimpleCharHandler(codesToBytes(codeStrings[0], true));
   }
 
+  /**
+   * Returns an InternationalCharHandler parsed from the given index code
+   * strings.
+   */
   private static CharHandler parseInternationalCodes(String[] codeStrings)
   {
     if(codeStrings.length != 2) {
@@ -360,6 +405,10 @@ public class IndexCodes {
                                         codesToBytes(codeStrings[1], true));
   }
 
+  /**
+   * Returns a UnprintableCharHandler parsed from the given index code
+   * strings.
+   */
   private static CharHandler parseUnprintableCodes(String[] codeStrings)
   {
     if(codeStrings.length != 1) {
@@ -369,6 +418,10 @@ public class IndexCodes {
     return new UnprintableCharHandler(codesToBytes(codeStrings[0], true));
   }
 
+  /**
+   * Returns a UnprintableExtCharHandler parsed from the given index code
+   * strings.
+   */
   private static CharHandler parseUnprintableExtCodes(String[] codeStrings) 
   {
     if(codeStrings.length != 1) {
@@ -383,6 +436,10 @@ public class IndexCodes {
     return new UnprintableExtCharHandler(bytes[0]);
   }
 
+  /**
+   * Returns a InternationalExtCharHandler parsed from the given index code
+   * strings.
+   */
   private static CharHandler parseInternationalExtCodes(String[] codeStrings) 
   {
     if(codeStrings.length != 3) {
@@ -397,6 +454,10 @@ public class IndexCodes {
                                            crazyFlag);
   }
 
+  /**
+   * Converts a string of hex encoded bytes to a byte[], optionally throwing
+   * an exception if no codes are given.
+   */
   private static byte[] codesToBytes(String codes, boolean required)
   {
     if(codes.length() == 0) {
@@ -414,6 +475,11 @@ public class IndexCodes {
     return bytes;
   }
 
+  /**
+   * Returns an the char value converted to an unsigned char value.  Note, I
+   * think this is unnecessary (I think java treats chars as unsigned), but I
+   * did this just to be on the safe side.
+   */
   private static int asUnsignedChar(char c)
   {
     return c & 0xFFFF;

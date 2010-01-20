@@ -166,8 +166,8 @@ public abstract class Index implements Comparable<Index> {
   private ByteStream _entryBuffer;
   /** max size for all the entries written to a given index data page */
   private final int _maxPageEntrySize;
-  /** FIXME, for now, we can't write multi-page indexes or indexes using the funky primary key compression scheme */
-  boolean _readOnly;
+  /** FIXME, for SimpleIndex, we can't write multi-page indexes or indexes using the entry compression scheme */
+  private boolean _readOnly;
   
   protected Index(Table table, int uniqueEntryCount,
                   int uniqueEntryCountOffset)
@@ -1094,7 +1094,8 @@ public abstract class Index implements Comparable<Index> {
         }
           
         // keep track of the unprintable codes for later
-        writeUnprintableCodes(curCharOffset, bytes, unprintableCodes);
+        writeUnprintableCodes(curCharOffset, bytes, unprintableCodes,
+                              extraCodes);
       }
       
       byte crazyFlag = ch.getCrazyFlag();
@@ -1130,7 +1131,14 @@ public abstract class Index implements Comparable<Index> {
 
         // next come the crazy flags
         if(hasCrazyCodes) {
+
           writeCrazyCodes(crazyCodes, bout);
+
+          // if we are writing unprintable codes after this, tack on another
+          // code
+          if(hasUnprintableCodes) {
+            bout.write(CRAZY_CODES_UNPRINT_SUFFIX);
+          }
         }
 
         // then we write all the unprintable extra bytes
@@ -1159,6 +1167,9 @@ public abstract class Index implements Comparable<Index> {
     bout.write(END_EXTRA_TEXT);    
   }
 
+  /**
+   * Encodes the given extra code info in the given stream.
+   */
   private static void writeExtraCodes(
       int charOffset, byte[] bytes, byte extraCodeModifier,
       ExtraCodesStream extraCodes)
@@ -1180,19 +1191,31 @@ public abstract class Index implements Comparable<Index> {
 
     } else {
 
-      // the extra code modifier is added to the last extra code written.  if
-      // there is no previous extra code, it is made the first extra code.
+      // extra code modifiers modify the existing extra code bytes and do not
+      // count as additional extra code chars
       int lastIdx = extraCodes.getLength() - 1;
       if(lastIdx >= 0) {
+
+        // the extra code modifier is added to the last extra code written
         byte lastByte = extraCodes.get(lastIdx);
         lastByte += extraCodeModifier;
         extraCodes.set(lastIdx, lastByte);
+
       } else {
+
+        // there is no previous extra code, add a new code (but keep track of
+        // this "unprintable code" prefix)
         extraCodes.write(extraCodeModifier);
+        extraCodes.setUnprintablePrefixLen(1);
       }
     }
   }
 
+  /**
+   * Trims any bytes in the given range off of the end of the given stream,
+   * returning whether or not there are any bytes left in the given stream
+   * after trimming.
+   */
   private static boolean trimExtraCodes(ByteStream extraCodes,
                                         byte minTrimCode, byte maxTrimCode)
     throws IOException
@@ -1207,25 +1230,45 @@ public abstract class Index implements Comparable<Index> {
     return (extraCodes.getLength() > 0);
   }
 
+  /**
+   * Encodes the given unprintable char codes in the given stream.
+   */
   private static void writeUnprintableCodes(
-      int charOffset, byte[] bytes, ByteStream extraCodes)
+      int charOffset, byte[] bytes, ByteStream unprintableCodes,
+      ExtraCodesStream extraCodes)
     throws IOException
   {
+    // the offset seems to be calculated based on the number of bytes in the
+    // "extra codes" part of the entry (even if there are no extra codes bytes
+    // actually written in the final entry).
+    int unprintCharOffset = charOffset;
+    if(extraCodes != null) {
+      // we need to account for some extra codes which have not been written
+      // yet.  additionally, any unprintable bytes added to the beginning of
+      // the extra codes are ignored.
+      unprintCharOffset = extraCodes.getLength() +
+        (charOffset - extraCodes.getNumChars()) -
+        extraCodes.getUnprintablePrefixLen();
+    }
+
     // we write a whacky combo of bytes for each unprintable char which
     // includes a funky offset and extra char itself
     int offset =
       (UNPRINTABLE_COUNT_START +
-       (UNPRINTABLE_COUNT_MULTIPLIER * charOffset))
+       (UNPRINTABLE_COUNT_MULTIPLIER * unprintCharOffset))
       | UNPRINTABLE_OFFSET_FLAGS;
 
     // write offset as big-endian short
-    extraCodes.write((offset >> 8) & 0xFF);
-    extraCodes.write(offset & 0xFF);
+    unprintableCodes.write((offset >> 8) & 0xFF);
+    unprintableCodes.write(offset & 0xFF);
           
-    extraCodes.write(UNPRINTABLE_MIDFIX);
-    extraCodes.write(bytes);
+    unprintableCodes.write(UNPRINTABLE_MIDFIX);
+    unprintableCodes.write(bytes);
   }
 
+  /**
+   * Encode the given crazy code bytes into the given byte stream.
+   */
   private static void writeCrazyCodes(ByteStream crazyCodes, ByteStream bout)
     throws IOException
   {
@@ -1259,7 +1302,7 @@ public abstract class Index implements Comparable<Index> {
     }
 
     // write crazy code suffix (note, we write this even if all the codes are
-    // trmmed
+    // trimmed
     bout.write(CRAZY_CODES_SUFFIX);
   }
 
@@ -2387,22 +2430,32 @@ public abstract class Index implements Comparable<Index> {
 
 
   /**
-   * Extension of ByteStream which keeps track of an additional char count.
+   * Extension of ByteStream which keeps track of an additional char count and
+   * the length of any "unprintable" code prefix.
    */
   private static final class ExtraCodesStream extends ByteStream
   {
-    private int numChars;
+    private int _numChars;
+    private int _unprintablePrefixLen; 
 
     private ExtraCodesStream(int length) {
       super(length);
     }
 
     public int getNumChars() {
-      return numChars;
+      return _numChars;
     }
     
     public void incrementNumChars(int inc) {
-      numChars += inc;
+      _numChars += inc;
+    }
+
+    public int getUnprintablePrefixLen() {
+      return _unprintablePrefixLen;
+    }
+
+    public void setUnprintablePrefixLen(int len) {
+      _unprintablePrefixLen = len;
     }
   }
 
