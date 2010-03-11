@@ -58,7 +58,11 @@ public class BigIndexTest extends TestCase {
   
   @Override
   protected void tearDown() {
-    System.setProperty(Database.USE_BIG_INDEX_PROPERTY, _oldBigIndexValue);
+    if (_oldBigIndexValue != null) {
+      System.setProperty(Database.USE_BIG_INDEX_PROPERTY, _oldBigIndexValue);
+    } else {
+      System.getProperties().remove(Database.USE_BIG_INDEX_PROPERTY);
+    }
   }
   
   public void testComplexIndex() throws Exception
