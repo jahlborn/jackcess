@@ -370,11 +370,24 @@ public class Database
             EMPTY_MDB)), 0, Integer.MAX_VALUE);
     return new Database(channel, autoSync);
   }
-  
-  private static FileChannel openChannel(File mdbFile, boolean readOnly)
+
+  /**
+   * Package visible only to support unit tests via DatabaseTest.openChannel().
+   * @param mdbFile file to open
+   * @param readOnly true if read-only
+   * @return a FileChannel on the given file.
+   * @exception FileNotFoundException
+   *            if the mode is <tt>"r"</tt> but the given file object does
+   *            not denote an existing regular file, or if the mode begins
+   *            with <tt>"rw"</tt> but the given file object does not denote
+   *            an existing, writable regular file and a new regular file of
+   *            that name cannot be created, or if some other error occurs
+   *            while opening or creating the file
+   */
+  static FileChannel openChannel(final File mdbFile, final boolean readOnly)
     throws FileNotFoundException
   {
-    String mode = (readOnly ? "r" : "rw");
+    final String mode = (readOnly ? "r" : "rw");
     return new RandomAccessFile(mdbFile, mode).getChannel();
   }
   

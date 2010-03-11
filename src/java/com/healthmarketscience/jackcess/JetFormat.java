@@ -52,6 +52,8 @@ public abstract class JetFormat {
   private static final byte CODE_VERSION_3 = 0x0;
   /** Version code for Jet version 4 */
   private static final byte CODE_VERSION_4 = 0x1;
+  /** Version code for Jet version 5 */
+  private static final byte CODE_VERSION_5 = 0x2;
 
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
@@ -131,10 +133,14 @@ public abstract class JetFormat {
   
   public final Charset CHARSET;
   
+  public static final JetFormat VERSION_3 = new Jet3Format();
   public static final JetFormat VERSION_4 = new Jet4Format();
+  public static final JetFormat VERSION_5 = new Jet5Format();
 
   /**
+   * @param channel the database file.
    * @return The Jet Format represented in the passed-in file
+   * @throws IOException if the database file format is unsupported.
    */
   public static JetFormat getFormat(FileChannel channel) throws IOException {
     ByteBuffer buffer = ByteBuffer.allocate(1);
@@ -144,8 +150,12 @@ public abstract class JetFormat {
     }
     buffer.flip();
     byte version = buffer.get();
-    if (version == CODE_VERSION_4) {
+    if (version == CODE_VERSION_3) {
+      return VERSION_3;
+    } else if (version == CODE_VERSION_4) {
       return VERSION_4;
+    } else if (version == CODE_VERSION_5) {
+      return VERSION_5;
     }
     throw new IOException("Unsupported version: " + version);
   }
@@ -300,10 +310,14 @@ public abstract class JetFormat {
     return _name;
   }
   
-  private static final class Jet4Format extends JetFormat {
+  private static class Jet4Format extends JetFormat {
 
     private Jet4Format() {
-      super("VERSION_4");
+      this("VERSION_4");
+    }
+
+    private Jet4Format(final String name) {
+      super(name);
     }
 
     @Override
@@ -438,4 +452,15 @@ public abstract class JetFormat {
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
   }
   
+  private static final class Jet3Format extends Jet4Format {
+      private Jet3Format() {
+        super("VERSION_3");
+      }
+  }
+
+  private static final class Jet5Format extends Jet4Format {
+      private Jet5Format() {
+        super("VERSION_5");
+      }
+  }
 }
