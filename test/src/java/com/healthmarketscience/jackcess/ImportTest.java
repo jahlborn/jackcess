@@ -39,6 +39,7 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 
 /** 
@@ -53,75 +54,81 @@ public class ImportTest extends TestCase
 
   public void testImportFromFile() throws Exception
   {
-    Database db = create();
-    db.importFile("test", new File("test/data/sample-input.tab"), "\\t");
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+      db.importFile("test", new File("test/data/sample-input.tab"), "\\t");
+    }
   }
 
   public void testImportFromFileWithOnlyHeaders() throws Exception
   {
-    Database db = create();
-    db.importFile("test", new File("test/data/sample-input-only-headers.tab"),
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+      db.importFile("test", new File("test/data/sample-input-only-headers.tab"),
                   "\\t");
+    }
   }
 
   public void testCopySqlHeaders() throws Exception
   {
-    TestResultSet rs = new TestResultSet();
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
 
-    rs.addColumn(Types.INTEGER, "col1");
-    rs.addColumn(Types.VARCHAR, "col2", 60, 0, 0);
-    rs.addColumn(Types.VARCHAR, "col3", 500, 0, 0);
-    rs.addColumn(Types.BINARY, "col4", 128, 0, 0);
-    rs.addColumn(Types.BINARY, "col5", 512, 0, 0);
-    rs.addColumn(Types.NUMERIC, "col6", 0, 7, 15);
-    rs.addColumn(Types.VARCHAR, "col7", Integer.MAX_VALUE, 0, 0);
+      TestResultSet rs = new TestResultSet();
 
-    Database db = create();
-    db.copyTable("Test1", (ResultSet)Proxy.newProxyInstance(
-                     Thread.currentThread().getContextClassLoader(),
-                     new Class[]{ResultSet.class},
-                     rs));
+      rs.addColumn(Types.INTEGER, "col1");
+      rs.addColumn(Types.VARCHAR, "col2", 60, 0, 0);
+      rs.addColumn(Types.VARCHAR, "col3", 500, 0, 0);
+      rs.addColumn(Types.BINARY, "col4", 128, 0, 0);
+      rs.addColumn(Types.BINARY, "col5", 512, 0, 0);
+      rs.addColumn(Types.NUMERIC, "col6", 0, 7, 15);
+      rs.addColumn(Types.VARCHAR, "col7", Integer.MAX_VALUE, 0, 0);
 
-    Table t = db.getTable("Test1");
-    List<Column> columns = t.getColumns();
-    assertEquals(7, columns.size());
+      Database db = create(fileFormat);
+      db.copyTable("Test1", (ResultSet)Proxy.newProxyInstance(
+                       Thread.currentThread().getContextClassLoader(),
+                       new Class[]{ResultSet.class},
+                       rs));
 
-    Column c = columns.get(0);
-    assertEquals("col1", c.getName());
-    assertEquals(DataType.LONG, c.getType());
+      Table t = db.getTable("Test1");
+      List<Column> columns = t.getColumns();
+      assertEquals(7, columns.size());
 
-    c = columns.get(1);
-    assertEquals("col2", c.getName());
-    assertEquals(DataType.TEXT, c.getType());
-    assertEquals(120, c.getLength());
+      Column c = columns.get(0);
+      assertEquals("col1", c.getName());
+      assertEquals(DataType.LONG, c.getType());
 
-    c = columns.get(2);
-    assertEquals("col3", c.getName());
-    assertEquals(DataType.MEMO, c.getType());
-    assertEquals(0, c.getLength());
+      c = columns.get(1);
+      assertEquals("col2", c.getName());
+      assertEquals(DataType.TEXT, c.getType());
+      assertEquals(120, c.getLength());
 
-    c = columns.get(3);
-    assertEquals("col4", c.getName());
-    assertEquals(DataType.BINARY, c.getType());
-    assertEquals(128, c.getLength());
-    
-    c = columns.get(4);
-    assertEquals("col5", c.getName());
-    assertEquals(DataType.OLE, c.getType());
-    assertEquals(0, c.getLength());
-    
-    c = columns.get(5);
-    assertEquals("col6", c.getName());
-    assertEquals(DataType.NUMERIC, c.getType());
-    assertEquals(17, c.getLength());
-    assertEquals(7, c.getScale());
-    assertEquals(15, c.getPrecision());
-    
-    c = columns.get(6);
-    assertEquals("col7", c.getName());
-    assertEquals(DataType.MEMO, c.getType());
-    assertEquals(0, c.getLength());
+      c = columns.get(2);
+      assertEquals("col3", c.getName());
+      assertEquals(DataType.MEMO, c.getType());
+      assertEquals(0, c.getLength());
 
+      c = columns.get(3);
+      assertEquals("col4", c.getName());
+      assertEquals(DataType.BINARY, c.getType());
+      assertEquals(128, c.getLength());
+
+      c = columns.get(4);
+      assertEquals("col5", c.getName());
+      assertEquals(DataType.OLE, c.getType());
+      assertEquals(0, c.getLength());
+
+      c = columns.get(5);
+      assertEquals("col6", c.getName());
+      assertEquals(DataType.NUMERIC, c.getType());
+      assertEquals(17, c.getLength());
+      assertEquals(7, c.getScale());
+      assertEquals(15, c.getPrecision());
+
+      c = columns.get(6);
+      assertEquals("col7", c.getName());
+      assertEquals(DataType.MEMO, c.getType());
+      assertEquals(0, c.getLength());
+    }
   }
 
 

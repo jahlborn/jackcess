@@ -5,6 +5,8 @@ import junit.framework.TestCase;
 import java.io.File;
 import java.io.IOException;
 
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
+
 /**
  * @author Dan Rollo
  *         Date: Mar 5, 2010
@@ -14,14 +16,30 @@ public final class UsageMapTest extends TestCase {
 
     public void testRead() throws Exception {
         try {
-            Database.open(JetFormatTest.DB_1997);
+            Database.open(UNSUPPORTED_TEST_V1997.getFile());
             fail("mdb v97 usage map unsupported");
         } catch (IOException e) {
             assertEquals(UsageMap.MSG_PREFIX_UNRECOGNIZED_MAP + 2, e.getMessage());
         }
 
-        checkUsageMapRead(JetFormatTest.DB_2000, 743, 767);
-        checkUsageMapRead(JetFormatTest.DB_2007, 42, 511);
+        for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+            final int expectedFirstPage;
+            final int expectedLastPage;
+            final Database.FileFormat expectedFileFormat = testDB.getExpectedFileFormat();
+            if (Database.FileFormat.V2000.equals(expectedFileFormat)) {
+                expectedFirstPage = 743;
+                expectedLastPage = 767;
+            } else if (Database.FileFormat.V2003.equals(expectedFileFormat)) {
+                expectedFirstPage = 16;
+                expectedLastPage = 799;
+            } else if (Database.FileFormat.V2007.equals(expectedFileFormat)) {
+                expectedFirstPage = 42;
+                expectedLastPage = 511;
+            } else {
+                throw new IllegalAccessException("Unknown file format: " + expectedFileFormat);
+            }
+            checkUsageMapRead(testDB.getFile(), expectedFirstPage, expectedLastPage);
+        }
     }
 
     private static void checkUsageMapRead(final File dbFile,
@@ -30,8 +48,8 @@ public final class UsageMapTest extends TestCase {
 
         final Database db = Database.open(dbFile);
         final UsageMap usageMap = UsageMap.read(db,
-                1, //PageChannel.PAGE_GLOBAL_USAGE_MAP,
-                0, //PageChannel.ROW_GLOBAL_USAGE_MAP,
+                PageChannel.PAGE_GLOBAL_USAGE_MAP,
+                PageChannel.ROW_GLOBAL_USAGE_MAP,
                 true);
         assertEquals("Unexpected FirstPageNumber.", expectedFirstPage, usageMap.getFirstPageNumber());
         assertEquals("Unexpected LastPageNumber.", expectedLastPage, usageMap.getLastPageNumber());

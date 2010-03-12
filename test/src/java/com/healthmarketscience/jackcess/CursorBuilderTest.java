@@ -29,6 +29,8 @@ package com.healthmarketscience.jackcess;
 
 import junit.framework.TestCase;
 
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
+
 /**
  * @author James Ahlborn
  */
@@ -50,117 +52,119 @@ public class CursorBuilderTest extends TestCase {
   
   public void test() throws Exception
   {
-    Database db = CursorTest.createTestIndexTable();
+    for (final TestDB indexCursorDB : CursorTest.INDEX_CURSOR_DBS) {
+      Database db = CursorTest.createTestIndexTable(indexCursorDB);
 
-    Table table = db.getTable("test");
-    Index idx = table.getIndexes().get(0);
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
 
-    Cursor expected = Cursor.createCursor(table);
-    
-    Cursor found = new CursorBuilder(table).toCursor();
-    assertCursor(expected, found);
+      Cursor expected = Cursor.createCursor(table);
 
-    expected = Cursor.createIndexCursor(table, idx);
-    found = new CursorBuilder(table)
-      .setIndex(idx)
-      .toCursor();
-    assertCursor(expected, found);
+      Cursor found = new CursorBuilder(table).toCursor();
+      assertCursor(expected, found);
 
-    expected = Cursor.createIndexCursor(table, idx);
-    found = new CursorBuilder(table)
-      .setIndexByName("id")
-      .toCursor();
-    assertCursor(expected, found);
+      expected = Cursor.createIndexCursor(table, idx);
+      found = new CursorBuilder(table)
+        .setIndex(idx)
+        .toCursor();
+      assertCursor(expected, found);
 
-    try {
-      new CursorBuilder(table)
-        .setIndexByName("foo");
-      fail("IllegalArgumentException should have been thrown");
-    } catch(IllegalArgumentException ignored) {
-      // success
+      expected = Cursor.createIndexCursor(table, idx);
+      found = new CursorBuilder(table)
+        .setIndexByName("id")
+        .toCursor();
+      assertCursor(expected, found);
+
+      try {
+        new CursorBuilder(table)
+          .setIndexByName("foo");
+        fail("IllegalArgumentException should have been thrown");
+      } catch(IllegalArgumentException ignored) {
+        // success
+      }
+
+      expected = Cursor.createIndexCursor(table, idx);
+      found = new CursorBuilder(table)
+        .setIndexByColumns(table.getColumn("id"))
+        .toCursor();
+      assertCursor(expected, found);
+
+      try {
+        new CursorBuilder(table)
+          .setIndexByColumns(table.getColumn("value"));
+        fail("IllegalArgumentException should have been thrown");
+      } catch(IllegalArgumentException ignored) {
+        // success
+      }
+
+      try {
+        new CursorBuilder(table)
+          .setIndexByColumns(table.getColumn("id"), table.getColumn("value"));
+        fail("IllegalArgumentException should have been thrown");
+      } catch(IllegalArgumentException ignored) {
+        // success
+      }
+
+      expected = Cursor.createCursor(table);
+      expected.beforeFirst();
+      found = new CursorBuilder(table)
+        .beforeFirst()
+        .toCursor();
+      assertCursor(expected, found);
+
+      expected = Cursor.createCursor(table);
+      expected.afterLast();
+      found = new CursorBuilder(table)
+        .afterLast()
+        .toCursor();
+      assertCursor(expected, found);
+
+      expected = Cursor.createCursor(table);
+      expected.moveNextRows(2);
+      Cursor.Savepoint sp = expected.getSavepoint();
+      found = new CursorBuilder(table)
+        .afterLast()
+        .restoreSavepoint(sp)
+        .toCursor();
+      assertCursor(expected, found);
+
+      expected = Cursor.createIndexCursor(table, idx);
+      expected.moveNextRows(2);
+      sp = expected.getSavepoint();
+      found = new CursorBuilder(table)
+        .setIndex(idx)
+        .beforeFirst()
+        .restoreSavepoint(sp)
+        .toCursor();
+      assertCursor(expected, found);
+
+      expected = Cursor.createIndexCursor(table, idx,
+                                          idx.constructIndexRowFromEntry(3),
+                                          null);
+      found = new CursorBuilder(table)
+        .setIndex(idx)
+        .setStartEntry(3)
+        .toCursor();
+      assertCursor(expected, found);
+
+      expected = Cursor.createIndexCursor(table, idx,
+                                          idx.constructIndexRowFromEntry(3),
+                                          false,
+                                          idx.constructIndexRowFromEntry(7),
+                                          false);
+      found = new CursorBuilder(table)
+        .setIndex(idx)
+        .setStartEntry(3)
+        .setStartRowInclusive(false)
+        .setEndEntry(7)
+        .setEndRowInclusive(false)
+        .toCursor();
+      assertCursor(expected, found);
+
+
+
+      db.close();
     }
-    
-    expected = Cursor.createIndexCursor(table, idx);
-    found = new CursorBuilder(table)
-      .setIndexByColumns(table.getColumn("id"))
-      .toCursor();
-    assertCursor(expected, found);
-
-    try {
-      new CursorBuilder(table)
-        .setIndexByColumns(table.getColumn("value"));
-      fail("IllegalArgumentException should have been thrown");
-    } catch(IllegalArgumentException ignored) {
-      // success
-    }
-    
-    try {
-      new CursorBuilder(table)
-        .setIndexByColumns(table.getColumn("id"), table.getColumn("value"));
-      fail("IllegalArgumentException should have been thrown");
-    } catch(IllegalArgumentException ignored) {
-      // success
-    }
-    
-    expected = Cursor.createCursor(table);
-    expected.beforeFirst();
-    found = new CursorBuilder(table)
-      .beforeFirst()
-      .toCursor();
-    assertCursor(expected, found);
-
-    expected = Cursor.createCursor(table);
-    expected.afterLast();
-    found = new CursorBuilder(table)
-      .afterLast()
-      .toCursor();
-    assertCursor(expected, found);
-
-    expected = Cursor.createCursor(table);
-    expected.moveNextRows(2);
-    Cursor.Savepoint sp = expected.getSavepoint();
-    found = new CursorBuilder(table)
-      .afterLast()
-      .restoreSavepoint(sp)
-      .toCursor();
-    assertCursor(expected, found);
-
-    expected = Cursor.createIndexCursor(table, idx);
-    expected.moveNextRows(2);
-    sp = expected.getSavepoint();
-    found = new CursorBuilder(table)
-      .setIndex(idx)
-      .beforeFirst()
-      .restoreSavepoint(sp)
-      .toCursor();
-    assertCursor(expected, found);
-
-    expected = Cursor.createIndexCursor(table, idx,
-                                        idx.constructIndexRowFromEntry(3),
-                                        null);
-    found = new CursorBuilder(table)
-      .setIndex(idx)
-      .setStartEntry(3)
-      .toCursor();
-    assertCursor(expected, found);
-
-    expected = Cursor.createIndexCursor(table, idx,
-                                        idx.constructIndexRowFromEntry(3),
-                                        false,
-                                        idx.constructIndexRowFromEntry(7),
-                                        false);
-    found = new CursorBuilder(table)
-      .setIndex(idx)
-      .setStartEntry(3)
-      .setStartRowInclusive(false)
-      .setEndEntry(7)
-      .setEndRowInclusive(false)
-      .toCursor();
-    assertCursor(expected, found);
-
-
-    
-    db.close();
   }
   
 }

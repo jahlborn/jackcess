@@ -169,8 +169,30 @@ public class Database
   /** System catalog column name of the flags column */
   private static final String CAT_COL_FLAGS = "Flags";
   
-  /** Empty database template for creating new databases */
-  private static final String EMPTY_MDB = "com/healthmarketscience/jackcess/empty.mdb";
+  public static enum FileFormat {
+
+    V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
+    V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
+    V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
+    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5);
+
+    private final String emptyFile;
+    private final JetFormat format;
+
+    /**
+     * @param emptyDBFile Empty database template for creating new databases.
+     * @param jetFormat JetFormat of the template.
+     */
+    FileFormat(final String emptyDBFile, final JetFormat jetFormat) {
+      emptyFile = emptyDBFile;
+      format = jetFormat;
+    }
+
+    public JetFormat getJetFormat() { return format; }
+
+    public String toString() { return name() + ", jetFormat: " + format; }
+  }
+
   /** Prefix for column or table names that are reserved words */
   private static final String ESCAPE_PREFIX = "x";
   /** Prefix that flags system tables */
@@ -362,12 +384,31 @@ public class Database
    */
   public static Database create(File mdbFile, boolean autoSync)
     throws IOException
-  {    
+  {
+    return create(FileFormat.V2000, mdbFile, autoSync);
+  }
+  /**
+   * Create a new Database
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   */
+  public static Database create(FileFormat fileFormat, File mdbFile, boolean autoSync)
+    throws IOException
+  {
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            EMPTY_MDB)), 0, Integer.MAX_VALUE);
+            fileFormat.emptyFile)), 0, Integer.MAX_VALUE);
     return new Database(channel, autoSync);
   }
 
