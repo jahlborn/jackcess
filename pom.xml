@@ -33,6 +33,12 @@
       <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
+    <developer>
+      <name>Dan Rollo</name>
+      <id>bhamail</id>
+      <email>bhamail@users.sf.net</email>
+      <timezone>-5</timezone>
+    </developer>
   </developers>
   <issueManagement>
     <system>SourceForge</system>
