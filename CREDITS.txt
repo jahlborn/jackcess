@@ -5,3 +5,4 @@ James Ahlborn - Added support for NUMERIC data type
 Jon Iles - Added support for reading table definitions that span multiple pages
 James Schopp - added support for reading currency columns
 Patricia Donaldson - contributed RowFilter class
+Dan Rollo - added support for new DB file formats
