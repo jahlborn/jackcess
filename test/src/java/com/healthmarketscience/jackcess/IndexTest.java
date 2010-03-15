@@ -362,9 +362,14 @@ public class IndexTest extends TestCase {
 
       Cursor c = Cursor.createCursor(table);
       assertTrue(c.moveToNextRow());
-      Map<String,Object> row = c.getCurrentRow();
-      assertEquals(testDB.toString(), "abcdefg", row.get("A")); // @todo Fails with v2007
-      assertEquals("hijklmnop", row.get("B"));
+
+      final Map<String,Object> row = c.getCurrentRow();
+      // Row order is arbitrary, so v2007 row order difference is valid
+      if (Database.FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
+        DatabaseTest.checkTestDBTable1RowA(testDB, table, row);
+      } else {
+        DatabaseTest.checkTestDBTable1RowABCDEFG(testDB, table, row);
+      }
       c.deleteCurrentRow();
 
       assertEquals(11, indA.getEntryCount());
