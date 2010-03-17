@@ -90,15 +90,9 @@ public final class JetFormatTest extends TestCase {
 
         private static File getFileForBasename(Basename basename, Database.FileFormat fileFormat) {
 
-            final String filenameExtension;
-            if (Database.FileFormat.V2007.equals(fileFormat)) {
-                filenameExtension = ".accdb";
-            } else {
-                filenameExtension = ".mdb";
-            }
-
             return new File(DIR_TEST_DATA, 
-                    fileFormat.name() + "/" + basename.basename + fileFormat.name() + filenameExtension);
+                            fileFormat.name() + "/" + basename.basename + fileFormat.name() + 
+                            fileFormat.getFileExtension());
         }
     }
 

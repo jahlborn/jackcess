@@ -174,23 +174,28 @@ public class Database
     V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
     V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
     V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
-    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5);
+      V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
 
-    private final String emptyFile;
-    private final JetFormat format;
+    private final String _emptyFile;
+    private final JetFormat _format;
+    private final String _ext;
 
-    /**
-     * @param emptyDBFile Empty database template for creating new databases.
-     * @param jetFormat JetFormat of the template.
-     */
-    FileFormat(final String emptyDBFile, final JetFormat jetFormat) {
-      emptyFile = emptyDBFile;
-      format = jetFormat;
+    private FileFormat(String emptyDBFile, JetFormat jetFormat) {
+      this(emptyDBFile, jetFormat, ".mdb");
     }
 
-    public JetFormat getJetFormat() { return format; }
+    private FileFormat(String emptyDBFile, JetFormat jetFormat, String ext) {
+      _emptyFile = emptyDBFile;
+      _format = jetFormat;
+      _ext = ext;
+    }
 
-    public String toString() { return name() + ", jetFormat: " + format; }
+    public JetFormat getJetFormat() { return _format; }
+
+    public String getFileExtension() { return _ext; }
+
+    @Override
+    public String toString() { return name() + ", jetFormat: " + getJetFormat(); }
   }
 
   /** Prefix for column or table names that are reserved words */
@@ -408,7 +413,7 @@ public class Database
     channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            fileFormat.emptyFile)), 0, Integer.MAX_VALUE);
+            fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
     return new Database(channel, autoSync);
   }
 
