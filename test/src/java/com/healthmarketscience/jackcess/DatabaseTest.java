@@ -199,13 +199,17 @@ public class DatabaseTest extends TestCase {
       assertEquals(4, db.getTableNames().size());
       final Table table = db.getTable("Table1");
 
-      final Map<String, Object> row = table.getNextRow();
+      Map<String, Object> row1 = table.getNextRow();
+      Map<String, Object> row2 = table.getNextRow();
 
-      if("abcdefg".equals(row.get("A"))) {
-        checkTestDBTable1RowABCDEFG(testDB, table, row);
-      } else {
-        checkTestDBTable1RowA(testDB, table, row);
+      if(!"abcdefg".equals(row1.get("A"))) {
+        Map<String, Object> tmpRow = row1;
+        row1 = row2;
+        row2 = tmpRow;
       }
+
+      checkTestDBTable1RowABCDEFG(testDB, table, row1);
+      checkTestDBTable1RowA(testDB, table, row2);
     }
   }
 
