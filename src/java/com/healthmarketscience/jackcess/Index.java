@@ -1540,17 +1540,31 @@ public abstract class Index implements Comparable<Index> {
       boolean isNegative = ((valueBytes[0] & 0x80) != 0);
 
       // bit twiddling rules:
-      // isAsc && !isNeg => setReverseSignByte
-      // isAsc && isNeg => flipBytes, setReverseSignByte
-      // !isAsc && !isNeg => flipBytes, setReverseSignByte
-      // !isAsc && isNeg => setReverseSignByte
+      // isAsc && !isNeg => setReverseSignByte             => FF 00 00 ...
+      // isAsc && isNeg => flipBytes, setReverseSignByte   => 00 FF FF ...
+      // !isAsc && !isNeg => flipBytes, setReverseSignByte => FF FF FF ...
+      // !isAsc && isNeg => setReverseSignByte             => 00 00 00 ...
       
+      // v2007 bit twiddling rules:
+      // isAsc && !isNeg => setSignByte 0xFF            => FF 00 00 ...
+      // isAsc && isNeg => setSignByte 0xFF, flipBytes  => 00 FF FF ...
+      // !isAsc && !isNeg => setSignByte 0xFF           => FF 00 00 ...
+      // !isAsc && isNeg => setSignByte 0xFF, flipBytes => 00 FF FF ...
+
+      boolean alwaysRevFirstByte = getColumn().getFormat().REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES;
+      if(alwaysRevFirstByte) {
+        // reverse the sign byte (before any byte flipping)
+        valueBytes[0] = (byte)0xFF;
+      }
+
       if(isNegative == isAscending()) {
         flipBytes(valueBytes);
       }
 
-      // reverse the sign byte (after any previous byte flipping)
-      valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);
+      if(!alwaysRevFirstByte) {
+        // reverse the sign byte (after any previous byte flipping)
+        valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);
+      }
       
       bout.write(valueBytes);
     }    

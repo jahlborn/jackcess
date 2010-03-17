@@ -126,7 +126,7 @@ public class IndexCodesTest extends TestCase {
       }
     }
     fail("testDB: " + testDB + ";\nCould not find expected row " + expectedRow + " starting at " +
-         entryToString(startPos)); // @todo fails with v2007 on row2
+         entryToString(startPos));
   }
 
   

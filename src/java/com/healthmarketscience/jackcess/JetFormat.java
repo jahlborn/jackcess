@@ -130,6 +130,8 @@ public abstract class JetFormat {
   public final int MAX_TABLE_NAME_LENGTH;
   public final int MAX_COLUMN_NAME_LENGTH;
   public final int MAX_INDEX_NAME_LENGTH;
+
+  public final boolean REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES;
   
   public final Charset CHARSET;
   
@@ -230,7 +232,8 @@ public abstract class JetFormat {
     MAX_TABLE_NAME_LENGTH = defineMaxTableNameLength();
     MAX_COLUMN_NAME_LENGTH = defineMaxColumnNameLength();
     MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
-
+    
+    REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES = defineReverseFirstByteInDescNumericIndexes();
     
     CHARSET = defineCharset();
   }
@@ -304,6 +307,8 @@ public abstract class JetFormat {
   protected abstract int defineMaxIndexNameLength();
   
   protected abstract Charset defineCharset();
+
+  protected abstract boolean defineReverseFirstByteInDescNumericIndexes();
 
   @Override
   public String toString() {
@@ -449,6 +454,9 @@ public abstract class JetFormat {
     protected int defineMaxIndexNameLength() { return 64; }
       
     @Override
+    protected boolean defineReverseFirstByteInDescNumericIndexes() { return false; }
+
+    @Override
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
   }
   
@@ -462,5 +470,10 @@ public abstract class JetFormat {
       private Jet5Format() {
         super("VERSION_5");
       }
+
+    @Override
+    protected boolean defineReverseFirstByteInDescNumericIndexes() { return true; }
+
   }
+
 }
