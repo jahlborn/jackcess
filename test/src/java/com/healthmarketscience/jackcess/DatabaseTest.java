@@ -200,12 +200,10 @@ public class DatabaseTest extends TestCase {
       final Table table = db.getTable("Table1");
 
       final Map<String, Object> row = table.getNextRow();
-      // Row order is arbitrary, so v2007 row order difference is valid
-      if (Database.FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
-        checkTestDBTable1RowA(testDB, table, row);
+
+      if("abcdefg".equals(row.get("A"))) {
         checkTestDBTable1RowABCDEFG(testDB, table, row);
       } else {
-        checkTestDBTable1RowABCDEFG(testDB, table, row);
         checkTestDBTable1RowA(testDB, table, row);
       }
     }
