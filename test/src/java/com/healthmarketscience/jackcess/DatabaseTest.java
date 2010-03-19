@@ -73,6 +73,8 @@ public class DatabaseTest extends TestCase {
   public static Database open(final TestDB testDB) throws Exception {
     final Database db = Database.open(testDB.getFile(), true, _autoSync);
     assertEquals("Wrong JetFormat.", testDB.getExpectedFormat(), db.getFormat());
+    assertEquals("Wrong FileFormat.", testDB.getExpectedFileFormat(), 
+                 db.getFileFormat());
     return db;
   }
 

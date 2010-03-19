@@ -168,13 +168,15 @@ public class Database
   private static final String CAT_COL_DATE_UPDATE = "DateUpdate";
   /** System catalog column name of the flags column */
   private static final String CAT_COL_FLAGS = "Flags";
+  /** System catalog column name of the properties column */
+  private static final String CAT_COL_PROPS = "LvProp";
   
   public static enum FileFormat {
 
     V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
     V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
     V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
-      V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
+    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
 
     private final String _emptyFile;
     private final JetFormat _format;
@@ -210,6 +212,8 @@ public class Database
   private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
   /** Name of the table that contains queries */
   private static final String TABLE_SYSTEM_QUERIES = "MSysQueries";
+  /** Name of the table that contains queries */
+  private static final String OBJECT_NAME_DBPROPS = "MSysDb";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
   /** System object type for query definitions */
@@ -296,6 +300,8 @@ public class Database
   private boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _dbErrorHandler;
+  /** the file format of the database */
+  private FileFormat _fileFormat;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -356,14 +362,14 @@ public class Database
     }
     return new Database(openChannel(mdbFile,
                                     (!mdbFile.canWrite() || readOnly)),
-                        autoSync);
+                        autoSync, null);
   }
   
   /**
-   * Create a new Database
+   * Create a new Access 2000 Database 
    * <p>
    * Equivalent to:
-   * {@code  create(mdbFile, DEFAULT_AUTO_SYNC);}
+   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
    * 
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
@@ -375,7 +381,29 @@ public class Database
   }
   
   /**
-   * Create a new Database
+   * Create a new Database for the given fileFormat
+   * <p>
+   * Equivalent to:
+   * {@code  create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);}
+   * 
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   *
+   * @see #create(File,boolean)
+   */
+  public static Database create(FileFormat fileFormat, File mdbFile) 
+    throws IOException 
+  {
+    return create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);
+  }
+  
+  /**
+   * Create a new Access 2000 Database
+   * <p>
+   * Equivalent to:
+   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
+   * 
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
    * @param autoSync whether or not to enable auto-syncing on write.  if
@@ -392,8 +420,9 @@ public class Database
   {
     return create(FileFormat.V2000, mdbFile, autoSync);
   }
+
   /**
-   * Create a new Database
+   * Create a new Database for the given fileFormat
    * @param fileFormat version of new database.
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
@@ -406,7 +435,8 @@ public class Database
    *                 leave the database in an inconsistent state if failures
    *                 are encountered during writing.
    */
-  public static Database create(FileFormat fileFormat, File mdbFile, boolean autoSync)
+  public static Database create(FileFormat fileFormat, File mdbFile, 
+                                boolean autoSync)
     throws IOException
   {
     FileChannel channel = openChannel(mdbFile, false);
@@ -414,7 +444,7 @@ public class Database
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
             fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
-    return new Database(channel, autoSync);
+    return new Database(channel, autoSync, fileFormat);
   }
 
   /**
@@ -443,9 +473,12 @@ public class Database
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
    */
-  protected Database(FileChannel channel, boolean autoSync) throws IOException
+  protected Database(FileChannel channel, boolean autoSync, 
+                     FileFormat fileFormat)
+    throws IOException
   {
     _format = JetFormat.getFormat(channel);
+    _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, _format, autoSync);
     // note, it's slighly sketchy to pass ourselves along partially
     // constructed, but only our _format and _pageChannel refs should be
@@ -508,6 +541,59 @@ public class Database
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
+
+  /**
+   * Returns the FileFormat of this database (which may involve inspecting the
+   * database itself).
+   * @throws IllegalStateException if the file format cannot be determined
+   */
+  public FileFormat getFileFormat()
+  {
+    if(_fileFormat == null) {
+
+      Map<Database.FileFormat,byte[]> possibleFileFormats =
+        getFormat().getPossibleFileFormats();
+
+      if(possibleFileFormats.size() == 1) {
+
+        // single possible format, easy enough
+        _fileFormat = possibleFileFormats.keySet().iterator().next();
+
+      } else {
+
+        // need to check the "AccessVersion" property
+        byte[] dbProps = null;
+        for(Map<String,Object> row :
+              Cursor.createCursor(_systemCatalog).iterable(
+                  Arrays.asList(CAT_COL_NAME, CAT_COL_PROPS))) {
+          if(OBJECT_NAME_DBPROPS.equals(row.get(CAT_COL_NAME))) {
+            dbProps = (byte[])row.get(CAT_COL_PROPS);
+            break;
+          }
+        }
+        
+        if(dbProps != null) {
+
+          // search for certain "version strings" in the properties (we
+          // can't fully parse the properties objects, but we can still
+          // find the byte pattern)
+          ByteBuffer dbPropBuf = ByteBuffer.wrap(dbProps);
+          for(Map.Entry<Database.FileFormat,byte[]> possible : 
+                possibleFileFormats.entrySet()) {
+            if(ByteUtil.findRange(dbPropBuf, 0, possible.getValue()) >= 0) {
+              _fileFormat = possible.getKey();
+              break;
+            }
+          }
+        }
+        
+        if(_fileFormat == null) {
+          throw new IllegalStateException("Could not determine FileFormat");
+        }
+      }
+    }
+    return _fileFormat;
+  }
   
   /**
    * Read the system catalog
