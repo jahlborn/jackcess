@@ -27,7 +27,6 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +39,7 @@ import java.util.TreeSet;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
 
 /**
  * @author James Ahlborn
@@ -84,131 +84,140 @@ public class IndexTest extends TestCase {
   }
 
   public void testPrimaryKey() throws Exception {
-    Table table = open().getTable("Table1");
-    Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
-    for(Index index : table.getIndexes()) {
-      foundPKs.put(index.getColumns().iterator().next().getName(),
-                   index.isPrimaryKey());
+    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+      Table table = open(testDB).getTable("Table1");
+      Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
+      for(Index index : table.getIndexes()) {
+        foundPKs.put(index.getColumns().iterator().next().getName(),
+                     index.isPrimaryKey());
+      }
+      Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
+      expectedPKs.put("A", Boolean.TRUE);
+      expectedPKs.put("B", Boolean.FALSE);
+      assertEquals(expectedPKs, foundPKs);
     }
-    Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
-    expectedPKs.put("A", Boolean.TRUE);
-    expectedPKs.put("B", Boolean.FALSE);
-    assertEquals(expectedPKs, foundPKs);
   }
   
   public void testIndexSlots() throws Exception
   {
-    Database mdb = open(new File("test/data/indexTest.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+      Database mdb = open(testDB);
 
-    Table table = mdb.getTable("Table1");
-    for(Index idx : table.getIndexes()) {
-      idx.initialize();
-    }
-    assertEquals(4, table.getIndexes().size());
-    assertEquals(4, table.getIndexSlotCount());
-    checkIndexColumns(table,
-                      "id", "id",
-                      "PrimaryKey", "id",
-                      "Table2Table1", "otherfk1",
-                      "Table3Table1", "otherfk2");
-    
-    table = mdb.getTable("Table2");
-    for(Index idx : table.getIndexes()) {
-      idx.initialize();
-    }
-    assertEquals(2, table.getIndexes().size());
-    assertEquals(3, table.getIndexSlotCount());
-    checkIndexColumns(table,
-                      "id", "id",
-                      "PrimaryKey", "id");
+      Table table = mdb.getTable("Table1");
+      for(Index idx : table.getIndexes()) {
+        idx.initialize();
+      }
+      assertEquals(4, table.getIndexes().size());
+      assertEquals(4, table.getIndexSlotCount());
+      checkIndexColumns(table,
+                        "id", "id",
+                        "PrimaryKey", "id",
+                        "Table2Table1", "otherfk1",
+                        "Table3Table1", "otherfk2");
 
-    table = mdb.getTable("Table3");
-    for(Index idx : table.getIndexes()) {
-      idx.initialize();
+      table = mdb.getTable("Table2");
+      for(Index idx : table.getIndexes()) {
+        idx.initialize();
+      }
+      assertEquals(2, table.getIndexes().size());
+      assertEquals(3, table.getIndexSlotCount());
+      checkIndexColumns(table,
+                        "id", "id",
+                        "PrimaryKey", "id");
+
+      table = mdb.getTable("Table3");
+      for(Index idx : table.getIndexes()) {
+        idx.initialize();
+      }
+      assertEquals(2, table.getIndexes().size());
+      assertEquals(3, table.getIndexSlotCount());
+      checkIndexColumns(table,
+                        "id", "id",
+                        "PrimaryKey", "id");
     }
-    assertEquals(2, table.getIndexes().size());
-    assertEquals(3, table.getIndexSlotCount());
-    checkIndexColumns(table,
-                      "id", "id",
-                      "PrimaryKey", "id");
   }
 
   public void testComplexIndex() throws Exception
   {
-    // this file has an index with "compressed" entries and node pages
-    File origFile = new File("test/data/compIndexTest.mdb");
-    Database db = open(origFile);
-    Table t = db.getTable("Table1");
-    Index index = t.getIndexes().get(0);
-    assertFalse(index.isInitialized());
-    assertEquals(512, countRows(t));
-    assertEquals(512, index.getEntryCount());
-    db.close();
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX)) {
+      // this file has an index with "compressed" entries and node pages
+      Database db = open(testDB);
+      Table t = db.getTable("Table1");
+      Index index = t.getIndexes().get(0);
+      assertFalse(index.isInitialized());
+      assertEquals(512, countRows(t));
+      assertEquals(512, index.getEntryCount());
+      db.close();
 
-    // copy to temp file and attempt to edit
-    db = openCopy(origFile);
-    t = db.getTable("Table1");
-    index = t.getIndexes().get(0);
+      // copy to temp file and attempt to edit
+      db = openCopy(testDB);
+      t = db.getTable("Table1");
+      index = t.getIndexes().get(0);
 
-    System.out.println("IndexTest: Index type: " + index.getClass());
-    try {
-      t.addRow(99, "abc", "def");
-      if(index instanceof SimpleIndex) {
-        // SimpleIndex doesn't support writing these indexes
-        fail("Should have thrown UnsupportedOperationException");
-      }
-    } catch(UnsupportedOperationException e) {
-      // success
-      if(index instanceof BigIndex) {
-        throw e;
+      System.out.println("IndexTest: Index type: " + index.getClass());
+      try {
+        t.addRow(99, "abc", "def");
+        if(index instanceof SimpleIndex) {
+          // SimpleIndex doesn't support writing these indexes
+          fail("Should have thrown UnsupportedOperationException");
+        }
+      } catch(UnsupportedOperationException e) {
+        // success
+        if(index instanceof BigIndex) {
+          throw e;
+        }
       }
     }
   }
 
   public void testEntryDeletion() throws Exception {
-    Table table = openCopy(new File("test/data/test.mdb")).getTable("Table1");
+    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+      Table table = openCopy(testDB).getTable("Table1");
 
-    for(int i = 0; i < 10; ++i) {
-      table.addRow("foo" + i, "bar" + i, (byte)42 + i, (short)53 + i, 13 * i,
-                   (6.7d / i), null, null, true);
-    }
-    table.reset();
-    assertRowCount(12, table);
+      for(int i = 0; i < 10; ++i) {
+        table.addRow("foo" + i, "bar" + i, (byte)42 + i, (short)53 + i, 13 * i,
+                     (6.7d / i), null, null, true);
+      }
+      table.reset();
+      assertRowCount(12, table);
 
-    for(Index index : table.getIndexes()) {
-      assertEquals(12, index.getEntryCount());
-    }
+      for(Index index : table.getIndexes()) {
+        assertEquals(12, index.getEntryCount());
+      }
 
-    table.reset();
-    table.getNextRow();
-    table.getNextRow();
-    table.deleteCurrentRow();
-    table.getNextRow();
-    table.deleteCurrentRow();
-    table.getNextRow();
-    table.getNextRow();
-    table.deleteCurrentRow();
-    table.getNextRow();
-    table.getNextRow();
-    table.getNextRow();
-    table.deleteCurrentRow();
+      table.reset();
+      table.getNextRow();
+      table.getNextRow();
+      table.deleteCurrentRow();
+      table.getNextRow();
+      table.deleteCurrentRow();
+      table.getNextRow();
+      table.getNextRow();
+      table.deleteCurrentRow();
+      table.getNextRow();
+      table.getNextRow();
+      table.getNextRow();
+      table.deleteCurrentRow();
 
-    table.reset();
-    assertRowCount(8, table);
+      table.reset();
+      assertRowCount(8, table);
 
-    for(Index index : table.getIndexes()) {
-      assertEquals(8, index.getEntryCount());
+      for(Index index : table.getIndexes()) {
+        assertEquals(8, index.getEntryCount());
+      }
     }
   }
 
   public void testIgnoreNulls() throws Exception
   {
-    Database db = openCopy(new File("test/data/testIndexProperties.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_PROPERTIES)) {
+      Database db = openCopy(testDB);
 
-    doTestIgnoreNulls(db, "TableIgnoreNulls1");
-    doTestIgnoreNulls(db, "TableIgnoreNulls2");    
+      doTestIgnoreNulls(db, "TableIgnoreNulls1");
+      doTestIgnoreNulls(db, "TableIgnoreNulls2");
 
-    db.close();
+      db.close();
+    }
   }
 
   private void doTestIgnoreNulls(Database db, String tableName)
@@ -250,41 +259,43 @@ public class IndexTest extends TestCase {
 
   public void testUnique() throws Exception
   {
-    Database db = openCopy(new File("test/data/testIndexProperties.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_PROPERTIES)) {
+      Database db = openCopy(testDB);
 
-    Table t = db.getTable("TableUnique1_temp");
-    Index index = t.getIndex("DataIndex");
+      Table t = db.getTable("TableUnique1_temp");
+      Index index = t.getIndex("DataIndex");
 
-    doTestUnique(t, index, 1,
-                 null, true,
-                 "unique data", true,
-                 null, true,
-                 "more", false,
-                 "stuff", false,
-                 "unique data", false);
+      doTestUnique(index, 1,
+                   null, true,
+                   "unique data", true,
+                   null, true,
+                   "more", false,
+                   "stuff", false,
+                   "unique data", false);
 
-    t = db.getTable("TableUnique2_temp");
-    index = t.getIndex("DataIndex");
+      t = db.getTable("TableUnique2_temp");
+      index = t.getIndex("DataIndex");
 
-    doTestUnique(t, index, 2,
-                 null, null, true,
-                 "unique data", 42, true,
-                 "unique data", null, true,
-                 null, null, true,
-                 "some", 42, true,
-                 "more unique data", 13, true,
-                 null, -4242, true,
-                 "another row", -3462, false,
-                 null, 49, false,
-                 "more", null, false,
-                 "unique data", 42, false,
-                 "unique data", null, false,
-                 null, -4242, false);
-    
-    db.close();
+      doTestUnique(index, 2,
+                   null, null, true,
+                   "unique data", 42, true,
+                   "unique data", null, true,
+                   null, null, true,
+                   "some", 42, true,
+                   "more unique data", 13, true,
+                   null, -4242, true,
+                   "another row", -3462, false,
+                   null, 49, false,
+                   "more", null, false,
+                   "unique data", 42, false,
+                   "unique data", null, false,
+                   null, -4242, false);
+
+      db.close();
+    }
   }
 
-  private void doTestUnique(Table t, Index index, int numValues,
+  private void doTestUnique(Index index, int numValues,
                             Object... testData)
     throws Exception
   {
@@ -312,70 +323,79 @@ public class IndexTest extends TestCase {
   }
 
   public void testUniqueEntryCount() throws Exception {
-    Database db = openCopy(new File("test/data/test.mdb"));
-    Table table = db.getTable("Table1");
-    Index indA = table.getIndex("PrimaryKey");
-    Index indB = table.getIndex("B");
+    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+      Database db = openCopy(testDB);
+      Table table = db.getTable("Table1");
+      Index indA = table.getIndex("PrimaryKey");
+      Index indB = table.getIndex("B");
 
-    assertEquals(2, indA.getUniqueEntryCount());
-    assertEquals(2, indB.getUniqueEntryCount());
+      assertEquals(2, indA.getUniqueEntryCount());
+      assertEquals(2, indB.getUniqueEntryCount());
 
-    List<String> bElems = Arrays.asList("bar", null, "baz", "argle", null,
-                                        "bazzle", "37", "bar", "bar", "BAZ");
-    
-    for(int i = 0; i < 10; ++i) {
-      table.addRow("foo" + i, bElems.get(i), (byte)42 + i, (short)53 + i,
-                   13 * i, (6.7d / i), null, null, true);
+      List<String> bElems = Arrays.asList("bar", null, "baz", "argle", null,
+                                          "bazzle", "37", "bar", "bar", "BAZ");
+
+      for(int i = 0; i < 10; ++i) {
+        table.addRow("foo" + i, bElems.get(i), (byte)42 + i, (short)53 + i,
+                     13 * i, (6.7d / i), null, null, true);
+      }
+
+      assertEquals(12, indA.getEntryCount());
+      assertEquals(12, indB.getEntryCount());
+
+      assertEquals(12, indA.getUniqueEntryCount());
+      assertEquals(8, indB.getUniqueEntryCount());
+
+      table = null;
+      indA = null;
+      indB = null;
+
+      table = db.getTable("Table1");
+      indA = table.getIndex("PrimaryKey");
+      indB = table.getIndex("B");
+
+      assertEquals(12, indA.getEntryCount());
+      assertEquals(12, indB.getEntryCount());
+
+      assertEquals(12, indA.getUniqueEntryCount());
+      assertEquals(8, indB.getUniqueEntryCount());
+
+      Cursor c = Cursor.createCursor(table);
+      assertTrue(c.moveToNextRow());
+
+      final Map<String,Object> row = c.getCurrentRow();
+      // Row order is arbitrary, so v2007 row order difference is valid
+      if (Database.FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
+        DatabaseTest.checkTestDBTable1RowA(testDB, table, row);
+      } else {
+        DatabaseTest.checkTestDBTable1RowABCDEFG(testDB, table, row);
+      }
+      c.deleteCurrentRow();
+
+      assertEquals(11, indA.getEntryCount());
+      assertEquals(11, indB.getEntryCount());
+
+      assertEquals(12, indA.getUniqueEntryCount());
+      assertEquals(8, indB.getUniqueEntryCount());
+
+      db.close();
     }
-
-    assertEquals(12, indA.getEntryCount());
-    assertEquals(12, indB.getEntryCount());
-    
-    assertEquals(12, indA.getUniqueEntryCount());
-    assertEquals(8, indB.getUniqueEntryCount());
-
-    table = null;
-    indA = null;
-    indB = null;
-
-    table = db.getTable("Table1");
-    indA = table.getIndex("PrimaryKey");
-    indB = table.getIndex("B");
-    
-    assertEquals(12, indA.getEntryCount());
-    assertEquals(12, indB.getEntryCount());
-    
-    assertEquals(12, indA.getUniqueEntryCount());
-    assertEquals(8, indB.getUniqueEntryCount());    
-
-    Cursor c = Cursor.createCursor(table);
-    assertTrue(c.moveToNextRow());
-    Map<String,Object> row = c.getCurrentRow();
-    assertEquals("abcdefg", row.get("A"));
-    assertEquals("hijklmnop", row.get("B"));
-    c.deleteCurrentRow();
-
-    assertEquals(11, indA.getEntryCount());
-    assertEquals(11, indB.getEntryCount());
-    
-    assertEquals(12, indA.getUniqueEntryCount());
-    assertEquals(8, indB.getUniqueEntryCount());        
-    
-    db.close();
   }
   
   public void testReplId() throws Exception
   {
-    Database db = openCopy(new File("test/data/test.mdb"));
-    Table table = db.getTable("Table4");
+    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+      Database db = openCopy(testDB);
+      Table table = db.getTable("Table4");
 
-    for(int i = 0; i< 20; ++i) {
-      table.addRow("row" + i, Column.AUTO_NUMBER);
+      for(int i = 0; i< 20; ++i) {
+        table.addRow("row" + i, Column.AUTO_NUMBER);
+      }
+
+      assertEquals(20, table.getRowCount());
+
+      db.close();
     }
-
-    assertEquals(20, table.getRowCount());
-    
-    db.close();
   }
   
   private void checkIndexColumns(Table table, String... idxInfo)

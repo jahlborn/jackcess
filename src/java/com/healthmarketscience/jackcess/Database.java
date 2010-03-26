@@ -168,9 +168,38 @@ public class Database
   private static final String CAT_COL_DATE_UPDATE = "DateUpdate";
   /** System catalog column name of the flags column */
   private static final String CAT_COL_FLAGS = "Flags";
+  /** System catalog column name of the properties column */
+  private static final String CAT_COL_PROPS = "LvProp";
   
-  /** Empty database template for creating new databases */
-  private static final String EMPTY_MDB = "com/healthmarketscience/jackcess/empty.mdb";
+  public static enum FileFormat {
+
+    V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
+    V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
+    V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
+    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
+
+    private final String _emptyFile;
+    private final JetFormat _format;
+    private final String _ext;
+
+    private FileFormat(String emptyDBFile, JetFormat jetFormat) {
+      this(emptyDBFile, jetFormat, ".mdb");
+    }
+
+    private FileFormat(String emptyDBFile, JetFormat jetFormat, String ext) {
+      _emptyFile = emptyDBFile;
+      _format = jetFormat;
+      _ext = ext;
+    }
+
+    public JetFormat getJetFormat() { return _format; }
+
+    public String getFileExtension() { return _ext; }
+
+    @Override
+    public String toString() { return name() + ", jetFormat: " + getJetFormat(); }
+  }
+
   /** Prefix for column or table names that are reserved words */
   private static final String ESCAPE_PREFIX = "x";
   /** Prefix that flags system tables */
@@ -183,6 +212,8 @@ public class Database
   private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
   /** Name of the table that contains queries */
   private static final String TABLE_SYSTEM_QUERIES = "MSysQueries";
+  /** Name of the table that contains queries */
+  private static final String OBJECT_NAME_DBPROPS = "MSysDb";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
   /** System object type for query definitions */
@@ -269,6 +300,8 @@ public class Database
   private boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _dbErrorHandler;
+  /** the file format of the database */
+  private FileFormat _fileFormat;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -329,14 +362,14 @@ public class Database
     }
     return new Database(openChannel(mdbFile,
                                     (!mdbFile.canWrite() || readOnly)),
-                        autoSync);
+                        autoSync, null);
   }
   
   /**
-   * Create a new Database
+   * Create a new Access 2000 Database 
    * <p>
    * Equivalent to:
-   * {@code  create(mdbFile, DEFAULT_AUTO_SYNC);}
+   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
    * 
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
@@ -348,7 +381,29 @@ public class Database
   }
   
   /**
-   * Create a new Database
+   * Create a new Database for the given fileFormat
+   * <p>
+   * Equivalent to:
+   * {@code  create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);}
+   * 
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   *
+   * @see #create(File,boolean)
+   */
+  public static Database create(FileFormat fileFormat, File mdbFile) 
+    throws IOException 
+  {
+    return create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);
+  }
+  
+  /**
+   * Create a new Access 2000 Database
+   * <p>
+   * Equivalent to:
+   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
+   * 
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
    * @param autoSync whether or not to enable auto-syncing on write.  if
@@ -362,19 +417,53 @@ public class Database
    */
   public static Database create(File mdbFile, boolean autoSync)
     throws IOException
-  {    
+  {
+    return create(FileFormat.V2000, mdbFile, autoSync);
+  }
+
+  /**
+   * Create a new Database for the given fileFormat
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   */
+  public static Database create(FileFormat fileFormat, File mdbFile, 
+                                boolean autoSync)
+    throws IOException
+  {
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            EMPTY_MDB)), 0, Integer.MAX_VALUE);
-    return new Database(channel, autoSync);
+            fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
+    return new Database(channel, autoSync, fileFormat);
   }
-  
-  private static FileChannel openChannel(File mdbFile, boolean readOnly)
+
+  /**
+   * Package visible only to support unit tests via DatabaseTest.openChannel().
+   * @param mdbFile file to open
+   * @param readOnly true if read-only
+   * @return a FileChannel on the given file.
+   * @exception FileNotFoundException
+   *            if the mode is <tt>"r"</tt> but the given file object does
+   *            not denote an existing regular file, or if the mode begins
+   *            with <tt>"rw"</tt> but the given file object does not denote
+   *            an existing, writable regular file and a new regular file of
+   *            that name cannot be created, or if some other error occurs
+   *            while opening or creating the file
+   */
+  static FileChannel openChannel(final File mdbFile, final boolean readOnly)
     throws FileNotFoundException
   {
-    String mode = (readOnly ? "r" : "rw");
+    final String mode = (readOnly ? "r" : "rw");
     return new RandomAccessFile(mdbFile, mode).getChannel();
   }
   
@@ -384,9 +473,12 @@ public class Database
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
    */
-  protected Database(FileChannel channel, boolean autoSync) throws IOException
+  protected Database(FileChannel channel, boolean autoSync, 
+                     FileFormat fileFormat)
+    throws IOException
   {
     _format = JetFormat.getFormat(channel);
+    _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, _format, autoSync);
     // note, it's slighly sketchy to pass ourselves along partially
     // constructed, but only our _format and _pageChannel refs should be
@@ -449,6 +541,59 @@ public class Database
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
+
+  /**
+   * Returns the FileFormat of this database (which may involve inspecting the
+   * database itself).
+   * @throws IllegalStateException if the file format cannot be determined
+   */
+  public FileFormat getFileFormat()
+  {
+    if(_fileFormat == null) {
+
+      Map<Database.FileFormat,byte[]> possibleFileFormats =
+        getFormat().getPossibleFileFormats();
+
+      if(possibleFileFormats.size() == 1) {
+
+        // single possible format, easy enough
+        _fileFormat = possibleFileFormats.keySet().iterator().next();
+
+      } else {
+
+        // need to check the "AccessVersion" property
+        byte[] dbProps = null;
+        for(Map<String,Object> row :
+              Cursor.createCursor(_systemCatalog).iterable(
+                  Arrays.asList(CAT_COL_NAME, CAT_COL_PROPS))) {
+          if(OBJECT_NAME_DBPROPS.equals(row.get(CAT_COL_NAME))) {
+            dbProps = (byte[])row.get(CAT_COL_PROPS);
+            break;
+          }
+        }
+        
+        if(dbProps != null) {
+
+          // search for certain "version strings" in the properties (we
+          // can't fully parse the properties objects, but we can still
+          // find the byte pattern)
+          ByteBuffer dbPropBuf = ByteBuffer.wrap(dbProps);
+          for(Map.Entry<Database.FileFormat,byte[]> possible : 
+                possibleFileFormats.entrySet()) {
+            if(ByteUtil.findRange(dbPropBuf, 0, possible.getValue()) >= 0) {
+              _fileFormat = possible.getKey();
+              break;
+            }
+          }
+        }
+        
+        if(_fileFormat == null) {
+          throw new IllegalStateException("Could not determine FileFormat");
+        }
+      }
+    }
+    return _fileFormat;
+  }
   
   /**
    * Read the system catalog

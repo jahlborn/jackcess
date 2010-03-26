@@ -56,9 +56,9 @@ public class PageChannel implements Channel, Flushable {
     new byte[]{PageTypes.INVALID, (byte)0, (byte)0, (byte)0};
   
   /** Global usage map always lives on page 1 */
-  private static final int PAGE_GLOBAL_USAGE_MAP = 1;
+  static final int PAGE_GLOBAL_USAGE_MAP = 1;
   /** Global usage map always lives at row 0 */
-  private static final int ROW_GLOBAL_USAGE_MAP = 0;
+  static final int ROW_GLOBAL_USAGE_MAP = 0;
   
   /** Channel containing the database */
   private final FileChannel _channel;

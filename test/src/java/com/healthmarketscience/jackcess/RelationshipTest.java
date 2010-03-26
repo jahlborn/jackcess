@@ -27,13 +27,13 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
 
 /**
  * @author James Ahlborn
@@ -45,50 +45,51 @@ public class RelationshipTest extends TestCase {
   }
 
   public void testSimple() throws Exception {
-    Database db = open(new File("test/data/indexTest.mdb"));
-    Table t1 = db.getTable("Table1");
-    Table t2 = db.getTable("Table2");
-    Table t3 = db.getTable("Table3");
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+      Database db = open(testDB);
+      Table t1 = db.getTable("Table1");
+      Table t2 = db.getTable("Table2");
+      Table t3 = db.getTable("Table3");
 
-    List<Relationship> rels = db.getRelationships(t1, t2);
-    assertEquals(1, rels.size());
-    Relationship rel = rels.get(0);
-    assertEquals("Table2Table1", rel.getName());
-    assertEquals(t2, rel.getFromTable());
-    assertEquals(Arrays.asList(t2.getColumn("id")),
-                 rel.getFromColumns());
-    assertEquals(t1, rel.getToTable());
-    assertEquals(Arrays.asList(t1.getColumn("otherfk1")),
-                 rel.getToColumns());
-    assertTrue(rel.hasReferentialIntegrity());
-    assertEquals(0, rel.getFlags());
-    assertSameRelationships(rels, db.getRelationships(t2, t1));
-    
-    rels = db.getRelationships(t2, t3);
-    assertTrue(db.getRelationships(t2, t3).isEmpty());
-    assertSameRelationships(rels, db.getRelationships(t3, t2));
-    
-    rels = db.getRelationships(t1, t3);
-    assertEquals(1, rels.size());
-    rel = rels.get(0);
-    assertEquals("Table3Table1", rel.getName());
-    assertEquals(t3, rel.getFromTable());
-    assertEquals(Arrays.asList(t3.getColumn("id")),
-                 rel.getFromColumns());
-    assertEquals(t1, rel.getToTable());
-    assertEquals(Arrays.asList(t1.getColumn("otherfk2")),
-                 rel.getToColumns());
-    assertTrue(rel.hasReferentialIntegrity());
-    assertEquals(0, rel.getFlags());
-    assertSameRelationships(rels, db.getRelationships(t3, t1));
+      List<Relationship> rels = db.getRelationships(t1, t2);
+      assertEquals(1, rels.size());
+      Relationship rel = rels.get(0);
+      assertEquals("Table2Table1", rel.getName());
+      assertEquals(t2, rel.getFromTable());
+      assertEquals(Arrays.asList(t2.getColumn("id")),
+                   rel.getFromColumns());
+      assertEquals(t1, rel.getToTable());
+      assertEquals(Arrays.asList(t1.getColumn("otherfk1")),
+                   rel.getToColumns());
+      assertTrue(rel.hasReferentialIntegrity());
+      assertEquals(0, rel.getFlags());
+      assertSameRelationships(rels, db.getRelationships(t2, t1));
 
-    try {
-      db.getRelationships(t1, t1);
-      fail("IllegalArgumentException should have been thrown");
-    } catch(IllegalArgumentException ignored) {
-      // success
+      rels = db.getRelationships(t2, t3);
+      assertTrue(db.getRelationships(t2, t3).isEmpty());
+      assertSameRelationships(rels, db.getRelationships(t3, t2));
+
+      rels = db.getRelationships(t1, t3);
+      assertEquals(1, rels.size());
+      rel = rels.get(0);
+      assertEquals("Table3Table1", rel.getName());
+      assertEquals(t3, rel.getFromTable());
+      assertEquals(Arrays.asList(t3.getColumn("id")),
+                   rel.getFromColumns());
+      assertEquals(t1, rel.getToTable());
+      assertEquals(Arrays.asList(t1.getColumn("otherfk2")),
+                   rel.getToColumns());
+      assertTrue(rel.hasReferentialIntegrity());
+      assertEquals(0, rel.getFlags());
+      assertSameRelationships(rels, db.getRelationships(t3, t1));
+
+      try {
+        db.getRelationships(t1, t1);
+        fail("IllegalArgumentException should have been thrown");
+      } catch(IllegalArgumentException ignored) {
+        // success
+      }
     }
-
   }
 
   private void assertSameRelationships(

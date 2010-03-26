@@ -27,7 +27,6 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -40,6 +39,7 @@ import java.util.regex.Pattern;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
 
 
 /**
@@ -66,19 +66,21 @@ public class IndexCodesTest extends TestCase {
 
   public void testIndexCodes() throws Exception
   {
-    Database db = open(new File("test/data/testIndexCodes.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES)) {
+      Database db = open(testDB);
 
-    for(Table t : db) {
-      for(Index index : t.getIndexes()) {
-//         System.out.println("Checking " + t.getName() + "." + index.getName());
-        checkIndexEntries(t, index);
+      for(Table t : db) {
+        for(Index index : t.getIndexes()) {
+  //         System.out.println("Checking " + t.getName() + "." + index.getName());
+          checkIndexEntries(testDB, t, index);
+        }
       }
+
+      db.close();
     }
-    
-    db.close();
   }
 
-  private static void checkIndexEntries(Table t, Index index) throws Exception
+  private static void checkIndexEntries(final TestDB testDB, Table t, Index index) throws Exception
   {
 //         index.initialize();
 //         System.out.println("Ind " + index);
@@ -90,7 +92,7 @@ public class IndexCodesTest extends TestCase {
       Cursor.Position curPos = cursor.getSavepoint().getCurrentPosition();
       boolean success = false;
       try {
-        findRow(t, index, row, curPos);
+        findRow(testDB, t, index, row, curPos);
         success = true;
       } finally {
         if(!success) {
@@ -103,7 +105,7 @@ public class IndexCodesTest extends TestCase {
     
   }
   
-  private static void findRow(Table t, Index index,
+  private static void findRow(final TestDB testDB, Table t, Index index,
                               Map<String,Object> expectedRow,
                               Cursor.Position expectedPos)
     throws Exception
@@ -123,7 +125,7 @@ public class IndexCodesTest extends TestCase {
         return;
       }
     }
-    fail("Could not find expected row " + expectedRow + " starting at " +
+    fail("testDB: " + testDB + ";\nCould not find expected row " + expectedRow + " starting at " +
          entryToString(startPos));
   }
 
@@ -140,120 +142,134 @@ public class IndexCodesTest extends TestCase {
 
   public void x_testCreateIsoFile() throws Exception
   {
-    Database db = create(true);
+    for (final Database.FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat, true);
 
-    Table t = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("row", DataType.TEXT).toColumn())
-      .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
-      .toTable(db);
-    
-    for(int i = 0; i < 256; ++i) {
-      String str = "AA" + ((char)i) + "AA";
-      t.addRow("row" + i, str);
+      Table t = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("row", DataType.TEXT).toColumn())
+        .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+        .toTable(db);
+
+      for(int i = 0; i < 256; ++i) {
+        String str = "AA" + ((char)i) + "AA";
+        t.addRow("row" + i, str);
+      }
+
+      db.close();
     }
-
-    db.close();
   }
 
   public void x_testCreateAltIsoFile() throws Exception
   {
-    Database db = openCopy(new File("/tmp/test_ind.mdb"), true);
+    for (final TestDB testDB : TestDB.getSupportedForBasename(null)) {
+      // @todo Bank test dbFiles and create new TestDB here.
+      //Database db = openCopy(new File("/tmp/test_ind.mdb"), true);
+      Database db = openCopy(testDB, true);
 
-    Table t = db.getTable("Table1");
+      Table t = db.getTable("Table1");
 
-    for(int i = 0; i < 256; ++i) {
-      String str = "AA" + ((char)i) + "AA";
-      t.addRow("row" + i, str,
-               (byte)42 + i, (short)53 + i, 13 * i,
-               (6.7d / i), null, null, true);
+      for(int i = 0; i < 256; ++i) {
+        String str = "AA" + ((char)i) + "AA";
+        t.addRow("row" + i, str,
+                 (byte)42 + i, (short)53 + i, 13 * i,
+                 (6.7d / i), null, null, true);
+      }
+
+      db.close();
     }
-    
-    db.close();
   }
 
   public void x_testWriteAllCodesMdb() throws Exception
   {
-    Database db = create(true);
+    for (final Database.FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat, true);
 
-//     Table t = new TableBuilder("Table1")
-//       .addColumn(new ColumnBuilder("key", DataType.TEXT).toColumn())
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
-//       .toTable(db);
+  //     Table t = new TableBuilder("Table1")
+  //       .addColumn(new ColumnBuilder("key", DataType.TEXT).toColumn())
+  //       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+  //       .toTable(db);
 
-//     for(int i = 0; i <= 0xFFFF; ++i) {
-//       // skip non-char chars
-//       char c = (char)i;
-//       if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
-//         continue;
-//       }
-//       String key = toUnicodeStr(c);
-//       String str = "AA" + c + "AA";
-//       t.addRow(key, str);
-//     }
+  //     for(int i = 0; i <= 0xFFFF; ++i) {
+  //       // skip non-char chars
+  //       char c = (char)i;
+  //       if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
+  //         continue;
+  //       }
+  //       String key = toUnicodeStr(c);
+  //       String str = "AA" + c + "AA";
+  //       t.addRow(key, str);
+  //     }
 
-    Table t = new TableBuilder("Table5")
-      .addColumn(new ColumnBuilder("name", DataType.TEXT).toColumn())
-      .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
-      .toTable(db);
+      Table t = new TableBuilder("Table5")
+        .addColumn(new ColumnBuilder("name", DataType.TEXT).toColumn())
+        .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+        .toTable(db);
 
-    char c = (char)0x3041;   // crazy 7F 02 ... A0
-    char c2 = (char)0x30A2;  // crazy 7F 02 ... 
-    char c3 = (char)0x2045;  // inat 27 ... 1C
-    char c4 = (char)0x3043;  // crazy 7F 03 ... A0
-    char c5 = (char)0x3046;  // crazy 7F 04 ... 
-    char c6 = (char)0x30F6;  // crazy 7F 0D ... A0
-    char c7 = (char)0x3099;  // unprint 03
-    char c8 = (char)0x0041;  // A
-    char c9 = (char)0x002D;  // - (unprint)
-    char c10 = (char)0x20E1; // unprint F2
-    char c11 = (char)0x309A; // unprint 04
-    char c12 = (char)0x01C4; // (long extra)
-    char c13 = (char)0x005F; // _ (long inline)
-    char c14 = (char)0xFFFE; // removed
+      char c = (char)0x3041;   // crazy 7F 02 ... A0
+      char c2 = (char)0x30A2;  // crazy 7F 02 ...
+      char c3 = (char)0x2045;  // inat 27 ... 1C
+      char c4 = (char)0x3043;  // crazy 7F 03 ... A0
+      char c5 = (char)0x3046;  // crazy 7F 04 ...
+      char c6 = (char)0x30F6;  // crazy 7F 0D ... A0
+      char c7 = (char)0x3099;  // unprint 03
+      char c8 = (char)0x0041;  // A
+      char c9 = (char)0x002D;  // - (unprint)
+      char c10 = (char)0x20E1; // unprint F2
+      char c11 = (char)0x309A; // unprint 04
+      char c12 = (char)0x01C4; // (long extra)
+      char c13 = (char)0x005F; // _ (long inline)
+      char c14 = (char)0xFFFE; // removed
 
-    char[] cs = new char[]{c7, c8, c3, c12, c13, c14, c, c2, c9};
-    addCombos(t, 0, "", cs, 5);
+      char[] cs = new char[]{c7, c8, c3, c12, c13, c14, c, c2, c9};
+      addCombos(t, 0, "", cs, 5);
 
-//     t = new TableBuilder("Table2")
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
-//       .toTable(db);
-    
-//     writeChars(0x0000, t);
+  //     t = new TableBuilder("Table2")
+  //       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+  //       .toTable(db);
 
-//     t = new TableBuilder("Table3")
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
-//       .toTable(db);
-    
-//     writeChars(0x0400, t);
+  //     writeChars(0x0000, t);
+
+  //     t = new TableBuilder("Table3")
+  //       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+  //       .toTable(db);
+
+  //     writeChars(0x0400, t);
 
 
-    db.close();
+      db.close();
+    }
   }
 
   public void x_testReadAllCodesMdb() throws Exception
   {
-//     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes.mdb"));
-//     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes_orig.mdb"));
-//     Database db = openCopy(new File("/data2/jackcess_test/testSomeMoreCodes.mdb"));
-    Database db = openCopy(new File("/data2/jackcess_test/testStillMoreCodes.mdb"));
-    Table t = db.getTable("Table5");
+    for (final TestDB testDB : TestDB.getSupportedForBasename(null)) {
 
-    Index ind = t.getIndexes().iterator().next();
-    ind.initialize();
-    
-    System.out.println("Ind " + ind);
+  //     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes.mdb"));
+  //     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes_orig.mdb"));
+  //     Database db = openCopy(new File("/data2/jackcess_test/testSomeMoreCodes.mdb"));
+      // @todo Bank test dbFiles and create new TestDB here.
+      //Database db = openCopy(new File("/data2/jackcess_test/testStillMoreCodes.mdb"));
+      Database db = openCopy(testDB);
 
-    Cursor cursor = Cursor.createIndexCursor(t, ind);
-    while(cursor.moveToNextRow()) {
-      System.out.println("=======");
-      String entryStr = 
-        entryToString(cursor.getSavepoint().getCurrentPosition());
-      System.out.println("Entry Bytes: " + entryStr);
-      System.out.println("Value: " + cursor.getCurrentRow() + "; " +
-                         toUnicodeStr(cursor.getCurrentRow().get("data")));
+      Table t = db.getTable("Table5");
+
+      Index ind = t.getIndexes().iterator().next();
+      ind.initialize();
+
+      System.out.println("Ind " + ind);
+
+      Cursor cursor = Cursor.createIndexCursor(t, ind);
+      while(cursor.moveToNextRow()) {
+        System.out.println("=======");
+        String entryStr =
+          entryToString(cursor.getSavepoint().getCurrentPosition());
+        System.out.println("Entry Bytes: " + entryStr);
+        System.out.println("Value: " + cursor.getCurrentRow() + "; " +
+                           toUnicodeStr(cursor.getCurrentRow().get("data")));
+      }
+
+      db.close();
     }
-
-    db.close();
   }
 
   private int addCombos(Table t, int rowNum, String s, char[] cs, int len)
@@ -285,201 +301,209 @@ public class IndexCodesTest extends TestCase {
 
   public void x_testReadIsoMdb() throws Exception
   {
-//     Database db = open(new File("/tmp/test_ind.mdb"));
-//     Database db = open(new File("/tmp/test_ind2.mdb"));
-    Database db = open(new File("/tmp/test_ind3.mdb"));
-//     Database db = open(new File("/tmp/test_ind4.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(null)) {
+  //     Database db = open(new File("/tmp/test_ind.mdb"));
+  //     Database db = open(new File("/tmp/test_ind2.mdb"));
+      // @todo Bank test dbFiles and create new TestDB here.
+      //Database db = open(new File("/tmp/test_ind3.mdb"));
+      Database db = open(testDB);
+  //     Database db = open(new File("/tmp/test_ind4.mdb"));
 
-    Table t = db.getTable("Table1");
-    Index index = t.getIndex("B");
-    index.initialize();
-    System.out.println("Ind " + index);
+      Table t = db.getTable("Table1");
+      Index index = t.getIndex("B");
+      index.initialize();
+      System.out.println("Ind " + index);
 
-    Cursor cursor = Cursor.createIndexCursor(t, index);
-    while(cursor.moveToNextRow()) {
-      System.out.println("=======");
-      System.out.println("Savepoint: " + cursor.getSavepoint());
-      System.out.println("Value: " + cursor.getCurrentRow());
+      Cursor cursor = Cursor.createIndexCursor(t, index);
+      while(cursor.moveToNextRow()) {
+        System.out.println("=======");
+        System.out.println("Savepoint: " + cursor.getSavepoint());
+        System.out.println("Value: " + cursor.getCurrentRow());
+      }
+
+      db.close();
     }
-    
-    db.close();
   }
     
   public void x_testReverseIsoMdb() throws Exception
   {
-    Database db = open(new File("/data2/jackcess_test/testAllIndexCodes3.mdb"));
+    for (final TestDB testDB : TestDB.getSupportedForBasename(null)) {
+       // @todo Bank test dbFiles and create new TestDB here.
+      //Database db = open(new File("/data2/jackcess_test/testAllIndexCodes3.mdb"));
+      Database db = open(testDB);
 
-    Table t = db.getTable("Table1");
-    Index index = t.getIndexes().iterator().next();
-    index.initialize();
-    System.out.println("Ind " + index);
+      Table t = db.getTable("Table1");
+      Index index = t.getIndexes().iterator().next();
+      index.initialize();
+      System.out.println("Ind " + index);
 
-    Pattern inlinePat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 00");
-    Pattern unprintPat = Pattern.compile("01 01 01 80 (.+) 06 (.+) 00");
-    Pattern unprint2Pat = Pattern.compile("4A 4A 4A 4A 01 02 (.+) 00");
-    Pattern inatPat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 02 02 (.+) 00");
-    Pattern inat2Pat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 (02 02 (.+))?01 01 (.*)FF 02 80 FF 80 00");
+      Pattern inlinePat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 00");
+      Pattern unprintPat = Pattern.compile("01 01 01 80 (.+) 06 (.+) 00");
+      Pattern unprint2Pat = Pattern.compile("4A 4A 4A 4A 01 02 (.+) 00");
+      Pattern inatPat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 02 02 (.+) 00");
+      Pattern inat2Pat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 (02 02 (.+))?01 01 (.*)FF 02 80 FF 80 00");
 
-    Map<Character,String[]> inlineCodes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> unprintCodes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> unprint2Codes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> inatInlineCodes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> inatExtraCodes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> inat2Codes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> inat2ExtraCodes = new TreeMap<Character,String[]>();
-    Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
-    
-    
-    Cursor cursor = Cursor.createIndexCursor(t, index);
-    while(cursor.moveToNextRow()) {
-//       System.out.println("=======");
-//       System.out.println("Savepoint: " + cursor.getSavepoint());
-//       System.out.println("Value: " + cursor.getCurrentRow());
-      Cursor.Savepoint savepoint = cursor.getSavepoint();
-      String entryStr = entryToString(savepoint.getCurrentPosition());
+      Map<Character,String[]> inlineCodes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> unprintCodes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> unprint2Codes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> inatInlineCodes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> inatExtraCodes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> inat2Codes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> inat2ExtraCodes = new TreeMap<Character,String[]>();
+      Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
 
-      Map<String,Object> row = cursor.getCurrentRow();
-      String value = (String)row.get("data");
-      String key = (String)row.get("key");
-      char c = value.charAt(2);
-      System.out.println("=======");
-      System.out.println("RowId: " +
-                         savepoint.getCurrentPosition().getRowId());
-      System.out.println("Entry: " + entryStr);
-//         System.out.println("Row: " + row);
-      System.out.println("Value: (" + key + ")" + value);
-      System.out.println("Char: " + c + ", " + (int)c + ", " +
-                         toUnicodeStr(c));
 
-      String type = null;
-      if(entryStr.endsWith("01 00")) {
+      Cursor cursor = Cursor.createIndexCursor(t, index);
+      while(cursor.moveToNextRow()) {
+  //       System.out.println("=======");
+  //       System.out.println("Savepoint: " + cursor.getSavepoint());
+  //       System.out.println("Value: " + cursor.getCurrentRow());
+        Cursor.Savepoint savepoint = cursor.getSavepoint();
+        String entryStr = entryToString(savepoint.getCurrentPosition());
 
-        // handle inline codes
-        type = "INLINE";
-        Matcher m = inlinePat.matcher(entryStr);
-        m.find();
-        handleInlineEntry(m.group(1), c, inlineCodes);
+        Map<String,Object> row = cursor.getCurrentRow();
+        String value = (String)row.get("data");
+        String key = (String)row.get("key");
+        char c = value.charAt(2);
+        System.out.println("=======");
+        System.out.println("RowId: " +
+                           savepoint.getCurrentPosition().getRowId());
+        System.out.println("Entry: " + entryStr);
+  //         System.out.println("Row: " + row);
+        System.out.println("Value: (" + key + ")" + value);
+        System.out.println("Char: " + c + ", " + (int)c + ", " +
+                           toUnicodeStr(c));
 
-      } else if(entryStr.contains("01 01 01 80")) {
-        
-        // handle most unprintable codes
-        type = "UNPRINTABLE";
-        Matcher m = unprintPat.matcher(entryStr);
-        m.find();
-        handleUnprintableEntry(m.group(2), c, unprintCodes);
+        String type = null;
+        if(entryStr.endsWith("01 00")) {
 
-      } else if(entryStr.contains("01 02 02") && 
-                !entryStr.contains("FF 02 80 FF 80")) {
+          // handle inline codes
+          type = "INLINE";
+          Matcher m = inlinePat.matcher(entryStr);
+          m.find();
+          handleInlineEntry(m.group(1), c, inlineCodes);
 
-        // handle chars w/ symbols
-        type = "CHAR_WITH_SYMBOL";
-        Matcher m = inatPat.matcher(entryStr);
-        m.find();
-        handleInternationalEntry(m.group(1), m.group(2), c,
-                                 inatInlineCodes, inatExtraCodes);
-        
-      } else if(entryStr.contains("4A 4A 4A 4A 01 02")) {
+        } else if(entryStr.contains("01 01 01 80")) {
 
-        // handle chars w/ symbols
-        type = "UNPRINTABLE_2";
-        Matcher m = unprint2Pat.matcher(entryStr);
-        m.find();
-        handleUnprintable2Entry(m.group(1), c, unprint2Codes);
-        
-      } else if(entryStr.contains("FF 02 80 FF 80")) {
+          // handle most unprintable codes
+          type = "UNPRINTABLE";
+          Matcher m = unprintPat.matcher(entryStr);
+          m.find();
+          handleUnprintableEntry(m.group(2), c, unprintCodes);
 
-        type = "CRAZY_INAT";
-        Matcher m = inat2Pat.matcher(entryStr);
-        m.find();
-        handleInternational2Entry(m.group(1), m.group(3), m.group(4), c,
-                                  inat2Codes, inat2ExtraCodes,
-                                  inat2CrazyCodes);
+        } else if(entryStr.contains("01 02 02") &&
+                  !entryStr.contains("FF 02 80 FF 80")) {
 
-      } else {
+          // handle chars w/ symbols
+          type = "CHAR_WITH_SYMBOL";
+          Matcher m = inatPat.matcher(entryStr);
+          m.find();
+          handleInternationalEntry(m.group(1), m.group(2), c,
+                                   inatInlineCodes, inatExtraCodes);
 
-        throw new RuntimeException("unhandled " + entryStr);
-      }      
-        
-      System.out.println("Type: " + type);
-    }
+        } else if(entryStr.contains("4A 4A 4A 4A 01 02")) {
 
-    System.out.println("\n***CODES");
-    for(int i = 0; i <= 0xFFFF; ++i) {
+          // handle chars w/ symbols
+          type = "UNPRINTABLE_2";
+          Matcher m = unprint2Pat.matcher(entryStr);
+          m.find();
+          handleUnprintable2Entry(m.group(1), c, unprint2Codes);
 
-      if(i == 256) {
-        System.out.println("\n***EXTENDED CODES");
-      }
+        } else if(entryStr.contains("FF 02 80 FF 80")) {
 
-      // skip non-char chars
-      char c = (char)i;
-      if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
-        continue;
-      }
+          type = "CRAZY_INAT";
+          Matcher m = inat2Pat.matcher(entryStr);
+          m.find();
+          handleInternational2Entry(m.group(1), m.group(3), m.group(4), c,
+                                    inat2Codes, inat2ExtraCodes,
+                                    inat2CrazyCodes);
 
-      if(c == (char)0xFFFE) {
-        // this gets replaced with FFFD, treat it the same
-        c = (char)0xFFFD;
-      }
-
-      Character cc = c;
-      String[] chars = inlineCodes.get(cc);
-      if(chars != null) {
-        if((chars.length == 1) && (chars[0].length() == 0)) {
-          System.out.println("X");
         } else {
-          System.out.println("S" + toByteString(chars));
+
+          throw new RuntimeException("unhandled " + entryStr);
         }
-        continue;
+
+        System.out.println("Type: " + type);
       }
 
-      chars = inatInlineCodes.get(cc);
-      if(chars != null) {
-        String[] extra = inatExtraCodes.get(cc);
-        System.out.println("I" + toByteString(chars) + "," +
-                           toByteString(extra));
-        continue;
-      }
-        
-      chars = unprintCodes.get(cc);
-      if(chars != null) {
-        System.out.println("U" + toByteString(chars));
-        continue;
-      }
+      System.out.println("\n***CODES");
+      for(int i = 0; i <= 0xFFFF; ++i) {
 
-      chars = unprint2Codes.get(cc);
-      if(chars != null) {
-        if(chars.length > 1) {
-          throw new RuntimeException("long unprint codes");
+        if(i == 256) {
+          System.out.println("\n***EXTENDED CODES");
         }
-        int val = Integer.parseInt(chars[0], 16) - 2;
-        String valStr = ByteUtil.toHexString(new byte[]{(byte)val}).trim();
-        System.out.println("P" + valStr);
-        continue;
-      }
 
-      chars = inat2Codes.get(cc);
-      if(chars != null) {
-        String [] crazyCodes = inat2CrazyCodes.get(cc);
-        String crazyCode = "";
-        if(crazyCodes != null) {
-          if((crazyCodes.length != 1) || !"A0".equals(crazyCodes[0])) {
-            throw new RuntimeException("CC " + Arrays.asList(crazyCodes));
+        // skip non-char chars
+        char c = (char)i;
+        if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
+          continue;
+        }
+
+        if(c == (char)0xFFFE) {
+          // this gets replaced with FFFD, treat it the same
+          c = (char)0xFFFD;
+        }
+
+        Character cc = c;
+        String[] chars = inlineCodes.get(cc);
+        if(chars != null) {
+          if((chars.length == 1) && (chars[0].length() == 0)) {
+            System.out.println("X");
+          } else {
+            System.out.println("S" + toByteString(chars));
           }
-          crazyCode = "1";
+          continue;
         }
 
-        String[] extra = inat2ExtraCodes.get(cc);
-        System.out.println("Z" + toByteString(chars) + "," +
-                           toByteString(extra) + "," +
-                           crazyCode);
-        continue;
-      }
+        chars = inatInlineCodes.get(cc);
+        if(chars != null) {
+          String[] extra = inatExtraCodes.get(cc);
+          System.out.println("I" + toByteString(chars) + "," +
+                             toByteString(extra));
+          continue;
+        }
 
-      throw new RuntimeException("Unhandled char " + toUnicodeStr(c));
+        chars = unprintCodes.get(cc);
+        if(chars != null) {
+          System.out.println("U" + toByteString(chars));
+          continue;
+        }
+
+        chars = unprint2Codes.get(cc);
+        if(chars != null) {
+          if(chars.length > 1) {
+            throw new RuntimeException("long unprint codes");
+          }
+          int val = Integer.parseInt(chars[0], 16) - 2;
+          String valStr = ByteUtil.toHexString(new byte[]{(byte)val}).trim();
+          System.out.println("P" + valStr);
+          continue;
+        }
+
+        chars = inat2Codes.get(cc);
+        if(chars != null) {
+          String [] crazyCodes = inat2CrazyCodes.get(cc);
+          String crazyCode = "";
+          if(crazyCodes != null) {
+            if((crazyCodes.length != 1) || !"A0".equals(crazyCodes[0])) {
+              throw new RuntimeException("CC " + Arrays.asList(crazyCodes));
+            }
+            crazyCode = "1";
+          }
+
+          String[] extra = inat2ExtraCodes.get(cc);
+          System.out.println("Z" + toByteString(chars) + "," +
+                             toByteString(extra) + "," +
+                             crazyCode);
+          continue;
+        }
+
+        throw new RuntimeException("Unhandled char " + toUnicodeStr(c));
+      }
+      System.out.println("\n***END CODES");
+
+      db.close();
     }
-    System.out.println("\n***END CODES");
-    
-    db.close();
   }
 
   private static String toByteString(String[] chars)

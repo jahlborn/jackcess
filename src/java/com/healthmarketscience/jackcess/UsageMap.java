@@ -72,8 +72,11 @@ public class UsageMap
   /** the current handler implementation for reading/writing the specific
       usage map type.  note, this may change over time. */
   private Handler _handler;
-  
-  /**
+
+  /** Error message prefix used when map type is unrecognized. */
+  static final String MSG_PREFIX_UNRECOGNIZED_MAP = "Unrecognized map type: ";
+
+    /**
    * @param database database that contains this usage map
    * @param tableBuffer Buffer that contains this map's declaration
    * @param pageNum Page number that this usage map is contained in
@@ -139,7 +142,7 @@ public class UsageMap
     } else if (mapType == MAP_TYPE_REFERENCE) {
       _handler = new ReferenceHandler();
     } else {
-      throw new IOException("Unrecognized map type: " + mapType);
+      throw new IOException(MSG_PREFIX_UNRECOGNIZED_MAP + mapType);
     }
   }
   

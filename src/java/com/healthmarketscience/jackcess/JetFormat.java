@@ -31,6 +31,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
  * Encapsulates constants describing a specific version of the Access Jet format
@@ -46,12 +49,41 @@ public abstract class JetFormat {
   /** Maximum size of a text field */
   public static final short TEXT_FIELD_MAX_LENGTH = 255 * TEXT_FIELD_UNIT_SIZE;
   
-  /** Offset in the file that holds the byte describing the Jet format version */
+  /** Offset in the file that holds the byte describing the Jet format
+      version */
   private static final long OFFSET_VERSION = 20L;
   /** Version code for Jet version 3 */
   private static final byte CODE_VERSION_3 = 0x0;
   /** Version code for Jet version 4 */
   private static final byte CODE_VERSION_4 = 0x1;
+  /** Version code for Jet version 5 */
+  private static final byte CODE_VERSION_5 = 0x2;
+
+  /** value of the "AccessVersion" property for access 2000 dbs:
+      {@code "08.50"} */
+  private static final byte[] ACCESS_VERSION_2000 = new byte[] {
+    '0', 0, '8', 0, '.', 0, '5', 0, '0', 0};
+  /** value of the "AccessVersion" property for access 2002/2003 dbs
+      {@code "09.50"}  */
+  private static final byte[] ACCESS_VERSION_2003 = new byte[] {
+    '0', 0, '9', 0, '.', 0, '5', 0, '0', 0};
+
+  // use nested inner class to avoid problematic static init loops
+  private static final class PossibleFileFormats {
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_3 = 
+      Collections.singletonMap(Database.FileFormat.V1997, (byte[])null);
+
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_4 = 
+      new EnumMap<Database.FileFormat,byte[]>(Database.FileFormat.class);
+
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_5 = 
+      Collections.singletonMap(Database.FileFormat.V2007, (byte[])null);
+
+    static {
+      POSSIBLE_VERSION_4.put(Database.FileFormat.V2000, ACCESS_VERSION_2000);
+      POSSIBLE_VERSION_4.put(Database.FileFormat.V2003, ACCESS_VERSION_2003);
+    }
+  }
 
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
@@ -128,13 +160,19 @@ public abstract class JetFormat {
   public final int MAX_TABLE_NAME_LENGTH;
   public final int MAX_COLUMN_NAME_LENGTH;
   public final int MAX_INDEX_NAME_LENGTH;
+
+  public final boolean REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES;
   
   public final Charset CHARSET;
   
+  public static final JetFormat VERSION_3 = new Jet3Format();
   public static final JetFormat VERSION_4 = new Jet4Format();
+  public static final JetFormat VERSION_5 = new Jet5Format();
 
   /**
+   * @param channel the database file.
    * @return The Jet Format represented in the passed-in file
+   * @throws IOException if the database file format is unsupported.
    */
   public static JetFormat getFormat(FileChannel channel) throws IOException {
     ByteBuffer buffer = ByteBuffer.allocate(1);
@@ -144,8 +182,12 @@ public abstract class JetFormat {
     }
     buffer.flip();
     byte version = buffer.get();
-    if (version == CODE_VERSION_4) {
+    if (version == CODE_VERSION_3) {
+      return VERSION_3;
+    } else if (version == CODE_VERSION_4) {
       return VERSION_4;
+    } else if (version == CODE_VERSION_5) {
+      return VERSION_5;
     }
     throw new IOException("Unsupported version: " + version);
   }
@@ -220,7 +262,8 @@ public abstract class JetFormat {
     MAX_TABLE_NAME_LENGTH = defineMaxTableNameLength();
     MAX_COLUMN_NAME_LENGTH = defineMaxColumnNameLength();
     MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
-
+    
+    REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES = defineReverseFirstByteInDescNumericIndexes();
     
     CHARSET = defineCharset();
   }
@@ -295,15 +338,23 @@ public abstract class JetFormat {
   
   protected abstract Charset defineCharset();
 
+  protected abstract boolean defineReverseFirstByteInDescNumericIndexes();
+
+  protected abstract Map<Database.FileFormat,byte[]> getPossibleFileFormats();
+
   @Override
   public String toString() {
     return _name;
   }
   
-  private static final class Jet4Format extends JetFormat {
+  private static class Jet4Format extends JetFormat {
 
     private Jet4Format() {
-      super("VERSION_4");
+      this("VERSION_4");
+    }
+
+    private Jet4Format(final String name) {
+      super(name);
     }
 
     @Override
@@ -435,7 +486,43 @@ public abstract class JetFormat {
     protected int defineMaxIndexNameLength() { return 64; }
       
     @Override
+    protected boolean defineReverseFirstByteInDescNumericIndexes() { return false; }
+
+    @Override
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    {
+      return PossibleFileFormats.POSSIBLE_VERSION_4;
+    }
+
   }
   
+  private static final class Jet3Format extends Jet4Format {
+      private Jet3Format() {
+        super("VERSION_3");
+      }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
+      return PossibleFileFormats.POSSIBLE_VERSION_3;
+    }
+
+  }
+
+  private static final class Jet5Format extends Jet4Format {
+      private Jet5Format() {
+        super("VERSION_5");
+      }
+
+    @Override
+    protected boolean defineReverseFirstByteInDescNumericIndexes() { return true; }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
+      return PossibleFileFormats.POSSIBLE_VERSION_5;
+    }
+  }
+
 }

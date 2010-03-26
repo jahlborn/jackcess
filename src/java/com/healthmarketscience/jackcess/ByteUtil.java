@@ -308,6 +308,23 @@ public final class ByteUtil {
     }
     return true;
   }
+
+  /**
+   * Searches for a pattern of bytes in the given buffer starting at the
+   * given offset.
+   * @return the offset of the pattern if a match is found, -1 otherwise
+   */
+  public static int findRange(ByteBuffer buffer, int start, byte[] pattern)
+  {
+    byte firstByte = pattern[0];
+    int limit = buffer.limit() - pattern.length;
+    for(int i = start; i < limit; ++i) {
+      if((firstByte == buffer.get(i)) && matchesRange(buffer, i, pattern)) {
+        return i;
+      }
+    }
+    return -1;
+  }
   
   /**
    * Convert a byte buffer to a hexadecimal string for display
