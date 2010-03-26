@@ -4,9 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.1.22" date="TBD">
+    <release version="1.2.0" date="TBD">
       <action dev="bhamail" type="fix" issue="2968957">
         Fix BigIndexTest to work in IDE's w/out sys.prop.
+      </action>
+      <action dev="bhamail" type="update" issue="1451628">
+        Add support for access 2002/2003/2007 databases.
       </action>
     </release>
     <release version="1.1.21" date="2010-01-19">
