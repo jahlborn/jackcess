@@ -5,6 +5,7 @@ import junit.framework.TestCase;
 import java.io.File;
 import java.io.IOException;
 
+import static com.healthmarketscience.jackcess.Database.MSG_PREFIX_OPEN_UNSUPPORTED_JET_FORMAT;
 import static com.healthmarketscience.jackcess.JetFormatTest.*;
 
 /**
@@ -18,8 +19,10 @@ public final class UsageMapTest extends TestCase {
         try {
             Database.open(UNSUPPORTED_TEST_V1997.getFile());
             fail("mdb v97 usage map unsupported");
-        } catch (IOException e) {
-            assertEquals(UsageMap.MSG_PREFIX_UNRECOGNIZED_MAP + 2, e.getMessage());
+        } catch (IllegalArgumentException e) {
+            assertEquals(
+                    MSG_PREFIX_OPEN_UNSUPPORTED_JET_FORMAT + UNSUPPORTED_TEST_V1997.getExpectedFormat(),
+                    e.getMessage());
         }
 
         for (final TestDB testDB : SUPPORTED_DBS_TEST) {

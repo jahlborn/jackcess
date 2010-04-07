@@ -101,6 +101,27 @@ public class DatabaseTest extends TestCase {
   }
 
 
+  public void testUnsupportedCreate() throws Exception {
+      try {
+          create(JetFormatTest.UNSUPPORTED_TEST_V1997.getExpectedFileFormat());
+          fail("Create unsupported JetFormat should fail.");
+      } catch (IllegalArgumentException e) {
+          assertEquals(Database.MSG_PREFIX_CREATE_UNSUPPORTED_FILE_FORMAT + FileFormat.V1997, e.getMessage());
+      }
+  }
+
+  public void testUnsupportedOpen() throws Exception {
+      try {
+          open(JetFormatTest.UNSUPPORTED_TEST_V1997);
+          fail("Open unsupported JetFormat should fail.");
+      } catch (IllegalArgumentException e) {
+          assertEquals(
+                  MSG_PREFIX_OPEN_UNSUPPORTED_JET_FORMAT + UNSUPPORTED_TEST_V1997.getExpectedFormat(),
+                  e.getMessage());
+      }
+  }
+
+
   public void testInvalidTableDefs() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -783,15 +804,9 @@ public class DatabaseTest extends TestCase {
 
       String lval = createString(255); // "--255 chars long text--";
 
-      if (FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
-        // @todo Field order differs with V2007
-        System.err.println("\n*** TODO: " + getName()
-                + "(): Is OK that " + testDB.getExpectedFileFormat().name() + " field order differs?  ***");
-      }
-
       for(int i = 0; i < 1000; ++i) {
         if (FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
-          // @todo Field order differs with V2007
+          // Field order differs with V2007
           t.addRow(i, 13, 57, lval, lval, lval, lval, lval, lval, 47.0d);
         } else {
           t.addRow(i, 13, 57, 47.0d, lval, lval, lval, lval, lval, lval);
@@ -986,9 +1001,7 @@ public class DatabaseTest extends TestCase {
               && !FileFormat.V2007.equals(fileFormat)) {
         assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       } else {
-        // @todo Does is matter that v2003, v2007 template files have no "MSysAccessObjects" table?
-        System.err.println("\n*** TODO: " + getName()
-                + "(): Is OK that " + fileFormat.name() + " template file has no \"MSysAccessObjects\" table?  ***");
+        // v2003, v2007 template files have no "MSysAccessObjects" table
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       }
 

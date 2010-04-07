@@ -170,7 +170,12 @@ public class Database
   private static final String CAT_COL_FLAGS = "Flags";
   /** System catalog column name of the properties column */
   private static final String CAT_COL_PROPS = "LvProp";
-  
+
+  /** Error message prefix for unsupported file format. */
+  static final String MSG_PREFIX_CREATE_UNSUPPORTED_FILE_FORMAT = "Unsupported file format: ";
+  /** Error message prefix for unsupported file format. */
+  static final String MSG_PREFIX_OPEN_UNSUPPORTED_JET_FORMAT = "Unsupported Jet format: ";
+
   public static enum FileFormat {
 
     V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
@@ -439,6 +444,10 @@ public class Database
                                 boolean autoSync)
     throws IOException
   {
+    if (JetFormat.VERSION_3.equals(fileFormat.getJetFormat())) {
+        throw new IllegalArgumentException(MSG_PREFIX_CREATE_UNSUPPORTED_FILE_FORMAT + fileFormat);
+    }
+
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
@@ -478,6 +487,10 @@ public class Database
     throws IOException
   {
     _format = JetFormat.getFormat(channel);
+    if (JetFormat.VERSION_3.equals(_format)) {
+        channel.close();
+        throw new IllegalArgumentException(MSG_PREFIX_OPEN_UNSUPPORTED_JET_FORMAT + _format);
+    }
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, _format, autoSync);
     // note, it's slighly sketchy to pass ourselves along partially
