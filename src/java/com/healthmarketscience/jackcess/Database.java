@@ -476,15 +476,30 @@ public class Database
                      FileFormat fileFormat)
     throws IOException
   {
-    _format = JetFormat.getFormat(channel);
-    _fileFormat = fileFormat;
-    _pageChannel = new PageChannel(channel, _format, autoSync);
-    // note, it's slighly sketchy to pass ourselves along partially
-    // constructed, but only our _format and _pageChannel refs should be
-    // needed
-    _pageChannel.initialize(this);
-    _buffer = _pageChannel.createPageBuffer();
-    readSystemCatalog();
+    boolean success = false;
+    try {
+
+      _format = JetFormat.getFormat(channel);
+      _fileFormat = fileFormat;
+      _pageChannel = new PageChannel(channel, _format, autoSync);
+      // note, it's slighly sketchy to pass ourselves along partially
+      // constructed, but only our _format and _pageChannel refs should be
+      // needed
+      _pageChannel.initialize(this);
+      _buffer = _pageChannel.createPageBuffer();
+      readSystemCatalog();
+      success = true;
+
+    } finally {
+      if(!success && (channel != null)) {
+        // something blew up, shutdown the channel (quietly)
+        try {
+          channel.close();
+        } catch(Exception ignored) {
+          // we don't care
+        }
+      }
+    }
   }
   
   public PageChannel getPageChannel() {
