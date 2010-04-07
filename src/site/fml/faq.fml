@@ -203,9 +203,10 @@
         of rows.  When the index size limit was reached an
         UnsupportedOperationException (or possibly an IOException) was thrown.
         As of the 1.1.14 release, experimental, optional large index support
-        has been added.  This support is disabled by default but can be
-        enabled via a few different means.  Please see the <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database javadocs</a>
-        for details on enabling large index support.
+        has been added.  As of the 1.2.0 release, large index support is
+        enabled by default.  This support is enabled/disabled via a few
+        different means.  Please see the <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database
+        javadocs</a> for details on enabling/disabling large index support.
       </answer>
     </faq>
 

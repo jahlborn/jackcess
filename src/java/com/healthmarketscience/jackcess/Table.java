@@ -125,7 +125,7 @@ public class Table
   /** page buffer used to write out-of-line "long value" data */
   private final TempPageHolder _longValueBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
-  /** for now, "big index support" is optional */
+  /** "big index support" is optional */
   private final boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _tableErrorHandler;
@@ -144,7 +144,7 @@ public class Table
     _database = null;
     _tableDefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     _name = null;
-    _useBigIndex = false;
+    _useBigIndex = true;
     setColumns(columns);
   }
   

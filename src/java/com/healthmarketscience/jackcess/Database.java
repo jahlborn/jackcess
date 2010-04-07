@@ -62,14 +62,14 @@ import org.apache.commons.logging.LogFactory;
 /**
  * An Access database.
  * <p>
- * There is now experimental, optional support for large indexes (disabled by
- * default).  This optional support can be enabled via a few different means:
+ * There is optional support for large indexes (enabled by default).  This
+ * optional support can be disabled via a few different means:
  * <ul>
  * <li>Setting the system property {@value #USE_BIG_INDEX_PROPERTY} to
- *     {@code "true"} will enable "large" index support accross the jvm</li>
- * <li>Calling {@link #setUseBigIndex} with {@code true} on a Database
- *     instance will enable "large" index support for all tables subsequently
- *     created from that instance</li>
+ *     {@code "false"} will disable "large" index support across the jvm</li>
+ * <li>Calling {@link #setUseBigIndex} on a Database instance will override
+ *     any system property setting for "large" index support for all tables
+ *     subsequently created from that instance</li>
  * <li>Calling {@link #getTable(String,boolean)} can selectively
  *     enable/disable "large" index support on a per-table basis (overriding
  *     any Database or system property setting)</li>
@@ -295,8 +295,8 @@ public class Database
   private Table _queries;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
-  /** for now, "big index support" is optional */
-  private boolean _useBigIndex;
+  /** "big index support" is optional, but enabled by default */
+  private Boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _dbErrorHandler;
   /** the file format of the database */
@@ -513,7 +513,7 @@ public class Database
    * Whether or not big index support is enabled for tables.
    */
   public boolean doUseBigIndex() {
-    return _useBigIndex;
+    return (_useBigIndex != null ? _useBigIndex : true);
   }
 
   /**
@@ -1227,11 +1227,18 @@ public class Database
   }
 
   /**
-   * Returns {@code true} if "big index support" has been enabled explicity on
-   * the this Database or via a system property, {@code false} otherwise.
+   * Returns {@code false} if "big index support" has been disabled explicity
+   * on the this Database or via a system property, {@code true} otherwise.
    */
   public boolean defaultUseBigIndex() {
-    return doUseBigIndex() || Boolean.getBoolean(USE_BIG_INDEX_PROPERTY);
+    if(_useBigIndex != null) {
+      return _useBigIndex;
+    }
+    String prop = System.getProperty(USE_BIG_INDEX_PROPERTY);
+    if(prop != null) {
+      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
+    }
+    return true;
   }
   
   /**
