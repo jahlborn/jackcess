@@ -1,10 +1,12 @@
 package com.healthmarketscience.jackcess;
 
-import junit.framework.TestCase;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+
+import junit.framework.TestCase;
 
 /**
  * @author Dan Rollo
@@ -37,20 +39,22 @@ public final class JetFormatTest extends TestCase {
         PROMOTION("testPromotion"),
         ;
 
-        private final String basename;
+        private final String _basename;
 
-        Basename(final String fileBasename) {
-          basename = fileBasename;
+        Basename(String fileBasename) {
+          _basename = fileBasename;
         }
 
+        @Override
+        public String toString() { return _basename; }
     }
 
     /** Defines currently supported db file formats. */
-    final static Database.FileFormat[] SUPPORTED_FILEFORMATS = new Database.FileFormat[] {
+    final static Database.FileFormat[] SUPPORTED_FILEFORMATS = 
+      new Database.FileFormat[] {
             Database.FileFormat.V2000,
             Database.FileFormat.V2003,
             Database.FileFormat.V2007,
-            // @todo Uncomment these elements to run test other formats
     };
 
     /**
@@ -61,45 +65,56 @@ public final class JetFormatTest extends TestCase {
         private final File dbFile;
         private final Database.FileFormat expectedFileFormat;
 
-        private TestDB(final File databaseFile, final Database.FileFormat expectedDBFileFormat) {
+        private TestDB(File databaseFile, 
+                       Database.FileFormat expectedDBFileFormat) {
 
             dbFile = databaseFile;
             expectedFileFormat = expectedDBFileFormat;
         }
 
         public final File getFile() { return dbFile; }
-        public final Database.FileFormat  getExpectedFileFormat() { return expectedFileFormat; }
-        public final JetFormat getExpectedFormat() { return expectedFileFormat.getJetFormat(); }
 
+        public final Database.FileFormat  getExpectedFileFormat() { 
+          return expectedFileFormat; 
+        }
+
+        public final JetFormat getExpectedFormat() { 
+          return expectedFileFormat.getJetFormat(); 
+        }
+
+        @Override
         public final String toString() {
-            return "dbFile: " + dbFile.getAbsolutePath()
-                    + "; expectedFileFormat: " + expectedFileFormat;
+          return "dbFile: " + dbFile.getAbsolutePath()
+            + "; expectedFileFormat: " + expectedFileFormat;
         }
 
-        public static TestDB[] getSupportedForBasename(final Basename basename) {
+        public static List<TestDB> getSupportedForBasename(Basename basename) {
 
-            final TestDB[] supportedTestDBs = new TestDB[SUPPORTED_FILEFORMATS.length];
-            int i = 0;
-            for (final Database.FileFormat fileFormat: SUPPORTED_FILEFORMATS) {
-                supportedTestDBs[i++] = new TestDB(
-                        getFileForBasename(basename, fileFormat),
-                        fileFormat);
-            }
-            return supportedTestDBs;
+          List<TestDB> supportedTestDBs = new ArrayList<TestDB>();
+          for (Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+            supportedTestDBs.add(new TestDB(
+                                     getFileForBasename(basename, fileFormat),
+                                     fileFormat));
+          }
+          return supportedTestDBs;
         }
 
-        private static File getFileForBasename(Basename basename, Database.FileFormat fileFormat) {
+        private static File getFileForBasename(
+            Basename basename, Database.FileFormat fileFormat) {
 
             return new File(DIR_TEST_DATA, 
-                            fileFormat.name() + "/" + basename.basename + fileFormat.name() + 
+                            fileFormat.name() + File.separator +
+                            basename + fileFormat.name() + 
                             fileFormat.getFileExtension());
         }
     }
 
-    static final TestDB UNSUPPORTED_TEST_V1997 = new TestDB(
-            TestDB.getFileForBasename(Basename.TEST, Database.FileFormat.V1997), Database.FileFormat.V1997);
+    private static final File UNSUPPORTED_TEST_V1997 = 
+      new File(DIR_TEST_DATA, "V1997" + File.separator +
+               Basename.TEST + "V1997.mdb");
 
-    static final TestDB[] SUPPORTED_DBS_TEST= TestDB.getSupportedForBasename(Basename.TEST);
+    static final List<TestDB> SUPPORTED_DBS_TEST = 
+      TestDB.getSupportedForBasename(Basename.TEST);
 
 
     public void testGetFormat() throws Exception {
@@ -107,10 +122,10 @@ public final class JetFormatTest extends TestCase {
             JetFormat.getFormat(null);
             fail("npe");
         } catch (NullPointerException e) {
-            assertNull(e.getMessage());
+          // success
         }
 
-        checkJetFormat(UNSUPPORTED_TEST_V1997);
+        checkUnsupportedJetFormat(UNSUPPORTED_TEST_V1997);
 
         for (final TestDB testDB : SUPPORTED_DBS_TEST) {
           checkJetFormat(testDB);
@@ -123,12 +138,29 @@ public final class JetFormatTest extends TestCase {
         final FileChannel channel = Database.openChannel(testDB.dbFile, false);
         try {
 
-            final JetFormat fmtActual = JetFormat.getFormat(channel);
-            assertEquals("Unexpected JetFormat for dbFile: " + testDB.dbFile.getAbsolutePath(),
-                    testDB.expectedFileFormat.getJetFormat(), fmtActual);
+            JetFormat fmtActual = JetFormat.getFormat(channel);
+            assertEquals("Unexpected JetFormat for dbFile: " + 
+                         testDB.dbFile.getAbsolutePath(),
+                         testDB.expectedFileFormat.getJetFormat(), fmtActual);
 
         } finally {
             channel.close();
         }
     }
+
+    private static void checkUnsupportedJetFormat(File testDB)
+            throws IOException {
+
+        final FileChannel channel = Database.openChannel(testDB, false);
+        try {
+            JetFormat.getFormat(channel);
+            fail("Unexpected JetFormat for dbFile: " + 
+                 testDB.getAbsolutePath());
+        } catch(IOException ignored) {
+          // success
+        } finally {
+            channel.close();
+        }
+    }
+
 }

@@ -173,7 +173,6 @@ public class Database
   
   public static enum FileFormat {
 
-    V1997(null, JetFormat.VERSION_3), // v97 is not supported, so no empty template is provided
     V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
     V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
     V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");

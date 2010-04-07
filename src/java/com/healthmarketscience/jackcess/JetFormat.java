@@ -70,9 +70,6 @@ public abstract class JetFormat {
 
   // use nested inner class to avoid problematic static init loops
   private static final class PossibleFileFormats {
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_3 = 
-      Collections.singletonMap(Database.FileFormat.V1997, (byte[])null);
-
     private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_4 = 
       new EnumMap<Database.FileFormat,byte[]>(Database.FileFormat.class);
 
@@ -165,7 +162,6 @@ public abstract class JetFormat {
   
   public final Charset CHARSET;
   
-  public static final JetFormat VERSION_3 = new Jet3Format();
   public static final JetFormat VERSION_4 = new Jet4Format();
   public static final JetFormat VERSION_5 = new Jet5Format();
 
@@ -182,14 +178,14 @@ public abstract class JetFormat {
     }
     buffer.flip();
     byte version = buffer.get();
-    if (version == CODE_VERSION_3) {
-      return VERSION_3;
-    } else if (version == CODE_VERSION_4) {
+    if (version == CODE_VERSION_4) {
       return VERSION_4;
     } else if (version == CODE_VERSION_5) {
       return VERSION_5;
     }
-    throw new IOException("Unsupported version: " + version);
+    throw new IOException("Unsupported " +
+                          ((version < CODE_VERSION_4) ? "older" : "newer") +
+                          " version: " + version);
   }
   
   private JetFormat(String name) {
@@ -499,18 +495,6 @@ public abstract class JetFormat {
 
   }
   
-  private static final class Jet3Format extends Jet4Format {
-      private Jet3Format() {
-        super("VERSION_3");
-      }
-
-    @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
-      return PossibleFileFormats.POSSIBLE_VERSION_3;
-    }
-
-  }
-
   private static final class Jet5Format extends Jet4Format {
       private Jet5Format() {
         super("VERSION_5");

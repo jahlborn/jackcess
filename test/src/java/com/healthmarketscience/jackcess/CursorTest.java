@@ -98,9 +98,12 @@ public class CursorTest extends TestCase {
     return expectedRows;
   }  
 
-  static final TestDB[] INDEX_CURSOR_DBS = TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
+  static final List<TestDB> INDEX_CURSOR_DBS = 
+    TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
 
-  static Database createTestIndexTable(final TestDB indexCursorDB) throws Exception {
+  static Database createTestIndexTable(final TestDB indexCursorDB) 
+    throws Exception 
+  {
     Database db = openCopy(indexCursorDB);
 
     Table table = db.getTable("test");
