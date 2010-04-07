@@ -70,33 +70,47 @@ public class DatabaseTest extends TestCase {
     super(name);
   }
 
-  public static Database open(final TestDB testDB) throws Exception {
-    final Database db = Database.open(testDB.getFile(), true, _autoSync);
-    assertEquals("Wrong JetFormat.", testDB.getExpectedFormat(), db.getFormat());
-    assertEquals("Wrong FileFormat.", testDB.getExpectedFileFormat(), 
-                 db.getFileFormat());
+  public static Database open(Database.FileFormat fileFormat, File file) throws Exception {
+    final Database db = Database.open(file, true, _autoSync);
+    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), db.getFormat());
+    assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
   }
 
-  public static Database create(final Database.FileFormat fileFormat) throws Exception {
+  public static Database open(TestDB testDB) throws Exception {
+    return open(testDB.getExpectedFileFormat(), testDB.getFile());
+  }
+
+  public static Database create(Database.FileFormat fileFormat) throws Exception {
     return create(fileFormat, false);
   }
 
-  public static Database create(final Database.FileFormat fileFormat, boolean keep) throws Exception {
+  public static Database create(Database.FileFormat fileFormat, boolean keep) throws Exception {
     return Database.create(fileFormat, createTempFile(keep), _autoSync);
   }
 
 
-  public static Database openCopy(final TestDB testDB) throws Exception {
+  public static Database openCopy(TestDB testDB) throws Exception {
     return openCopy(testDB, false);
   }
 
+  public static Database openCopy(TestDB testDB, boolean keep)
+    throws Exception
+  {
+    return openCopy(testDB.getFile(), keep);
+  }
 
-  public static Database openCopy(final TestDB testDB, boolean keep)
+  public static Database openCopy(File file)
+    throws Exception
+  {
+    return openCopy(file, false);
+  }
+
+  public static Database openCopy(File file, boolean keep)
     throws Exception
   {
     File tmp = createTempFile(keep);
-    copyFile(testDB.getFile(), tmp);
+    copyFile(file, tmp);
     return Database.open(tmp, false, _autoSync);
   }
 
@@ -986,9 +1000,7 @@ public class DatabaseTest extends TestCase {
               && !FileFormat.V2007.equals(fileFormat)) {
         assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       } else {
-        // @todo Does is matter that v2003, v2007 template files have no "MSysAccessObjects" table?
-        System.err.println("\n*** TODO: " + getName()
-                + "(): Is OK that " + fileFormat.name() + " template file has no \"MSysAccessObjects\" table?  ***");
+        // v2003, v2007 template files have no "MSysAccessObjects" table
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       }
 
