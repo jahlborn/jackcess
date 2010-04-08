@@ -5,11 +5,15 @@
   </properties>
   <body>
     <release version="1.2.0" date="TBD">
-      <action dev="bhamail" type="fix" issue="2968957">
-        Fix BigIndexTest to work in IDE's w/out sys.prop.
-      </action>
       <action dev="bhamail" type="update" issue="1451628">
         Add support for access 2002/2003/2007 databases.
+      </action>
+      <action dev="jahlborn" type="update">
+        Enable "large" index support by default.  It can still be disabled via
+        a variety of means, see the Database javadoc for more details.
+      </action>
+      <action dev="bhamail" type="fix" issue="2968957">
+        Fix BigIndexTest to work in IDE's w/out sys.prop.
       </action>
     </release>
     <release version="1.1.21" date="2010-01-19">
