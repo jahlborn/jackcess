@@ -16,8 +16,8 @@
     <faq id="formats">
       <question>What Access formats does it support?</question>
       <answer>
-        <p>Jackcess currently supports <i>only</i> Access 2000
-          databases.  Access 2003 is not supported.</p>
+        <p>As of the 1.2.0 release, Jackcess supports Access database versions
+           2000-2007. Access 97 databases are not supported.</p>
       </answer>
     </faq>
 
