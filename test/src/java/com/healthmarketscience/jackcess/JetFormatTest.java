@@ -4,9 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.TestCase;
+
+import static com.healthmarketscience.jackcess.Database.*;
 
 /**
  * @author Dan Rollo
@@ -50,11 +54,11 @@ public class JetFormatTest extends TestCase {
   }
 
   /** Defines currently supported db file formats. */
-  final static Database.FileFormat[] SUPPORTED_FILEFORMATS = 
-    new Database.FileFormat[] {
-    Database.FileFormat.V2000,
-    Database.FileFormat.V2003,
-    Database.FileFormat.V2007,
+  final static FileFormat[] SUPPORTED_FILEFORMATS = 
+    new FileFormat[] {
+    FileFormat.V2000,
+    FileFormat.V2003,
+    FileFormat.V2007,
   };
 
   /**
@@ -63,10 +67,10 @@ public class JetFormatTest extends TestCase {
   public static final class TestDB {
 
     private final File dbFile;
-    private final Database.FileFormat expectedFileFormat;
+    private final FileFormat expectedFileFormat;
 
     private TestDB(File databaseFile, 
-                   Database.FileFormat expectedDBFileFormat) {
+                   FileFormat expectedDBFileFormat) {
 
       dbFile = databaseFile;
       expectedFileFormat = expectedDBFileFormat;
@@ -74,7 +78,7 @@ public class JetFormatTest extends TestCase {
 
     public final File getFile() { return dbFile; }
 
-    public final Database.FileFormat  getExpectedFileFormat() { 
+    public final FileFormat  getExpectedFileFormat() { 
       return expectedFileFormat; 
     }
 
@@ -90,8 +94,20 @@ public class JetFormatTest extends TestCase {
 
     public static List<TestDB> getSupportedForBasename(Basename basename) {
 
+      String testFormatStr = System.getProperty("com.healthmarketscience.jackcess.testFormats");
+      Set<FileFormat> testFormats = EnumSet.allOf(FileFormat.class);
+      if((testFormatStr != null) && (testFormatStr.length() > 0)) {
+        testFormats = EnumSet.noneOf(FileFormat.class);
+        for(String tmp : testFormatStr.split(",")) {
+          testFormats.add(FileFormat.valueOf(tmp.toUpperCase()));
+        }
+      }
+
       List<TestDB> supportedTestDBs = new ArrayList<TestDB>();
-      for (Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      for (FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+        if(!testFormats.contains(fileFormat)) {
+          continue;
+        }
         supportedTestDBs.add(new TestDB(
                                  getFileForBasename(basename, fileFormat),
                                  fileFormat));
@@ -100,7 +116,7 @@ public class JetFormatTest extends TestCase {
     }
 
     private static File getFileForBasename(
-        Basename basename, Database.FileFormat fileFormat) {
+        Basename basename, FileFormat fileFormat) {
 
       return new File(DIR_TEST_DATA, 
                       fileFormat.name() + File.separator +

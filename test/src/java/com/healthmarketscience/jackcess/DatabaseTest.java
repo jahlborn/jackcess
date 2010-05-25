@@ -70,7 +70,9 @@ public class DatabaseTest extends TestCase {
     super(name);
   }
 
-  public static Database open(Database.FileFormat fileFormat, File file) throws Exception {
+  public static Database open(FileFormat fileFormat, File file) 
+    throws Exception 
+  {
     final Database db = Database.open(file, true, _autoSync);
     assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), db.getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
@@ -81,11 +83,13 @@ public class DatabaseTest extends TestCase {
     return open(testDB.getExpectedFileFormat(), testDB.getFile());
   }
 
-  public static Database create(Database.FileFormat fileFormat) throws Exception {
+  public static Database create(FileFormat fileFormat) throws Exception {
     return create(fileFormat, false);
   }
 
-  public static Database create(Database.FileFormat fileFormat, boolean keep) throws Exception {
+  public static Database create(FileFormat fileFormat, boolean keep) 
+    throws Exception 
+  {
     return Database.create(fileFormat, createTempFile(keep), _autoSync);
   }
 

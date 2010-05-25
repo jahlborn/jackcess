@@ -82,6 +82,10 @@
                 <name>com.healthmarketscience.jackcess.bigIndex</name>
                 <value>${jackcess.bigIndex}</value>
               </property>
+              <property>
+                <name>com.healthmarketscience.jackcess.testFormats</name>
+                <value>${jackcess.testFormats}</value>
+              </property>
             </systemProperties>
           </configuration>
         </plugin>
@@ -182,4 +186,8 @@
       <url>scp://shell.sourceforge.net/home/groups/j/ja/jackcess/htdocs</url>
     </site>    
   </distributionManagement>
+  <properties>
+    <jackcess.bigIndex>true</jackcess.bigIndex>
+    <jackcess.testFormats>V2000,V2003,V2007</jackcess.testFormats>
+  </properties>
 </project>
