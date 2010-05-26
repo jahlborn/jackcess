@@ -43,6 +43,9 @@ public final class ByteUtil {
   private static final String[] HEX_CHARS = new String[] {
       "0", "1", "2", "3", "4", "5", "6", "7",
       "8", "9", "A", "B", "C", "D", "E", "F"};
+
+  private static final int NUM_BYTES_PER_BLOCK = 4;
+  private static final int NUM_BYTES_PER_LINE = 24;
       
   private ByteUtil() {}
 
@@ -380,15 +383,20 @@ public final class ByteUtil {
       h = (byte) (b & 0x0F);
       rtn.append(HEX_CHARS[h]);
 
-      if (formatted == true)
+      int next = (i + 1);
+      if(formatted && (next < size))
       {
-        rtn.append(" ");
+        if((next % NUM_BYTES_PER_LINE) == 0) {
 
-        if ((i + 1) % 4 == 0) {
-          rtn.append(" ");
-        }
-        if ((i + 1) % 24 == 0) {
           rtn.append("\n");
+
+        } else {
+          
+          rtn.append(" ");
+
+          if ((next % NUM_BYTES_PER_BLOCK) == 0) {
+            rtn.append(" ");
+          }
         }
       }
     }
