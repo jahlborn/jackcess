@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -53,13 +54,32 @@ public class JetFormatTest extends TestCase {
     public String toString() { return _basename; }
   }
 
-  /** Defines currently supported db file formats. */
-  final static FileFormat[] SUPPORTED_FILEFORMATS = 
-    new FileFormat[] {
-    FileFormat.V2000,
-    FileFormat.V2003,
-    FileFormat.V2007,
-  };
+  /** Defines currently supported db file formats.  (can be modified at
+      runtime via the system property
+      "com.healthmarketscience.jackcess.testFormats") */
+  final static FileFormat[] SUPPORTED_FILEFORMATS;
+
+  static {
+    String testFormatStr = System.getProperty("com.healthmarketscience.jackcess.testFormats");
+    Set<FileFormat> testFormats = EnumSet.allOf(FileFormat.class);
+    if((testFormatStr != null) && (testFormatStr.length() > 0)) {
+      testFormats.clear();
+      for(String tmp : testFormatStr.split(",")) {
+        testFormats.add(FileFormat.valueOf(tmp.toUpperCase()));
+      }
+    }
+
+    List<FileFormat> supported = new ArrayList<FileFormat>();
+    for(FileFormat ff : Arrays.asList(FileFormat.V2000, FileFormat.V2003,
+                                      FileFormat.V2007)) {
+      if(!testFormats.contains(ff)) {
+        continue;
+      }
+      supported.add(ff);
+    }
+
+    SUPPORTED_FILEFORMATS = supported.toArray(new FileFormat[0]);
+  }
 
   /**
    * Defines known valid test database files, and their jet format version.
@@ -94,20 +114,8 @@ public class JetFormatTest extends TestCase {
 
     public static List<TestDB> getSupportedForBasename(Basename basename) {
 
-      String testFormatStr = System.getProperty("com.healthmarketscience.jackcess.testFormats");
-      Set<FileFormat> testFormats = EnumSet.allOf(FileFormat.class);
-      if((testFormatStr != null) && (testFormatStr.length() > 0)) {
-        testFormats = EnumSet.noneOf(FileFormat.class);
-        for(String tmp : testFormatStr.split(",")) {
-          testFormats.add(FileFormat.valueOf(tmp.toUpperCase()));
-        }
-      }
-
       List<TestDB> supportedTestDBs = new ArrayList<TestDB>();
       for (FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-        if(!testFormats.contains(fileFormat)) {
-          continue;
-        }
         supportedTestDBs.add(new TestDB(
                                  getFileForBasename(basename, fileFormat),
                                  fileFormat));
