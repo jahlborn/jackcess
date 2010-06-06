@@ -10,7 +10,7 @@
         files (thanks to F. Gerbig).
       </action>
       <action dev="jahlborn" type="fix" issue="3011084">
-        Fix some places where columns names were not being handled
+        Fix some places where table/columns names were not being handled
         case-insensitively.
       </action>
     </release>
