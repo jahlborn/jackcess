@@ -9,6 +9,10 @@
         Add ExportUtil and associated utilities for exporting tables to flat
         files (thanks to F. Gerbig).
       </action>
+      <action dev="jahlborn" type="fix" issue="3011084">
+        Fix some places where columns names were not being handled
+        case-insensitively.
+      </action>
     </release>
     <release version="1.2.0" date="2010-04-18">
       <action dev="bhamail" type="update" issue="1451628">

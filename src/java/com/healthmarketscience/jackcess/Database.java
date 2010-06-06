@@ -894,8 +894,8 @@ public class Database
       String fromName = (String)row.get(REL_COL_FROM_TABLE);
       String toName = (String)row.get(REL_COL_TO_TABLE);
       
-      if(fromTable.getName().equals(fromName) &&
-         toTable.getName().equals(toName))
+      if(fromTable.getName().equalsIgnoreCase(fromName) &&
+         toTable.getName().equalsIgnoreCase(toName))
       {
 
         String relName = (String)row.get(REL_COL_NAME);
@@ -904,7 +904,7 @@ public class Database
         // info for this relationship
         Relationship rel = null;
         for(Relationship tmp : relationships) {
-          if(tmp.getName().equals(relName)) {
+          if(tmp.getName().equalsIgnoreCase(relName)) {
             rel = tmp;
             break;
           }

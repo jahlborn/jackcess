@@ -263,7 +263,7 @@ public class Table
    */
   public Column getColumn(String name) {
     for(Column column : _columns) {
-      if(column.getName().equals(name)) {
+      if(column.getName().equalsIgnoreCase(name)) {
         return column;
       }
     }
@@ -306,7 +306,7 @@ public class Table
    */
   public Index getIndex(String name) {
     for(Index index : _indexes) {
-      if(index.getName().equals(name)) {
+      if(index.getName().equalsIgnoreCase(name)) {
         return index;
       }
     }
