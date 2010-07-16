@@ -42,16 +42,55 @@ public class TableBuilder {
   private String _name;
   /** columns for the new table */
   private List<Column> _columns = new ArrayList<Column>();
-  
+  /** whether or not table/columns names are automatically escaped */
+  private boolean _escapeIdentifiers;
+
   public TableBuilder(String name) {
-    _name = name;
+    this(name, false);
   }
+  
+  public TableBuilder(String name, boolean escapeIdentifiers) {
+    _name = name;
+    _escapeIdentifiers = escapeIdentifiers;
+    if(_escapeIdentifiers) {
+      _name = Database.escapeIdentifier(_name);
+    }
+  }
+
 
   /**
    * Adds a Column to the new table.
    */
   public TableBuilder addColumn(Column column) {
+    if(_escapeIdentifiers) {
+      column.setName(Database.escapeIdentifier(column.getName()));
+    }
     _columns.add(column);
+    return this;
+  }
+
+  /**
+   * Adds a Column to the new table.
+   */
+  public TableBuilder addColumn(ColumnBuilder columnBuilder) {
+    return addColumn(columnBuilder.toColumn());
+  }
+
+  /**
+   * Sets whether or not subsequently added columns will have their names
+   * automatically escaped
+   */
+  public TableBuilder setEscapeIdentifiers(boolean escapeIdentifiers) {
+    _escapeIdentifiers = escapeIdentifiers;
+    return this;
+  }
+
+  /**
+   * Escapes the new table's name using {@link Database#escapeIdentifier}.
+   */
+  public TableBuilder escapeName()
+  {
+    _name = Database.escapeIdentifier(_name);
     return this;
   }
 

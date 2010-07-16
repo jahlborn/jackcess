@@ -75,8 +75,8 @@ public class CursorTest extends TestCase {
     Database db = create(fileFormat);
 
     Table table = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("id", DataType.LONG).toColumn())
-      .addColumn(new ColumnBuilder("value", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("id", DataType.LONG))
+      .addColumn(new ColumnBuilder("value", DataType.TEXT))
       .toTable(db);
 
     for(Map<String,Object> row : createTestTableData()) {

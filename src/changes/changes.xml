@@ -13,6 +13,10 @@
         Fix some places where table/columns names were not being handled
         case-insensitively.
       </action>
+      <action dev="jahlborn" type="fix" issue="3029500">
+        Make Database.escapeIdentifier public; add methods to TableBuilder and
+        ColumnBuilder to optionally escape names.
+      </action>
     </release>
     <release version="1.2.0" date="2010-04-18">
       <action dev="bhamail" type="update" issue="1451628">

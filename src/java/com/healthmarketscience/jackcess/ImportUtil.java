@@ -90,7 +90,7 @@ public class ImportUtil
   {
     ResultSetMetaData md = source.getMetaData();
 
-    name = Database.escape(name);
+    name = Database.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
       
@@ -98,7 +98,7 @@ public class ImportUtil
       List<Column> columns = new LinkedList<Column>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
         Column column = new Column();
-        column.setName(Database.escape(md.getColumnName(i)));
+        column.setName(Database.escapeIdentifier(md.getColumnName(i)));
         int lengthInUnits = md.getColumnDisplaySize(i);
         column.setSQLType(md.getColumnType(i), lengthInUnits);
         DataType type = column.getType();
@@ -269,7 +269,7 @@ public class ImportUtil
     }
 
     try {
-      name = Database.escape(name);
+      name = Database.escapeIdentifier(name);
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
@@ -277,8 +277,8 @@ public class ImportUtil
         String[] columnNames = line.split(delim);
       
         for (int i = 0; i < columnNames.length; i++) {
-          columns.add(new ColumnBuilder(Database.escape(columnNames[i]), 
-                                        DataType.TEXT)
+          columns.add(new ColumnBuilder(columnNames[i], DataType.TEXT)
+                      .escapeName()
                       .setLength((short)DataType.TEXT.getMaxSize())
                       .toColumn());
         }

@@ -55,8 +55,8 @@ public class ErrorHandlerTest extends TestCase
 
       Table table =
         new TableBuilder("test")
-        .addColumn(new ColumnBuilder("col", DataType.TEXT).toColumn())
-        .addColumn(new ColumnBuilder("val", DataType.LONG).toColumn())
+        .addColumn(new ColumnBuilder("col", DataType.TEXT))
+        .addColumn(new ColumnBuilder("val", DataType.LONG))
         .toTable(db);
 
       table.addRow("row1", 1);

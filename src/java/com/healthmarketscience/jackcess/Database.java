@@ -1178,7 +1178,7 @@ public class Database
   /**
    * @return A table or column name escaped for Access
    */
-  static String escape(String s) {
+  public static String escapeIdentifier(String s) {
     if (isReservedWord(s)) {
       return ESCAPE_PREFIX + s; 
     }

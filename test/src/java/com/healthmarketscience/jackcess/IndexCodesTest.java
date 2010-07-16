@@ -146,8 +146,8 @@ public class IndexCodesTest extends TestCase {
     Database db = create(Database.FileFormat.V2000, true);
 
     Table t = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("row", DataType.TEXT).toColumn())
-      .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("row", DataType.TEXT))
+      .addColumn(new ColumnBuilder("data", DataType.TEXT))
       .toTable(db);
     
     for(int i = 0; i < 256; ++i) {
@@ -179,8 +179,8 @@ public class IndexCodesTest extends TestCase {
     Database db = create(Database.FileFormat.V2000, true);
 
 //     Table t = new TableBuilder("Table1")
-//       .addColumn(new ColumnBuilder("key", DataType.TEXT).toColumn())
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+//       .addColumn(new ColumnBuilder("key", DataType.TEXT))
+//       .addColumn(new ColumnBuilder("data", DataType.TEXT))
 //       .toTable(db);
 
 //     for(int i = 0; i <= 0xFFFF; ++i) {
@@ -195,8 +195,8 @@ public class IndexCodesTest extends TestCase {
 //     }
 
     Table t = new TableBuilder("Table5")
-      .addColumn(new ColumnBuilder("name", DataType.TEXT).toColumn())
-      .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+      .addColumn(new ColumnBuilder("name", DataType.TEXT))
+      .addColumn(new ColumnBuilder("data", DataType.TEXT))
       .toTable(db);
 
     char c = (char)0x3041;   // crazy 7F 02 ... A0
@@ -218,13 +218,13 @@ public class IndexCodesTest extends TestCase {
     addCombos(t, 0, "", cs, 5);
 
 //     t = new TableBuilder("Table2")
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+//       .addColumn(new ColumnBuilder("data", DataType.TEXT))
 //       .toTable(db);
     
 //     writeChars(0x0000, t);
 
 //     t = new TableBuilder("Table3")
-//       .addColumn(new ColumnBuilder("data", DataType.TEXT).toColumn())
+//       .addColumn(new ColumnBuilder("data", DataType.TEXT))
 //       .toTable(db);
     
 //     writeChars(0x0400, t);

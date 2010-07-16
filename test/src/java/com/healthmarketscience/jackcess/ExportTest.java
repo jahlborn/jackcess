@@ -59,12 +59,12 @@ public class ExportTest extends TestCase
       Database db = create(fileFormat);
 
       Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("col1", DataType.TEXT).toColumn())
-        .addColumn(new ColumnBuilder("col2", DataType.LONG).toColumn())
-        .addColumn(new ColumnBuilder("col3", DataType.DOUBLE).toColumn())
-        .addColumn(new ColumnBuilder("col4", DataType.OLE).toColumn())
-        .addColumn(new ColumnBuilder("col5", DataType.BOOLEAN).toColumn())
-        .addColumn(new ColumnBuilder("col6", DataType.SHORT_DATE_TIME).toColumn())
+        .addColumn(new ColumnBuilder("col1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("col2", DataType.LONG))
+        .addColumn(new ColumnBuilder("col3", DataType.DOUBLE))
+        .addColumn(new ColumnBuilder("col4", DataType.OLE))
+        .addColumn(new ColumnBuilder("col5", DataType.BOOLEAN))
+        .addColumn(new ColumnBuilder("col6", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       t.addRow("some text||some more", 13, 13.25, createString(30).getBytes(), true, df.parse("19801231 00:00:00"));

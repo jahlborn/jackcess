@@ -156,6 +156,15 @@ public class ColumnBuilder {
   }
 
   /**
+   * Escapes the new column's name using {@link Database#escapeIdentifier}.
+   */
+  public ColumnBuilder escapeName()
+  {
+    _name = Database.escapeIdentifier(_name);
+    return this;
+  }
+
+  /**
    * Creates a new Column with the currently configured attributes.
    */
   public Column toColumn() {
