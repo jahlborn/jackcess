@@ -84,7 +84,7 @@ public class IndexTest extends TestCase {
   }
 
   public void testPrimaryKey() throws Exception {
-    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       Table table = open(testDB).getTable("Table1");
       Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
       for(Index index : table.getIndexes()) {
@@ -100,7 +100,7 @@ public class IndexTest extends TestCase {
   
   public void testIndexSlots() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database mdb = open(testDB);
 
       Table table = mdb.getTable("Table1");

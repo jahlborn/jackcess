@@ -257,6 +257,41 @@ public final class ByteUtil {
   }
 
   /**
+   * Read an unsigned variable length int from a buffer
+   * @param buffer Buffer containing the variable length int
+   * @return The unsigned int
+   */
+  public static int getUnsignedVarInt(ByteBuffer buffer, int numBytes) {
+    int pos = buffer.position();
+    int rtn = getUnsignedVarInt(buffer, pos, numBytes);
+    buffer.position(pos + numBytes);
+    return rtn;
+  }
+
+  /**
+   * Read an unsigned variable length int from a buffer
+   * @param buffer Buffer containing the variable length int
+   * @param offset Offset at which to read the value
+   * @return The unsigned int
+   */
+  public static int getUnsignedVarInt(ByteBuffer buffer, int offset, 
+                                      int numBytes) {  
+    switch(numBytes) {
+    case 1:
+      return getUnsignedByte(buffer, offset);
+    case 2:
+      return getUnsignedShort(buffer, offset);
+    case 3:
+      return get3ByteInt(buffer, offset);
+    case 4:
+      return buffer.getInt(offset);
+    default:
+      throw new IllegalArgumentException("Invalid num bytes " + numBytes);
+    }
+  }
+
+  
+  /**
    * Sets all bits in the given remaining byte range to 0.
    */
   public static void clearRemaining(ByteBuffer buffer)

@@ -45,7 +45,7 @@ public class RelationshipTest extends TestCase {
   }
 
   public void testSimple() throws Exception {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database db = open(testDB);
       Table t1 = db.getTable("Table1");
       Table t2 = db.getTable("Table2");

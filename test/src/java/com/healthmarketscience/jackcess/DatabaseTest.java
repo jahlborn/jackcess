@@ -176,7 +176,7 @@ public class DatabaseTest extends TestCase {
   }
       
   public void testReadDeletedRows() throws Exception {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL, true)) {
       Table table = open(testDB).getTable("Table");
       int rows = 0;
       while (table.getNextRow() != null) {
@@ -187,7 +187,7 @@ public class DatabaseTest extends TestCase {
   }
   
   public void testGetColumns() throws Exception {
-    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
       List<Column> columns = open(testDB).getTable("Table1").getColumns();
       assertEquals(9, columns.size());
@@ -213,7 +213,7 @@ public class DatabaseTest extends TestCase {
   }
   
   public void testGetNextRow() throws Exception {
-    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
       assertEquals(4, db.getTableNames().size());
       final Table table = db.getTable("Table1");
@@ -272,7 +272,7 @@ public class DatabaseTest extends TestCase {
     assertEquals(Boolean.FALSE, row.get("I"));
   }
 
-    public void testCreate() throws Exception {
+  public void testCreate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
       assertEquals(0, db.getTableNames().size());
@@ -396,7 +396,7 @@ public class DatabaseTest extends TestCase {
 
   public void testReadLongValue() throws Exception {
 
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2, true)) {
       Database db = open(testDB);
       Table table = db.getTable("MSP_PROJECTS");
       Map<String, Object> row = table.getNextRow();
@@ -528,7 +528,7 @@ public class DatabaseTest extends TestCase {
   }
 
   public void testReadWithDeletedCols() throws Exception {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL_COL)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL_COL, true)) {
       Table table = open(testDB).getTable("Table1");
 
       Map<String, Object> expectedRow0 = new LinkedHashMap<String, Object>();
@@ -733,7 +733,7 @@ public class DatabaseTest extends TestCase {
 
   public void testMultiPageTableDef() throws Exception
   {
-    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       List<Column> columns = open(testDB).getTable("Table2").getColumns();
       assertEquals(89, columns.size());
     }

@@ -39,12 +39,14 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -343,6 +345,14 @@ public class Column implements Comparable<Column> {
   
   public int getFixedDataOffset() {
     return _fixedDataOffset;
+  }
+
+  protected Charset getCharset() {
+    return getTable().getDatabase().getCharset();
+  }
+
+  protected TimeZone getTimeZone() {
+    return getTable().getDatabase().getTimeZone();
   }
 
   private void setAutoNumberGenerator()
@@ -732,7 +742,7 @@ public class Column implements Comparable<Column> {
   /**
    * Returns a java long time value converted from an access date double.
    */
-  private static long fromDateDouble(double value)
+  private long fromDateDouble(double value)
   {
     long time = Math.round(value * MILLISECONDS_PER_DAY);
     time -= MILLIS_BETWEEN_EPOCH_AND_1900;
@@ -763,7 +773,7 @@ public class Column implements Comparable<Column> {
    * Returns an access date double converted from a java Date/Calendar/Number
    * time value.
    */
-  private static double toDateDouble(Object value)
+  private double toDateDouble(Object value)
   {
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
@@ -780,9 +790,9 @@ public class Column implements Comparable<Column> {
   /**
    * Gets the timezone offset from UTC for the given time (including DST).
    */
-  private static long getTimeZoneOffset(long time)
+  private long getTimeZoneOffset(long time)
   {
-    Calendar c = Calendar.getInstance();
+    Calendar c = Calendar.getInstance(getTimeZone());
     c.setTimeInMillis(time);
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
   }  
@@ -1239,7 +1249,7 @@ public class Column implements Comparable<Column> {
         
       }
       
-      return decodeUncompressedText(data, getFormat());
+      return decodeUncompressedText(data, getCharset());
       
     } catch (IllegalInputException e) {
       throw (IOException)
@@ -1273,7 +1283,7 @@ public class Column implements Comparable<Column> {
     } else {
       // handle uncompressed data
       textBuf.append(decodeUncompressedText(data, dataStart, dataLength,
-                                            getFormat()));
+                                            getCharset()));
     }
   }
 
@@ -1282,9 +1292,9 @@ public class Column implements Comparable<Column> {
    * @return the decoded string
    */
   private static CharBuffer decodeUncompressedText(
-      byte[] textBytes, int startPos, int length, JetFormat format)
+      byte[] textBytes, int startPos, int length, Charset charset)
   {
-    return format.CHARSET.decode(ByteBuffer.wrap(textBytes, startPos, length));
+    return charset.decode(ByteBuffer.wrap(textBytes, startPos, length));
   }  
 
   /**
@@ -1320,7 +1330,7 @@ public class Column implements Comparable<Column> {
       }
     }
 
-    return encodeUncompressedText(text, getFormat());
+    return encodeUncompressedText(text, getCharset());
   }
 
   /**
@@ -1364,25 +1374,25 @@ public class Column implements Comparable<Column> {
   
   /**
    * @param textBytes bytes of text to decode
-   * @param format relevant db format
+   * @param charset relevant charset
    * @return the decoded string
    */
-  public static String decodeUncompressedText(byte[] textBytes,
-                                              JetFormat format)
+  public static String decodeUncompressedText(byte[] textBytes, 
+                                              Charset charset)
   {
-    return decodeUncompressedText(textBytes, 0, textBytes.length, format)
+    return decodeUncompressedText(textBytes, 0, textBytes.length, charset)
       .toString();
   }
 
   /**
    * @param text Text to encode
-   * @param format relevant db format
+   * @param db relevant db
    * @return A buffer with the text encoded
    */
   public static ByteBuffer encodeUncompressedText(CharSequence text,
-                                                  JetFormat format)
+                                                  Charset charset)
   {
-    return format.CHARSET.encode(CharBuffer.wrap(text));
+    return charset.encode(CharBuffer.wrap(text));
   }
 
   

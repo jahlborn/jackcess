@@ -17,6 +17,13 @@
         Make Database.escapeIdentifier public; add methods to TableBuilder and
         ColumnBuilder to optionally escape names.
       </action>
+      <action dev="jahlborn" type="update" issue="2997751">
+        Add support for overriding charset and tiemzone used when
+        reading/writing database.
+      </action>
+      <action dev="jahlborn" type="add" issue="3003375">
+        Add support for reading Access 97 (jet format 3) databases.
+      </action>
     </release>
     <release version="1.2.0" date="2010-04-18">
       <action dev="bhamail" type="update" issue="1451628">

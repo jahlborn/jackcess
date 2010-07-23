@@ -70,6 +70,9 @@ public abstract class JetFormat {
 
   // use nested inner class to avoid problematic static init loops
   private static final class PossibleFileFormats {
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_3 = 
+      Collections.singletonMap(Database.FileFormat.V1997, (byte[])null);
+
     private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_4 = 
       new EnumMap<Database.FileFormat,byte[]>(Database.FileFormat.class);
 
@@ -88,6 +91,9 @@ public abstract class JetFormat {
 
   /** the name of this format */
   private final String _name;
+  
+  /** the read/write mode of this format */
+  public final boolean READ_ONLY;
   
   /** Database page size in bytes */
   public final int PAGE_SIZE;
@@ -120,6 +126,7 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_LENGTH;
   public final int OFFSET_COLUMN_VARIABLE_TABLE_INDEX;
   public final int OFFSET_COLUMN_FIXED_DATA_OFFSET;
+  public final int OFFSET_COLUMN_FIXED_DATA_ROW_OFFSET;
   
   public final int OFFSET_TABLE_DEF_LOCATION;
   
@@ -150,6 +157,14 @@ public abstract class JetFormat {
   public final int SIZE_TDEF_TRAILER;
   public final int SIZE_COLUMN_DEF_BLOCK;
   public final int SIZE_INDEX_ENTRY_MASK;
+  public final int SKIP_BEFORE_INDEX_FLAGS;
+  public final int SKIP_AFTER_INDEX_FLAGS;
+  public final int SKIP_BEFORE_INDEX_SLOT;
+  public final int SKIP_AFTER_INDEX_SLOT;
+  public final int SKIP_BEFORE_INDEX;
+  public final int SIZE_NAME_LENGTH;
+  public final int SIZE_ROW_COLUMN_COUNT;
+  public final int SIZE_ROW_VAR_COL_OFFSET;
   
   public final int USAGE_MAP_TABLE_BYTE_LENGTH;
 
@@ -162,6 +177,7 @@ public abstract class JetFormat {
   
   public final Charset CHARSET;
   
+  public static final JetFormat VERSION_3 = new Jet3Format();
   public static final JetFormat VERSION_4 = new Jet4Format();
   public static final JetFormat VERSION_5 = new Jet5Format();
 
@@ -178,18 +194,22 @@ public abstract class JetFormat {
     }
     buffer.flip();
     byte version = buffer.get();
-    if (version == CODE_VERSION_4) {
+    if (version == CODE_VERSION_3) {
+      return VERSION_3;
+    } else if (version == CODE_VERSION_4) {
       return VERSION_4;
     } else if (version == CODE_VERSION_5) {
       return VERSION_5;
     }
     throw new IOException("Unsupported " +
-                          ((version < CODE_VERSION_4) ? "older" : "newer") +
+                          ((version < CODE_VERSION_3) ? "older" : "newer") +
                           " version: " + version);
   }
   
   private JetFormat(String name) {
     _name = name;
+    
+    READ_ONLY = defineReadOnly();
     
     PAGE_SIZE = definePageSize();
     MAX_DATABASE_SIZE = defineMaxDatabaseSize();
@@ -221,6 +241,7 @@ public abstract class JetFormat {
     OFFSET_COLUMN_LENGTH = defineOffsetColumnLength();
     OFFSET_COLUMN_VARIABLE_TABLE_INDEX = defineOffsetColumnVariableTableIndex();
     OFFSET_COLUMN_FIXED_DATA_OFFSET = defineOffsetColumnFixedDataOffset();
+    OFFSET_COLUMN_FIXED_DATA_ROW_OFFSET = defineOffsetColumnFixedDataRowOffset();
     
     OFFSET_TABLE_DEF_LOCATION = defineOffsetTableDefLocation();
     
@@ -251,7 +272,15 @@ public abstract class JetFormat {
     SIZE_TDEF_TRAILER = defineSizeTdefTrailer();
     SIZE_COLUMN_DEF_BLOCK = defineSizeColumnDefBlock();
     SIZE_INDEX_ENTRY_MASK = defineSizeIndexEntryMask();
-    
+    SKIP_BEFORE_INDEX_FLAGS = defineSkipBeforeIndexFlags();
+    SKIP_AFTER_INDEX_FLAGS = defineSkipAfterIndexFlags();
+    SKIP_BEFORE_INDEX_SLOT = defineSkipBeforeIndexSlot();
+    SKIP_AFTER_INDEX_SLOT = defineSkipAfterIndexSlot();
+    SKIP_BEFORE_INDEX = defineSkipBeforeIndex();
+    SIZE_NAME_LENGTH = defineSizeNameLength();
+    SIZE_ROW_COLUMN_COUNT = defineSizeRowColumnCount();
+    SIZE_ROW_VAR_COL_OFFSET = defineSizeRowVarColOffset();
+
     USAGE_MAP_TABLE_BYTE_LENGTH = defineUsageMapTableByteLength();
 
     MAX_COLUMNS_PER_TABLE = defineMaxColumnsPerTable();
@@ -263,6 +292,8 @@ public abstract class JetFormat {
     
     CHARSET = defineCharset();
   }
+  
+  protected abstract boolean defineReadOnly();
   
   protected abstract int definePageSize();
   protected abstract long defineMaxDatabaseSize();
@@ -294,6 +325,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnLength();
   protected abstract int defineOffsetColumnVariableTableIndex();
   protected abstract int defineOffsetColumnFixedDataOffset();
+  protected abstract int defineOffsetColumnFixedDataRowOffset();
   
   protected abstract int defineOffsetTableDefLocation();
   
@@ -324,7 +356,15 @@ public abstract class JetFormat {
   protected abstract int defineSizeTdefTrailer();
   protected abstract int defineSizeColumnDefBlock();
   protected abstract int defineSizeIndexEntryMask();
-  
+  protected abstract int defineSkipBeforeIndexFlags();
+  protected abstract int defineSkipAfterIndexFlags();
+  protected abstract int defineSkipBeforeIndexSlot();
+  protected abstract int defineSkipAfterIndexSlot();
+  protected abstract int defineSkipBeforeIndex();
+  protected abstract int defineSizeNameLength();
+  protected abstract int defineSizeRowColumnCount();
+  protected abstract int defineSizeRowVarColOffset();
+
   protected abstract int defineUsageMapTableByteLength();
 
   protected abstract int defineMaxColumnsPerTable();
@@ -343,6 +383,175 @@ public abstract class JetFormat {
     return _name;
   }
   
+  private static class Jet3Format extends JetFormat {
+
+    private Jet3Format() {
+      super("VERSION_3");
+    }
+
+    @Override
+    protected boolean defineReadOnly() { return true; }
+	    
+    @Override
+    protected int definePageSize() { return 2048; }
+	    
+    @Override
+    protected long defineMaxDatabaseSize() {
+      return (1L * 1024L * 1024L * 1024L);
+    }
+	    
+    @Override
+    protected int defineMaxRowSize() { return 2012; }
+    @Override
+    protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
+	    
+    @Override
+    protected int defineOffsetNextTableDefPage() { return 4; }
+    @Override
+    protected int defineOffsetNumRows() { return 12; }
+    @Override
+    protected int defineOffsetNextAutoNumber() { return 20; }
+    @Override
+    protected int defineOffsetTableType() { return 20; }
+    @Override
+    protected int defineOffsetMaxCols() { return 21; }
+    @Override
+    protected int defineOffsetNumVarCols() { return 23; }
+    @Override
+    protected int defineOffsetNumCols() { return 25; }
+    @Override
+    protected int defineOffsetNumIndexSlots() { return 27; }
+    @Override
+    protected int defineOffsetNumIndexes() { return 31; }
+    @Override
+    protected int defineOffsetOwnedPages() { return 35; }
+    @Override
+    protected int defineOffsetFreeSpacePages() { return 39; }
+    @Override
+    protected int defineOffsetIndexDefBlock() { return 43; }
+
+    @Override
+    protected int defineOffsetIndexNumberBlock() { return 39; }
+	    
+    @Override
+    protected int defineOffsetColumnType() { return 0; }
+    @Override
+    protected int defineOffsetColumnNumber() { return 1; }
+    @Override
+    protected int defineOffsetColumnPrecision() { return 11; }
+    @Override
+    protected int defineOffsetColumnScale() { return 12; }
+    @Override
+    protected int defineOffsetColumnFlags() { return 13; }
+    @Override
+    protected int defineOffsetColumnCompressedUnicode() { return 16; }
+    @Override
+    protected int defineOffsetColumnLength() { return 16; }
+    @Override
+    protected int defineOffsetColumnVariableTableIndex() { return 3; }
+    @Override
+    protected int defineOffsetColumnFixedDataOffset() { return 14; }
+    @Override
+    protected int defineOffsetColumnFixedDataRowOffset() { return 1; }
+	  
+    @Override
+    protected int defineOffsetTableDefLocation() { return 4; }
+	    
+    @Override
+    protected int defineOffsetRowStart() { return 10; }
+    @Override
+    protected int defineOffsetUsageMapStart() { return 5; }
+	    
+    @Override
+    protected int defineOffsetUsageMapPageData() { return 4; }
+	    
+    @Override
+    protected int defineOffsetReferenceMapPageNumbers() { return 1; }
+	    
+    @Override
+    protected int defineOffsetFreeSpace() { return 2; }
+    @Override
+    protected int defineOffsetNumRowsOnDataPage() { return 8; }
+    @Override
+    protected int defineMaxNumRowsOnDataPage() { return 255; }
+	    
+    @Override
+    protected int defineOffsetIndexCompressedByteCount() { return 20; }
+    @Override
+    protected int defineOffsetIndexEntryMask() { return 22; }
+    @Override
+    protected int defineOffsetPrevIndexPage() { return 8; }
+    @Override
+    protected int defineOffsetNextIndexPage() { return 12; }
+    @Override
+    protected int defineOffsetChildTailIndexPage() { return 16; }
+	    
+    @Override
+    protected int defineSizeIndexDefinition() { return 8; }
+    @Override
+    protected int defineSizeColumnHeader() { return 18; }
+    @Override
+    protected int defineSizeRowLocation() { return 2; }
+    @Override
+    protected int defineSizeLongValueDef() { return 12; }
+    @Override
+    protected int defineMaxInlineLongValueSize() { return 64; }
+    @Override
+    protected int defineMaxLongValueRowSize() { return 2032; }
+    @Override
+    protected int defineSizeTdefHeader() { return 63; }
+    @Override
+    protected int defineSizeTdefTrailer() { return 2; }
+    @Override
+    protected int defineSizeColumnDefBlock() { return 25; }
+    @Override
+    protected int defineSizeIndexEntryMask() { return 226; }
+    @Override
+    protected int defineSkipBeforeIndexFlags() { return 0; }
+    @Override
+    protected int defineSkipAfterIndexFlags() { return 0; }
+    @Override
+    protected int defineSkipBeforeIndexSlot() { return 0; }
+    @Override
+    protected int defineSkipAfterIndexSlot() { return 0; }
+    @Override
+    protected int defineSkipBeforeIndex() { return 0; }
+    @Override
+    protected int defineSizeNameLength() { return 1; }
+    @Override
+    protected int defineSizeRowColumnCount() { return 1; }
+    @Override
+    protected int defineSizeRowVarColOffset() { return 1; }
+	    
+    @Override
+    protected int defineUsageMapTableByteLength() { return 128; }
+	      
+    @Override
+    protected int defineMaxColumnsPerTable() { return 255; }
+	      
+    @Override
+    protected int defineMaxTableNameLength() { return 64; }
+	      
+    @Override
+    protected int defineMaxColumnNameLength() { return 64; }
+	      
+    @Override
+    protected int defineMaxIndexNameLength() { return 64; }
+	      
+    @Override
+    protected boolean defineReverseFirstByteInDescNumericIndexes() { return false; }
+
+    @Override
+    protected Charset defineCharset() { return Charset.defaultCharset(); }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    {
+      return PossibleFileFormats.POSSIBLE_VERSION_3;
+    }
+
+  }
+  
   private static class Jet4Format extends JetFormat {
 
     private Jet4Format() {
@@ -353,6 +562,9 @@ public abstract class JetFormat {
       super(name);
     }
 
+    @Override
+    protected boolean defineReadOnly() { return false; }
+    
     @Override
     protected int definePageSize() { return 4096; }
     
@@ -412,6 +624,8 @@ public abstract class JetFormat {
     protected int defineOffsetColumnVariableTableIndex() { return 7; }
     @Override
     protected int defineOffsetColumnFixedDataOffset() { return 21; }
+    @Override
+    protected int defineOffsetColumnFixedDataRowOffset() { return 2; }
   
     @Override
     protected int defineOffsetTableDefLocation() { return 4; }
@@ -465,6 +679,22 @@ public abstract class JetFormat {
     protected int defineSizeColumnDefBlock() { return 25; }
     @Override
     protected int defineSizeIndexEntryMask() { return 453; }
+    @Override
+    protected int defineSkipBeforeIndexFlags() { return 4; }
+    @Override
+    protected int defineSkipAfterIndexFlags() { return 5; }
+    @Override
+    protected int defineSkipBeforeIndexSlot() { return 4; }
+    @Override
+    protected int defineSkipAfterIndexSlot() { return 4; }
+    @Override
+    protected int defineSkipBeforeIndex() { return 4; }
+    @Override
+    protected int defineSizeNameLength() { return 2; }
+    @Override
+    protected int defineSizeRowColumnCount() { return 2; }
+    @Override
+    protected int defineSizeRowVarColOffset() { return 2; }
     
     @Override
     protected int defineUsageMapTableByteLength() { return 64; }

@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -12,6 +11,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseTest.*;
 
 /**
  * @author Dan Rollo
@@ -28,21 +28,20 @@ public class JetFormatTest extends TestCase {
   public static enum Basename {
 
     BIG_INDEX("bigIndexTest"),
-      COMP_INDEX("compIndexTest"),
-      DEL_COL("delColTest"),
-      DEL("delTest"),
-      FIXED_NUMERIC("fixedNumericTest"),
-      FIXED_TEXT("fixedTextTest"),
-      INDEX_CURSOR("indexCursorTest"),
-      INDEX("indexTest"),
-      OVERFLOW("overflowTest"),
-      QUERY("queryTest"),
-      TEST("test"),
-      TEST2("test2"),
-      INDEX_CODES("testIndexCodes"),
-      INDEX_PROPERTIES("testIndexProperties"),
-      PROMOTION("testPromotion"),
-      ;
+    COMP_INDEX("compIndexTest"),
+    DEL_COL("delColTest"),
+    DEL("delTest"),
+    FIXED_NUMERIC("fixedNumericTest"),
+    FIXED_TEXT("fixedTextTest"),
+    INDEX_CURSOR("indexCursorTest"),
+    INDEX("indexTest"),
+    OVERFLOW("overflowTest"),
+    QUERY("queryTest"),
+    TEST("test"),
+    TEST2("test2"),
+    INDEX_CODES("testIndexCodes"),
+    INDEX_PROPERTIES("testIndexProperties"),
+    PROMOTION("testPromotion");
 
     private final String _basename;
 
@@ -58,6 +57,7 @@ public class JetFormatTest extends TestCase {
       runtime via the system property
       "com.healthmarketscience.jackcess.testFormats") */
   final static FileFormat[] SUPPORTED_FILEFORMATS;
+  final static FileFormat[] SUPPORTED_FILEFORMATS_FOR_READ;
 
   static {
     String testFormatStr = System.getProperty("com.healthmarketscience.jackcess.testFormats");
@@ -70,15 +70,21 @@ public class JetFormatTest extends TestCase {
     }
 
     List<FileFormat> supported = new ArrayList<FileFormat>();
-    for(FileFormat ff : Arrays.asList(FileFormat.V2000, FileFormat.V2003,
-                                      FileFormat.V2007)) {
+    List<FileFormat> supportedForRead = new ArrayList<FileFormat>();
+    for(FileFormat ff : FileFormat.values()) {
       if(!testFormats.contains(ff)) {
+        continue;
+      }
+      supportedForRead.add(ff);
+      if(ff.getJetFormat().READ_ONLY) {
         continue;
       }
       supported.add(ff);
     }
 
     SUPPORTED_FILEFORMATS = supported.toArray(new FileFormat[0]);
+    SUPPORTED_FILEFORMATS_FOR_READ = 
+      supportedForRead.toArray(new FileFormat[0]);
   }
 
   /**
@@ -113,12 +119,36 @@ public class JetFormatTest extends TestCase {
     }
 
     public static List<TestDB> getSupportedForBasename(Basename basename) {
+      return getSupportedForBasename(basename, false);
+    }
+
+    public static List<TestDB> getSupportedForBasename(Basename basename,
+                                                       boolean readOnly) {
 
       List<TestDB> supportedTestDBs = new ArrayList<TestDB>();
-      for (FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-        supportedTestDBs.add(new TestDB(
-                                 getFileForBasename(basename, fileFormat),
-                                 fileFormat));
+      for (FileFormat fileFormat : 
+             (readOnly ? SUPPORTED_FILEFORMATS_FOR_READ :
+              SUPPORTED_FILEFORMATS)) {
+        File testFile = getFileForBasename(basename, fileFormat);
+        if(!testFile.exists()) {
+          continue;
+        }
+        
+        // verify that the db is the file format expected
+        try {
+//           System.out.println("FOO checking " + testFile);
+          Database db = Database.open(testFile, true);
+          FileFormat dbFileFormat = db.getFileFormat();
+          db.close();
+          if(dbFileFormat != fileFormat) {
+            throw new IllegalStateException("Expected " + fileFormat +
+                                            " was " + dbFileFormat);
+          }
+        } catch(Exception e) {
+          throw new RuntimeException(e);
+        }
+
+        supportedTestDBs.add(new TestDB(testFile, fileFormat));
       }
       return supportedTestDBs;
     }
@@ -133,12 +163,10 @@ public class JetFormatTest extends TestCase {
     }
   }
 
-  private static final File UNSUPPORTED_TEST_V1997 = 
-    new File(DIR_TEST_DATA, "V1997" + File.separator +
-             Basename.TEST + "V1997.mdb");
-
   static final List<TestDB> SUPPORTED_DBS_TEST = 
     TestDB.getSupportedForBasename(Basename.TEST);
+  static final List<TestDB> SUPPORTED_DBS_TEST_FOR_READ = 
+    TestDB.getSupportedForBasename(Basename.TEST, true);
 
 
   public void testGetFormat() throws Exception {
@@ -149,41 +177,61 @@ public class JetFormatTest extends TestCase {
       // success
     }
 
-    checkUnsupportedJetFormat(UNSUPPORTED_TEST_V1997);
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-    for (final TestDB testDB : SUPPORTED_DBS_TEST) {
-      checkJetFormat(testDB);
+      final FileChannel channel = Database.openChannel(testDB.dbFile, false);
+      try {
+
+        JetFormat fmtActual = JetFormat.getFormat(channel);
+        assertEquals("Unexpected JetFormat for dbFile: " + 
+                     testDB.dbFile.getAbsolutePath(),
+                     testDB.expectedFileFormat.getJetFormat(), fmtActual);
+
+      } finally {
+        channel.close();
+      }
+
     }
   }
 
-  private static void checkJetFormat(final TestDB testDB)
-    throws IOException {
+  public void testReadOnlyFormat() throws Exception {
 
-    final FileChannel channel = Database.openChannel(testDB.dbFile, false);
-    try {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      JetFormat fmtActual = JetFormat.getFormat(channel);
-      assertEquals("Unexpected JetFormat for dbFile: " + 
-                   testDB.dbFile.getAbsolutePath(),
-                   testDB.expectedFileFormat.getJetFormat(), fmtActual);
+      Database db = null;
+      IOException failure = null;
+      try {
+        db = openCopy(testDB);
+      } catch(IOException e) {
+        failure = e;
+      } finally {
+        if(db != null) {
+          db.close();
+        }
+      }
 
-    } finally {
-      channel.close();
+      if(!testDB.getExpectedFormat().READ_ONLY) {
+        assertNull(failure);
+      } else {
+        assertTrue(failure.getMessage().contains("does not support writing"));
+      }
+
     }
   }
 
-  private static void checkUnsupportedJetFormat(File testDB)
-    throws IOException {
+  public void testFileFormat() throws Exception {
 
-    final FileChannel channel = Database.openChannel(testDB, false);
-    try {
-      JetFormat.getFormat(channel);
-      fail("Unexpected JetFormat for dbFile: " + 
-           testDB.getAbsolutePath());
-    } catch(IOException ignored) {
-      // success
-    } finally {
-      channel.close();
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
+
+      Database db = null;
+      try {
+        db = open(testDB);
+        assertEquals(testDB.getExpectedFileFormat(), db.getFileFormat());
+      } finally {
+        if(db != null) {
+          db.close();
+        }
+      }
     }
   }
 

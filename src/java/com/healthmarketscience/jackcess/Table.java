@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,6 +61,8 @@ public class Table
   private static final short DELETED_ROW_MASK = (short)0x8000;
   
   private static final short OVERFLOW_ROW_MASK = (short)0x4000;
+
+  private static final int MAX_BYTE = 256;
 
   /** Table type code for system tables */
   public static final byte TYPE_SYSTEM = 0x53;
@@ -403,7 +406,7 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
     
-    return getRowColumn(rowBuffer, getRowNullMask(rowBuffer), column,
+    return getRowColumn(getFormat(), rowBuffer, getRowNullMask(rowBuffer), column,
                         rowState);
   }
 
@@ -421,7 +424,7 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
 
-    return getRow(rowState, rowBuffer, getRowNullMask(rowBuffer), _columns,
+    return getRow(getFormat(), rowState, rowBuffer, getRowNullMask(rowBuffer), _columns,
                   columnNames);
   }
 
@@ -430,6 +433,7 @@ public class Table
    * Saves parsed row values to the given rowState.
    */
   private static Map<String, Object> getRow(
+	  JetFormat format,
       RowState rowState,
       ByteBuffer rowBuffer,
       NullMask nullMask,
@@ -444,7 +448,7 @@ public class Table
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
         rtn.put(column.getName(), 
-                getRowColumn(rowBuffer, nullMask, column, rowState));
+                getRowColumn(format, rowBuffer, nullMask, column, rowState));
       }
     }
     return rtn;
@@ -454,7 +458,8 @@ public class Table
    * Reads the column data from the given row buffer.  Leaves limit unchanged.
    * Caches the returned value in the rowState.
    */
-  private static Object getRowColumn(ByteBuffer rowBuffer,
+  private static Object getRowColumn(JetFormat format,
+                                     ByteBuffer rowBuffer,
                                      NullMask nullMask,
                                      Column column,
                                      RowState rowState)
@@ -484,19 +489,34 @@ public class Table
       if(!column.isVariableLength()) {
 
         // read fixed length value (non-boolean at this point)
-        int dataStart = rowStart + 2;
+        int dataStart = rowStart + format.OFFSET_COLUMN_FIXED_DATA_ROW_OFFSET;
         colDataPos = dataStart + column.getFixedDataOffset();
         colDataLen = column.getType().getFixedSize(column.getLength());
       
       } else {
+        int varDataStart; 
+        int varDataEnd;
 
-        // read var length value
-        int varColumnOffsetPos =
-          (rowBuffer.limit() - nullMask.byteSize() - 4) -
-          (column.getVarLenTableIndex() * 2);
+        if(format.SIZE_ROW_VAR_COL_OFFSET == 2) {
 
-        short varDataStart = rowBuffer.getShort(varColumnOffsetPos);
-        short varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
+          // read simple var length value
+          int varColumnOffsetPos =
+            (rowBuffer.limit() - nullMask.byteSize() - 4) -
+            (column.getVarLenTableIndex() * 2);
+
+          varDataStart = rowBuffer.getShort(varColumnOffsetPos);
+          varDataEnd = rowBuffer.getShort(varColumnOffsetPos - 2);
+
+        } else {
+
+          // read jump-table based var length values
+          short[] varColumnOffsets = readJumpTableVarColOffsets(
+              rowState, rowBuffer, rowStart, nullMask);
+
+          varDataStart = varColumnOffsets[column.getVarLenTableIndex()];
+          varDataEnd = varColumnOffsets[column.getVarLenTableIndex() + 1];
+        }
+
         colDataPos = rowStart + varDataStart;
         colDataLen = varDataEnd - varDataStart;
       }
@@ -523,16 +543,61 @@ public class Table
     }
   }
 
+  static short[] readJumpTableVarColOffsets(
+      RowState rowState, ByteBuffer rowBuffer, int rowStart,
+      NullMask nullMask) 
+  {
+    short[] varColOffsets = rowState.getVarColOffsets();
+    if(varColOffsets != null) {
+      return varColOffsets;
+    }
+
+    // calculate offsets using jump-table info
+    int nullMaskSize = nullMask.byteSize();
+    int rowEnd = rowStart + rowBuffer.remaining() - 1;
+    int numVarCols = ByteUtil.getUnsignedByte(rowBuffer, 
+                                              rowEnd - nullMaskSize);
+    varColOffsets = new short[numVarCols + 1];
+	  
+    int rowLen = rowEnd - rowStart + 1;
+    int numJumps = (rowLen - 1) / MAX_BYTE;
+    int colOffset = rowEnd - nullMaskSize - numJumps - 1;
+	  
+    // If last jump is a dummy value, ignore it
+    if(((colOffset - rowStart - numVarCols) / MAX_BYTE) < numJumps) {
+      numJumps--;
+    }
+
+    int jumpsUsed = 0;
+    for(int i = 0; i < numVarCols + 1; i++) {
+
+      if((jumpsUsed < numJumps) && 
+         (i == ByteUtil.getUnsignedByte(
+              rowBuffer, rowEnd - nullMaskSize-jumpsUsed - 1))) {
+        jumpsUsed++;
+      }
+		  
+      varColOffsets[i] = (short)
+        (ByteUtil.getUnsignedByte(rowBuffer, colOffset - i)
+         + (jumpsUsed * MAX_BYTE));
+    }
+	  
+    rowState.setVarColOffsets(varColOffsets);
+    return varColOffsets;
+  }
+
   /**
    * Reads the null mask from the given row buffer.  Leaves limit unchanged.
    */
-  private static NullMask getRowNullMask(ByteBuffer rowBuffer)
+  private NullMask getRowNullMask(ByteBuffer rowBuffer)
     throws IOException
   {
     // reset position to row start
     rowBuffer.reset();
-    
-    short columnCount = rowBuffer.getShort(); // Number of columns in this row
+
+    // Number of columns in this row
+    int columnCount = ByteUtil.getUnsignedVarInt(
+        rowBuffer, getFormat().SIZE_ROW_COLUMN_COUNT);
     
     // read null mask
     NullMask nullMask = new NullMask(columnCount);
@@ -685,7 +750,8 @@ public class Table
    * @return the first page of the new table's definition
    */
   public static int writeTableDefinition(
-      List<Column> columns, PageChannel pageChannel, JetFormat format)
+      List<Column> columns, PageChannel pageChannel, JetFormat format,
+      Charset charset)
     throws IOException
   {
     // first, create the usage map page
@@ -710,7 +776,7 @@ public class Table
                                                           format.PAGE_SIZE));
     writeTableDefinitionHeader(buffer, columns, usageMapPageNumber,
                                totalTableDefSize, format);
-    writeColumnDefinitions(buffer, columns, format); 
+    writeColumnDefinitions(buffer, columns, format, charset); 
     
     //End of tabledef
     buffer.put((byte) 0xff);
@@ -834,7 +900,8 @@ public class Table
    * @param columns List of Columns to write definitions for
    */
   private static void writeColumnDefinitions(
-      ByteBuffer buffer, List<Column> columns, JetFormat format)
+      ByteBuffer buffer, List<Column> columns, JetFormat format,
+      Charset charset)
     throws IOException
   {
     short columnNumber = (short) 0;
@@ -896,7 +963,7 @@ public class Table
       }
     }
     for (Column col : columns) {
-      writeName(buffer, col.getName(), format);
+      writeName(buffer, col.getName(), charset);
     }
   }
 
@@ -905,10 +972,9 @@ public class Table
    * {@link #readName}.
    */
   private static void writeName(ByteBuffer buffer, String name,
-                                JetFormat format)
+                                Charset charset)
   {
-      ByteBuffer encName = Column.encodeUncompressedText(
-          name, format);
+      ByteBuffer encName = Column.encodeUncompressedText(name, charset);
       buffer.putShort((short) encName.remaining());
       buffer.put(encName);
   }
@@ -1041,12 +1107,12 @@ public class Table
     
     for (int i = 0; i < _indexSlotCount; i++) {
 
-      tableBuffer.getInt(); //Forward past Unknown
+      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
       tableBuffer.getInt(); //Forward past alternate index number
       int indexNumber = tableBuffer.getInt();
       ByteUtil.forward(tableBuffer, 11);
       byte indexType = tableBuffer.get();
-      ByteUtil.forward(tableBuffer, 4);
+      ByteUtil.forward(tableBuffer, getFormat().SKIP_AFTER_INDEX_SLOT); //Skip past Unknown
 
       if(i < firstRealIdx) {
         // ignore this info
@@ -1077,7 +1143,7 @@ public class Table
     // go back to index column info after sorting
     tableBuffer.position(idxOffset);
     for (int i = 0; i < _indexCount; i++) {
-      tableBuffer.getInt(); //Forward past Unknown
+      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
       _indexes.get(i).read(tableBuffer, _columns);
     }
 
@@ -1115,15 +1181,16 @@ public class Table
   }
 
   /**
-   * Returns a name read from the buffer at the current position.  The
-   * expected name format is the name length as a short followed by (length *
-   * 2) bytes encoded using the {@link JetFormat#CHARSET}
+   * Returns a name read from the buffer at the current position. The
+   * expected name format is the name length followed by the name 
+   * encoded using the {@link JetFormat#CHARSET}
    */
-  private String readName(ByteBuffer buffer) {
-    int nameLength = ByteUtil.getUnsignedShort(buffer);
+  private String readName(ByteBuffer buffer) { 
+    int nameLength = readNameLength(buffer);
     byte[] nameBytes = new byte[nameLength];
     buffer.get(nameBytes);
-    return Column.decodeUncompressedText(nameBytes, getFormat());
+    return Column.decodeUncompressedText(nameBytes, 
+                                         getDatabase().getCharset());
   }
   
   /**
@@ -1131,8 +1198,15 @@ public class Table
    * expected name format is the same as that for {@link #readName}.
    */
   private void skipName(ByteBuffer buffer) {
-    int nameLength = ByteUtil.getUnsignedShort(buffer);
+	int nameLength = readNameLength(buffer);
     ByteUtil.forward(buffer, nameLength);
+  }
+  
+  /**
+   * Returns a name length read from the buffer at the current position.
+   */
+  private int readNameLength(ByteBuffer buffer) { 
+    return ByteUtil.getUnsignedVarInt(buffer, getFormat().SIZE_NAME_LENGTH);
   }
   
   /**
@@ -1307,7 +1381,7 @@ public class Table
     for(Column column : _columns) {
       if(column.isAutoNumber() || 
          (row[column.getColumnIndex()] == Column.KEEP_VALUE)) {
-        row[column.getColumnIndex()] = getRowColumn(rowBuffer, nullMask,
+        row[column.getColumnIndex()] = getRowColumn(getFormat(), rowBuffer, nullMask,
                                                     column, rowState);
       }
     }
@@ -1929,6 +2003,8 @@ public class Table
     private int _lastModCount;
     /** optional error handler to use when row errors are encountered */
     private ErrorHandler _errorHandler;
+    /** cached variable column offsets for jump-table based rows */
+    private short[] _varColOffsets;
   
     private RowState(TempBufferHolder.Type headerType) {
       _headerRowBufferH = TempPageHolder.newHolder(headerType);
@@ -1955,6 +2031,7 @@ public class Table
       _rowsOnHeaderPage = 0;
       _status = RowStateStatus.INIT;
       _rowStatus = RowStatus.INIT;
+      _varColOffsets = null;
       if(_haveRowValues) {
         Arrays.fill(_rowValues, null);
         _haveRowValues = false;
@@ -2035,6 +2112,14 @@ public class Table
     
     public Object[] getRowValues() {
       return dupeRow(_rowValues, _rowValues.length);
+    }
+
+    private short[] getVarColOffsets() {
+      return _varColOffsets;
+    }
+
+    private void setVarColOffsets(short[] varColOffsets) {
+      _varColOffsets = varColOffsets;
     }
     
     public RowId getHeaderRowId() {

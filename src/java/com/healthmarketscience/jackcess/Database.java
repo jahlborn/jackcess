@@ -37,6 +37,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeSet;
 
 import com.healthmarketscience.jackcess.query.Query;
@@ -99,6 +101,16 @@ public class Database
       default. */
   public static final String USE_BIG_INDEX_PROPERTY =
     "com.healthmarketscience.jackcess.bigIndex";
+
+  /** system property which can be used to set the default TimeZone used for
+      date calculations. */
+  public static final String TIMEZONE_PROPERTY =
+    "com.healthmarketscience.jackcess.timeZone";
+
+  /** system property prefix which can be used to set the default Charset
+      used for text data (full property includes the JetFormat version). */
+  public static final String CHARSET_PROPERTY_PREFIX =
+    "com.healthmarketscience.jackcess.charset.";
 
   /** default error handler used if none provided (just rethrows exception) */
   public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
@@ -173,6 +185,7 @@ public class Database
   
   public static enum FileFormat {
 
+    V1997(null, JetFormat.VERSION_3),
     V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
     V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
     V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
@@ -301,6 +314,10 @@ public class Database
   private ErrorHandler _dbErrorHandler;
   /** the file format of the database */
   private FileFormat _fileFormat;
+  /** charset to use when handling text */
+  private Charset _charset;
+  /** timezone to use when handling dates */
+  private TimeZone _timeZone;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -356,12 +373,57 @@ public class Database
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync)
     throws IOException
   {    
+    return open(mdbFile, readOnly, autoSync, null, null);
+  }
+
+  /**
+   * Open an existing Database.  If the existing file is not writeable or the
+   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * @param mdbFile File containing the database
+   * @param readOnly iff <code>true</code>, force opening file in read-only
+   *                 mode
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   * @param charset Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
+   */
+  public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
+                              Charset charset, TimeZone timeZone)
+    throws IOException
+  {    
     if(!mdbFile.exists() || !mdbFile.canRead()) {
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
-    return new Database(openChannel(mdbFile,
-                                    (!mdbFile.canWrite() || readOnly)),
-                        autoSync, null);
+
+    // force read-only for non-writable files
+    readOnly |= !mdbFile.canWrite();
+
+    // open file channel
+    FileChannel channel = openChannel(mdbFile, readOnly);
+
+    if(!readOnly) {
+
+      // verify that format supports writing
+      JetFormat jetFormat = JetFormat.getFormat(channel);
+
+      if(jetFormat.READ_ONLY) {
+        // shutdown the channel (quietly)
+        try {
+          channel.close();
+        } catch(Exception ignored) {
+          // we don't care
+        }
+        throw new IOException("jet format '" + jetFormat + "' does not support writing");
+      }
+    }
+
+    return new Database(channel, autoSync, null, charset, timeZone);
   }
   
   /**
@@ -438,12 +500,40 @@ public class Database
                                 boolean autoSync)
     throws IOException
   {
+    return create(fileFormat, mdbFile, autoSync, null, null);
+  }
+
+  /**
+   * Create a new Database for the given fileFormat
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   * @param charset Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
+   */
+  public static Database create(FileFormat fileFormat, File mdbFile, 
+                                boolean autoSync, Charset charset,
+                                TimeZone timeZone)
+    throws IOException
+  {
+    if (fileFormat.getJetFormat().READ_ONLY) {
+      throw new IOException("jet format '" + fileFormat.getJetFormat() + "' does not support writing");
+    }
+
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
             fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
-    return new Database(channel, autoSync, fileFormat);
+    return new Database(channel, autoSync, fileFormat, charset, timeZone);
   }
 
   /**
@@ -471,17 +561,30 @@ public class Database
    * @param channel File channel of the database.  This needs to be a
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   * @param fileFormat version of new database (if known)
+   * @param charset Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected Database(FileChannel channel, boolean autoSync, 
-                     FileFormat fileFormat)
+  protected Database(FileChannel channel, boolean autoSync,
+                     FileFormat fileFormat, Charset charset, TimeZone timeZone)
     throws IOException
   {
     boolean success = false;
     try {
 
       _format = JetFormat.getFormat(channel);
+      _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
       _fileFormat = fileFormat;
       _pageChannel = new PageChannel(channel, _format, autoSync);
+      _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
       // note, it's slighly sketchy to pass ourselves along partially
       // constructed, but only our _format and _pageChannel refs should be
       // needed
@@ -555,6 +658,44 @@ public class Database
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
+
+  /**
+   * Gets currently configured TimeZone (always non-{@code null}).
+   */
+  public TimeZone getTimeZone()
+  {
+    return _timeZone;
+  }
+
+  /**
+   * Sets a new TimeZone.  If {@code null}, resets to the value returned by
+   * {@link #getDefaultTimeZone}.
+   */
+  public void setTimeZone(TimeZone newTimeZone) {
+    if(newTimeZone == null) {
+      newTimeZone = getDefaultTimeZone();
+    }
+    _timeZone = newTimeZone;
+  }    
+
+  /**
+   * Gets currently configured Charset (always non-{@code null}).
+   */
+  public Charset getCharset()
+  {
+    return _charset;
+  }
+
+  /**
+   * Sets a new Charset.  If {@code null}, resets to the value returned by
+   * {@link #getDefaultCharset}.
+   */
+  public void setCharset(Charset newCharset) {
+    if(newCharset == null) {
+      newCharset = getDefaultCharset(getFormat());
+    }
+    _charset = newCharset;
+  }
 
   /**
    * Returns the FileFormat of this database (which may involve inspecting the
@@ -747,7 +888,7 @@ public class Database
     
     //Write the tdef page to disk.
     int tdefPageNumber = Table.writeTableDefinition(columns, _pageChannel,
-                                                    _format);
+                                                    _format, getCharset());
     
     //Add this table to our internal list.
     addTable(name, Integer.valueOf(tdefPageNumber));
@@ -1254,6 +1395,47 @@ public class Database
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
     return true;
+  }
+
+  /**
+   * Returns the default TimeZone.  This is normally the platform default
+   * TimeZone as returned by {@link TimeZone#getDefault}, but can be
+   * overridden using the system property {@value #TIMEZONE_PROPERTY}.
+   */
+  public static TimeZone getDefaultTimeZone()
+  {
+    String tzProp = System.getProperty(TIMEZONE_PROPERTY);
+    if(tzProp != null) {
+      tzProp = tzProp.trim();
+      if(tzProp.length() > 0) {
+        return TimeZone.getTimeZone(tzProp);
+      }
+    }
+
+    // use system default
+    return TimeZone.getDefault();
+  }
+  
+  /**
+   * Returns the default Charset for the given JetFormat.  This may or may not
+   * be platform specific, depending on the format, but can be overridden
+   * using a system property composed of the prefix
+   * {@value #CHARSET_PROPERTY_PREFIX} followed by the JetFormat version to
+   * which the charset should apply, e.g. {@code
+   * "com.healthmarketscience.jackcess.charset.VERSION_3"}.
+   */
+  public static Charset getDefaultCharset(JetFormat format)
+  {
+    String csProp = System.getProperty(CHARSET_PROPERTY_PREFIX + format);
+    if(csProp != null) {
+      csProp = csProp.trim();
+      if(csProp.length() > 0) {
+        return Charset.forName(csProp);
+      }
+    }
+
+    // use format default
+    return format.CHARSET;
   }
   
   /**

@@ -67,7 +67,7 @@ public class BigIndexTest extends TestCase {
   
   public void testComplexIndex() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX, true)) {
       // this file has an index with "compressed" entries and node pages
       Database db = open(testDB);
       Table t = db.getTable("Table1");

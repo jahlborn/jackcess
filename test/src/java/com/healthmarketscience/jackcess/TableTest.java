@@ -29,9 +29,11 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
 
 import junit.framework.TestCase;
 
@@ -172,6 +174,14 @@ public class TableTest extends TestCase {
         @Override
         public Table getTable() {
           return _testTable;
+        }
+        @Override
+        protected Charset getCharset() {
+          return getFormat().CHARSET;
+        }
+        @Override
+        protected TimeZone getTimeZone() {
+          return TimeZone.getDefault();
         }
       };
   }

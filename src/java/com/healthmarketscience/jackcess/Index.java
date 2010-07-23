@@ -366,9 +366,9 @@ public abstract class Index implements Comparable<Index> {
                                 umapRowNum, false);
 
     _rootPageNumber = tableBuffer.getInt();
-    tableBuffer.getInt(); //Forward past Unknown
+    ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_FLAGS); //Forward past Unknown
     _indexFlags = tableBuffer.get();
-    ByteUtil.forward(tableBuffer, 5);  //Forward past other stuff
+    ByteUtil.forward(tableBuffer, getFormat().SKIP_AFTER_INDEX_FLAGS); //Forward past other stuff
   }
 
   /**
