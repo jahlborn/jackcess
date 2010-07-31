@@ -176,6 +176,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       throw new IllegalArgumentException(
           "Given index is not for given table: " + index + ", " + table);
     }
+    if(!table.getFormat().INDEXES_SUPPORTED) {
+      throw new IllegalArgumentException(
+          "JetFormat " + table.getFormat() + 
+          " does not currently support index lookups");
+    }
     return new IndexCursor(table, index,
                            index.cursor(startRow, startInclusive,
                                         endRow, endInclusive));
@@ -1163,6 +1168,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       super(new Id(table, index), table,
             new IndexPosition(entryCursor.getFirstEntry()),
             new IndexPosition(entryCursor.getLastEntry()));
+
+      index.initialize();
       _entryCursor = entryCursor;
     }
 

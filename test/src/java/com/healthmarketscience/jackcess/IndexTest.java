@@ -112,8 +112,10 @@ public class IndexTest extends TestCase {
       checkIndexColumns(table,
                         "id", "id",
                         "PrimaryKey", "id",
-                        "Table2Table1", "otherfk1",
-                        "Table3Table1", "otherfk2");
+                        getRelationshipName(testDB.getExpectedFormat(), 
+                                            "Table2Table1"), "otherfk1",
+                        getRelationshipName(testDB.getExpectedFormat(), 
+                                            "Table3Table1"), "otherfk2");
 
       table = mdb.getTable("Table2");
       for(Index idx : table.getIndexes()) {
@@ -417,5 +419,17 @@ public class IndexTest extends TestCase {
       }
     }
   }
-  
+
+  static String getRelationshipName(JetFormat format, String name)
+  {
+    if(format == JetFormat.VERSION_3) {
+      if(name.equals("Table2Table1")) {
+        return "{150B6687-5C64-4DC0-B934-A8CF92FF73FF}";
+      }
+      if(name.equals("Table3Table1")) {
+        return "{D039E343-97A1-471F-B2E3-8DFCF1EEC597}";
+      }
+    }
+    return name;
+  }
 }

@@ -95,6 +95,9 @@ public abstract class JetFormat {
   /** the read/write mode of this format */
   public final boolean READ_ONLY;
   
+  /** whether or not we can use indexes in this format */
+  public final boolean INDEXES_SUPPORTED;
+  
   /** Database page size in bytes */
   public final int PAGE_SIZE;
   public final long MAX_DATABASE_SIZE;
@@ -210,6 +213,7 @@ public abstract class JetFormat {
     _name = name;
     
     READ_ONLY = defineReadOnly();
+    INDEXES_SUPPORTED = defineIndexesSupported();
     
     PAGE_SIZE = definePageSize();
     MAX_DATABASE_SIZE = defineMaxDatabaseSize();
@@ -294,6 +298,7 @@ public abstract class JetFormat {
   }
   
   protected abstract boolean defineReadOnly();
+  protected abstract boolean defineIndexesSupported();
   
   protected abstract int definePageSize();
   protected abstract long defineMaxDatabaseSize();
@@ -391,6 +396,9 @@ public abstract class JetFormat {
 
     @Override
     protected boolean defineReadOnly() { return true; }
+	    
+    @Override
+    protected boolean defineIndexesSupported() { return false; }
 	    
     @Override
     protected int definePageSize() { return 2048; }
@@ -565,6 +573,9 @@ public abstract class JetFormat {
     @Override
     protected boolean defineReadOnly() { return false; }
     
+    @Override
+    protected boolean defineIndexesSupported() { return true; }
+	    
     @Override
     protected int definePageSize() { return 4096; }
     

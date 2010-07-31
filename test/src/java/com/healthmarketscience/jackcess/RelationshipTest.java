@@ -54,7 +54,9 @@ public class RelationshipTest extends TestCase {
       List<Relationship> rels = db.getRelationships(t1, t2);
       assertEquals(1, rels.size());
       Relationship rel = rels.get(0);
-      assertEquals("Table2Table1", rel.getName());
+      assertEquals(IndexTest.getRelationshipName(testDB.getExpectedFormat(),
+                                                 "Table2Table1"),
+                   rel.getName());
       assertEquals(t2, rel.getFromTable());
       assertEquals(Arrays.asList(t2.getColumn("id")),
                    rel.getFromColumns());
@@ -72,7 +74,9 @@ public class RelationshipTest extends TestCase {
       rels = db.getRelationships(t1, t3);
       assertEquals(1, rels.size());
       rel = rels.get(0);
-      assertEquals("Table3Table1", rel.getName());
+      assertEquals(IndexTest.getRelationshipName(testDB.getExpectedFormat(),
+                                                 "Table3Table1"),
+                   rel.getName());
       assertEquals(t3, rel.getFromTable());
       assertEquals(Arrays.asList(t3.getColumn("id")),
                    rel.getFromColumns());
