@@ -200,7 +200,7 @@ public class QueryTest extends TestCase
 
   public void testReadQueries() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.QUERY)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.QUERY, true)) {
       Map<String,String> expectedQueries = new HashMap<String,String>();
       expectedQueries.put(
           "SelectQuery", multiline(

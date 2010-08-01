@@ -741,7 +741,7 @@ public class DatabaseTest extends TestCase {
 
   public void testOverflow() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OVERFLOW)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OVERFLOW, true)) {
       Database mdb = open(testDB);
       Table table = mdb.getTable("Table1");
 
