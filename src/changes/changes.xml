@@ -22,7 +22,8 @@
         reading/writing database.
       </action>
       <action dev="jahlborn" type="add" issue="3003375">
-        Add support for reading Access 97 (jet format 3) databases.
+        Add support for reading Access 97 (jet format 3) databases (thanks to
+        F. Gerbig).
       </action>
     </release>
     <release version="1.2.0" date="2010-04-18">
