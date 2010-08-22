@@ -72,6 +72,8 @@ public class ExportTest extends TestCase
       t.addRow("crazy'data\"here", -345, -0.000345, createString(7).getBytes(),
                true, null);
 
+      t.addRow("C:\\temp\\some_file.txt", 25, 0.0, null, false, null);
+
       StringWriter out = new StringWriter();
 
       ExportUtil.exportWriter(db, "test", new BufferedWriter(out));
@@ -79,7 +81,8 @@ public class ExportTest extends TestCase
       String expected = 
         "some text||some more,13,13.25,\"61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +
         "79 7A 61 62  63 64\",true,Wed Dec 31 00:00:00 EST 1980" + NL +
-        "\"crazy'data\"\"here\",-345,-3.45E-4,61 62 63 64  65 66 67,true," + NL;
+        "\"crazy'data\"\"here\",-345,-3.45E-4,61 62 63 64  65 66 67,true," + NL +
+        "C:\\temp\\some_file.txt,25,0.0,,false," + NL;
 
       assertEquals(expected, out.toString());
 
@@ -92,7 +95,8 @@ public class ExportTest extends TestCase
         "col1||col2||col3||col4||col5||col6" + NL +
         "'some text||some more'||13||13.25||'61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +
         "79 7A 61 62  63 64'||true||Wed Dec 31 00:00:00 EST 1980" + NL +
-        "'crazy''data\"here'||-345||-3.45E-4||61 62 63 64  65 66 67||true||" + NL;
+        "'crazy''data\"here'||-345||-3.45E-4||61 62 63 64  65 66 67||true||" + NL +
+        "C:\\temp\\some_file.txt||25||0.0||||false||" + NL;
       assertEquals(expected, out.toString());
     }
   }
