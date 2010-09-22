@@ -25,6 +25,22 @@
             <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());
 </source>
           </li>
+          <li>Iterating through the rows of a table:
+            <source>Table table = Database.open(new File("my.mdb")).getTable("MyTable");
+for(Map&lt;String, Object&gt; row : table) {
+  System.out.println("Column 'a' has value: " + row.get("a"));
+}
+</source>
+          </li>
+          <li>Searching for a row with a specific column value:
+            <source>Map&lt;String, Object&gt; row = Cursor.findRow(table, Collections.singletonMap("a", "foo"));
+if(row != null) {
+  System.out.println("Found row where 'a' == 'foo': " + row);
+} else {
+  System.out.println("Could not find row where 'a' == 'foo'");
+}
+</source>
+          </li>
           <li>Creating a new table and writing data into it:
             <source>Database db = Database.create(new File("new.mdb"));
 Table newTable = new TableBuilder("NewTable")
@@ -38,6 +54,7 @@ Table newTable = new TableBuilder("NewTable")
 newTable.addRow(1, "foo");
 </source>
           </li>
+
           <li>Copying the contents of a JDBC ResultSet (e.g. from an
 external database) into a new table:
             <source>Database.open(new File("my.mdb")).copyTable("Imported", resultSet);</source>
