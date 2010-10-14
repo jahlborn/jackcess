@@ -454,7 +454,7 @@ public class Column implements Comparable<Column> {
    * @return The deserialized Object
    */
   public Object read(byte[] data) throws IOException {
-    return read(data, ByteOrder.LITTLE_ENDIAN);
+    return read(data, PageChannel.DEFAULT_BYTE_ORDER);
   }
   
   /**
@@ -516,8 +516,8 @@ public class Column implements Comparable<Column> {
   private byte[] readLongValue(byte[] lvalDefinition)
     throws IOException
   {
-    ByteBuffer def = ByteBuffer.wrap(lvalDefinition);
-    def.order(ByteOrder.LITTLE_ENDIAN);
+    ByteBuffer def = ByteBuffer.wrap(lvalDefinition)
+      .order(PageChannel.DEFAULT_BYTE_ORDER);
     int length = ByteUtil.get3ByteInt(def);
     // bail out gracefully here as we don't understand the format
     if (length < 0)
@@ -1047,14 +1047,15 @@ public class Column implements Comparable<Column> {
   }
   
   /**
-   * Serialize an Object into a raw byte value for this column in little endian order
+   * Serialize an Object into a raw byte value for this column in little
+   * endian order
    * @param obj Object to serialize
    * @return A buffer containing the bytes
    */
   public ByteBuffer write(Object obj, int remainingRowLength)
     throws IOException
   {
-    return write(obj, remainingRowLength, ByteOrder.LITTLE_ENDIAN);
+    return write(obj, remainingRowLength, PageChannel.DEFAULT_BYTE_ORDER);
   }
   
   /**

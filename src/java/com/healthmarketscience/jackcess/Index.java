@@ -82,6 +82,8 @@ public abstract class Index implements Comparable<Index> {
 
   private static final int MAX_TEXT_INDEX_CHAR_LENGTH =
     (JetFormat.TEXT_FIELD_MAX_LENGTH / JetFormat.TEXT_FIELD_UNIT_SIZE);
+
+  private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
   
   /** type attributes for Entries which simplify comparisons */
   public enum EntryType {
@@ -815,7 +817,7 @@ public abstract class Index implements Comparable<Index> {
     List<Entry> entries = new ArrayList<Entry>();
     TempBufferHolder tmpEntryBufferH =
       TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
-                                 ByteOrder.BIG_ENDIAN);
+                                 ENTRY_BYTE_ORDER);
 
     Entry prevEntry = FIRST_ENTRY;
     for (int i = 0; i < entryMaskLength; i++) {
@@ -1027,7 +1029,7 @@ public abstract class Index implements Comparable<Index> {
     throws IOException
   {
     // always write in big endian order
-    return column.write(value, 0, ByteOrder.BIG_ENDIAN).array();
+    return column.write(value, 0, ENTRY_BYTE_ORDER).array();
   }    
 
   /**
@@ -1759,7 +1761,7 @@ public abstract class Index implements Comparable<Index> {
       buffer.get(_entryBytes);
 
       // read the rowId
-      int page = ByteUtil.get3ByteInt(buffer, ByteOrder.BIG_ENDIAN);
+      int page = ByteUtil.get3ByteInt(buffer, ENTRY_BYTE_ORDER);
       int row = ByteUtil.getUnsignedByte(buffer);
       
       _rowId = new RowId(page, row);
@@ -1811,7 +1813,7 @@ public abstract class Index implements Comparable<Index> {
         buffer.put(_entryBytes, prefix.length,
                    (_entryBytes.length - prefix.length));
         ByteUtil.put3ByteInt(buffer, getRowId().getPageNumber(),
-                             ByteOrder.BIG_ENDIAN);
+                             ENTRY_BYTE_ORDER);
         
       } else if(prefix.length <= (_entryBytes.length + 3)) {
         
@@ -1819,7 +1821,7 @@ public abstract class Index implements Comparable<Index> {
         // and copy last bytes to output buffer
         ByteBuffer tmp = ByteBuffer.allocate(3);
         ByteUtil.put3ByteInt(tmp, getRowId().getPageNumber(),
-                             ByteOrder.BIG_ENDIAN);
+                             ENTRY_BYTE_ORDER);
         tmp.flip();
         tmp.position(prefix.length - _entryBytes.length);
         buffer.put(tmp);
@@ -1935,7 +1937,7 @@ public abstract class Index implements Comparable<Index> {
       // we need 4 trailing bytes for the sub-page number
       super(buffer, entryLen, 4);
 
-      _subPageNumber = ByteUtil.getInt(buffer, ByteOrder.BIG_ENDIAN);
+      _subPageNumber = ByteUtil.getInt(buffer, ENTRY_BYTE_ORDER);
     }
 
     @Override
@@ -1957,7 +1959,7 @@ public abstract class Index implements Comparable<Index> {
     @Override
     protected void write(ByteBuffer buffer, byte[] prefix) throws IOException {
       super.write(buffer, prefix);
-      ByteUtil.putInt(buffer, _subPageNumber, ByteOrder.BIG_ENDIAN);
+      ByteUtil.putInt(buffer, _subPageNumber, ENTRY_BYTE_ORDER);
     }
     
     @Override
