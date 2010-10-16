@@ -1,4 +1,4 @@
 To build from source:
 1) Install Maven (http://maven.apache.org/).
-2) maven jar
+2) mvn install
 3) Find output in "target" directory.
