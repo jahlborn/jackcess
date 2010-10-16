@@ -1024,6 +1024,67 @@ public class Database
   }
 
   /**
+   * @return the current database password, or {@code null} if none set.
+   */
+  public String getDatabasePassword() throws IOException
+  {
+    _pageChannel.readPage(_buffer, 0);
+
+    byte[] pwdBytes = new byte[_format.SIZE_PASSWORD];
+    _buffer.position(_format.OFFSET_PASSWORD);
+    _buffer.get(pwdBytes);
+
+    // de-mask password
+    applyPasswordMask(pwdBytes);
+    
+    boolean hasPassword = false;
+    for(int i = 0; i < pwdBytes.length; ++i) {
+      if(pwdBytes[i] != 0) {
+        hasPassword = true;
+        break;
+      }
+    }
+
+    if(!hasPassword) {
+      return null;
+    }
+
+    String pwd = Column.decodeUncompressedText(pwdBytes, getCharset());
+
+    // remove any trailing null chars
+    int idx = pwd.indexOf('\0');
+    if(idx >= 0) {
+      pwd = pwd.substring(0, idx);
+    }
+
+    return pwd;
+  }
+
+  /**
+   * Applies an extra mask to the password if required for the current
+   * JetFormat.
+   */
+  private void applyPasswordMask(byte[] pwdBytes)
+  {
+    // apply extra password mask if necessary (the extra password mask is
+    // generated from the database creation date stored in the header)
+    int pwdMaskPos = _format.OFFSET_HEADER_DATE;
+    if(pwdMaskPos >= 0) {
+
+      _buffer.position(pwdMaskPos);
+      double dateVal = Double.longBitsToDouble(_buffer.getLong());
+
+      byte[] pwdMask = new byte[4];
+      ByteBuffer.wrap(pwdMask).order(PageChannel.DEFAULT_BYTE_ORDER)
+        .putInt((int)dateVal);
+
+      for(int i = 0; i < pwdBytes.length; ++i) {
+        pwdBytes[i] ^= pwdMask[i % pwdMask.length];
+      }
+    }
+  }
+
+  /**
    * Finds the relationships matching the given from and to tables from the
    * given cursor and adds them to the given list.
    */

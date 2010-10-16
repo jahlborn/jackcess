@@ -161,6 +161,11 @@ public class PageChannel implements Channel, Flushable {
                             getFormat().PAGE_SIZE + " bytes from page " +
                             pageNumber + ", only read " + bytesRead);
     }
+
+    if(pageNumber == 0) {
+      // de-mask header
+      applyHeaderMask(buffer);
+    }
   }
   
   /**
@@ -192,10 +197,21 @@ public class PageChannel implements Channel, Flushable {
           "Page buffer is too large, size " + (page.remaining() - pageOffset));
     }
     
-    page.position(pageOffset);
-    _channel.write(page, (getPageOffset(pageNumber) + pageOffset));
-    if(_autoSync) {
-      flush();
+    if(pageNumber == 0) {
+      // re-mask header
+      applyHeaderMask(page);
+    }
+    try {
+      page.position(pageOffset);
+      _channel.write(page, (getPageOffset(pageNumber) + pageOffset));
+      if(_autoSync) {
+        flush();
+      }
+    } finally {
+      if(pageNumber == 0) {
+        // de-mask header
+        applyHeaderMask(page);
+      }
     }
   }
   
@@ -265,11 +281,11 @@ public class PageChannel implements Channel, Flushable {
   }
 
   /**
-   * @return A newly-allocated buffer of the given size and LITTLE_ENDIAN byte
-   *         order
+   * @return A newly-allocated buffer of the given size and DEFAULT_BYTE_ORDER
+   *         byte order
    */
   public ByteBuffer createBuffer(int size) {
-    return createBuffer(size, ByteOrder.LITTLE_ENDIAN);
+    return createBuffer(size, DEFAULT_BYTE_ORDER);
   }
   
   /**
@@ -292,6 +308,19 @@ public class PageChannel implements Channel, Flushable {
   
   public boolean isOpen() {
     return _channel.isOpen();
+  }
+
+  /**
+   * Applies the XOR mask to the database header in the given buffer.
+   */
+  private void applyHeaderMask(ByteBuffer buffer) {
+      // de/re-obfuscate the header
+      byte[] headerMask = _format.HEADER_MASK;
+      for(int idx = 0; idx < headerMask.length; ++idx) {
+        int pos = idx + _format.OFFSET_MASKED_HEADER;
+        byte b = (byte)(buffer.get(pos) ^ headerMask[idx]);
+        buffer.put(pos, b);
+      }
   }
 
   /**

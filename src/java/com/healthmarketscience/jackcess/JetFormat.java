@@ -59,6 +59,31 @@ public abstract class JetFormat {
   /** Version code for Jet version 5 */
   private static final byte CODE_VERSION_5 = 0x2;
 
+  /** mask used to obfuscate the db header */
+  private static final byte[] BASE_HEADER_MASK = new byte[]{
+    (byte)0xB5, (byte)0x6F, (byte)0x03, (byte)0x62, (byte)0x61, (byte)0x08,
+    (byte)0xC2, (byte)0x55, (byte)0xEB, (byte)0xA9, (byte)0x67, (byte)0x72,
+    (byte)0x43, (byte)0x3F, (byte)0x00, (byte)0x9C, (byte)0x7A, (byte)0x9F,
+    (byte)0x90, (byte)0xFF, (byte)0x80, (byte)0x9A, (byte)0x31, (byte)0xC5,
+    (byte)0x79, (byte)0xBA, (byte)0xED, (byte)0x30, (byte)0xBC, (byte)0xDF, 
+    (byte)0xCC, (byte)0x9D, (byte)0x63, (byte)0xD9, (byte)0xE4, (byte)0xC3,
+    (byte)0x7B, (byte)0x42, (byte)0xFB, (byte)0x8A, (byte)0xBC, (byte)0x4E,
+    (byte)0x86, (byte)0xFB, (byte)0xEC, (byte)0x37, (byte)0x5D, (byte)0x44,
+    (byte)0x9C, (byte)0xFA, (byte)0xC6, (byte)0x5E, (byte)0x28, (byte)0xE6, 
+    (byte)0x13, (byte)0xB6, (byte)0x8A, (byte)0x60, (byte)0x54, (byte)0x94,
+    (byte)0x7B, (byte)0x36, (byte)0xF5, (byte)0x72, (byte)0xDF, (byte)0xB1,
+    (byte)0x77, (byte)0xF4, (byte)0x13, (byte)0x43, (byte)0xCF, (byte)0xAF,
+    (byte)0xB1, (byte)0x33, (byte)0x34, (byte)0x61, (byte)0x79, (byte)0x5B,
+    (byte)0x92, (byte)0xB5, (byte)0x7C, (byte)0x2A, (byte)0x05, (byte)0xF1,
+    (byte)0x7C, (byte)0x99, (byte)0x01, (byte)0x1B, (byte)0x98, (byte)0xFD,
+    (byte)0x12, (byte)0x4F, (byte)0x4A, (byte)0x94, (byte)0x6C, (byte)0x3E,
+    (byte)0x60, (byte)0x26, (byte)0x5F, (byte)0x95, (byte)0xF8, (byte)0xD0,
+    (byte)0x89, (byte)0x24, (byte)0x85, (byte)0x67, (byte)0xC6, (byte)0x1F,
+    (byte)0x27, (byte)0x44, (byte)0xD2, (byte)0xEE, (byte)0xCF, (byte)0x65,
+    (byte)0xED, (byte)0xFF, (byte)0x07, (byte)0xC7, (byte)0x46, (byte)0xA1,
+    (byte)0x78, (byte)0x16, (byte)0x0C, (byte)0xED, (byte)0xE9, (byte)0x2D,
+    (byte)0x62, (byte)0xD4};    
+
   /** value of the "AccessVersion" property for access 2000 dbs:
       {@code "08.50"} */
   private static final byte[] ACCESS_VERSION_2000 = new byte[] {
@@ -104,7 +129,12 @@ public abstract class JetFormat {
   
   public final int MAX_ROW_SIZE;
   public final int PAGE_INITIAL_FREE_SPACE;
-  
+
+  public final int OFFSET_MASKED_HEADER;
+  public final byte[] HEADER_MASK;
+  public final int OFFSET_HEADER_DATE;
+  public final int OFFSET_PASSWORD;
+  public final int SIZE_PASSWORD;
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
   public final int OFFSET_NEXT_AUTO_NUMBER;
@@ -221,6 +251,11 @@ public abstract class JetFormat {
     MAX_ROW_SIZE = defineMaxRowSize();
     PAGE_INITIAL_FREE_SPACE = definePageInitialFreeSpace();
     
+    OFFSET_MASKED_HEADER = defineOffsetMaskedHeader();
+    HEADER_MASK = defineHeaderMask();
+    OFFSET_HEADER_DATE = defineOffsetHeaderDate();
+    OFFSET_PASSWORD = defineOffsetPassword();
+    SIZE_PASSWORD = defineSizePassword();
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
     OFFSET_NEXT_AUTO_NUMBER = defineOffsetNextAutoNumber();
@@ -306,6 +341,11 @@ public abstract class JetFormat {
   protected abstract int defineMaxRowSize();
   protected abstract int definePageInitialFreeSpace();
   
+  protected abstract int defineOffsetMaskedHeader();
+  protected abstract byte[] defineHeaderMask();
+  protected abstract int defineOffsetHeaderDate();
+  protected abstract int defineOffsetPassword();
+  protected abstract int defineSizePassword();
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
   protected abstract int defineOffsetNextAutoNumber();
@@ -413,6 +453,20 @@ public abstract class JetFormat {
     @Override
     protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
 	    
+    @Override
+    protected int defineOffsetMaskedHeader() { return 24; }
+    @Override
+    protected byte[] defineHeaderMask() { 
+      byte[] mask = new byte[BASE_HEADER_MASK.length - 2];
+      System.arraycopy(BASE_HEADER_MASK, 0, mask, 0, mask.length);
+      return mask; 
+    }
+    @Override
+    protected int defineOffsetHeaderDate() { return -1; }
+    @Override
+    protected int defineOffsetPassword() { return 66; }
+    @Override
+    protected int defineSizePassword() { return 20; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
     @Override
@@ -589,6 +643,16 @@ public abstract class JetFormat {
     @Override
     protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
     
+    @Override
+    protected int defineOffsetMaskedHeader() { return 24; }
+    @Override
+    protected byte[] defineHeaderMask() { return BASE_HEADER_MASK; }
+    @Override
+    protected int defineOffsetHeaderDate() { return 114; }
+    @Override
+    protected int defineOffsetPassword() { return 66; }
+    @Override
+    protected int defineSizePassword() { return 40; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
     @Override
