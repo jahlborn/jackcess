@@ -74,6 +74,8 @@ public class PageChannel implements Channel, Flushable {
   private final ByteBuffer _forceBytes = ByteBuffer.allocate(1);
   /** Tracks free pages in the database. */
   private UsageMap _globalUsageMap;
+  /** handler for the current database encoding type */
+  private CodecHandler _codecHandler = DefaultCodecProvider.DUMMY_HANDLER;
   
   /**
    * @param channel Channel containing the database
@@ -90,13 +92,16 @@ public class PageChannel implements Channel, Flushable {
   /**
    * Does second-stage initialization, must be called after construction.
    */
-  public void initialize(Database database)
+  public void initialize(Database database, CodecProvider codecProvider)
     throws IOException
   {
     // note the global usage map is a special map where any page outside of
     // the current range is assumed to be "on"
     _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP,
                                     ROW_GLOBAL_USAGE_MAP, true);
+
+    // initialize page en/decoding support
+    _codecHandler = codecProvider.createHandler(this);
   }
   
   /**
@@ -163,8 +168,10 @@ public class PageChannel implements Channel, Flushable {
     }
 
     if(pageNumber == 0) {
-      // de-mask header
+      // de-mask header (note, page 0 never has additional encoding)
       applyHeaderMask(buffer);
+    } else {
+      _codecHandler.decodePage(buffer, pageNumber);
     }
   }
   
@@ -184,8 +191,7 @@ public class PageChannel implements Channel, Flushable {
    * @param pageOffset offset within the page at which to start writing the
    *                   page data
    */
-  public void writePage(ByteBuffer page, int pageNumber,
-                        int pageOffset)
+  public void writePage(ByteBuffer page, int pageNumber, int pageOffset)
     throws IOException
   {
     validatePageNumber(pageNumber);
@@ -197,13 +203,17 @@ public class PageChannel implements Channel, Flushable {
           "Page buffer is too large, size " + (page.remaining() - pageOffset));
     }
     
+    ByteBuffer encodedPage = page;
     if(pageNumber == 0) {
       // re-mask header
       applyHeaderMask(page);
+    } else {
+      // re-encode page
+      encodedPage = _codecHandler.encodePage(page, pageNumber, pageOffset);
     }
     try {
-      page.position(pageOffset);
-      _channel.write(page, (getPageOffset(pageNumber) + pageOffset));
+      encodedPage.position(pageOffset);
+      _channel.write(encodedPage, (getPageOffset(pageNumber) + pageOffset));
       if(_autoSync) {
         flush();
       }
@@ -243,9 +253,11 @@ public class PageChannel implements Channel, Flushable {
     // push the buffer to the end of the page, so that a full page's worth of
     // data is written regardless of the incoming buffer size (we use a tiny
     // buffer in allocateNewPage)
-    long offset = size + (getFormat().PAGE_SIZE - page.remaining());
-    _channel.write(page, offset);
+    int pageOffset = (getFormat().PAGE_SIZE - page.remaining());
+    long offset = size + pageOffset;
     int pageNumber = getNextPageNumber(size);
+    _channel.write(_codecHandler.encodePage(page, pageNumber, pageOffset),
+                   offset);
     _globalUsageMap.removePageNumber(pageNumber);  //force is done here
     return pageNumber;
   }

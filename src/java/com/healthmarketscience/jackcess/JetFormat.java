@@ -48,16 +48,29 @@ public abstract class JetFormat {
   public static final short TEXT_FIELD_UNIT_SIZE = 2;
   /** Maximum size of a text field */
   public static final short TEXT_FIELD_MAX_LENGTH = 255 * TEXT_FIELD_UNIT_SIZE;
+
+  public enum CodecType {
+    NONE, JET, MSISAM;
+  }
   
   /** Offset in the file that holds the byte describing the Jet format
       version */
-  private static final long OFFSET_VERSION = 20L;
+  private static final int OFFSET_VERSION = 20;
   /** Version code for Jet version 3 */
   private static final byte CODE_VERSION_3 = 0x0;
   /** Version code for Jet version 4 */
   private static final byte CODE_VERSION_4 = 0x1;
   /** Version code for Jet version 5 */
   private static final byte CODE_VERSION_5 = 0x2;
+
+  /** location of the engine name in the header */
+  private static final int OFFSET_ENGINE_NAME = 0x4;
+  /** amount of initial data to be read to determine database type */
+  private static final int HEADER_LENGTH = 21;
+  
+  private final static byte[] MSISAM_ENGINE = new byte[] {
+    'M', 'S', 'I', 'S', 'A', 'M', ' ', 'D', 'a', 't', 'a', 'b', 'a', 's', 'e'
+  };
 
   /** mask used to obfuscate the db header */
   private static final byte[] BASE_HEADER_MASK = new byte[]{
@@ -122,6 +135,9 @@ public abstract class JetFormat {
   
   /** whether or not we can use indexes in this format */
   public final boolean INDEXES_SUPPORTED;
+
+  /** type of page encoding supported */
+  public final CodecType CODEC_TYPE;
   
   /** Database page size in bytes */
   public final int PAGE_SIZE;
@@ -135,6 +151,7 @@ public abstract class JetFormat {
   public final int OFFSET_HEADER_DATE;
   public final int OFFSET_PASSWORD;
   public final int SIZE_PASSWORD;
+  public final int OFFSET_ENCODING_KEY;
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
   public final int OFFSET_NEXT_AUTO_NUMBER;
@@ -212,6 +229,7 @@ public abstract class JetFormat {
   
   public static final JetFormat VERSION_3 = new Jet3Format();
   public static final JetFormat VERSION_4 = new Jet4Format();
+  public static final JetFormat VERSION_MSISAM = new MSISAMFormat();
   public static final JetFormat VERSION_5 = new Jet5Format();
 
   /**
@@ -220,16 +238,19 @@ public abstract class JetFormat {
    * @throws IOException if the database file format is unsupported.
    */
   public static JetFormat getFormat(FileChannel channel) throws IOException {
-    ByteBuffer buffer = ByteBuffer.allocate(1);
-    int bytesRead = channel.read(buffer, OFFSET_VERSION);
-    if(bytesRead < 1) {
+    ByteBuffer buffer = ByteBuffer.allocate(HEADER_LENGTH);
+    int bytesRead = channel.read(buffer, 0L);
+    if(bytesRead < HEADER_LENGTH) {
       throw new IOException("Empty database file");
     }
     buffer.flip();
-    byte version = buffer.get();
+    byte version = buffer.get(OFFSET_VERSION);
     if (version == CODE_VERSION_3) {
       return VERSION_3;
     } else if (version == CODE_VERSION_4) {
+      if(ByteUtil.matchesRange(buffer, OFFSET_ENGINE_NAME, MSISAM_ENGINE)) {
+        return VERSION_MSISAM;
+      }
       return VERSION_4;
     } else if (version == CODE_VERSION_5) {
       return VERSION_5;
@@ -244,6 +265,7 @@ public abstract class JetFormat {
     
     READ_ONLY = defineReadOnly();
     INDEXES_SUPPORTED = defineIndexesSupported();
+    CODEC_TYPE = defineCodecType();
     
     PAGE_SIZE = definePageSize();
     MAX_DATABASE_SIZE = defineMaxDatabaseSize();
@@ -256,6 +278,7 @@ public abstract class JetFormat {
     OFFSET_HEADER_DATE = defineOffsetHeaderDate();
     OFFSET_PASSWORD = defineOffsetPassword();
     SIZE_PASSWORD = defineSizePassword();
+    OFFSET_ENCODING_KEY = defineOffsetEncodingKey();
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
     OFFSET_NEXT_AUTO_NUMBER = defineOffsetNextAutoNumber();
@@ -334,6 +357,7 @@ public abstract class JetFormat {
   
   protected abstract boolean defineReadOnly();
   protected abstract boolean defineIndexesSupported();
+  protected abstract CodecType defineCodecType();
   
   protected abstract int definePageSize();
   protected abstract long defineMaxDatabaseSize();
@@ -346,6 +370,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetHeaderDate();
   protected abstract int defineOffsetPassword();
   protected abstract int defineSizePassword();
+  protected abstract int defineOffsetEncodingKey();
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
   protected abstract int defineOffsetNextAutoNumber();
@@ -439,6 +464,11 @@ public abstract class JetFormat {
 	    
     @Override
     protected boolean defineIndexesSupported() { return false; }
+
+    @Override
+    protected CodecType defineCodecType() { 
+      return CodecType.JET; 
+    }
 	    
     @Override
     protected int definePageSize() { return 2048; }
@@ -467,6 +497,8 @@ public abstract class JetFormat {
     protected int defineOffsetPassword() { return 66; }
     @Override
     protected int defineSizePassword() { return 20; }
+    @Override
+    protected int defineOffsetEncodingKey() { return 62; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
     @Override
@@ -631,6 +663,11 @@ public abstract class JetFormat {
     protected boolean defineIndexesSupported() { return true; }
 	    
     @Override
+    protected CodecType defineCodecType() { 
+      return CodecType.JET; 
+    }
+
+    @Override
     protected int definePageSize() { return 4096; }
     
     @Override
@@ -653,6 +690,8 @@ public abstract class JetFormat {
     protected int defineOffsetPassword() { return 66; }
     @Override
     protected int defineSizePassword() { return 40; }
+    @Override
+    protected int defineOffsetEncodingKey() { return 62; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
     @Override
@@ -800,6 +839,22 @@ public abstract class JetFormat {
 
   }
   
+  private static final class MSISAMFormat extends Jet4Format {
+    private MSISAMFormat() {
+      super("MSISAM");
+    }
+
+    @Override
+    protected boolean defineReadOnly() {
+      return true;
+    }
+
+    @Override
+    protected CodecType defineCodecType() { 
+      return CodecType.MSISAM; 
+    }
+  }
+
   private static final class Jet5Format extends Jet4Format {
       private Jet5Format() {
         super("VERSION_5");

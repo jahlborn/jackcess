@@ -397,6 +397,33 @@ public class Database
                               Charset charset, TimeZone timeZone)
     throws IOException
   {    
+    return open(mdbFile, readOnly, autoSync, charset, timeZone, null);
+  }
+
+  /**
+   * Open an existing Database.  If the existing file is not writeable or the
+   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * @param mdbFile File containing the database
+   * @param readOnly iff <code>true</code>, force opening file in read-only
+   *                 mode
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.
+   * @param charset Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @param provider CodecProvider for handling page encoding/decoding, may be
+   *                 {@code null} if no special encoding is necessary
+   */
+  public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
+                              Charset charset, TimeZone timeZone, 
+                              CodecProvider provider)
+    throws IOException
+  {
     if(!mdbFile.exists() || !mdbFile.canRead()) {
       throw new FileNotFoundException("given file does not exist: " + mdbFile);
     }
@@ -423,7 +450,7 @@ public class Database
       }
     }
 
-    return new Database(channel, autoSync, null, charset, timeZone);
+    return new Database(channel, autoSync, null, charset, timeZone, provider);
   }
   
   /**
@@ -533,7 +560,8 @@ public class Database
     channel.transferFrom(Channels.newChannel(
         Thread.currentThread().getContextClassLoader().getResourceAsStream(
             fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
-    return new Database(channel, autoSync, fileFormat, charset, timeZone);
+    return new Database(channel, autoSync, fileFormat, charset, timeZone,
+                        null);
   }
 
   /**
@@ -574,7 +602,8 @@ public class Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
   protected Database(FileChannel channel, boolean autoSync,
-                     FileFormat fileFormat, Charset charset, TimeZone timeZone)
+                     FileFormat fileFormat, Charset charset, TimeZone timeZone,
+                     CodecProvider provider)
     throws IOException
   {
     boolean success = false;
@@ -585,10 +614,13 @@ public class Database
       _fileFormat = fileFormat;
       _pageChannel = new PageChannel(channel, _format, autoSync);
       _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
+      if(provider == null) {
+        provider = DefaultCodecProvider.INSTANCE;
+      }
       // note, it's slighly sketchy to pass ourselves along partially
       // constructed, but only our _format and _pageChannel refs should be
       // needed
-      _pageChannel.initialize(this);
+      _pageChannel.initialize(this, provider);
       _buffer = _pageChannel.createPageBuffer();
       readSystemCatalog();
       success = true;
