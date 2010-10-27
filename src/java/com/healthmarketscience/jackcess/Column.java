@@ -1277,8 +1277,7 @@ public class Column implements Comparable<Column> {
     int dataLength = dataEnd - dataStart;
     if(inCompressedMode) {
       // handle compressed data
-      byte[] tmpData = new byte[dataLength];
-      System.arraycopy(data, dataStart, tmpData, 0, dataLength);
+      byte[] tmpData = ByteUtil.copyOf(data, dataStart, dataLength);
       expander.reset();
       textBuf.append(expander.expand(tmpData));
     } else {

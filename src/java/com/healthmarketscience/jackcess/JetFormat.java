@@ -487,9 +487,7 @@ public abstract class JetFormat {
     protected int defineOffsetMaskedHeader() { return 24; }
     @Override
     protected byte[] defineHeaderMask() { 
-      byte[] mask = new byte[BASE_HEADER_MASK.length - 2];
-      System.arraycopy(BASE_HEADER_MASK, 0, mask, 0, mask.length);
-      return mask; 
+      return ByteUtil.copyOf(BASE_HEADER_MASK, BASE_HEADER_MASK.length - 2); 
     }
     @Override
     protected int defineOffsetHeaderDate() { return -1; }

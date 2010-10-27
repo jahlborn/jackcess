@@ -532,6 +532,26 @@ public final class ByteUtil {
   }
 
   /**
+   * Returns a copy of the the given array of the given length.
+   */
+  public static byte[] copyOf(byte[] arr, int newLength)
+  {
+    return copyOf(arr, 0, newLength);
+  }
+
+  /**
+   * Returns a copy of the the given array of the given length starting at the
+   * given position.
+   */
+  public static byte[] copyOf(byte[] arr, int offset, int newLength)
+  {
+    byte[] newArr = new byte[newLength];
+    int srcLen = arr.length - offset;
+    System.arraycopy(arr, offset, newArr, 0, Math.min(srcLen, newLength));
+    return newArr;
+  }
+
+  /**
    * Utility byte stream similar to ByteArrayOutputStream but with extended
    * accessibility to the bytes.
    */
@@ -608,8 +628,7 @@ public final class ByteUtil {
         result = _bytes;
         _bytes = null;
       } else {
-        result = new byte[_length];
-        System.arraycopy(_bytes, 0, result, 0, _length);
+        result = copyOf(_bytes, _length);
         if(_lastLength == _length) {
           // if we get the same result length bytes twice in a row, clear the
           // _bytes so that the next _bytes will be _lastLength

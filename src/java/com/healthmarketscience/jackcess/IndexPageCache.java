@@ -955,9 +955,7 @@ public class IndexPageCache
       }
       
       // need new prefix
-      byte[] tmpPrefix = new byte[len];
-      System.arraycopy(prefix, 0, tmpPrefix, 0, len);
-      prefix = tmpPrefix;
+      prefix = ByteUtil.copyOf(prefix, len);
     }
 
     return prefix;
