@@ -35,7 +35,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
@@ -56,7 +58,43 @@ public class ImportTest extends TestCase
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
-      db.importFile("test", new File("test/data/sample-input.tab"), "\\t");
+      String tableName = db.importFile(
+          "test", new File("test/data/sample-input.tab"), "\\t");
+      Table t = db.getTable(tableName);
+
+      List<String> colNames = new ArrayList<String>();
+      for(Column c : t.getColumns()) {
+        colNames.add(c.getName());
+      }
+      assertEquals(Arrays.asList("Test1", "Test2", "Test3"), colNames);
+
+      List<Map<String, Object>> expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "Test1", "Foo",
+                "Test2", "Bar",
+                "Test3", "Ralph"),
+            createExpectedRow(
+                "Test1", "S",
+                "Test2", "Mouse",
+                "Test3", "Rocks"),
+            createExpectedRow(
+                "Test1", "",
+                "Test2", "Partial line",
+                "Test3", null),
+            createExpectedRow(
+                "Test1", " Quoted Value",
+                "Test2", " bazz ",
+                "Test3", " Really \"Crazy" + ImportUtil.LINE_SEPARATOR
+                + "value\""),
+            createExpectedRow(
+                "Test1", "buzz",
+                "Test2", "embedded\tseparator",
+                "Test3", "long")
+            );
+      assertTable(expectedRows, t);
+
+      db.close();
     }
   }
 
@@ -64,8 +102,22 @@ public class ImportTest extends TestCase
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
-      db.importFile("test", new File("test/data/sample-input-only-headers.tab"),
-                  "\\t");
+      String tableName = db.importFile(
+          "test", new File("test/data/sample-input-only-headers.tab"), "\\t");
+
+      Table t = db.getTable(tableName);
+
+      List<String> colNames = new ArrayList<String>();
+      for(Column c : t.getColumns()) {
+        colNames.add(c.getName());
+      }
+      assertEquals(Arrays.asList(
+                       "RESULT_PHYS_ID", "FIRST", "MIDDLE", "LAST", "OUTLIER",
+                       "RANK", "CLAIM_COUNT", "PROCEDURE_COUNT",
+                       "WEIGHTED_CLAIM_COUNT", "WEIGHTED_PROCEDURE_COUNT"), 
+                   colNames);
+
+      db.close();
     }
   }
 

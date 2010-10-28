@@ -3,6 +3,7 @@
 package com.healthmarketscience.jackcess;
 
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -12,6 +13,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,11 +30,14 @@ public class ImportUtil
 
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
+
+  /** the platform line separator */
+  static final String LINE_SEPARATOR = System.getProperty("line.separator");
   
   private ImportUtil() {}
 
   /**
-   * Copy an existing JDBC ResultSet into a new table in this database
+   * Copy an existing JDBC ResultSet into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importResultSet(source, db, name, SimpleImportFilter.INSTANCE);}
@@ -51,7 +57,7 @@ public class ImportUtil
   }
   
   /**
-   * Copy an existing JDBC ResultSet into a new table in this database
+   * Copy an existing JDBC ResultSet into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importResultSet(source, db, name, filter, false);}
@@ -73,7 +79,8 @@ public class ImportUtil
    
   /**
    * Copy an existing JDBC ResultSet into a new (or optionally existing) table
-   * in this database
+   * in this database.
+   * 
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    * @param filter valid import filter
@@ -146,7 +153,7 @@ public class ImportUtil
   }
   
   /**
-   * Copy a delimited text file into a new table in this database
+   * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importFile(f, name, db, delim, SimpleImportFilter.INSTANCE);}
@@ -167,10 +174,10 @@ public class ImportUtil
   }
 
   /**
-   * Copy a delimited text file into a new table in this database
+   * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
-   * {@code  importReader(new BufferedReader(new FileReader(f)), db, name, delim, filter);}
+   * {@code  importFile(f, name, db, delim, "'", filter, false);}
    * 
    * @param name Name of the new table to create
    * @param f Source file to import
@@ -185,10 +192,40 @@ public class ImportUtil
                                   String delim, ImportFilter filter)
     throws IOException
   {
+    return importFile(f, db, name, delim, ExportUtil.DEFAULT_QUOTE_CHAR,
+                      filter, false);
+  }
+
+  /**
+   * Copy a delimited text file into a new table in this database.
+   * <p>
+   * Equivalent to:
+   * {@code  importReader(new BufferedReader(new FileReader(f)), db, name, delim, "'", filter, false);}
+   * 
+   * @param name Name of the new table to create
+   * @param f Source file to import
+   * @param delim Regular expression representing the delimiter string.
+   * @param quote the quote character
+   * @param filter valid import filter
+   * @param useExistingTable if {@code true} use current table if it already
+   *                         exists, otherwise, create new table with unique
+   *                         name
+   *
+   * @return the name of the imported table
+   *
+   * @see #importReader(BufferedReader,Database,String,String,ImportFilter)
+   */
+  public static String importFile(File f, Database db, String name, 
+                                  String delim, char quote, 
+                                  ImportFilter filter,
+                                  boolean useExistingTable)
+    throws IOException
+  {
     BufferedReader in = null;
     try {
       in = new BufferedReader(new FileReader(f));
-      return importReader(in, db, name, delim, filter);
+      return importReader(in, db, name, delim, quote, filter, 
+                          useExistingTable);
     } finally {
       if (in != null) {
         try {
@@ -201,7 +238,7 @@ public class ImportUtil
   }
 
   /**
-   * Copy a delimited text file into a new table in this database
+   * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, SimpleImportFilter.INSTANCE);}
@@ -222,7 +259,7 @@ public class ImportUtil
   }
   
   /**
-   * Copy a delimited text file into a new table in this database
+   * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, filter, false);}
@@ -246,7 +283,11 @@ public class ImportUtil
 
   /**
    * Copy a delimited text file into a new (or optionally exixsting) table in
-   * this database
+   * this database.
+   * <p>
+   * Equivalent to:
+   * {@code  importReader(in, db, name, delim, '"', filter, false);}
+   * 
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -263,10 +304,37 @@ public class ImportUtil
                                     boolean useExistingTable)
     throws IOException
   {
+    return importReader(in, db, name, delim, ExportUtil.DEFAULT_QUOTE_CHAR,
+                        filter, useExistingTable);
+  }
+
+  /**
+   * Copy a delimited text file into a new (or optionally exixsting) table in
+   * this database.
+   * 
+   * @param name Name of the new table to create
+   * @param in Source reader to import
+   * @param delim Regular expression representing the delimiter string.
+   * @param quote the quote character
+   * @param filter valid import filter
+   * @param useExistingTable if {@code true} use current table if it already
+   *                         exists, otherwise, create new table with unique
+   *                         name
+   *
+   * @return the name of the imported table
+   */
+  public static String importReader(BufferedReader in, Database db, 
+                                    String name, String delim, char quote,
+                                    ImportFilter filter,
+                                    boolean useExistingTable)
+    throws IOException
+  {
     String line = in.readLine();
     if (line == null || line.trim().length() == 0) {
       return null;
     }
+
+    Pattern delimPat = Pattern.compile(delim);
 
     try {
       name = Database.escapeIdentifier(name);
@@ -274,7 +342,7 @@ public class ImportUtil
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
         List<Column> columns = new LinkedList<Column>();
-        String[] columnNames = line.split(delim);
+        String[] columnNames = splitLine(line, delimPat, quote, in, 0);
       
         for (int i = 0; i < columnNames.length; i++) {
           columns.add(new ColumnBuilder(columnNames[i], DataType.TEXT)
@@ -291,12 +359,7 @@ public class ImportUtil
       
       while ((line = in.readLine()) != null)
       {
-        // 
-        // Handle the situation where the end of the line
-        // may have null fields.  We always want to add the
-        // same number of columns to the table each time.
-        //
-        Object[] data = Table.dupeRow(line.split(delim), numColumns);
+        Object[] data = splitLine(line, delimPat, quote, in, numColumns);
         rows.add(filter.filterRow(data));
         if (rows.size() == COPY_TABLE_BATCH_SIZE) {
           table.addRows(rows);
@@ -312,6 +375,84 @@ public class ImportUtil
     } catch(SQLException e) {
       throw (IOException)new IOException(e.getMessage()).initCause(e);
     }
+  }
+
+  /**
+   * Splits the given line using the given delimiter pattern and quote
+   * character.  May read additional lines for quotes spanning newlines.
+   */
+  private static String[] splitLine(String line, Pattern delim, char quote,
+                                    BufferedReader in, int numColumns)
+    throws IOException
+  {
+    List<String> tokens = new ArrayList<String>();
+    StringBuilder sb = new StringBuilder();
+    Matcher m = delim.matcher(line);
+    int idx = 0;
+
+    while(idx < line.length()) {
+
+      if(line.charAt(idx) == quote) {
+
+        // find quoted value
+        sb.setLength(0);
+        ++idx;
+        while(true) {
+
+          int endIdx = line.indexOf(quote, idx);
+
+          if(endIdx >= 0) {
+
+            sb.append(line, idx, endIdx);
+            ++endIdx;
+            if((endIdx < line.length()) && (line.charAt(endIdx) == quote)) {
+
+              // embedded quote
+              sb.append(quote);
+              // keep searching
+              idx = endIdx + 1;
+
+            } else {
+              
+              // done
+              idx = endIdx;
+              break;
+            }
+
+          } else {
+
+            // line wrap
+            sb.append(line, idx, line.length());
+            sb.append(LINE_SEPARATOR);
+
+            idx = 0;
+            line = in.readLine();
+            if(line == null) {
+              throw new EOFException("Missing end of quoted value " + sb);
+            }
+          }
+        }
+
+        tokens.add(sb.toString());
+
+        // skip next delim
+        idx = (m.find(idx) ? m.end() : line.length());
+
+      } else if(m.find(idx)) {
+
+        // next unquoted value
+        tokens.add(line.substring(idx, m.start()));
+        idx = m.end();
+
+      } else {
+
+        // trailing token
+        tokens.add(line.substring(idx));
+        idx = line.length();
+      }
+    }
+
+    return tokens.toArray(new String[Math.max(tokens.size(), numColumns)]);
   }
 
   /**
