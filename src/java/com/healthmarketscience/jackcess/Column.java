@@ -1386,13 +1386,15 @@ public class Column implements Comparable<Column> {
 
   /**
    * @param text Text to encode
-   * @param db relevant db
+   * @param charset database charset
    * @return A buffer with the text encoded
    */
   public static ByteBuffer encodeUncompressedText(CharSequence text,
                                                   Charset charset)
   {
-    return charset.encode(CharBuffer.wrap(text));
+    CharBuffer cb = ((text instanceof CharBuffer) ? 
+                     (CharBuffer)text : CharBuffer.wrap(text));
+    return charset.encode(cb);
   }
 
   
