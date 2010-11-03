@@ -17,20 +17,18 @@
       <name>Tim McCune</name>
       <id>javajedi</id>
       <email>javajedi@users.sf.net</email>
-      <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
     <developer>
       <name>James Ahlborn</name>
       <id>jahlborn</id>
       <email>jahlborn@users.sf.net</email>
-      <organization>Health Market Science, Inc.</organization>
+      <organization>Boomi, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
     <developer>
       <name>Rob Di Marco</name>
       <id>robdimarco</id>
-      <organization>Health Market Science, Inc.</organization>
       <timezone>-5</timezone>
     </developer>
     <developer>

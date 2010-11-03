@@ -126,6 +126,15 @@ public abstract class JetFormat {
     }
   }
 
+  /** the JetFormat constants for the Jet database version "3" */
+  public static final JetFormat VERSION_3 = new Jet3Format();
+  /** the JetFormat constants for the Jet database version "4" */
+  public static final JetFormat VERSION_4 = new Jet4Format();
+  /** the JetFormat constants for the MSISAM database */
+  public static final JetFormat VERSION_MSISAM = new MSISAMFormat();
+  /** the JetFormat constants for the Jet database version "5" */
+  public static final JetFormat VERSION_5 = new Jet5Format();
+
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
   //doesn't allow this; hence all the abstract defineXXX() methods.
@@ -230,11 +239,6 @@ public abstract class JetFormat {
   
   public final Charset CHARSET;
   
-  public static final JetFormat VERSION_3 = new Jet3Format();
-  public static final JetFormat VERSION_4 = new Jet4Format();
-  public static final JetFormat VERSION_MSISAM = new MSISAMFormat();
-  public static final JetFormat VERSION_5 = new Jet5Format();
-
   /**
    * @param channel the database file.
    * @return The Jet Format represented in the passed-in file

@@ -33,10 +33,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -97,8 +99,13 @@ public class Database
       but leaves more chance of a useable database in the face of failures. */
   public static final boolean DEFAULT_AUTO_SYNC = true;
 
-  /** system property which can be used to make big index support the
-      default. */
+  /** the default value for the resource path used to load classpath
+      resources. */
+  public static final String DEFAULT_RESOURCE_PATH = 
+    "com/healthmarketscience/jackcess/";
+
+  /** (boolean) system property which can be used to disable the default big
+      index support. */
   public static final String USE_BIG_INDEX_PROPERTY =
     "com.healthmarketscience.jackcess.bigIndex";
 
@@ -111,6 +118,18 @@ public class Database
       used for text data (full property includes the JetFormat version). */
   public static final String CHARSET_PROPERTY_PREFIX =
     "com.healthmarketscience.jackcess.charset.";
+
+  /** system property which can be used to set the path from which classpath
+      resources are loaded (must end with a "/" if non-empty).  Default value
+      is {@link #DEFAULT_RESOURCE_PATH} if unspecified. */
+  public static final String RESOURCE_PATH_PROPERTY = 
+    "com.healthmarketscience.jackcess.resourcePath";
+
+  /** (boolean) system property which can be used to indicate that the current
+      vm has a poor nio implementation (specifically for
+      FileChannel.transferFrom) */
+  public static final String BROKEN_NIO_PROPERTY = 
+    "com.healthmarketscience.jackcess.brokenNio";
 
   /** default error handler used if none provided (just rethrows exception) */
   public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
@@ -127,6 +146,14 @@ public class Database
         throw (RuntimeException)error;
       }
     };
+
+  /** the resource path to be used when loading classpath resources */
+  static final String RESOURCE_PATH = 
+    System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
+
+  /** whether or not this jvm has "broken" nio support */
+  static final boolean BROKEN_NIO = Boolean.TRUE.toString().equalsIgnoreCase(
+      System.getProperty(BROKEN_NIO_PROPERTY));
   
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
@@ -182,13 +209,16 @@ public class Database
   private static final String CAT_COL_FLAGS = "Flags";
   /** System catalog column name of the properties column */
   private static final String CAT_COL_PROPS = "LvProp";
+
+  /** the maximum size of any of the included "empty db" resources */
+  private static final long MAX_EMPTYDB_SIZE = 320000L;
   
   public static enum FileFormat {
 
     V1997(null, JetFormat.VERSION_3),
-    V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
-    V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
-    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb"),
+    V2000(RESOURCE_PATH + "empty.mdb", JetFormat.VERSION_4),
+    V2003(RESOURCE_PATH + "empty2003.mdb", JetFormat.VERSION_4),
+    V2007(RESOURCE_PATH + "empty2007.accdb", JetFormat.VERSION_5, ".accdb"),
     MSISAM(null, JetFormat.VERSION_MSISAM, ".mny");
 
     private final String _emptyFile;
@@ -558,9 +588,8 @@ public class Database
 
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
-    channel.transferFrom(Channels.newChannel(
-        Thread.currentThread().getContextClassLoader().getResourceAsStream(
-            fileFormat._emptyFile)), 0, Integer.MAX_VALUE);
+    transferFrom(channel, Thread.currentThread().getContextClassLoader()
+                 .getResourceAsStream(fileFormat._emptyFile));
     return new Database(channel, autoSync, fileFormat, charset, timeZone,
                         null);
   }
@@ -1532,6 +1561,28 @@ public class Database
     return format.CHARSET;
   }
   
+  /**
+   * Copies the given InputStream to the given channel using the most
+   * efficient means possible.
+   */
+  private static void transferFrom(FileChannel channel, InputStream in)
+    throws IOException
+  {
+    ReadableByteChannel readChannel = Channels.newChannel(in);
+    if(!BROKEN_NIO) {
+      // sane implementation
+      channel.transferFrom(readChannel, 0, MAX_EMPTYDB_SIZE);    
+    } else {
+      // do things the hard way for broken vms
+      ByteBuffer bb = ByteBuffer.allocate(8096);
+      while(readChannel.read(bb) >= 0) {
+        bb.flip();
+        channel.write(bb);
+        bb.clear();
+      }
+    }
+  }
+
   /**
    * Utility class for storing table page number and actual name.
    */

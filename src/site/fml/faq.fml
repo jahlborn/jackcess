@@ -8,8 +8,8 @@
     <faq id="linux">
       <question>Does this work on Linux/Unix?</question>
       <answer>
-        <p>Yep, Jackcess is pure Java.  It will work on any
-          Java Virtual Machine (1.4+).</p>
+        <p>Yep, Jackcess is pure Java.  It will work on any Java Virtual
+        Machine (1.5+).</p>
       </answer>
     </faq>
 
@@ -223,6 +223,33 @@
       </answer>
     </faq>
     
+    <faq id="android">
+      <question>Why do I get an OutOfMemoryError or NullPointerException when
+                creating a new database on the Android platform?</question>
+      <answer>
+        <p>
+          There are 2 issues which need to be dealt with when using Jackcess
+          on the Android platform.  The first is that non-class resources need
+          to be in a special location.  The second is that the nio
+          implementation has some "weaknesses".
+        </p>
+        <p>
+          The following steps will make Jackcess compatible with the Android
+          platform.
+          <ul>
+            <li>Set the system property "com.healthmarketscience.jackcess.brokenNio=true"</li>
+            <li>Set the system property "com.healthmarketscience.jackcess.resourcePath=/res/raw/"</li>
+            <li>Copy the *.txt, *.mdb, and *.accdb files from the
+                "com/healthmarketscience/jackcess/" directory in the Jackcess
+                jar to the "/res/raw" Android application directory.</li>
+            <li>Before executing any Jackcess code, set the current Thread's
+                context classloader,
+                e.g. "Thread.currentThread().setContextClassLoader(Database.class.getClassLoader())".</li>
+          </ul>
+        </p>
+      </answer>
+    </faq>
+    
     <faq id="hms">
       <question>Who is Health Market Science?</question>
       <answer>
@@ -231,8 +258,6 @@
           Using proprietary matching and consolidation software,
           HMS scientifically manufactures the most comprehensive
           and accurate healthcare data sets in the market today.
-          <a href="http://www.healthmarketscience.com/company/careers.html">We're hiring!</a>
-          HMS is always looking for talented individuals.
         </p>
       </answer>
     </faq>

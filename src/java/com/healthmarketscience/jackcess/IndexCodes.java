@@ -85,9 +85,9 @@ public class IndexCodes {
 
   // stash the codes in some resource files
   private static final String CODES_FILE = 
-    "com/healthmarketscience/jackcess/index_codes.txt";
+    Database.RESOURCE_PATH + "index_codes.txt";
   private static final String EXT_CODES_FILE = 
-    "com/healthmarketscience/jackcess/index_codes_ext.txt";
+    Database.RESOURCE_PATH + "index_codes_ext.txt";
 
   /**
    * Enum which classifies the types of char encoding strategies used when
