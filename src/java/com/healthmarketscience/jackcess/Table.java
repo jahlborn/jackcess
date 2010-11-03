@@ -69,13 +69,33 @@ public class Table
   /** Table type code for user tables */
   public static final byte TYPE_USER = 0x4e;
 
-  /** comparator which sorts variable length columns vased on their index into
+  /** enum which controls the ordering of the columns in a table. */
+  public enum ColumnOrder {
+    /** columns are ordered based on the order of the data in the table (this
+        order does not change as columns are added to the table). */
+    DATA, 
+    /** columns are ordered based on the "display" order (this order can be
+        changed arbitrarily) */
+    DISPLAY;
+  }
+
+  /** comparator which sorts variable length columns based on their index into
       the variable length offset table */
   private static final Comparator<Column> VAR_LEN_COLUMN_COMPARATOR =
     new Comparator<Column>() {
       public int compare(Column c1, Column c2) {
         return ((c1.getVarLenTableIndex() < c2.getVarLenTableIndex()) ? -1 :
                 ((c1.getVarLenTableIndex() > c2.getVarLenTableIndex()) ? 1 :
+                 0));
+      }
+    };
+
+  /** comparator which sorts columns based on their display index */
+  private static final Comparator<Column> DISPLAY_ORDER_COMPARATOR =
+    new Comparator<Column>() {
+      public int compare(Column c1, Column c2) {
+        return ((c1.getDisplayIndex() < c2.getDisplayIndex()) ? -1 :
+                ((c1.getDisplayIndex() > c2.getDisplayIndex()) ? 1 :
                  0));
       }
     };
@@ -1069,9 +1089,10 @@ public class Table
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
+    int dispIndex = 0;
     for (int i = 0; i < columnCount; i++) {
       Column column = new Column(this, tableBuffer,
-          colOffset + (i * getFormat().SIZE_COLUMN_HEADER));
+          colOffset + (i * getFormat().SIZE_COLUMN_HEADER), dispIndex++);
       _columns.add(column);
       if(column.isVariableLength()) {
         // also shove it in the variable columns list, which is ordered
@@ -1149,6 +1170,11 @@ public class Table
 
     // reset to end of index info
     tableBuffer.position(idxEndOffset);
+
+    // re-sort columns if necessary
+    if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
+      Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
+    }
   }
 
   /**

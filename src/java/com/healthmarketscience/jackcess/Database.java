@@ -104,6 +104,10 @@ public class Database
   public static final String DEFAULT_RESOURCE_PATH = 
     "com/healthmarketscience/jackcess/";
 
+  /** the default sort order for table columns. */
+  public static final Table.ColumnOrder DEFAULT_COLUMN_ORDER = 
+    Table.ColumnOrder.DATA;
+
   /** (boolean) system property which can be used to disable the default big
       index support. */
   public static final String USE_BIG_INDEX_PROPERTY =
@@ -130,6 +134,12 @@ public class Database
       FileChannel.transferFrom) */
   public static final String BROKEN_NIO_PROPERTY = 
     "com.healthmarketscience.jackcess.brokenNio";
+
+  /** system property which can be used to set the default sort order for
+      table columns.  Value should be one {@link Table.ColumnOrder} enum
+      values. */
+  public static final String COLUMN_ORDER_PROPERTY = 
+    "com.healthmarketscience.jackcess.columnOrder";
 
   /** default error handler used if none provided (just rethrows exception) */
   public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
@@ -349,6 +359,8 @@ public class Database
   private Charset _charset;
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
+  /** the ordering used for table columns */
+  private Table.ColumnOrder _columnOrder;
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -641,6 +653,7 @@ public class Database
 
       _format = JetFormat.getFormat(channel);
       _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
+      _columnOrder = getDefaultColumnOrder();
       _fileFormat = fileFormat;
       _pageChannel = new PageChannel(channel, _format, autoSync);
       _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
@@ -757,6 +770,26 @@ public class Database
       newCharset = getDefaultCharset(getFormat());
     }
     _charset = newCharset;
+  }
+
+  /**
+   * Gets currently configured {@link Table.ColumnOrder} (always non-{@code
+   * null}).
+   */
+  public Table.ColumnOrder getColumnOrder()
+  {
+    return _columnOrder;
+  }
+
+  /**
+   * Sets a new Table.ColumnOrder.  If {@code null}, resets to the value
+   * returned by {@link #getDefaultColumnOrder}.
+   */
+  public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
+    if(newColumnOrder == null) {
+      newColumnOrder = getDefaultColumnOrder();
+    }
+    _columnOrder = newColumnOrder;
   }
 
   /**
@@ -1559,6 +1592,25 @@ public class Database
 
     // use format default
     return format.CHARSET;
+  }
+  
+  /**
+   * Returns the default Table.ColumnOrder.  This defaults to
+   * {@link #DEFAULT_COLUMN_ORDER}, but can be overridden using the system
+   * property {@value #COLUMN_ORDER_PROPERTY}.
+   */
+  public static Table.ColumnOrder getDefaultColumnOrder()
+  {
+    String coProp = System.getProperty(COLUMN_ORDER_PROPERTY);
+    if(coProp != null) {
+      coProp = coProp.trim();
+      if(coProp.length() > 0) {
+        return Table.ColumnOrder.valueOf(coProp);
+      }
+    }
+
+    // use default order
+    return DEFAULT_COLUMN_ORDER;
   }
   
   /**

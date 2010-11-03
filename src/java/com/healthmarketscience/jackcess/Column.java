@@ -145,6 +145,8 @@ public class Column implements Comparable<Column> {
   private short _columnNumber;
   /** index of the data for this column within a list of row data */
   private int _columnIndex;
+  /** display index of the data for this column */
+  private int _displayIndex;
   /** Column name */
   private String _name;
   /** the offset of the fixed data in the row */
@@ -178,10 +180,11 @@ public class Column implements Comparable<Column> {
    * @param buffer Buffer containing column definition
    * @param offset Offset in the buffer at which the column definition starts
    */
-  public Column(Table table, ByteBuffer buffer, int offset)
+  public Column(Table table, ByteBuffer buffer, int offset, int displayIndex)
     throws IOException
   {
     _table = table;
+    _displayIndex = displayIndex;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));
     }
@@ -259,6 +262,10 @@ public class Column implements Comparable<Column> {
     _columnIndex = newColumnIndex;
   }
   
+  public int getDisplayIndex() {
+    return _displayIndex;
+  }
+
   /**
    * Also sets the length and the variable length flag, inferred from the
    * type.  For types with scale/precision, sets the scale and precision to
