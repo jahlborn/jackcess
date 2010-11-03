@@ -21,6 +21,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * Default implementation of CodecProvider which does not have any actual
@@ -50,7 +51,7 @@ public class DefaultCodecProvider implements CodecProvider
    * This implementation returns DUMMY_HANDLER for databases with no encoding
    * and UNSUPPORTED_HANDLER for databases with any encoding.
    */
-  public CodecHandler createHandler(PageChannel channel)
+  public CodecHandler createHandler(PageChannel channel, Charset charset)
     throws IOException
   {
     JetFormat format = channel.getFormat();
@@ -69,6 +70,7 @@ public class DefaultCodecProvider implements CodecProvider
     case MSISAM:
       // always encoded, we don't handle it
       return UNSUPPORTED_HANDLER;
+
     default:
       throw new RuntimeException("Unknown codec type " + format.CODEC_TYPE);
     }

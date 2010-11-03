@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * Interface for a provider which can generate CodecHandlers for various types
@@ -40,9 +41,10 @@ public interface CodecProvider
    * PageChannel.
    * 
    * @param channel the PageChannel for a Database
+   * @param charset the Charset for the Database
    * 
    * @return a new CodecHandler, may not be {@code null}
    */
-  public CodecHandler createHandler(PageChannel channel)
+  public CodecHandler createHandler(PageChannel channel, Charset charset)
     throws IOException;
 }

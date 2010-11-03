@@ -95,13 +95,13 @@ public class PageChannel implements Channel, Flushable {
   public void initialize(Database database, CodecProvider codecProvider)
     throws IOException
   {
+    // initialize page en/decoding support
+    _codecHandler = codecProvider.createHandler(this, database.getCharset());
+
     // note the global usage map is a special map where any page outside of
     // the current range is assumed to be "on"
     _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP,
                                     ROW_GLOBAL_USAGE_MAP, true);
-
-    // initialize page en/decoding support
-    _codecHandler = codecProvider.createHandler(this);
   }
   
   /**
