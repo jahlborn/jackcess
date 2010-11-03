@@ -188,7 +188,8 @@ public class Database
     V1997(null, JetFormat.VERSION_3),
     V2000("com/healthmarketscience/jackcess/empty.mdb", JetFormat.VERSION_4),
     V2003("com/healthmarketscience/jackcess/empty2003.mdb", JetFormat.VERSION_4),
-    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb");
+    V2007("com/healthmarketscience/jackcess/empty2007.accdb", JetFormat.VERSION_5, ".accdb"),
+    MSISAM(null, JetFormat.VERSION_MSISAM, ".mny");
 
     private final String _emptyFile;
     private final JetFormat _format;

@@ -117,6 +117,9 @@ public abstract class JetFormat {
     private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_5 = 
       Collections.singletonMap(Database.FileFormat.V2007, (byte[])null);
 
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_MSISAM = 
+      Collections.singletonMap(Database.FileFormat.MSISAM, (byte[])null);
+
     static {
       POSSIBLE_VERSION_4.put(Database.FileFormat.V2000, ACCESS_VERSION_2000);
       POSSIBLE_VERSION_4.put(Database.FileFormat.V2003, ACCESS_VERSION_2003);
@@ -850,6 +853,12 @@ public abstract class JetFormat {
     @Override
     protected CodecType defineCodecType() { 
       return CodecType.MSISAM; 
+    }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    {
+      return PossibleFileFormats.POSSIBLE_VERSION_MSISAM;
     }
   }
 
