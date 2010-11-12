@@ -59,6 +59,8 @@ public class CursorBuilder {
   private boolean _beforeFirst = true;
   /** optional save point to restore to the cursor */
   private Cursor.Savepoint _savepoint;
+  /** ColumnMatcher to be used when matching column values */
+  private ColumnMatcher _columnMatcher;
 
   public CursorBuilder(Table table) {
     _table = table;
@@ -239,6 +241,14 @@ public class CursorBuilder {
   }
 
   /**
+   * Sets the ColumnMatcher to use for matching row patterns.
+   */
+  public CursorBuilder setColumnMatcher(ColumnMatcher columnMatcher) {
+    _columnMatcher = columnMatcher;
+    return this;
+  }
+
+  /**
    * Returns a new cursor for the table, constructed to the given
    * specifications.
    */
@@ -253,6 +263,7 @@ public class CursorBuilder {
                                         _startRow, _startRowInclusive,
                                         _endRow, _endRowInclusive);
     }
+    cursor.setColumnMatcher(_columnMatcher);
     if(_savepoint == null) {
       if(!_beforeFirst) {
         cursor.afterLast();

@@ -87,7 +87,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   private Position _prevPos;
   /** the current row */
   private Position _curPos;
-  
+  /** ColumnMatcher to be used when matching column values */
+  private ColumnMatcher _columnMatcher = SimpleColumnMatcher.INSTANCE;
 
   protected Cursor(Id id, Table table, Position firstPos, Position lastPos) {
     _id = id;
@@ -319,6 +320,24 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _rowState.setErrorHandler(newErrorHandler);
   }    
+
+  /**
+   * Returns the currently configured ColumnMatcher, always non-{@code null}.
+   */
+  public ColumnMatcher getColumnMatcher() {
+    return _columnMatcher;
+  }
+
+  /**
+   * Sets a new ColumnMatcher.  If {@code null}, resets to using the
+   * default matcher, {@link SimpleColumnMatcher#INSTANCE}.
+   */
+  public void setColumnMatcher(ColumnMatcher columnMatcher) {
+    if(columnMatcher == null) {
+      columnMatcher = SimpleColumnMatcher.INSTANCE;
+    }
+    _columnMatcher = columnMatcher;
+  }
 
   /**
    * Returns the current state of the cursor which can be restored at a future
@@ -765,7 +784,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean currentRowMatches(Column columnPattern, Object valuePattern)
     throws IOException
   {
-    return ObjectUtils.equals(valuePattern, getCurrentRowValue(columnPattern));
+    return _columnMatcher.matches(getTable(), columnPattern.getName(),
+                                  valuePattern,
+                                  getCurrentRowValue(columnPattern));
   }
   
   /**
@@ -776,7 +797,21 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public boolean currentRowMatches(Map<String,Object> rowPattern)
     throws IOException
   {
-    return ObjectUtils.equals(rowPattern, getCurrentRow(rowPattern.keySet()));
+    Map<String,Object> row = getCurrentRow(rowPattern.keySet());
+
+    if(rowPattern.size() != row.size()) {
+      return false;
+    }
+
+    for(Map.Entry<String,Object> e : row.entrySet()) {
+      String columnName = e.getKey();
+      if(!_columnMatcher.matches(getTable(), columnName,
+                                 rowPattern.get(columnName), e.getValue())) {
+        return false;
+      }
+    }
+
+    return true;
   }
   
   /**

@@ -71,7 +71,9 @@ public class CursorTest extends TestCase {
     return expectedRows;
   }
   
-  private static Database createTestTable(final FileFormat fileFormat) throws Exception {
+  private static Database createTestTable(final FileFormat fileFormat) 
+    throws Exception 
+  {
     Database db = create(fileFormat);
 
     Table table = new TableBuilder("test")
@@ -720,4 +722,103 @@ public class CursorTest extends TestCase {
     }
   }
   
+  public void testColmnMatcher() throws Exception {
+    
+
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = createTestTable(fileFormat);
+
+      Table table = db.getTable("test");
+
+      doTestMatchers(table, SimpleColumnMatcher.INSTANCE, false);
+      doTestMatchers(table, CaseInsensitiveColumnMatcher.INSTANCE, true);
+
+      Cursor cursor = Cursor.createCursor(table);
+      doTestMatcher(table, cursor, SimpleColumnMatcher.INSTANCE, false);
+      doTestMatcher(table, cursor, CaseInsensitiveColumnMatcher.INSTANCE, 
+                    true);
+      db.close();
+    }
+  }
+
+  private void doTestMatchers(Table table, ColumnMatcher columnMatcher,
+                              boolean caseInsensitive)
+    throws Exception
+  {
+      assertTrue(columnMatcher.matches(table, "value", null, null));
+      assertFalse(columnMatcher.matches(table, "value", "foo", null));
+      assertFalse(columnMatcher.matches(table, "value", null, "foo"));
+      assertTrue(columnMatcher.matches(table, "value", "foo", "foo"));
+      assertTrue(columnMatcher.matches(table, "value", "foo", "Foo")
+                 == caseInsensitive);
+
+      assertFalse(columnMatcher.matches(table, "value", 13, null));
+      assertFalse(columnMatcher.matches(table, "value", null, 13));
+      assertTrue(columnMatcher.matches(table, "value", 13, 13));
+  }
+  
+  private void doTestMatcher(Table table, Cursor cursor, 
+                             ColumnMatcher columnMatcher,
+                             boolean caseInsensitive)
+    throws Exception
+  {
+    cursor.setColumnMatcher(columnMatcher);
+
+    assertTrue(cursor.findRow(table.getColumn("id"), 3));
+    assertEquals(createExpectedRow("id", 3,
+                                   "value", "data" + 3),
+                 cursor.getCurrentRow());
+
+    assertTrue(cursor.findRow(createExpectedRow(
+                                    "id", 6,
+                                    "value", "data" + 6)));
+    assertEquals(createExpectedRow("id", 6,
+                                   "value", "data" + 6),
+                 cursor.getCurrentRow());
+
+    assertTrue(cursor.findRow(createExpectedRow(
+                                    "id", 6,
+                                    "value", "Data" + 6)) == caseInsensitive);
+    if(caseInsensitive) {
+      assertEquals(createExpectedRow("id", 6,
+                                     "value", "data" + 6),
+                   cursor.getCurrentRow());
+    }
+
+    assertFalse(cursor.findRow(createExpectedRow(
+                                   "id", 8,
+                                   "value", "data" + 13)));
+    assertFalse(cursor.findRow(table.getColumn("id"), 13));
+    assertEquals(createExpectedRow("id", 6,
+                                   "value", "data" + 6),
+                 cursor.getCurrentRow());
+
+    assertTrue(cursor.findRow(createExpectedRow(
+                                    "value", "data" + 7)));
+    assertEquals(createExpectedRow("id", 7,
+                                   "value", "data" + 7),
+                 cursor.getCurrentRow());
+    
+    assertTrue(cursor.findRow(createExpectedRow(
+                                    "value", "Data" + 7)) == caseInsensitive);
+    if(caseInsensitive) {
+      assertEquals(createExpectedRow("id", 7,
+                                     "value", "data" + 7),
+                   cursor.getCurrentRow());
+    }
+    
+    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 4));
+    assertEquals(createExpectedRow("id", 4,
+                                   "value", "data" + 4),
+                 cursor.getCurrentRow());
+
+    assertTrue(cursor.findRow(table.getColumn("value"), "Data" + 4) 
+               == caseInsensitive);
+    if(caseInsensitive) {
+      assertEquals(createExpectedRow("id", 4,
+                                     "value", "data" + 4),
+                   cursor.getCurrentRow());
+    }
+  }
+
 }
