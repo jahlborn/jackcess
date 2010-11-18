@@ -301,20 +301,29 @@ public class UsageMap
    */
   public void addPageNumber(int pageNumber) throws IOException {
     ++_modCount;
-    _handler.addOrRemovePageNumber(pageNumber, true);
+    _handler.addOrRemovePageNumber(pageNumber, true, false);
   }
   
   /**
    * Remove a page number from this usage map
    */
   public void removePageNumber(int pageNumber) throws IOException {
+    removePageNumber(pageNumber, false);
+  }
+
+  /**
+   * Remove a page number from this usage map
+   */
+  protected void removePageNumber(int pageNumber, boolean force) 
+    throws IOException 
+  {
     ++_modCount;
-    _handler.addOrRemovePageNumber(pageNumber, false);
+    _handler.addOrRemovePageNumber(pageNumber, false, force);
   }
   
   protected void updateMap(int absolutePageNumber,
                            int bufferRelativePageNumber,
-                           ByteBuffer buffer, boolean add)
+                           ByteBuffer buffer, boolean add, boolean force)
     throws IOException
   {
     //Find the byte to which to apply the bitmask and create the bitmask
@@ -325,7 +334,7 @@ public class UsageMap
     // check current value for this page number
     int pageNumberOffset = pageNumberToBitIndex(absolutePageNumber);
     boolean isOn = _pageNumbers.get(pageNumberOffset);
-    if(isOn == add) {
+    if((isOn == add) && !force) {
       throw new IOException("Page number " + absolutePageNumber + " already " +
                             ((add) ? "added to" : "removed from") +
                             " usage map, expected range " +
@@ -390,16 +399,40 @@ public class UsageMap
     StringBuilder builder = new StringBuilder(
         "(" + _handler.getClass().getSimpleName() +
         ") page numbers (range " + _startPage + " " + _endPage + "): [");
+
     PageCursor pCursor = cursor();
+    int curRangeStart = Integer.MIN_VALUE;
+    int prevPage = Integer.MIN_VALUE;
     while(true) {
       int nextPage = pCursor.getNextPage();
       if(nextPage < 0) {
         break;
       }
-      builder.append(nextPage).append(", ");
+
+      if(nextPage != (prevPage + 1)) {
+        if(prevPage >= 0) {
+          rangeToString(builder, curRangeStart, prevPage);
+        }
+        curRangeStart = nextPage;
+      }
+      prevPage = nextPage;
     }
+    if(prevPage >= 0) {
+      rangeToString(builder, curRangeStart, prevPage);
+    }
+
     builder.append("]");
     return builder.toString();
+  }
+
+  private static void rangeToString(StringBuilder builder, int rangeStart,
+                                    int rangeEnd)
+  {
+    builder.append(rangeStart);
+    if(rangeEnd > rangeStart) {
+      builder.append("-").append(rangeEnd);
+    }
+    builder.append(", ");
   }
   
   private abstract class Handler
@@ -415,8 +448,10 @@ public class UsageMap
     /**
      * @param pageNumber Page number to add or remove from this map
      * @param add True to add it, false to remove it
+     * @param force true to force add/remove and ignore certain inconsistencies
      */
-    public abstract void addOrRemovePageNumber(int pageNumber, boolean add)
+    public abstract void addOrRemovePageNumber(int pageNumber, boolean add,
+                                               boolean force)
       throws IOException;
   }
 
@@ -471,14 +506,16 @@ public class UsageMap
     }
     
     @Override
-    public void addOrRemovePageNumber(int pageNumber, boolean add)
+    public void addOrRemovePageNumber(int pageNumber, boolean add,
+                                      boolean force)
       throws IOException
     {
       if(isPageWithinRange(pageNumber)) {
 
         // easy enough, just update the inline data
         int bufferRelativePageNumber = pageNumberToBitIndex(pageNumber);
-        updateMap(pageNumber, bufferRelativePageNumber, getTableBuffer(), add);
+        updateMap(pageNumber, bufferRelativePageNumber, getTableBuffer(), add,
+                  force);
         // Write the updated map back to disk
         writeTable();
         
@@ -535,7 +572,7 @@ public class UsageMap
               
             }
             
-          } else {
+          } else if(!force) {
 
             // this should not happen, we are removing a page which is not in
             // the map
@@ -671,10 +708,14 @@ public class UsageMap
     }
         
     @Override
-    public void addOrRemovePageNumber(int pageNumber, boolean add)
+    public void addOrRemovePageNumber(int pageNumber, boolean add,
+                                      boolean force)
       throws IOException
     {
       if(!isPageWithinRange(pageNumber)) {
+        if(force) {
+          return;
+        }
         throw new IOException("Page number " + pageNumber +
                               " is out of supported range");
       }
@@ -691,7 +732,7 @@ public class UsageMap
       }
       updateMap(pageNumber,
                 (pageNumber - (getMaxPagesPerUsagePage() * pageIndex)),
-                mapPageBuffer, add);
+                mapPageBuffer, add, force);
       getPageChannel().writePage(mapPageBuffer, mapPageNum);
     }
   

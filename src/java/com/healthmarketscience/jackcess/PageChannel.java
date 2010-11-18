@@ -258,7 +258,9 @@ public class PageChannel implements Channel, Flushable {
     int pageNumber = getNextPageNumber(size);
     _channel.write(_codecHandler.encodePage(page, pageNumber, pageOffset),
                    offset);
-    _globalUsageMap.removePageNumber(pageNumber);  //force is done here
+    // note, we "force" page removal because we know that this is an unused
+    // page (since we just added it to the file)
+    _globalUsageMap.removePageNumber(pageNumber, true);
     return pageNumber;
   }
 
