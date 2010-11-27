@@ -64,7 +64,9 @@ public abstract class JetFormat {
   private static final byte CODE_VERSION_5 = 0x2;
 
   /** location of the engine name in the header */
-  private static final int OFFSET_ENGINE_NAME = 0x4;
+  static final int OFFSET_ENGINE_NAME = 0x4;
+  /** length of the engine name in the header */
+  static final int LENGTH_ENGINE_NAME = 0xF;
   /** amount of initial data to be read to determine database type */
   private static final int HEADER_LENGTH = 21;
   

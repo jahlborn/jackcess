@@ -1129,8 +1129,15 @@ public class Database
     _buffer.position(_format.OFFSET_PASSWORD);
     _buffer.get(pwdBytes);
 
-    // de-mask password
-    applyPasswordMask(pwdBytes);
+    // de-mask password using extra password mask if necessary (the extra
+    // password mask is generated from the database creation date stored in
+    // the header)
+    byte[] pwdMask = getPasswordMask(_buffer, _format);
+    if(pwdMask != null) {
+      for(int i = 0; i < pwdBytes.length; ++i) {
+        pwdBytes[i] ^= pwdMask[i % pwdMask.length];
+      }
+    }
     
     boolean hasPassword = false;
     for(int i = 0; i < pwdBytes.length; ++i) {
@@ -1153,30 +1160,6 @@ public class Database
     }
 
     return pwd;
-  }
-
-  /**
-   * Applies an extra mask to the password if required for the current
-   * JetFormat.
-   */
-  private void applyPasswordMask(byte[] pwdBytes)
-  {
-    // apply extra password mask if necessary (the extra password mask is
-    // generated from the database creation date stored in the header)
-    int pwdMaskPos = _format.OFFSET_HEADER_DATE;
-    if(pwdMaskPos >= 0) {
-
-      _buffer.position(pwdMaskPos);
-      double dateVal = Double.longBitsToDouble(_buffer.getLong());
-
-      byte[] pwdMask = new byte[4];
-      ByteBuffer.wrap(pwdMask).order(PageChannel.DEFAULT_BYTE_ORDER)
-        .putInt((int)dateVal);
-
-      for(int i = 0; i < pwdBytes.length; ++i) {
-        pwdBytes[i] ^= pwdMask[i % pwdMask.length];
-      }
-    }
   }
 
   /**
@@ -1634,6 +1617,30 @@ public class Database
       }
     }
   }
+
+  /**
+   * Returns the password mask retrieved from the given header page and
+   * format, or {@code null} if this format does not use a password mask.
+   */
+  static byte[] getPasswordMask(ByteBuffer buffer, JetFormat format)
+  {
+    // get extra password mask if necessary (the extra password mask is
+    // generated from the database creation date stored in the header)
+    int pwdMaskPos = format.OFFSET_HEADER_DATE;
+    if(pwdMaskPos < 0) {
+      return null;
+    }
+
+    buffer.position(pwdMaskPos);
+    double dateVal = Double.longBitsToDouble(buffer.getLong());
+
+    byte[] pwdMask = new byte[4];
+    ByteBuffer.wrap(pwdMask).order(PageChannel.DEFAULT_BYTE_ORDER)
+      .putInt((int)dateVal);
+
+    return pwdMask;
+  }
+
 
   /**
    * Utility class for storing table page number and actual name.
