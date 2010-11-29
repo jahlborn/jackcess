@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.2" date="TBD">
+    <release version="1.2.2" date="2010-11-29">
       <action dev="jahlborn" type="update">
         Add support for specifying a quote character on import from flat
         files.
@@ -13,22 +13,25 @@
         Add support for reading database password.
       </action>
       <action dev="jahlborn" type="update" issue="3065010">
-        Add support for plugging implementations of various page
-        encoding/decoding algorithms.  (thanks to Vladimir Berezniker).
+        Add support for plugging in implementations of various page
+        encoding/decoding algorithms.  See the &lt;a href="http://jackcessencrypt.sourceforge.net/"&gt;Jackcess Encrypt&lt;/a&gt;
+        project for a CodecProvider implementation which supports a few of the
+        Access encodings.  (thanks to Vladimir Berezniker).
       </action>
       <action dev="jahlborn" type="update" issue="3101578">
         Implement some tweaks which allow jackcess to be used on the Android
-        platform. (thanks to Miha Pirnat).
+        platform.  See the &lt;a href="faq.html#android"&gt;FAQ&lt;/a&gt; for more
+        details.  (thanks to Miha Pirnat).
       </action>
       <action dev="jahlborn" type="update" issue="3097387">
-        Allow column order in tables to be configured.
+        Allow output column order in tables to be configured.
       </action>
       <action dev="jahlborn" type="update" issue="3105829">
         Add support for custom column value matching when finding rows using a
         Cursor.
       </action>
       <action dev="jahlborn" type="fix">
-        Ignore usagemap inconsistencies in certain situations.
+        Ignore usagemap inconsistencies in certain (safe) situations.
       </action>
     </release>
     <release version="1.2.1" date="2010-08-01">
