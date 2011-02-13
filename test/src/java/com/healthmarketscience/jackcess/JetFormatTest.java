@@ -76,7 +76,7 @@ public class JetFormatTest extends TestCase {
         continue;
       }
       supportedForRead.add(ff);
-      if(ff.getJetFormat().READ_ONLY) {
+      if(ff.getJetFormat().READ_ONLY || (ff == FileFormat.MSISAM)) {
         continue;
       }
       supported.add(ff);
