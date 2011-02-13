@@ -852,11 +852,6 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected boolean defineReadOnly() {
-      return true;
-    }
-
-    @Override
     protected CodecType defineCodecType() { 
       return CodecType.MSISAM; 
     }
