@@ -1079,7 +1079,7 @@ public class Column implements Comparable<Column> {
       return ByteBuffer.wrap(((RawData)obj).getBytes());
     }
 
-    if(!isVariableLength()) {
+    if(!isVariableLength() || !getType().isVariableLength()) {
       return writeFixedLengthField(obj, order);
     }
       
