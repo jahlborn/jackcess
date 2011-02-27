@@ -35,6 +35,7 @@ import java.util.TimeZone;
 
 import junit.framework.TestCase;
 import org.apache.commons.lang.SystemUtils;
+import java.util.Date;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
@@ -54,9 +55,10 @@ public class ExportTest extends TestCase
 
   public void testExportToFile() throws Exception
   {
-    DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
-
     TimeZone testTZ = TimeZone.getTimeZone("America/New_York");
+
+    DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+    df.setTimeZone(testTZ);
 
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -71,7 +73,9 @@ public class ExportTest extends TestCase
         .addColumn(new ColumnBuilder("col6", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
-      t.addRow("some text||some more", 13, 13.25, createString(30).getBytes(), true, df.parse("19801231 00:00:00"));
+      Date testDate = df.parse("19801231 00:00:00");
+      t.addRow("some text||some more", 13, 13.25, createString(30).getBytes(),
+               true, testDate);
 
       t.addRow("crazy'data\"here", -345, -0.000345, createString(7).getBytes(),
                true, null);
@@ -84,7 +88,7 @@ public class ExportTest extends TestCase
 
       String expected = 
         "some text||some more,13,13.25,\"61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +
-        "79 7A 61 62  63 64\",true,Wed Dec 31 00:00:00 EST 1980" + NL +
+        "79 7A 61 62  63 64\",true," + testDate + NL +
         "\"crazy'data\"\"here\",-345,-3.45E-4,61 62 63 64  65 66 67,true," + NL +
         "C:\\temp\\some_file.txt,25,0.0,,false," + NL;
 
@@ -98,7 +102,7 @@ public class ExportTest extends TestCase
       expected = 
         "col1||col2||col3||col4||col5||col6" + NL +
         "'some text||some more'||13||13.25||'61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +
-        "79 7A 61 62  63 64'||true||Wed Dec 31 00:00:00 EST 1980" + NL +
+        "79 7A 61 62  63 64'||true||" + testDate + NL +
         "'crazy''data\"here'||-345||-3.45E-4||61 62 63 64  65 66 67||true||" + NL +
         "C:\\temp\\some_file.txt||25||0.0||||false||" + NL;
       assertEquals(expected, out.toString());
