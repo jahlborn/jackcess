@@ -77,7 +77,7 @@ public class IndexTest extends TestCase {
     List<byte[]> expectedList = Arrays.<byte[]>asList(b0, b1, b2, b3, b4,
                                                       b5, b6, b7, b8);
     SortedSet<byte[]> sortedSet = new TreeSet<byte[]>(
-        Index.BYTE_CODE_COMPARATOR);
+        IndexData.BYTE_CODE_COMPARATOR);
     sortedSet.addAll(expectedList);
     assertEquals(expectedList, new ArrayList<byte[]>(sortedSet));
     
@@ -98,7 +98,7 @@ public class IndexTest extends TestCase {
     }
   }
   
-  public void testIndexSlots() throws Exception
+  public void testLogicalIndexes() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database mdb = open(testDB);
@@ -108,7 +108,7 @@ public class IndexTest extends TestCase {
         idx.initialize();
       }
       assertEquals(4, table.getIndexes().size());
-      assertEquals(4, table.getIndexSlotCount());
+      assertEquals(4, table.getLogicalIndexCount());
       checkIndexColumns(table,
                         "id", "id",
                         "PrimaryKey", "id",
@@ -121,21 +121,43 @@ public class IndexTest extends TestCase {
       for(Index idx : table.getIndexes()) {
         idx.initialize();
       }
-      assertEquals(2, table.getIndexes().size());
-      assertEquals(3, table.getIndexSlotCount());
+      assertEquals(3, table.getIndexes().size());
+      assertEquals(2, table.getIndexDatas().size());
+      assertEquals(3, table.getLogicalIndexCount());
       checkIndexColumns(table,
                         "id", "id",
-                        "PrimaryKey", "id");
+                        "PrimaryKey", "id",
+                        ".rC", "id");
+
+      Index pkIdx = table.getIndex("PrimaryKey");
+      Index fkIdx = table.getIndex(".rC");
+      assertNotSame(pkIdx, fkIdx);
+      assertTrue(fkIdx.isForeignKey());
+      assertSame(pkIdx.getIndexData(), fkIdx.getIndexData());
+      IndexData indexData = pkIdx.getIndexData();
+      assertEquals(Arrays.asList(pkIdx, fkIdx), indexData.getIndexes());
+      assertSame(pkIdx, indexData.getPrimaryIndex());
 
       table = mdb.getTable("Table3");
       for(Index idx : table.getIndexes()) {
         idx.initialize();
       }
-      assertEquals(2, table.getIndexes().size());
-      assertEquals(3, table.getIndexSlotCount());
+      assertEquals(3, table.getIndexes().size());
+      assertEquals(2, table.getIndexDatas().size());
+      assertEquals(3, table.getLogicalIndexCount());
       checkIndexColumns(table,
                         "id", "id",
-                        "PrimaryKey", "id");
+                        "PrimaryKey", "id",
+                        ".rC", "id");
+
+      pkIdx = table.getIndex("PrimaryKey");
+      fkIdx = table.getIndex(".rC");
+      assertNotSame(pkIdx, fkIdx);
+      assertTrue(fkIdx.isForeignKey());
+      assertSame(pkIdx.getIndexData(), fkIdx.getIndexData());
+      indexData = pkIdx.getIndexData();
+      assertEquals(Arrays.asList(pkIdx, fkIdx), indexData.getIndexes());
+      assertSame(pkIdx, indexData.getPrimaryIndex());
     }
   }
 
@@ -148,7 +170,7 @@ public class IndexTest extends TestCase {
       Index index = t.getIndexes().get(0);
       assertFalse(index.isInitialized());
       assertEquals(512, countRows(t));
-      assertEquals(512, index.getEntryCount());
+      assertEquals(512, index.getIndexData().getEntryCount());
       db.close();
 
       // copy to temp file and attempt to edit
@@ -159,13 +181,13 @@ public class IndexTest extends TestCase {
       System.out.println("IndexTest: Index type: " + index.getClass());
       try {
         t.addRow(99, "abc", "def");
-        if(index instanceof SimpleIndex) {
+        if(index.getIndexData() instanceof SimpleIndexData) {
           // SimpleIndex doesn't support writing these indexes
           fail("Should have thrown UnsupportedOperationException");
         }
       } catch(UnsupportedOperationException e) {
         // success
-        if(index instanceof BigIndex) {
+        if(index.getIndexData() instanceof BigIndexData) {
           throw e;
         }
       }
@@ -184,7 +206,7 @@ public class IndexTest extends TestCase {
       assertRowCount(12, table);
 
       for(Index index : table.getIndexes()) {
-        assertEquals(12, index.getEntryCount());
+        assertEquals(12, index.getIndexData().getEntryCount());
       }
 
       table.reset();
@@ -205,7 +227,7 @@ public class IndexTest extends TestCase {
       assertRowCount(8, table);
 
       for(Index index : table.getIndexes()) {
-        assertEquals(8, index.getEntryCount());
+        assertEquals(8, index.getIndexData().getEntryCount());
       }
     }
   }
@@ -235,7 +257,8 @@ public class IndexTest extends TestCase {
       temp.addRow(orig.asRow(row));
     }
 
-    assertEquals(origI.getEntryCount(), tempI.getEntryCount());
+    assertEquals(origI.getIndexData().getEntryCount(), 
+                 tempI.getIndexData().getEntryCount());
 
     Cursor origC = Cursor.createIndexCursor(orig, origI);
     Cursor tempC = Cursor.createIndexCursor(temp, tempI);
@@ -342,8 +365,8 @@ public class IndexTest extends TestCase {
                      13 * i, (6.7d / i), null, null, true);
       }
 
-      assertEquals(12, indA.getEntryCount());
-      assertEquals(12, indB.getEntryCount());
+      assertEquals(12, indA.getIndexData().getEntryCount());
+      assertEquals(12, indB.getIndexData().getEntryCount());
 
       assertEquals(12, indA.getUniqueEntryCount());
       assertEquals(8, indB.getUniqueEntryCount());
@@ -356,8 +379,8 @@ public class IndexTest extends TestCase {
       indA = table.getIndex("PrimaryKey");
       indB = table.getIndex("B");
 
-      assertEquals(12, indA.getEntryCount());
-      assertEquals(12, indB.getEntryCount());
+      assertEquals(12, indA.getIndexData().getEntryCount());
+      assertEquals(12, indB.getIndexData().getEntryCount());
 
       assertEquals(12, indA.getUniqueEntryCount());
       assertEquals(8, indB.getUniqueEntryCount());
@@ -374,8 +397,8 @@ public class IndexTest extends TestCase {
       }
       c.deleteCurrentRow();
 
-      assertEquals(11, indA.getEntryCount());
-      assertEquals(11, indB.getEntryCount());
+      assertEquals(11, indA.getIndexData().getEntryCount());
+      assertEquals(11, indB.getIndexData().getEntryCount());
 
       assertEquals(12, indA.getUniqueEntryCount());
       assertEquals(8, indB.getUniqueEntryCount());

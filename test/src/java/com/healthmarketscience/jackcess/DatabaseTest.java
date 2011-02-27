@@ -1254,9 +1254,9 @@ public class DatabaseTest extends TestCase {
 
   static void dumpIndex(Index index, PrintWriter writer) throws Exception {
     writer.println("INDEX: " + index);
-    Index.EntryCursor ec = index.cursor();
-    Index.Entry lastE = ec.getLastEntry();
-    Index.Entry e = null;
+    IndexData.EntryCursor ec = index.cursor();
+    IndexData.Entry lastE = ec.getLastEntry();
+    IndexData.Entry e = null;
     while((e = ec.getNextEntry()) != lastE) {
       writer.println(e);
     }

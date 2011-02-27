@@ -35,16 +35,16 @@ import java.util.List;
  * Simple implementation of an Access table index
  * @author Tim McCune
  */
-public class SimpleIndex extends Index {
+public class SimpleIndexData extends IndexData {
 
   /** data for the single index page.  if this data came from multiple pages,
       the index is read-only. */
   private SimpleDataPage _dataPage;
   
-  public SimpleIndex(Table table, int uniqueEntryCount,
-                     int uniqueEntryCountOffset)
+  public SimpleIndexData(Table table, int number, int uniqueEntryCount,
+                         int uniqueEntryCountOffset)
   {
-    super(table, uniqueEntryCount, uniqueEntryCountOffset);
+    super(table, number, uniqueEntryCount, uniqueEntryCountOffset);
   }
 
   @Override

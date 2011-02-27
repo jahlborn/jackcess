@@ -74,7 +74,7 @@ public class BigIndexTest extends TestCase {
       Index index = t.getIndex("CD_AGENTE");
       assertFalse(index.isInitialized());
       assertEquals(512, countRows(t));
-      assertEquals(512, index.getEntryCount());
+      assertEquals(512, index.getIndexData().getEntryCount());
       db.close();
     }
   }
@@ -88,7 +88,7 @@ public class BigIndexTest extends TestCase {
       Index index = t.getIndex("col1");
       assertFalse(index.isInitialized());
       assertEquals(0, countRows(t));
-      assertEquals(0, index.getEntryCount());
+      assertEquals(0, index.getIndexData().getEntryCount());
       db.close();
 
       DatabaseTest._autoSync = false;
@@ -130,7 +130,7 @@ public class BigIndexTest extends TestCase {
           }
         }
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         db.flush();
         t = db.getTable("Table1");
@@ -158,7 +158,7 @@ public class BigIndexTest extends TestCase {
 
         assertEquals(2000, rowCount);
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         // delete an entry in the middle
         Cursor cursor = Cursor.createIndexCursor(t, index);
@@ -175,7 +175,7 @@ public class BigIndexTest extends TestCase {
           cursor.deleteCurrentRow();
         }
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         List<String> found = new ArrayList<String>();
         for(Map<String,Object> row : Cursor.createIndexCursor(t, index)) {
@@ -194,7 +194,7 @@ public class BigIndexTest extends TestCase {
         assertFalse(cursor.moveToNextRow());
         assertFalse(cursor.moveToPreviousRow());
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         // add 50 (pseudo) random entries to the table
         rand = new Random(42L);
@@ -207,14 +207,14 @@ public class BigIndexTest extends TestCase {
           t.addRow(nextVal, "this is some row data " + nextInt);
         }
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         cursor = Cursor.createIndexCursor(t, index);
         while(cursor.moveToNextRow()) {
           cursor.deleteCurrentRow();
         }
 
-        ((BigIndex)index).validate();
+        ((BigIndexData)index.getIndexData()).validate();
 
         db.close();
 

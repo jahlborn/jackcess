@@ -104,10 +104,10 @@ public class Table
   private final Database _database;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
   private byte _tableType;
-  /** Number of indexes on the table */
+  /** Number of actual indexes on the table */
   private int _indexCount;
-  /** Number of index slots for the table */
-  private int _indexSlotCount;
+  /** Number of logical indexes for the table */
+  private int _logicalIndexCount;
   /** Number of rows in the table */
   private int _rowCount;
   /** last long auto number for the table */
@@ -122,8 +122,12 @@ public class Table
   private List<Column> _columns = new ArrayList<Column>();
   /** List of variable length columns in this table, ordered by offset */
   private List<Column> _varColumns = new ArrayList<Column>();
-  /** List of indexes on this table */
+  /** List of indexes on this table (multiple logical indexes may be backed by
+      the same index data) */
   private List<Index> _indexes = new ArrayList<Index>();
+  /** List of index datas on this table (the actual backing data for an
+      index) */
+  private List<IndexData> _indexDatas = new ArrayList<IndexData>();
   /** Table name as stored in Database */
   private final String _name;
   /** Usage map of pages that this table owns */
@@ -338,10 +342,17 @@ public class Table
   }
     
   /**
+   * @return All of the IndexData on this table (unmodifiable List)
+   */
+  List<IndexData> getIndexDatas() {
+    return Collections.unmodifiableList(_indexDatas);
+  }
+
+  /**
    * Only called by unit tests
    */
-  int getIndexSlotCount() {
-    return _indexSlotCount;
+  int getLogicalIndexCount() {
+    return _logicalIndexCount;
   }
 
   /**
@@ -376,7 +387,7 @@ public class Table
     int rowNumber = rowState.getHeaderRowId().getRowNumber();
 
     // use any read rowValues to help update the indexes
-    Object[] rowValues = (!_indexes.isEmpty() ?
+    Object[] rowValues = (!_indexDatas.isEmpty() ?
                           rowState.getRowValues() : null);
     
     int rowIndex = getRowStartOffset(rowNumber, getFormat());
@@ -385,8 +396,8 @@ public class Table
     writeDataPage(rowBuffer, pageNumber);
 
     // update the indexes
-    for(Index index : _indexes) {
-      index.deleteRow(rowValues, rowId);
+    for(IndexData indexData : _indexDatas) {
+      indexData.deleteRow(rowValues, rowId);
     }
     
     // make sure table def gets updated
@@ -1067,7 +1078,7 @@ public class Table
     _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
     _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
     short columnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_COLS);
-    _indexSlotCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
+    _logicalIndexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
 
     int rowNum = ByteUtil.getUnsignedByte(
@@ -1084,7 +1095,8 @@ public class Table
         (getFormat().OFFSET_INDEX_DEF_BLOCK +
          (i * getFormat().SIZE_INDEX_DEFINITION) + 4);
       int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
-      _indexes.add(createIndex(uniqueEntryCount, uniqueEntryCountOffset));
+      _indexDatas.add(createIndexData(i, uniqueEntryCount, 
+                                      uniqueEntryCountOffset));
     }
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
@@ -1117,59 +1129,33 @@ public class Table
     // sort variable length columns based on their index into the variable
     // length offset table, because we will write the columns in this order
     Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
-    
-    int idxOffset = tableBuffer.position();
-    tableBuffer.position(idxOffset +
-                     (getFormat().OFFSET_INDEX_NUMBER_BLOCK * _indexCount));
 
-    // if there are more index slots than indexes, the initial slots are
-    // always empty/invalid, so we skip that data
-    int firstRealIdx = (_indexSlotCount - _indexCount);
-    
-    for (int i = 0; i < _indexSlotCount; i++) {
+    // read index column information
+    for (int i = 0; i < _indexCount; i++) {
+      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
+      _indexDatas.get(i).read(tableBuffer, _columns);
+    }
+
+    // read logical index info (may be more logical indexes than index datas)
+    for (int i = 0; i < _logicalIndexCount; i++) {
 
       ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
-      tableBuffer.getInt(); //Forward past alternate index number
       int indexNumber = tableBuffer.getInt();
+      int indexDataNumber = tableBuffer.getInt();
       ByteUtil.forward(tableBuffer, 11);
       byte indexType = tableBuffer.get();
       ByteUtil.forward(tableBuffer, getFormat().SKIP_AFTER_INDEX_SLOT); //Skip past Unknown
 
-      if(i < firstRealIdx) {
-        // ignore this info
-        continue;
-      }
-
-      Index index = _indexes.get(i - firstRealIdx);
-      index.setIndexNumber(indexNumber);
-      index.setIndexType(indexType);
+      IndexData indexData = _indexDatas.get(indexDataNumber);
+      _indexes.add(new Index(indexData, indexNumber, indexType));
     }
 
-    // read actual index names
-    for (int i = 0; i < _indexSlotCount; i++) {
-      if(i < firstRealIdx) {
-        // for each empty index slot, there is some weird sort of name, skip
-        // it
-        skipName(tableBuffer);
-        continue;
-      }
-        
-      _indexes.get(i - firstRealIdx)
-        .setName(readName(tableBuffer));
+    // read logical index names
+    for (int i = 0; i < _logicalIndexCount; i++) {
+      _indexes.get(i).setName(readName(tableBuffer));
     }
-    int idxEndOffset = tableBuffer.position();
     
     Collections.sort(_indexes);
-
-    // go back to index column info after sorting
-    tableBuffer.position(idxOffset);
-    for (int i = 0; i < _indexCount; i++) {
-      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
-      _indexes.get(i).read(tableBuffer, _columns);
-    }
-
-    // reset to end of index info
-    tableBuffer.position(idxEndOffset);
 
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
@@ -1180,11 +1166,15 @@ public class Table
   /**
    * Creates an index with the given initial info.
    */
-  private Index createIndex(int uniqueEntryCount, int uniqueEntryCountOffset)
+  private IndexData createIndexData(int indexDataNumber,
+                                    int uniqueEntryCount, 
+                                    int uniqueEntryCountOffset)
   {
     return(_useBigIndex ?
-           new BigIndex(this, uniqueEntryCount, uniqueEntryCountOffset) :
-           new SimpleIndex(this, uniqueEntryCount, uniqueEntryCountOffset));
+           new BigIndexData(this, indexDataNumber, uniqueEntryCount,
+                            uniqueEntryCountOffset) :
+           new SimpleIndexData(this, indexDataNumber, uniqueEntryCount, 
+                               uniqueEntryCountOffset));
   }
   
   /**
@@ -1359,8 +1349,8 @@ public class Table
 
       // update the indexes
       RowId rowId = new RowId(pageNumber, rowNum);
-      for(Index index : _indexes) {
-        index.addRow(rows.get(i), rowId);
+      for(IndexData indexData : _indexDatas) {
+        indexData.addRow(rows.get(i), rowId);
       }
     }
 
@@ -1422,12 +1412,12 @@ public class Table
                             " is too large");
     }
 
-    Object[] oldRowValues = (!_indexes.isEmpty() ?
+    Object[] oldRowValues = (!_indexDatas.isEmpty() ?
                              rowState.getRowValues() : null);
 
     // delete old values from indexes
-    for(Index index : _indexes) {
-      index.deleteRow(oldRowValues, rowId);
+    for(IndexData indexData : _indexDatas) {
+      indexData.deleteRow(oldRowValues, rowId);
     }
     
     // see if we can squeeze the new row data into the existing row
@@ -1488,8 +1478,8 @@ public class Table
     }
 
     // update the indexes
-    for(Index index : _indexes) {
-      index.addRow(row, rowId);
+    for(IndexData indexData : _indexDatas) {
+      indexData.addRow(row, rowId);
     }
 
     writeDataPage(dataPage, pageNumber);
@@ -1557,13 +1547,13 @@ public class Table
     tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastLongAutoNumber);
 
     // write any index changes
-    for (Index index : _indexes) {
+    for (IndexData indexData : _indexDatas) {
       // write the unique entry count for the index to the table definition
       // page
-      tdefPage.putInt(index.getUniqueEntryCountOffset(),
-                      index.getUniqueEntryCount());
+      tdefPage.putInt(indexData.getUniqueEntryCountOffset(),
+                      indexData.getUniqueEntryCount());
       // write the entry page for the index
-      index.update();
+      indexData.update();
     }
 
     // write modified table definition

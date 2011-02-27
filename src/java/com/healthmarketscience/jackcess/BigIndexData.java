@@ -34,14 +34,14 @@ import java.io.IOException;
  * Implementation of an Access table index which supports large indexes.
  * @author James Ahlborn
  */
-public class BigIndex extends Index {
+public class BigIndexData extends IndexData {
 
   /** Cache which manages the index pages */
   private final IndexPageCache _pageCache;
   
-  public BigIndex(Table table, int uniqueEntryCount,
-                  int uniqueEntryCountOffset) {
-    super(table, uniqueEntryCount, uniqueEntryCountOffset);
+  public BigIndexData(Table table, int number, int uniqueEntryCount,
+                      int uniqueEntryCountOffset) {
+    super(table, number, uniqueEntryCount, uniqueEntryCountOffset);
     _pageCache = new IndexPageCache(this);
   }
 

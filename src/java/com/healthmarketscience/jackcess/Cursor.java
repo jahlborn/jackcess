@@ -1193,24 +1193,26 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     /** IndexDirHandler for backward traversal */
     private final IndexDirHandler _reverseDirHandler =
       new ReverseIndexDirHandler();
+    /** logical index which this cursor is using */
+    private final Index _index;
     /** Cursor over the entries of the relvant index */
-    private final Index.EntryCursor _entryCursor;
+    private final IndexData.EntryCursor _entryCursor;
 
     private IndexCursor(Table table, Index index,
-                        Index.EntryCursor entryCursor)
+                        IndexData.EntryCursor entryCursor)
       throws IOException
     {
       super(new Id(table, index), table,
             new IndexPosition(entryCursor.getFirstEntry()),
             new IndexPosition(entryCursor.getLastEntry()));
-
-      index.initialize();
+      _index = index;
+      _index.initialize();
       _entryCursor = entryCursor;
     }
 
     @Override
     public Index getIndex() {
-      return _entryCursor.getIndex();
+      return _index;
     }
     
     @Override
@@ -1247,7 +1249,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     protected boolean findRowImpl(Column columnPattern, Object valuePattern)
       throws IOException
     {
-      Object[] rowValues = _entryCursor.getIndex().constructIndexRow(
+      Object[] rowValues = _entryCursor.getIndexData().constructIndexRow(
           columnPattern.getName(), valuePattern);
 
       if(rowValues == null) {
@@ -1257,7 +1259,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       
       // sweet, we can use our index
       _entryCursor.beforeEntry(rowValues);
-      Index.Entry startEntry = _entryCursor.getNextEntry();
+      IndexData.Entry startEntry = _entryCursor.getNextEntry();
       if(!startEntry.getRowId().isValid()) {
         // at end of index, no potential matches
         return false;
@@ -1273,8 +1275,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     protected boolean findRowImpl(Map<String,Object> rowPattern)
       throws IOException
     {
-      Index index = _entryCursor.getIndex();
-      Object[] rowValues = index.constructIndexRow(rowPattern);
+      IndexData indexData = _entryCursor.getIndexData();
+      Object[] rowValues = indexData.constructIndexRow(rowPattern);
 
       if(rowValues == null) {
         // bummer, use the default table scan
@@ -1283,7 +1285,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       
       // sweet, we can use our index
       _entryCursor.beforeEntry(rowValues);
-      Index.Entry startEntry = _entryCursor.getNextEntry();
+      IndexData.Entry startEntry = _entryCursor.getNextEntry();
       if(!startEntry.getRowId().isValid()) {
         // at end of index, no potential matches
         return false;
@@ -1291,7 +1293,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       restorePosition(new IndexPosition(startEntry));
 
       Map<String,Object> indexRowPattern = null;
-      if(rowPattern.size() == index.getColumns().size()) {
+      if(rowPattern.size() == indexData.getColumns().size()) {
         // the rowPattern matches our index columns exactly, so we can
         // streamline our testing below
         indexRowPattern = rowPattern;
@@ -1300,7 +1302,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         // do more work when testing below
         indexRowPattern =
           new LinkedHashMap<String,Object>();
-        for(Index.ColumnDescriptor idxCol : index.getColumns()) {
+        for(IndexData.ColumnDescriptor idxCol : indexData.getColumns()) {
           indexRowPattern.put(idxCol.getName(),
                               rowValues[idxCol.getColumnIndex()]);
         }
@@ -1336,7 +1338,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     {
       IndexDirHandler handler = getDirHandler(moveForward);
       IndexPosition endPos = (IndexPosition)handler.getEndPosition();
-      Index.Entry entry = handler.getAnotherEntry();
+      IndexData.Entry entry = handler.getAnotherEntry();
       return ((!entry.equals(endPos.getEntry())) ?
               new IndexPosition(entry) : endPos);
     }
@@ -1346,7 +1348,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
      * cursor logic from value storage.
      */
     private abstract class IndexDirHandler extends DirHandler {
-      public abstract Index.Entry getAnotherEntry()
+      public abstract IndexData.Entry getAnotherEntry()
         throws IOException;
     }
     
@@ -1363,7 +1365,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         return getLastPosition();
       }
       @Override
-      public Index.Entry getAnotherEntry() throws IOException {
+      public IndexData.Entry getAnotherEntry() throws IOException {
         return _entryCursor.getNextEntry();
       }
     }
@@ -1381,7 +1383,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
         return getFirstPosition();
       }
       @Override
-      public Index.Entry getAnotherEntry() throws IOException {
+      public IndexData.Entry getAnotherEntry() throws IOException {
         return _entryCursor.getPreviousEntry();
       }
     }    
@@ -1521,9 +1523,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   private static final class IndexPosition extends Position
   {
-    private final Index.Entry _entry;
+    private final IndexData.Entry _entry;
     
-    private IndexPosition(Index.Entry entry) {
+    private IndexPosition(IndexData.Entry entry) {
       _entry = entry;
     }
 
@@ -1532,7 +1534,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       return getEntry().getRowId();
     }
     
-    public Index.Entry getEntry() {
+    public IndexData.Entry getEntry() {
       return _entry;
     }
     

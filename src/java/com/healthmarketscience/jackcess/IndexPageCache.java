@@ -40,7 +40,7 @@ import java.util.Map;
 import java.util.RandomAccess;
 
 
-import static com.healthmarketscience.jackcess.Index.*;
+import static com.healthmarketscience.jackcess.IndexData.*;
 
 /**
  * Manager of the index pages for a BigIndex.
@@ -53,7 +53,7 @@ public class IndexPageCache
   }
 
   /** the index whose pages this cache is managing */
-  private final BigIndex _index;
+  private final BigIndexData _indexData;
   /** the root page for the index */
   private DataPageMain _rootPage;
   /** the currently loaded pages for this index, pageNumber -> page */
@@ -63,16 +63,16 @@ public class IndexPageCache
   private final List<CacheDataPage> _modifiedPages =
     new ArrayList<CacheDataPage>();
   
-  public IndexPageCache(BigIndex index) {
-    _index = index;
+  public IndexPageCache(BigIndexData indexData) {
+    _indexData = indexData;
   }
 
-  public BigIndex getIndex() {
-    return _index;
+  public BigIndexData getIndexData() {
+    return _indexData;
   }
   
   public PageChannel getPageChannel() {
-    return getIndex().getPageChannel();
+    return getIndexData().getPageChannel();
   }
 
   /**
@@ -129,7 +129,7 @@ public class IndexPageCache
   private void preparePagesForWriting() throws IOException
   {
     boolean splitPages = false;
-    int maxPageEntrySize = getIndex().getMaxPageEntrySize();
+    int maxPageEntrySize = getIndexData().getMaxPageEntrySize();
 
     // we need to continue looping through all the pages until we do not split
     // any pages (because a split may cascade up the tree)
@@ -224,7 +224,7 @@ public class IndexPageCache
   private void writeDataPage(CacheDataPage cacheDataPage)
     throws IOException
   {
-    getIndex().writeDataPage(cacheDataPage);
+    getIndexData().writeDataPage(cacheDataPage);
 
     // lastly, mark the page as no longer modified
     cacheDataPage._extra._modified = false;    
@@ -255,7 +255,7 @@ public class IndexPageCache
     DataPageMain dataPage = new DataPageMain(pageNumber);
     DataPageExtra extra = new DataPageExtra();
     CacheDataPage cacheDataPage = new CacheDataPage(dataPage, extra);
-    getIndex().readDataPage(cacheDataPage);
+    getIndexData().readDataPage(cacheDataPage);
 
     // associate the extra info with the main data page
     dataPage.setExtra(extra);
@@ -742,7 +742,7 @@ public class IndexPageCache
     _dataPages.put(dpMain._pageNumber, dpMain);
 
     // update owned pages cache
-    _index.addOwnedPage(dpMain._pageNumber);
+    _indexData.addOwnedPage(dpMain._pageNumber);
 
     // needs to be written out
     CacheDataPage cacheDataPage = new CacheDataPage(dpMain, dpExtra);
@@ -980,7 +980,7 @@ public class IndexPageCache
    */
   private void validateEntries(DataPageExtra dpExtra) throws IOException {
     int entrySize = 0;
-    Entry prevEntry = Index.FIRST_ENTRY;
+    Entry prevEntry = IndexData.FIRST_ENTRY;
     for(Entry e : dpExtra._entries) {
       entrySize += e.size();
       if(prevEntry.compareTo(e) >= 0) {
@@ -1290,7 +1290,7 @@ public class IndexPageCache
    * IndexPageCache implementation of an Index {@link DataPage}.
    */
   public static final class CacheDataPage
-    extends Index.DataPage
+    extends IndexData.DataPage
   {
     public final DataPageMain _main;
     public final DataPageExtra _extra;

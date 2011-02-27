@@ -584,7 +584,7 @@ public class IndexCodesTest extends TestCase {
   {
     Field eField = curPos.getClass().getDeclaredField("_entry");
     eField.setAccessible(true);
-    Index.Entry entry = (Index.Entry)eField.get(curPos);
+    IndexData.Entry entry = (IndexData.Entry)eField.get(curPos);
     Field ebField = entry.getClass().getDeclaredField("_entryBytes");
     ebField.setAccessible(true);
     byte[] entryBytes = (byte[])ebField.get(entry);

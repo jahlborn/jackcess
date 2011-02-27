@@ -9,6 +9,10 @@
         Add support for writing all fixed length column types into variable
         length fields.
       </action>
+      <action dev="jahlborn" type="fix" issue="3192058">
+        More fixes related to reading and interpreting index information.
+        Handle multiple logical indexes backed by the same index data.
+      </action>
       <action dev="jahlborn" type="update">
         Allow MSISAM files to be written (experimental).
       </action>
