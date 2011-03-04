@@ -158,7 +158,7 @@ public abstract class JetFormat {
   public final long MAX_DATABASE_SIZE;
   
   public final int MAX_ROW_SIZE;
-  public final int PAGE_INITIAL_FREE_SPACE;
+  public final int DATA_PAGE_INITIAL_FREE_SPACE;
 
   public final int OFFSET_MASKED_HEADER;
   public final byte[] HEADER_MASK;
@@ -179,7 +179,8 @@ public abstract class JetFormat {
   public final int OFFSET_FREE_SPACE_PAGES;
   public final int OFFSET_INDEX_DEF_BLOCK;
   
-  public final int OFFSET_INDEX_NUMBER_BLOCK;
+  public final int SIZE_INDEX_COLUMN_BLOCK;
+  public final int SIZE_INDEX_INFO_BLOCK;
   
   public final int OFFSET_COLUMN_TYPE;
   public final int OFFSET_COLUMN_NUMBER;
@@ -280,7 +281,7 @@ public abstract class JetFormat {
     MAX_DATABASE_SIZE = defineMaxDatabaseSize();
     
     MAX_ROW_SIZE = defineMaxRowSize();
-    PAGE_INITIAL_FREE_SPACE = definePageInitialFreeSpace();
+    DATA_PAGE_INITIAL_FREE_SPACE = defineDataPageInitialFreeSpace();
     
     OFFSET_MASKED_HEADER = defineOffsetMaskedHeader();
     HEADER_MASK = defineHeaderMask();
@@ -301,7 +302,8 @@ public abstract class JetFormat {
     OFFSET_FREE_SPACE_PAGES = defineOffsetFreeSpacePages();
     OFFSET_INDEX_DEF_BLOCK = defineOffsetIndexDefBlock();
     
-    OFFSET_INDEX_NUMBER_BLOCK = defineOffsetIndexNumberBlock();
+    SIZE_INDEX_COLUMN_BLOCK = defineSizeIndexColumnBlock();
+    SIZE_INDEX_INFO_BLOCK = defineSizeIndexInfoBlock();
     
     OFFSET_COLUMN_TYPE = defineOffsetColumnType();
     OFFSET_COLUMN_NUMBER = defineOffsetColumnNumber();
@@ -372,7 +374,7 @@ public abstract class JetFormat {
   protected abstract long defineMaxDatabaseSize();
   
   protected abstract int defineMaxRowSize();
-  protected abstract int definePageInitialFreeSpace();
+  protected abstract int defineDataPageInitialFreeSpace();
   
   protected abstract int defineOffsetMaskedHeader();
   protected abstract byte[] defineHeaderMask();
@@ -393,7 +395,8 @@ public abstract class JetFormat {
   protected abstract int defineOffsetFreeSpacePages();
   protected abstract int defineOffsetIndexDefBlock();
   
-  protected abstract int defineOffsetIndexNumberBlock();
+  protected abstract int defineSizeIndexColumnBlock();
+  protected abstract int defineSizeIndexInfoBlock();
   
   protected abstract int defineOffsetColumnType();
   protected abstract int defineOffsetColumnNumber();
@@ -490,7 +493,7 @@ public abstract class JetFormat {
     @Override
     protected int defineMaxRowSize() { return 2012; }
     @Override
-    protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
+    protected int defineDataPageInitialFreeSpace() { return PAGE_SIZE - 14; }
 	    
     @Override
     protected int defineOffsetMaskedHeader() { return 24; }
@@ -532,7 +535,9 @@ public abstract class JetFormat {
     protected int defineOffsetIndexDefBlock() { return 43; }
 
     @Override
-    protected int defineOffsetIndexNumberBlock() { return 39; }
+    protected int defineSizeIndexColumnBlock() { return 39; }
+    @Override
+    protected int defineSizeIndexInfoBlock() { return 20; }
 	    
     @Override
     protected int defineOffsetColumnType() { return 0; }
@@ -685,7 +690,7 @@ public abstract class JetFormat {
     @Override
     protected int defineMaxRowSize() { return 4060; }
     @Override
-    protected int definePageInitialFreeSpace() { return PAGE_SIZE - 14; }
+    protected int defineDataPageInitialFreeSpace() { return PAGE_SIZE - 14; }
     
     @Override
     protected int defineOffsetMaskedHeader() { return 24; }
@@ -725,7 +730,9 @@ public abstract class JetFormat {
     protected int defineOffsetIndexDefBlock() { return 63; }
 
     @Override
-    protected int defineOffsetIndexNumberBlock() { return 52; }
+    protected int defineSizeIndexColumnBlock() { return 52; }
+    @Override
+    protected int defineSizeIndexInfoBlock() { return 28; }
     
     @Override
     protected int defineOffsetColumnType() { return 0; }

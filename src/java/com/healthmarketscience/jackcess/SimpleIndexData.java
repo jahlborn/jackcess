@@ -28,6 +28,7 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -35,7 +36,12 @@ import java.util.List;
  * Simple implementation of an Access table index
  * @author Tim McCune
  */
-public class SimpleIndexData extends IndexData {
+public class SimpleIndexData extends IndexData 
+{
+
+  static final DataPage NEW_ROOT_DATA_PAGE = 
+    new SimpleDataPage(0, true, Collections.<Entry>emptyList());
+
 
   /** data for the single index page.  if this data came from multiple pages,
       the index is read-only. */
@@ -131,7 +137,6 @@ public class SimpleIndexData extends IndexData {
   {
     throw new UnsupportedOperationException();
   }
-  
 
   /**
    * Simple implementation of a DataPage
@@ -145,7 +150,14 @@ public class SimpleIndexData extends IndexData {
     private List<Entry> _entries;
 
     private SimpleDataPage(int pageNumber) {
+      this(pageNumber, false, null);
+    }
+
+    private SimpleDataPage(int pageNumber, boolean leaf, List<Entry> entries)
+    {
       _pageNumber = pageNumber;
+      _leaf = leaf;
+      _entries = entries;
     }
     
     @Override
@@ -208,8 +220,7 @@ public class SimpleIndexData extends IndexData {
     }
     
     @Override
-    public void setEntries(List<Entry> entries) {
-      
+    public void setEntries(List<Entry> entries) {      
       _entries = entries;
     }
 

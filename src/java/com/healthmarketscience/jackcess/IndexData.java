@@ -66,16 +66,18 @@ public abstract class IndexData {
   protected static final int INVALID_INDEX_PAGE_NUMBER = 0;          
   
   /** Max number of columns in an index */
-  private static final int MAX_COLUMNS = 10;
+  static final int MAX_COLUMNS = 10;
   
   protected static final byte[] EMPTY_PREFIX = new byte[0];
 
   private static final short COLUMN_UNUSED = -1;
 
-  private static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
+  static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
 
-  private static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
-  private static final byte IGNORE_NULLS_INDEX_FLAG = (byte)0x02;
+  static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
+  static final byte IGNORE_NULLS_INDEX_FLAG = (byte)0x02;
+
+  private static final int MAGIC_INDEX_NUMBER = 1923;
 
   private static final int MAX_TEXT_INDEX_CHAR_LENGTH =
     (JetFormat.TEXT_FIELD_MAX_LENGTH / JetFormat.TEXT_FIELD_UNIT_SIZE);
@@ -176,6 +178,26 @@ public abstract class IndexData {
     _uniqueEntryCount = uniqueEntryCount;
     _uniqueEntryCountOffset = uniqueEntryCountOffset;
     _maxPageEntrySize = calcMaxPageEntrySize(_table.getFormat());
+  }
+
+  /**
+   * Creates an IndexData appropriate for the given table, using information
+   * from the given table definition buffer.
+   */
+  public static IndexData create(Table table, ByteBuffer tableBuffer,
+                                 int number, JetFormat format)
+    throws IOException
+  {
+    int uniqueEntryCountOffset =
+      (format.OFFSET_INDEX_DEF_BLOCK +
+       (number * format.SIZE_INDEX_DEFINITION) + 4);
+    int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
+
+    return(table.doUseBigIndex() ?
+           new BigIndexData(table, number, uniqueEntryCount,
+                            uniqueEntryCountOffset) :
+           new SimpleIndexData(table, number, uniqueEntryCount, 
+                               uniqueEntryCountOffset));
   }
 
   public Table getTable() {
@@ -350,13 +372,15 @@ public abstract class IndexData {
   }
 
   /**
-   * Read the index info from a tableBuffer
+   * Read the rest of the index info from a tableBuffer
    * @param tableBuffer table definition buffer to read from initial info
    * @param availableColumns Columns that this index may use
    */
   public void read(ByteBuffer tableBuffer, List<Column> availableColumns)
     throws IOException
   {
+    ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
+
     for (int i = 0; i < MAX_COLUMNS; i++) {
       short columnNumber = tableBuffer.getShort();
       byte colFlags = tableBuffer.get();
@@ -382,11 +406,85 @@ public abstract class IndexData {
     int umapPageNum = ByteUtil.get3ByteInt(tableBuffer);
     _ownedPages = UsageMap.read(getTable().getDatabase(), umapPageNum,
                                 umapRowNum, false);
-
+    
     _rootPageNumber = tableBuffer.getInt();
+
     ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_FLAGS); //Forward past Unknown
     _indexFlags = tableBuffer.get();
     ByteUtil.forward(tableBuffer, getFormat().SKIP_AFTER_INDEX_FLAGS); //Forward past other stuff
+  }
+
+  /**
+   * Writes the index row count definitions into a table definition buffer.
+   * @param buffer Buffer to write to
+   * @param indexes List of IndexBuilders to write definitions for
+   */
+  protected static void writeRowCountDefinitions(
+      ByteBuffer buffer, int indexCount, JetFormat format)
+  {
+    // index row counts (empty data)
+    ByteUtil.forward(buffer, (indexCount * format.SIZE_INDEX_DEFINITION));
+  }
+
+  /**
+   * Writes the index definitions into a table definition buffer.
+   * @param buffer Buffer to write to
+   * @param indexes List of IndexBuilders to write definitions for
+   */
+  protected static void writeDefinitions(
+      ByteBuffer buffer, List<Column> columns, List<IndexBuilder> indexes,
+      int tdefPageNumber, PageChannel pageChannel, JetFormat format)
+    throws IOException
+  {
+    ByteBuffer rootPageBuffer = pageChannel.createPageBuffer();
+    writeDataPage(rootPageBuffer, SimpleIndexData.NEW_ROOT_DATA_PAGE, 
+                  tdefPageNumber, format);
+
+    for(IndexBuilder idx : indexes) {
+      buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
+
+      // write column information (always MAX_COLUMNS entries)
+      List<IndexBuilder.Column> idxColumns = idx.getColumns();
+      for(int i = 0; i < MAX_COLUMNS; ++i) {
+
+        short columnNumber = COLUMN_UNUSED;
+        byte flags = 0;
+
+        if(i < idxColumns.size()) {
+
+          // determine column info
+          IndexBuilder.Column idxCol = idxColumns.get(i);
+          flags = idxCol.getFlags();
+
+          // find actual table column number
+          for(Column col : columns) {
+            if(col.getName().equalsIgnoreCase(idxCol.getName())) {
+              columnNumber = col.getColumnNumber();
+              break;
+            }
+          }
+          if(columnNumber == COLUMN_UNUSED) {
+            // should never happen as this is validated before
+            throw new IllegalArgumentException(
+                "Column with name " + idxCol.getName() + " not found");
+          }
+        }
+         
+        buffer.putShort(columnNumber); // table column number
+        buffer.put(flags); // column flags (e.g. ordering)
+      }
+
+      buffer.put(idx.getUmapRowNumber()); // umap row
+      ByteUtil.put3ByteInt(buffer, idx.getUmapPageNumber()); // umap page
+
+      // write empty root index page
+      pageChannel.writePage(rootPageBuffer, idx.getRootPageNumber());
+
+      buffer.putInt(idx.getRootPageNumber());
+      buffer.putInt(0); // unknown
+      buffer.put(idx.getFlags()); // index flags (unique, etc.)
+      ByteUtil.forward(buffer, 5); // unknown
+    }
   }
 
   /**
@@ -723,16 +821,16 @@ public abstract class IndexData {
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
-    rtn.append("\n\tData number: " + _number);
-    rtn.append("\n\tPage number: " + _rootPageNumber);
-    rtn.append("\n\tIs Backing Primary Key: " + isBackingPrimaryKey());
-    rtn.append("\n\tIs Unique: " + isUnique());
-    rtn.append("\n\tIgnore Nulls: " + shouldIgnoreNulls());
-    rtn.append("\n\tColumns: " + _columns);
-    rtn.append("\n\tInitialized: " + _initialized);
+    rtn.append("\n\tData number: ").append(_number);
+    rtn.append("\n\tPage number: ").append(_rootPageNumber);
+    rtn.append("\n\tIs Backing Primary Key: ").append(isBackingPrimaryKey());
+    rtn.append("\n\tIs Unique: ").append(isUnique());
+    rtn.append("\n\tIgnore Nulls: ").append(shouldIgnoreNulls());
+    rtn.append("\n\tColumns: ").append(_columns);
+    rtn.append("\n\tInitialized: ").append(_initialized);
     if(_initialized) {
       try {
-        rtn.append("\n\tEntryCount: " + getEntryCount());
+        rtn.append("\n\tEntryCount: ").append(getEntryCount());
       } catch(IOException e) {
         throw new RuntimeException(e);
       }
@@ -755,12 +853,26 @@ public abstract class IndexData {
     }
     
     ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
+
+    writeDataPage(buffer, dataPage, getTable().getTableDefPageNumber(),
+                  getFormat());
+
+    getPageChannel().writePage(buffer, dataPage.getPageNumber());
+  }
+
+  /**
+   * Writes the data page info to the given buffer.
+   */
+  protected static void writeDataPage(ByteBuffer buffer, DataPage dataPage,
+                                      int tdefPageNumber, JetFormat format)
+    throws IOException
+  {
     buffer.put(dataPage.isLeaf() ?
                PageTypes.INDEX_LEAF :
                PageTypes.INDEX_NODE );  //Page type
     buffer.put((byte) 0x01);  //Unknown
     buffer.putShort((short) 0); //Free space
-    buffer.putInt(getTable().getTableDefPageNumber());
+    buffer.putInt(tdefPageNumber);
 
     buffer.putInt(0); //Unknown
     buffer.putInt(dataPage.getPrevPageNumber()); //Prev page
@@ -771,7 +883,7 @@ public abstract class IndexData {
     buffer.putShort((short) entryPrefix.length); // entry prefix byte count
     buffer.put((byte) 0); //Unknown
 
-    byte[] entryMask = new byte[getFormat().SIZE_INDEX_ENTRY_MASK];
+    byte[] entryMask = new byte[format.SIZE_INDEX_ENTRY_MASK];
     // first entry includes the prefix
     int totalSize = entryPrefix.length;
     for(Entry entry : dataPage.getEntries()) {
@@ -789,9 +901,7 @@ public abstract class IndexData {
     }
 
     // update free space
-    buffer.putShort(2, (short) (getFormat().PAGE_SIZE - buffer.position()));
-
-    getPageChannel().writePage(buffer, dataPage.getPageNumber());
+    buffer.putShort(2, (short) (format.PAGE_SIZE - buffer.position()));
   }
 
   /**

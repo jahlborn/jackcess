@@ -1022,7 +1022,7 @@ public class Column implements Comparable<Column> {
   {
     lvalPage.put(PageTypes.DATA); //Page type
     lvalPage.put((byte) 1); //Unknown
-    lvalPage.putShort((short)getFormat().PAGE_INITIAL_FREE_SPACE); //Free space
+    lvalPage.putShort((short)getFormat().DATA_PAGE_INITIAL_FREE_SPACE); //Free space
     lvalPage.put((byte) 'L');
     lvalPage.put((byte) 'V');
     lvalPage.put((byte) 'A');
@@ -1592,6 +1592,94 @@ public class Column implements Comparable<Column> {
    */
   static boolean isRawData(Object value) {
     return(value instanceof RawData);
+  }
+
+  /**
+   * Writes the column definitions into a table definition buffer.
+   * @param buffer Buffer to write to
+   * @param columns List of Columns to write definitions for
+   */
+  protected static void writeDefinitions(
+      ByteBuffer buffer, List<Column> columns, JetFormat format,
+      Charset charset)
+    throws IOException
+  {
+    short columnNumber = (short) 0;
+    short fixedOffset = (short) 0;
+    short variableOffset = (short) 0;
+    // we specifically put the "long variable" values after the normal
+    // variable length values so that we have a better chance of fitting it
+    // all (because "long variable" values can go in separate pages)
+    short longVariableOffset =
+      Column.countNonLongVariableLength(columns);
+    for (Column col : columns) {
+      // record this for later use when writing indexes
+      col.setColumnNumber(columnNumber);
+
+      int position = buffer.position();
+      buffer.put(col.getType().getValue());
+      buffer.putInt(Table.MAGIC_TABLE_NUMBER);  //constant magic number
+      buffer.putShort(columnNumber);  //Column Number
+      if (col.isVariableLength()) {
+        if(!col.getType().isLongValue()) {
+          buffer.putShort(variableOffset++);
+        } else {
+          buffer.putShort(longVariableOffset++);
+        }          
+      } else {
+        buffer.putShort((short) 0);
+      }
+      buffer.putShort(columnNumber); //Column Number again
+      if(col.getType().getHasScalePrecision()) {
+        buffer.put(col.getPrecision());  // numeric precision
+        buffer.put(col.getScale());  // numeric scale
+      } else {
+        buffer.put((byte) 0x00); //unused
+        buffer.put((byte) 0x00); //unused
+      }
+      buffer.putShort((short) 0); //Unknown
+      buffer.put(getColumnBitFlags(col)); // misc col flags
+      if (col.isCompressedUnicode()) {  //Compressed
+        buffer.put((byte) 1);
+      } else {
+        buffer.put((byte) 0);
+      }
+      buffer.putInt(0); //Unknown, but always 0.
+      //Offset for fixed length columns
+      if (col.isVariableLength()) {
+        buffer.putShort((short) 0);
+      } else {
+        buffer.putShort(fixedOffset);
+        fixedOffset += col.getType().getFixedSize(col.getLength());
+      }
+      if(!col.getType().isLongValue()) {
+        buffer.putShort(col.getLength()); //Column length
+      } else {
+        buffer.putShort((short)0x0000); // unused
+      }
+      columnNumber++;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
+            buffer, position, format.SIZE_COLUMN_DEF_BLOCK));
+      }
+    }
+    for (Column col : columns) {
+      Table.writeName(buffer, col.getName(), charset);
+    }
+  }
+
+  /**
+   * Constructs a byte containing the flags for the given column.
+   */
+  private static byte getColumnBitFlags(Column col) {
+    byte flags = Column.UNKNOWN_FLAG_MASK;
+    if(!col.isVariableLength()) {
+      flags |= Column.FIXED_LEN_FLAG_MASK;
+    }
+    if(col.isAutoNumber()) {
+      flags |= col.getAutoNumberGenerator().getColumnFlags();
+    }
+    return flags;
   }
 
   /**

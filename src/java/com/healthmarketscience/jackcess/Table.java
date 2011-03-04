@@ -62,6 +62,8 @@ public class Table
   
   private static final short OVERFLOW_ROW_MASK = (short)0x4000;
 
+  static final int MAGIC_TABLE_NUMBER = 1625;
+
   private static final int MAX_BYTE = 256;
 
   /** Table type code for system tables */
@@ -777,51 +779,91 @@ public class Table
   }
 
   /**
-   * Writes a new table defined by the given columns to the database.
+   * Writes a new table defined by the given columns and indexes to the
+   * database.
    * @return the first page of the new table's definition
    */
   public static int writeTableDefinition(
-      List<Column> columns, PageChannel pageChannel, JetFormat format,
-      Charset charset)
+      List<Column> columns, List<IndexBuilder> indexes,
+      PageChannel pageChannel, JetFormat format, Charset charset)
     throws IOException
   {
+    int indexCount = 0;
+    int logicalIndexCount = 0;
+    if(!indexes.isEmpty()) {
+      // sort out index numbers.  for now, these values will always match
+      // (until we support writing foreign key indexes)
+      for(IndexBuilder idx : indexes) {
+        idx.setIndexNumber(logicalIndexCount++);
+        idx.setIndexDataNumber(indexCount++);
+      }
+    }
+
+    // allocate first table def page
+    int tdefPageNumber = pageChannel.allocateNewPage();
+
     // first, create the usage map page
-    int usageMapPageNumber = pageChannel.writeNewPage(
-        createUsageMapDefinitionBuffer(pageChannel, format));
+    int usageMapPageNumber = 
+        createUsageMapDefinitionBuffer(indexes, pageChannel, format);
 
     // next, determine how big the table def will be (in case it will be more
     // than one page)
+    int idxDataLen = (indexCount * (format.SIZE_INDEX_DEFINITION + 
+                                    format.SIZE_INDEX_COLUMN_BLOCK)) + 
+      (logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK);
     int totalTableDefSize = format.SIZE_TDEF_HEADER +
-      (format.SIZE_COLUMN_DEF_BLOCK * columns.size()) +
+      (format.SIZE_COLUMN_DEF_BLOCK * columns.size()) + idxDataLen +
       format.SIZE_TDEF_TRAILER;
+
+    // total up the amount of space used by the column and index names (2
+    // bytes per char + 2 bytes for the length)
     for(Column col : columns) {
-      // we add the number of bytes for the column name and 2 bytes for the
-      // length of the column name
       int nameByteLen = (col.getName().length() *
                          JetFormat.TEXT_FIELD_UNIT_SIZE);
       totalTableDefSize += nameByteLen + 2;
     }
     
+    for(IndexBuilder idx : indexes) {
+      int nameByteLen = (idx.getName().length() *
+                         JetFormat.TEXT_FIELD_UNIT_SIZE);
+      totalTableDefSize += nameByteLen + 2;
+    }
+    
+
     // now, create the table definition
     ByteBuffer buffer = pageChannel.createBuffer(Math.max(totalTableDefSize,
                                                           format.PAGE_SIZE));
     writeTableDefinitionHeader(buffer, columns, usageMapPageNumber,
-                               totalTableDefSize, format);
-    writeColumnDefinitions(buffer, columns, format, charset); 
+                               totalTableDefSize, indexCount, 
+                               logicalIndexCount, format);
+
+    if(indexCount > 0) {
+      // index row counts
+      IndexData.writeRowCountDefinitions(buffer, indexCount, format);
+    }
+
+    // column definitions
+    Column.writeDefinitions(buffer, columns, format, charset); 
     
+    if(indexCount > 0) {
+      // index and index data definitions
+      IndexData.writeDefinitions(buffer, columns, indexes, tdefPageNumber,
+                                 pageChannel, format);
+      Index.writeDefinitions(buffer, indexes, charset);
+    }
+
     //End of tabledef
     buffer.put((byte) 0xff);
     buffer.put((byte) 0xff);
 
     // write table buffer to database
-    int tdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     if(totalTableDefSize <= format.PAGE_SIZE) {
       
       // easy case, fits on one page
       buffer.putShort(format.OFFSET_FREE_SPACE,
                       (short)(buffer.remaining() - 8)); // overwrite page free space
       // Write the tdef page to disk.
-      tdefPageNumber = pageChannel.writeNewPage(buffer);
+      pageChannel.writePage(buffer, tdefPageNumber);
       
     } else {
 
@@ -834,11 +876,10 @@ public class Table
         // reset for next write
         partialTdef.clear();
         
-        if(tdefPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+        if(nextTdefPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
           
           // this is the first page.  note, the first page already has the
           // page header, so no need to write it here
-          tdefPageNumber = pageChannel.allocateNewPage();
           nextTdefPageNumber = tdefPageNumber;
           
         } else {
@@ -879,15 +920,14 @@ public class Table
    */
   private static void writeTableDefinitionHeader(
       ByteBuffer buffer, List<Column> columns,
-      int usageMapPageNumber, int totalTableDefSize, JetFormat format)
+      int usageMapPageNumber, int totalTableDefSize,
+      int indexCount, int logicalIndexCount, JetFormat format)
     throws IOException
   {
     //Start writing the tdef
     writeTablePageHeader(buffer);
     buffer.putInt(totalTableDefSize);  //Length of table def
-    buffer.put((byte) 0x59);  //Unknown
-    buffer.put((byte) 0x06);  //Unknown
-    buffer.putShort((short) 0); //Unknown
+    buffer.putInt(MAGIC_TABLE_NUMBER); // seemingly constant magic value
     buffer.putInt(0);  //Number of rows
     buffer.putInt(0); //Last Autonumber
     buffer.put((byte) 1); // this makes autonumbering work in access
@@ -898,8 +938,8 @@ public class Table
     buffer.putShort((short) columns.size()); //Max columns a row will have
     buffer.putShort(Column.countVariableLength(columns));  //Number of variable columns in table
     buffer.putShort((short) columns.size()); //Number of columns in table
-    buffer.putInt(0);  //Number of indexes in table
-    buffer.putInt(0);  //Number of indexes in table
+    buffer.putInt(logicalIndexCount);  //Number of logical indexes in table
+    buffer.putInt(indexCount);  //Number of indexes in table
     buffer.put((byte) 0); //Usage map row number
     ByteUtil.put3ByteInt(buffer, usageMapPageNumber);  //Usage map page number
     buffer.put((byte) 1); //Free map row number
@@ -927,116 +967,40 @@ public class Table
   }
   
   /**
-   * @param buffer Buffer to write to
-   * @param columns List of Columns to write definitions for
-   */
-  private static void writeColumnDefinitions(
-      ByteBuffer buffer, List<Column> columns, JetFormat format,
-      Charset charset)
-    throws IOException
-  {
-    short columnNumber = (short) 0;
-    short fixedOffset = (short) 0;
-    short variableOffset = (short) 0;
-    // we specifically put the "long variable" values after the normal
-    // variable length values so that we have a better chance of fitting it
-    // all (because "long variable" values can go in separate pages)
-    short longVariableOffset =
-      Column.countNonLongVariableLength(columns);
-    for (Column col : columns) {
-      int position = buffer.position();
-      buffer.put(col.getType().getValue());
-      buffer.put((byte) 0x59);  //Unknown
-      buffer.put((byte) 0x06);  //Unknown
-      buffer.putShort((short) 0); //Unknown
-      buffer.putShort(columnNumber);  //Column Number
-      if (col.isVariableLength()) {
-        if(!col.getType().isLongValue()) {
-          buffer.putShort(variableOffset++);
-        } else {
-          buffer.putShort(longVariableOffset++);
-        }          
-      } else {
-        buffer.putShort((short) 0);
-      }
-      buffer.putShort(columnNumber); //Column Number again
-      if(col.getType().getHasScalePrecision()) {
-        buffer.put(col.getPrecision());  // numeric precision
-        buffer.put(col.getScale());  // numeric scale
-      } else {
-        buffer.put((byte) 0x00); //unused
-        buffer.put((byte) 0x00); //unused
-      }
-      buffer.putShort((short) 0); //Unknown
-      buffer.put(getColumnBitFlags(col)); // misc col flags
-      if (col.isCompressedUnicode()) {  //Compressed
-        buffer.put((byte) 1);
-      } else {
-        buffer.put((byte) 0);
-      }
-      buffer.putInt(0); //Unknown, but always 0.
-      //Offset for fixed length columns
-      if (col.isVariableLength()) {
-        buffer.putShort((short) 0);
-      } else {
-        buffer.putShort(fixedOffset);
-        fixedOffset += col.getType().getFixedSize(col.getLength());
-      }
-      if(!col.getType().isLongValue()) {
-        buffer.putShort(col.getLength()); //Column length
-      } else {
-        buffer.putShort((short)0x0000); // unused
-      }
-      columnNumber++;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
-            buffer, position, format.SIZE_COLUMN_DEF_BLOCK));
-      }
-    }
-    for (Column col : columns) {
-      writeName(buffer, col.getName(), charset);
-    }
-  }
-
-  /**
    * Writes the given name into the given buffer in the format as expected by
    * {@link #readName}.
    */
-  private static void writeName(ByteBuffer buffer, String name,
-                                Charset charset)
+  static void writeName(ByteBuffer buffer, String name, Charset charset)
   {
       ByteBuffer encName = Column.encodeUncompressedText(name, charset);
       buffer.putShort((short) encName.remaining());
       buffer.put(encName);
   }
-
-  /**
-   * Constructs a byte containing the flags for the given column.
-   */
-  private static byte getColumnBitFlags(Column col) {
-    byte flags = Column.UNKNOWN_FLAG_MASK;
-    if(!col.isVariableLength()) {
-      flags |= Column.FIXED_LEN_FLAG_MASK;
-    }
-    if(col.isAutoNumber()) {
-      flags |= col.getAutoNumberGenerator().getColumnFlags();
-    }
-    return flags;
-  }
   
   /**
    * Create the usage map definition page buffer.  The "used pages" map is in
-   * row 0, the "pages with free space" map is in row 1.
+   * row 0, the "pages with free space" map is in row 1.  Index usage maps are
+   * in subsequent rows.
    */
-  private static ByteBuffer createUsageMapDefinitionBuffer(
-      PageChannel pageChannel, JetFormat format)
+  private static int createUsageMapDefinitionBuffer(
+      List<IndexBuilder> indexes, PageChannel pageChannel, JetFormat format)
     throws IOException
   {
+    // 2 table usage maps plus 1 for each index
+    int umapNum = 2 + indexes.size();
+
     int usageMapRowLength = format.OFFSET_USAGE_MAP_START +
       format.USAGE_MAP_TABLE_BYTE_LENGTH;
-    int freeSpace = format.PAGE_INITIAL_FREE_SPACE
-      - (2 * getRowSpaceUsage(usageMapRowLength, format));
+    int freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE
+      - (umapNum * getRowSpaceUsage(usageMapRowLength, format));
     
+    // for now, don't handle writing that many indexes
+    if(freeSpace < 0) {
+      throw new IOException("FIXME attempting to write too many indexes");
+    }
+
+    int umapPageNumber = pageChannel.allocateNewPage();
+
     ByteBuffer rtn = pageChannel.createPageBuffer();
     rtn.put(PageTypes.DATA);
     rtn.put((byte) 0x1);  //Unknown
@@ -1045,7 +1009,7 @@ public class Table
     rtn.putInt(0); //Unknown
     rtn.putShort((short) 2); //Number of records on this page
 
-    // write two rows of usage map definitions
+    // write two rows of usage map definitions for the table
     int rowStart = findRowEnd(rtn, 0, format) - usageMapRowLength;
     for(int i = 0; i < 2; ++i) {
       rtn.putShort(getRowStartOffset(i, format), (short)rowStart);
@@ -1058,8 +1022,34 @@ public class Table
       }
       rowStart -= usageMapRowLength;
     }
-        
-    return rtn;
+
+    if(!indexes.isEmpty()) {
+      
+      for(int i = 0; i < indexes.size(); ++i) {
+        IndexBuilder idx = indexes.get(i);
+
+        // allocate root page for the index
+        int rootPageNumber = pageChannel.allocateNewPage();
+        int umapRowNum = i + 2;
+
+        // stash info for later use
+        idx.setRootPageNumber(rootPageNumber);
+        idx.setUmapRowNumber((byte)umapRowNum);
+        idx.setUmapPageNumber(umapPageNumber);
+
+        // index map definition, including initial root page
+        rtn.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
+        rtn.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+        rtn.putInt(rowStart + 1, rootPageNumber);
+        rtn.put(rowStart + 5, (byte)1);
+
+        rowStart -= usageMapRowLength;
+      }      
+    }
+
+    pageChannel.writePage(rtn, umapPageNumber);
+
+    return umapPageNumber;
   }
     
   /**
@@ -1091,12 +1081,7 @@ public class Table
     _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
     
     for (int i = 0; i < _indexCount; i++) {
-      int uniqueEntryCountOffset =
-        (getFormat().OFFSET_INDEX_DEF_BLOCK +
-         (i * getFormat().SIZE_INDEX_DEFINITION) + 4);
-      int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
-      _indexDatas.add(createIndexData(i, uniqueEntryCount, 
-                                      uniqueEntryCountOffset));
+      _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
     }
     
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
@@ -1132,22 +1117,12 @@ public class Table
 
     // read index column information
     for (int i = 0; i < _indexCount; i++) {
-      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
       _indexDatas.get(i).read(tableBuffer, _columns);
     }
 
     // read logical index info (may be more logical indexes than index datas)
     for (int i = 0; i < _logicalIndexCount; i++) {
-
-      ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
-      int indexNumber = tableBuffer.getInt();
-      int indexDataNumber = tableBuffer.getInt();
-      ByteUtil.forward(tableBuffer, 11);
-      byte indexType = tableBuffer.get();
-      ByteUtil.forward(tableBuffer, getFormat().SKIP_AFTER_INDEX_SLOT); //Skip past Unknown
-
-      IndexData indexData = _indexDatas.get(indexDataNumber);
-      _indexes.add(new Index(indexData, indexNumber, indexType));
+      _indexes.add(new Index(tableBuffer, _indexDatas, getFormat()));
     }
 
     // read logical index names
@@ -1161,20 +1136,6 @@ public class Table
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
       Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
     }
-  }
-
-  /**
-   * Creates an index with the given initial info.
-   */
-  private IndexData createIndexData(int indexDataNumber,
-                                    int uniqueEntryCount, 
-                                    int uniqueEntryCountOffset)
-  {
-    return(_useBigIndex ?
-           new BigIndexData(this, indexDataNumber, uniqueEntryCount,
-                            uniqueEntryCountOffset) :
-           new SimpleIndexData(this, indexDataNumber, uniqueEntryCount, 
-                               uniqueEntryCountOffset));
   }
   
   /**
@@ -1207,15 +1168,6 @@ public class Table
     buffer.get(nameBytes);
     return Column.decodeUncompressedText(nameBytes, 
                                          getDatabase().getCharset());
-  }
-  
-  /**
-   * Skips past a name int the buffer at the current position.  The
-   * expected name format is the same as that for {@link #readName}.
-   */
-  private void skipName(ByteBuffer buffer) {
-	int nameLength = readNameLength(buffer);
-    ByteUtil.forward(buffer, nameLength);
   }
   
   /**
@@ -1571,7 +1523,7 @@ public class Table
     ByteBuffer dataPage = _addRowBufferH.setNewPage(getPageChannel());
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
-    dataPage.putShort((short)getFormat().PAGE_INITIAL_FREE_SPACE); //Free space in this page
+    dataPage.putShort((short)getFormat().DATA_PAGE_INITIAL_FREE_SPACE); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
     dataPage.putInt(0); //Unknown
     dataPage.putShort((short)0); //Number of rows on this page
@@ -1761,7 +1713,8 @@ public class Table
 		rtn.append("\nName: " + _name);
     rtn.append("\nRow count: " + _rowCount);
     rtn.append("\nColumn count: " + _columns.size());
-    rtn.append("\nIndex count: " + _indexCount);
+    rtn.append("\nIndex (data) count: " + _indexCount);
+    rtn.append("\nLogical Index count: " + _logicalIndexCount);
     rtn.append("\nColumns:\n");
     for(Column col : _columns) {
       rtn.append(col);

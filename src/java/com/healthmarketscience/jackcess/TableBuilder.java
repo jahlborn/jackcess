@@ -42,8 +42,11 @@ public class TableBuilder {
   private String _name;
   /** columns for the new table */
   private List<Column> _columns = new ArrayList<Column>();
-  /** whether or not table/columns names are automatically escaped */
+  /** indexes for the new table */
+  private List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
+  /** whether or not table/column/index names are automatically escaped */
   private boolean _escapeIdentifiers;
+  
 
   public TableBuilder(String name) {
     this(name, false);
@@ -77,6 +80,20 @@ public class TableBuilder {
   }
 
   /**
+   * Adds an IndexBuilder to the new table.
+   */
+  public TableBuilder addIndex(IndexBuilder index) {
+    if(_escapeIdentifiers) {
+      index.setName(Database.escapeIdentifier(index.getName()));
+      for(IndexBuilder.Column col : index.getColumns()) {
+        col.setName(Database.escapeIdentifier(col.getName()));
+      }
+    }
+    _indexes.add(index);
+    return this;
+  }
+
+  /**
    * Sets whether or not subsequently added columns will have their names
    * automatically escaped
    */
@@ -101,7 +118,7 @@ public class TableBuilder {
   public Table toTable(Database db)
     throws IOException
   {
-    db.createTable(_name, _columns);
+    db.createTable(_name, _columns, _indexes);
     return db.getTable(_name);
   }
   

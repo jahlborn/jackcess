@@ -38,6 +38,7 @@ import java.util.TreeSet;
 
 import junit.framework.TestCase;
 
+import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import static com.healthmarketscience.jackcess.JetFormatTest.*;
 
@@ -421,6 +422,46 @@ public class IndexTest extends TestCase {
 
       db.close();
     }
+  }
+
+  public void testIndexCreation() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      Table t = new TableBuilder("TestTable")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data", DataType.TEXT))
+        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+                  .addColumns("id").setPrimaryKey())
+        .toTable(db);
+
+      assertEquals(1, t.getIndexes().size());
+      Index idx = t.getIndexes().get(0);
+      
+      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());       
+      assertEquals(1, idx.getColumns().size());
+      assertEquals("id", idx.getColumns().get(0).getName());
+      assertTrue(idx.getColumns().get(0).isAscending());
+      assertTrue(idx.isPrimaryKey());
+      assertTrue(idx.isUnique());
+      assertFalse(idx.shouldIgnoreNulls());
+      assertNull(idx.getReference());
+
+      t.addRow(2, "row2");
+      t.addRow(1, "row1");
+      t.addRow(3, "row3");
+
+      Cursor c = new CursorBuilder(t)
+        .setIndexByName(IndexBuilder.PRIMARY_KEY_NAME).toCursor();
+
+      for(int i = 1; i <= 3; ++i) {
+        Map<String,Object> row = c.getNextRow();
+        assertEquals(i, row.get("id"));
+        assertEquals("row" + i, row.get("data"));
+      }
+      assertFalse(c.moveToNextRow());
+    }    
   }
   
   private void checkIndexColumns(Table table, String... idxInfo)

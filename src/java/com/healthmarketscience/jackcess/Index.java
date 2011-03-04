@@ -28,6 +28,8 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,10 +49,21 @@ public class Index implements Comparable<Index> {
   protected static final Log LOG = LogFactory.getLog(Index.class);
     
   /** index type for primary key indexes */
-  private static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
+  static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
   
   /** index type for foreign key indexes */
-  private static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
+  static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
+
+  /** flag for indicating that updates should cascade in a foreign key index */
+  private static final byte CASCADE_UPDATES_FLAG = (byte)1;
+  /** flag for indicating that deletes should cascade in a foreign key index */
+  private static final byte CASCADE_DELETES_FLAG = (byte)1;
+
+  /** index table type for the "primary" table in a foreign key index */
+  private static final byte PRIMARY_TABLE_TYPE = (byte)1;
+
+  /** indicate an invalid index number for foreign key field */
+  private static final int INVALID_INDEX_NUMBER = -1;
 
   /** the actual data backing this index (more than one index may be backed by
       the same data */
@@ -61,12 +74,42 @@ public class Index implements Comparable<Index> {
   private final byte _indexType;
   /** Index name */
   private String _name;
+  /** foreign key reference info, if any */
+  private final ForeignKeyReference _reference;
   
-  protected Index(IndexData data, int indexNumber, byte indexType) {
-    _data = data;
-    _indexNumber = indexNumber;
-    _indexType = indexType;
-    data.addIndex(this);
+  protected Index(ByteBuffer tableBuffer, List<IndexData> indexDatas,
+                  JetFormat format) 
+    throws IOException
+  {
+
+    ByteUtil.forward(tableBuffer, format.SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
+    _indexNumber = tableBuffer.getInt();
+    int indexDataNumber = tableBuffer.getInt();
+      
+    // read foreign key reference info
+    byte relIndexType = tableBuffer.get();
+    int relIndexNumber = tableBuffer.getInt();
+    int relTablePageNumber = tableBuffer.getInt();
+    byte cascadeUpdatesFlag = tableBuffer.get();
+    byte cascadeDeletesFlag = tableBuffer.get();
+
+    _indexType = tableBuffer.get();
+ 
+    if((_indexType == FOREIGN_KEY_INDEX_TYPE) && 
+       (relIndexNumber != INVALID_INDEX_NUMBER)) {
+      _reference = new ForeignKeyReference(
+          relIndexType, relIndexNumber, relTablePageNumber,
+          (cascadeUpdatesFlag == CASCADE_UPDATES_FLAG),
+          (cascadeDeletesFlag == CASCADE_DELETES_FLAG));
+    } else {
+      _reference = null;
+    }
+
+    ByteUtil.forward(tableBuffer, format.SKIP_AFTER_INDEX_SLOT); //Skip past Unknown
+
+    _data = indexDatas.get(indexDataNumber);
+
+    _data.addIndex(this);
   }
 
   public IndexData getIndexData() {
@@ -115,6 +158,10 @@ public class Index implements Comparable<Index> {
 
   public boolean isForeignKey() {
     return _indexType == FOREIGN_KEY_INDEX_TYPE;
+  }
+
+  public ForeignKeyReference getReference() {
+    return _reference;
   }
 
   /**
@@ -271,10 +318,14 @@ public class Index implements Comparable<Index> {
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: (" + getTable().getName() + ") " + _name);
-    rtn.append("\n\tNumber: " + _indexNumber);
-    rtn.append("\n\tIs Primary Key: " + isPrimaryKey());
-    rtn.append("\n\tIs Foreign Key: " + isForeignKey());
+    rtn.append("\tName: (").append(getTable().getName()).append(") ")
+      .append(_name);
+    rtn.append("\n\tNumber: ").append(_indexNumber);
+    rtn.append("\n\tIs Primary Key: ").append(isPrimaryKey());
+    rtn.append("\n\tIs Foreign Key: ").append(isForeignKey());
+    if(_reference != null) {
+      rtn.append("\n\tForeignKeyReference: ").append(_reference);
+    }
     rtn.append(_data.toString());
     rtn.append("\n\n");
     return rtn.toString();
@@ -290,4 +341,91 @@ public class Index implements Comparable<Index> {
     }
   }
 
+  /**
+   * Writes the logical index definitions into a table definition buffer.
+   * @param buffer Buffer to write to
+   * @param indexes List of IndexBuilders to write definitions for
+   */
+  protected static void writeDefinitions(
+      ByteBuffer buffer, List<IndexBuilder> indexes, Charset charset)
+    throws IOException
+  {
+    // write logical index information
+    for(IndexBuilder idx : indexes) {
+      buffer.putInt(Table.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
+      buffer.putInt(idx.getIndexNumber()); // index num
+      buffer.putInt(idx.getIndexDataNumber()); // index data num
+      buffer.put((byte)0); // related table type
+      buffer.putInt(INVALID_INDEX_NUMBER); // related index num
+      buffer.putInt(0); // related table definition page number
+      buffer.put((byte)0); // cascade updates flag
+      buffer.put((byte)0); // cascade deletes flag
+      buffer.put(idx.getFlags()); // index flags
+      buffer.putInt(0); // unknown
+    }
+
+    // write index names
+    for(IndexBuilder idx : indexes) {
+      Table.writeName(buffer, idx.getName(), charset);
+    }
+  }
+
+  /**
+   * Information about a foreign key reference defined in an index (when
+   * referential integrity should be enforced).
+   */
+  public static class ForeignKeyReference
+  {
+    private final byte _tableType;
+    private final int _otherIndexNumber;
+    private final int _otherTablePageNumber;
+    private final boolean _cascadeUpdates;
+    private final boolean _cascadeDeletes;
+    
+    public ForeignKeyReference(
+        byte tableType, int otherIndexNumber, int otherTablePageNumber,
+        boolean cascadeUpdates, boolean cascadeDeletes)
+    {
+      _tableType = tableType;
+      _otherIndexNumber = otherIndexNumber;
+      _otherTablePageNumber = otherTablePageNumber;
+      _cascadeUpdates = cascadeUpdates;
+      _cascadeDeletes = cascadeDeletes;
+    }
+
+    public byte getTableType() {
+      return _tableType;
+    }
+
+    public boolean isPrimaryTable() {
+      return(getTableType() == PRIMARY_TABLE_TYPE);
+    }
+
+    public int getOtherIndexNumber() {
+      return _otherIndexNumber;
+    }
+
+    public int getOtherTablePageNumber() {
+      return _otherTablePageNumber;
+    }
+
+    public boolean isCascadeUpdates() {
+      return _cascadeUpdates;
+    }
+
+    public boolean isCascadeDeletes() {
+      return _cascadeDeletes;
+    }
+
+    @Override
+    public String toString() {
+      return new StringBuilder()
+        .append("\n\t\tOther Index Number: ").append(_otherIndexNumber)
+        .append("\n\t\tOther Table Page Num: ").append(_otherTablePageNumber)
+        .append("\n\t\tIs Primary Table: ").append(isPrimaryTable())
+        .append("\n\t\tIs Cascade Updates: ").append(isCascadeUpdates())
+        .append("\n\t\tIs Cascade Deletes: ").append(isCascadeDeletes())
+        .toString();
+    }
+  }
 }

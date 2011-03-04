@@ -45,6 +45,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.EnumSet;
@@ -942,6 +943,19 @@ public class Database
   public void createTable(String name, List<Column> columns)
     throws IOException
   {
+    createTable(name, columns, null);
+  }
+
+  /**
+   * Create a new table in this database
+   * @param name Name of the table to create
+   * @param columns List of Columns in the table
+   * @param indexes List of IndexBuilders describing indexes for the table
+   */
+  public void createTable(String name, List<Column> columns,
+                          List<IndexBuilder> indexes)
+    throws IOException
+  {
     validateIdentifierName(name, _format.MAX_TABLE_NAME_LENGTH, "table");
     
     if(getTable(name) != null) {
@@ -980,10 +994,26 @@ public class Database
         }
       }
     }
+
+    if(indexes == null) {
+      indexes = Collections.emptyList();
+    }
+    if(!indexes.isEmpty()) {
+      // now, validate the indexes
+      Set<String> idxNames = new HashSet<String>();
+      for(IndexBuilder index : indexes) {
+        index.validate(colNames);
+        if(!idxNames.add(index.getName().toUpperCase())) {
+          throw new IllegalArgumentException("duplicate index name: " +
+                                             index.getName());
+        }
+      }
+    }
     
     //Write the tdef page to disk.
-    int tdefPageNumber = Table.writeTableDefinition(columns, _pageChannel,
-                                                    _format, getCharset());
+    int tdefPageNumber = Table.writeTableDefinition(columns, indexes,
+                                                    _pageChannel, _format,
+                                                    getCharset());
     
     //Add this table to our internal list.
     addTable(name, Integer.valueOf(tdefPageNumber));
