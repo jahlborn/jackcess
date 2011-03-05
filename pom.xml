@@ -192,7 +192,7 @@
   <distributionManagement>
     <site>
       <id>jackcess-build-site</id>
-      <url>scp://shell.sourceforge.net/home/groups/j/ja/jackcess/htdocs</url>
+      <url>scp://shell.sourceforge.net/home/project-web/jackcess/htdocs</url>
     </site>    
   </distributionManagement>
   <properties>
