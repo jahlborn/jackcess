@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.3" date="TBD">
+    <release version="1.2.3" date="2011-03-05">
       <action dev="jahlborn" type="fix" issue="3181334">
         Add support for writing all fixed length column types into variable
         length fields.
