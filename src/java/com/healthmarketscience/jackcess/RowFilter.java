@@ -70,7 +70,7 @@ public abstract class RowFilter
    * 
    * @param rowPattern Map from column names to the values to be matched.
    *                   A table row will match the target if
-   *                   {@code ObjectUtil.equals(rowPattern.get(s), row.get(s))}
+   *                   {@code ObjectUtils.equals(rowPattern.get(s), row.get(s))}
    *                   for all column names in the pattern map.
    * @return a filter which matches table rows which match the values in the
    *         row pattern
@@ -97,7 +97,7 @@ public abstract class RowFilter
    * @param columnPattern column to be matched
    * @param valuePattern value to be matched.
    *                     A table row will match the target if
-   *                     {@code ObjectUtil.equals(valuePattern, row.get(columnPattern.getName()))}.
+   *                     {@code ObjectUtils.equals(valuePattern, row.get(columnPattern.getName()))}.
    * @return a filter which matches table rows which match the value in the
    *         row pattern
    */
