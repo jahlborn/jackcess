@@ -53,6 +53,10 @@ public class QueryFormat
   public static final int DATA_DEF_QUERY_OBJECT_FLAG = 96;
   public static final int PASSTHROUGH_QUERY_OBJECT_FLAG = 112;
   public static final int UNION_QUERY_OBJECT_FLAG = 128;
+  // dbQSPTBulk = 144
+  // dbQCompound = 160
+  // dbQProcedure = 224
+  // dbQAction = 240
 
   public static final String COL_ATTRIBUTE = "Attribute";
   public static final String COL_EXPRESSION = "Expression";

@@ -391,6 +391,10 @@ public enum DataType {
     return toValidRange(precision, getMinPrecision(), getMaxPrecision());
   }
 
+  public boolean isTextual() {
+    return ((this == TEXT) || (this == MEMO));
+  }
+
   private static int toValidRange(int value, int minValue, int maxValue) {
     return((value > maxValue) ? maxValue :
            ((value < minValue) ? minValue : value));
