@@ -41,7 +41,7 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {
-    if(!isTextual(table.getColumn(columnName))) {
+    if(!table.getColumn(columnName).getType().isTextual()) {
       // use simple equality
       return SimpleColumnMatcher.INSTANCE.matches(table, columnName, 
                                                   value1, value2);
@@ -59,12 +59,6 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
       throw new IllegalStateException("Could not read column " + columnName 
                                       + " value", e);
     }
-  }
-
-  private static boolean isTextual(Column col)
-  {
-    DataType type = col.getType();
-    return((type == DataType.TEXT) || (type == DataType.MEMO));
   }
 
 }

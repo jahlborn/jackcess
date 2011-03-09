@@ -28,12 +28,12 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.lang.ObjectUtils;
 
 /**
  * Builder style class for constructing a Cursor.  By default, a cursor is
@@ -114,10 +114,30 @@ public class CursorBuilder {
    * Sets an index to use for the cursor by searching the table for an index
    * with exactly the given columns.
    * @throws IllegalArgumentException if no index can be found on the table
-   *         with the given name
+   *         with the given columns
+   */
+  public CursorBuilder setIndexByColumnNames(String... columnNames) {
+    return setIndexByColumns(Arrays.asList(columnNames));
+  }
+
+  /**
+   * Sets an index to use for the cursor by searching the table for an index
+   * with exactly the given columns.
+   * @throws IllegalArgumentException if no index can be found on the table
+   *         with the given columns
    */
   public CursorBuilder setIndexByColumns(Column... columns) {
-    List<Column> searchColumns = Arrays.asList(columns);
+    List<String> colNames = new ArrayList<String>();
+    for(Column col : columns) {
+      colNames.add(col.getName());
+    }
+    return setIndexByColumns(colNames);
+  }
+
+  /**
+   * Searches for an index with the given column names.
+   */
+  private CursorBuilder setIndexByColumns(List<String> searchColumns) {
     boolean found = false;
     for(Index index : _table.getIndexes()) {
       
@@ -125,13 +145,14 @@ public class CursorBuilder {
       if(indexColumns.size() != searchColumns.size()) {
         continue;
       }
-      Iterator<Column> sIter = searchColumns.iterator();
+      Iterator<String> sIter = searchColumns.iterator();
       Iterator<IndexData.ColumnDescriptor> iIter = indexColumns.iterator();
       boolean matches = true;
       while(sIter.hasNext()) {
-        Column sCol = sIter.next();
-        IndexData.ColumnDescriptor iCol = iIter.next();
-        if(!ObjectUtils.equals(sCol.getName(), iCol.getName())) {
+        String sColName = sIter.next();
+        String iColName = iIter.next().getName();
+        if((sColName != iColName) &&
+           ((sColName == null) || !sColName.equalsIgnoreCase(iColName))) {
           matches = false;
           break;
         }
@@ -274,4 +295,14 @@ public class CursorBuilder {
     return cursor;
   }
   
+  /**
+   * Returns a new index cursor for the table, constructed to the given
+   * specifications.
+   */
+  public IndexCursor toIndexCursor()
+    throws IOException
+  {
+    return (IndexCursor)toCursor();
+  }
+
 }

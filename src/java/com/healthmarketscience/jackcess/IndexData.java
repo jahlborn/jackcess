@@ -62,6 +62,14 @@ public abstract class IndexData {
   /** special entry which is greater than any other entry */
   public static final Entry LAST_ENTRY =
     createSpecialEntry(RowId.LAST_ROW_ID);
+
+  /** special object which will always be greater than any other value, when
+      searching for an index entry range in a multi-value index */
+  public static final Object MAX_VALUE = new Object();
+
+  /** special object which will always be greater than any other value, when
+      searching for an index entry range in a multi-value index */
+  public static final Object MIN_VALUE = new Object();
   
   protected static final int INVALID_INDEX_PAGE_NUMBER = 0;          
   
@@ -1078,6 +1086,17 @@ public abstract class IndexData {
         continue;
       }
 
+      if(value == MIN_VALUE) {
+        // null is the "least" value
+        _entryBuffer.write(getNullEntryFlag(col.isAscending()));
+        continue;
+      }
+      if(value == MAX_VALUE) {
+        // the opposite null is the "greatest" value
+        _entryBuffer.write(getNullEntryFlag(!col.isAscending()));
+        continue;
+      }
+
       col.writeValue(value, _entryBuffer);
     }
     
@@ -1437,6 +1456,11 @@ public abstract class IndexData {
     switch(col.getType()) {
     case TEXT:
     case MEMO:
+      if(col.getTextSortOrder() != Column.GENERAL_SORT_ORDER) {
+        // unsupported sort order
+        setReadOnly();
+        return new ReadOnlyColumnDescriptor(col, flags);
+      }
       return new TextColumnDescriptor(col, flags);
     case INT:
     case LONG:

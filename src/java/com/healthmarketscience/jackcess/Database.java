@@ -35,6 +35,8 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -52,6 +54,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -221,8 +224,21 @@ public class Database
   /** System catalog column name of the properties column */
   private static final String CAT_COL_PROPS = "LvProp";
 
+  /** top-level parentid for a database */
+  private static final int DB_PARENT_ID = 0xF000000;
+
   /** the maximum size of any of the included "empty db" resources */
-  private static final long MAX_EMPTYDB_SIZE = 320000L;
+  private static final long MAX_EMPTYDB_SIZE = 330000L;
+
+  /** this object is a "system" object */
+  static final int SYSTEM_OBJECT_FLAG = 0x80000000;
+  /** this object is another type of "system" object */
+  static final int ALT_SYSTEM_OBJECT_FLAG = 0x02;
+  /** this object is hidden */
+  static final int HIDDEN_OBJECT_FLAG = 0x08;
+  /** all flags which seem to indicate some type of system object */
+  static final int SYSTEM_OBJECT_FLAGS = 
+    SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
   
   public static enum FileFormat {
 
@@ -256,8 +272,6 @@ public class Database
 
   /** Prefix for column or table names that are reserved words */
   private static final String ESCAPE_PREFIX = "x";
-  /** Prefix that flags system tables */
-  private static final String PREFIX_SYSTEM = "MSys";
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
   /** Name of the table that contains system access control entries */
@@ -273,14 +287,17 @@ public class Database
   /** System object type for query definitions */
   private static final Short TYPE_QUERY = (short) 5;
 
-  /** the columns to read when reading system catalog initially */
+  /** max number of table lookups to cache */
+  private static final int MAX_CACHED_LOOKUP_TABLES = 50;
+
+  /** the columns to read when reading system catalog normally */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID));
-  
-  /** the columns to read when finding queries */
-  private static Collection<String> SYSTEM_CATALOG_QUERY_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
                                       CAT_COL_FLAGS));
+  /** the columns to read when finding table names */
+  private static Collection<String> SYSTEM_CATALOG_TABLE_NAME_COLUMNS =
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
+                                      CAT_COL_FLAGS, CAT_COL_PARENT_ID));
   
   
   /**
@@ -331,17 +348,26 @@ public class Database
   /** Format that the containing database is in */
   private final JetFormat _format;
   /**
-   * Map of UPPERCASE table names to page numbers containing their definition
-   * and their stored table name.
+   * Cache map of UPPERCASE table names to page numbers containing their
+   * definition and their stored table name (max size
+   * MAX_CACHED_LOOKUP_TABLES).
    */
-  private Map<String, TableInfo> _tableLookup =
-    new HashMap<String, TableInfo>();
+  private final Map<String, TableInfo> _tableLookup =
+    new LinkedHashMap<String, TableInfo>() {
+    private static final long serialVersionUID = 0L;
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, TableInfo> e) {
+      return(size() > MAX_CACHED_LOOKUP_TABLES);
+    }
+  };
   /** set of table names as stored in the mdb file, created on demand */
   private Set<String> _tableNames;
   /** Reads and writes database pages */
   private final PageChannel _pageChannel;
   /** System catalog table */
   private Table _systemCatalog;
+  /** utility table finder */
+  private TableFinder _tableFinder;
   /** System access control entries table */
   private Table _accessControlEntries;
   /** System relationships table (initialized on first use) */
@@ -362,6 +388,8 @@ public class Database
   private TimeZone _timeZone;
   /** the ordering used for table columns */
   private Table.ColumnOrder _columnOrder;
+  /** cache of in-use tables */
+  private final TableCache _tableCache = new TableCache();
   
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -851,33 +879,32 @@ public class Database
    */
   private void readSystemCatalog() throws IOException {
     _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
-                               defaultUseBigIndex());
-    for(Map<String,Object> row :
-          Cursor.createCursor(_systemCatalog).iterable(
-              SYSTEM_CATALOG_COLUMNS))
-    {
-      String name = (String) row.get(CAT_COL_NAME);
-      if (name != null && TYPE_TABLE.equals(row.get(CAT_COL_TYPE))) {
-        if (!name.startsWith(PREFIX_SYSTEM)) {
-          addTable((String) row.get(CAT_COL_NAME), (Integer) row.get(CAT_COL_ID));
-        } else if(TABLE_SYSTEM_ACES.equals(name)) {
-          int pageNumber = (Integer)row.get(CAT_COL_ID);
-          _accessControlEntries = readTable(TABLE_SYSTEM_ACES, pageNumber,
-                                            defaultUseBigIndex());
-        }
-      } else if (SYSTEM_OBJECT_NAME_TABLES.equals(name)) {
-        _tableParentId = (Integer) row.get(CAT_COL_ID);
-      }
+                               SYSTEM_OBJECT_FLAGS, defaultUseBigIndex());
+
+    try {
+      _tableFinder = new DefaultTableFinder(
+          new CursorBuilder(_systemCatalog)
+            .setIndexByColumnNames(CAT_COL_PARENT_ID, CAT_COL_NAME)
+            .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
+            .toIndexCursor());
+    } catch(IllegalArgumentException e) {
+      LOG.info("Could not find expected index on table " + 
+               _systemCatalog.getName());
+      // use table scan instead
+      _tableFinder = new FallbackTableFinder(
+          new CursorBuilder(_systemCatalog)
+            .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
+            .toCursor());
     }
 
-    // check for required system values
-    if(_accessControlEntries == null) {
-      throw new IOException("Did not find required " + TABLE_SYSTEM_ACES +
-                            " table");
-    }
-    if(_tableParentId == null) {
+    _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+                                               SYSTEM_OBJECT_NAME_TABLES);
+
+    if(_tableParentId == null) {  
       throw new IOException("Did not find required parent table id");
     }
+
+    _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Finished reading system catalog.  Tables: " +
@@ -888,12 +915,12 @@ public class Database
   /**
    * @return The names of all of the user tables (String)
    */
-  public Set<String> getTableNames() {
+  public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
-      _tableNames = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-      for(TableInfo tableInfo : _tableLookup.values()) {
-        _tableNames.add(tableInfo.tableName);
-      }
+      Set<String> tableNames =
+        new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+      _tableFinder.getTableNames(tableNames);
+      _tableNames = tableNames;
     }
     return _tableNames;
   }
@@ -925,14 +952,32 @@ public class Database
    * @return The table, or null if it doesn't exist
    */
   public Table getTable(String name, boolean useBigIndex) throws IOException {
+    return getTable(name, false, useBigIndex);
+  }
 
+  /**
+   * @param name Table name
+   * @param includeSystemTables whether to consider returning a system table
+   * @param useBigIndex whether or not "big index support" should be enabled
+   *                    for the table (this value will override any other
+   *                    settings)
+   * @return The table, or null if it doesn't exist
+   */
+  private Table getTable(String name, boolean includeSystemTables, 
+                         boolean useBigIndex) 
+    throws IOException 
+  {
     TableInfo tableInfo = lookupTable(name);
     
     if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
     }
+    if(!includeSystemTables && isSystemObject(tableInfo.flags)) {
+      return null;
+    }
 
-    return readTable(tableInfo.tableName, tableInfo.pageNumber, useBigIndex);
+    return readTable(tableInfo.tableName, tableInfo.pageNumber,
+                     tableInfo.flags, useBigIndex);
   }
   
   /**
@@ -1081,8 +1126,7 @@ public class Database
     Map<Integer,List<Query.Row>> queryRowMap = 
       new HashMap<Integer,List<Query.Row>>();
     for(Map<String,Object> row :
-          Cursor.createCursor(_systemCatalog).iterable(
-              SYSTEM_CATALOG_QUERY_COLUMNS))
+          Cursor.createCursor(_systemCatalog).iterable(SYSTEM_CATALOG_COLUMNS))
     {
       String name = (String) row.get(CAT_COL_NAME);
       if (name != null && TYPE_QUERY.equals(row.get(CAT_COL_TYPE))) {
@@ -1132,20 +1176,7 @@ public class Database
   public Table getSystemTable(String tableName)
     throws IOException
   {
-    for(Map<String,Object> row :
-          Cursor.createCursor(_systemCatalog).iterable(
-              SYSTEM_CATALOG_COLUMNS))
-    {
-      String name = (String) row.get(CAT_COL_NAME);
-      if (tableName.equalsIgnoreCase(name) && 
-          TYPE_TABLE.equals(row.get(CAT_COL_TYPE))) {
-        Integer pageNumber = (Integer) row.get(CAT_COL_ID);
-        if(pageNumber != null) {
-          return readTable(name, pageNumber, defaultUseBigIndex());
-        }
-      }
-    }
-    return null;
+    return getTable(tableName, true, defaultUseBigIndex());
   }
 
   /**
@@ -1335,16 +1366,25 @@ public class Database
   /**
    * Reads a table with the given name from the given pageNumber.
    */
-  private Table readTable(String name, int pageNumber, boolean useBigIndex)
+  private Table readTable(String name, int pageNumber, int flags,
+                          boolean useBigIndex)
     throws IOException
   {
+    // first, check for existing table
+    Table table = _tableCache.get(pageNumber);
+    if(table != null) {
+      return table;
+    }
+
+    // need to load table from db
     _pageChannel.readPage(_buffer, pageNumber);
     byte pageType = _buffer.get(0);
     if (pageType != PageTypes.TABLE_DEF) {
       throw new IOException("Looking for " + name + " at page " + pageNumber +
                             ", but page type is " + pageType);
     }
-    return new Table(this, _buffer, pageNumber, name, useBigIndex);
+    return _tableCache.put(
+        new Table(this, _buffer, pageNumber, name, flags, useBigIndex));
   }
 
   /**
@@ -1532,7 +1572,7 @@ public class Database
   private void addTable(String tableName, Integer pageNumber)
   {
     _tableLookup.put(toLookupTableName(tableName),
-                     new TableInfo(pageNumber, tableName));
+                     new TableInfo(pageNumber, tableName, 0));
     // clear this, will be created next time needed
     _tableNames = null;
   }
@@ -1540,8 +1580,22 @@ public class Database
   /**
    * @return the tableInfo of the given table, if any
    */
-  private TableInfo lookupTable(String tableName) {
-    return _tableLookup.get(toLookupTableName(tableName));
+  private TableInfo lookupTable(String tableName) throws IOException {
+
+    String lookupTableName = toLookupTableName(tableName);
+    TableInfo tableInfo = _tableLookup.get(lookupTableName);
+    if(tableInfo != null) {
+      return tableInfo;
+    }
+
+    tableInfo = _tableFinder.lookupTable(tableName);
+
+    if(tableInfo != null) {
+      // cache for later
+      _tableLookup.put(lookupTableName, tableInfo);
+    }
+
+    return tableInfo;
   }
 
   /**
@@ -1549,6 +1603,14 @@ public class Database
    */
   private String toLookupTableName(String tableName) {
     return ((tableName != null) ? tableName.toUpperCase() : null);
+  }
+
+  /**
+   * @return {@code true} if the given flags indicate that an object is some
+   *         sort of system object, {@code false} otherwise.
+   */
+  private static boolean isSystemObject(int flags) {
+    return ((flags & SYSTEM_OBJECT_FLAGS) != 0);
   }
 
   /**
@@ -1679,11 +1741,14 @@ public class Database
   {
     public final Integer pageNumber;
     public final String tableName;
+    public final int flags;
 
     private TableInfo(Integer newPageNumber,
-                      String newTableName) {
+                      String newTableName, 
+                      int newFlags) {
       pageNumber = newPageNumber;
       tableName = newTableName;
+      flags = newFlags;
     }
   }
 
@@ -1695,7 +1760,11 @@ public class Database
     private Iterator<String> _tableNameIter;
 
     private TableIterator() {
-      _tableNameIter = getTableNames().iterator();
+      try {
+        _tableNameIter = getTableNames().iterator();
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      }
     }
 
     public boolean hasNext() {
@@ -1714,6 +1783,217 @@ public class Database
         return getTable(_tableNameIter.next());
       } catch(IOException e) {
         throw new IllegalStateException(e);
+      }
+    }
+  }
+
+  /**
+   * Utility class for handling table lookups.
+   */
+  private abstract class TableFinder
+  {
+    public abstract Integer findObjectId(Integer parentId, String name)
+      throws IOException;
+
+    public abstract TableInfo lookupTable(String tableName)
+      throws IOException;
+    
+    public abstract void getTableNames(Set<String> tableNames) 
+      throws IOException;
+  }
+
+  /**
+   * Normal table lookup handler, using catalog table index.
+   */
+  private final class DefaultTableFinder extends TableFinder
+  {
+    private final IndexCursor _systemCatalogCursor;
+
+    private DefaultTableFinder(IndexCursor systemCatalogCursor) {
+      _systemCatalogCursor = systemCatalogCursor;
+    }
+
+    @Override
+    public Integer findObjectId(Integer parentId, String name) 
+      throws IOException 
+    {
+      if(!_systemCatalogCursor.findRowByEntry(parentId, name)) {  
+        return null;
+      }
+      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      return (Integer)_systemCatalogCursor.getCurrentRowValue(idCol);
+    }
+
+    @Override
+    public TableInfo lookupTable(String tableName) throws IOException {
+
+      if(!_systemCatalogCursor.findRowByEntry(_tableParentId, tableName)) {
+        return null;
+      }
+
+      Map<String,Object> row = _systemCatalogCursor.getCurrentRow(
+          SYSTEM_CATALOG_COLUMNS);
+      Integer pageNumber = (Integer)row.get(CAT_COL_ID);
+      String realName = (String)row.get(CAT_COL_NAME);
+      int flags = (Integer)row.get(CAT_COL_FLAGS);
+      Short type = (Short)row.get(CAT_COL_TYPE);
+
+      if(!TYPE_TABLE.equals(type)) {
+        return null;
+      }
+
+      return new TableInfo(pageNumber, realName, flags);
+    }
+    
+    @Override
+    public void getTableNames(Set<String> tableNames) throws IOException {
+
+      IndexCursor tNameCursor = new CursorBuilder(_systemCatalog)
+        .setIndex(_systemCatalogCursor.getIndex())
+        .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
+        .setEndEntry(_tableParentId, IndexData.MAX_VALUE)
+        .toIndexCursor();
+
+      for(Map<String,Object> row : tNameCursor.iterable(
+              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+
+        String tableName = (String)row.get(CAT_COL_NAME);
+        int flags = (Integer)row.get(CAT_COL_FLAGS);
+        Short type = (Short)row.get(CAT_COL_TYPE);
+
+        if(TYPE_TABLE.equals(type) && !isSystemObject(flags)) {
+          tableNames.add(tableName);
+        }
+      }
+    }
+  }
+  
+  /**
+   * Fallback table lookup handler, using catalog table scans.
+   */
+  private final class FallbackTableFinder extends TableFinder
+  {
+    private final Cursor _systemCatalogCursor;
+
+    private FallbackTableFinder(Cursor systemCatalogCursor) {
+      _systemCatalogCursor = systemCatalogCursor;
+    }
+
+    @Override
+    public Integer findObjectId(Integer parentId, String name) 
+      throws IOException 
+    {
+      Map<String,Object> rowPat = new HashMap<String,Object>();
+      rowPat.put(CAT_COL_PARENT_ID, parentId);  
+      rowPat.put(CAT_COL_NAME, name);
+      if(!_systemCatalogCursor.findRow(rowPat)) {  
+        return null;
+      }
+      
+      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      return (Integer)_systemCatalogCursor.getCurrentRowValue(idCol);
+    }
+
+    @Override
+    public TableInfo lookupTable(String tableName) throws IOException {
+
+      for(Map<String,Object> row : _systemCatalogCursor.iterable(
+              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+
+        Short type = (Short)row.get(CAT_COL_TYPE);
+        if(!TYPE_TABLE.equals(type)) {
+          continue;
+        }
+
+        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
+        if(parentId != _tableParentId) {
+          continue;
+        }
+
+        String realName = (String)row.get(CAT_COL_NAME);
+        if(!tableName.equalsIgnoreCase(realName)) {
+          continue;
+        }
+
+        Integer pageNumber = (Integer)row.get(CAT_COL_ID);
+        int flags = (Integer)row.get(CAT_COL_FLAGS);
+        return new TableInfo(pageNumber, realName, flags);
+      }
+
+      return null;
+    }
+    
+    @Override
+    public void getTableNames(Set<String> tableNames) throws IOException {
+
+      for(Map<String,Object> row : _systemCatalogCursor.iterable(
+              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+
+        String tableName = (String)row.get(CAT_COL_NAME);
+        int flags = (Integer)row.get(CAT_COL_FLAGS);
+        Short type = (Short)row.get(CAT_COL_TYPE);
+        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
+
+        if(parentId != _tableParentId) {
+          // no more tables
+          continue;
+        }
+
+        if(TYPE_TABLE.equals(type) && !isSystemObject(flags)) {
+          tableNames.add(tableName);
+        }
+      }
+    }
+  }
+
+  /**
+   * WeakReference for a Table which holds the table pageNumber (for later
+   * cache purging).
+   */
+  private static final class WeakTableReference extends WeakReference<Table>
+  {
+    private final Integer _pageNumber;
+
+    private WeakTableReference(Integer pageNumber, Table table, 
+                               ReferenceQueue<Table> queue) {
+      super(table, queue);
+      _pageNumber = pageNumber;
+    }
+
+    public Integer getPageNumber() {
+      return _pageNumber;
+    }
+  }
+
+  /**
+   * Cache of currently in-use tables, allows re-use of existing tables.
+   */
+  private static final class TableCache
+  {
+    private final Map<Integer,WeakTableReference> _tables = 
+      new HashMap<Integer,WeakTableReference>();
+    private final ReferenceQueue<Table> _queue = new ReferenceQueue<Table>();
+
+    public Table get(Integer pageNumber) {
+      WeakTableReference ref = _tables.get(pageNumber);
+      return ((ref != null) ? ref.get() : null);
+    }
+
+    public Table put(Table table) {
+      purgeOldRefs();
+  
+      Integer pageNumber = table.getTableDefPageNumber();
+      WeakTableReference ref = new WeakTableReference(
+          pageNumber, table, _queue);
+      _tables.put(pageNumber, ref);
+
+      return table;
+    }
+
+    private void purgeOldRefs() {
+      WeakTableReference oldRef = null;
+      while((oldRef = (WeakTableReference)_queue.poll()) != null) {
+        _tables.remove(oldRef.getPageNumber());
       }
     }
   }

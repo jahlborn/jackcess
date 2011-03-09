@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -84,11 +83,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /** the last (exclusive) row id for this cursor */
   private final Position _lastPos;
   /** the previous row */
-  private Position _prevPos;
+  protected Position _prevPos;
   /** the current row */
-  private Position _curPos;
+  protected Position _curPos;
   /** ColumnMatcher to be used when matching column values */
-  private ColumnMatcher _columnMatcher = SimpleColumnMatcher.INSTANCE;
+  protected ColumnMatcher _columnMatcher = SimpleColumnMatcher.INSTANCE;
 
   protected Cursor(Id id, Table table, Position firstPos, Position lastPos) {
     _id = id;
@@ -122,7 +121,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   public static Cursor createIndexCursor(Table table, Index index)
     throws IOException
   {
-    return createIndexCursor(table, index, null, null);
+    return IndexCursor.createCursor(table, index);
   }
   
   /**
@@ -145,7 +144,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
                                          Object[] startRow, Object[] endRow)
     throws IOException
   {
-    return createIndexCursor(table, index, startRow, true, endRow, true);
+    return IndexCursor.createCursor(table, index, startRow, endRow);
   }
   
   /**
@@ -173,18 +172,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
                                          boolean endInclusive)
     throws IOException
   {
-    if(table != index.getTable()) {
-      throw new IllegalArgumentException(
-          "Given index is not for given table: " + index + ", " + table);
-    }
-    if(!table.getFormat().INDEXES_SUPPORTED) {
-      throw new IllegalArgumentException(
-          "JetFormat " + table.getFormat() + 
-          " does not currently support index lookups");
-    }
-    return new IndexCursor(table, index,
-                           index.cursor(startRow, startInclusive,
-                                        endRow, endInclusive));
+    return IndexCursor.createCursor(table, index, startRow, startInclusive,
+                                    endRow, endInclusive);
   }
 
   /**
@@ -293,10 +282,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return _table;
   }
 
-  public Index getIndex() {
-    return null;
-  }
-  
   public JetFormat getFormat() {
     return getTable().getFormat();
   }
@@ -334,9 +319,16 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   public void setColumnMatcher(ColumnMatcher columnMatcher) {
     if(columnMatcher == null) {
-      columnMatcher = SimpleColumnMatcher.INSTANCE;
+      columnMatcher = getDefaultColumnMatcher();
     }
     _columnMatcher = columnMatcher;
+  }
+
+  /**
+   * Returns the default ColumnMatcher for this Cursor.
+   */
+  protected ColumnMatcher getDefaultColumnMatcher() {
+    return SimpleColumnMatcher.INSTANCE;
   }
 
   /**
@@ -1182,213 +1174,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     
   }
 
-  /**
-   * Indexed cursor.
-   */
-  private static final class IndexCursor extends Cursor
-  {
-    /** IndexDirHandler for forward traversal */
-    private final IndexDirHandler _forwardDirHandler =
-      new ForwardIndexDirHandler();
-    /** IndexDirHandler for backward traversal */
-    private final IndexDirHandler _reverseDirHandler =
-      new ReverseIndexDirHandler();
-    /** logical index which this cursor is using */
-    private final Index _index;
-    /** Cursor over the entries of the relvant index */
-    private final IndexData.EntryCursor _entryCursor;
-
-    private IndexCursor(Table table, Index index,
-                        IndexData.EntryCursor entryCursor)
-      throws IOException
-    {
-      super(new Id(table, index), table,
-            new IndexPosition(entryCursor.getFirstEntry()),
-            new IndexPosition(entryCursor.getLastEntry()));
-      _index = index;
-      _index.initialize();
-      _entryCursor = entryCursor;
-    }
-
-    @Override
-    public Index getIndex() {
-      return _index;
-    }
-    
-    @Override
-    protected IndexDirHandler getDirHandler(boolean moveForward) {
-      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
-    }
-    
-    @Override
-    protected boolean isUpToDate() {
-      return(super.isUpToDate() && _entryCursor.isUpToDate());
-    }
-    
-    @Override
-    protected void reset(boolean moveForward) {
-      _entryCursor.reset(moveForward);
-      super.reset(moveForward);
-    }
-
-    @Override
-    protected void restorePositionImpl(Position curPos, Position prevPos)
-      throws IOException
-    {
-      if(!(curPos instanceof IndexPosition) ||
-         !(prevPos instanceof IndexPosition)) {
-        throw new IllegalArgumentException(
-            "Restored positions must be index positions");
-      }
-      _entryCursor.restorePosition(((IndexPosition)curPos).getEntry(),
-                                   ((IndexPosition)prevPos).getEntry());
-      super.restorePositionImpl(curPos, prevPos);
-    }
-
-    @Override
-    protected boolean findRowImpl(Column columnPattern, Object valuePattern)
-      throws IOException
-    {
-      Object[] rowValues = _entryCursor.getIndexData().constructIndexRow(
-          columnPattern.getName(), valuePattern);
-
-      if(rowValues == null) {
-        // bummer, use the default table scan
-        return super.findRowImpl(columnPattern, valuePattern);
-      }
-      
-      // sweet, we can use our index
-      _entryCursor.beforeEntry(rowValues);
-      IndexData.Entry startEntry = _entryCursor.getNextEntry();
-      if(!startEntry.getRowId().isValid()) {
-        // at end of index, no potential matches
-        return false;
-      }
-
-      // either we found a row with the given value, or none exist in the
-      // table
-      restorePosition(new IndexPosition(startEntry));
-      return currentRowMatches(columnPattern, valuePattern);
-    }
-
-    @Override
-    protected boolean findRowImpl(Map<String,Object> rowPattern)
-      throws IOException
-    {
-      IndexData indexData = _entryCursor.getIndexData();
-      Object[] rowValues = indexData.constructIndexRow(rowPattern);
-
-      if(rowValues == null) {
-        // bummer, use the default table scan
-        return super.findRowImpl(rowPattern);
-      }
-      
-      // sweet, we can use our index
-      _entryCursor.beforeEntry(rowValues);
-      IndexData.Entry startEntry = _entryCursor.getNextEntry();
-      if(!startEntry.getRowId().isValid()) {
-        // at end of index, no potential matches
-        return false;
-      }
-      restorePosition(new IndexPosition(startEntry));
-
-      Map<String,Object> indexRowPattern = null;
-      if(rowPattern.size() == indexData.getColumns().size()) {
-        // the rowPattern matches our index columns exactly, so we can
-        // streamline our testing below
-        indexRowPattern = rowPattern;
-      } else {
-        // the rowPattern has more columns than just the index, so we need to
-        // do more work when testing below
-        indexRowPattern =
-          new LinkedHashMap<String,Object>();
-        for(IndexData.ColumnDescriptor idxCol : indexData.getColumns()) {
-          indexRowPattern.put(idxCol.getName(),
-                              rowValues[idxCol.getColumnIndex()]);
-        }
-      }
-      
-      // there may be multiple columns which fit the pattern subset used by
-      // the index, so we need to keep checking until our index values no
-      // longer match
-      do {
-
-        if(!currentRowMatches(indexRowPattern)) {
-          // there are no more rows which could possibly match
-          break;
-        }
-
-        // note, if rowPattern == indexRowPattern, no need to do an extra
-        // comparison with the current row
-        if((rowPattern == indexRowPattern) || currentRowMatches(rowPattern)) {
-          // found it!
-          return true;
-        }
-
-      } while(moveToNextRow());
-        
-      // none of the potential rows matched
-      return false;
-    }
-    
-    @Override
-    protected Position findAnotherPosition(RowState rowState, Position curPos,
-                                           boolean moveForward)
-      throws IOException
-    {
-      IndexDirHandler handler = getDirHandler(moveForward);
-      IndexPosition endPos = (IndexPosition)handler.getEndPosition();
-      IndexData.Entry entry = handler.getAnotherEntry();
-      return ((!entry.equals(endPos.getEntry())) ?
-              new IndexPosition(entry) : endPos);
-    }
-
-    /**
-     * Handles moving the table index cursor in a given direction.  Separates
-     * cursor logic from value storage.
-     */
-    private abstract class IndexDirHandler extends DirHandler {
-      public abstract IndexData.Entry getAnotherEntry()
-        throws IOException;
-    }
-    
-    /**
-     * Handles moving the table index cursor forward.
-     */
-    private final class ForwardIndexDirHandler extends IndexDirHandler {
-      @Override
-      public Position getBeginningPosition() {
-        return getFirstPosition();
-      }
-      @Override
-      public Position getEndPosition() {
-        return getLastPosition();
-      }
-      @Override
-      public IndexData.Entry getAnotherEntry() throws IOException {
-        return _entryCursor.getNextEntry();
-      }
-    }
-    
-    /**
-     * Handles moving the table index cursor backward.
-     */
-    private final class ReverseIndexDirHandler extends IndexDirHandler {
-      @Override
-      public Position getBeginningPosition() {
-        return getLastPosition();
-      }
-      @Override
-      public Position getEndPosition() {
-        return getFirstPosition();
-      }
-      @Override
-      public IndexData.Entry getAnotherEntry() throws IOException {
-        return _entryCursor.getPreviousEntry();
-      }
-    }    
-    
-  }
 
   /**
    * Identifier for a cursor.  Will be equal to any other cursor of the same
@@ -1400,7 +1185,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     private final String _tableName;
     private final String _indexName;
 
-    private Id(Table table, Index index) {
+    protected Id(Table table, Index index) {
       _tableName = table.getName();
       _indexName = ((index != null) ? index.getName() : null);
     }
@@ -1515,37 +1300,6 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     @Override
     public String toString() {
       return "RowId = " + getRowId();
-    }
-  }
-  
-  /**
-   * Value object which maintains the current position of an IndexCursor.
-   */
-  private static final class IndexPosition extends Position
-  {
-    private final IndexData.Entry _entry;
-    
-    private IndexPosition(IndexData.Entry entry) {
-      _entry = entry;
-    }
-
-    @Override
-    public RowId getRowId() {
-      return getEntry().getRowId();
-    }
-    
-    public IndexData.Entry getEntry() {
-      return _entry;
-    }
-    
-    @Override
-    protected boolean equalsImpl(Object o) {
-      return getEntry().equals(((IndexPosition)o).getEntry());
-    }
-
-    @Override
-    public String toString() {
-      return "Entry = " + getEntry();
     }
   }
   

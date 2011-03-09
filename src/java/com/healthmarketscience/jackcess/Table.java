@@ -104,6 +104,8 @@ public class Table
 
   /** owning database */
   private final Database _database;
+  /** additional table flags from the catalog entry */
+  private int _flags;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
   private byte _tableType;
   /** Number of actual indexes on the table */
@@ -186,12 +188,13 @@ public class Table
    *                    for the table
    */
   protected Table(Database database, ByteBuffer tableBuffer,
-                  int pageNumber, String name, boolean useBigIndex)
+                  int pageNumber, String name, int flags, boolean useBigIndex)
   throws IOException
   {
     _database = database;
     _tableDefPageNumber = pageNumber;
     _name = name;
+    _flags = flags;
     _useBigIndex = useBigIndex; 
     int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
     ByteBuffer nextPageBuffer = null;
@@ -220,6 +223,13 @@ public class Table
    */
   public String getName() {
     return _name;
+  }
+
+  /**
+   * Whether or not this table has been marked as hidden.
+   */
+  public boolean isHidden() {
+    return((_flags & Database.HIDDEN_OBJECT_FLAG) != 0);
   }
 
   public boolean doUseBigIndex() {

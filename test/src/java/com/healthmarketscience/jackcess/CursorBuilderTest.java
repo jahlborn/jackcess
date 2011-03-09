@@ -44,7 +44,10 @@ public class CursorBuilderTest extends TestCase {
       Cursor expected, Cursor found)
   {
     assertSame(expected.getTable(), found.getTable());
-    assertSame(expected.getIndex(), found.getIndex());
+    if(expected instanceof IndexCursor) {
+      assertSame(((IndexCursor)expected).getIndex(), 
+                 ((IndexCursor)found).getIndex());
+    }
 
     assertEquals(expected.getSavepoint().getCurrentPosition(),
                  found.getSavepoint().getCurrentPosition());

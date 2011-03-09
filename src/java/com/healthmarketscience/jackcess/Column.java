@@ -117,6 +117,9 @@ public class Column implements Comparable<Column> {
   /** mask for the unknown bit */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
 
+  /** the "general" text sort order */
+  public static final short GENERAL_SORT_ORDER = 1033;
+
   /** pattern matching textual guid strings (allows for optional surrounding
       '{' and '}') */
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]?([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]?\\s*");
@@ -153,6 +156,8 @@ public class Column implements Comparable<Column> {
   private int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
   private int _varLenTableIndex;
+  /** the collating sort order for a text field */
+  private short _textSortOrder = GENERAL_SORT_ORDER;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
   
@@ -194,6 +199,14 @@ public class Column implements Comparable<Column> {
     if (_type.getHasScalePrecision()) {
       _precision = buffer.get(offset + getFormat().OFFSET_COLUMN_PRECISION);
       _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
+    } else if(_type.isTextual()) {
+      // co-located w/ precision/scale
+      _textSortOrder = buffer.getShort(
+          offset + getFormat().OFFSET_COLUMN_PRECISION);
+      if(_textSortOrder == 0) {
+        // probably a file we wrote, before handling sort order
+        _textSortOrder = GENERAL_SORT_ORDER;
+      }
     }
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
@@ -324,6 +337,14 @@ public class Column implements Comparable<Column> {
     _scale = newScale;
   }
   
+  public short getTextSortOrder() {
+    return _textSortOrder;
+  }
+
+  public void setTextSortOrder(short newTextSortOrder) {
+    _textSortOrder = newTextSortOrder;
+  }
+  
   public void setLength(short length) {
     _columnLength = length;
   }
@@ -447,8 +468,7 @@ public class Column implements Comparable<Column> {
     }
 
     if(isCompressedUnicode()) {
-      if((getType() != DataType.TEXT) &&
-         (getType() != DataType.MEMO)) {
+      if(!getType().isTextual()) {
         throw new IllegalArgumentException(
             "Only textual columns allow unicode compression (text/memo)");
       }
@@ -1375,6 +1395,9 @@ public class Column implements Comparable<Column> {
     if(_autoNumber) {
       rtn.append("\n\tLast AutoNumber: " + _autoNumberGenerator.getLast());
     }
+    if(_type.isTextual()) {
+      rtn.append("\n\tText Sort order: " + _textSortOrder);
+    }      
     rtn.append("\n\n");
     return rtn.toString();
   }
@@ -1633,6 +1656,8 @@ public class Column implements Comparable<Column> {
       if(col.getType().getHasScalePrecision()) {
         buffer.put(col.getPrecision());  // numeric precision
         buffer.put(col.getScale());  // numeric scale
+      } else if(col.getType().isTextual()) {
+        buffer.putShort(col.getTextSortOrder());
       } else {
         buffer.put((byte) 0x00); //unused
         buffer.put((byte) 0x00); //unused
