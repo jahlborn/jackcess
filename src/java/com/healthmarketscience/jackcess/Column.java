@@ -93,15 +93,18 @@ public class Column implements Comparable<Column> {
     25569L * (long)MILLISECONDS_PER_DAY;
   
   /**
-   * Long value (LVAL) type that indicates that the value is stored on the same page
+   * Long value (LVAL) type that indicates that the value is stored on the
+   * same page
    */
   private static final byte LONG_VALUE_TYPE_THIS_PAGE = (byte) 0x80;
   /**
-   * Long value (LVAL) type that indicates that the value is stored on another page
+   * Long value (LVAL) type that indicates that the value is stored on another
+   * page
    */
   private static final byte LONG_VALUE_TYPE_OTHER_PAGE = (byte) 0x40;
   /**
-   * Long value (LVAL) type that indicates that the value is stored on multiple other pages
+   * Long value (LVAL) type that indicates that the value is stored on
+   * multiple other pages
    */
   private static final byte LONG_VALUE_TYPE_OTHER_PAGES = (byte) 0x00;
 

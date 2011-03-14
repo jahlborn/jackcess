@@ -60,8 +60,10 @@ public abstract class JetFormat {
   private static final byte CODE_VERSION_3 = 0x0;
   /** Version code for Jet version 4 */
   private static final byte CODE_VERSION_4 = 0x1;
-  /** Version code for Jet version 5 */
-  private static final byte CODE_VERSION_5 = 0x2;
+  /** Version code for Jet version 12 */
+  private static final byte CODE_VERSION_12 = 0x2;
+  /** Version code for Jet version 14 */
+  private static final byte CODE_VERSION_14 = 0x3;
 
   /** location of the engine name in the header */
   static final int OFFSET_ENGINE_NAME = 0x4;
@@ -116,8 +118,11 @@ public abstract class JetFormat {
     private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_4 = 
       new EnumMap<Database.FileFormat,byte[]>(Database.FileFormat.class);
 
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_5 = 
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_12 = 
       Collections.singletonMap(Database.FileFormat.V2007, (byte[])null);
+
+    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_14 = 
+      Collections.singletonMap(Database.FileFormat.V2010, (byte[])null);
 
     private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_MSISAM = 
       Collections.singletonMap(Database.FileFormat.MSISAM, (byte[])null);
@@ -134,8 +139,10 @@ public abstract class JetFormat {
   public static final JetFormat VERSION_4 = new Jet4Format();
   /** the JetFormat constants for the MSISAM database */
   public static final JetFormat VERSION_MSISAM = new MSISAMFormat();
-  /** the JetFormat constants for the Jet database version "5" */
-  public static final JetFormat VERSION_5 = new Jet5Format();
+  /** the JetFormat constants for the Jet database version "12" */
+  public static final JetFormat VERSION_12 = new Jet12Format();
+  /** the JetFormat constants for the Jet database version "14" */
+  public static final JetFormat VERSION_14 = new Jet14Format();
 
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
@@ -262,8 +269,10 @@ public abstract class JetFormat {
         return VERSION_MSISAM;
       }
       return VERSION_4;
-    } else if (version == CODE_VERSION_5) {
-      return VERSION_5;
+    } else if (version == CODE_VERSION_12) {
+      return VERSION_12;
+    } else if (version == CODE_VERSION_14) {
+      return VERSION_14;
     }
     throw new IOException("Unsupported " +
                           ((version < CODE_VERSION_3) ? "older" : "newer") +
@@ -664,7 +673,7 @@ public abstract class JetFormat {
       this("VERSION_4");
     }
 
-    private Jet4Format(final String name) {
+    private Jet4Format(String name) {
       super(name);
     }
 
@@ -870,17 +879,39 @@ public abstract class JetFormat {
     }
   }
 
-  private static final class Jet5Format extends Jet4Format {
-      private Jet5Format() {
-        super("VERSION_5");
-      }
+  private static class Jet12Format extends Jet4Format {
+    private Jet12Format() {
+      super("VERSION_12");
+    }
+
+
+    private Jet12Format(String name) {
+      super(name);
+    }
 
     @Override
     protected boolean defineReverseFirstByteInDescNumericIndexes() { return true; }
 
     @Override
     protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
-      return PossibleFileFormats.POSSIBLE_VERSION_5;
+      return PossibleFileFormats.POSSIBLE_VERSION_12;
+    }
+  }
+
+  private static final class Jet14Format extends Jet12Format {
+      private Jet14Format() {
+        super("VERSION_14");
+      }
+
+    @Override
+    protected boolean defineIndexesSupported() { 
+      // 2010 uses a new text index format (new "General" sort order)...
+      return false;
+    }
+
+    @Override
+    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
+      return PossibleFileFormats.POSSIBLE_VERSION_14;
     }
   }
 

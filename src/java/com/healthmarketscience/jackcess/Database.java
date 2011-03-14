@@ -245,7 +245,8 @@ public class Database
     V1997(null, JetFormat.VERSION_3),
     V2000(RESOURCE_PATH + "empty.mdb", JetFormat.VERSION_4),
     V2003(RESOURCE_PATH + "empty2003.mdb", JetFormat.VERSION_4),
-    V2007(RESOURCE_PATH + "empty2007.accdb", JetFormat.VERSION_5, ".accdb"),
+    V2007(RESOURCE_PATH + "empty2007.accdb", JetFormat.VERSION_12, ".accdb"),
+    V2010(RESOURCE_PATH + "empty2010.accdb", JetFormat.VERSION_14, ".accdb"),
     MSISAM(null, JetFormat.VERSION_MSISAM, ".mny");
 
     private final String _emptyFile;
