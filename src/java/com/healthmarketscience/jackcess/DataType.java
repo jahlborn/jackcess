@@ -112,14 +112,14 @@ public enum DataType {
    * Accepts a {@code byte[]}, or {@code null}.  Equivalent to SQL
    * {@link Types#LONGVARBINARY}, {@link Types#BLOB}.
    */
-  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0xFFFFFF,
+  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0x3FFFFFFF,
       1),
   /**
    * Corresponds to a java String of max length 8388607 chars.  Accepts any
    * CharSequence, any Object converted to a String , or {@code null}.
    * Equivalent to SQL {@link Types#LONGVARCHAR}, {@link Types#CLOB}.
    */
-  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0xFFFFFF,
+  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0x3FFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
    * Unknown data.  Handled like BINARY.

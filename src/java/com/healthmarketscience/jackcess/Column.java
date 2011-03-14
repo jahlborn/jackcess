@@ -107,6 +107,11 @@ public class Column implements Comparable<Column> {
    * multiple other pages
    */
   private static final byte LONG_VALUE_TYPE_OTHER_PAGES = (byte) 0x00;
+  /**
+   * Mask to apply the long length in order to get the flag bits (only the
+   * first 2 bits are type flags).
+   */
+  private static final int LONG_VALUE_TYPE_MASK = 0xC0000000;
 
   /** mask for the fixed len bit */
   public static final byte FIXED_LEN_FLAG_MASK = (byte)0x01;
@@ -117,8 +122,12 @@ public class Column implements Comparable<Column> {
   /** mask for the auto number guid bit */
   public static final byte AUTO_NUMBER_GUID_FLAG_MASK = (byte)0x40;
   
-  /** mask for the unknown bit */
+  /** mask for the unknown bit (possible "can be null"?) */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
+
+  // some other flags?
+  // 0x10: replication related field (or hidden?)
+  // 0x80: hyperlink (some memo based thing)
 
   /** the "general" text sort order */
   public static final short GENERAL_SORT_ORDER = 1033;
@@ -548,14 +557,11 @@ public class Column implements Comparable<Column> {
   {
     ByteBuffer def = ByteBuffer.wrap(lvalDefinition)
       .order(PageChannel.DEFAULT_BYTE_ORDER);
-    int length = ByteUtil.get3ByteInt(def);
-    // bail out gracefully here as we don't understand the format
-    if (length < 0)
-    {
-       return null;
-    }
+    int lengthWithFlags = def.getInt();
+    int length = lengthWithFlags & (~LONG_VALUE_TYPE_MASK);
+
     byte[] rtn = new byte[length];
-    byte type = def.get();
+    byte type = (byte)((lengthWithFlags & LONG_VALUE_TYPE_MASK) >>> 24);
 
     if(type == LONG_VALUE_TYPE_THIS_PAGE) {
 
@@ -932,8 +938,9 @@ public class Column implements Comparable<Column> {
     }
 
     ByteBuffer def = getPageChannel().createBuffer(lvalDefLen);
-    ByteUtil.put3ByteInt(def, value.length);
-    def.put(type);
+    // take length and apply type to first byte
+    int lengthWithFlags = value.length | (type << 24);
+    def.putInt(lengthWithFlags);
 
     if(type == LONG_VALUE_TYPE_THIS_PAGE) {
       // write long value inline
