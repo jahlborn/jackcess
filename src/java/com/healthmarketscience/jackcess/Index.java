@@ -360,7 +360,7 @@ public class Index implements Comparable<Index> {
       buffer.putInt(0); // related table definition page number
       buffer.put((byte)0); // cascade updates flag
       buffer.put((byte)0); // cascade deletes flag
-      buffer.put(idx.getFlags()); // index flags
+      buffer.put(idx.getType()); // index type flags
       buffer.putInt(0); // unknown
     }
 
