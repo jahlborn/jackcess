@@ -179,7 +179,8 @@ public class IndexTest extends TestCase {
       t = db.getTable("Table1");
       index = t.getIndexes().get(0);
 
-      System.out.println("IndexTest: Index type: " + index.getClass());
+      System.out.println("IndexTest: Index type: " + 
+                         index.getIndexData().getClass());
       try {
         t.addRow(99, "abc", "def");
         if(index.getIndexData() instanceof SimpleIndexData) {

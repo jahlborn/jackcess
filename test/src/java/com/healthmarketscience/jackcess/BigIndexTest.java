@@ -101,7 +101,8 @@ public class BigIndexTest extends TestCase {
         t = db.getTable("Table1");
         index = t.getIndex("col1");
 
-        System.out.println("BigIndexTest: Index type: " + index.getClass());
+        System.out.println("BigIndexTest: Index type: " + 
+                           index.getIndexData().getClass());
 
         // add 2,000 (pseudo) random entries to the table
         Random rand = new Random(13L);
