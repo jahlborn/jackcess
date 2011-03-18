@@ -963,30 +963,30 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   protected abstract DirHandler getDirHandler(boolean moveForward);
 
   /**
-   * Row iterator for this table, unmodifiable.
+   * Row iterator for this table, modifiable.
    */
   private final class RowIterator implements Iterator<Map<String, Object>>
   {
     private final Collection<String> _columnNames;
     private final boolean _moveForward;
-    private boolean _hasNext = false;
+    private Boolean _hasNext;
     
     private RowIterator(Collection<String> columnNames, boolean moveForward)
     {
-      try {
-        _columnNames = columnNames;
-        _moveForward = moveForward;
-        reset(_moveForward);
-        _hasNext = moveToAnotherRow(_moveForward);
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
-      }
+      _columnNames = columnNames;
+      _moveForward = moveForward;
+      reset(_moveForward);
     }
 
-    public boolean hasNext() { return _hasNext; }
-
-    public void remove() {
-      throw new UnsupportedOperationException();
+    public boolean hasNext() {
+      if(_hasNext == null) {
+        try {
+          _hasNext = moveToAnotherRow(_moveForward);
+        } catch(IOException e) {
+          throw new IllegalStateException(e);
+        }
+      }
+      return _hasNext; 
     }
     
     public Map<String, Object> next() {
@@ -995,13 +995,20 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       }
       try {
         Map<String, Object> rtn = getCurrentRow(_columnNames);
-        _hasNext = moveToAnotherRow(_moveForward);
+        _hasNext = null;
         return rtn;
       } catch(IOException e) {
         throw new IllegalStateException(e);
       }
     }
-    
+
+    public void remove() {
+      try {
+        deleteCurrentRow();
+      } catch(IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }    
   }
 
   /**
