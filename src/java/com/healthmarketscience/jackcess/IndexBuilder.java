@@ -38,8 +38,9 @@ public class IndexBuilder
   private String _name;
   /** the type of the index */
   private byte _type;
-  /** additional index flags */
-  private byte _flags;
+  /** additional index flags (UNKNOWN_INDEX_FLAG always seems to be set in
+      access 2000+) */
+  private byte _flags = IndexData.UNKNOWN_INDEX_FLAG;
   /** the names and orderings of the indexed columns */
   private final List<Column> _columns = new ArrayList<Column>();
 

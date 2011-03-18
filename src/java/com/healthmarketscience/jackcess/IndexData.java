@@ -84,6 +84,8 @@ public abstract class IndexData {
 
   static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
   static final byte IGNORE_NULLS_INDEX_FLAG = (byte)0x02;
+  static final byte SPECIAL_INDEX_FLAG = (byte)0x08; // set on MSysACEs and MSysAccessObjects indexes, purpose unknown
+  static final byte UNKNOWN_INDEX_FLAG = (byte)0x80; // always seems to be set on indexes in access 2000+
 
   private static final int MAGIC_INDEX_NUMBER = 1923;
 
