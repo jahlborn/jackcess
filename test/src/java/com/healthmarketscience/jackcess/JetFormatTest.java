@@ -20,7 +20,7 @@ import static com.healthmarketscience.jackcess.DatabaseTest.*;
  */
 public class JetFormatTest extends TestCase {
 
-  private static final File DIR_TEST_DATA = new File("test/data");
+  static final File DIR_TEST_DATA = new File("test/data");
 
   /**
    * Defines known valid db test file base names.

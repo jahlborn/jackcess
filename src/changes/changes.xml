@@ -4,6 +4,17 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.4" date="TBD">
+      <action dev="jahlborn" type="update">
+        Refactor table loading to use indexes.  Do not load all table names at
+        database startup (should make startup faster).
+      </action>
+      <action dev="jahlborn" type="add">
+        Add support for reading properties blobs.  Add methods for accessing
+        database, summary, and user-defined properties from the Database.  Add
+        methods to Table and Column for accessing their respective properties.
+      </action>
+    </release>
     <release version="1.2.3" date="2011-03-05">
       <action dev="jahlborn" type="fix" issue="3181334">
         Add support for writing all fixed length column types into variable

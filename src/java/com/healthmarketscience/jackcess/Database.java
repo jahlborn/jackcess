@@ -275,14 +275,22 @@ public class Database
   private static final String ESCAPE_PREFIX = "x";
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
+  /** Name of the system object that is the parent of all databases */
+  private static final String SYSTEM_OBJECT_NAME_DATABASES = "Databases";
+  /** Name of the system object that is the parent of all relationships */
+  private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = "Relationships";
   /** Name of the table that contains system access control entries */
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** Name of the table that contains table relationships */
   private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
   /** Name of the table that contains queries */
   private static final String TABLE_SYSTEM_QUERIES = "MSysQueries";
-  /** Name of the table that contains queries */
-  private static final String OBJECT_NAME_DBPROPS = "MSysDb";
+  /** Name of the main database properties object */
+  private static final String OBJECT_NAME_DB_PROPS = "MSysDb";
+  /** Name of the summary properties object */
+  private static final String OBJECT_NAME_SUMMARY_PROPS = "SummaryInfo";
+  /** Name of the user-defined properties object */
+  private static final String OBJECT_NAME_USERDEF_PROPS = "UserDefined";
   /** System object type for table definitions */
   private static final Short TYPE_TABLE = (short) 1;
   /** System object type for query definitions */
@@ -299,6 +307,9 @@ public class Database
   private static Collection<String> SYSTEM_CATALOG_TABLE_NAME_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID));
+  /** the columns to read when getting object propertyes */
+  private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
+    new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
   
   
   /**
@@ -391,7 +402,18 @@ public class Database
   private Table.ColumnOrder _columnOrder;
   /** cache of in-use tables */
   private final TableCache _tableCache = new TableCache();
-  
+  /** handler for reading/writing properteies */
+  private PropertyMaps.Handler _propsHandler;
+  /** ID of the Databases system object */
+  private Integer _dbParentId;
+  /** core database properties */
+  private PropertyMaps _dbPropMaps;
+  /** summary properties */
+  private PropertyMaps _summaryPropMaps;
+  /** user-defined properties */
+  private PropertyMaps _userDefPropMaps;
+
+
   /**
    * Open an existing Database.  If the existing file is not writeable, the
    * file will be opened read-only.  Auto-syncing is enabled for the returned
@@ -806,8 +828,7 @@ public class Database
    * Gets currently configured {@link Table.ColumnOrder} (always non-{@code
    * null}).
    */
-  public Table.ColumnOrder getColumnOrder()
-  {
+  public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
   }
 
@@ -823,49 +844,40 @@ public class Database
   }
 
   /**
+   * @returns the current handler for reading/writing properties, creating if
+   * necessary
+   */
+  private PropertyMaps.Handler getPropsHandler() {
+    if(_propsHandler == null) {
+      _propsHandler = new PropertyMaps.Handler(this);
+    }
+    return _propsHandler;
+  }
+
+  /**
    * Returns the FileFormat of this database (which may involve inspecting the
    * database itself).
    * @throws IllegalStateException if the file format cannot be determined
    */
-  public FileFormat getFileFormat()
-  {
+  public FileFormat getFileFormat() throws IOException {
+
     if(_fileFormat == null) {
 
-      Map<Database.FileFormat,byte[]> possibleFileFormats =
+      Map<String,Database.FileFormat> possibleFileFormats =
         getFormat().getPossibleFileFormats();
 
       if(possibleFileFormats.size() == 1) {
 
-        // single possible format, easy enough
-        _fileFormat = possibleFileFormats.keySet().iterator().next();
+        // single possible format (null key), easy enough
+        _fileFormat = possibleFileFormats.get(null);
 
       } else {
 
         // need to check the "AccessVersion" property
-        byte[] dbProps = null;
-        for(Map<String,Object> row :
-              Cursor.createCursor(_systemCatalog).iterable(
-                  Arrays.asList(CAT_COL_NAME, CAT_COL_PROPS))) {
-          if(OBJECT_NAME_DBPROPS.equals(row.get(CAT_COL_NAME))) {
-            dbProps = (byte[])row.get(CAT_COL_PROPS);
-            break;
-          }
-        }
+        String accessVersion = (String)getDatabaseProperties().getValue(
+            PropertyMap.ACCESS_VERSION_PROP);
         
-        if(dbProps != null) {
-
-          // search for certain "version strings" in the properties (we
-          // can't fully parse the properties objects, but we can still
-          // find the byte pattern)
-          ByteBuffer dbPropBuf = ByteBuffer.wrap(dbProps);
-          for(Map.Entry<Database.FileFormat,byte[]> possible : 
-                possibleFileFormats.entrySet()) {
-            if(ByteUtil.findRange(dbPropBuf, 0, possible.getValue()) >= 0) {
-              _fileFormat = possible.getKey();
-              break;
-            }
-          }
-        }
+        _fileFormat = possibleFileFormats.get(accessVersion);
         
         if(_fileFormat == null) {
           throw new IllegalStateException("Could not determine FileFormat");
@@ -873,6 +885,16 @@ public class Database
       }
     }
     return _fileFormat;
+  }
+
+  /**
+   * @return a PropertyMaps instance decoded from the given bytes (always
+   *         returns non-{@code null} result).
+   */
+  public PropertyMaps readProperties(byte[] propsBytes, int objectId)
+    throws IOException 
+  {
+    return getPropsHandler().read(propsBytes, objectId);
   }
   
   /**
@@ -1178,6 +1200,77 @@ public class Database
     throws IOException
   {
     return getTable(tableName, true, defaultUseBigIndex());
+  }
+
+  /**
+   * @return the core properties for the database
+   */
+  public PropertyMap getDatabaseProperties() throws IOException {
+    if(_dbPropMaps == null) {
+      _dbPropMaps = getPropertiesForDbObject(OBJECT_NAME_DB_PROPS);
+    }
+    return _dbPropMaps.getDefault();
+  }
+
+  /**
+   * @return the summary properties for the database
+   */
+  public PropertyMap getSummaryProperties() throws IOException {
+    if(_summaryPropMaps == null) {
+      _summaryPropMaps = getPropertiesForDbObject(OBJECT_NAME_SUMMARY_PROPS);
+    }
+    return _summaryPropMaps.getDefault();
+  }
+
+  /**
+   * @return the user-defined properties for the database
+   */
+  public PropertyMap getUserDefinedProperties() throws IOException {
+    if(_userDefPropMaps == null) {
+      _userDefPropMaps = getPropertiesForDbObject(OBJECT_NAME_USERDEF_PROPS);
+    }
+    return _userDefPropMaps.getDefault();
+  }
+
+  /**
+   * @return the PropertyMaps for the object with the given id
+   */
+  public PropertyMaps getPropertiesForObject(int objectId)
+    throws IOException
+  {
+    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+        objectId, SYSTEM_CATALOG_PROPS_COLUMNS);
+    byte[] propsBytes = null;
+    if(objectRow != null) {
+      propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
+    }
+    return readProperties(propsBytes, objectId);
+  }
+
+  /**
+   * @return property group for the given "database" object
+   */
+  private PropertyMaps getPropertiesForDbObject(String dbName)
+    throws IOException
+  {
+    if(_dbParentId == null) {
+      // need the parent if of the databases objects
+      _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+                                              SYSTEM_OBJECT_NAME_DATABASES);
+      if(_dbParentId == null) {  
+        throw new IOException("Did not find required parent db id");
+      }
+    }
+
+    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+        _dbParentId, dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
+    byte[] propsBytes = null;
+    int objectId = -1;
+    if(objectRow != null) {
+      propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
+      objectId = (Integer)objectRow.get(CAT_COL_ID);
+    }
+    return readProperties(propsBytes, objectId);
   }
 
   /**
@@ -1572,7 +1665,7 @@ public class Database
    */
   private void addTable(String tableName, Integer pageNumber)
   {
-    _tableLookup.put(toLookupTableName(tableName),
+    _tableLookup.put(toLookupName(tableName),
                      new TableInfo(pageNumber, tableName, 0));
     // clear this, will be created next time needed
     _tableNames = null;
@@ -1583,7 +1676,7 @@ public class Database
    */
   private TableInfo lookupTable(String tableName) throws IOException {
 
-    String lookupTableName = toLookupTableName(tableName);
+    String lookupTableName = toLookupName(tableName);
     TableInfo tableInfo = _tableLookup.get(lookupTableName);
     if(tableInfo != null) {
       return tableInfo;
@@ -1602,8 +1695,8 @@ public class Database
   /**
    * @return a string usable in the _tableLookup map.
    */
-  private String toLookupTableName(String tableName) {
-    return ((tableName != null) ? tableName.toUpperCase() : null);
+  static String toLookupName(String name) {
+    return ((name != null) ? name.toUpperCase() : null);
   }
 
   /**
@@ -1793,14 +1886,44 @@ public class Database
    */
   private abstract class TableFinder
   {
-    public abstract Integer findObjectId(Integer parentId, String name)
+    protected abstract Cursor findRow(Integer parentId, String name)
       throws IOException;
+
+    protected abstract Cursor findRow(Integer objectId) 
+      throws IOException;
+
+    public Integer findObjectId(Integer parentId, String name) 
+      throws IOException 
+    {
+      Cursor cur = findRow(parentId, name);
+      if(cur == null) {  
+        return null;
+      }
+      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      return (Integer)cur.getCurrentRowValue(idCol);
+    }
 
     public abstract TableInfo lookupTable(String tableName)
       throws IOException;
     
     public abstract void getTableNames(Set<String> tableNames) 
       throws IOException;
+
+    public Map<String,Object> getObjectRow(Integer parentId, String name,
+                                           Collection<String> columns) 
+      throws IOException 
+    {
+      Cursor cur = findRow(parentId, name);
+      return ((cur != null) ? cur.getCurrentRow(columns) : null);
+    }
+
+    public Map<String,Object> getObjectRow(
+        Integer objectId, Collection<String> columns)
+      throws IOException
+    {
+      Cursor cur = findRow(objectId);
+      return ((cur != null) ? cur.getCurrentRow(columns) : null);
+    }
   }
 
   /**
@@ -1809,26 +1932,37 @@ public class Database
   private final class DefaultTableFinder extends TableFinder
   {
     private final IndexCursor _systemCatalogCursor;
+    private IndexCursor _systemCatalogIdCursor;
 
     private DefaultTableFinder(IndexCursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
     }
 
     @Override
-    public Integer findObjectId(Integer parentId, String name) 
+    protected Cursor findRow(Integer parentId, String name) 
       throws IOException 
     {
-      if(!_systemCatalogCursor.findRowByEntry(parentId, name)) {  
-        return null;
+      return (_systemCatalogCursor.findRowByEntry(parentId, name) ?
+              _systemCatalogCursor : null);
+    }
+
+    @Override
+    protected Cursor findRow(Integer objectId) throws IOException 
+    {
+      if(_systemCatalogIdCursor == null) {
+        _systemCatalogIdCursor = new CursorBuilder(_systemCatalog)
+          .setIndexByColumnNames(CAT_COL_ID)
+          .toIndexCursor();
       }
-      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
-      return (Integer)_systemCatalogCursor.getCurrentRowValue(idCol);
+
+      return (_systemCatalogIdCursor.findRowByEntry(objectId) ?
+              _systemCatalogIdCursor : null);
     }
 
     @Override
     public TableInfo lookupTable(String tableName) throws IOException {
 
-      if(!_systemCatalogCursor.findRowByEntry(_tableParentId, tableName)) {
+      if(findRow(_tableParentId, tableName) == null) {
         return null;
       }
 
@@ -1881,18 +2015,22 @@ public class Database
     }
 
     @Override
-    public Integer findObjectId(Integer parentId, String name) 
+    protected Cursor findRow(Integer parentId, String name) 
       throws IOException 
     {
       Map<String,Object> rowPat = new HashMap<String,Object>();
       rowPat.put(CAT_COL_PARENT_ID, parentId);  
       rowPat.put(CAT_COL_NAME, name);
-      if(!_systemCatalogCursor.findRow(rowPat)) {  
-        return null;
-      }
-      
+      return (_systemCatalogCursor.findRow(rowPat) ?
+              _systemCatalogCursor : null);
+    }
+
+    @Override
+    protected Cursor findRow(Integer objectId) throws IOException 
+    {
       Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
-      return (Integer)_systemCatalogCursor.getCurrentRowValue(idCol);
+      return (_systemCatalogCursor.findRow(idCol, objectId) ?
+              _systemCatalogCursor : null);
     }
 
     @Override
@@ -1935,12 +2073,8 @@ public class Database
         Short type = (Short)row.get(CAT_COL_TYPE);
         int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
 
-        if(parentId != _tableParentId) {
-          // no more tables
-          continue;
-        }
-
-        if(TYPE_TABLE.equals(type) && !isSystemObject(flags)) {
+        if((parentId == _tableParentId) && TYPE_TABLE.equals(type) && 
+           !isSystemObject(flags)) {
           tableNames.add(tableName);
         }
       }

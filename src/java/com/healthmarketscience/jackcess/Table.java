@@ -160,7 +160,11 @@ public class Table
   private final boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _tableErrorHandler;
-  
+  /** properties for this table */
+  private PropertyMap _props;
+  /** properties group for this table (and columns) */
+  private PropertyMaps _propertyMaps;
+
   /** common cursor for iterating through the table, kept here for historic
       reasons */
   private Cursor _cursor;
@@ -331,6 +335,27 @@ public class Table
     }
     _maxColumnCount = (short)_columns.size();
     _maxVarColumnCount = (short)_varColumns.size();
+  }
+
+  /**
+   * @return the properties for this table
+   */
+  public PropertyMap getProperties() throws IOException {
+    if(_props == null) {
+      _props = getPropertyMaps().getDefault();
+    }
+    return _props;
+  }
+
+  /**
+   * @return all PropertyMaps for this table (and columns)
+   */
+  protected PropertyMaps getPropertyMaps() throws IOException {
+    if(_propertyMaps == null) {
+      _propertyMaps = getDatabase().getPropertiesForObject(
+          _tableDefPageNumber);
+    }
+    return _propertyMaps;
   }
   
   /**

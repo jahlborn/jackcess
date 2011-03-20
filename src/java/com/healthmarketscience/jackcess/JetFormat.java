@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.Collections;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -103,33 +103,36 @@ public abstract class JetFormat {
 
   /** value of the "AccessVersion" property for access 2000 dbs:
       {@code "08.50"} */
-  private static final byte[] ACCESS_VERSION_2000 = new byte[] {
-    '0', 0, '8', 0, '.', 0, '5', 0, '0', 0};
+  private static final String ACCESS_VERSION_2000 = "08.50";
   /** value of the "AccessVersion" property for access 2002/2003 dbs
       {@code "09.50"}  */
-  private static final byte[] ACCESS_VERSION_2003 = new byte[] {
-    '0', 0, '9', 0, '.', 0, '5', 0, '0', 0};
+  private static final String ACCESS_VERSION_2003 = "09.50";
+
+  /** known intro bytes for property maps */
+  static final byte[][] PROPERTY_MAP_TYPES = {
+    new byte[]{'M', 'R', '2', '\0'}, // access 2000+
+    new byte[]{'K', 'K', 'D', '\0'}};  // access 97
 
   // use nested inner class to avoid problematic static init loops
   private static final class PossibleFileFormats {
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_3 = 
-      Collections.singletonMap(Database.FileFormat.V1997, (byte[])null);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_3 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V1997);
 
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_4 = 
-      new EnumMap<Database.FileFormat,byte[]>(Database.FileFormat.class);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_4 = 
+      new HashMap<String,Database.FileFormat>();
 
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_12 = 
-      Collections.singletonMap(Database.FileFormat.V2007, (byte[])null);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_12 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V2007);
 
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_14 = 
-      Collections.singletonMap(Database.FileFormat.V2010, (byte[])null);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_14 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V2010);
 
-    private static final Map<Database.FileFormat,byte[]> POSSIBLE_VERSION_MSISAM = 
-      Collections.singletonMap(Database.FileFormat.MSISAM, (byte[])null);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_MSISAM = 
+      Collections.singletonMap((String)null, Database.FileFormat.MSISAM);
 
     static {
-      POSSIBLE_VERSION_4.put(Database.FileFormat.V2000, ACCESS_VERSION_2000);
-      POSSIBLE_VERSION_4.put(Database.FileFormat.V2003, ACCESS_VERSION_2003);
+      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2000, Database.FileFormat.V2000);
+      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2003, Database.FileFormat.V2003);
     }
   }
 
@@ -467,7 +470,7 @@ public abstract class JetFormat {
 
   protected abstract boolean defineReverseFirstByteInDescNumericIndexes();
 
-  protected abstract Map<Database.FileFormat,byte[]> getPossibleFileFormats();
+  protected abstract Map<String,Database.FileFormat> getPossibleFileFormats();
 
   @Override
   public String toString() {
@@ -660,7 +663,7 @@ public abstract class JetFormat {
     protected Charset defineCharset() { return Charset.defaultCharset(); }
 
     @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_3;
     }
@@ -855,7 +858,7 @@ public abstract class JetFormat {
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
 
     @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_4;
     }
@@ -873,7 +876,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_MSISAM;
     }
@@ -893,7 +896,7 @@ public abstract class JetFormat {
     protected boolean defineReverseFirstByteInDescNumericIndexes() { return true; }
 
     @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_12;
     }
   }
@@ -910,7 +913,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<Database.FileFormat,byte[]> getPossibleFileFormats() {
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_14;
     }
   }

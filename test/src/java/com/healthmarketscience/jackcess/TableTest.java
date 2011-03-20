@@ -176,6 +176,14 @@ public class TableTest extends TestCase {
           return _testTable;
         }
         @Override
+        public JetFormat getFormat() {
+          return getTable().getFormat();
+        }
+        @Override
+        public PageChannel getPageChannel() {
+          return getTable().getPageChannel();
+        }
+        @Override
         protected Charset getCharset() {
           return getFormat().CHARSET;
         }

@@ -172,9 +172,11 @@ public class Column implements Comparable<Column> {
   private short _textSortOrder = GENERAL_SORT_ORDER;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
+  /** properties for this column, if any */
+  private PropertyMap _props;  
   
   public Column() {
-    this(JetFormat.VERSION_4);
+    this(null);
   }
   
   public Column(JetFormat format) {
@@ -238,13 +240,17 @@ public class Column implements Comparable<Column> {
   public Table getTable() {
     return _table;
   }
+
+  public Database getDatabase() {       
+    return getTable().getDatabase();
+  }
   
   public JetFormat getFormat() {
-    return getTable().getFormat();
+    return getDatabase().getFormat();
   }
 
   public PageChannel getPageChannel() {
-    return getTable().getPageChannel();
+    return getDatabase().getPageChannel();
   }
   
   public String getName() {
@@ -388,11 +394,11 @@ public class Column implements Comparable<Column> {
   }
 
   protected Charset getCharset() {
-    return getTable().getDatabase().getCharset();
+    return getDatabase().getCharset();
   }
 
   protected TimeZone getTimeZone() {
-    return getTable().getDatabase().getTimeZone();
+    return getDatabase().getTimeZone();
   }
 
   private void setAutoNumberGenerator()
@@ -426,6 +432,16 @@ public class Column implements Comparable<Column> {
    */
   public AutoNumberGenerator getAutoNumberGenerator() {
     return _autoNumberGenerator;
+  }
+
+  /**
+   * @return the properties for this column
+   */
+  public PropertyMap getProperties() throws IOException {
+    if(_props == null) {
+      _props = getTable().getPropertyMaps().get(getName());
+    }
+    return _props;
   }
 
   /**
@@ -1603,7 +1619,7 @@ public class Column implements Comparable<Column> {
   /**
    * Treat booleans as integers (C-style).
    */
-  private static Object booleanToInteger(Object obj) {
+  protected static Object booleanToInteger(Object obj) {
     if (obj instanceof Boolean) {
       obj = ((Boolean) obj) ? 1 : 0;
     }
