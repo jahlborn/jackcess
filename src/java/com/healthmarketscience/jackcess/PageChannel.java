@@ -306,9 +306,7 @@ public class PageChannel implements Channel, Flushable {
    * @return A newly-allocated buffer of the given size and byte order
    */
   public ByteBuffer createBuffer(int size, ByteOrder order) {
-    ByteBuffer rtn = ByteBuffer.allocate(size);
-    rtn.order(order);
-    return rtn;
+    return ByteBuffer.allocate(size).order(order);
   }
   
   public void flush() throws IOException {
