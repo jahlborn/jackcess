@@ -74,7 +74,8 @@ public class DatabaseTest extends TestCase {
     throws Exception 
   {
     final Database db = Database.open(file, true, _autoSync);
-    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), db.getFormat());
+    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), 
+                 db.getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
   }
@@ -101,21 +102,26 @@ public class DatabaseTest extends TestCase {
   public static Database openCopy(TestDB testDB, boolean keep)
     throws Exception
   {
-    return openCopy(testDB.getFile(), keep);
+    return openCopy(testDB.getExpectedFileFormat(), testDB.getFile(), keep);
   }
 
-  public static Database openCopy(File file)
+  public static Database openCopy(FileFormat fileFormat, File file)
     throws Exception
   {
-    return openCopy(file, false);
+    return openCopy(fileFormat, file, false);
   }
 
-  public static Database openCopy(File file, boolean keep)
+  public static Database openCopy(FileFormat fileFormat, File file,
+                                  boolean keep)
     throws Exception
   {
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
-    return Database.open(tmp, false, _autoSync);
+    Database db = Database.open(tmp, false, _autoSync);
+    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(),         
+                 db.getFormat());
+    assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
+    return db;
   }
 
 
@@ -796,21 +802,13 @@ public class DatabaseTest extends TestCase {
       Database db = openCopy(testDB);
       Table t = db.getTable("jobDB1");
 
-      String lval = createString(255); // "--255 chars long text--";
+      assertTrue(t.getOwnedPagesCursor().getUsageMap().toString()
+                 .startsWith("(InlineHandler)"));
 
-      if (FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
-        // @todo Field order differs with V2007
-        System.err.println("\n*** TODO: " + getName()
-                + "(): Is OK that " + testDB.getExpectedFileFormat().name() + " field order differs?  ***");
-      }
+      String lval = createNonAsciiString(255); // "--255 chars long text--";
 
       for(int i = 0; i < 1000; ++i) {
-        if (FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
-          // @todo Field order differs with V2007
-          t.addRow(i, 13, 57, lval, lval, lval, lval, lval, lval, 47.0d);
-        } else {
-          t.addRow(i, 13, 57, 47.0d, lval, lval, lval, lval, lval, lval);
-        }
+        t.addRow(i, 13, 57, lval, lval, lval, lval, lval, lval, 47.0d);
       }
 
       Set<Integer> ids = new HashSet<Integer>();
@@ -818,6 +816,9 @@ public class DatabaseTest extends TestCase {
         ids.add((Integer)row.get("ID"));
       }
       assertEquals(1000, ids.size());
+
+      assertTrue(t.getOwnedPagesCursor().getUsageMap().toString()
+                 .startsWith("(ReferenceHandler)"));
 
       db.close();
     }
@@ -1152,11 +1153,19 @@ public class DatabaseTest extends TestCase {
       .addColumn(new ColumnBuilder("I", DataType.SHORT_DATE_TIME))
       .toTable(db);
   }
-    
+
   static String createString(int len) {
+    return createString(len, 'a');
+  }
+
+  static String createNonAsciiString(int len) {
+    return createString(len, '\u00C0');
+  }
+    
+  private static String createString(int len, char firstChar) {
     StringBuilder builder = new StringBuilder(len);
     for(int i = 0; i < len; ++i) {
-      builder.append((char)('a' + (i % 26)));
+      builder.append((char)(firstChar + (i % 26)));
     }
     return builder.toString();
   }

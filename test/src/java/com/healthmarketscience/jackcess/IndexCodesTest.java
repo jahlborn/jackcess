@@ -160,7 +160,7 @@ public class IndexCodesTest extends TestCase {
 
   public void x_testCreateAltIsoFile() throws Exception
   {
-    Database db = openCopy(new File("/tmp/test_ind.mdb"), true);
+    Database db = openCopy(Database.FileFormat.V2000, new File("/tmp/test_ind.mdb"), true);
 
     Table t = db.getTable("Table1");
 
@@ -238,7 +238,7 @@ public class IndexCodesTest extends TestCase {
 //     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes.mdb"));
 //     Database db = openCopy(new File("/data2/jackcess_test/testAllIndexCodes_orig.mdb"));
 //     Database db = openCopy(new File("/data2/jackcess_test/testSomeMoreCodes.mdb"));
-    Database db = openCopy(new File("/data2/jackcess_test/testStillMoreCodes.mdb"));
+    Database db = openCopy(Database.FileFormat.V2000, new File("/data2/jackcess_test/testStillMoreCodes.mdb"));
     Table t = db.getTable("Table5");
 
     Index ind = t.getIndexes().iterator().next();
