@@ -1886,12 +1886,6 @@ public class Database
    */
   private abstract class TableFinder
   {
-    protected abstract Cursor findRow(Integer parentId, String name)
-      throws IOException;
-
-    protected abstract Cursor findRow(Integer objectId) 
-      throws IOException;
-
     public Integer findObjectId(Integer parentId, String name) 
       throws IOException 
     {
@@ -1902,12 +1896,6 @@ public class Database
       Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (Integer)cur.getCurrentRowValue(idCol);
     }
-
-    public abstract TableInfo lookupTable(String tableName)
-      throws IOException;
-    
-    public abstract void getTableNames(Set<String> tableNames) 
-      throws IOException;
 
     public Map<String,Object> getObjectRow(Integer parentId, String name,
                                            Collection<String> columns) 
@@ -1924,6 +1912,34 @@ public class Database
       Cursor cur = findRow(objectId);
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
     }
+
+    public void getTableNames(Set<String> tableNames) throws IOException {
+
+      for(Map<String,Object> row : getTableNamesCursor().iterable(
+              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+
+        String tableName = (String)row.get(CAT_COL_NAME);
+        int flags = (Integer)row.get(CAT_COL_FLAGS);
+        Short type = (Short)row.get(CAT_COL_TYPE);
+        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
+
+        if((parentId == _tableParentId) && TYPE_TABLE.equals(type) && 
+           !isSystemObject(flags)) {
+          tableNames.add(tableName);
+        }
+      }
+    }
+
+    protected abstract Cursor findRow(Integer parentId, String name)
+      throws IOException;
+
+    protected abstract Cursor findRow(Integer objectId) 
+      throws IOException;
+
+    protected abstract Cursor getTableNamesCursor() throws IOException;
+
+    public abstract TableInfo lookupTable(String tableName)
+      throws IOException;
   }
 
   /**
@@ -1981,25 +1997,12 @@ public class Database
     }
     
     @Override
-    public void getTableNames(Set<String> tableNames) throws IOException {
-
-      IndexCursor tNameCursor = new CursorBuilder(_systemCatalog)
+    protected Cursor getTableNamesCursor() throws IOException {
+      return new CursorBuilder(_systemCatalog)
         .setIndex(_systemCatalogCursor.getIndex())
         .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
         .setEndEntry(_tableParentId, IndexData.MAX_VALUE)
         .toIndexCursor();
-
-      for(Map<String,Object> row : tNameCursor.iterable(
-              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
-
-        String tableName = (String)row.get(CAT_COL_NAME);
-        int flags = (Integer)row.get(CAT_COL_FLAGS);
-        Short type = (Short)row.get(CAT_COL_TYPE);
-
-        if(TYPE_TABLE.equals(type) && !isSystemObject(flags)) {
-          tableNames.add(tableName);
-        }
-      }
     }
   }
   
@@ -2063,21 +2066,8 @@ public class Database
     }
     
     @Override
-    public void getTableNames(Set<String> tableNames) throws IOException {
-
-      for(Map<String,Object> row : _systemCatalogCursor.iterable(
-              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
-
-        String tableName = (String)row.get(CAT_COL_NAME);
-        int flags = (Integer)row.get(CAT_COL_FLAGS);
-        Short type = (Short)row.get(CAT_COL_TYPE);
-        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
-
-        if((parentId == _tableParentId) && TYPE_TABLE.equals(type) && 
-           !isSystemObject(flags)) {
-          tableNames.add(tableName);
-        }
-      }
+    protected Cursor getTableNamesCursor() throws IOException {
+      return _systemCatalogCursor;
     }
   }
 
