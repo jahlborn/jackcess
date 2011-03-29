@@ -1361,6 +1361,11 @@ public class Table
   
   /**
    * Update the row on which the given rowState is currently positioned.
+   * <p>
+   * Note, this method is not generally meant to be used directly.  You should
+   * use the {@link #updateCurrentRow} method or use the Cursor class, which
+   * allows for more complex table interactions, e.g.
+   * {@link Cursor#setCurrentRowValue} and {@link Cursor#updateCurrentRow}.
    */
   public void updateRow(RowState rowState, RowId rowId, Object... row) 
     throws IOException 
