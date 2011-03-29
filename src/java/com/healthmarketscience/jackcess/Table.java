@@ -409,6 +409,10 @@ public class Table
 
   /**
    * Delete the row on which the given rowState is currently positioned.
+   * <p>
+   * Note, this method is not generally meant to be used directly.  You should
+   * use the {@link #deleteCurrentRow} method or use the Cursor class, which
+   * allows for more complex table interactions.
    */
   public void deleteRow(RowState rowState, RowId rowId) throws IOException {
     requireValidRowId(rowId);
@@ -460,6 +464,10 @@ public class Table
   
   /**
    * Reads a single column from the given row.
+   * <p>
+   * Note, this method is not generally meant to be used directly.  Instead
+   * use the Cursor class, which allows for more complex table interactions,
+   * e.g. {@link Cursor#getCurrentRowValue}.
    */
   public Object getRowValue(RowState rowState, RowId rowId, Column column)
     throws IOException
