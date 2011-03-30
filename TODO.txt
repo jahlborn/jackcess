@@ -1,17 +1,12 @@
 Missing pieces:
 
-- implement index creation
-  * HARD (still missing knowledge about all the magic bits in index meta data)
+- implement foreign key index creation
+  * MEDIUM
 - implement table, column, index renaming
   * EASY
 - implement table, column, index deletion
   * EASY - MEDIUM
 - implement more comprehensive unicode compression write support
   * EASY? (have the code, do we trust it?)
-- implement duplicateTable(Table, db, newName), or (oldName, newName)
-  - by doing binary level copy, could maybe workaround missing jackcess
-    features (like create index)
-  - do optional data copy which preserves autonumbers
-  * EASY - MEDIUM
 - implement createReadOnlyTemp(InputStream) (delete temp file on close)
   * EASY
