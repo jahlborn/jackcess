@@ -1130,6 +1130,16 @@ public class DatabaseTest extends TestCase {
       db.close();
     }
   }
+
+  public void testDbSortOrder() throws Exception {
+
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
+
+      Database db = open(testDB);
+      assertEquals(Column.GENERAL_SORT_ORDER, db.getDefaultSortOrder());
+      db.close();
+    }
+  }
     
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

@@ -398,6 +398,8 @@ public class Database
   private Charset _charset;
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
+  /** language sort order to be used for textual columns */
+  private Short _defaultSortOrder;
   /** the ordering used for table columns */
   private Table.ColumnOrder _columnOrder;
   /** cache of in-use tables */
@@ -887,6 +889,19 @@ public class Database
     return _fileFormat;
   }
 
+  /**
+   * @return the currently configured database default language sort order for
+   *         textual columns
+   */
+  public short getDefaultSortOrder() throws IOException {
+
+    if(_defaultSortOrder == null) {
+      _pageChannel.readPage(_buffer, 0);
+      _defaultSortOrder = _buffer.getShort(_format.OFFSET_SORT_ORDER);
+    }
+    return _defaultSortOrder;
+  }
+  
   /**
    * @return a PropertyMaps instance decoded from the given bytes (always
    *         returns non-{@code null} result).
