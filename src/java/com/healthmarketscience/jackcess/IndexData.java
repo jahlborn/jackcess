@@ -89,9 +89,6 @@ public abstract class IndexData {
 
   private static final int MAGIC_INDEX_NUMBER = 1923;
 
-  private static final int MAX_TEXT_INDEX_CHAR_LENGTH =
-    (JetFormat.TEXT_FIELD_MAX_LENGTH / JetFormat.TEXT_FIELD_UNIT_SIZE);
-
   private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
   
   /** type attributes for Entries which simplify comparisons */
@@ -1149,7 +1146,7 @@ public abstract class IndexData {
   /**
    * Flips the bits in the specified bytes in the byte array.
    */
-  private static byte[] flipBytes(byte[] value, int offset, int length) {
+  static byte[] flipBytes(byte[] value, int offset, int length) {
     for(int i = offset; i < (offset + length); ++i) {
       value[i] = (byte)(~value[i]);
     } 
@@ -1165,282 +1162,6 @@ public abstract class IndexData {
     // always write in big endian order
     return column.write(value, 0, ENTRY_BYTE_ORDER).array();
   }    
-
-  /**
-   * Converts an index value for a text column into the entry value (which
-   * is based on a variety of nifty codes).
-   */
-  private static void writeNonNullIndexTextValue(
-      Object value, ByteStream bout, boolean isAscending)
-    throws IOException
-  {
-    // first, convert to string
-    String str = Column.toCharSequence(value).toString();
-
-    // all text columns (including memos) are only indexed up to the max
-    // number of chars in a VARCHAR column
-    if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
-      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
-    }
-
-    // record pprevious entry length so we can do any post-processing
-    // necessary for this entry (handling descending)
-    int prevLength = bout.getLength();
-    
-    // now, convert each character to a "code" of one or more bytes
-    ExtraCodesStream extraCodes = null;
-    ByteStream unprintableCodes = null;
-    ByteStream crazyCodes = null;
-    int charOffset = 0;
-    for(int i = 0; i < str.length(); ++i) {
-
-      char c = str.charAt(i);
-      CharHandler ch = getCharHandler(c);
-
-      int curCharOffset = charOffset;
-      byte[] bytes = ch.getInlineBytes();
-      if(bytes != null) {
-        // write the "inline" codes immediately
-        bout.write(bytes);
-
-        // only increment the charOffset for chars with inline codes
-        ++charOffset;
-      }
-
-      if(ch.getType() == Type.SIMPLE) {
-        // common case, skip further code handling
-        continue;
-      }
-
-      bytes = ch.getExtraBytes();
-      byte extraCodeModifier = ch.getExtraByteModifier();
-      if((bytes != null) || (extraCodeModifier != 0)) {
-        if(extraCodes == null) {
-          extraCodes = new ExtraCodesStream(str.length());
-        }
-
-        // keep track of the extra codes for later
-        writeExtraCodes(curCharOffset, bytes, extraCodeModifier, extraCodes);
-      }
-
-      bytes = ch.getUnprintableBytes();
-      if(bytes != null) {
-        if(unprintableCodes == null) {
-          unprintableCodes = new ByteStream();
-        }
-          
-        // keep track of the unprintable codes for later
-        writeUnprintableCodes(curCharOffset, bytes, unprintableCodes,
-                              extraCodes);
-      }
-      
-      byte crazyFlag = ch.getCrazyFlag();
-      if(crazyFlag != 0) {
-        if(crazyCodes == null) {
-          crazyCodes = new ByteStream();
-        }
-
-        // keep track of the crazy flags for later
-        crazyCodes.write(crazyFlag);
-      }
-    }
-
-    // write end text flag
-    bout.write(END_TEXT);
-
-    boolean hasExtraCodes = trimExtraCodes(
-        extraCodes, (byte)0, INTERNATIONAL_EXTRA_PLACEHOLDER);
-    boolean hasUnprintableCodes = (unprintableCodes != null);
-    boolean hasCrazyCodes = (crazyCodes != null);
-    if(hasExtraCodes || hasUnprintableCodes || hasCrazyCodes) {
-
-      // we write all the international extra bytes first
-      if(hasExtraCodes) {
-        extraCodes.writeTo(bout);
-      }
-
-      if(hasCrazyCodes || hasUnprintableCodes) {
-
-        // write 2 more end flags
-        bout.write(END_TEXT);
-        bout.write(END_TEXT);
-
-        // next come the crazy flags
-        if(hasCrazyCodes) {
-
-          writeCrazyCodes(crazyCodes, bout);
-
-          // if we are writing unprintable codes after this, tack on another
-          // code
-          if(hasUnprintableCodes) {
-            bout.write(CRAZY_CODES_UNPRINT_SUFFIX);
-          }
-        }
-
-        // then we write all the unprintable extra bytes
-        if(hasUnprintableCodes) {
-
-          // write another end flag
-          bout.write(END_TEXT);
-        
-          unprintableCodes.writeTo(bout);
-        }
-      }
-    }
-
-    // handle descending order by inverting the bytes
-    if(!isAscending) {
-
-      // we actually write the end byte before flipping the bytes, and write
-      // another one after flipping
-      bout.write(END_EXTRA_TEXT);
-      
-      // flip the bytes that we have written thus far for this text value
-      flipBytes(bout.getBytes(), prevLength, (bout.getLength() - prevLength));
-    }
-
-    // write end extra text
-    bout.write(END_EXTRA_TEXT);    
-  }
-
-  /**
-   * Encodes the given extra code info in the given stream.
-   */
-  private static void writeExtraCodes(
-      int charOffset, byte[] bytes, byte extraCodeModifier,
-      ExtraCodesStream extraCodes)
-    throws IOException
-  {
-    // we fill in a placeholder value for any chars w/out extra codes
-    int numChars = extraCodes.getNumChars();
-    if(numChars < charOffset) {
-      int fillChars = charOffset - numChars;
-      extraCodes.writeFill(fillChars, INTERNATIONAL_EXTRA_PLACEHOLDER);
-      extraCodes.incrementNumChars(fillChars);
-    }
-
-    if(bytes != null) {
-      
-      // write the actual extra codes and update the number of chars
-      extraCodes.write(bytes);
-      extraCodes.incrementNumChars(1);
-
-    } else {
-
-      // extra code modifiers modify the existing extra code bytes and do not
-      // count as additional extra code chars
-      int lastIdx = extraCodes.getLength() - 1;
-      if(lastIdx >= 0) {
-
-        // the extra code modifier is added to the last extra code written
-        byte lastByte = extraCodes.get(lastIdx);
-        lastByte += extraCodeModifier;
-        extraCodes.set(lastIdx, lastByte);
-
-      } else {
-
-        // there is no previous extra code, add a new code (but keep track of
-        // this "unprintable code" prefix)
-        extraCodes.write(extraCodeModifier);
-        extraCodes.setUnprintablePrefixLen(1);
-      }
-    }
-  }
-
-  /**
-   * Trims any bytes in the given range off of the end of the given stream,
-   * returning whether or not there are any bytes left in the given stream
-   * after trimming.
-   */
-  private static boolean trimExtraCodes(ByteStream extraCodes,
-                                        byte minTrimCode, byte maxTrimCode)
-    throws IOException
-  {
-    if(extraCodes == null) {
-      return false;
-    }
-
-    extraCodes.trimTrailing(minTrimCode, maxTrimCode);
-
-    // anything left?
-    return (extraCodes.getLength() > 0);
-  }
-
-  /**
-   * Encodes the given unprintable char codes in the given stream.
-   */
-  private static void writeUnprintableCodes(
-      int charOffset, byte[] bytes, ByteStream unprintableCodes,
-      ExtraCodesStream extraCodes)
-    throws IOException
-  {
-    // the offset seems to be calculated based on the number of bytes in the
-    // "extra codes" part of the entry (even if there are no extra codes bytes
-    // actually written in the final entry).
-    int unprintCharOffset = charOffset;
-    if(extraCodes != null) {
-      // we need to account for some extra codes which have not been written
-      // yet.  additionally, any unprintable bytes added to the beginning of
-      // the extra codes are ignored.
-      unprintCharOffset = extraCodes.getLength() +
-        (charOffset - extraCodes.getNumChars()) -
-        extraCodes.getUnprintablePrefixLen();
-    }
-
-    // we write a whacky combo of bytes for each unprintable char which
-    // includes a funky offset and extra char itself
-    int offset =
-      (UNPRINTABLE_COUNT_START +
-       (UNPRINTABLE_COUNT_MULTIPLIER * unprintCharOffset))
-      | UNPRINTABLE_OFFSET_FLAGS;
-
-    // write offset as big-endian short
-    unprintableCodes.write((offset >> 8) & 0xFF);
-    unprintableCodes.write(offset & 0xFF);
-          
-    unprintableCodes.write(UNPRINTABLE_MIDFIX);
-    unprintableCodes.write(bytes);
-  }
-
-  /**
-   * Encode the given crazy code bytes into the given byte stream.
-   */
-  private static void writeCrazyCodes(ByteStream crazyCodes, ByteStream bout)
-    throws IOException
-  {
-    // CRAZY_CODE_2 flags at the end are ignored, so ditch them
-    trimExtraCodes(crazyCodes, CRAZY_CODE_2, CRAZY_CODE_2);
-
-    if(crazyCodes.getLength() > 0) {
-
-      // the crazy codes get encoded into 6 bit sequences where each code is 2
-      // bits (where the first 2 bits in the byte are a common prefix).
-      byte curByte = CRAZY_CODE_START;
-      int idx = 0;
-      for(int i = 0; i < crazyCodes.getLength(); ++i) {
-        byte nextByte = crazyCodes.get(i);
-        nextByte <<= ((2 - idx) * 2);
-        curByte |= nextByte;
-
-        ++idx;
-        if(idx == 3) {
-          // write current byte and reset
-          bout.write(curByte);
-          curByte = CRAZY_CODE_START;
-          idx = 0;
-        }
-      }
-
-      // write last byte
-      if(idx > 0) {
-        bout.write(curByte);
-      }
-    }
-
-    // write crazy code suffix (note, we write this even if all the codes are
-    // trimmed
-    bout.write(CRAZY_CODES_SUFFIX);
-  }
 
   /**
    * Creates one of the special index entries.
@@ -1473,7 +1194,9 @@ public abstract class IndexData {
     case SHORT_DATE_TIME:
       return new FloatingPointColumnDescriptor(col, flags);
     case NUMERIC:
-      return new FixedPointColumnDescriptor(col, flags);
+      return (col.getFormat().REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES ?
+              new NewFixedPointColumnDescriptor(col, flags) :
+              new FixedPointColumnDescriptor(col, flags));
     case BYTE:
       return new ByteColumnDescriptor(col, flags);
     case BOOLEAN:
@@ -1660,13 +1383,24 @@ public abstract class IndexData {
   /**
    * ColumnDescriptor for fixed point based columns.
    */
-  private static final class FixedPointColumnDescriptor
+  private static class FixedPointColumnDescriptor
     extends ColumnDescriptor
   {
     private FixedPointColumnDescriptor(Column column, byte flags)
       throws IOException
     {
       super(column, flags);
+    }
+
+    protected void handleNegationAndOrder(boolean isNegative,
+                                          byte[] valueBytes)
+    {
+      if(isNegative == isAscending()) {
+        flipBytes(valueBytes);
+      }
+
+      // reverse the sign byte (after any previous byte flipping)
+      valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);      
     }
     
     @Override
@@ -1691,23 +1425,36 @@ public abstract class IndexData {
       // isAsc && isNeg => setSignByte 0xFF, flipBytes  => 00 FF FF ...
       // !isAsc && !isNeg => setSignByte 0xFF           => FF 00 00 ...
       // !isAsc && isNeg => setSignByte 0xFF, flipBytes => 00 FF FF ...
+      handleNegationAndOrder(isNegative, valueBytes);
 
-      boolean alwaysRevFirstByte = getColumn().getFormat().REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES;
-      if(alwaysRevFirstByte) {
-        // reverse the sign byte (before any byte flipping)
-        valueBytes[0] = (byte)0xFF;
-      }
+      bout.write(valueBytes);
+    }    
+  }
+  
+  /**
+   * ColumnDescriptor for new-style fixed point based columns.
+   */
+  private static final class NewFixedPointColumnDescriptor
+    extends FixedPointColumnDescriptor
+  {
+    private NewFixedPointColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void handleNegationAndOrder(boolean isNegative,
+                                          byte[] valueBytes)
+    {
+      // see notes above in FixedPointColumnDescriptor for bit twiddling rules
+
+      // reverse the sign byte (before any byte flipping)
+      valueBytes[0] = (byte)0xFF;
 
       if(isNegative == isAscending()) {
         flipBytes(valueBytes);
       }
-
-      if(!alwaysRevFirstByte) {
-        // reverse the sign byte (after any previous byte flipping)
-        valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);
-      }
-      
-      bout.write(valueBytes);
     }    
   }
   
@@ -1784,7 +1531,8 @@ public abstract class IndexData {
         Object value, ByteStream bout)
       throws IOException
     {
-      writeNonNullIndexTextValue(value, bout, isAscending());
+      GeneralLegacyIndexCodes.writeNonNullIndexTextValue(value, bout, 
+                                                         isAscending());
     }    
   }
 
@@ -2583,35 +2331,5 @@ public abstract class IndexData {
     }
   }
 
-
-  /**
-   * Extension of ByteStream which keeps track of an additional char count and
-   * the length of any "unprintable" code prefix.
-   */
-  private static final class ExtraCodesStream extends ByteStream
-  {
-    private int _numChars;
-    private int _unprintablePrefixLen; 
-
-    private ExtraCodesStream(int length) {
-      super(length);
-    }
-
-    public int getNumChars() {
-      return _numChars;
-    }
-    
-    public void incrementNumChars(int inc) {
-      _numChars += inc;
-    }
-
-    public int getUnprintablePrefixLen() {
-      return _unprintablePrefixLen;
-    }
-
-    public void setUnprintablePrefixLen(int len) {
-      _unprintablePrefixLen = len;
-    }
-  }
 
 }
