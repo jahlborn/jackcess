@@ -129,10 +129,10 @@ public class GeneralLegacyIndexCodes {
   }
 
   /**
-   * Base class for the handlers which hold thetext index character encoding
+   * Base class for the handlers which hold the text index character encoding
    * information.
    */
-  abstract static class CharHandler {
+  private abstract static class CharHandler {
     public abstract Type getType();
     public byte[] getInlineBytes() {
       return null;
@@ -365,7 +365,7 @@ public class GeneralLegacyIndexCodes {
                                         String codeLine)
   {
     String prefix = codeLine.substring(0, 1);
-    String suffix = ((codeLine.length() > 1) ? codeLine.substring(2) : "");
+    String suffix = ((codeLine.length() > 1) ? codeLine.substring(1) : "");
     return prefixMap.get(prefix).parseCodes(suffix.split(",", -1));
   }
 
@@ -455,6 +455,10 @@ public class GeneralLegacyIndexCodes {
         throw new IllegalStateException("empty code bytes");
       }
       return null;
+    }
+    if((codes.length() % 2) != 0) {
+      // stripped a leading 0
+      codes = "0" + codes;
     }
     byte[] bytes = new byte[codes.length() / 2];
     for(int i = 0; i < bytes.length; ++i) {
