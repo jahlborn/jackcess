@@ -14,6 +14,10 @@
         database, summary, and user-defined properties from the Database.  Add
         methods to Table and Column for accessing their respective properties.
       </action>
+      <action dev="jahlborn" type="add">
+        Add support for Access 2010, including new "General" sort order
+        (support for long text index entries still needs work).
+      </action>
     </release>
     <release version="1.2.3" date="2011-03-05">
       <action dev="jahlborn" type="fix" issue="3181334">

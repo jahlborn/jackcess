@@ -37,8 +37,8 @@ import java.util.Map;
 import static com.healthmarketscience.jackcess.ByteUtil.ByteStream;
 
 /**
- * Various constants used for creating "general legacy" sort order text index
- * entries.
+ * Various constants used for creating "general legacy" (access 2000-2007)
+ * sort order text index entries.
  *
  * @author James Ahlborn
  */
@@ -75,9 +75,9 @@ public class GeneralLegacyIndexCodes {
 
   // stash the codes in some resource files
   private static final String CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes.txt";
+    Database.RESOURCE_PATH + "index_codes_genleg.txt";
   private static final String EXT_CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes_ext.txt";
+    Database.RESOURCE_PATH + "index_codes_ext_genleg.txt";
 
   /**
    * Enum which classifies the types of char encoding strategies used when
@@ -132,7 +132,7 @@ public class GeneralLegacyIndexCodes {
    * Base class for the handlers which hold the text index character encoding
    * information.
    */
-  private abstract static class CharHandler {
+  abstract static class CharHandler {
     public abstract Type getType();
     public byte[] getInlineBytes() {
       return null;
@@ -266,10 +266,10 @@ public class GeneralLegacyIndexCodes {
     }
   };
 
-  private static final char FIRST_CHAR = (char)0x0000;
-  private static final char LAST_CHAR = (char)0x00FF;
-  private static final char FIRST_EXT_CHAR = LAST_CHAR + 1;
-  private static final char LAST_EXT_CHAR = (char)0xFFFF;
+  static final char FIRST_CHAR = (char)0x0000;
+  static final char LAST_CHAR = (char)0x00FF;
+  static final char FIRST_EXT_CHAR = LAST_CHAR + 1;
+  static final char LAST_EXT_CHAR = (char)0xFFFF;
 
   private static final class Codes
   {
@@ -286,14 +286,17 @@ public class GeneralLegacyIndexCodes {
     private static final CharHandler[] _values = loadCodes(
         EXT_CODES_FILE, FIRST_EXT_CHAR, LAST_EXT_CHAR);
   }
+
+  static final GeneralLegacyIndexCodes GEN_LEG_INSTANCE = 
+    new GeneralLegacyIndexCodes();
   
-  private GeneralLegacyIndexCodes() {
+  GeneralLegacyIndexCodes() {
   }
 
   /**
    * Returns the CharHandler for the given character.
    */
-  static CharHandler getCharHandler(char c)
+  CharHandler getCharHandler(char c)
   {
     if(c <= LAST_CHAR) {
       return Codes._values[c];
@@ -307,8 +310,8 @@ public class GeneralLegacyIndexCodes {
    * Loads the CharHandlers for the given range of characters from the
    * resource file with the given name.
    */
-  private static CharHandler[] loadCodes(String codesFilePath, 
-                                         char firstChar, char lastChar)
+  static CharHandler[] loadCodes(String codesFilePath,
+                                 char firstChar, char lastChar)
   {
     int numCodes = (asUnsignedChar(lastChar) - asUnsignedChar(firstChar)) + 1;
     CharHandler[] values = new CharHandler[numCodes];
@@ -474,7 +477,7 @@ public class GeneralLegacyIndexCodes {
    * think this is unnecessary (I think java treats chars as unsigned), but I
    * did this just to be on the safe side.
    */
-  private static int asUnsignedChar(char c)
+  static int asUnsignedChar(char c)
   {
     return c & 0xFFFF;
   }
@@ -483,7 +486,7 @@ public class GeneralLegacyIndexCodes {
    * Converts an index value for a text column into the entry value (which
    * is based on a variety of nifty codes).
    */
-  static void writeNonNullIndexTextValue(
+  void writeNonNullIndexTextValue(
       Object value, ByteStream bout, boolean isAscending)
     throws IOException
   {

@@ -1184,7 +1184,9 @@ public abstract class IndexData {
         setReadOnly();
         return new ReadOnlyColumnDescriptor(col, flags);
       }
-      return new TextColumnDescriptor(col, flags);
+      return(col.getFormat().LEGACY_TEXT_INDEXES ?
+             new GenLegTextColumnDescriptor(col, flags) :
+             new GenTextColumnDescriptor(col, flags));
     case INT:
     case LONG:
     case MONEY:
@@ -1194,8 +1196,8 @@ public abstract class IndexData {
     case SHORT_DATE_TIME:
       return new FloatingPointColumnDescriptor(col, flags);
     case NUMERIC:
-      return (col.getFormat().REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES ?
-              new NewFixedPointColumnDescriptor(col, flags) :
+      return (col.getFormat().LEGACY_NUMERIC_INDEXES ?
+              new LegacyFixedPointColumnDescriptor(col, flags) :
               new FixedPointColumnDescriptor(col, flags));
     case BYTE:
       return new ByteColumnDescriptor(col, flags);
@@ -1381,12 +1383,12 @@ public abstract class IndexData {
   }
   
   /**
-   * ColumnDescriptor for fixed point based columns.
+   * ColumnDescriptor for fixed point based columns (legacy sort order).
    */
-  private static class FixedPointColumnDescriptor
+  private static class LegacyFixedPointColumnDescriptor
     extends ColumnDescriptor
   {
-    private FixedPointColumnDescriptor(Column column, byte flags)
+    private LegacyFixedPointColumnDescriptor(Column column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1434,10 +1436,10 @@ public abstract class IndexData {
   /**
    * ColumnDescriptor for new-style fixed point based columns.
    */
-  private static final class NewFixedPointColumnDescriptor
-    extends FixedPointColumnDescriptor
+  private static final class FixedPointColumnDescriptor
+    extends LegacyFixedPointColumnDescriptor
   {
-    private NewFixedPointColumnDescriptor(Column column, byte flags)
+    private FixedPointColumnDescriptor(Column column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1516,11 +1518,12 @@ public abstract class IndexData {
   }
   
   /**
-   * ColumnDescriptor for text based columns.
+   * ColumnDescriptor for "general legacy" sort order text based columns.
    */
-  private static final class TextColumnDescriptor extends ColumnDescriptor
+  private static final class GenLegTextColumnDescriptor 
+    extends ColumnDescriptor
   {
-    private TextColumnDescriptor(Column column, byte flags)
+    private GenLegTextColumnDescriptor(Column column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1531,8 +1534,29 @@ public abstract class IndexData {
         Object value, ByteStream bout)
       throws IOException
     {
-      GeneralLegacyIndexCodes.writeNonNullIndexTextValue(value, bout, 
-                                                         isAscending());
+      GeneralLegacyIndexCodes.GEN_LEG_INSTANCE.writeNonNullIndexTextValue(
+          value, bout, isAscending());
+    }    
+  }
+
+  /**
+   * ColumnDescriptor for "general" sort order (2010+) text based columns.
+   */
+  private static final class GenTextColumnDescriptor extends ColumnDescriptor
+  {
+    private GenTextColumnDescriptor(Column column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+    
+    @Override
+    protected void writeNonNullValue(
+        Object value, ByteStream bout)
+      throws IOException
+    {
+      GeneralIndexCodes.GEN_INSTANCE.writeNonNullIndexTextValue(
+          value, bout, isAscending());
     }    
   }
 

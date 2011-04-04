@@ -249,7 +249,8 @@ public abstract class JetFormat {
   public final int MAX_COLUMN_NAME_LENGTH;
   public final int MAX_INDEX_NAME_LENGTH;
 
-  public final boolean REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES;
+  public final boolean LEGACY_NUMERIC_INDEXES;
+  public final boolean LEGACY_TEXT_INDEXES;
   
   public final Charset CHARSET;
   
@@ -375,7 +376,8 @@ public abstract class JetFormat {
     MAX_COLUMN_NAME_LENGTH = defineMaxColumnNameLength();
     MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
     
-    REVERSE_FIRST_BYTE_IN_DESC_NUMERIC_INDEXES = defineReverseFirstByteInDescNumericIndexes();
+    LEGACY_NUMERIC_INDEXES = defineLegacyNumericIndexes();
+    LEGACY_TEXT_INDEXES = defineLegacyTextIndexes();
     
     CHARSET = defineCharset();
   }
@@ -471,7 +473,8 @@ public abstract class JetFormat {
   
   protected abstract Charset defineCharset();
 
-  protected abstract boolean defineReverseFirstByteInDescNumericIndexes();
+  protected abstract boolean defineLegacyNumericIndexes();
+  protected abstract boolean defineLegacyTextIndexes();
 
   protected abstract Map<String,Database.FileFormat> getPossibleFileFormats();
 
@@ -662,7 +665,10 @@ public abstract class JetFormat {
     protected int defineMaxIndexNameLength() { return 64; }
 	      
     @Override
-    protected boolean defineReverseFirstByteInDescNumericIndexes() { return false; }
+    protected boolean defineLegacyNumericIndexes() { return true; }
+
+    @Override
+    protected boolean defineLegacyTextIndexes() { return true; }
 
     @Override
     protected Charset defineCharset() { return Charset.defaultCharset(); }
@@ -859,7 +865,10 @@ public abstract class JetFormat {
     protected int defineMaxIndexNameLength() { return 64; }
       
     @Override
-    protected boolean defineReverseFirstByteInDescNumericIndexes() { return false; }
+    protected boolean defineLegacyNumericIndexes() { return true; }
+
+    @Override
+    protected boolean defineLegacyTextIndexes() { return true; }
 
     @Override
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
@@ -900,7 +909,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected boolean defineReverseFirstByteInDescNumericIndexes() { return true; }
+    protected boolean defineLegacyNumericIndexes() { return false; }
 
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats() {
@@ -914,10 +923,7 @@ public abstract class JetFormat {
       }
 
     @Override
-    protected boolean defineIndexesSupported() { 
-      // 2010 uses a new text index format (new "General" sort order)...
-      return false;
-    }
+    protected boolean defineLegacyTextIndexes() { return false; }
 
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats() {
