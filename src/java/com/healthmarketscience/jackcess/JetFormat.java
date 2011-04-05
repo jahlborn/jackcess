@@ -176,6 +176,7 @@ public abstract class JetFormat {
   public final int OFFSET_PASSWORD;
   public final int SIZE_PASSWORD;
   public final int OFFSET_SORT_ORDER;
+  public final int SIZE_SORT_ORDER;
   public final int OFFSET_ENCODING_KEY;
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
@@ -303,6 +304,7 @@ public abstract class JetFormat {
     OFFSET_PASSWORD = defineOffsetPassword();
     SIZE_PASSWORD = defineSizePassword();
     OFFSET_SORT_ORDER = defineOffsetSortOrder();
+    SIZE_SORT_ORDER = defineSizeSortOrder();
     OFFSET_ENCODING_KEY = defineOffsetEncodingKey();
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
@@ -398,6 +400,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetPassword();
   protected abstract int defineSizePassword();
   protected abstract int defineOffsetSortOrder();
+  protected abstract int defineSizeSortOrder();
   protected abstract int defineOffsetEncodingKey();
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
@@ -527,6 +530,8 @@ public abstract class JetFormat {
     protected int defineSizePassword() { return 20; }
     @Override
     protected int defineOffsetSortOrder() { return 58; }
+    @Override
+    protected int defineSizeSortOrder() { return 2; }
     @Override
     protected int defineOffsetEncodingKey() { return 62; }
     @Override
@@ -729,6 +734,8 @@ public abstract class JetFormat {
     protected int defineSizePassword() { return 40; }
     @Override
     protected int defineOffsetSortOrder() { return 110; }
+    @Override
+    protected int defineSizeSortOrder() { return 4; }
     @Override
     protected int defineOffsetEncodingKey() { return 62; }
     @Override

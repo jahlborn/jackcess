@@ -1747,7 +1747,11 @@ public class Column implements Comparable<Column> {
                                  JetFormat format)
   {
     short value = buffer.getShort(position);
-    byte version = buffer.get(position + 3);
+    byte version = 0;
+    if(format.SIZE_SORT_ORDER == 4) {
+      version = buffer.get(position + 3);
+    }
+
     if(value == 0) {
       // probably a file we wrote, before handling sort order
       return format.DEFAULT_SORT_ORDER;
@@ -1773,8 +1777,10 @@ public class Column implements Comparable<Column> {
       sortOrder = format.DEFAULT_SORT_ORDER;
     }
     buffer.putShort(sortOrder.getValue());      
-    buffer.put((byte)0x00); // unknown
-    buffer.put(sortOrder.getVersion());
+    if(format.SIZE_SORT_ORDER == 4) {
+      buffer.put((byte)0x00); // unknown
+      buffer.put(sortOrder.getVersion());
+    }
   }
 
   /**

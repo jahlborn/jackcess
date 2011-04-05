@@ -1057,6 +1057,13 @@ public class Database
           _format.MAX_COLUMNS_PER_TABLE + " columns");
     }
     
+    Column.SortOrder dbSortOrder = null;
+    try {
+      dbSortOrder = getDefaultSortOrder();
+    } catch(IOException e) {
+      // ignored, just use the jet format default
+    }
+
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(Column column : columns) {
@@ -1064,6 +1071,11 @@ public class Database
       if(!colNames.add(column.getName().toUpperCase())) {
         throw new IllegalArgumentException("duplicate column name: " +
                                            column.getName());
+      }
+
+      // set the sort order to the db default (if unspecified)
+      if(column.getType().isTextual() && (column.getTextSortOrder() == null)) {
+        column.setTextSortOrder(dbSortOrder);
       }
     }
 
