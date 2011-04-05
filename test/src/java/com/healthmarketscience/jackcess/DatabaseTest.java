@@ -1136,7 +1136,8 @@ public class DatabaseTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
       Database db = open(testDB);
-      assertEquals(Column.GENERAL_SORT_ORDER, db.getDefaultSortOrder());
+      assertEquals(db.getFormat().DEFAULT_SORT_ORDER,
+                   db.getDefaultSortOrder());
       db.close();
     }
   }

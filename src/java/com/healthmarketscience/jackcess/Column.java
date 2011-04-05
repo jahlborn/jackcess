@@ -129,8 +129,16 @@ public class Column implements Comparable<Column> {
   // 0x10: replication related field (or hidden?)
   // 0x80: hyperlink (some memo based thing)
 
-  /** the "general" text sort order */
-  public static final short GENERAL_SORT_ORDER = 1033;
+  /** the value for the "general" sort order */
+  private static final short GENERAL_SORT_ORDER_VALUE = 1033;
+
+  /** the "general" text sort order, legacy version (access 2000-2007) */
+  public static final SortOrder GENERAL_LEGACY_SORT_ORDER =
+    new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)0);
+
+  /** the "general" text sort order, latest version (access 2010+) */
+  public static final SortOrder GENERAL_SORT_ORDER = 
+    new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)1);
 
   /** pattern matching textual guid strings (allows for optional surrounding
       '{' and '}') */
@@ -169,7 +177,7 @@ public class Column implements Comparable<Column> {
   /** the index of the variable length data in the var len offset table */
   private int _varLenTableIndex;
   /** the collating sort order for a text field */
-  private short _textSortOrder = GENERAL_SORT_ORDER;
+  private SortOrder _textSortOrder;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
   /** properties for this column, if any */
@@ -215,12 +223,8 @@ public class Column implements Comparable<Column> {
       _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
     } else if(_type.isTextual()) {
       // co-located w/ precision/scale
-      _textSortOrder = buffer.getShort(
-          offset + getFormat().OFFSET_COLUMN_PRECISION);
-      if(_textSortOrder == 0) {
-        // probably a file we wrote, before handling sort order
-        _textSortOrder = GENERAL_SORT_ORDER;
-      }
+      _textSortOrder = readSortOrder(
+          buffer, offset + getFormat().OFFSET_COLUMN_PRECISION, getFormat());
     }
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
@@ -355,11 +359,11 @@ public class Column implements Comparable<Column> {
     _scale = newScale;
   }
   
-  public short getTextSortOrder() {
+  public SortOrder getTextSortOrder() {
     return _textSortOrder;
   }
 
-  public void setTextSortOrder(short newTextSortOrder) {
+  public void setTextSortOrder(SortOrder newTextSortOrder) {
     _textSortOrder = newTextSortOrder;
   }
   
@@ -1679,16 +1683,19 @@ public class Column implements Comparable<Column> {
         buffer.putShort((short) 0);
       }
       buffer.putShort(columnNumber); //Column Number again
-      if(col.getType().getHasScalePrecision()) {
-        buffer.put(col.getPrecision());  // numeric precision
-        buffer.put(col.getScale());  // numeric scale
-      } else if(col.getType().isTextual()) {
-        buffer.putShort(col.getTextSortOrder());
+      if(col.getType().isTextual()) {
+        // this will write 4 bytes
+        writeSortOrder(buffer, col._textSortOrder, format);
       } else {
-        buffer.put((byte) 0x00); //unused
-        buffer.put((byte) 0x00); //unused
+        if(col.getType().getHasScalePrecision()) {
+          buffer.put(col.getPrecision());  // numeric precision
+          buffer.put(col.getScale());  // numeric scale
+        } else {
+          buffer.put((byte) 0x00); //unused
+          buffer.put((byte) 0x00); //unused
+        }
+        buffer.putShort((short) 0); //Unknown
       }
-      buffer.putShort((short) 0); //Unknown
       buffer.put(getColumnBitFlags(col)); // misc col flags
       if (col.isCompressedUnicode()) {  //Compressed
         buffer.put((byte) 1);
@@ -1731,6 +1738,43 @@ public class Column implements Comparable<Column> {
       flags |= col.getAutoNumberGenerator().getColumnFlags();
     }
     return flags;
+  }
+
+  /**
+   * Reads the sort order info from the given buffer from the given position.
+   */
+  static SortOrder readSortOrder(ByteBuffer buffer, int position,
+                                 JetFormat format)
+  {
+    short value = buffer.getShort(position);
+    byte version = buffer.get(position + 3);
+    if(value == 0) {
+      // probably a file we wrote, before handling sort order
+      return format.DEFAULT_SORT_ORDER;
+    }
+    
+    if(value == GENERAL_SORT_ORDER_VALUE) {
+      if(version == GENERAL_LEGACY_SORT_ORDER.getVersion()) {
+        return GENERAL_LEGACY_SORT_ORDER;
+      }
+      if(version == GENERAL_SORT_ORDER.getVersion()) {
+        return GENERAL_SORT_ORDER;
+      }
+    }
+    return new SortOrder(value, version);
+  }
+
+  /**
+   * Writes the sort order info to the given buffer at the current position.
+   */
+  private static void writeSortOrder(ByteBuffer buffer, SortOrder sortOrder,
+                                     JetFormat format) {
+    if(sortOrder == null) {
+      sortOrder = format.DEFAULT_SORT_ORDER;
+    }
+    buffer.putShort(sortOrder.getValue());      
+    buffer.put((byte)0x00); // unknown
+    buffer.put(sortOrder.getVersion());
   }
 
   /**
@@ -1874,6 +1918,46 @@ public class Column implements Comparable<Column> {
     @Override
     public DataType getType() {
       return DataType.GUID;
+    }
+  }
+
+  /**
+   * Information about the sort order (collation) for a textual column.
+   */
+  public static final class SortOrder
+  {
+    private final short _value;
+    private final byte _version;
+    
+    public SortOrder(short value, byte version) {
+      _value = value;
+      _version = version;
+    }
+
+    public short getValue() {
+      return _value;
+    }
+
+    public byte getVersion() {
+      return _version;
+    }
+
+    @Override
+    public int hashCode() {
+      return _value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return ((this == o) ||
+              ((o != null) && (getClass() == o.getClass()) &&
+               (_value == ((SortOrder)o)._value) &&
+               (_version == ((SortOrder)o)._version)));
+    }
+
+    @Override
+    public String toString() {
+      return _value + "(" + _version + ")";
     }
   }
 

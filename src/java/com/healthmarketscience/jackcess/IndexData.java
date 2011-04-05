@@ -1179,14 +1179,16 @@ public abstract class IndexData {
     switch(col.getType()) {
     case TEXT:
     case MEMO:
-      if(col.getTextSortOrder() != Column.GENERAL_SORT_ORDER) {
-        // unsupported sort order
-        setReadOnly();
-        return new ReadOnlyColumnDescriptor(col, flags);
+      Column.SortOrder sortOrder = col.getTextSortOrder();
+      if(Column.GENERAL_LEGACY_SORT_ORDER.equals(sortOrder)) {
+        return new GenLegTextColumnDescriptor(col, flags);
       }
-      return(col.getFormat().LEGACY_TEXT_INDEXES ?
-             new GenLegTextColumnDescriptor(col, flags) :
-             new GenTextColumnDescriptor(col, flags));
+      if(Column.GENERAL_SORT_ORDER.equals(sortOrder)) {
+        return new GenTextColumnDescriptor(col, flags);
+      }
+      // unsupported sort order
+      setReadOnly();
+      return new ReadOnlyColumnDescriptor(col, flags);
     case INT:
     case LONG:
     case MONEY:

@@ -399,7 +399,7 @@ public class Database
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
   /** language sort order to be used for textual columns */
-  private Short _defaultSortOrder;
+  private Column.SortOrder _defaultSortOrder;
   /** the ordering used for table columns */
   private Table.ColumnOrder _columnOrder;
   /** cache of in-use tables */
@@ -893,11 +893,12 @@ public class Database
    * @return the currently configured database default language sort order for
    *         textual columns
    */
-  public short getDefaultSortOrder() throws IOException {
+  public Column.SortOrder getDefaultSortOrder() throws IOException {
 
     if(_defaultSortOrder == null) {
       _pageChannel.readPage(_buffer, 0);
-      _defaultSortOrder = _buffer.getShort(_format.OFFSET_SORT_ORDER);
+      _defaultSortOrder = Column.readSortOrder(
+          _buffer, _format.OFFSET_SORT_ORDER, _format);
     }
     return _defaultSortOrder;
   }

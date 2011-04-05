@@ -250,9 +250,9 @@ public abstract class JetFormat {
   public final int MAX_INDEX_NAME_LENGTH;
 
   public final boolean LEGACY_NUMERIC_INDEXES;
-  public final boolean LEGACY_TEXT_INDEXES;
   
   public final Charset CHARSET;
+  public final Column.SortOrder DEFAULT_SORT_ORDER;
   
   /**
    * @param channel the database file.
@@ -377,9 +377,9 @@ public abstract class JetFormat {
     MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
     
     LEGACY_NUMERIC_INDEXES = defineLegacyNumericIndexes();
-    LEGACY_TEXT_INDEXES = defineLegacyTextIndexes();
     
     CHARSET = defineCharset();
+    DEFAULT_SORT_ORDER = defineDefaultSortOrder();
   }
   
   protected abstract boolean defineReadOnly();
@@ -472,9 +472,9 @@ public abstract class JetFormat {
   protected abstract int defineMaxIndexNameLength();
   
   protected abstract Charset defineCharset();
+  protected abstract Column.SortOrder defineDefaultSortOrder();
 
   protected abstract boolean defineLegacyNumericIndexes();
-  protected abstract boolean defineLegacyTextIndexes();
 
   protected abstract Map<String,Database.FileFormat> getPossibleFileFormats();
 
@@ -668,10 +668,12 @@ public abstract class JetFormat {
     protected boolean defineLegacyNumericIndexes() { return true; }
 
     @Override
-    protected boolean defineLegacyTextIndexes() { return true; }
+    protected Charset defineCharset() { return Charset.defaultCharset(); }
 
     @Override
-    protected Charset defineCharset() { return Charset.defaultCharset(); }
+    protected Column.SortOrder defineDefaultSortOrder() {
+      return Column.GENERAL_LEGACY_SORT_ORDER;
+    }
 
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats()
@@ -868,10 +870,12 @@ public abstract class JetFormat {
     protected boolean defineLegacyNumericIndexes() { return true; }
 
     @Override
-    protected boolean defineLegacyTextIndexes() { return true; }
+    protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
 
     @Override
-    protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
+    protected Column.SortOrder defineDefaultSortOrder() {
+      return Column.GENERAL_LEGACY_SORT_ORDER;
+    }
 
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats()
@@ -923,7 +927,9 @@ public abstract class JetFormat {
       }
 
     @Override
-    protected boolean defineLegacyTextIndexes() { return false; }
+    protected Column.SortOrder defineDefaultSortOrder() {
+      return Column.GENERAL_SORT_ORDER;
+    }
 
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats() {
