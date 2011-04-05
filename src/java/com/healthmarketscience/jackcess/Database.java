@@ -228,7 +228,7 @@ public class Database
   private static final int DB_PARENT_ID = 0xF000000;
 
   /** the maximum size of any of the included "empty db" resources */
-  private static final long MAX_EMPTYDB_SIZE = 330000L;
+  private static final long MAX_EMPTYDB_SIZE = 350000L;
 
   /** this object is a "system" object */
   static final int SYSTEM_OBJECT_FLAG = 0x80000000;
