@@ -441,6 +441,18 @@ public final class ByteUtil {
   }
 
   /**
+   * Convert the given number of bytes from the given database page to a
+   * hexidecimal string for display.
+   */
+  public static String toHexString(Database db, int pageNumber, int size)
+    throws IOException
+  {
+    ByteBuffer buffer = db.getPageChannel().createPageBuffer();
+    db.getPageChannel().readPage(buffer, pageNumber);
+    return toHexString(buffer, size);
+  }
+
+  /**
    * Writes a sequence of hexidecimal values into the given buffer, where
    * every two characters represent one byte value.
    */
