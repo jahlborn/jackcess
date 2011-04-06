@@ -278,7 +278,8 @@ public class Database
   /** Name of the system object that is the parent of all databases */
   private static final String SYSTEM_OBJECT_NAME_DATABASES = "Databases";
   /** Name of the system object that is the parent of all relationships */
-  private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = "Relationships";
+  private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = 
+    "Relationships";
   /** Name of the table that contains system access control entries */
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** Name of the table that contains table relationships */
@@ -400,6 +401,8 @@ public class Database
   private TimeZone _timeZone;
   /** language sort order to be used for textual columns */
   private Column.SortOrder _defaultSortOrder;
+  /** default code page to be used for textual columns (in some dbs) */
+  private Short _defaultCodePage;
   /** the ordering used for table columns */
   private Table.ColumnOrder _columnOrder;
   /** cache of in-use tables */
@@ -896,11 +899,31 @@ public class Database
   public Column.SortOrder getDefaultSortOrder() throws IOException {
 
     if(_defaultSortOrder == null) {
-      _pageChannel.readPage(_buffer, 0);
-      _defaultSortOrder = Column.readSortOrder(
-          _buffer, _format.OFFSET_SORT_ORDER, _format);
+      initRootPageInfo();
     }
     return _defaultSortOrder;
+  }
+
+  /**
+   * @return the currently configured database default code page for textual
+   *         data (may not be relevant to all database versions)
+   */
+  public short getDefaultCodePage() throws IOException {
+
+    if(_defaultCodePage == null) {
+      initRootPageInfo();
+    }
+    return _defaultCodePage;
+  }
+
+  /**
+   * Reads various config info from the db page 0.
+   */
+  private void initRootPageInfo() throws IOException {
+    _pageChannel.readPage(_buffer, 0);
+    _defaultSortOrder = Column.readSortOrder(
+        _buffer, _format.OFFSET_SORT_ORDER, _format);
+    _defaultCodePage = _buffer.getShort(_format.OFFSET_CODE_PAGE);
   }
   
   /**

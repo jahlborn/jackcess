@@ -178,6 +178,8 @@ public class Column implements Comparable<Column> {
   private int _varLenTableIndex;
   /** the collating sort order for a text field */
   private SortOrder _textSortOrder;
+  /** the code page for a text field (for certain db versions) */
+  private short _textCodePage;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
   /** properties for this column, if any */
@@ -224,7 +226,11 @@ public class Column implements Comparable<Column> {
     } else if(_type.isTextual()) {
       // co-located w/ precision/scale
       _textSortOrder = readSortOrder(
-          buffer, offset + getFormat().OFFSET_COLUMN_PRECISION, getFormat());
+          buffer, offset + getFormat().OFFSET_COLUMN_SORT_ORDER, getFormat());
+      int cpOffset = getFormat().OFFSET_COLUMN_CODE_PAGE;
+      if(cpOffset >= 0) {
+        _textCodePage = buffer.getShort(offset + cpOffset);
+      }
     }
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
@@ -365,6 +371,10 @@ public class Column implements Comparable<Column> {
 
   public void setTextSortOrder(SortOrder newTextSortOrder) {
     _textSortOrder = newTextSortOrder;
+  }
+
+  public short getTextCodePage() {
+    return _textCodePage;
   }
   
   public void setLength(short length) {
@@ -1427,6 +1437,9 @@ public class Column implements Comparable<Column> {
     }
     if(_type.isTextual()) {
       rtn.append("\n\tText Sort order: " + _textSortOrder);
+      if(_textCodePage > 0) {
+      rtn.append("\n\tText Code Page: " + _textCodePage);
+      }
     }      
     rtn.append("\n\n");
     return rtn.toString();

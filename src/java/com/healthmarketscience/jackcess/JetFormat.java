@@ -177,6 +177,7 @@ public abstract class JetFormat {
   public final int SIZE_PASSWORD;
   public final int OFFSET_SORT_ORDER;
   public final int SIZE_SORT_ORDER;
+  public final int OFFSET_CODE_PAGE;
   public final int OFFSET_ENCODING_KEY;
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
@@ -198,6 +199,8 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_NUMBER;
   public final int OFFSET_COLUMN_PRECISION;
   public final int OFFSET_COLUMN_SCALE;
+  public final int OFFSET_COLUMN_SORT_ORDER;
+  public final int OFFSET_COLUMN_CODE_PAGE;
   public final int OFFSET_COLUMN_FLAGS;
   public final int OFFSET_COLUMN_COMPRESSED_UNICODE;
   public final int OFFSET_COLUMN_LENGTH;
@@ -305,6 +308,7 @@ public abstract class JetFormat {
     SIZE_PASSWORD = defineSizePassword();
     OFFSET_SORT_ORDER = defineOffsetSortOrder();
     SIZE_SORT_ORDER = defineSizeSortOrder();
+    OFFSET_CODE_PAGE = defineOffsetCodePage();
     OFFSET_ENCODING_KEY = defineOffsetEncodingKey();
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
@@ -326,6 +330,8 @@ public abstract class JetFormat {
     OFFSET_COLUMN_NUMBER = defineOffsetColumnNumber();
     OFFSET_COLUMN_PRECISION = defineOffsetColumnPrecision();
     OFFSET_COLUMN_SCALE = defineOffsetColumnScale();
+    OFFSET_COLUMN_SORT_ORDER = defineOffsetColumnSortOrder();
+    OFFSET_COLUMN_CODE_PAGE = defineOffsetColumnCodePage();
     OFFSET_COLUMN_FLAGS = defineOffsetColumnFlags();
     OFFSET_COLUMN_COMPRESSED_UNICODE = defineOffsetColumnCompressedUnicode();
     OFFSET_COLUMN_LENGTH = defineOffsetColumnLength();
@@ -401,6 +407,7 @@ public abstract class JetFormat {
   protected abstract int defineSizePassword();
   protected abstract int defineOffsetSortOrder();
   protected abstract int defineSizeSortOrder();
+  protected abstract int defineOffsetCodePage();
   protected abstract int defineOffsetEncodingKey();
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
@@ -422,6 +429,8 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnNumber();
   protected abstract int defineOffsetColumnPrecision();
   protected abstract int defineOffsetColumnScale();
+  protected abstract int defineOffsetColumnSortOrder();
+  protected abstract int defineOffsetColumnCodePage();
   protected abstract int defineOffsetColumnFlags();
   protected abstract int defineOffsetColumnCompressedUnicode();
   protected abstract int defineOffsetColumnLength();
@@ -533,6 +542,8 @@ public abstract class JetFormat {
     @Override
     protected int defineSizeSortOrder() { return 2; }
     @Override
+    protected int defineOffsetCodePage() { return 60; }
+    @Override
     protected int defineOffsetEncodingKey() { return 62; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
@@ -572,6 +583,10 @@ public abstract class JetFormat {
     protected int defineOffsetColumnPrecision() { return 11; }
     @Override
     protected int defineOffsetColumnScale() { return 12; }
+    @Override
+    protected int defineOffsetColumnSortOrder() { return 9; }
+    @Override
+    protected int defineOffsetColumnCodePage() { return 11; }
     @Override
     protected int defineOffsetColumnFlags() { return 13; }
     @Override
@@ -737,6 +752,8 @@ public abstract class JetFormat {
     @Override
     protected int defineSizeSortOrder() { return 4; }
     @Override
+    protected int defineOffsetCodePage() { return 60; }
+    @Override
     protected int defineOffsetEncodingKey() { return 62; }
     @Override
     protected int defineOffsetNextTableDefPage() { return 4; }
@@ -776,6 +793,10 @@ public abstract class JetFormat {
     protected int defineOffsetColumnPrecision() { return 11; }
     @Override
     protected int defineOffsetColumnScale() { return 12; }
+    @Override
+    protected int defineOffsetColumnSortOrder() { return 11; }
+    @Override
+    protected int defineOffsetColumnCodePage() { return -1; }
     @Override
     protected int defineOffsetColumnFlags() { return 15; }
     @Override
