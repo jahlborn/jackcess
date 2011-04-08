@@ -997,11 +997,10 @@ public class DatabaseTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      if (!FileFormat.V2003.equals(fileFormat)
-              && !FileFormat.V2007.equals(fileFormat)) {
+      if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
         assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       } else {
-        // v2003, v2007 template files have no "MSysAccessObjects" table
+        // v2003+ template files have no "MSysAccessObjects" table
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       }
 

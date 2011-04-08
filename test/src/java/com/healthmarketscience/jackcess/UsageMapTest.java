@@ -28,6 +28,9 @@ public final class UsageMapTest extends TestCase {
             } else if (Database.FileFormat.V2007.equals(expectedFileFormat)) {
                 expectedFirstPage = 94;
                 expectedLastPage = 511;
+            } else if (Database.FileFormat.V2010.equals(expectedFileFormat)) {
+                expectedFirstPage = 109;
+                expectedLastPage = 511;
             } else {
                 throw new IllegalAccessException("Unknown file format: " + expectedFileFormat);
             }

@@ -392,7 +392,8 @@ public class IndexTest extends TestCase {
 
       final Map<String,Object> row = c.getCurrentRow();
       // Row order is arbitrary, so v2007 row order difference is valid
-      if (Database.FileFormat.V2007.equals(testDB.getExpectedFileFormat())) {
+      if (testDB.getExpectedFileFormat().ordinal() >= 
+          Database.FileFormat.V2007.ordinal()) {
         DatabaseTest.checkTestDBTable1RowA(testDB, table, row);
       } else {
         DatabaseTest.checkTestDBTable1RowABCDEFG(testDB, table, row);
