@@ -1191,6 +1191,8 @@ public abstract class IndexData {
         return new GenTextColumnDescriptor(col, flags);
       }
       // unsupported sort order
+      LOG.warn("Unsupported collating sort order " + sortOrder + 
+               " for text index, making read-only");
       setReadOnly();
       return new ReadOnlyColumnDescriptor(col, flags);
     case INT:
@@ -1214,6 +1216,8 @@ public abstract class IndexData {
 
     default:
       // FIXME we can't modify this index at this point in time
+      LOG.warn("Unsupported data type " + col.getType() + 
+               " for index, making read-only");
       setReadOnly();
       return new ReadOnlyColumnDescriptor(col, flags);
     }

@@ -137,6 +137,11 @@ public class IndexCursor extends Cursor
           "JetFormat " + table.getFormat() + 
           " does not currently support index lookups");
     }
+    if(index.getIndexData().isReadOnly()) {
+      throw new IllegalArgumentException(
+          "Given index " + index + 
+          " is not usable for indexed lookups because it is read-only");
+    }
     IndexCursor cursor = new IndexCursor(table, index,
                                          index.cursor(startRow, startInclusive,
                                                       endRow, endInclusive));

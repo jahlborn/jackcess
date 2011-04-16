@@ -2003,9 +2003,6 @@ public class Database
 
     private DefaultTableFinder(IndexCursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
-      if(_systemCatalogCursor.getIndex().getIndexData().isReadOnly()) {
-        throw new IllegalArgumentException("Unusable index");
-      }
     }
 
     @Override
