@@ -322,6 +322,10 @@ public abstract class IndexData {
     _readOnly = true;
   }
 
+  protected boolean isReadOnly() {
+    return _readOnly;
+  }
+
   protected int getMaxPageEntrySize() {
     return _maxPageEntrySize;
   }
