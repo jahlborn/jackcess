@@ -18,6 +18,10 @@
         Add support for Access 2010, including new "General" sort order
         (support for long text index entries still needs work).
       </action>
+      <action dev="jahlborn" type="fix" issue="3287626">
+        Access expects a row to be at least big enough to hold all fixed
+        values, even if they are null.
+      </action>
     </release>
     <release version="1.2.3" date="2011-03-05">
       <action dev="jahlborn" type="fix" issue="3181334">

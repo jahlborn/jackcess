@@ -1605,45 +1605,52 @@ public class Table
     int fixedDataEnd = fixedDataStart;
     for (Column col : _columns) {
 
-      if(!col.isVariableLength()) {
-        
-        Object rowValue = rowArray[col.getColumnIndex()];
-
-        if (col.getType() == DataType.BOOLEAN) {
-        
-          if(Column.toBooleanValue(rowValue)) {
-            //Booleans are stored in the null mask
-            nullMask.markNotNull(col);
-          }
-        
-        } else {
-
-          if(col.isAutoNumber() && !isUpdate) {
-            
-            // ignore given row value, use next autonumber
-            rowValue = col.getAutoNumberGenerator().getNext();
-
-            // we need to stick this back in the row so that the indexes get
-            // updated correctly (and caller can get the generated value)
-            rowArray[col.getColumnIndex()] = rowValue;
-          }
-          
-          if(rowValue != null) {
-        
-            // we have a value
-            nullMask.markNotNull(col);
-
-            //remainingRowLength is ignored when writing fixed length data
-            buffer.position(fixedDataStart + col.getFixedDataOffset());
-            buffer.put(col.write(rowValue, 0));
-
-            // keep track of the end of fixed data
-            if(buffer.position() > fixedDataEnd) {
-              fixedDataEnd = buffer.position();
-            }
-          }
-        }
+      if(col.isVariableLength()) {
+        continue;
       }
+        
+      Object rowValue = rowArray[col.getColumnIndex()];
+
+      if (col.getType() == DataType.BOOLEAN) {
+        
+        if(Column.toBooleanValue(rowValue)) {
+          //Booleans are stored in the null mask
+          nullMask.markNotNull(col);
+        }
+        rowValue = null;
+        
+      } else if(col.isAutoNumber() && !isUpdate) {
+            
+        // ignore given row value, use next autonumber
+        rowValue = col.getAutoNumberGenerator().getNext();
+
+        // we need to stick this back in the row so that the indexes get
+        // updated correctly (and caller can get the generated value)
+        rowArray[col.getColumnIndex()] = rowValue;
+      }
+          
+      if(rowValue != null) {
+        
+        // we have a value to write
+        nullMask.markNotNull(col);
+
+        // remainingRowLength is ignored when writing fixed length data
+        buffer.position(fixedDataStart + col.getFixedDataOffset());
+        buffer.put(col.write(rowValue, 0));
+
+      }
+
+      // always insert space for the entire fixed data column length
+      // (including null values), access expects the row to always be at least
+      // big enough to hold all fixed values
+      buffer.position(fixedDataStart + col.getFixedDataOffset() +
+                      col.getLength());
+
+      // keep track of the end of fixed data
+      if(buffer.position() > fixedDataEnd) {
+        fixedDataEnd = buffer.position();
+      }                  
+      
     }
 
     // reposition at end of fixed data
