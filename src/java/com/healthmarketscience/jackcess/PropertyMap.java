@@ -45,6 +45,7 @@ public class PropertyMap implements Iterable<PropertyMap.Property>
   public static final String VALIDATION_RULE_PROP = "ValidationRule";
   public static final String VALIDATION_TEXT_PROP = "ValidationText";
   public static final String GUID_PROP = "GUID";
+  public static final String DESCRIPTION_PROP = "Description";
 
   private final String _mapName;
   private final short _mapType;
