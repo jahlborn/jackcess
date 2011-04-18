@@ -1018,6 +1018,31 @@ public class Database
   }
 
   /**
+   * @param tableDefPageNumber the page number of a table definition
+   * @return The table, or null if it doesn't exist
+   */
+  protected Table getTable(int tableDefPageNumber) throws IOException {
+
+    // first, check for existing table
+    Table table = _tableCache.get(tableDefPageNumber);
+    if(table != null) {
+      return table;
+    }
+    
+    // lookup table info from system catalog
+    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+        tableDefPageNumber, SYSTEM_CATALOG_COLUMNS);
+    if(objectRow == null) {
+      return null;
+    }
+
+    String name = (String)objectRow.get(CAT_COL_NAME);
+    int flags = (Integer)objectRow.get(CAT_COL_FLAGS);
+
+    return readTable(name, tableDefPageNumber, flags, defaultUseBigIndex());
+  }
+
+  /**
    * @param name Table name
    * @param includeSystemTables whether to consider returning a system table
    * @param useBigIndex whether or not "big index support" should be enabled

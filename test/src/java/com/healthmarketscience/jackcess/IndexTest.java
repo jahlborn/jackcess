@@ -466,6 +466,48 @@ public class IndexTest extends TestCase {
     }    
   }
   
+  public void testGetForeignKeyIndex() throws Exception
+  {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
+      Database db = open(testDB);
+      Table t1 = db.getTable("Table1");
+      Table t2 = db.getTable("Table2");
+      Table t3 = db.getTable("Table3");
+
+      Index t2t1 = t1.getIndex(IndexTest.getRelationshipName(
+                                   db.getFormat(), "Table2Table1"));
+      Index t3t1 = t1.getIndex(IndexTest.getRelationshipName(
+                                   db.getFormat(), "Table3Table1"));
+
+
+      assertTrue(t2t1.isForeignKey());
+      assertNotNull(t2t1.getReference());
+      assertFalse(t2t1.getReference().isPrimaryTable());
+      doCheckForeignKeyIndex(t1, t2t1, t2);
+
+      assertTrue(t3t1.isForeignKey());
+      assertNotNull(t3t1.getReference());
+      assertFalse(t3t1.getReference().isPrimaryTable());
+      doCheckForeignKeyIndex(t1, t3t1, t3);
+      
+      Index t1pk = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
+      assertNotNull(t1pk);
+      assertNull(t1pk.getReference());
+      assertNull(t1pk.getReferencedIndex());
+    }    
+  }
+
+  private void doCheckForeignKeyIndex(Table ta, Index ia, Table tb)
+    throws Exception
+  {
+    Index ib = ia.getReferencedIndex();
+    assertNotNull(ib);
+    assertSame(tb, ib.getTable());
+
+    assertNotNull(ib.getReference());
+    assertSame(ia, ib.getReferencedIndex());
+  }
+
   private void checkIndexColumns(Table table, String... idxInfo)
     throws Exception
   {

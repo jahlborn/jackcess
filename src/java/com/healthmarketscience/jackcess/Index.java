@@ -165,6 +165,53 @@ public class Index implements Comparable<Index> {
   }
 
   /**
+   * @return the Index referenced by this Index's ForeignKeyReference (if it
+   *         has one), otherwise {@code null}.
+   */
+  public Index getReferencedIndex() throws IOException {
+
+    if(_reference == null) {
+      return null;
+    }
+
+    Table refTable = getTable().getDatabase().getTable(
+        _reference.getOtherTablePageNumber());
+
+    if(refTable == null) {
+      throw new IOException("Reference to missing table " + 
+                            _reference.getOtherTablePageNumber());
+    }
+
+    Index refIndex = null;
+    int idxNumber = _reference.getOtherIndexNumber();
+    for(Index idx : refTable.getIndexes()) {
+      if(idx.getIndexNumber() == idxNumber) {
+        refIndex = idx;
+        break;
+      }
+    }
+    
+    if(refIndex == null) {
+      throw new IOException("Reference to missing index " + idxNumber + 
+                            " on table " + refTable.getName());
+    }
+
+    // finally verify that we found the expected index (should reference this
+    // index)
+    ForeignKeyReference otherRef = refIndex.getReference();
+    if((otherRef == null) ||
+       (otherRef.getOtherTablePageNumber() != 
+        getTable().getTableDefPageNumber()) ||
+       (otherRef.getOtherIndexNumber() != _indexNumber)) {
+      throw new IOException("Found unexpected index " + refIndex.getName() +
+                            " on table " + refTable.getName() +
+                            " with reference " + otherRef);
+    }
+
+    return refIndex;
+  }
+
+  /**
    * Whether or not {@code null} values are actually recorded in the index.
    */
   public boolean shouldIgnoreNulls() {
