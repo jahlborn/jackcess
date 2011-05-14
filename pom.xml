@@ -197,6 +197,6 @@
   </distributionManagement>
   <properties>
     <jackcess.bigIndex>true</jackcess.bigIndex>
-    <jackcess.testFormats>V1997,V2000,V2003,V2007</jackcess.testFormats>
+    <jackcess.testFormats>V1997,V2000,V2003,V2007,V2010</jackcess.testFormats>
   </properties>
 </project>
