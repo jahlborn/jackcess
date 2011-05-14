@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.4" date="TBD">
+    <release version="1.2.4" date="2011-05-14">
       <action dev="jahlborn" type="update">
         Refactor table loading to use indexes.  Do not load all table names at
         database startup (should make startup faster).
@@ -16,7 +16,7 @@
       </action>
       <action dev="jahlborn" type="add">
         Add support for Access 2010, including new "General" sort order
-        (support for long text index entries still needs work).
+        (support for super-long text index entries still needs work).
       </action>
       <action dev="jahlborn" type="fix" issue="3287626">
         Access expects a row to be at least big enough to hold all fixed

@@ -1,5 +1,7 @@
 Missing pieces:
 
+- fix long text index entries
+  * ???
 - implement foreign key index creation
   * MEDIUM
 - implement table, column, index renaming
