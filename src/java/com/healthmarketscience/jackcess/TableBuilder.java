@@ -103,6 +103,16 @@ public class TableBuilder {
   }
 
   /**
+   * Sets the names of the primary key columns for this table.  Convenience
+   * method for creating a primary key index on a table.
+   */
+  public TableBuilder setPrimaryKey(String... colNames) {
+    addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+             .addColumns(colNames).setPrimaryKey());
+    return this;
+  }
+  
+  /**
    * Escapes the new table's name using {@link Database#escapeIdentifier}.
    */
   public TableBuilder escapeName()

@@ -1145,11 +1145,19 @@ public class Database
     if(!indexes.isEmpty()) {
       // now, validate the indexes
       Set<String> idxNames = new HashSet<String>();
+      boolean foundPk = false;
       for(IndexBuilder index : indexes) {
         index.validate(colNames);
         if(!idxNames.add(index.getName().toUpperCase())) {
           throw new IllegalArgumentException("duplicate index name: " +
                                              index.getName());
+        }
+        if(index.isPrimaryKey()) {
+          if(foundPk) {
+            throw new IllegalArgumentException(
+                "found second primary key index: " + index.getName());
+          }
+          foundPk = true;
         }
       }
     }
