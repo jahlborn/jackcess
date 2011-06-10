@@ -326,8 +326,7 @@ public class GeneralLegacyIndexCodes {
 
       reader = new BufferedReader(
           new InputStreamReader(
-              Thread.currentThread().getContextClassLoader()
-              .getResourceAsStream(codesFilePath), "US-ASCII"));
+              Database.getResourceAsStream(codesFilePath), "US-ASCII"));
       
       int start = asUnsignedChar(firstChar);
       int end = asUnsignedChar(lastChar);

@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.5" date="TBD">
+      <action dev="jahlborn" type="update">
+        Try multiple classloaders when loading resources as streams.
+      </action>
+    </release>
     <release version="1.2.4" date="2011-05-14">
       <action dev="jahlborn" type="update">
         Refactor table loading to use indexes.  Do not load all table names at

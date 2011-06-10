@@ -657,8 +657,7 @@ public class Database
 
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
-    transferFrom(channel, Thread.currentThread().getContextClassLoader()
-                 .getResourceAsStream(fileFormat._emptyFile));
+    transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
     return new Database(channel, autoSync, fileFormat, charset, timeZone,
                         null);
   }
@@ -1911,6 +1910,25 @@ public class Database
     return pwdMask;
   }
 
+  static InputStream getResourceAsStream(String resourceName)
+    throws IOException
+  {
+    InputStream stream = Database.class.getClassLoader()
+      .getResourceAsStream(resourceName);
+    
+    if(stream == null) {
+      
+      stream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream(resourceName);
+      
+      if(stream == null) {
+        throw new IOException("Could not load jackcess resource " +
+                              resourceName);
+      }
+    }
+
+    return stream;
+  }
 
   /**
    * Utility class for storing table page number and actual name.
