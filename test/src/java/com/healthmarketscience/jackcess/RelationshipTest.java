@@ -54,9 +54,7 @@ public class RelationshipTest extends TestCase {
       List<Relationship> rels = db.getRelationships(t1, t2);
       assertEquals(1, rels.size());
       Relationship rel = rels.get(0);
-      assertEquals(IndexTest.getRelationshipName(testDB.getExpectedFormat(),
-                                                 "Table2Table1"),
-                   rel.getName());
+      assertEquals("Table2Table1", rel.getName());
       assertEquals(t2, rel.getFromTable());
       assertEquals(Arrays.asList(t2.getColumn("id")),
                    rel.getFromColumns());
@@ -64,7 +62,8 @@ public class RelationshipTest extends TestCase {
       assertEquals(Arrays.asList(t1.getColumn("otherfk1")),
                    rel.getToColumns());
       assertTrue(rel.hasReferentialIntegrity());
-      assertEquals(0, rel.getFlags());
+      assertEquals(4096, rel.getFlags());
+      assertTrue(rel.cascadeDeletes());
       assertSameRelationships(rels, db.getRelationships(t2, t1));
 
       rels = db.getRelationships(t2, t3);
@@ -74,9 +73,7 @@ public class RelationshipTest extends TestCase {
       rels = db.getRelationships(t1, t3);
       assertEquals(1, rels.size());
       rel = rels.get(0);
-      assertEquals(IndexTest.getRelationshipName(testDB.getExpectedFormat(),
-                                                 "Table3Table1"),
-                   rel.getName());
+      assertEquals("Table3Table1", rel.getName());
       assertEquals(t3, rel.getFromTable());
       assertEquals(Arrays.asList(t3.getColumn("id")),
                    rel.getFromColumns());
@@ -84,7 +81,8 @@ public class RelationshipTest extends TestCase {
       assertEquals(Arrays.asList(t1.getColumn("otherfk2")),
                    rel.getToColumns());
       assertTrue(rel.hasReferentialIntegrity());
-      assertEquals(0, rel.getFlags());
+      assertEquals(256, rel.getFlags());
+      assertTrue(rel.cascadeUpdates());
       assertSameRelationships(rels, db.getRelationships(t3, t1));
 
       try {

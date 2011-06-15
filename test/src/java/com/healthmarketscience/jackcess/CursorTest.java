@@ -30,15 +30,16 @@ package com.healthmarketscience.jackcess;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.TreeSet;
-
-import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import junit.framework.TestCase;
 
 /**
  * @author James Ahlborn
@@ -821,4 +822,144 @@ public class CursorTest extends TestCase {
     }
   }
 
+  public void testIndexCursor() throws Exception
+  { 
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+
+      Database db = open(testDB);
+      Table t1 = db.getTable("Table1");
+      Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
+      IndexCursor cursor = IndexCursor.createCursor(t1, idx);
+
+      assertFalse(cursor.findRowByEntry(-1));
+      cursor.findClosestRowByEntry(-1);
+      assertEquals(0, cursor.getCurrentRow().get("id"));
+
+      assertTrue(cursor.findRowByEntry(1));
+      assertEquals(1, cursor.getCurrentRow().get("id"));
+      
+      cursor.findClosestRowByEntry(2);
+      assertEquals(2, cursor.getCurrentRow().get("id"));
+
+      assertFalse(cursor.findRowByEntry(4));
+      cursor.findClosestRowByEntry(4);
+      assertTrue(cursor.isAfterLast());
+
+      db.close();
+    }    
+  }
+  
+  public void testIndexCursorDelete() throws Exception
+  { 
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+
+      Database db = openCopy(testDB);
+      Table t1 = db.getTable("Table1");
+      Index idx = t1.getIndex("Table2Table1");
+      IndexCursor cursor = IndexCursor.createCursor(t1, idx);
+
+      List<String> expectedData = new ArrayList<String>();
+      for(Map<String,Object> row : cursor.entryIterable(
+              Arrays.asList("data"), 1)) {
+        expectedData.add((String)row.get("data"));
+      }
+
+      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+
+      expectedData = new ArrayList<String>();
+      for(Iterator<Map<String,Object>> iter = cursor.entryIterator(1);
+          iter.hasNext(); ) {
+        expectedData.add((String)iter.next().get("data"));
+        iter.remove();
+        try {
+          iter.remove();
+          fail("IllegalArgumentException should have been thrown");
+        } catch(IllegalStateException e) {
+          // success
+        }
+
+        if(!iter.hasNext()) {
+          try {
+            iter.next();
+            fail("NoSuchElementException should have been thrown");
+          } catch(NoSuchElementException e) {
+            // success
+          }
+        }
+      }
+
+      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+      
+      expectedData = new ArrayList<String>();
+      for(Map<String,Object> row : cursor.entryIterable(
+              Arrays.asList("data"), 1)) {
+        expectedData.add((String)row.get("data"));
+      }
+
+      assertTrue(expectedData.isEmpty());
+      
+      db.close();
+    }    
+  }
+  
+  public void testCursorDelete() throws Exception
+  { 
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+
+      Database db = openCopy(testDB);
+      Table t1 = db.getTable("Table1");
+      Cursor cursor = Cursor.createCursor(t1);
+
+      List<String> expectedData = new ArrayList<String>();
+      for(Map<String,Object> row : cursor.iterable(
+              Arrays.asList("otherfk1", "data"))) {
+        if(row.get("otherfk1").equals(1)) {
+          expectedData.add((String)row.get("data"));
+        }
+      }
+
+      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+
+      expectedData = new ArrayList<String>();
+      for(Iterator<Map<String,Object>> iter = cursor.iterator();
+          iter.hasNext(); ) {
+        Map<String,Object> row = iter.next();
+        if(row.get("otherfk1").equals(1)) {
+          expectedData.add((String)row.get("data"));
+          iter.remove();
+          try {
+            iter.remove();
+            fail("IllegalArgumentException should have been thrown");
+          } catch(IllegalStateException e) {
+            // success
+          }
+        }
+
+        if(!iter.hasNext()) {
+          try {
+            iter.next();
+            fail("NoSuchElementException should have been thrown");
+          } catch(NoSuchElementException e) {
+            // success
+          }
+        }
+      }
+
+      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+      
+      expectedData = new ArrayList<String>();
+      for(Map<String,Object> row : cursor.iterable(
+              Arrays.asList("otherfk1", "data"))) {
+        if(row.get("otherfk1").equals(1)) {
+          expectedData.add((String)row.get("data"));
+        }
+      }
+
+      assertTrue(expectedData.isEmpty());
+      
+      db.close();
+    }    
+  }
+  
 }
+  

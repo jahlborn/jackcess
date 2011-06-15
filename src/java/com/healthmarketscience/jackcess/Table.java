@@ -795,7 +795,7 @@ public class Table
 
   
   /**
-   * Calls <code>reset</code> on this table and returns an unmodifiable
+   * Calls <code>reset</code> on this table and returns a modifiable
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.
@@ -808,7 +808,7 @@ public class Table
   }
   
   /**
-   * Calls <code>reset</code> on this table and returns an unmodifiable
+   * Calls <code>reset</code> on this table and returns a modifiable
    * Iterator which will iterate through all the rows of this table, returning
    * only the given columns.  Use of the Iterator follows the same
    * restrictions as a call to <code>getNextRow</code>.

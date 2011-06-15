@@ -113,10 +113,8 @@ public class IndexTest extends TestCase {
       checkIndexColumns(table,
                         "id", "id",
                         "PrimaryKey", "id",
-                        getRelationshipName(testDB.getExpectedFormat(), 
-                                            "Table2Table1"), "otherfk1",
-                        getRelationshipName(testDB.getExpectedFormat(), 
-                                            "Table3Table1"), "otherfk2");
+                        "Table2Table1", "otherfk1",
+                        "Table3Table1", "otherfk2");
 
       table = mdb.getTable("Table2");
       for(Index idx : table.getIndexes()) {
@@ -474,20 +472,22 @@ public class IndexTest extends TestCase {
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");
 
-      Index t2t1 = t1.getIndex(IndexTest.getRelationshipName(
-                                   db.getFormat(), "Table2Table1"));
-      Index t3t1 = t1.getIndex(IndexTest.getRelationshipName(
-                                   db.getFormat(), "Table3Table1"));
+      Index t2t1 = t1.getIndex("Table2Table1");
+      Index t3t1 = t1.getIndex("Table3Table1");
 
 
       assertTrue(t2t1.isForeignKey());
       assertNotNull(t2t1.getReference());
       assertFalse(t2t1.getReference().isPrimaryTable());
+      assertFalse(t2t1.getReference().isCascadeUpdates());
+      assertTrue(t2t1.getReference().isCascadeDeletes());
       doCheckForeignKeyIndex(t1, t2t1, t2);
 
       assertTrue(t3t1.isForeignKey());
       assertNotNull(t3t1.getReference());
       assertFalse(t3t1.getReference().isPrimaryTable());
+      assertTrue(t3t1.getReference().isCascadeUpdates());
+      assertFalse(t3t1.getReference().isCascadeDeletes());
       doCheckForeignKeyIndex(t1, t3t1, t3);
       
       Index t1pk = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
@@ -506,6 +506,7 @@ public class IndexTest extends TestCase {
 
     assertNotNull(ib.getReference());
     assertSame(ia, ib.getReferencedIndex());
+    assertTrue(ib.getReference().isPrimaryTable());
   }
 
   private void checkIndexColumns(Table table, String... idxInfo)
@@ -528,16 +529,4 @@ public class IndexTest extends TestCase {
     }
   }
 
-  static String getRelationshipName(JetFormat format, String name)
-  {
-    if(format == JetFormat.VERSION_3) {
-      if(name.equals("Table2Table1")) {
-        return "{150B6687-5C64-4DC0-B934-A8CF92FF73FF}";
-      }
-      if(name.equals("Table3Table1")) {
-        return "{D039E343-97A1-471F-B2E3-8DFCF1EEC597}";
-      }
-    }
-    return name;
-  }
 }

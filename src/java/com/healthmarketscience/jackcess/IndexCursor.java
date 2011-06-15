@@ -20,7 +20,9 @@ USA
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -156,9 +158,8 @@ public class IndexCursor extends Cursor
 
   /**
    * Moves to the first row (as defined by the cursor) where the index entries
-   * match the given values (only valid for index-backed cursors).  If a match
-   * is not found (or an exception is thrown), the cursor is restored to its
-   * previous state.
+   * match the given values.  If a match is not found (or an exception is
+   * thrown), the cursor is restored to its previous state.
    *
    * @param entryValues the column values for the index's columns.
    * @return {@code true} if a valid row was found with the given values,
@@ -171,7 +172,7 @@ public class IndexCursor extends Cursor
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findRowByEntryImpl(entryValues, true);
+      found = findRowByEntryImpl(toRowValues(entryValues), true);
       return found;
     } finally {
       if(!found) {
@@ -186,8 +187,8 @@ public class IndexCursor extends Cursor
 
   /**
    * Moves to the first row (as defined by the cursor) where the index entries
-   * are >= the given values (only valid for index-backed cursors).  If a an
-   * exception is thrown, the cursor is restored to its previous state.
+   * are >= the given values.  If a an exception is thrown, the cursor is
+   * restored to its previous state.
    *
    * @param entryValues the column values for the index's columns.
    */
@@ -198,7 +199,7 @@ public class IndexCursor extends Cursor
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      findRowByEntryImpl(entryValues, false);
+      findRowByEntryImpl(toRowValues(entryValues), false);
       found = true;
     } finally {
       if(!found) {
@@ -210,7 +211,69 @@ public class IndexCursor extends Cursor
       }
     }
   }
-    
+
+  /**
+   * Returns {@code true} if the current row matches the given index entries.
+   * 
+   * @param entryValues the column values for the index's columns.
+   */
+  public boolean currentRowMatchesEntry(Object... entryValues) 
+    throws IOException 
+  {
+    return currentRowMatchesEntryImpl(toRowValues(entryValues));
+  }
+  
+  /**
+   * Returns a modifiable Iterator which will iterate through all the rows of
+   * this table which match the given index entries.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String,Object>> entryIterator(Object... entryValues)
+  {
+    return entryIterator((Collection<String>)null, entryValues);
+  }
+  
+  /**
+   * Returns a modifiable Iterator which will iterate through all the rows of
+   * this table which match the given index entries, returning only the given
+   * columns.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String,Object>> entryIterator(
+      Collection<String> columnNames, Object... entryValues)
+  {
+    return new EntryIterator(columnNames, toRowValues(entryValues));
+  }
+  
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #entryIterator(Object...)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String,Object>> entryIterable(Object... entryValues)
+  {
+    return entryIterable((Collection<String>)null, entryValues);
+  }
+  
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #entryIterator(Collection,Object...)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String,Object>> entryIterable(
+      final Collection<String> columnNames, final Object... entryValues)
+  {
+    return new Iterable<Map<String, Object>>() {
+      public Iterator<Map<String, Object>> iterator() {
+        return new EntryIterator(columnNames, toRowValues(entryValues));
+      }
+    };
+  }
+  
   @Override
   protected IndexDirHandler getDirHandler(boolean moveForward) {
     return (moveForward ? _forwardDirHandler : _reverseDirHandler);
@@ -267,19 +330,15 @@ public class IndexCursor extends Cursor
    * Moves to the first row (as defined by the cursor) where the index entries
    * match the given values.  Caller manages save/restore on failure.
    *
-   * @param entryValues the column values for the index's columns.
+   * @param rowValues the column values built from the index column values
    * @param requireMatch whether or not an exact match is found
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  protected boolean findRowByEntryImpl(Object[] entryValues,
-                                            boolean requireMatch) 
+  protected boolean findRowByEntryImpl(Object[] rowValues,
+                                       boolean requireMatch) 
     throws IOException 
   {
-    Object[] rowValues = _entryCursor.getIndexData()
-      .constructIndexRowFromEntry(entryValues);
-      
-    // sweet, we can use our index
     if(!findPotentialRow(rowValues, requireMatch)) {
       return false;
     } else if(!requireMatch) {
@@ -287,28 +346,7 @@ public class IndexCursor extends Cursor
       return true;
     }
 
-    if(_indexEntryPattern == null) {
-      // init our set of index column names
-      _indexEntryPattern = new HashSet<String>();
-      for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
-        _indexEntryPattern.add(col.getName());
-      }
-    }
-
-    // check the next row to see if it actually matches
-    Map<String,Object> row = getCurrentRow(_indexEntryPattern);
-
-    for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
-      String columnName = col.getName();
-      Object patValue = rowValues[col.getColumnIndex()];
-      Object rowValue = row.get(columnName);
-      if(!_columnMatcher.matches(getTable(), columnName,
-                                 patValue, rowValue)) {
-        return false;
-      }
-    }
-
-    return true;
+    return currentRowMatchesEntryImpl(rowValues);
   }
 
   @Override
@@ -338,8 +376,7 @@ public class IndexCursor extends Cursor
     } else {
       // the rowPattern has more columns than just the index, so we need to
       // do more work when testing below
-      indexRowPattern =
-        new LinkedHashMap<String,Object>();
+      indexRowPattern = new LinkedHashMap<String,Object>();
       for(IndexData.ColumnDescriptor idxCol : indexData.getColumns()) {
         indexRowPattern.put(idxCol.getName(),
                             rowValues[idxCol.getColumnIndex()]);
@@ -368,7 +405,34 @@ public class IndexCursor extends Cursor
     // none of the potential rows matched
     return false;
   }
-    
+
+  private boolean currentRowMatchesEntryImpl(Object[] rowValues)
+    throws IOException
+  {
+    if(_indexEntryPattern == null) {
+      // init our set of index column names
+      _indexEntryPattern = new HashSet<String>();
+      for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
+        _indexEntryPattern.add(col.getName());
+      }
+    }
+
+    // check the next row to see if it actually matches
+    Map<String,Object> row = getCurrentRow(_indexEntryPattern);
+
+    for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
+      String columnName = col.getName();
+      Object patValue = rowValues[col.getColumnIndex()];
+      Object rowValue = row.get(columnName);
+      if(!_columnMatcher.matches(getTable(), columnName,
+                                 patValue, rowValue)) {
+        return false;
+      }
+    }
+
+    return true;    
+  }
+  
   private boolean findPotentialRow(Object[] rowValues, boolean requireMatch)
     throws IOException
   {
@@ -383,6 +447,11 @@ public class IndexCursor extends Cursor
     return true;
   }
 
+  private Object[] toRowValues(Object[] entryValues)
+  {
+    return _entryCursor.getIndexData().constructIndexRowFromEntry(entryValues);
+  }
+  
   @Override
   protected Position findAnotherPosition(RowState rowState, Position curPos,
                                          boolean moveForward)
@@ -480,5 +549,31 @@ public class IndexCursor extends Cursor
       return "Entry = " + getEntry();
     }
   }
+
+  /**
+   * Row iterator (by matching entry) for this cursor, modifiable.
+   */
+  private final class EntryIterator extends BaseIterator
+  {
+    private final Object[] _rowValues;
+    
+    private EntryIterator(Collection<String> columnNames, Object[] rowValues)
+    {
+      super(columnNames);
+      _rowValues = rowValues;
+      try {
+        _hasNext = findRowByEntryImpl(rowValues, true);
+        _validRow = _hasNext;
+      } catch(IOException e) {
+          throw new IllegalStateException(e);
+      }
+    }
+
+    @Override
+    protected boolean findNext() throws IOException {
+      return (moveToNextRow() && currentRowMatchesEntryImpl(_rowValues));
+    }    
+  }
+
   
 }

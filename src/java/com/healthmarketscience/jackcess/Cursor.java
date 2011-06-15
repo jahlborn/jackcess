@@ -447,7 +447,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Returns an Iterable whose iterator() method calls <code>afterLast</code>
-   * on this cursor and returns an unmodifiable Iterator which will iterate
+   * on this cursor and returns a modifiable Iterator which will iterate
    * through all the rows of this table in reverse order.  Use of the Iterator
    * follows the same restrictions as a call to <code>getPreviousRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
@@ -459,7 +459,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Returns an Iterable whose iterator() method calls <code>afterLast</code>
-   * on this table and returns an unmodifiable Iterator which will iterate
+   * on this table and returns a modifiable Iterator which will iterate
    * through all the rows of this table in reverse order, returning only the
    * given columns.  Use of the Iterator follows the same restrictions as a
    * call to <code>getPreviousRow</code>.
@@ -477,7 +477,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
-   * Calls <code>beforeFirst</code> on this cursor and returns an unmodifiable
+   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.
@@ -506,7 +506,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
-   * Calls <code>beforeFirst</code> on this table and returns an unmodifiable
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
    * Iterator which will iterate through all the rows of this table, returning
    * only the given columns.  Use of the Iterator follows the same
    * restrictions as a call to <code>getNextRow</code>.
@@ -962,26 +962,27 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   protected abstract DirHandler getDirHandler(boolean moveForward);
 
+
   /**
-   * Row iterator for this table, modifiable.
+   * Base implementation of iterator for this cursor, modifiable.
    */
-  private final class RowIterator implements Iterator<Map<String, Object>>
+  protected abstract class BaseIterator
+    implements Iterator<Map<String, Object>>
   {
-    private final Collection<String> _columnNames;
-    private final boolean _moveForward;
-    private Boolean _hasNext;
+    protected final Collection<String> _columnNames;
+    protected Boolean _hasNext;
+    protected boolean _validRow;
     
-    private RowIterator(Collection<String> columnNames, boolean moveForward)
+    protected BaseIterator(Collection<String> columnNames)
     {
       _columnNames = columnNames;
-      _moveForward = moveForward;
-      reset(_moveForward);
     }
 
     public boolean hasNext() {
       if(_hasNext == null) {
         try {
-          _hasNext = moveToAnotherRow(_moveForward);
+          _hasNext = findNext();
+          _validRow = _hasNext;
         } catch(IOException e) {
           throw new IllegalStateException(e);
         }
@@ -1003,12 +1004,40 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     }
 
     public void remove() {
-      try {
-        deleteCurrentRow();
-      } catch(IOException e) {
-        throw new IllegalStateException(e);
+      if(_validRow) {
+        try {
+          deleteCurrentRow();
+          _validRow = false;
+        } catch(IOException e) {
+          throw new IllegalStateException(e);
+        }
+      } else {
+        throw new IllegalStateException("Not at valid row");
       }
-    }    
+    }
+
+    protected abstract boolean findNext() throws IOException;
+  }
+
+  
+  /**
+   * Row iterator for this cursor, modifiable.
+   */
+  private final class RowIterator extends BaseIterator
+  {
+    private final boolean _moveForward;
+    
+    private RowIterator(Collection<String> columnNames, boolean moveForward)
+    {
+      super(columnNames);
+      _moveForward = moveForward;
+      reset(_moveForward);
+    }
+
+    @Override
+    protected boolean findNext() throws IOException {
+      return moveToAnotherRow(_moveForward);
+    }
   }
 
   /**

@@ -8,6 +8,10 @@
       <action dev="jahlborn" type="update">
         Try multiple classloaders when loading resources as streams.
       </action>
+      <action dev="jahlborn" type="add">
+        Add the Joiner utility and some new methods to IndexCursor to make it
+        easier to join tables using pre-defined (index backed) relationships.
+      </action>
     </release>
     <release version="1.2.4" date="2011-05-14">
       <action dev="jahlborn" type="update">
