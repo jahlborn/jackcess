@@ -88,14 +88,20 @@ public class IndexTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       Table table = open(testDB).getTable("Table1");
       Map<String, Boolean> foundPKs = new HashMap<String, Boolean>();
+      Index pkIndex = null;
       for(Index index : table.getIndexes()) {
         foundPKs.put(index.getColumns().iterator().next().getName(),
                      index.isPrimaryKey());
+        if(index.isPrimaryKey()) {
+          pkIndex= index;
+        
+        }
       }
       Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
       expectedPKs.put("A", Boolean.TRUE);
       expectedPKs.put("B", Boolean.FALSE);
       assertEquals(expectedPKs, foundPKs);
+      assertSame(pkIndex, table.getPrimaryKeyIndex());
     }
   }
   

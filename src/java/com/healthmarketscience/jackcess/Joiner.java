@@ -47,9 +47,24 @@ public class Joiner
   }
 
   /**
+   * Creates a new Joiner based on the foreign-key relationship between the
+   * given "from"" table and the given "to"" table.
+   *
+   * @param fromTable the "from" side of the relationship
+   * @param toTable the "to" side of the relationship
+   * @throws IllegalArgumentException if there is no relationship between the
+   *         given tables
+   */
+  public static Joiner create(Table fromTable, Table toTable)
+    throws IOException
+  {
+    return create(fromTable.getForeignKeyIndex(toTable));
+  }
+  
+  /**
    * Creates a new Joiner based on the given index which backs a foreign-key
    * relationship.  The table of the given index will be the "from" table and
-   * the table on the other end of the relationsip is the "to" table.
+   * the table on the other end of the relationship will be the "to" table.
    *
    * @param fromIndex the index backing one side of a foreign-key relationship
    */
@@ -62,6 +77,16 @@ public class Joiner
     // text lookups are always case-insensitive
     toCursor.setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE);
     return new Joiner(fromIndex, toCursor);
+  }
+
+  /**
+   * Creates a new Joiner that is the reverse of this Joiner (the "from" and
+   * "to" tables are swapped).
+   */ 
+  public Joiner createReverse()
+    throws IOException
+  {
+    return create(getToTable(), getFromTable());
   }
   
   public Table getFromTable()

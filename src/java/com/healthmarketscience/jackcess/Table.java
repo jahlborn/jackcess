@@ -367,6 +367,7 @@ public class Table
 
   /**
    * @return the index with the given name
+   * @throws IllegalArgumentException if there is no index with the given name
    */
   public Index getIndex(String name) {
     for(Index index : _indexes) {
@@ -377,7 +378,40 @@ public class Table
     throw new IllegalArgumentException("Index with name " + name +
                                        " does not exist on this table");
   }
-    
+
+  /**
+   * @return the primary key index for this table
+   * @throws IllegalArgumentException if there is no primary key index on this
+   *         table
+   */
+  public Index getPrimaryKeyIndex() {
+    for(Index index : _indexes) {
+      if(index.isPrimaryKey()) {
+        return index;
+      }
+    }
+    throw new IllegalArgumentException("Table " + getName() +
+                                       " does not have a primary key index");
+  }
+  
+  /**
+   * @return the foreign key index joining this table to the given other table
+   * @throws IllegalArgumentException if there is no relationship between this
+   *         table and the given table
+   */
+  public Index getForeignKeyIndex(Table otherTable) {
+    for(Index index : _indexes) {
+      if(index.isForeignKey() && (index.getReference() != null) &&
+         (index.getReference().getOtherTablePageNumber() ==
+          otherTable.getTableDefPageNumber())) {
+        return index;
+      }
+    }
+    throw new IllegalArgumentException(
+        "Table " + getName() + " does not have a foreign key reference to " +
+        otherTable.getName());
+  }
+  
   /**
    * @return All of the IndexData on this table (unmodifiable List)
    */

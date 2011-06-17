@@ -83,7 +83,8 @@ public class JoinerTest extends TestCase {
   {
     final Set<String> colNames = new HashSet<String>(
         Arrays.asList("id", "data"));
-    
+
+    Joiner revJoin = join.createReverse();
     for(Map<String,Object> row : join.getFromTable()) {
       Integer id = (Integer)row.get("id");
 
@@ -98,6 +99,8 @@ public class JoinerTest extends TestCase {
 
       if(!expectedRows.isEmpty()) {
         assertEquals(expectedRows.get(0), join.findFirstRow(row));
+
+        assertEquals(row, revJoin.findFirstRow(expectedRows.get(0)));
       } else {
         assertNull(join.findFirstRow(row));
       }
