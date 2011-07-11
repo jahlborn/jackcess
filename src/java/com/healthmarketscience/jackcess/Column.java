@@ -217,9 +217,25 @@ public class Column implements Comparable<Column> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));
     }
-    setType(DataType.fromByte(buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE)));
+    
+    byte colType = buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE);
     _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
     _columnLength = buffer.getShort(offset + getFormat().OFFSET_COLUMN_LENGTH);
+
+    byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
+    _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
+    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
+
+    try {
+      _type = DataType.fromByte(colType);
+    } catch(IOException e) {
+      LOG.warn("Unsupported column type " + colType);
+      _type = (_variableLength ? DataType.UNSUPPORTED_VARLEN :
+               DataType.UNSUPPORTED_FIXEDLEN);
+      // slight hack, stash the original type in the _scale
+      _scale = colType;
+    }
+    
     if (_type.getHasScalePrecision()) {
       _precision = buffer.get(offset + getFormat().OFFSET_COLUMN_PRECISION);
       _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
@@ -232,11 +248,8 @@ public class Column implements Comparable<Column> {
         _textCodePage = buffer.getShort(offset + cpOffset);
       }
     }
-    byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
-    _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
-    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
     setAutoNumberGenerator();
-        
+    
     _compressedUnicode = ((buffer.get(offset +
         getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
 
@@ -436,7 +449,8 @@ public class Column implements Comparable<Column> {
       _autoNumberGenerator = new GuidAutoNumberGenerator();
       break;
     default:
-      throw new RuntimeException("Unexpected autoNumber column type " + _type);
+      LOG.warn("Unknown auto number column type " + _type);
+      _autoNumberGenerator = new UnsupportedAutoNumberGenerator(_type);
     }
   }
 
@@ -503,7 +517,7 @@ public class Column implements Comparable<Column> {
     }
 
     if(isAutoNumber()) {
-      if((getType() != DataType.LONG) && (getType() != DataType.GUID)) {
+      if(!getType().mayBeAutoNumber()) {
         throw new IllegalArgumentException(
             "Auto number column must be long integer or guid");
       }
@@ -573,6 +587,8 @@ public class Column implements Comparable<Column> {
                (_type == DataType.UNKNOWN_11)) {
       // treat like "binary" data
       return data;
+    } else if(_type.isUnsupported()) {
+      return rawDataWrapper(data);
     } else {
       throw new IOException("Unrecognized data type: " + _type);
     }
@@ -1164,6 +1180,7 @@ public class Column implements Comparable<Column> {
         
       case BINARY:
       case UNKNOWN_0D:
+      case UNSUPPORTED_VARLEN:
         // should already be "encoded"
         break;
       default:
@@ -1255,6 +1272,7 @@ public class Column implements Comparable<Column> {
     case BINARY:
     case UNKNOWN_0D:
     case UNKNOWN_11:
+    case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
       if(bytes.length != getLength()) {
         throw new IOException("Invalid fixed size binary data, size "
@@ -1420,11 +1438,30 @@ public class Column implements Comparable<Column> {
     return true;
   }
 
+  /**
+   * Constructs a byte containing the flags for this column.
+   */
+  private byte getColumnBitFlags() {
+    byte flags = Column.UNKNOWN_FLAG_MASK;
+    if(!isVariableLength()) {
+      flags |= Column.FIXED_LEN_FLAG_MASK;
+    }
+    if(isAutoNumber()) {
+      flags |= getAutoNumberGenerator().getColumnFlags();
+    }
+    return flags;
+  }
+  
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
     rtn.append("\tName: (" + _table.getName() + ") " + _name);
-    rtn.append("\n\tType: 0x" + Integer.toHexString(_type.getValue()) +
+    byte typeValue = _type.getValue();
+    if(_type.isUnsupported()) {
+      // slight hack, we stashed the real type in the _scale
+      typeValue = _scale;
+    }
+    rtn.append("\n\tType: 0x" + Integer.toHexString(typeValue) +
                " (" + _type + ")");
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);
@@ -1709,7 +1746,7 @@ public class Column implements Comparable<Column> {
         }
         buffer.putShort((short) 0); //Unknown
       }
-      buffer.put(getColumnBitFlags(col)); // misc col flags
+      buffer.put(col.getColumnBitFlags()); // misc col flags
       if (col.isCompressedUnicode()) {  //Compressed
         buffer.put((byte) 1);
       } else {
@@ -1737,20 +1774,6 @@ public class Column implements Comparable<Column> {
     for (Column col : columns) {
       Table.writeName(buffer, col.getName(), charset);
     }
-  }
-
-  /**
-   * Constructs a byte containing the flags for the given column.
-   */
-  private static byte getColumnBitFlags(Column col) {
-    byte flags = Column.UNKNOWN_FLAG_MASK;
-    if(!col.isVariableLength()) {
-      flags |= Column.FIXED_LEN_FLAG_MASK;
-    }
-    if(col.isAutoNumber()) {
-      flags |= col.getAutoNumberGenerator().getColumnFlags();
-    }
-    return flags;
   }
 
   /**
@@ -1940,6 +1963,36 @@ public class Column implements Comparable<Column> {
     }
   }
 
+  private final class UnsupportedAutoNumberGenerator extends AutoNumberGenerator
+  {
+    private final DataType _genType;
+    
+    private UnsupportedAutoNumberGenerator(DataType genType) {
+      _genType = genType;
+    }
+    
+    @Override
+    public Object getLast() {
+      return null;
+    }
+
+    @Override
+    public Object getNext() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getColumnFlags() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DataType getType() {
+      return _genType;
+    }
+  }
+
+  
   /**
    * Information about the sort order (collation) for a textual column.
    */

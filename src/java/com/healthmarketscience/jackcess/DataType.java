@@ -146,7 +146,18 @@ public enum DataType {
    * Unknown data (seems to be an alternative OLE type, used by
    * MSysAccessObjects table).  Handled like a fixed length BINARY/OLE.
    */
-  UNKNOWN_11((byte) 0x11, null, 3992);
+  UNKNOWN_11((byte) 0x11, null, 3992),
+  /**
+   * Dummy type for a fixed length type which is not currently supported.
+   * Handled like a fixed length BINARY.
+   */
+  UNSUPPORTED_FIXEDLEN((byte) 0xFE, null, null),
+  /**
+   * Placeholder type for a variable length type which is not currently supported.
+   * Handled like BINARY.
+   */
+  UNSUPPORTED_VARLEN((byte) 0xFF, null, null, true, false, 0, null, 0x3FFFFFFF,
+      1);
 
   /** Map of SQL types to Access data types */
   private static Map<Integer, DataType> SQL_TYPES = new HashMap<Integer, DataType>();
@@ -177,6 +188,9 @@ public enum DataType {
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
   static {
     for (DataType type : DataType.values()) {
+      if(type.isUnsupported()) {
+        continue;
+      }
       DATA_TYPES.put(type._value, type);
     }
   }
@@ -395,6 +409,14 @@ public enum DataType {
     return ((this == TEXT) || (this == MEMO));
   }
 
+  public boolean mayBeAutoNumber() {
+    return((this == LONG) || (this == GUID));
+  }
+
+  public boolean isUnsupported() {
+    return((this == UNSUPPORTED_FIXEDLEN) || (this == UNSUPPORTED_VARLEN));
+  }
+  
   private static int toValidRange(int value, int minValue, int maxValue) {
     return((value > maxValue) ? maxValue :
            ((value < minValue) ? minValue : value));
