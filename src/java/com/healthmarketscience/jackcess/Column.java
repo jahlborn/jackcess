@@ -483,6 +483,11 @@ public class Column implements Comparable<Column> {
     }
     Database.validateIdentifierName(getName(), format.MAX_COLUMN_NAME_LENGTH,
                                     "column");
+
+    if(getType().isUnsupported()) {
+      throw new IllegalArgumentException(
+          "Cannot create column with unsupported type " + getType());
+    }
     
     if(isVariableLength() != getType().isVariableLength()) {
       throw new IllegalArgumentException("invalid variable length setting");
