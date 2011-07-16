@@ -289,6 +289,29 @@ public class Table
   protected UsageMap.PageCursor getOwnedPagesCursor() {
     return _ownedPages.cursor();
   }
+
+  /**
+   * Returns the <i>approximate</i> number of database pages owned by this
+   * table and all related indexes (this number does <i>not</i> take into
+   * account pages used for large OLE/MEMO fields).
+   * <p>
+   * To calculate the approximate number of bytes owned by a table:
+   * <code>
+   * int approxTableBytes = (table.getApproximateOwnedPageCount() *
+   *                         table.getFormat().PAGE_SIZE);
+   * </code>
+   */
+  public int getApproximateOwnedPageCount() {
+    // add a page for the table def (although that might actually be more than
+    // one page)
+    int count = _ownedPages.getPageCount() + 1;
+    // note, we count owned pages from _physical_ indexes, not logical indexes
+    // (otherwise we could double count pages)
+    for(IndexData indexData : _indexDatas) {
+      count += indexData.getOwnedPageCount();
+    }
+    return count;
+  }
   
   protected TempPageHolder getLongValueBuffer() {
     return _longValueBufferH;

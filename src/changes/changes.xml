@@ -15,6 +15,9 @@
       <action dev="jahlborn" type="update">
         Enable basic handling of unsupported data types as binary content.
       </action>
+      <action dev="jahlborn" type="update">
+        Add methods to approximate table size.
+      </action>
     </release>
     <release version="1.2.4" date="2011-05-14">
       <action dev="jahlborn" type="update">

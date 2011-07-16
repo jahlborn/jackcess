@@ -150,6 +150,10 @@ public class UsageMap
     return new PageCursor();
   }
 
+  public int getPageCount() {
+    return _pageNumbers.cardinality();
+  }
+  
   protected short getRowStart() {
     return _rowStart;
   }

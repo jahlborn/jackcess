@@ -330,6 +330,13 @@ public abstract class IndexData {
     return _maxPageEntrySize;
   }
 
+  /**
+   * Returns the number of database pages owned by this index data.
+   */
+  public int getOwnedPageCount() {
+    return _ownedPages.getPageCount();
+  }
+  
   void addOwnedPage(int pageNumber) throws IOException {
     _ownedPages.addPageNumber(pageNumber);
   }
