@@ -980,10 +980,23 @@ public class Database
     if(_tableNames == null) {
       Set<String> tableNames =
         new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-      _tableFinder.getTableNames(tableNames);
+      _tableFinder.getTableNames(tableNames, false);
       _tableNames = tableNames;
     }
     return _tableNames;
+  }
+
+  /**
+   * @return The names of all of the system tables (String).  Note, in order
+   *         to read these tables, you must use {@link #getSystemTable}.
+   *         <i>Extreme care should be taken if modifying these tables
+   *         directly!</i>.
+   */
+  public Set<String> getSystemTableNames() throws IOException {
+    Set<String> sysTableNames =
+      new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    _tableFinder.getTableNames(sysTableNames, true);
+    return sysTableNames;
   }
 
   /**
@@ -2015,8 +2028,10 @@ public class Database
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
     }
 
-    public void getTableNames(Set<String> tableNames) throws IOException {
-
+    public void getTableNames(Set<String> tableNames,
+                              boolean systemTables)
+      throws IOException
+    {
       for(Map<String,Object> row : getTableNamesCursor().iterable(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
@@ -2026,7 +2041,7 @@ public class Database
         int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
 
         if((parentId == _tableParentId) && TYPE_TABLE.equals(type) && 
-           !isSystemObject(flags)) {
+           (isSystemObject(flags) == systemTables)) {
           tableNames.add(tableName);
         }
       }

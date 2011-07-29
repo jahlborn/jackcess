@@ -51,12 +51,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
-
-import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import junit.framework.TestCase;
 
 /**
  * @author Tim McCune
@@ -997,13 +997,39 @@ public class DatabaseTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
+      Set<String> sysTables = new TreeSet<String>(
+          String.CASE_INSENSITIVE_ORDER);
+      sysTables.addAll(
+          Arrays.asList("MSysObjects", "MSysQueries", "MSysACES",
+                        "MSysRelationships"));
+      
       if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
         assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        sysTables.add("MSysAccessObjects");
       } else {
         // v2003+ template files have no "MSysAccessObjects" table
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        sysTables.addAll(
+            Arrays.asList("MSysNavPaneGroupCategories",
+                          "MSysNavPaneGroups", "MSysNavPaneGroupToObjects",
+                          "MSysNavPaneObjectIDs", "MSysAccessStorage"));
+        if(fileFormat.ordinal() >= FileFormat.V2007.ordinal()) {
+          sysTables.addAll(
+              Arrays.asList(
+                  "MSysComplexColumns", "MSysComplexType_Attachment",
+                  "MSysComplexType_Decimal", "MSysComplexType_GUID",
+                  "MSysComplexType_IEEEDouble", "MSysComplexType_IEEESingle",
+                  "MSysComplexType_Long", "MSysComplexType_Short",
+                  "MSysComplexType_Text", "MSysComplexType_UnsignedByte"));
+        }
+        if(fileFormat.ordinal() >= FileFormat.V2010.ordinal()) {
+          sysTables.add("f_12D7448B56564D8AAE333BCC9B3718E5_Data");
+          sysTables.add("MSysResources");
+        } 
       }
 
+      assertEquals(sysTables, db.getSystemTableNames());
+      
       assertNotNull(db.getSystemTable("MSysObjects"));
       assertNotNull(db.getSystemTable("MSysQueries"));
       assertNotNull(db.getSystemTable("MSysACES"));
@@ -1011,6 +1037,7 @@ public class DatabaseTest extends TestCase {
 
       assertNull(db.getSystemTable("MSysBogus"));
 
+      
       db.close();
     }
   }
