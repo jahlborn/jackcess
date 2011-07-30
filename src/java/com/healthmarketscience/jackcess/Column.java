@@ -148,18 +148,19 @@ public class Column implements Comparable<Column> {
   private static final byte[] TEXT_COMPRESSION_HEADER = 
   { (byte)0xFF, (byte)0XFE };
 
+  /** placeholder for column which is not numeric */
+  private static final NumericInfo DEFAULT_NUMERIC_INFO = new NumericInfo();
+
+  /** placeholder for column which is not textual */
+  private static final TextInfo DEFAULT_TEXT_INFO = new TextInfo();
+
+  
   /** owning table */
   private final Table _table;
-  /** For text columns, whether or not they are compressed */ 
-  private boolean _compressedUnicode = false;
   /** Whether or not the column is of variable length */
   private boolean _variableLength;
   /** Whether or not the column is an autonumber column */
   private boolean _autoNumber;
-  /** Numeric precision */
-  private byte _precision;
-  /** Numeric scale */
-  private byte _scale;
   /** Data type */
   private DataType _type;
   /** Maximum column length */
@@ -176,10 +177,10 @@ public class Column implements Comparable<Column> {
   private int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
   private int _varLenTableIndex;
-  /** the collating sort order for a text field */
-  private SortOrder _textSortOrder;
-  /** the code page for a text field (for certain db versions) */
-  private short _textCodePage;
+  /** information specific to numeric columns */
+  private NumericInfo _numericInfo = DEFAULT_NUMERIC_INFO;
+  /** information specific to text columns */
+  private TextInfo _textInfo = DEFAULT_TEXT_INFO;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
   /** properties for this column, if any */
@@ -232,27 +233,31 @@ public class Column implements Comparable<Column> {
       LOG.warn("Unsupported column type " + colType);
       _type = (_variableLength ? DataType.UNSUPPORTED_VARLEN :
                DataType.UNSUPPORTED_FIXEDLEN);
-      // slight hack, stash the original type in the _scale
-      _scale = colType;
+      setUnknownDataType(colType);
     }
     
     if (_type.getHasScalePrecision()) {
-      _precision = buffer.get(offset + getFormat().OFFSET_COLUMN_PRECISION);
-      _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
+      modifyNumericInfo();
+      _numericInfo._precision = buffer.get(offset +
+                                           getFormat().OFFSET_COLUMN_PRECISION);
+      _numericInfo._scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
     } else if(_type.isTextual()) {
+      modifyTextInfo();
+
       // co-located w/ precision/scale
-      _textSortOrder = readSortOrder(
+      _textInfo._sortOrder = readSortOrder(
           buffer, offset + getFormat().OFFSET_COLUMN_SORT_ORDER, getFormat());
       int cpOffset = getFormat().OFFSET_COLUMN_CODE_PAGE;
       if(cpOffset >= 0) {
-        _textCodePage = buffer.getShort(offset + cpOffset);
+        _textInfo._codePage = buffer.getShort(offset + cpOffset);
       }
+
+      _textInfo._compressedUnicode = ((buffer.get(offset +
+        getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
     }
+    
     setAutoNumberGenerator();
     
-    _compressedUnicode = ((buffer.get(offset +
-        getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
-
     if(_variableLength) {
       _varLenTableIndex = buffer.getShort(offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
     } else {
@@ -355,39 +360,43 @@ public class Column implements Comparable<Column> {
   }
   
   public boolean isCompressedUnicode() {
-    return _compressedUnicode;
+    return _textInfo._compressedUnicode;
   }
 
   public void setCompressedUnicode(boolean newCompessedUnicode) {
-    _compressedUnicode = newCompessedUnicode;
+    modifyTextInfo();
+    _textInfo._compressedUnicode = newCompessedUnicode;
   }
 
   public byte getPrecision() {
-    return _precision;
+    return _numericInfo._precision;
   }
   
   public void setPrecision(byte newPrecision) {
-    _precision = newPrecision;
+    modifyNumericInfo();
+    _numericInfo._precision = newPrecision;
   }
   
   public byte getScale() {
-    return _scale;
+    return _numericInfo._scale;
   }
 
   public void setScale(byte newScale) {
-    _scale = newScale;
+    modifyNumericInfo();
+    _numericInfo._scale = newScale;
   }
   
   public SortOrder getTextSortOrder() {
-    return _textSortOrder;
+    return _textInfo._sortOrder;
   }
 
   public void setTextSortOrder(SortOrder newTextSortOrder) {
-    _textSortOrder = newTextSortOrder;
+    modifyTextInfo();
+    _textInfo._sortOrder = newTextSortOrder;
   }
 
   public short getTextCodePage() {
-    return _textCodePage;
+    return _textInfo._codePage;
   }
   
   public void setLength(short length) {
@@ -428,6 +437,17 @@ public class Column implements Comparable<Column> {
     return getDatabase().getTimeZone();
   }
 
+  private void setUnknownDataType(byte type) {
+    // slight hack, stash the original type in the _scale
+    modifyNumericInfo();
+    _numericInfo._scale = type;
+  }
+
+  private byte getUnknownDataType() {
+    // slight hack, we stashed the real type in the _scale
+    return _numericInfo._scale;
+  }
+  
   private void setAutoNumberGenerator()
   {
     if(!_autoNumber || (_type == null)) {
@@ -472,6 +492,18 @@ public class Column implements Comparable<Column> {
     return _props;
   }
 
+  private void modifyNumericInfo() {
+    if(_numericInfo == DEFAULT_NUMERIC_INFO) {
+      _numericInfo = new NumericInfo();
+    }
+  }
+  
+  private void modifyTextInfo() {
+    if(_textInfo == DEFAULT_TEXT_INFO) {
+      _textInfo = new TextInfo();
+    }
+  }
+  
   /**
    * Checks that this column definition is valid.
    *
@@ -1463,26 +1495,23 @@ public class Column implements Comparable<Column> {
     rtn.append("\tName: (" + _table.getName() + ") " + _name);
     byte typeValue = _type.getValue();
     if(_type.isUnsupported()) {
-      // slight hack, we stashed the real type in the _scale
-      typeValue = _scale;
+      typeValue = getUnknownDataType();
     }
     rtn.append("\n\tType: 0x" + Integer.toHexString(typeValue) +
                " (" + _type + ")");
     rtn.append("\n\tNumber: " + _columnNumber);
     rtn.append("\n\tLength: " + _columnLength);
     rtn.append("\n\tVariable length: " + _variableLength);
-    if(_variableLength) {
-      rtn.append("\n\tCompressed Unicode: " + _compressedUnicode);
-    }
+    if(_type.isTextual()) {
+      rtn.append("\n\tCompressed Unicode: " + _textInfo._compressedUnicode);
+      rtn.append("\n\tText Sort order: " + _textInfo._sortOrder);
+      if(_textInfo._codePage > 0) {
+        rtn.append("\n\tText Code Page: " + _textInfo._codePage);
+      }
+    }      
     if(_autoNumber) {
       rtn.append("\n\tLast AutoNumber: " + _autoNumberGenerator.getLast());
     }
-    if(_type.isTextual()) {
-      rtn.append("\n\tText Sort order: " + _textSortOrder);
-      if(_textCodePage > 0) {
-      rtn.append("\n\tText Code Page: " + _textCodePage);
-      }
-    }      
     rtn.append("\n\n");
     return rtn.toString();
   }
@@ -1739,8 +1768,9 @@ public class Column implements Comparable<Column> {
       }
       buffer.putShort(columnNumber); //Column Number again
       if(col.getType().isTextual()) {
-        // this will write 4 bytes
-        writeSortOrder(buffer, col._textSortOrder, format);
+        // this will write 4 bytes (note we don't support writing dbs which
+        // use the text code page)
+        writeSortOrder(buffer, col.getTextSortOrder(), format);
       } else {
         if(col.getType().getHasScalePrecision()) {
           buffer.put(col.getPrecision());  // numeric precision
@@ -2038,4 +2068,27 @@ public class Column implements Comparable<Column> {
     }
   }
 
+  /**
+   * Information specific to numeric types.
+   */
+  private static final class NumericInfo
+  {
+    /** Numeric precision */
+    private byte _precision;
+    /** Numeric scale */
+    private byte _scale;
+  }
+
+  /**
+   * Information specific to textual types.
+   */
+  private static final class TextInfo
+  {
+    /** whether or not they are compressed */ 
+    private boolean _compressedUnicode;
+    /** the collating sort order for a text field */
+    private SortOrder _sortOrder;
+    /** the code page for a text field (for certain db versions) */
+    private short _codePage;
+  }
 }
