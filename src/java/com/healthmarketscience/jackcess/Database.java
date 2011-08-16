@@ -286,6 +286,8 @@ public class Database
   private static final String TABLE_SYSTEM_RELATIONSHIPS = "MSysRelationships";
   /** Name of the table that contains queries */
   private static final String TABLE_SYSTEM_QUERIES = "MSysQueries";
+  /** Name of the table that contains complex type information */
+  private static final String TABLE_SYSTEM_COMPLEX_COLS = "MSysComplexColumns";
   /** Name of the main database properties object */
   private static final String OBJECT_NAME_DB_PROPS = "MSysDb";
   /** Name of the summary properties object */
@@ -381,12 +383,14 @@ public class Database
   private Table _systemCatalog;
   /** utility table finder */
   private TableFinder _tableFinder;
-  /** System access control entries table */
+  /** System access control entries table (initialized on first use) */
   private Table _accessControlEntries;
   /** System relationships table (initialized on first use) */
   private Table _relationships;
   /** System queries table (initialized on first use) */
   private Table _queries;
+  /** System complex columns table (initialized on first use) */
+  private Table _complexCols;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   /** "big index support" is optional, but enabled by default */
@@ -735,7 +739,7 @@ public class Database
       }
     }
   }
-  
+
   public PageChannel getPageChannel() {
     return _pageChannel;
   }
@@ -752,12 +756,34 @@ public class Database
   }
   
   /**
-   * @return The system Access Control Entries table
+   * @return The system Access Control Entries table (loaded on demand)
    */
-  public Table getAccessControlEntries() {
+  public Table getAccessControlEntries() throws IOException {
+    if(_accessControlEntries == null) {
+      _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
+      if(_accessControlEntries == null) {
+        throw new IOException("Could not find system table " +
+                              TABLE_SYSTEM_ACES);
+      }
+
+    }
     return _accessControlEntries;
   }
 
+  /**
+   * @return the complex column system table (loaded on demand)
+   */
+  public Table getSystemComplexColumns() throws IOException {
+    if(_complexCols == null) {
+      _complexCols = getSystemTable(TABLE_SYSTEM_COMPLEX_COLS);
+      if(_complexCols == null) {
+        throw new IOException("Could not find system table " +
+                              TABLE_SYSTEM_COMPLEX_COLS);
+      }
+    }
+    return _complexCols;
+  }
+    
   /**
    * Whether or not big index support is enabled for tables.
    */
@@ -892,6 +918,36 @@ public class Database
   }
 
   /**
+   * @return a (possibly cached) page ByteBuffer for internal use.  the
+   *         returned buffer should be released using
+   *         {@link #releaseSharedBuffer} when no longer in use
+   */
+  private ByteBuffer takeSharedBuffer() {
+    // we try to re-use a single shared _buffer, but occassionally, it may be
+    // needed by multiple operations at the same time (e.g. loading a
+    // secondary table while loading a primary table).  this method ensures
+    // that we don't corrupt the _buffer, but instead force the second caller
+    // to use a new buffer.
+    if(_buffer != null) {
+      ByteBuffer curBuffer = _buffer;
+      _buffer = null;
+      return curBuffer;
+    }
+    return _pageChannel.createPageBuffer();
+  }
+
+  /**
+   * Relinquishes use of a page ByteBuffer returned by
+   * {@link #takeSharedBuffer}.
+   */
+  private void releaseSharedBuffer(ByteBuffer buffer) {
+    // we always stuff the returned buffer back into _buffer.  it doesn't
+    // really matter if multiple values over-write, at the end of the day, we
+    // just need one shared buffer
+    _buffer = buffer;
+  }
+  
+  /**
    * @return the currently configured database default language sort order for
    *         textual columns
    */
@@ -919,10 +975,15 @@ public class Database
    * Reads various config info from the db page 0.
    */
   private void initRootPageInfo() throws IOException {
-    _pageChannel.readPage(_buffer, 0);
-    _defaultSortOrder = Column.readSortOrder(
-        _buffer, _format.OFFSET_SORT_ORDER, _format);
-    _defaultCodePage = _buffer.getShort(_format.OFFSET_CODE_PAGE);
+    ByteBuffer buffer = takeSharedBuffer();
+    try {
+      _pageChannel.readPage(buffer, 0);
+      _defaultSortOrder = Column.readSortOrder(
+          buffer, _format.OFFSET_SORT_ORDER, _format);
+      _defaultCodePage = buffer.getShort(_format.OFFSET_CODE_PAGE);
+    } finally {
+      releaseSharedBuffer(buffer);
+    }
   }
   
   /**
@@ -965,8 +1026,6 @@ public class Database
       throw new IOException("Did not find required parent table id");
     }
 
-    _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
-    
     if (LOG.isDebugEnabled()) {
       LOG.debug("Finished reading system catalog.  Tables: " +
                 getTableNames());
@@ -1033,7 +1092,7 @@ public class Database
    * @param tableDefPageNumber the page number of a table definition
    * @return The table, or null if it doesn't exist
    */
-  protected Table getTable(int tableDefPageNumber) throws IOException {
+  public Table getTable(int tableDefPageNumber) throws IOException {
 
     // first, check for existing table
     Table table = _tableCache.get(tableDefPageNumber);
@@ -1374,43 +1433,48 @@ public class Database
    */
   public String getDatabasePassword() throws IOException
   {
-    _pageChannel.readPage(_buffer, 0);
+    ByteBuffer buffer = takeSharedBuffer();
+    try {
+      _pageChannel.readPage(buffer, 0);
 
-    byte[] pwdBytes = new byte[_format.SIZE_PASSWORD];
-    _buffer.position(_format.OFFSET_PASSWORD);
-    _buffer.get(pwdBytes);
+      byte[] pwdBytes = new byte[_format.SIZE_PASSWORD];
+      buffer.position(_format.OFFSET_PASSWORD);
+      buffer.get(pwdBytes);
 
-    // de-mask password using extra password mask if necessary (the extra
-    // password mask is generated from the database creation date stored in
-    // the header)
-    byte[] pwdMask = getPasswordMask(_buffer, _format);
-    if(pwdMask != null) {
-      for(int i = 0; i < pwdBytes.length; ++i) {
-        pwdBytes[i] ^= pwdMask[i % pwdMask.length];
+      // de-mask password using extra password mask if necessary (the extra
+      // password mask is generated from the database creation date stored in
+      // the header)
+      byte[] pwdMask = getPasswordMask(buffer, _format);
+      if(pwdMask != null) {
+        for(int i = 0; i < pwdBytes.length; ++i) {
+          pwdBytes[i] ^= pwdMask[i % pwdMask.length];
+        }
       }
-    }
     
-    boolean hasPassword = false;
-    for(int i = 0; i < pwdBytes.length; ++i) {
-      if(pwdBytes[i] != 0) {
-        hasPassword = true;
-        break;
+      boolean hasPassword = false;
+      for(int i = 0; i < pwdBytes.length; ++i) {
+        if(pwdBytes[i] != 0) {
+          hasPassword = true;
+          break;
+        }
       }
+
+      if(!hasPassword) {
+        return null;
+      }
+
+      String pwd = Column.decodeUncompressedText(pwdBytes, getCharset());
+
+      // remove any trailing null chars
+      int idx = pwd.indexOf('\0');
+      if(idx >= 0) {
+        pwd = pwd.substring(0, idx);
+      }
+
+      return pwd;
+    } finally {
+      releaseSharedBuffer(buffer);
     }
-
-    if(!hasPassword) {
-      return null;
-    }
-
-    String pwd = Column.decodeUncompressedText(pwdBytes, getCharset());
-
-    // remove any trailing null chars
-    int idx = pwd.indexOf('\0');
-    if(idx >= 0) {
-      pwd = pwd.substring(0, idx);
-    }
-
-    return pwd;
   }
 
   /**
@@ -1506,28 +1570,29 @@ public class Database
    * @param pageNumber Page number that contains the table definition
    */
   private void addToAccessControlEntries(int pageNumber) throws IOException {
-    
+
     if(_newTableSIDs.isEmpty()) {
       initNewTableSIDs();
     }
 
-    Column acmCol = _accessControlEntries.getColumn(ACE_COL_ACM);
-    Column inheritCol = _accessControlEntries.getColumn(ACE_COL_F_INHERITABLE);
-    Column objIdCol = _accessControlEntries.getColumn(ACE_COL_OBJECT_ID);
-    Column sidCol = _accessControlEntries.getColumn(ACE_COL_SID);
+    Table acEntries = getAccessControlEntries();
+    Column acmCol = acEntries.getColumn(ACE_COL_ACM);
+    Column inheritCol = acEntries.getColumn(ACE_COL_F_INHERITABLE);
+    Column objIdCol = acEntries.getColumn(ACE_COL_OBJECT_ID);
+    Column sidCol = acEntries.getColumn(ACE_COL_SID);
 
     // construct a collection of ACE entries mimicing those of our parent, the
     // "Tables" system object
     List<Object[]> aceRows = new ArrayList<Object[]>(_newTableSIDs.size());
     for(byte[] sid : _newTableSIDs) {
-      Object[] aceRow = new Object[_accessControlEntries.getColumnCount()];
+      Object[] aceRow = new Object[acEntries.getColumnCount()];
       aceRow[acmCol.getColumnIndex()] = SYS_FULL_ACCESS_ACM;
       aceRow[inheritCol.getColumnIndex()] = Boolean.FALSE;
       aceRow[objIdCol.getColumnIndex()] = Integer.valueOf(pageNumber);
       aceRow[sidCol.getColumnIndex()] = sid;
       aceRows.add(aceRow);
     }
-    _accessControlEntries.addRows(aceRows);  
+    acEntries.addRows(aceRows);  
   }
 
   /**
@@ -1538,7 +1603,7 @@ public class Database
     // search for ACEs matching the tableParentId.  use the index on the
     // objectId column if found (should be there)
     Cursor cursor = createCursorWithOptionalIndex(
-        _accessControlEntries, ACE_COL_OBJECT_ID, _tableParentId);
+        getAccessControlEntries(), ACE_COL_OBJECT_ID, _tableParentId);
     
     for(Map<String, Object> row : cursor) {
       Integer objId = (Integer)row.get(ACE_COL_OBJECT_ID);
@@ -1565,16 +1630,22 @@ public class Database
     if(table != null) {
       return table;
     }
-
-    // need to load table from db
-    _pageChannel.readPage(_buffer, pageNumber);
-    byte pageType = _buffer.get(0);
-    if (pageType != PageTypes.TABLE_DEF) {
-      throw new IOException("Looking for " + name + " at page " + pageNumber +
-                            ", but page type is " + pageType);
+    
+    ByteBuffer buffer = takeSharedBuffer();
+    try {
+      // need to load table from db
+      _pageChannel.readPage(buffer, pageNumber);
+      byte pageType = buffer.get(0);
+      if (pageType != PageTypes.TABLE_DEF) {
+        throw new IOException(
+            "Looking for " + name + " at page " + pageNumber +
+            ", but page type is " + pageType);
+      }
+      return _tableCache.put(
+          new Table(this, buffer, pageNumber, name, flags, useBigIndex));
+    } finally {
+      releaseSharedBuffer(buffer);
     }
-    return _tableCache.put(
-        new Table(this, _buffer, pageNumber, name, flags, useBigIndex));
   }
 
   /**
