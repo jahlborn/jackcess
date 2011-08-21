@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>1.0.8</version>
+    <version>1.0.9</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
@@ -175,20 +175,53 @@
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
+          <additionalJOption>-J-DTaglets.ConfigurationFile=${basedir}/src/site/javadoc/taglets.properties -J-DTaglets.NoDefaultConfiguration=true</additionalJOption>
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>http://java.sun.com/j2se/1.5.0/docs/api</list>
-            <list>http://java.sun.com/javaee/5/docs/api/</list>
+            <list>http://download.oracle.com/javase/1.5.0/docs/api</list>
+            <list>http://download.oracle.com/javaee/5/api</list>
           </links>
           <source>1.5</source>
           <excludePackageNames>com.healthmarketscience.jackcess.scsu</excludePackageNames>
           <show>public</show>
+          <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
+          <tags>
+            <tag>
+              <name>usage</name>
+              <placement>a</placement>
+              <head>Usage:</head>
+            </tag>
+          </tags>
+          <taglets>
+            <taglet>
+              <tagletClass>net.sourceforge.taglets.Taglets</tagletClass>
+              <tagletArtifact>
+                <groupId>net.sourceforge.taglets</groupId>
+                <artifactId>taglets</artifactId>
+                <version>2.0.3</version>
+              </tagletArtifact>
+            </taglet>
+          </taglets>
           <quiet>true</quiet>
         </configuration>
       </plugin>
     </plugins>
   </reporting>
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>taglets</id>
+      <name>Taglets</name>
+      <url>http://maven.geotoolkit.org/</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
   <distributionManagement>
     <site>
       <id>jackcess-build-site</id>

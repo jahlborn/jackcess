@@ -49,6 +49,7 @@ import org.apache.commons.logging.LogFactory;
  * Is not thread-safe.
  * 
  * @author Tim McCune
+ * @usage _general_class_
  */
 public class Table
   implements Iterable<Map<String, Object>>
@@ -66,12 +67,21 @@ public class Table
 
   private static final int MAX_BYTE = 256;
 
-  /** Table type code for system tables */
+  /**
+   * Table type code for system tables
+   * @usage _intermediate_class_
+   */
   public static final byte TYPE_SYSTEM = 0x53;
-  /** Table type code for user tables */
+  /**
+   * Table type code for user tables
+   * @usage _intermediate_class_
+   */
   public static final byte TYPE_USER = 0x4e;
 
-  /** enum which controls the ordering of the columns in a table. */
+  /**
+   * enum which controls the ordering of the columns in a table.
+   * @usage _intermediate_class_
+   */
   public enum ColumnOrder {
     /** columns are ordered based on the order of the data in the table (this
         order does not change as columns are added to the table). */
@@ -217,13 +227,11 @@ public class Table
     }
     readTableDefinition(tableBuffer);
     tableBuffer = null;
-
-    // setup common cursor
-    _cursor = Cursor.createCursor(this);
   }
 
   /**
    * @return The name of the table
+   * @usage _general_method_
    */
   public String getName() {
     return _name;
@@ -231,31 +239,50 @@ public class Table
 
   /**
    * Whether or not this table has been marked as hidden.
+   * @usage _general_method_
    */
   public boolean isHidden() {
     return((_flags & Database.HIDDEN_OBJECT_FLAG) != 0);
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public boolean doUseBigIndex() {
     return _useBigIndex;
   }
-  
+
+  /**
+   * @usage _advanced_method_
+   */
   public int getMaxColumnCount() {
     return _maxColumnCount;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public int getColumnCount() {
     return _columns.size();
   }
   
+  /**
+   * @usage _general_method_
+   */
   public Database getDatabase() {
     return _database;
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public JetFormat getFormat() {
     return getDatabase().getFormat();
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
@@ -264,6 +291,7 @@ public class Table
    * Gets the currently configured ErrorHandler (always non-{@code null}).
    * This will be used to handle all errors unless overridden at the Cursor
    * level.
+   * @usage _intermediate_method_
    */
   public ErrorHandler getErrorHandler() {
     return((_tableErrorHandler != null) ? _tableErrorHandler :
@@ -273,6 +301,7 @@ public class Table
   /**
    * Sets a new ErrorHandler.  If {@code null}, resets to using the
    * ErrorHandler configured at the Database level.
+   * @usage _intermediate_method_
    */
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _tableErrorHandler = newErrorHandler;
@@ -282,6 +311,9 @@ public class Table
     return _tableDefPageNumber;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public RowState createRowState() {
     return new RowState(TempBufferHolder.Type.HARD);
   }
@@ -300,6 +332,7 @@ public class Table
    * int approxTableBytes = (table.getApproximateOwnedPageCount() *
    *                         table.getFormat().PAGE_SIZE);
    * </code>
+   * @usage _intermediate_method_
    */
   public int getApproximateOwnedPageCount() {
     // add a page for the table def (although that might actually be more than
@@ -319,6 +352,7 @@ public class Table
 
   /**
    * @return All of the columns in this table (unmodifiable List)
+   * @usage _general_method_
    */
   public List<Column> getColumns() {
     return Collections.unmodifiableList(_columns);
@@ -326,6 +360,7 @@ public class Table
 
   /**
    * @return the column with the given name
+   * @usage _general_method_
    */
   public Column getColumn(String name) {
     for(Column column : _columns) {
@@ -362,6 +397,7 @@ public class Table
 
   /**
    * @return the properties for this table
+   * @usage _general_method_
    */
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
@@ -372,6 +408,7 @@ public class Table
 
   /**
    * @return all PropertyMaps for this table (and columns)
+   * @usage _general_method_
    */
   protected PropertyMaps getPropertyMaps() throws IOException {
     if(_propertyMaps == null) {
@@ -383,6 +420,7 @@ public class Table
   
   /**
    * @return All of the Indexes on this table (unmodifiable List)
+   * @usage _intermediate_method_
    */
   public List<Index> getIndexes() {
     return Collections.unmodifiableList(_indexes);
@@ -391,6 +429,7 @@ public class Table
   /**
    * @return the index with the given name
    * @throws IllegalArgumentException if there is no index with the given name
+   * @usage _intermediate_method_
    */
   public Index getIndex(String name) {
     for(Index index : _indexes) {
@@ -406,6 +445,7 @@ public class Table
    * @return the primary key index for this table
    * @throws IllegalArgumentException if there is no primary key index on this
    *         table
+   * @usage _intermediate_method_
    */
   public Index getPrimaryKeyIndex() {
     for(Index index : _indexes) {
@@ -421,6 +461,7 @@ public class Table
    * @return the foreign key index joining this table to the given other table
    * @throws IllegalArgumentException if there is no relationship between this
    *         table and the given table
+   * @usage _intermediate_method_
    */
   public Index getForeignKeyIndex(Table otherTable) {
     for(Index index : _indexes) {
@@ -449,19 +490,28 @@ public class Table
     return _logicalIndexCount;
   }
 
+  private Cursor getInternalCursor() {
+    if(_cursor == null) {
+      _cursor = Cursor.createCursor(this);
+    }
+    return _cursor;
+  }
+  
   /**
    * After calling this method, getNextRow will return the first row in the
-   * table
+   * table, see {@link Cursor#reset}.
+   * @usage _general_method_
    */
   public void reset() {
-    _cursor.reset();
+    getInternalCursor().reset();
   }
   
   /**
    * Delete the current row (retrieved by a call to {@link #getNextRow()}).
+   * @usage _general_method_
    */
   public void deleteCurrentRow() throws IOException {
-    _cursor.deleteCurrentRow();
+    getInternalCursor().deleteCurrentRow();
   }
 
   /**
@@ -470,6 +520,7 @@ public class Table
    * Note, this method is not generally meant to be used directly.  You should
    * use the {@link #deleteCurrentRow} method or use the Cursor class, which
    * allows for more complex table interactions.
+   * @usage _advanced_method_
    */
   public void deleteRow(RowState rowState, RowId rowId) throws IOException {
     requireValidRowId(rowId);
@@ -504,6 +555,7 @@ public class Table
   
   /**
    * @return The next row in this table (Column name -> Column value)
+   * @usage _general_method_
    */
   public Map<String, Object> getNextRow() throws IOException {
     return getNextRow(null);
@@ -512,11 +564,12 @@ public class Table
   /**
    * @param columnNames Only column names in this collection will be returned
    * @return The next row in this table (Column name -> Column value)
+   * @usage _general_method_
    */
   public Map<String, Object> getNextRow(Collection<String> columnNames) 
     throws IOException
   {
-    return _cursor.getNextRow(columnNames);
+    return getInternalCursor().getNextRow(columnNames);
   }
   
   /**
@@ -525,6 +578,7 @@ public class Table
    * Note, this method is not generally meant to be used directly.  Instead
    * use the Cursor class, which allows for more complex table interactions,
    * e.g. {@link Cursor#getCurrentRowValue}.
+   * @usage _advanced_method_
    */
   public Object getRowValue(RowState rowState, RowId rowId, Column column)
     throws IOException
@@ -546,6 +600,7 @@ public class Table
   /**
    * Reads some columns from the given row.
    * @param columnNames Only column names in this collection will be returned
+   * @usage _advanced_method_
    */
   public Map<String, Object> getRow(
       RowState rowState, RowId rowId, Collection<String> columnNames)
@@ -746,9 +801,9 @@ public class Table
    * determined, but overflow row pointers are not followed.
    * 
    * @return a ByteBuffer of the relevant page, or null if row was invalid
+   * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowHeader(RowState rowState,
-                                               RowId rowId)
+  public static ByteBuffer positionAtRowHeader(RowState rowState, RowId rowId)
     throws IOException
   {
     ByteBuffer rowBuffer = rowState.setHeaderRow(rowId);
@@ -790,9 +845,9 @@ public class Table
    * 
    * @return a ByteBuffer narrowed to the actual row data, or null if row was
    *         invalid or deleted
+   * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowData(RowState rowState,
-                                             RowId rowId)
+  public static ByteBuffer positionAtRowData(RowState rowState, RowId rowId)
     throws IOException
   {
     positionAtRowHeader(rowState, rowId);
@@ -858,6 +913,7 @@ public class Table
    * <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
+   * @usage _general_method_
    */
   public Iterator<Map<String, Object>> iterator()
   {
@@ -871,17 +927,19 @@ public class Table
    * restrictions as a call to <code>getNextRow</code>.
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
+   * @usage _general_method_
    */
   public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
   {
     reset();
-    return _cursor.iterator(columnNames);
+    return getInternalCursor().iterator(columnNames);
   }
 
   /**
    * Writes a new table defined by the given columns and indexes to the
    * database.
    * @return the first page of the new table's definition
+   * @usage _advanced_method_
    */
   public static int writeTableDefinition(
       List<Column> columns, List<IndexBuilder> indexes,
@@ -1280,6 +1338,7 @@ public class Table
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}.
+   * @usage _general_method_
    */
   public Object[] asRow(Map<String,Object> rowMap) {
     return asRow(rowMap, null);
@@ -1288,6 +1347,7 @@ public class Table
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #updateCurrentRow(Object...)}.
+   * @usage _general_method_
    */
   public Object[] asUpdateRow(Map<String,Object> rowMap) {
     return asRow(rowMap, Column.KEEP_VALUE);
@@ -1322,6 +1382,7 @@ public class Table
    * @param row row values for a single row.  the row will be modified if
    *            this table contains an auto-number column, otherwise it
    *            will not be modified.
+   * @usage _general_method_
    */
   public void addRow(Object... row) throws IOException {
     addRows(Collections.singletonList(row), _singleRowBufferH);
@@ -1338,6 +1399,7 @@ public class Table
    * @param rows List of Object[] row values.  the rows will be modified if
    *             this table contains an auto-number column, otherwise they
    *             will not be modified.
+   * @usage _general_method_
    */
   public void addRows(List<? extends Object[]> rows) throws IOException {
     addRows(rows, _multiRowBufferH);
@@ -1419,9 +1481,10 @@ public class Table
    * will be maintained, unchanged.
    *
    * @param row new row values for the current row.
+   * @usage _general_method_
    */
   public void updateCurrentRow(Object... row) throws IOException {
-     _cursor.updateCurrentRow(row);
+     getInternalCursor().updateCurrentRow(row);
   }
   
   /**
@@ -1431,6 +1494,7 @@ public class Table
    * use the {@link #updateCurrentRow} method or use the Cursor class, which
    * allows for more complex table interactions, e.g.
    * {@link Cursor#setCurrentRowValue} and {@link Cursor#updateCurrentRow}.
+   * @usage _advanced_method_
    */
   public void updateRow(RowState rowState, RowId rowId, Object... row) 
     throws IOException 
@@ -1793,7 +1857,8 @@ public class Table
     return buffer;
   }
 
-  private void padRowBuffer(ByteBuffer buffer, int minRowSize, int trailerSize)
+  private static void padRowBuffer(ByteBuffer buffer, int minRowSize,
+                                   int trailerSize)
   {
     int pos = buffer.position();
     if((pos + trailerSize) < minRowSize) {
@@ -1804,6 +1869,9 @@ public class Table
     }
   }
 
+  /**
+   * @usage _general_method_
+   */
   public int getRowCount() {
     return _rowCount;
   }
@@ -1821,8 +1889,9 @@ public class Table
   @Override
   public String toString() {
     StringBuilder rtn = new StringBuilder();
-    rtn.append("Type: " + _tableType);
-		rtn.append("\nName: " + _name);
+    rtn.append("Type: " + _tableType + 
+               ((_tableType == TYPE_USER) ? " (USER)" : " (SYSTEM)"));
+    rtn.append("\nName: " + _name);
     rtn.append("\nRow count: " + _rowCount);
     rtn.append("\nColumn count: " + _columns.size());
     rtn.append("\nIndex (data) count: " + _indexCount);
@@ -1840,7 +1909,9 @@ public class Table
   }
   
   /**
-   * @return A simple String representation of the entire table in tab-delimited format
+   * @return A simple String representation of the entire table in
+   *         tab-delimited format
+   * @usage _general_method_
    */
   public String display() throws IOException {
     return display(Long.MAX_VALUE);
@@ -1848,7 +1919,9 @@ public class Table
   
   /**
    * @param limit Maximum number of rows to display
-   * @return A simple String representation of the entire table in tab-delimited format
+   * @return A simple String representation of the entire table in
+   *         tab-delimited format
+   * @usage _general_method_
    */
   public String display(long limit) throws IOException {
     reset();
@@ -1891,6 +1964,7 @@ public class Table
    * Updates free space and row info for a new row of the given size in the
    * given data page.  Positions the page for writing the row data.
    * @return the row number of the new row
+   * @usage _advanced_method_
    */
   public static int addDataPageRow(ByteBuffer dataPage,
                                    int rowSize,
@@ -1959,18 +2033,30 @@ public class Table
     }
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public static boolean isDeletedRow(short rowStart) {
     return ((rowStart & DELETED_ROW_MASK) != 0);
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public static boolean isOverflowRow(short rowStart) {
     return ((rowStart & OVERFLOW_ROW_MASK) != 0);
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public static short cleanRowStart(short rowStart) {
     return (short)(rowStart & OFFSET_MASK);
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public static short findRowStart(ByteBuffer buffer, int rowNum,
                                    JetFormat format)
   {
@@ -1978,11 +2064,17 @@ public class Table
         buffer.getShort(getRowStartOffset(rowNum, format)));
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public static int getRowStartOffset(int rowNum, JetFormat format)
   {
     return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * rowNum);
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public static short findRowEnd(ByteBuffer buffer, int rowNum,
                                  JetFormat format)
   {
@@ -1992,11 +2084,17 @@ public class Table
                        buffer.getShort(getRowEndOffset(rowNum, format))));
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public static int getRowEndOffset(int rowNum, JetFormat format)
   {
     return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * (rowNum - 1));
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public static int getRowSpaceUsage(int rowSize, JetFormat format)
   {
     return rowSize + format.SIZE_ROW_LOCATION;
@@ -2004,6 +2102,7 @@ public class Table
 
   /**
    * @return the "AutoNumber" columns in the given collection of columns.
+   * @usage _advanced_method_
    */
   public static List<Column> getAutoNumberColumns(Collection<Column> columns) {
     List<Column> autoCols = new ArrayList<Column>();
@@ -2018,6 +2117,7 @@ public class Table
   /**
    * Returns {@code true} if a row of the given size will fit on the given
    * data page, {@code false} otherwise.
+   * @usage _advanced_method_
    */
   public static boolean rowFitsOnDataPage(
       int rowLength, ByteBuffer dataPage, JetFormat format)
@@ -2052,6 +2152,7 @@ public class Table
 
   /**
    * Maintains the state of reading a row of data.
+   * @usage _advanced_class_
    */
   public final class RowState
   {

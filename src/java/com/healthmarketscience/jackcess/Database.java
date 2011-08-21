@@ -84,6 +84,7 @@ import org.apache.commons.logging.LogFactory;
  * </ul>
  *
  * @author Tim McCune
+ * @usage _general_class_
  */
 public class Database
   implements Iterable<Table>, Closeable, Flushable
@@ -100,52 +101,74 @@ public class Database
   }
 
   /** default value for the auto-sync value ({@code true}).  this is slower,
-      but leaves more chance of a useable database in the face of failures. */
+   *  but leaves more chance of a useable database in the face of failures.
+   * @usage _general_field_
+   */
   public static final boolean DEFAULT_AUTO_SYNC = true;
 
   /** the default value for the resource path used to load classpath
-      resources. */
+   *  resources.
+   * @usage _general_field_
+   */
   public static final String DEFAULT_RESOURCE_PATH = 
     "com/healthmarketscience/jackcess/";
 
-  /** the default sort order for table columns. */
+  /**
+   * the default sort order for table columns.
+   * @usage _intermediate_field_
+   */
   public static final Table.ColumnOrder DEFAULT_COLUMN_ORDER = 
     Table.ColumnOrder.DATA;
 
   /** (boolean) system property which can be used to disable the default big
-      index support. */
+   *  index support.
+   * @usage _general_field_
+   */
   public static final String USE_BIG_INDEX_PROPERTY =
     "com.healthmarketscience.jackcess.bigIndex";
 
   /** system property which can be used to set the default TimeZone used for
-      date calculations. */
+   *  date calculations.
+   * @usage _general_field_
+   */
   public static final String TIMEZONE_PROPERTY =
     "com.healthmarketscience.jackcess.timeZone";
 
   /** system property prefix which can be used to set the default Charset
-      used for text data (full property includes the JetFormat version). */
+   *  used for text data (full property includes the JetFormat version).
+   * @usage _general_field_
+   */
   public static final String CHARSET_PROPERTY_PREFIX =
     "com.healthmarketscience.jackcess.charset.";
 
   /** system property which can be used to set the path from which classpath
-      resources are loaded (must end with a "/" if non-empty).  Default value
-      is {@link #DEFAULT_RESOURCE_PATH} if unspecified. */
+   *  resources are loaded (must end with a "/" if non-empty).  Default value
+   *  is {@link #DEFAULT_RESOURCE_PATH} if unspecified.
+   * @usage _general_field_
+   */
   public static final String RESOURCE_PATH_PROPERTY = 
     "com.healthmarketscience.jackcess.resourcePath";
 
   /** (boolean) system property which can be used to indicate that the current
-      vm has a poor nio implementation (specifically for
-      FileChannel.transferFrom) */
+   *  vm has a poor nio implementation (specifically for
+   *  FileChannel.transferFrom)
+   * @usage _intermediate_field_
+   */
   public static final String BROKEN_NIO_PROPERTY = 
     "com.healthmarketscience.jackcess.brokenNio";
 
   /** system property which can be used to set the default sort order for
-      table columns.  Value should be one {@link Table.ColumnOrder} enum
-      values. */
+   *  table columns.  Value should be one {@link Table.ColumnOrder} enum
+   *  values.
+   * @usage _intermediate_field_
+   */
   public static final String COLUMN_ORDER_PROPERTY = 
     "com.healthmarketscience.jackcess.columnOrder";
 
-  /** default error handler used if none provided (just rethrows exception) */
+  /**
+   * default error handler used if none provided (just rethrows exception)
+   * @usage _general_field_
+   */
   public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
       public Object handleRowError(Column column,
                                    byte[] columnData,
@@ -239,7 +262,11 @@ public class Database
   /** all flags which seem to indicate some type of system object */
   static final int SYSTEM_OBJECT_FLAGS = 
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
-  
+
+  /**
+   * Enum which indicates which version of Access created the database.
+   * @usage _general_class_
+   */
   public static enum FileFormat {
 
     V1997(null, JetFormat.VERSION_3),
@@ -434,6 +461,7 @@ public class Database
    * @param mdbFile File containing the database
    * 
    * @see #open(File,boolean)
+   * @usage _general_method_
    */
   public static Database open(File mdbFile) throws IOException {
     return open(mdbFile, false);
@@ -452,6 +480,7 @@ public class Database
    *                 mode
    *
    * @see #open(File,boolean,boolean)
+   * @usage _general_method_
    */
   public static Database open(File mdbFile, boolean readOnly)
     throws IOException
@@ -473,6 +502,7 @@ public class Database
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
    *                 are encountered during writing.
+   * @usage _general_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync)
     throws IOException
@@ -496,6 +526,7 @@ public class Database
    *                 are encountered during writing.
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @usage _intermediate_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
                               Charset charset, TimeZone timeZone)
@@ -522,6 +553,7 @@ public class Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @param provider CodecProvider for handling page encoding/decoding, may be
    *                 {@code null} if no special encoding is necessary
+   * @usage _intermediate_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
                               Charset charset, TimeZone timeZone, 
@@ -567,6 +599,7 @@ public class Database
    *    already exists, it will be overwritten.</b>
    *
    * @see #create(File,boolean)
+   * @usage _general_method_
    */
   public static Database create(File mdbFile) throws IOException {
     return create(mdbFile, DEFAULT_AUTO_SYNC);
@@ -583,6 +616,7 @@ public class Database
    *    already exists, it will be overwritten.</b>
    *
    * @see #create(File,boolean)
+   * @usage _general_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile) 
     throws IOException 
@@ -606,6 +640,7 @@ public class Database
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
    *                 are encountered during writing.
+   * @usage _general_method_
    */
   public static Database create(File mdbFile, boolean autoSync)
     throws IOException
@@ -626,6 +661,7 @@ public class Database
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
    *                 are encountered during writing.
+   * @usage _general_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile, 
                                 boolean autoSync)
@@ -649,6 +685,7 @@ public class Database
    *                 are encountered during writing.
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @usage _intermediate_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile, 
                                 boolean autoSync, Charset charset,
@@ -740,16 +777,23 @@ public class Database
     }
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public PageChannel getPageChannel() {
     return _pageChannel;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public JetFormat getFormat() {
     return _format;
   }
   
   /**
    * @return The system catalog table
+   * @usage _advanced_method_
    */
   public Table getSystemCatalog() {
     return _systemCatalog;
@@ -757,6 +801,7 @@ public class Database
   
   /**
    * @return The system Access Control Entries table (loaded on demand)
+   * @usage _advanced_method_
    */
   public Table getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
@@ -772,6 +817,7 @@ public class Database
 
   /**
    * @return the complex column system table (loaded on demand)
+   * @usage _advanced_method_
    */
   public Table getSystemComplexColumns() throws IOException {
     if(_complexCols == null) {
@@ -786,6 +832,7 @@ public class Database
     
   /**
    * Whether or not big index support is enabled for tables.
+   * @usage _advanced_method_
    */
   public boolean doUseBigIndex() {
     return (_useBigIndex != null ? _useBigIndex : true);
@@ -793,6 +840,7 @@ public class Database
 
   /**
    * Set whether or not big index support is enabled for tables.
+   * @usage _intermediate_method_
    */
   public void setUseBigIndex(boolean useBigIndex) {
     _useBigIndex = useBigIndex;
@@ -802,6 +850,7 @@ public class Database
    * Gets the currently configured ErrorHandler (always non-{@code null}).
    * This will be used to handle all errors unless overridden at the Table or
    * Cursor level.
+   * @usage _intermediate_method_
    */
   public ErrorHandler getErrorHandler() {
     return((_dbErrorHandler != null) ? _dbErrorHandler :
@@ -811,6 +860,7 @@ public class Database
   /**
    * Sets a new ErrorHandler.  If {@code null}, resets to the
    * {@link #DEFAULT_ERROR_HANDLER}.
+   * @usage _intermediate_method_
    */
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
@@ -818,15 +868,16 @@ public class Database
 
   /**
    * Gets currently configured TimeZone (always non-{@code null}).
+   * @usage _intermediate_method_
    */
-  public TimeZone getTimeZone()
-  {
+  public TimeZone getTimeZone() {
     return _timeZone;
   }
 
   /**
    * Sets a new TimeZone.  If {@code null}, resets to the value returned by
    * {@link #getDefaultTimeZone}.
+   * @usage _intermediate_method_
    */
   public void setTimeZone(TimeZone newTimeZone) {
     if(newTimeZone == null) {
@@ -837,6 +888,7 @@ public class Database
 
   /**
    * Gets currently configured Charset (always non-{@code null}).
+   * @usage _intermediate_method_
    */
   public Charset getCharset()
   {
@@ -846,6 +898,7 @@ public class Database
   /**
    * Sets a new Charset.  If {@code null}, resets to the value returned by
    * {@link #getDefaultCharset}.
+   * @usage _intermediate_method_
    */
   public void setCharset(Charset newCharset) {
     if(newCharset == null) {
@@ -857,6 +910,7 @@ public class Database
   /**
    * Gets currently configured {@link Table.ColumnOrder} (always non-{@code
    * null}).
+   * @usage _intermediate_method_
    */
   public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
@@ -865,6 +919,7 @@ public class Database
   /**
    * Sets a new Table.ColumnOrder.  If {@code null}, resets to the value
    * returned by {@link #getDefaultColumnOrder}.
+   * @usage _intermediate_method_
    */
   public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
     if(newColumnOrder == null) {
@@ -888,6 +943,7 @@ public class Database
    * Returns the FileFormat of this database (which may involve inspecting the
    * database itself).
    * @throws IllegalStateException if the file format cannot be determined
+   * @usage _general_method_
    */
   public FileFormat getFileFormat() throws IOException {
 
@@ -950,6 +1006,7 @@ public class Database
   /**
    * @return the currently configured database default language sort order for
    *         textual columns
+   * @usage _intermediate_method_
    */
   public Column.SortOrder getDefaultSortOrder() throws IOException {
 
@@ -962,6 +1019,7 @@ public class Database
   /**
    * @return the currently configured database default code page for textual
    *         data (may not be relevant to all database versions)
+   * @usage _intermediate_method_
    */
   public short getDefaultCodePage() throws IOException {
 
@@ -989,6 +1047,7 @@ public class Database
   /**
    * @return a PropertyMaps instance decoded from the given bytes (always
    *         returns non-{@code null} result).
+   * @usage _intermediate_method_
    */
   public PropertyMaps readProperties(byte[] propsBytes, int objectId)
     throws IOException 
@@ -1034,6 +1093,7 @@ public class Database
   
   /**
    * @return The names of all of the user tables (String)
+   * @usage _general_method_
    */
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
@@ -1050,6 +1110,7 @@ public class Database
    *         to read these tables, you must use {@link #getSystemTable}.
    *         <i>Extreme care should be taken if modifying these tables
    *         directly!</i>.
+   * @usage _intermediate_method_
    */
   public Set<String> getSystemTableNames() throws IOException {
     Set<String> sysTableNames =
@@ -1064,6 +1125,7 @@ public class Database
    *         operations, the actual exception will be contained within
    * @throws ConcurrentModificationException if a table is added to the
    *         database while an Iterator is in use.
+   * @usage _general_method_
    */
   public Iterator<Table> iterator() {
     return new TableIterator();
@@ -1072,6 +1134,7 @@ public class Database
   /**
    * @param name Table name
    * @return The table, or null if it doesn't exist
+   * @usage _general_method_
    */
   public Table getTable(String name) throws IOException {
     return getTable(name, defaultUseBigIndex());
@@ -1083,6 +1146,7 @@ public class Database
    *                    for the table (this value will override any other
    *                    settings)
    * @return The table, or null if it doesn't exist
+   * @usage _intermediate_method_
    */
   public Table getTable(String name, boolean useBigIndex) throws IOException {
     return getTable(name, false, useBigIndex);
@@ -1091,6 +1155,7 @@ public class Database
   /**
    * @param tableDefPageNumber the page number of a table definition
    * @return The table, or null if it doesn't exist
+   * @usage _advanced_method_
    */
   public Table getTable(int tableDefPageNumber) throws IOException {
 
@@ -1142,6 +1207,7 @@ public class Database
    * Create a new table in this database
    * @param name Name of the table to create
    * @param columns List of Columns in the table
+   * @usage _general_method_
    */
   public void createTable(String name, List<Column> columns)
     throws IOException
@@ -1154,6 +1220,7 @@ public class Database
    * @param name Name of the table to create
    * @param columns List of Columns in the table
    * @param indexes List of IndexBuilders describing indexes for the table
+   * @usage _general_method_
    */
   public void createTable(String name, List<Column> columns,
                           List<IndexBuilder> indexes)
@@ -1248,6 +1315,7 @@ public class Database
 
   /**
    * Finds all the relationships in the database between the given tables.
+   * @usage _intermediate_method_
    */
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
@@ -1287,6 +1355,7 @@ public class Database
 
   /**
    * Finds all the queries in the database.
+   * @usage _intermediate_method_
    */
   public List<Query> getQueries()
     throws IOException
@@ -1350,6 +1419,7 @@ public class Database
    * 
    * @param tableName Table name, may be a system table
    * @return The table, or {@code null} if it doesn't exist
+   * @usage _intermediate_method_
    */
   public Table getSystemTable(String tableName)
     throws IOException
@@ -1359,6 +1429,7 @@ public class Database
 
   /**
    * @return the core properties for the database
+   * @usage _general_method_
    */
   public PropertyMap getDatabaseProperties() throws IOException {
     if(_dbPropMaps == null) {
@@ -1369,6 +1440,7 @@ public class Database
 
   /**
    * @return the summary properties for the database
+   * @usage _general_method_
    */
   public PropertyMap getSummaryProperties() throws IOException {
     if(_summaryPropMaps == null) {
@@ -1379,6 +1451,7 @@ public class Database
 
   /**
    * @return the user-defined properties for the database
+   * @usage _general_method_
    */
   public PropertyMap getUserDefinedProperties() throws IOException {
     if(_userDefPropMaps == null) {
@@ -1389,6 +1462,7 @@ public class Database
 
   /**
    * @return the PropertyMaps for the object with the given id
+   * @usage _advanced_method_
    */
   public PropertyMaps getPropertiesForObject(int objectId)
     throws IOException
@@ -1430,6 +1504,7 @@ public class Database
 
   /**
    * @return the current database password, or {@code null} if none set.
+   * @usage _general_method_
    */
   public String getDatabasePassword() throws IOException
   {
@@ -1481,7 +1556,7 @@ public class Database
    * Finds the relationships matching the given from and to tables from the
    * given cursor and adds them to the given list.
    */
-  private void collectRelationships(
+  private static void collectRelationships(
       Cursor cursor, Table fromTable, Table toTable,
       List<Relationship> relationships)
   {
@@ -1677,6 +1752,7 @@ public class Database
    * @return the name of the copied table
    *
    * @see ImportUtil#importResultSet(ResultSet,Database,String)
+   * @usage _general_method_
    */
   public String copyTable(String name, ResultSet source)
     throws SQLException, IOException
@@ -1694,6 +1770,7 @@ public class Database
    * @return the name of the imported table
    *
    * @see ImportUtil#importResultSet(ResultSet,Database,String,ImportFilter)
+   * @usage _general_method_
    */
   public String copyTable(String name, ResultSet source, ImportFilter filter)
     throws SQLException, IOException
@@ -1711,6 +1788,7 @@ public class Database
    * @return the name of the imported table
    *
    * @see ImportUtil#importFile(File,Database,String,String)
+   * @usage _general_method_
    */
   public String importFile(String name, File f, String delim)
     throws IOException
@@ -1729,6 +1807,7 @@ public class Database
    * @return the name of the imported table
    *
    * @see ImportUtil#importFile(File,Database,String,String,ImportFilter)
+   * @usage _general_method_
    */
   public String importFile(String name, File f, String delim,
                            ImportFilter filter)
@@ -1747,6 +1826,7 @@ public class Database
    * @return the name of the imported table
    *
    * @see ImportUtil#importReader(BufferedReader,Database,String,String)
+   * @usage _general_method_
    */
   public String importReader(String name, BufferedReader in, String delim)
     throws IOException
@@ -1764,6 +1844,7 @@ public class Database
    * @return the name of the imported table
    *
    * @see ImportUtil#importReader(BufferedReader,Database,String,String,ImportFilter)
+   * @usage _general_method_
    */
   public String importReader(String name, BufferedReader in, String delim,
                              ImportFilter filter)
@@ -1774,6 +1855,7 @@ public class Database
 
   /**
    * Flushes any current changes to the database file to disk.
+   * @usage _general_method_
    */
   public void flush() throws IOException {
     _pageChannel.flush();
@@ -1781,6 +1863,7 @@ public class Database
   
   /**
    * Close the database file
+   * @usage _general_method_
    */
   public void close() throws IOException {
     _pageChannel.close();
@@ -1788,6 +1871,7 @@ public class Database
   
   /**
    * @return A table or column name escaped for Access
+   * @usage _general_method_
    */
   public static String escapeIdentifier(String s) {
     if (isReservedWord(s)) {
@@ -1799,6 +1883,7 @@ public class Database
   /**
    * @return {@code true} if the given string is a reserved word,
    *         {@code false} otherwise
+   * @usage _general_method_
    */
   public static boolean isReservedWord(String s) {
     return RESERVED_WORDS.contains(s.toLowerCase());
@@ -1806,6 +1891,7 @@ public class Database
 
   /**
    * Validates an identifier name.
+   * @usage _advanced_method_
    */
   public static void validateIdentifierName(String name,
                                             int maxLength,
@@ -1877,6 +1963,7 @@ public class Database
   /**
    * Returns {@code false} if "big index support" has been disabled explicity
    * on the this Database or via a system property, {@code true} otherwise.
+   * @usage _advanced_method_
    */
   public boolean defaultUseBigIndex() {
     if(_useBigIndex != null) {
@@ -1893,6 +1980,7 @@ public class Database
    * Returns the default TimeZone.  This is normally the platform default
    * TimeZone as returned by {@link TimeZone#getDefault}, but can be
    * overridden using the system property {@value #TIMEZONE_PROPERTY}.
+   * @usage _advanced_method_
    */
   public static TimeZone getDefaultTimeZone()
   {
@@ -1915,6 +2003,7 @@ public class Database
    * {@value #CHARSET_PROPERTY_PREFIX} followed by the JetFormat version to
    * which the charset should apply, e.g. {@code
    * "com.healthmarketscience.jackcess.charset.VERSION_3"}.
+   * @usage _advanced_method_
    */
   public static Charset getDefaultCharset(JetFormat format)
   {
@@ -1934,6 +2023,7 @@ public class Database
    * Returns the default Table.ColumnOrder.  This defaults to
    * {@link #DEFAULT_COLUMN_ORDER}, but can be overridden using the system
    * property {@value #COLUMN_ORDER_PROPERTY}.
+   * @usage _advanced_method_
    */
   public static Table.ColumnOrder getDefaultColumnOrder()
   {

@@ -61,6 +61,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Access database column definition
  * @author Tim McCune
+ * @usage _general_class_
  */
 public class Column implements Comparable<Column> {
   
@@ -70,12 +71,14 @@ public class Column implements Comparable<Column> {
    * Meaningless placeholder object for inserting values in an autonumber
    * column.  it is not required that this value be used (any passed in value
    * is ignored), but using this placeholder may make code more obvious.
+   * @usage _general_field_
    */
   public static final Object AUTO_NUMBER = "<AUTO_NUMBER>";
   
   /**
    * Meaningless placeholder object for updating rows which indicates that a
    * given column should keep its existing value.
+   * @usage _general_field_
    */
   public static final Object KEEP_VALUE = "<KEEP_VALUE>";
   
@@ -113,16 +116,28 @@ public class Column implements Comparable<Column> {
    */
   private static final int LONG_VALUE_TYPE_MASK = 0xC0000000;
 
-  /** mask for the fixed len bit */
+  /**
+   * mask for the fixed len bit
+   * @usage _advanced_field_
+   */
   public static final byte FIXED_LEN_FLAG_MASK = (byte)0x01;
   
-  /** mask for the auto number bit */
+  /**
+   * mask for the auto number bit
+   * @usage _advanced_field_
+   */
   public static final byte AUTO_NUMBER_FLAG_MASK = (byte)0x04;
   
-  /** mask for the auto number guid bit */
+  /**
+   * mask for the auto number guid bit
+   * @usage _advanced_field_
+   */
   public static final byte AUTO_NUMBER_GUID_FLAG_MASK = (byte)0x40;
   
-  /** mask for the unknown bit (possible "can be null"?) */
+  /**
+   * mask for the unknown bit (possible "can be null"?)
+   * @usage _advanced_field_
+   */
   public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
 
   // some other flags?
@@ -132,11 +147,17 @@ public class Column implements Comparable<Column> {
   /** the value for the "general" sort order */
   private static final short GENERAL_SORT_ORDER_VALUE = 1033;
 
-  /** the "general" text sort order, legacy version (access 2000-2007) */
+  /**
+   * the "general" text sort order, legacy version (access 2000-2007)
+   * @usage _intermediate_field_
+   */
   public static final SortOrder GENERAL_LEGACY_SORT_ORDER =
     new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)0);
 
-  /** the "general" text sort order, latest version (access 2010+) */
+  /**
+   * the "general" text sort order, latest version (access 2010+)
+   * @usage _intermediate_field_
+   */
   public static final SortOrder GENERAL_SORT_ORDER = 
     new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)1);
 
@@ -186,10 +207,16 @@ public class Column implements Comparable<Column> {
   /** properties for this column, if any */
   private PropertyMap _props;  
   
+  /**
+   * @usage _general_method_
+   */
   public Column() {
     this(null);
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public Column(JetFormat format) {
     _table = null;
   }
@@ -209,6 +236,7 @@ public class Column implements Comparable<Column> {
    * @param table owning table
    * @param buffer Buffer containing column definition
    * @param offset Offset in the buffer at which the column definition starts
+   * @usage _advanced_method_
    */
   public Column(Table table, ByteBuffer buffer, int offset, int displayIndex)
     throws IOException
@@ -265,62 +293,108 @@ public class Column implements Comparable<Column> {
     }
   }
 
+  /**
+   * @usage _general_method_
+   */
   public Table getTable() {
     return _table;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public Database getDatabase() {       
     return getTable().getDatabase();
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public JetFormat getFormat() {
     return getDatabase().getFormat();
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
   
+  /**
+   * @usage _general_method_
+   */
   public String getName() {
     return _name;
   }
+
+  /**
+   * @usage _advanced_method_
+   */
   public void setName(String name) {
     _name = name;
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public boolean isVariableLength() {
     return _variableLength;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setVariableLength(boolean variableLength) {
     _variableLength = variableLength;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public boolean isAutoNumber() {
     return _autoNumber;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public void setAutoNumber(boolean autoNumber) {
     _autoNumber = autoNumber;
     setAutoNumberGenerator();
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public short getColumnNumber() {
     return _columnNumber;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setColumnNumber(short newColumnNumber) {
     _columnNumber = newColumnNumber;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public int getColumnIndex() {
     return _columnIndex;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setColumnIndex(int newColumnIndex) {
     _columnIndex = newColumnIndex;
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public int getDisplayIndex() {
     return _displayIndex;
   }
@@ -329,6 +403,7 @@ public class Column implements Comparable<Column> {
    * Also sets the length and the variable length flag, inferred from the
    * type.  For types with scale/precision, sets the scale and precision to
    * default values.
+   * @usage _general_method_
    */
   public void setType(DataType type) {
     _type = type;
@@ -343,88 +418,154 @@ public class Column implements Comparable<Column> {
       setPrecision((byte)type.getDefaultPrecision());
     }
   }
+
+  /**
+   * @usage _general_method_
+   */
   public DataType getType() {
     return _type;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
   }
   
+  /**
+   * @usage _general_method_
+   */
   public void setSQLType(int type) throws SQLException {
     setSQLType(type, 0);
   }
   
+  /**
+   * @usage _general_method_
+   */
   public void setSQLType(int type, int lengthInUnits) throws SQLException {
     setType(DataType.fromSQLType(type, lengthInUnits));
   }
   
+  /**
+   * @usage _general_method_
+   */
   public boolean isCompressedUnicode() {
     return _textInfo._compressedUnicode;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public void setCompressedUnicode(boolean newCompessedUnicode) {
     modifyTextInfo();
     _textInfo._compressedUnicode = newCompessedUnicode;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public byte getPrecision() {
     return _numericInfo._precision;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public void setPrecision(byte newPrecision) {
     modifyNumericInfo();
     _numericInfo._precision = newPrecision;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public byte getScale() {
     return _numericInfo._scale;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public void setScale(byte newScale) {
     modifyNumericInfo();
     _numericInfo._scale = newScale;
   }
-  
+
+  /**
+   * @usage _intermediate_method_
+   */
   public SortOrder getTextSortOrder() {
     return _textInfo._sortOrder;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setTextSortOrder(SortOrder newTextSortOrder) {
     modifyTextInfo();
     _textInfo._sortOrder = newTextSortOrder;
   }
 
+  /**
+   * @usage _intermediate_method_
+   */
   public short getTextCodePage() {
     return _textInfo._codePage;
   }
   
+  /**
+   * @usage _general_method_
+   */
   public void setLength(short length) {
     _columnLength = length;
   }
+
+  /**
+   * @usage _general_method_
+   */
   public short getLength() {
     return _columnLength;
   }
 
+  /**
+   * @usage _general_method_
+   */
   public void setLengthInUnits(short unitLength) {
     setLength((short)getType().fromUnitSize(unitLength));
   }
+
+  /**
+   * @usage _general_method_
+   */
   public short getLengthInUnits() {
     return (short)getType().toUnitSize(getLength());
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setVarLenTableIndex(int idx) {
     _varLenTableIndex = idx;
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public int getVarLenTableIndex() {
     return _varLenTableIndex;
   }
 
+  /**
+   * @usage _advanced_method_
+   */
   public void setFixedDataOffset(int newOffset) {
     _fixedDataOffset = newOffset;
   }
   
+  /**
+   * @usage _advanced_method_
+   */
   public int getFixedDataOffset() {
     return _fixedDataOffset;
   }
@@ -477,6 +618,7 @@ public class Column implements Comparable<Column> {
   /**
    * Returns the AutoNumberGenerator for this column if this is an autonumber
    * column, {@code null} otherwise.
+   * @usage _advanced_method_
    */
   public AutoNumberGenerator getAutoNumberGenerator() {
     return _autoNumberGenerator;
@@ -484,6 +626,7 @@ public class Column implements Comparable<Column> {
 
   /**
    * @return the properties for this column
+   * @usage _general_method_
    */
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
@@ -508,6 +651,7 @@ public class Column implements Comparable<Column> {
    * Checks that this column definition is valid.
    *
    * @throws IllegalArgumentException if this column definition is invalid.
+   * @usage _advanced_method_
    */
   public void validate(JetFormat format) {
     if(getType() == null) {
@@ -572,6 +716,7 @@ public class Column implements Comparable<Column> {
    * Deserialize a raw byte value for this column into an Object
    * @param data The raw byte value
    * @return The deserialized Object
+   * @usage _advanced_method_
    */
   public Object read(byte[] data) throws IOException {
     return read(data, PageChannel.DEFAULT_BYTE_ORDER);
@@ -582,6 +727,7 @@ public class Column implements Comparable<Column> {
    * @param data The raw byte value
    * @param order Byte order in which the raw value is stored
    * @return The deserialized Object
+   * @usage _advanced_method_
    */  
   public Object read(byte[] data, ByteOrder order) throws IOException {
     ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -742,7 +888,7 @@ public class Column implements Comparable<Column> {
    * @return BigDecimal representing the monetary value
    * @throws IOException if the value cannot be parsed 
    */
-  private BigDecimal readCurrencyValue(ByteBuffer buffer)
+  private static BigDecimal readCurrencyValue(ByteBuffer buffer)
     throws IOException
   {
     if(buffer.remaining() != 8) {
@@ -755,7 +901,7 @@ public class Column implements Comparable<Column> {
   /**
    * Writes "Currency" values.
    */
-  private void writeCurrencyValue(ByteBuffer buffer, Object value)
+  private static void writeCurrencyValue(ByteBuffer buffer, Object value)
     throws IOException
   {
     try {
@@ -919,7 +1065,7 @@ public class Column implements Comparable<Column> {
   /**
    * Decodes a GUID value.
    */
-  private String readGUIDValue(ByteBuffer buffer, ByteOrder order)
+  private static String readGUIDValue(ByteBuffer buffer, ByteOrder order)
   {
     if(order != ByteOrder.BIG_ENDIAN) {
       byte[] tmpArr = new byte[16];
@@ -956,8 +1102,8 @@ public class Column implements Comparable<Column> {
   /**
    * Writes a GUID value.
    */
-  private void writeGUIDValue(ByteBuffer buffer, Object value, 
-                              ByteOrder order)
+  private static void writeGUIDValue(ByteBuffer buffer, Object value, 
+                                     ByteOrder order)
     throws IOException
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
@@ -997,6 +1143,7 @@ public class Column implements Comparable<Column> {
    * @param value Value of the LVAL column
    * @return A buffer containing the LVAL definition and (possibly) the column
    *         value (unless written to other pages)
+   * @usage _advanced_method_
    */
   public ByteBuffer writeLongValue(byte[] value,
                                    int remainingRowLength) throws IOException
@@ -1171,6 +1318,7 @@ public class Column implements Comparable<Column> {
    * endian order
    * @param obj Object to serialize
    * @return A buffer containing the bytes
+   * @usage _advanced_method_
    */
   public ByteBuffer write(Object obj, int remainingRowLength)
     throws IOException
@@ -1183,6 +1331,7 @@ public class Column implements Comparable<Column> {
    * @param obj Object to serialize
    * @param order Order in which to serialize
    * @return A buffer containing the bytes
+   * @usage _advanced_method_
    */
   public ByteBuffer write(Object obj, int remainingRowLength, ByteOrder order)
     throws IOException
@@ -1253,6 +1402,7 @@ public class Column implements Comparable<Column> {
    * @param obj Object to serialize
    * @param order Order in which to serialize
    * @return A buffer containing the bytes
+   * @usage _advanced_method_
    */
   public ByteBuffer writeFixedLengthField(Object obj, ByteOrder order)
     throws IOException
@@ -1520,6 +1670,7 @@ public class Column implements Comparable<Column> {
    * @param textBytes bytes of text to decode
    * @param charset relevant charset
    * @return the decoded string
+   * @usage _advanced_method_
    */
   public static String decodeUncompressedText(byte[] textBytes, 
                                               Charset charset)
@@ -1532,6 +1683,7 @@ public class Column implements Comparable<Column> {
    * @param text Text to encode
    * @param charset database charset
    * @return A buffer with the text encoded
+   * @usage _advanced_method_
    */
   public static ByteBuffer encodeUncompressedText(CharSequence text,
                                                   Charset charset)
@@ -1542,6 +1694,10 @@ public class Column implements Comparable<Column> {
   }
 
   
+  /**
+   * Orders Columns by column number.
+   * @usage _general_method_
+   */
   public int compareTo(Column other) {
     if (_columnNumber > other.getColumnNumber()) {
       return 1;
@@ -1555,6 +1711,7 @@ public class Column implements Comparable<Column> {
   /**
    * @param columns A list of columns in a table definition
    * @return The number of variable length columns found in the list
+   * @usage _advanced_method_
    */
   public static short countVariableLength(List<Column> columns) {
     short rtn = 0;
@@ -1570,6 +1727,7 @@ public class Column implements Comparable<Column> {
    * @param columns A list of columns in a table definition
    * @return The number of variable length columns which are not long values
    *         found in the list
+   * @usage _advanced_method_
    */
   public static short countNonLongVariableLength(List<Column> columns) {
     short rtn = 0;
@@ -1617,6 +1775,7 @@ public class Column implements Comparable<Column> {
   
   /**
    * @return an appropriate CharSequence representation of the given object.
+   * @usage _advanced_method_
    */
   public static CharSequence toCharSequence(Object value)
     throws IOException
@@ -1649,6 +1808,7 @@ public class Column implements Comparable<Column> {
 
   /**
    * @return an appropriate byte[] representation of the given object.
+   * @usage _advanced_method_
    */
   public static byte[] toByteArray(Object value)
     throws IOException
@@ -1688,6 +1848,7 @@ public class Column implements Comparable<Column> {
 
   /**
    * Interpret a boolean value (null == false)
+   * @usage _advanced_method_
    */
   public static boolean toBooleanValue(Object obj) {
     return ((obj != null) && ((Boolean)obj).booleanValue());
@@ -1912,6 +2073,7 @@ public class Column implements Comparable<Column> {
 
   /**
    * Base class for the supported autonumber types.
+   * @usage _advanced_class_
    */
   public abstract class AutoNumberGenerator
   {
@@ -2030,6 +2192,7 @@ public class Column implements Comparable<Column> {
   
   /**
    * Information about the sort order (collation) for a textual column.
+   * @usage _intermediate_class_
    */
   public static final class SortOrder
   {
