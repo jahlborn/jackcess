@@ -22,6 +22,9 @@
         Add Database.getSystemTableNames to enable retrieving the list of
         system/hidden tables.
       </action>
+      <action dev="jahlborn" type="fix">
+        Fix issue with reading Access 97 database with large number of fields.
+      </action>
     </release>
     <release version="1.2.4" date="2011-05-14">
       <action dev="jahlborn" type="update">
