@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.5" date="TBD">
+    <release version="1.2.5" date="2011-10-19">
       <action dev="jahlborn" type="update">
         Try multiple classloaders when loading resources as streams.
       </action>
