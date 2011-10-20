@@ -759,7 +759,7 @@ public class Table
     int jumpsUsed = 0;
     for(int i = 0; i < numVarCols + 1; i++) {
 
-      if((jumpsUsed < numJumps) && 
+      while((jumpsUsed < numJumps) && 
          (i == ByteUtil.getUnsignedByte(
               rowBuffer, rowEnd - nullMaskSize-jumpsUsed - 1))) {
         jumpsUsed++;
