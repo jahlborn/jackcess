@@ -41,7 +41,8 @@ public class JetFormatTest extends TestCase {
     TEST2("test2"),
     INDEX_CODES("testIndexCodes"),
     INDEX_PROPERTIES("testIndexProperties"),
-    PROMOTION("testPromotion");
+    PROMOTION("testPromotion"),
+    COMPLEX("complexDataTest");
 
     private final String _basename;
 
