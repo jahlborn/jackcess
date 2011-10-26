@@ -1253,6 +1253,13 @@ public class Database
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(Column column : columns) {
+
+      // FIXME for now, we can't create complex columns
+      if(column.getType() == DataType.COMPLEX_TYPE) {
+        throw new UnsupportedOperationException(
+            "Complex column creation is not yet implemented");
+      }
+      
       column.validate(_format);
       if(!colNames.add(column.getName().toUpperCase())) {
         throw new IllegalArgumentException("duplicate column name: " +
@@ -1267,12 +1274,14 @@ public class Database
 
     List<Column> autoCols = Table.getAutoNumberColumns(columns);
     if(autoCols.size() > 1) {
-      // we can have one of each type
+      // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
       for(Column c : autoCols) {
-        if(!autoTypes.add(c.getType())) {
+        if(!c.getType().isMultipleAutoNumberAllowed() &&
+           !autoTypes.add(c.getType())) {
           throw new IllegalArgumentException(
-              "Can have at most one AutoNumber column of type " + c.getType() + " per table");
+              "Can have at most one AutoNumber column of type " + c.getType() +
+              " per table");
         }
       }
     }
@@ -1661,10 +1670,10 @@ public class Database
     List<Object[]> aceRows = new ArrayList<Object[]>(_newTableSIDs.size());
     for(byte[] sid : _newTableSIDs) {
       Object[] aceRow = new Object[acEntries.getColumnCount()];
-      aceRow[acmCol.getColumnIndex()] = SYS_FULL_ACCESS_ACM;
-      aceRow[inheritCol.getColumnIndex()] = Boolean.FALSE;
-      aceRow[objIdCol.getColumnIndex()] = Integer.valueOf(pageNumber);
-      aceRow[sidCol.getColumnIndex()] = sid;
+      acmCol.setRowValue(aceRow, SYS_FULL_ACCESS_ACM);
+      inheritCol.setRowValue(aceRow, Boolean.FALSE);
+      objIdCol.setRowValue(aceRow, Integer.valueOf(pageNumber));
+      sidCol.setRowValue(aceRow, sid);
       aceRows.add(aceRow);
     }
     acEntries.addRows(aceRows);  

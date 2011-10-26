@@ -148,6 +148,11 @@ public enum DataType {
    */
   UNKNOWN_11((byte) 0x11, null, 3992),
   /**
+   * Complex type corresponds to a special LONG autonumber field which is the
+   * key for a secondary table which holds the "real" data.
+   */
+  COMPLEX_TYPE((byte) 0x12, null, 4),    
+  /**
    * Dummy type for a fixed length type which is not currently supported.
    * Handled like a fixed length BINARY.
    */
@@ -410,7 +415,11 @@ public enum DataType {
   }
 
   public boolean mayBeAutoNumber() {
-    return((this == LONG) || (this == GUID));
+    return((this == LONG) || (this == GUID) || (this == COMPLEX_TYPE));
+  }
+
+  public boolean isMultipleAutoNumberAllowed() {
+    return (this == COMPLEX_TYPE);
   }
 
   public boolean isUnsupported() {

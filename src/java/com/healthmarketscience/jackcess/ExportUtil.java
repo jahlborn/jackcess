@@ -327,7 +327,7 @@ public class ExportUtil {
 
       // fill raw row data in array
       for (int i = 0; i < columns.size(); i++) {
-        unfilteredRowData[i] = row.get(columns.get(i).getName());
+        unfilteredRowData[i] = columns.get(i).getRowValue(row);
       }
 
       // apply filter

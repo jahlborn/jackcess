@@ -126,6 +126,8 @@ public class Table
   private int _rowCount;
   /** last long auto number for the table */
   private int _lastLongAutoNumber;
+  /** last complex type auto number for the table */
+  private int _lastComplexTypeAutoNumber;
   /** page number of the definition of this table */
   private final int _tableDefPageNumber;
   /** max Number of columns in the table (includes previous deletions) */
@@ -136,6 +138,8 @@ public class Table
   private List<Column> _columns = new ArrayList<Column>();
   /** List of variable length columns in this table, ordered by offset */
   private List<Column> _varColumns = new ArrayList<Column>();
+  /** List of autonumber columns in this table, ordered by column number */
+  private List<Column> _autoNumColumns;
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
   private List<Index> _indexes = new ArrayList<Index>();
@@ -307,7 +311,7 @@ public class Table
     _tableErrorHandler = newErrorHandler;
   }    
 
-  protected int getTableDefPageNumber() {
+  public int getTableDefPageNumber() {
     return _tableDefPageNumber;
   }
 
@@ -393,6 +397,7 @@ public class Table
     }
     _maxColumnCount = (short)_columns.size();
     _maxVarColumnCount = (short)_varColumns.size();
+    _autoNumColumns = getAutoNumberColumns(columns);
   }
 
   /**
@@ -635,8 +640,8 @@ public class Table
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
-        rtn.put(column.getName(), 
-                getRowColumn(format, rowBuffer, nullMask, column, rowState));
+        column.setRowValue(
+            rtn, getRowColumn(format, rowBuffer, nullMask, column, rowState));
       }
     }
     return rtn;
@@ -1222,6 +1227,10 @@ public class Table
     }
     _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
     _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
+    if(getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER >= 0) {
+      _lastComplexTypeAutoNumber = tableBuffer.getInt(
+          getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER);
+    }
     _tableType = tableBuffer.get(getFormat().OFFSET_TABLE_TYPE);
     _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
     _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
@@ -1262,6 +1271,7 @@ public class Table
       column.setName(readName(tableBuffer));
     }    
     Collections.sort(_columns);
+    _autoNumColumns = getAutoNumberColumns(_columns);
 
     // setup the data index for the columns
     int colIdx = 0;
@@ -1293,6 +1303,12 @@ public class Table
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
       Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
+    }
+
+    for(Column col : _columns) {
+      // some columns need to do extra work after the table is completely
+      // loaded
+      col.postTableLoadInit();
     }
   }
   
@@ -1367,7 +1383,7 @@ public class Table
     }
     for(Column col : _columns) {
       if(rowMap.containsKey(col.getName())) {
-        row[col.getColumnIndex()] = rowMap.get(col.getName());
+        col.setRowValue(row, col.getRowValue(rowMap));
       }
     }
     return row;
@@ -1436,10 +1452,13 @@ public class Table
         rows.set(i, row);
       }
 
+      // fill in autonumbers
+      handleAutoNumbersForAdd(row);
+      
       // write the row of data to a temporary buffer
       rowData[i] = createRow(row, getFormat().MAX_ROW_SIZE,
                              writeRowBufferH.getPageBuffer(getPageChannel()),
-                             false, 0);
+                             0);
       
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
@@ -1512,21 +1531,25 @@ public class Table
       row = dupeRow(row, _columns.size());
     }
 
-    // fill in any auto-numbers (we don't allow autonumber values to be
-    // modified) or "keep value" fields
     NullMask nullMask = getRowNullMask(rowBuffer);
+
+    // fill in any auto-numbers (we don't allow autonumber values to be
+    // modified)
+    handleAutoNumbersForUpdate(row, rowBuffer, nullMask, rowState);
+    
+    // fill in any "keep value" fields
     for(Column column : _columns) {
-      if(column.isAutoNumber() || 
-         (row[column.getColumnIndex()] == Column.KEEP_VALUE)) {
-        row[column.getColumnIndex()] = getRowColumn(getFormat(), rowBuffer, nullMask,
-                                                    column, rowState);
+      if(column.getRowValue(row) == Column.KEEP_VALUE) {
+        column.setRowValue(
+            row, getRowColumn(
+                getFormat(), rowBuffer, nullMask, column, rowState));
       }
     }
 
     // generate new row bytes
     ByteBuffer newRowData = createRow(
         row, getFormat().MAX_ROW_SIZE,
-        _singleRowBufferH.getPageBuffer(getPageChannel()), true, oldRowSize);
+        _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize);
 
     if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
       throw new IOException("Row size " + newRowData.limit() + 
@@ -1666,6 +1689,10 @@ public class Table
     _rowCount += rowCountInc;
     tdefPage.putInt(getFormat().OFFSET_NUM_ROWS, _rowCount);
     tdefPage.putInt(getFormat().OFFSET_NEXT_AUTO_NUMBER, _lastLongAutoNumber);
+    int ctypeOff = getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER;
+    if(ctypeOff >= 0) {
+      tdefPage.putInt(ctypeOff, _lastComplexTypeAutoNumber);
+    }
 
     // write any index changes
     for (IndexData indexData : _indexDatas) {
@@ -1715,7 +1742,7 @@ public class Table
    * @return the given buffer, filled with the row data
    */
   ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer,
-                       boolean isUpdate, int minRowSize)
+                       int minRowSize)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);
@@ -1730,7 +1757,7 @@ public class Table
         continue;
       }
         
-      Object rowValue = rowArray[col.getColumnIndex()];
+      Object rowValue = col.getRowValue(rowArray);
 
       if (col.getType() == DataType.BOOLEAN) {
         
@@ -1739,15 +1766,6 @@ public class Table
           nullMask.markNotNull(col);
         }
         rowValue = null;
-        
-      } else if(col.isAutoNumber() && !isUpdate) {
-            
-        // ignore given row value, use next autonumber
-        rowValue = col.getAutoNumberGenerator().getNext();
-
-        // we need to stick this back in the row so that the indexes get
-        // updated correctly (and caller can get the generated value)
-        rowArray[col.getColumnIndex()] = rowValue;
       }
           
       if(rowValue != null) {
@@ -1758,7 +1776,6 @@ public class Table
         // remainingRowLength is ignored when writing fixed length data
         buffer.position(fixedDataStart + col.getFixedDataOffset());
         buffer.put(col.write(rowValue, 0));
-
       }
 
       // always insert space for the entire fixed data column length
@@ -1792,7 +1809,7 @@ public class Table
       // later by being too greedy
       for (Column varCol : _varColumns) {
         if((varCol.getType().isLongValue()) &&
-           (rowArray[varCol.getColumnIndex()] != null)) {
+           (varCol.getRowValue(rowArray) != null)) {
           maxRowSize -= getFormat().SIZE_LONG_VALUE_DEF;
         }
       }
@@ -1802,7 +1819,7 @@ public class Table
       int varColumnOffsetsIndex = 0;
       for (Column varCol : _varColumns) {
         short offset = (short) buffer.position();
-        Object rowValue = rowArray[varCol.getColumnIndex()];
+        Object rowValue = varCol.getRowValue(rowArray);
         if (rowValue != null) {
           // we have a value
           nullMask.markNotNull(varCol);
@@ -1857,6 +1874,50 @@ public class Table
     return buffer;
   }
 
+  /**
+   * Autonumber columns may not be modified on update.
+   */
+  private void handleAutoNumbersForUpdate(
+      Object[] row, ByteBuffer rowBuffer, NullMask nullMask, RowState rowState)
+    throws IOException
+  {
+    if(_autoNumColumns.isEmpty()) {
+      return;
+    }
+
+    for(Column col : _autoNumColumns) {
+      col.setRowValue(
+          row, getRowColumn(getFormat(), rowBuffer, nullMask, col, rowState));
+    }
+  }
+
+  /**
+   * Fill in all autonumber column values.
+   */
+  private void handleAutoNumbersForAdd(Object[] row)
+    throws IOException
+  {
+    if(_autoNumColumns.isEmpty()) {
+      return;
+    }
+
+    Object complexAutoNumber = null;
+    for(Column col : _autoNumColumns) {
+      // ignore given row value, use next autonumber
+      Column.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
+      Object rowValue = null;
+      if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
+        rowValue = autoNumGen.getNext(null);
+      } else {
+        // complex type auto numbers are shared across all complex columns
+        // in the row
+        complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
+        rowValue = complexAutoNumber;
+      }
+      col.setRowValue(row, rowValue);
+    }
+  }
+
   private static void padRowBuffer(ByteBuffer buffer, int minRowSize,
                                    int trailerSize)
   {
@@ -1884,6 +1945,16 @@ public class Table
   int getLastLongAutoNumber() {
     // gets the last used auto number (does not modify)
     return _lastLongAutoNumber;
+  }
+  
+  int getNextComplexTypeAutoNumber() {
+    // note, the saved value is the last one handed out, so pre-increment
+    return ++_lastComplexTypeAutoNumber;
+  }
+
+  int getLastComplexTypeAutoNumber() {
+    // gets the last used auto number (does not modify)
+    return _lastComplexTypeAutoNumber;
   }
   
   @Override
@@ -2105,7 +2176,7 @@ public class Table
    * @usage _advanced_method_
    */
   public static List<Column> getAutoNumberColumns(Collection<Column> columns) {
-    List<Column> autoCols = new ArrayList<Column>();
+    List<Column> autoCols = new ArrayList<Column>(1);
     for(Column c : columns) {
       if(c.isAutoNumber()) {
         autoCols.add(c);

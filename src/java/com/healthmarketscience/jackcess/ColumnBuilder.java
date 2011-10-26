@@ -151,6 +151,7 @@ public class ColumnBuilder {
       setScale(template.getScale());
       setPrecision(template.getPrecision());
     }
+    setCompressedUnicode(template.isCompressedUnicode());
     
     return this;
   }

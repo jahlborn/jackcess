@@ -182,6 +182,7 @@ public abstract class JetFormat {
   public final int OFFSET_NEXT_TABLE_DEF_PAGE;
   public final int OFFSET_NUM_ROWS;
   public final int OFFSET_NEXT_AUTO_NUMBER;
+  public final int OFFSET_NEXT_COMPLEX_AUTO_NUMBER;
   public final int OFFSET_TABLE_TYPE;
   public final int OFFSET_MAX_COLS;
   public final int OFFSET_NUM_VAR_COLS;
@@ -201,6 +202,7 @@ public abstract class JetFormat {
   public final int OFFSET_COLUMN_SCALE;
   public final int OFFSET_COLUMN_SORT_ORDER;
   public final int OFFSET_COLUMN_CODE_PAGE;
+  public final int OFFSET_COLUMN_COMPLEX_ID;
   public final int OFFSET_COLUMN_FLAGS;
   public final int OFFSET_COLUMN_COMPRESSED_UNICODE;
   public final int OFFSET_COLUMN_LENGTH;
@@ -313,6 +315,7 @@ public abstract class JetFormat {
     OFFSET_NEXT_TABLE_DEF_PAGE = defineOffsetNextTableDefPage();
     OFFSET_NUM_ROWS = defineOffsetNumRows();
     OFFSET_NEXT_AUTO_NUMBER = defineOffsetNextAutoNumber();
+    OFFSET_NEXT_COMPLEX_AUTO_NUMBER = defineOffsetNextComplexAutoNumber();
     OFFSET_TABLE_TYPE = defineOffsetTableType();
     OFFSET_MAX_COLS = defineOffsetMaxCols();
     OFFSET_NUM_VAR_COLS = defineOffsetNumVarCols();
@@ -332,6 +335,7 @@ public abstract class JetFormat {
     OFFSET_COLUMN_SCALE = defineOffsetColumnScale();
     OFFSET_COLUMN_SORT_ORDER = defineOffsetColumnSortOrder();
     OFFSET_COLUMN_CODE_PAGE = defineOffsetColumnCodePage();
+    OFFSET_COLUMN_COMPLEX_ID = defineOffsetColumnComplexId();
     OFFSET_COLUMN_FLAGS = defineOffsetColumnFlags();
     OFFSET_COLUMN_COMPRESSED_UNICODE = defineOffsetColumnCompressedUnicode();
     OFFSET_COLUMN_LENGTH = defineOffsetColumnLength();
@@ -412,6 +416,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetNextTableDefPage();
   protected abstract int defineOffsetNumRows();
   protected abstract int defineOffsetNextAutoNumber();
+  protected abstract int defineOffsetNextComplexAutoNumber();
   protected abstract int defineOffsetTableType();
   protected abstract int defineOffsetMaxCols();
   protected abstract int defineOffsetNumVarCols();
@@ -431,6 +436,7 @@ public abstract class JetFormat {
   protected abstract int defineOffsetColumnScale();
   protected abstract int defineOffsetColumnSortOrder();
   protected abstract int defineOffsetColumnCodePage();
+  protected abstract int defineOffsetColumnComplexId();
   protected abstract int defineOffsetColumnFlags();
   protected abstract int defineOffsetColumnCompressedUnicode();
   protected abstract int defineOffsetColumnLength();
@@ -489,6 +495,8 @@ public abstract class JetFormat {
   protected abstract boolean defineLegacyNumericIndexes();
 
   protected abstract Map<String,Database.FileFormat> getPossibleFileFormats();
+
+  protected abstract boolean isSupportedDataType(DataType type);
 
   @Override
   public String toString() {
@@ -552,6 +560,8 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetNextAutoNumber() { return 20; }
     @Override
+    protected int defineOffsetNextComplexAutoNumber() { return -1; }
+    @Override
     protected int defineOffsetTableType() { return 20; }
     @Override
     protected int defineOffsetMaxCols() { return 21; }
@@ -587,6 +597,8 @@ public abstract class JetFormat {
     protected int defineOffsetColumnSortOrder() { return 9; }
     @Override
     protected int defineOffsetColumnCodePage() { return 11; }
+    @Override
+    protected int defineOffsetColumnComplexId() { return -1; }
     @Override
     protected int defineOffsetColumnFlags() { return 13; }
     @Override
@@ -701,6 +713,10 @@ public abstract class JetFormat {
       return PossibleFileFormats.POSSIBLE_VERSION_3;
     }
 
+    @Override
+    protected boolean isSupportedDataType(DataType type) {
+      return (type != DataType.COMPLEX_TYPE);
+    }
   }
   
   private static class Jet4Format extends JetFormat {
@@ -762,6 +778,8 @@ public abstract class JetFormat {
     @Override
     protected int defineOffsetNextAutoNumber() { return 20; }
     @Override
+    protected int defineOffsetNextComplexAutoNumber() { return -1; }
+    @Override
     protected int defineOffsetTableType() { return 40; }
     @Override
     protected int defineOffsetMaxCols() { return 41; }
@@ -797,6 +815,8 @@ public abstract class JetFormat {
     protected int defineOffsetColumnSortOrder() { return 11; }
     @Override
     protected int defineOffsetColumnCodePage() { return -1; }
+    @Override
+    protected int defineOffsetColumnComplexId() { return -1; }
     @Override
     protected int defineOffsetColumnFlags() { return 15; }
     @Override
@@ -911,6 +931,10 @@ public abstract class JetFormat {
       return PossibleFileFormats.POSSIBLE_VERSION_4;
     }
 
+    @Override
+    protected boolean isSupportedDataType(DataType type) {
+      return (type != DataType.COMPLEX_TYPE);
+    }
   }
   
   private static final class MSISAMFormat extends Jet4Format {
@@ -946,6 +970,17 @@ public abstract class JetFormat {
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_12;
+    }
+
+    @Override
+    protected int defineOffsetNextComplexAutoNumber() { return 28; }
+
+    @Override
+    protected int defineOffsetColumnComplexId() { return 11; }
+    
+    @Override
+    protected boolean isSupportedDataType(DataType type) {
+      return true;
     }
   }
 

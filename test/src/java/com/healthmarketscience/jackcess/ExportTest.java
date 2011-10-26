@@ -31,7 +31,6 @@ import java.io.BufferedWriter;
 import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.TimeZone;
 
 import junit.framework.TestCase;
 import org.apache.commons.lang.SystemUtils;
@@ -55,14 +54,12 @@ public class ExportTest extends TestCase
 
   public void testExportToFile() throws Exception
   {
-    TimeZone testTZ = TimeZone.getTimeZone("America/New_York");
-
     DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
-    df.setTimeZone(testTZ);
+    df.setTimeZone(TEST_TZ);
 
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
-      db.setTimeZone(testTZ);
+      db.setTimeZone(TEST_TZ);
 
       Table t = new TableBuilder("test")
         .addColumn(new ColumnBuilder("col1", DataType.TEXT))

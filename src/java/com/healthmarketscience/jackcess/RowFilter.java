@@ -107,7 +107,7 @@ public abstract class RowFilter
         @Override
         public boolean matches(Map<String, Object> row) 
         {
-          return ObjectUtils.equals(valuePattern, row.get(columnPattern.getName()));
+          return ObjectUtils.equals(valuePattern, columnPattern.getRowValue(row));
         }
       };
   }

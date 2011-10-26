@@ -46,11 +46,15 @@ import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
+import com.healthmarketscience.jackcess.complex.ComplexValue;
+import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.scsu.Compress;
 import com.healthmarketscience.jackcess.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.scsu.Expand;
@@ -204,6 +208,8 @@ public class Column implements Comparable<Column> {
   private TextInfo _textInfo = DEFAULT_TEXT_INFO;
   /** the auto number generator for this column (if autonumber column) */
   private AutoNumberGenerator _autoNumberGenerator;
+  /** additional information specific to complex columns */
+  private ComplexColumnInfo<? extends ComplexValue> _complexInfo;
   /** properties for this column, if any */
   private PropertyMap _props;  
   
@@ -250,7 +256,7 @@ public class Column implements Comparable<Column> {
     byte colType = buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE);
     _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
     _columnLength = buffer.getShort(offset + getFormat().OFFSET_COLUMN_LENGTH);
-
+    
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
     _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
@@ -290,6 +296,20 @@ public class Column implements Comparable<Column> {
       _varLenTableIndex = buffer.getShort(offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
     } else {
       _fixedDataOffset = buffer.getShort(offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
+    }
+
+    // load complex info
+    if(_type == DataType.COMPLEX_TYPE) {
+      _complexInfo = ComplexColumnInfo.create(this, buffer, offset);
+    }
+  }
+
+  /**
+   * Secondary column initialization after the table is fully loaded.
+   */
+  void postTableLoadInit() throws IOException {
+    if(_complexInfo != null) {
+      _complexInfo.postTableLoadInit();
     }
   }
 
@@ -578,6 +598,40 @@ public class Column implements Comparable<Column> {
     return getDatabase().getTimeZone();
   }
 
+  /**
+   * Whether or not this column is "append only" (its history is tracked by a
+   * separate version history column).
+   * @usage _general_method_
+   */
+  public boolean isAppendOnly() {
+    return (getVersionHistoryColumn() != null);
+  }
+  
+  /**
+   * Returns the column which tracks the version history for an "append only"
+   * column.
+   * @usage _intermediate_method_
+   */
+  public Column getVersionHistoryColumn() {
+    return _textInfo._versionHistoryCol;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public void setVersionHistoryColumn(Column versionHistoryCol) {
+    modifyTextInfo();
+    _textInfo._versionHistoryCol = versionHistoryCol;
+  }
+  
+  /**
+   * Returns extended functionality for "complex" columns.
+   * @usage _general_method_
+   */
+  public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
+    return _complexInfo;
+  }
+  
   private void setUnknownDataType(byte type) {
     // slight hack, stash the original type in the _scale
     modifyNumericInfo();
@@ -608,6 +662,9 @@ public class Column implements Comparable<Column> {
       break;
     case GUID:
       _autoNumberGenerator = new GuidAutoNumberGenerator();
+      break;
+    case COMPLEX_TYPE:
+      _autoNumberGenerator = new ComplexTypeAutoNumberGenerator();
       break;
     default:
       LOG.warn("Unknown auto number column type " + _type);
@@ -664,6 +721,10 @@ public class Column implements Comparable<Column> {
       throw new IllegalArgumentException(
           "Cannot create column with unsupported type " + getType());
     }
+    if(!format.isSupportedDataType(getType())) {
+      throw new IllegalArgumentException(
+          "Database format " + format + " does not support type " + getType());
+    }
     
     if(isVariableLength() != getType().isVariableLength()) {
       throw new IllegalArgumentException("invalid variable length setting");
@@ -710,6 +771,24 @@ public class Column implements Comparable<Column> {
             "Only textual columns allow unicode compression (text/memo)");
       }
     }
+  }
+
+  public Object setRowValue(Object[] rowArray, Object value) {
+    rowArray[_columnIndex] = value;
+    return value;
+  }
+  
+  public Object setRowValue(Map<String,Object> rowMap, Object value) {
+    rowMap.put(_name, value);
+    return value;
+  }
+  
+  public Object getRowValue(Object[] rowArray) {
+    return rowArray[_columnIndex];
+  }
+  
+  public Object getRowValue(Map<String,Object> rowMap) {
+    return rowMap.get(_name);
   }
   
   /**
@@ -770,6 +849,8 @@ public class Column implements Comparable<Column> {
                (_type == DataType.UNKNOWN_11)) {
       // treat like "binary" data
       return data;
+    } else if (_type == DataType.COMPLEX_TYPE) {
+      return new ComplexValueForeignKey(this, buffer.getInt());
     } else if(_type.isUnsupported()) {
       return rawDataWrapper(data);
     } else {
@@ -1459,6 +1540,9 @@ public class Column implements Comparable<Column> {
     case BINARY:
     case UNKNOWN_0D:
     case UNKNOWN_11:
+    case COMPLEX_TYPE:
+      buffer.putInt(toNumber(obj).intValue());
+      break;
     case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
       if(bytes.length != getLength()) {
@@ -1658,9 +1742,15 @@ public class Column implements Comparable<Column> {
       if(_textInfo._codePage > 0) {
         rtn.append("\n\tText Code Page: " + _textInfo._codePage);
       }
+      if(isAppendOnly()) {
+        rtn.append("\n\tAppend only: " + isAppendOnly());
+      } 
     }      
     if(_autoNumber) {
       rtn.append("\n\tLast AutoNumber: " + _autoNumberGenerator.getLast());
+    }
+    if(_complexInfo != null) {
+      rtn.append("\n\tComplexInfo: " + _complexInfo);
     }
     rtn.append("\n\n");
     return rtn.toString();
@@ -2091,7 +2181,7 @@ public class Column implements Comparable<Column> {
      * <i>Warning, calling this externally will result in this value being
      * "lost" for the table.</i>
      */
-    public abstract Object getNext();
+    public abstract Object getNext(Object prevRowValue);
 
     /**
      * Returns the flags used when writing this column.
@@ -2115,7 +2205,7 @@ public class Column implements Comparable<Column> {
     }
 
     @Override
-    public Object getNext() {
+    public Object getNext(Object prevRowValue) {
       // the table stores the last long autonumber used
       return getTable().getNextLongAutoNumber();
     }
@@ -2143,7 +2233,7 @@ public class Column implements Comparable<Column> {
     }
 
     @Override
-    public Object getNext() {
+    public Object getNext(Object prevRowValue) {
       // format guids consistently w/ Column.readGUIDValue()
       _lastAutoNumber = "{" + UUID.randomUUID() + "}";
       return _lastAutoNumber;
@@ -2160,6 +2250,38 @@ public class Column implements Comparable<Column> {
     }
   }
 
+  private final class ComplexTypeAutoNumberGenerator extends AutoNumberGenerator
+  {
+    private ComplexTypeAutoNumberGenerator() {}
+
+    @Override
+    public Object getLast() {
+      // the table stores the last ComplexType autonumber used
+      return getTable().getLastComplexTypeAutoNumber();
+    }
+
+    @Override
+    public Object getNext(Object prevRowValue) {
+      int nextComplexAutoNum =
+        ((prevRowValue == null) ?
+         // the table stores the last ComplexType autonumber used
+         getTable().getNextComplexTypeAutoNumber() :
+         // same value is shared across all ComplexType values in a row
+         ((ComplexValueForeignKey)prevRowValue).get());
+      return new ComplexValueForeignKey(Column.this, nextComplexAutoNum);
+    }
+
+    @Override
+    public int getColumnFlags() {
+      return AUTO_NUMBER_FLAG_MASK;
+    }
+
+    @Override
+    public DataType getType() {
+      return DataType.COMPLEX_TYPE;
+    }
+  }
+  
   private final class UnsupportedAutoNumberGenerator extends AutoNumberGenerator
   {
     private final DataType _genType;
@@ -2174,7 +2296,7 @@ public class Column implements Comparable<Column> {
     }
 
     @Override
-    public Object getNext() {
+    public Object getNext(Object prevRowValue) {
       throw new UnsupportedOperationException();
     }
 
@@ -2253,5 +2375,8 @@ public class Column implements Comparable<Column> {
     private SortOrder _sortOrder;
     /** the code page for a text field (for certain db versions) */
     private short _codePage;
+    /** complex column which tracks the version history for this "append only"
+        column */
+    private Column _versionHistoryCol;
   }
 }

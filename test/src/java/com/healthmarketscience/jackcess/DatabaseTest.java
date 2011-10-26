@@ -51,11 +51,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import junit.framework.TestCase;
 
 /**
@@ -63,6 +65,9 @@ import junit.framework.TestCase;
  */
 public class DatabaseTest extends TestCase {
 
+  public static final TimeZone TEST_TZ =
+    TimeZone.getTimeZone("America/New_York");
+  
   static boolean _autoSync = Database.DEFAULT_AUTO_SYNC;
 
 
@@ -972,22 +977,7 @@ public class DatabaseTest extends TestCase {
       for(int i = 0; i < dates.size(); ++i) {
         Date expected = dates.get(i);
         Date found = foundDates.get(i);
-        if(expected == null) {
-          assertNull(found);
-        } else {
-          // there are some rounding issues due to dates being stored as
-          // doubles, but it results in a 1 millisecond difference, so i'm not
-          // going to worry about it
-          long expTime = expected.getTime();
-          long foundTime = found.getTime();
-          try {
-            assertTrue((expTime == foundTime) ||
-                       (Math.abs(expTime - foundTime) <= 1));
-          } catch(Error e) {
-            System.err.println("Expected " + expTime + ", found " + foundTime);
-            throw e;
-          }
-        }
+        assertSameDate(expected, found);
       }
     }
   }
@@ -1253,17 +1243,30 @@ public class DatabaseTest extends TestCase {
   }    
   
   static void dumpDatabase(Database mdb) throws Exception {
-    dumpDatabase(mdb, new PrintWriter(System.out, true));
+    dumpDatabase(mdb, false);
+  }
+
+  static void dumpDatabase(Database mdb, boolean systemTables)
+    throws Exception
+  {
+    dumpDatabase(mdb, systemTables, new PrintWriter(System.out, true));
   }
 
   static void dumpTable(Table table) throws Exception {
     dumpTable(table, new PrintWriter(System.out, true));
   }
 
-  static void dumpDatabase(Database mdb, PrintWriter writer) throws Exception {
+  static void dumpDatabase(Database mdb, boolean systemTables,
+                           PrintWriter writer) throws Exception
+  {
     writer.println("DATABASE:");
     for(Table table : mdb) {
       dumpTable(table, writer);
+    }
+    if(systemTables) {
+      for(String sysTableName : mdb.getSystemTableNames()) {
+        dumpTable(mdb.getSystemTable(sysTableName), writer);
+      }
     }
   }
 
@@ -1280,18 +1283,28 @@ public class DatabaseTest extends TestCase {
     }
     writer.println("COLUMNS: " + colNames);
     for(Map<String, Object> row : Cursor.createCursor(table)) {
+      writer.println(massageRow(row));
+    }
+  }
 
-      // make byte[] printable
+  private static Map<String,Object> massageRow(Map<String, Object> row)
+    throws IOException
+  {
       for(Map.Entry<String, Object> entry : row.entrySet()) {
         Object v = entry.getValue();
         if(v instanceof byte[]) {
+          // make byte[] printable
           byte[] bv = (byte[])v;
           entry.setValue(ByteUtil.toHexString(ByteBuffer.wrap(bv), bv.length));
+        } else if(v instanceof ComplexValueForeignKey) {
+          // deref complex values
+          String str = "ComplexValue(" + v + ")" +
+            ((ComplexValueForeignKey)v).getValues();
+          entry.setValue(str);
         }
       }
-      
-      writer.println(row);
-    }
+
+      return row;
   }
 
   static void dumpIndex(Index index) throws Exception {
@@ -1308,6 +1321,25 @@ public class DatabaseTest extends TestCase {
     }
   }
 
+  static void assertSameDate(Date expected, Date found)
+  {
+    if(expected == found) {
+      return;
+    }
+    if((expected == null) || (found == null)) {
+      throw new AssertionError("Expected " + expected + ", found " + found);
+    }
+    long expTime = expected.getTime();
+    long foundTime = found.getTime();
+    // there are some rounding issues due to dates being stored as doubles,
+    // but it results in a 1 millisecond difference, so i'm not going to worry
+    // about it
+    if((expTime != foundTime) && (Math.abs(expTime - foundTime) > 1)) {
+      throw new AssertionError("Expected " + expTime + " (" + expected +
+                               "), found " + foundTime + " (" + found + ")");
+    }
+  }
+  
   static void copyFile(File srcFile, File dstFile)
     throws IOException
   {

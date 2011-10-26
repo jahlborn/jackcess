@@ -1205,6 +1205,7 @@ public abstract class IndexData {
     case INT:
     case LONG:
     case MONEY:
+    case COMPLEX_TYPE:
       return new IntegerColumnDescriptor(col, flags);
     case FLOAT:
     case DOUBLE:

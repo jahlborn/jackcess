@@ -927,7 +927,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     Object[] row = new Object[_table.getColumnCount()];
     Arrays.fill(row, Column.KEEP_VALUE);
-    row[column.getColumnIndex()] = value;
+    column.setRowValue(row, value);
     _table.updateRow(_rowState, _curPos.getRowId(), row);
   }
 

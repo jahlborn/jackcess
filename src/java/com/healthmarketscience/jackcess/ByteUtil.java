@@ -544,7 +544,7 @@ public final class ByteUtil {
   }
 
   /**
-   * Returns a copy of the the given array of the given length.
+   * Returns a copy of the given array of the given length.
    */
   public static byte[] copyOf(byte[] arr, int newLength)
   {
@@ -552,7 +552,7 @@ public final class ByteUtil {
   }
 
   /**
-   * Returns a copy of the the given array of the given length starting at the
+   * Returns a copy of the given array of the given length starting at the
    * given position.
    */
   public static byte[] copyOf(byte[] arr, int offset, int newLength)
