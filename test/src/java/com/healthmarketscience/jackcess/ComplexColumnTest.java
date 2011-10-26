@@ -2,7 +2,6 @@
 
 package com.healthmarketscience.jackcess;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -32,7 +31,6 @@ public class ComplexColumnTest extends TestCase
   public void testVersions() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
-      
       Database db = openCopy(testDB);
       db.setTimeZone(TEST_TZ);
 
@@ -77,7 +75,7 @@ public class ComplexColumnTest extends TestCase
         verCol.getRowValue(row8);
       Date upTime = new Date();
       row8ValFk.addVersion("row8-memo", upTime);
-      checkVersions(8, row8ValFk, "row8-memo",
+      checkVersions(row8ValFk.get(), row8ValFk, "row8-memo",
                     "row8-memo", upTime);    
 
       Cursor cursor = Cursor.createCursor(t1);
@@ -141,7 +139,7 @@ public class ComplexColumnTest extends TestCase
         col.getRowValue(row8);
       row8ValFk.addAttachment(null, "test_data.txt", "txt",
                               getFileBytes("test_data.txt"), null, null);
-      checkAttachments(8, row8ValFk, "test_data.txt");
+      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
 
       Cursor cursor = Cursor.createCursor(t1);
       assertTrue(cursor.findRow(t1.getColumn("id"), "row4"));
@@ -207,7 +205,7 @@ public class ComplexColumnTest extends TestCase
         col.getRowValue(row8);
       row8ValFk.addMultiValue("value1");
       row8ValFk.addMultiValue("value2");
-      checkMultiValues(8, row8ValFk, "value1", "value2");
+      checkMultiValues(row8ValFk.get(), row8ValFk, "value1", "value2");
 
       Cursor cursor = Cursor.createCursor(t1);
       assertTrue(cursor.findRow(t1.getColumn("id"), "row2"));
