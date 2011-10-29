@@ -9,6 +9,10 @@
         Add support for reading/writing complex column data (version history,
         attachments, multi-value columns).
       </action>
+      <action dev="jahlborn" type="fix">
+        Fix problem with creating tables with indexes where ms access could
+        not open the created table.
+      </action>
     </release>
     <release version="1.2.5" date="2011-10-19">
       <action dev="jahlborn" type="update">

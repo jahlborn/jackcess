@@ -1170,7 +1170,7 @@ public class Table
     rtn.putShort((short)freeSpace);  //Free space in page
     rtn.putInt(0); //Table definition
     rtn.putInt(0); //Unknown
-    rtn.putShort((short) 2); //Number of records on this page
+    rtn.putShort((short) umapNum); //Number of records on this page
 
     // write two rows of usage map definitions for the table
     int rowStart = findRowEnd(rtn, 0, format) - usageMapRowLength;
