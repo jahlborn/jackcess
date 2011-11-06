@@ -2,9 +2,13 @@ Missing pieces:
 
 - re-use memo/ole data in "other page(s)" when updating rows
   * MEDIUM
-- fix long text index entries
+- fix long text index entries (for new general sort order)
   * ???
-- implement foreign key index creation
+- implement foreign key index creation & relationship creation
+  * MEDIUM
+- implement table creation w/ complex columns
+  * MEDIUM
+- implement (optional) foreign key enforcement
   * MEDIUM
 - implement table, column, index renaming
   * EASY
