@@ -76,9 +76,11 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     // the flat table has all the "value" columns and 2 extra columns, a
     // primary key for each row, and a LONG value which is essentially a
     // foreign key to the main table.
-    _typeCols = new ArrayList<Column>();
+    List<Column> typeCols = new ArrayList<Column>();
     List<Column> otherCols = new ArrayList<Column>();
-    diffFlatColumns(typeObjTable, flatTable, _typeCols, otherCols);
+    diffFlatColumns(typeObjTable, flatTable, typeCols, otherCols);
+
+    _typeCols = Collections.unmodifiableList(typeCols);
 
     Column pkCol = null;
     Column complexValFkCol = null;
@@ -234,6 +236,18 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return toValues(complexValueFk, rawValues);
   }
   
+  protected List<V> toValues(ComplexValueForeignKey complexValueFk,
+                             List<Map<String,Object>> rawValues)
+    throws IOException
+  {
+    List<V> values = new ArrayList<V>();
+    for(Map<String,Object> rawValue : rawValues) {
+      values.add(toValue(complexValueFk, rawValue));
+    }
+
+    return values;
+  }
+
   public int addRawValue(Map<String,Object> rawValue) throws IOException {
     Object[] row = _flatTable.asRow(rawValue);
     _flatTable.addRow(row);
@@ -336,9 +350,9 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   
   public abstract ComplexDataType getType();
 
-  protected abstract List<V> toValues(
+  protected abstract V toValue(
       ComplexValueForeignKey complexValueFk,
-      List<Map<String,Object>> rawValues)
+      Map<String,Object> rawValues)
     throws IOException;
   
   protected static class ComplexValueImpl implements ComplexValue

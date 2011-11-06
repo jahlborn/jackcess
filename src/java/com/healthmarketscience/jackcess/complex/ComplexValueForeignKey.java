@@ -28,6 +28,16 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.Column;
 
 /**
+ * Value which is returned for a complex column.  This value corresponds to a
+ * foreign key in a secondary table which contains the actual complex data for
+ * this row (which could be 0 or more complex values for a given row).  This
+ * class contains various convenience methods for interacting with the actual
+ * complex values.
+ * <p>
+ * This class will cache the associated complex values returned from one of
+ * the lookup methods.  The various modification methods will clear this cache
+ * automatically.  The {@link #reset} method may be called manually to clear
+ * this internal cache.
  *
  * @author James Ahlborn
  */
@@ -37,10 +47,9 @@ public class ComplexValueForeignKey extends Number
   
   private final Column _column;
   private final int _value;
-  private List<? extends ComplexValue> _values;
+  private transient List<? extends ComplexValue> _values;
   
-  public ComplexValueForeignKey(Column column, int value) 
-  {
+  public ComplexValueForeignKey(Column column, int value) {
     _column = column;
     _value = value;
   }
@@ -101,6 +110,10 @@ public class ComplexValueForeignKey extends Number
 
   protected MultiValueColumnInfo getMultiValueInfo() {
     return (MultiValueColumnInfo)getComplexInfo();
+  }
+    
+  protected UnsupportedColumnInfo getUnsupportedInfo() {
+    return (UnsupportedColumnInfo)getComplexInfo();
   }
     
   public int countValues()
@@ -214,6 +227,23 @@ public class ComplexValueForeignKey extends Number
   {
     reset();
     getMultiValueInfo().updateValue(value);
+    return value;
+  }
+  
+  public UnsupportedValue addUnsupportedValue(Map<String,Object> values)
+    throws IOException
+  {
+    reset();
+    UnsupportedValue v = UnsupportedColumnInfo.newValue(this, values);
+    getUnsupportedInfo().addValue(v);
+    return v;
+  }
+  
+  public UnsupportedValue updateUnsupportedValue(UnsupportedValue value)
+    throws IOException
+  {
+    reset();
+    getUnsupportedInfo().updateValue(value);
     return value;
   }
   

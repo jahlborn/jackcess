@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 /**
+ * Secondary type classification for the data in a complex column.
  *
  * @author James Ahlborn
  */

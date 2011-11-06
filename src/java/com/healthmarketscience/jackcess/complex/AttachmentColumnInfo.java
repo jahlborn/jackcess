@@ -20,7 +20,6 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +30,7 @@ import com.healthmarketscience.jackcess.Table;
 
 
 /**
+ * Complex column info for a column holding 0 or more attachments per row.
  *
  * @author James Ahlborn
  */
@@ -131,19 +131,8 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   }
 
   @Override
-  protected List<Attachment> toValues(ComplexValueForeignKey complexValueFk,
-                                   List<Map<String,Object>> rawValues)
-    throws IOException
-  {
-    List<Attachment> attachments = new ArrayList<Attachment>();
-    for(Map<String,Object> rawValue : rawValues) {
-      attachments.add(toAttachment(complexValueFk, rawValue));
-    }
-    return attachments;
-  }
-
-  protected AttachmentImpl toAttachment(ComplexValueForeignKey complexValueFk,
-                                        Map<String,Object> rawValue) {
+  protected AttachmentImpl toValue(ComplexValueForeignKey complexValueFk,
+                                   Map<String,Object> rawValue) {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
     String url = (String)getFileUrlColumn().getRowValue(rawValue);
     String name = (String)getFileNameColumn().getRowValue(rawValue);

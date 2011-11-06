@@ -10,6 +10,8 @@ Missing pieces:
   * MEDIUM
 - implement (optional) foreign key enforcement
   * MEDIUM
+- implement write support for properties
+  * EASY
 - implement table, column, index renaming
   * EASY
 - implement table, column, index deletion

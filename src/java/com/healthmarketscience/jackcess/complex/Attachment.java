@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess.complex;
 import java.util.Date;
 
 /**
+ * Complex value corresponding to an attachment.
  *
  * @author James Ahlborn
  */

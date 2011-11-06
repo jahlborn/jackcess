@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,10 +28,11 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
 
 /**
+ * Complex column info for an unsupported complex type.
  *
  * @author James Ahlborn
  */
-public class UnsupportedColumnInfo extends ComplexColumnInfo<ComplexValue>
+public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
 {
 
   public UnsupportedColumnInfo(Column column, int complexId, Table typeObjTable,
@@ -40,6 +42,10 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<ComplexValue>
     super(column, complexId, typeObjTable, flatTable);
   }
 
+  public List<Column> getValueColumns() {
+    return getTypeColumns();
+  }
+
   @Override
   public ComplexDataType getType()
   {
@@ -47,17 +53,73 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<ComplexValue>
   }
 
   @Override
-  protected List<ComplexValue> toValues(ComplexValueForeignKey complexValueFk,
-                                        List<Map<String,Object>> rawValues)
-    throws IOException
+  protected UnsupportedValueImpl toValue(
+      ComplexValueForeignKey complexValueFk,
+      Map<String,Object> rawValue)
   {
-    // FIXME
-    return null;
+    int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
+
+    Map<String,Object> values = new LinkedHashMap<String,Object>(rawValue);
+    values.remove(getPrimaryKeyColumn().getName());
+
+    return new UnsupportedValueImpl(id, complexValueFk, values);
   }
 
-  public ComplexValue newValue() {
-    // FIXME
-    return null;
+  @Override
+  protected Object[] asRow(Object[] row, UnsupportedValue value) {
+    super.asRow(row, value);
+
+    Map<String,Object> values = value.getValues();
+    for(Column col : getValueColumns()) {
+      col.setRowValue(row, col.getRowValue(values));
+    }
+
+    return row;
+  }
+
+  public static UnsupportedValue newValue(Map<String,Object> values) {
+    return newValue(INVALID_COMPLEX_VALUE_ID, values);
+  }
+
+  public static UnsupportedValue newValue(
+      ComplexValueForeignKey complexValueFk, Map<String,Object> values) {
+    return new UnsupportedValueImpl(INVALID_ID, complexValueFk, values);
   }
   
+  private static class UnsupportedValueImpl extends ComplexValueImpl
+    implements UnsupportedValue
+  {
+    private Map<String,Object> _values;
+
+    private UnsupportedValueImpl(int id, ComplexValueForeignKey complexValueFk,
+                                 Map<String,Object> values)
+    {
+      super(id, complexValueFk);
+      _values = values;
+    }
+
+    public Map<String,Object> getValues() {
+      return _values;
+    }
+    
+    public Object get(String columnName) {
+      return getValues().get(columnName);
+    }
+
+    public void set(String columnName, Object value) {
+      getValues().put(columnName, value);
+    }
+
+    @Override
+    public void update() throws IOException {
+      getComplexValueForeignKey().updateUnsupportedValue(this);
+    }
+    
+    @Override
+    public String toString()
+    {
+      return "UnsupportedValue(" + getComplexValueForeignKey() + "," + getId() +
+        ") " + getValues();
+    } 
+  }
 }

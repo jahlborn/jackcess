@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 /**
+ * Complex value corresponding to an single value in a multi-value column.
  *
  * @author James Ahlborn
  */

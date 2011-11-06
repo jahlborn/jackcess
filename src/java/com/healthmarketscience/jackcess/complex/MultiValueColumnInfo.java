@@ -20,7 +20,6 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +30,7 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
 
 /**
+ * Complex column info for a column holding multiple values per row.
  *
  * @author James Ahlborn
  */
@@ -60,21 +60,9 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   public Column getValueColumn() {
     return _valueCol;
   }
-  
+
   @Override
-  protected List<SingleValue> toValues(ComplexValueForeignKey complexValueFk,
-                                       List<Map<String,Object>> rawValues)
-    throws IOException
-  {
-    List<SingleValue> values = new ArrayList<SingleValue>();
-    for(Map<String,Object> rawValue : rawValues) {
-      values.add(toSingleValue(complexValueFk, rawValue));
-    }
-
-    return values;
-  }
-
-  protected SingleValueImpl toSingleValue(
+  protected SingleValueImpl toValue(
       ComplexValueForeignKey complexValueFk,
       Map<String,Object> rawValue)
   {

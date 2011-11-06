@@ -24,20 +24,43 @@ import java.io.IOException;
 import com.healthmarketscience.jackcess.Column;
 
 /**
+ * Base class for a value in a complex column (where there may be multiple
+ * values for a single row in the main table).
  *
  * @author James Ahlborn
  */
 public interface ComplexValue 
 {
+  /**
+   * Returns the unique identifier of this complex value (this value is unique
+   * among all values in all rows of the main table).
+   * 
+   * @return the current id or {@link ComplexColumnInfo#INVALID_ID} for a new,
+   *         unsaved value.
+   */
   public int getId();
 
   public void setId(int newId);
   
+  /**
+   * Returns the foreign key identifier for this complex value (this value is
+   * the same for all values in the same row of the main table).
+   * 
+   * @return the current id or {@link ComplexColumnInfo#INVALID_COMPLEX_VALUE_ID}
+   *         for a new, unsaved value.
+   */
   public ComplexValueForeignKey getComplexValueForeignKey();
 
   public void setComplexValueForeignKey(ComplexValueForeignKey complexValueFk);
 
+  /**
+   * @return the column in the main table with which this complex value is
+   *         associated
+   */
   public Column getColumn();
 
+  /**
+   * Writes any updated data for this complex value to the database.
+   */
   public void update() throws IOException;
 }

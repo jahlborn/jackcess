@@ -20,7 +20,6 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -30,6 +29,8 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
 
 /**
+ * Complex column info for a column which tracking the version history of an
+ * "append only" memo column.
  *
  * @author James Ahlborn
  */
@@ -92,10 +93,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
                                    List<Map<String,Object>> rawValues)
     throws IOException
   {
-    List<Version> versions = new ArrayList<Version>();
-    for(Map<String,Object> rawValue : rawValues) {
-      versions.add(toVersion(complexValueFk, rawValue));
-    }
+    List<Version> versions = super.toValues(complexValueFk, rawValues);
 
     // order versions newest to oldest
     Collections.sort(versions);
@@ -103,8 +101,9 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
     return versions;
   }
 
-  protected VersionImpl toVersion(ComplexValueForeignKey complexValueFk,
-                                  Map<String,Object> rawValue) {
+  @Override
+  protected VersionImpl toValue(ComplexValueForeignKey complexValueFk,
+                                Map<String,Object> rawValue) {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
     String value = (String)getValueColumn().getRowValue(rawValue);
     Date modifiedDate = (Date)getModifiedDateColumn().getRowValue(rawValue);

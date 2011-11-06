@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess.complex;
 import java.util.Date;
 
 /**
+ * Complex value corresponding to a version of a memo column.
  *
  * @author James Ahlborn
  */
