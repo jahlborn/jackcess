@@ -31,6 +31,11 @@ import com.healthmarketscience.jackcess.Table;
 /**
  * Complex column info for a column which tracking the version history of an
  * "append only" memo column.
+ * <p>
+ * Note, the strongly typed update/delete methods are <i>not</i> supported for
+ * version history columns (the data is supposed to be immutable).  That said,
+ * the "raw" update/delete methods are supported for those that <i>really</i>
+ * want to muck with the version history data.
  *
  * @author James Ahlborn
  */
@@ -86,6 +91,24 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   @Override
   public ComplexDataType getType() {
     return ComplexDataType.VERSION_HISTORY;
+  }
+
+  @Override
+  public int updateValue(Version value) throws IOException {
+    throw new UnsupportedOperationException(
+        "This column does not support value updates");
+  }
+
+  @Override
+  public void deleteValue(Version value) throws IOException {
+    throw new UnsupportedOperationException(
+        "This column does not support value deletes");
+  }
+
+  @Override
+  public void deleteAllValues(int complexValueFk) throws IOException {
+    throw new UnsupportedOperationException(
+        "This column does not support value deletes");
   }
 
   @Override
@@ -198,6 +221,16 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
       id2 = o.getComplexValueForeignKey().get();
       return ((id1 > id2) ? -1 :
               ((id1 < id2) ? 1 : 0));
+    }
+
+    public void update() throws IOException {
+      throw new UnsupportedOperationException(
+          "This column does not support value updates");
+    }
+    
+    public void delete() throws IOException {
+      throw new UnsupportedOperationException(
+          "This column does not support value deletes");
     }
 
     @Override

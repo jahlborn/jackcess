@@ -110,9 +110,12 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
       getValues().put(columnName, value);
     }
 
-    @Override
     public void update() throws IOException {
       getComplexValueForeignKey().updateUnsupportedValue(this);
+    }
+    
+    public void delete() throws IOException {
+      getComplexValueForeignKey().deleteUnsupportedValue(this);
     }
     
     @Override

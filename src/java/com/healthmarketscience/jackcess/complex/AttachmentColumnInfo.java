@@ -297,9 +297,12 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       _flags = fileFlags;
     }  
 
-    @Override
     public void update() throws IOException {
       getComplexValueForeignKey().updateAttachment(this);
+    }
+    
+    public void delete() throws IOException {
+      getComplexValueForeignKey().deleteAttachment(this);
     }
     
     @Override

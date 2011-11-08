@@ -186,9 +186,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return _typeCols;
   }
   
-  public int countValues(int complexValueFk)
-    throws IOException
-  {
+  public int countValues(int complexValueFk) throws IOException {
     return getRawValues(complexValueFk,
                         Collections.singleton(_complexValFkCol.getName()))
       .size();
@@ -199,9 +197,9 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   {
     return getRawValues(complexValueFk, null);
   }
-  
-  public List<Map<String,Object>> getRawValues(int complexValueFk,
-                                               Collection<String> columnNames)
+
+  private Iterator<Map<String,Object>> getComplexValFkIter(
+      int complexValueFk, Collection<String> columnNames)
     throws IOException
   {
     if(_complexValIdCursor == null) {
@@ -210,8 +208,15 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
         .toIndexCursor();
     }
 
+    return _complexValIdCursor.entryIterator(columnNames, complexValueFk);
+  }
+  
+  public List<Map<String,Object>> getRawValues(int complexValueFk,
+                                               Collection<String> columnNames)
+    throws IOException
+  {
     Iterator<Map<String,Object>> entryIter =
-      _complexValIdCursor.entryIterator(columnNames, complexValueFk);
+      getComplexValFkIter(complexValueFk, columnNames);
     if(!entryIter.hasNext()) {
       return Collections.emptyList();
     }
@@ -224,8 +229,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return values;
   }
 
-  public List<V> getValues(
-      ComplexValueForeignKey complexValueFk)
+  public List<V> getValues(ComplexValueForeignKey complexValueFk)
     throws IOException
   {
     List<Map<String,Object>> rawValues = getRawValues(complexValueFk.get());
@@ -262,9 +266,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return id;
   }
 
-  public void addValues(Collection<? extends V> values)
-    throws IOException
-  {
+  public void addValues(Collection<? extends V> values) throws IOException {
     for(V value : values) {
       addValue(value);
     }
@@ -282,15 +284,49 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return id;
   }
 
-  public void updateValues(Collection<? extends V> values)
-    throws IOException
-  {
+  public void updateValues(Collection<? extends V> values) throws IOException {
     for(V value : values) {
       updateValue(value);
     }
   }
 
-  private void updateRow(Integer id, Object[] row) throws IOException {
+  public void deleteRawValue(Map<String,Object> rawValue) throws IOException {
+    deleteRow((Integer)_pkCol.getRowValue(rawValue));
+  }
+  
+  public void deleteValue(V value) throws IOException {
+    deleteRow(value.getId());
+  }
+
+  public void deleteValues(Collection<? extends V> values) throws IOException {
+    for(V value : values) {
+      deleteValue(value);
+    }
+  }
+
+  public void deleteAllValues(int complexValueFk) throws IOException {
+    Iterator<Map<String,Object>> entryIter =
+      getComplexValFkIter(complexValueFk, Collections.<String>emptySet());
+    try {
+      while(entryIter.hasNext()) {
+        entryIter.next();
+        entryIter.remove();
+      }
+    } catch(RuntimeException e) {
+      if(e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      }
+      throw e;
+    }
+  }
+
+  public void deleteAllValues(ComplexValueForeignKey complexValueFk)
+    throws IOException
+  {
+    deleteAllValues(complexValueFk.get());
+  }
+
+  private void moveToRow(Integer id) throws IOException {
     if(_pkCursor == null) {
       _pkCursor = new CursorBuilder(_flatTable)
         .setIndexByColumns(_pkCol)
@@ -300,9 +336,17 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     if(!_pkCursor.findRowByEntry(id)) {
       throw new IllegalArgumentException("Row with id " + id +
                                          " does not exist");
-    }
-    
+    }    
+  }
+
+  private void updateRow(Integer id, Object[] row) throws IOException {
+    moveToRow(id);
     _pkCursor.updateCurrentRow(row);
+  }
+  
+  private void deleteRow(Integer id) throws IOException {
+    moveToRow(id);
+    _pkCursor.deleteCurrentRow();
   }
   
   protected Object[] asRow(Object[] row, V value) {
@@ -355,7 +399,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
       Map<String,Object> rawValues)
     throws IOException;
   
-  protected static class ComplexValueImpl implements ComplexValue
+  protected static abstract class ComplexValueImpl implements ComplexValue
   {
     private int _id;
     private ComplexValueForeignKey _complexValueFk;
@@ -390,11 +434,6 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
     public Column getColumn() {
       return _complexValueFk.getColumn();
-    }
-
-    public void update() throws IOException {
-      throw new UnsupportedOperationException(
-          "This column does not support value updates");
     }
     
     @Override

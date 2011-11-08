@@ -213,6 +213,14 @@ public class ComplexValueForeignKey extends Number
     return attachment;
   }
   
+  public Attachment deleteAttachment(Attachment attachment)
+    throws IOException
+  {
+    reset();
+    getAttachmentInfo().deleteValue(attachment);
+    return attachment;
+  }
+  
   public SingleValue addMultiValue(Object value)
     throws IOException
   {
@@ -227,6 +235,14 @@ public class ComplexValueForeignKey extends Number
   {
     reset();
     getMultiValueInfo().updateValue(value);
+    return value;
+  }
+  
+  public SingleValue deleteMultiValue(SingleValue value)
+    throws IOException
+  {
+    reset();
+    getMultiValueInfo().deleteValue(value);
     return value;
   }
   
@@ -245,6 +261,21 @@ public class ComplexValueForeignKey extends Number
     reset();
     getUnsupportedInfo().updateValue(value);
     return value;
+  }
+  
+  public UnsupportedValue deleteUnsupportedValue(UnsupportedValue value)
+    throws IOException
+  {
+    reset();
+    getUnsupportedInfo().deleteValue(value);
+    return value;
+  }
+  
+  public void deleteAllValues()
+    throws IOException
+  {
+    reset();
+    getComplexInfo().deleteAllValues(this);
   }
   
   private Object writeReplace() throws ObjectStreamException {

@@ -113,6 +113,38 @@ public class ComplexColumnTest extends TestCase
       } catch(UnsupportedOperationException expected) {
         // success
       }
+
+      checkVersions(3, row3ValFk, "new-value",
+                    "new-value", upTime,
+                    "row3-memo-again", new Date(1315876965382L),
+                    "row3-memo-revised", new Date(1315876953077L),
+                    "row3-memo", new Date(1315876879126L));
+    
+      try {
+        v.delete();
+        fail("UnsupportedOperationException should have been thrown");
+      } catch(UnsupportedOperationException expected) {
+        // success
+      }
+
+      checkVersions(3, row3ValFk, "new-value",
+                    "new-value", upTime,
+                    "row3-memo-again", new Date(1315876965382L),
+                    "row3-memo-revised", new Date(1315876953077L),
+                    "row3-memo", new Date(1315876879126L));
+    
+      try {
+        v.getComplexValueForeignKey().deleteAllValues();
+        fail("UnsupportedOperationException should have been thrown");
+      } catch(UnsupportedOperationException expected) {
+        // success
+      }
+
+      checkVersions(3, row3ValFk, "new-value",
+                    "new-value", upTime,
+                    "row3-memo-again", new Date(1315876965382L),
+                    "row3-memo-revised", new Date(1315876953077L),
+                    "row3-memo", new Date(1315876879126L));
     
       db.close();
     }
@@ -178,6 +210,17 @@ public class ComplexColumnTest extends TestCase
       assertEquals("xml", updated.getFileType());
       assertEquals("some_data.xml", updated.getFileName());
       assertTrue(Arrays.equals(newBytes, updated.getFileData()));
+
+      updated.delete();
+      checkAttachments(4, row4ValFk, "test_data2.txt");
+      row4ValFk.getAttachments().get(0).delete();
+      checkAttachments(4, row4ValFk);
+
+      assertTrue(cursor.findRow(t1.getColumn("id"), "row2"));
+      ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
+        cursor.getCurrentRowValue(col);
+      row2ValFk.deleteAllValues();
+      checkAttachments(2, row2ValFk);      
     
       db.close();
     }
@@ -235,6 +278,21 @@ public class ComplexColumnTest extends TestCase
       v.set("value5");
       v.update();
       checkMultiValues(2, row2ValFk, "value1", "value4", "value5", "value3");
+
+      v.delete();
+      checkMultiValues(2, row2ValFk, "value1", "value4", "value3");
+      row2ValFk.getMultiValues().get(0).delete();
+      checkMultiValues(2, row2ValFk, "value4", "value3");
+      row2ValFk.getMultiValues().get(1).delete();
+      checkMultiValues(2, row2ValFk, "value4");
+      row2ValFk.getMultiValues().get(0).delete();
+      checkMultiValues(2, row2ValFk);
+
+      assertTrue(cursor.findRow(t1.getColumn("id"), "row3"));
+      ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
+        cursor.getCurrentRowValue(col);
+      row3ValFk.deleteAllValues();
+      checkMultiValues(3, row3ValFk);
     
       db.close();
     }

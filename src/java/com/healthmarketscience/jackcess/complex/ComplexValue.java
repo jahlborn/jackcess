@@ -63,4 +63,10 @@ public interface ComplexValue
    * Writes any updated data for this complex value to the database.
    */
   public void update() throws IOException;
+
+  /**
+   * Deletes the data for this complex value from the database.
+   */
+  public void delete() throws IOException;
+
 }
