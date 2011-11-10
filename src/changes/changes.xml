@@ -13,6 +13,9 @@
         Fix problem with creating tables with indexes where ms access could
         not open the created table.
       </action>
+      <action dev="jahlborn" type="fix" issue="3435774">
+        Fix problem with reading row from table with deleted/added columns.
+      </action>
     </release>
     <release version="1.2.5" date="2011-10-19">
       <action dev="jahlborn" type="update">

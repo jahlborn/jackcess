@@ -36,18 +36,21 @@ import java.nio.ByteBuffer;
  */
 public class NullMask {
   
+  /** num row columns */
+  private final int _columnCount;
   /** The actual bitmask */
-  private byte[] _mask;
+  private final byte[] _mask;
   
   /**
    * @param columnCount Number of columns in the row that this mask will be
    *    used for
    */
   public NullMask(int columnCount) {
+    _columnCount = columnCount;
     // we leave everything initially marked as null so that we don't need to
     // do anything for deleted columns (we only need to mark as non-null
     // valid columns for which we actually have values).
-    _mask = new byte[(columnCount + 7) / 8];
+    _mask = new byte[(_columnCount + 7) / 8];
   }
   
   /**
@@ -72,14 +75,13 @@ public class NullMask {
    */
   public boolean isNull(Column column) {
     int columnNumber = column.getColumnNumber();
-    int maskIndex = columnNumber / 8;
     // if new columns were added to the table, old null masks may not include
     // them (meaning the field is null)
-    if(maskIndex >= _mask.length) {
+    if(columnNumber >= _columnCount) {
       // it's null
       return true;
     }
-    return (_mask[maskIndex] & (byte) (1 << (columnNumber % 8))) == 0;
+    return (_mask[byteIndex(columnNumber)] & bitMask(columnNumber)) == 0;
   }
 
   /**
@@ -89,8 +91,8 @@ public class NullMask {
    */
   public void markNotNull(Column column) {
     int columnNumber = column.getColumnNumber();
-    int maskIndex = columnNumber / 8;
-    _mask[maskIndex] = (byte) (_mask[maskIndex] | (byte) (1 << (columnNumber % 8)));
+    int maskIndex = byteIndex(columnNumber);
+    _mask[maskIndex] = (byte) (_mask[maskIndex] | bitMask(columnNumber));
   }
   
   /**
@@ -99,5 +101,12 @@ public class NullMask {
   public int byteSize() {
     return _mask.length;
   }
-  
+
+  private static int byteIndex(int columnNumber) {
+    return columnNumber / 8;
+  }
+
+  private static byte bitMask(int columnNumber) {
+    return (byte) (1 << (columnNumber % 8));
+  }
 }
