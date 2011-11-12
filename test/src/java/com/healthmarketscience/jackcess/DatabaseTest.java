@@ -1157,6 +1157,44 @@ public class DatabaseTest extends TestCase {
       db.close();
     }
   }
+
+  public void testUnsupportedColumns() throws Exception {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
+
+      Database db = open(testDB);
+      Table t = db.getTable("Test");
+      Column varCol = t.getColumn("UnknownVar");
+      assertEquals(DataType.UNSUPPORTED_VARLEN, varCol.getType());
+      Column fixCol = t.getColumn("UnknownFix");
+      assertEquals(DataType.UNSUPPORTED_FIXEDLEN, fixCol.getType());
+
+      List<String> varVals = Arrays.asList(
+          "RawData: FF FE 73 6F  6D 65 64 61  74 61",
+          "RawData: FF FE 6F 74  68 65 72 20  64 61 74 61",
+          null);
+      List<String> fixVals = Arrays.asList("RawData: 37 00 00 00",
+                                           "RawData: F3 FF FF FF", 
+                                           "RawData: 02 00 00 00");
+
+      int idx = 0;
+      for(Map<String,Object> row : t) {
+        checkRawValue(varVals.get(idx), varCol.getRowValue(row));
+        checkRawValue(fixVals.get(idx), fixCol.getRowValue(row));
+        ++idx;
+      }
+      db.close();
+    }
+  }
+
+  private void checkRawValue(String expected, Object val)
+  {
+    if(expected != null) {
+      assertTrue(Column.isRawData(val));
+      assertEquals(expected, val.toString());
+    } else {
+      assertNull(val);
+    }
+  }
     
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

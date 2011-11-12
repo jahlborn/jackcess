@@ -24,12 +24,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import static com.healthmarketscience.jackcess.JetFormatTest.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.complex.SingleValue;
+import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
 import junit.framework.TestCase;
 
@@ -155,7 +156,6 @@ public class ComplexColumnTest extends TestCase
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
       
       Database db = openCopy(testDB);
-      db.setTimeZone(TEST_TZ);
 
       Table t1 = db.getTable("Table1");
       Column col = t1.getColumn("attach-data");
@@ -231,7 +231,6 @@ public class ComplexColumnTest extends TestCase
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
       
       Database db = openCopy(testDB);
-      db.setTimeZone(TEST_TZ);
 
       Table t1 = db.getTable("Table1");
       Column col = t1.getColumn("multi-value-data");
@@ -293,6 +292,38 @@ public class ComplexColumnTest extends TestCase
         cursor.getCurrentRowValue(col);
       row3ValFk.deleteAllValues();
       checkMultiValues(3, row3ValFk);
+    
+      db.close();
+    }
+  }
+  
+  public void testUnsupported() throws Exception
+  {
+    for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
+      
+      Database db = openCopy(testDB);
+
+      Table t1 = db.getTable("Test");
+      Column col = t1.getColumn("UnknownComplex");
+      assertEquals(ComplexDataType.UNSUPPORTED,
+                   col.getComplexInfo().getType());
+
+      for(Map<String,Object> row : t1) {
+        Integer rowId = (Integer)row.get("ID");
+        ComplexValueForeignKey complexValueFk =
+          (ComplexValueForeignKey)col.getRowValue(row);
+
+        if(rowId.equals(1)) {
+          checkUnsupportedValues(1, complexValueFk, 
+                                 "RawData: FF FE 62 61  7A");
+        } else if(rowId.equals(2)) {
+          checkUnsupportedValues(2, complexValueFk, "RawData: FF FE 66 6F  6F", "RawData: FF FE 62 61  7A");
+        } else if(rowId.equals(3)) {
+          checkUnsupportedValues(3, complexValueFk);
+        } else {
+          assertTrue(false);
+        }
+      }     
     
       db.close();
     }
@@ -361,6 +392,29 @@ public class ComplexColumnTest extends TestCase
         Object value = expectedValues[i];
         SingleValue v = values.get(i);
         assertEquals(value, v.get());
+      }
+    }    
+  }
+
+  private static void checkUnsupportedValues(
+      int cValId, ComplexValueForeignKey complexValueFk,
+      String... expectedValues)
+    throws Exception
+  {
+    assertEquals(cValId, complexValueFk.get());
+
+    List<UnsupportedValue> values = complexValueFk.getUnsupportedValues();
+    if(expectedValues.length == 0) {
+      assertTrue(values.isEmpty());
+    } else {
+      assertEquals(expectedValues.length, values.size());
+      for(int i = 0; i < expectedValues.length; ++i) {
+        String value = expectedValues[i];
+        UnsupportedValue v = values.get(i);
+        assertEquals(1, v.getValues().size());
+        Object rv = v.get("Value");
+        assertTrue(Column.isRawData(rv));
+        assertEquals(value, rv.toString());
       }
     }    
   }

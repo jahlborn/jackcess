@@ -59,8 +59,10 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
   {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
 
-    Map<String,Object> values = new LinkedHashMap<String,Object>(rawValue);
-    values.remove(getPrimaryKeyColumn().getName());
+    Map<String,Object> values = new LinkedHashMap<String,Object>();
+    for(Column col : getValueColumns()) {
+      col.setRowValue(values, col.getRowValue(rawValue));
+    }
 
     return new UnsupportedValueImpl(id, complexValueFk, values);
   }
@@ -77,13 +79,15 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
     return row;
   }
 
-  public static UnsupportedValue newValue(Map<String,Object> values) {
+  public static UnsupportedValue newValue(Map<String,? extends Object> values) {
     return newValue(INVALID_COMPLEX_VALUE_ID, values);
   }
 
   public static UnsupportedValue newValue(
-      ComplexValueForeignKey complexValueFk, Map<String,Object> values) {
-    return new UnsupportedValueImpl(INVALID_ID, complexValueFk, values);
+      ComplexValueForeignKey complexValueFk, 
+      Map<String,? extends Object> values) {
+    return new UnsupportedValueImpl(INVALID_ID, complexValueFk, 
+                                    new LinkedHashMap<String,Object>(values));
   }
   
   private static class UnsupportedValueImpl extends ComplexValueImpl

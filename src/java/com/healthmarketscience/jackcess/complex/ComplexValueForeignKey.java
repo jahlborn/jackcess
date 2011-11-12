@@ -167,6 +167,16 @@ public class ComplexValueForeignKey extends Number
     return (List<SingleValue>)getValues();
   }
   
+  @SuppressWarnings("unchecked")
+  public List<UnsupportedValue> getUnsupportedValues()
+    throws IOException
+  {
+    if(getComplexType() != ComplexDataType.UNSUPPORTED) {
+      throw new UnsupportedOperationException();
+    }
+    return (List<UnsupportedValue>)getValues();
+  }
+  
   public void reset() {
     // discard any cached values
     _values = null;
@@ -246,7 +256,8 @@ public class ComplexValueForeignKey extends Number
     return value;
   }
   
-  public UnsupportedValue addUnsupportedValue(Map<String,Object> values)
+  public UnsupportedValue addUnsupportedValue(
+      Map<String,? extends Object> values)
     throws IOException
   {
     reset();
