@@ -598,8 +598,7 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
     
-    return getRowColumn(getFormat(), rowBuffer, getRowNullMask(rowBuffer), column,
-                        rowState);
+    return getRowColumn(getFormat(), rowBuffer, column, rowState);
   }
 
   /**
@@ -617,8 +616,7 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
 
-    return getRow(getFormat(), rowState, rowBuffer, getRowNullMask(rowBuffer), _columns,
-                  columnNames);
+    return getRow(getFormat(), rowState, rowBuffer, _columns, columnNames);
   }
 
   /**
@@ -629,7 +627,6 @@ public class Table
 	  JetFormat format,
       RowState rowState,
       ByteBuffer rowBuffer,
-      NullMask nullMask,
       Collection<Column> columns,
       Collection<String> columnNames)
     throws IOException
@@ -641,7 +638,7 @@ public class Table
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
         column.setRowValue(
-            rtn, getRowColumn(format, rowBuffer, nullMask, column, rowState));
+            rtn, getRowColumn(format, rowBuffer, column, rowState));
       }
     }
     return rtn;
@@ -653,7 +650,6 @@ public class Table
    */
   private static Object getRowColumn(JetFormat format,
                                      ByteBuffer rowBuffer,
-                                     NullMask nullMask,
                                      Column column,
                                      RowState rowState)
     throws IOException
@@ -661,6 +657,7 @@ public class Table
     byte[] columnData = null;
     try {
 
+      NullMask nullMask = rowState.getNullMask(rowBuffer);
       boolean isNull = nullMask.isNull(column);
       if(column.getType() == DataType.BOOLEAN) {
           // Boolean values are stored in the null mask.  see note about
@@ -736,7 +733,7 @@ public class Table
     }
   }
 
-  static short[] readJumpTableVarColOffsets(
+  private static short[] readJumpTableVarColOffsets(
       RowState rowState, ByteBuffer rowBuffer, int rowStart,
       NullMask nullMask) 
   {
@@ -1531,18 +1528,15 @@ public class Table
       row = dupeRow(row, _columns.size());
     }
 
-    NullMask nullMask = getRowNullMask(rowBuffer);
-
     // fill in any auto-numbers (we don't allow autonumber values to be
     // modified)
-    handleAutoNumbersForUpdate(row, rowBuffer, nullMask, rowState);
+    handleAutoNumbersForUpdate(row, rowBuffer, rowState);
     
     // fill in any "keep value" fields
     for(Column column : _columns) {
       if(column.getRowValue(row) == Column.KEEP_VALUE) {
         column.setRowValue(
-            row, getRowColumn(
-                getFormat(), rowBuffer, nullMask, column, rowState));
+            row, getRowColumn(getFormat(), rowBuffer, column, rowState));
       }
     }
 
@@ -1878,7 +1872,7 @@ public class Table
    * Autonumber columns may not be modified on update.
    */
   private void handleAutoNumbersForUpdate(
-      Object[] row, ByteBuffer rowBuffer, NullMask nullMask, RowState rowState)
+      Object[] row, ByteBuffer rowBuffer, RowState rowState)
     throws IOException
   {
     if(_autoNumColumns.isEmpty()) {
@@ -1886,8 +1880,7 @@ public class Table
     }
 
     for(Column col : _autoNumColumns) {
-      col.setRowValue(
-          row, getRowColumn(getFormat(), rowBuffer, nullMask, col, rowState));
+      col.setRowValue(row, getRowColumn(getFormat(), rowBuffer, col, rowState));
     }
   }
 
@@ -2250,6 +2243,8 @@ public class Table
     private boolean _haveRowValues;
     /** values read from the last row */
     private final Object[] _rowValues;
+    /** null mask for the last row */
+    private NullMask _nullMask;
     /** last modification count seen on the table we track this so that the
         rowState can detect updates to the table and re-read any buffered
         data */
@@ -2285,6 +2280,7 @@ public class Table
       _status = RowStateStatus.INIT;
       _rowStatus = RowStatus.INIT;
       _varColOffsets = null;
+      _nullMask = null;
       if(_haveRowValues) {
         Arrays.fill(_rowValues, null);
         _haveRowValues = false;
@@ -2365,6 +2361,13 @@ public class Table
     
     public Object[] getRowValues() {
       return dupeRow(_rowValues, _rowValues.length);
+    }
+
+    public NullMask getNullMask(ByteBuffer rowBuffer) throws IOException {
+      if(_nullMask == null) {
+        _nullMask = getRowNullMask(rowBuffer);
+      }
+      return _nullMask;
     }
 
     private short[] getVarColOffsets() {
