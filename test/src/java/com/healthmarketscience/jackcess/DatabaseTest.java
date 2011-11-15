@@ -183,6 +183,8 @@ public class DatabaseTest extends TestCase {
       } catch(IllegalArgumentException e) {
         // success
       }
+
+      db.close();
     }
   }
       
@@ -193,7 +195,8 @@ public class DatabaseTest extends TestCase {
       while (table.getNextRow() != null) {
         rows++;
       }
-      assertEquals(2, rows);
+      assertEquals(2, rows);      
+      table.getDatabase().close();
     }
   }
   
@@ -240,6 +243,8 @@ public class DatabaseTest extends TestCase {
 
       checkTestDBTable1RowABCDEFG(testDB, table, row1);
       checkTestDBTable1RowA(testDB, table, row2);
+
+      db.close();
     }
   }
 
@@ -287,6 +292,7 @@ public class DatabaseTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
       assertEquals(0, db.getTableNames().size());
+      db.close();
     }
   }
   
@@ -312,6 +318,8 @@ public class DatabaseTest extends TestCase {
         assertEquals(row[6], readRow.get("G"));
         assertEquals(row[7], readRow.get("H"));
       }
+
+      db.close();
     }
   }
   
@@ -338,6 +346,8 @@ public class DatabaseTest extends TestCase {
         assertEquals(row[6], readRow.get("G"));
         assertEquals(row[7], readRow.get("H"));
       }
+
+      db.close();
     }
   }
 
@@ -402,6 +412,8 @@ public class DatabaseTest extends TestCase {
       assertRowCount(7, table);
       table.reset();
       assertEquals(2, table.getNextRow().get("D"));
+
+      db.close();
     }
   }
 
@@ -419,6 +431,8 @@ public class DatabaseTest extends TestCase {
       byte[] expectedBinaryData =
         toByteArray(new File("test/data/test2BinData.dat"));
       assertTrue(Arrays.equals(expectedBinaryData, foundBinaryData));
+
+      db.close();
     }
   }
 
@@ -455,6 +469,8 @@ public class DatabaseTest extends TestCase {
       assertEquals(testStr, row.get("A"));
       assertEquals(longMemo, row.get("B"));
       assertTrue(Arrays.equals(oleValue, (byte[])row.get("C")));
+
+      db.close();
     }    
   }
 
@@ -566,6 +582,8 @@ public class DatabaseTest extends TestCase {
         }
         rowNum++;
       }
+      
+      table.getDatabase().close();
     }
   }
 
@@ -601,6 +619,8 @@ public class DatabaseTest extends TestCase {
       } catch(IOException e) {
         // ignored
       }
+
+      db.close();
     }
   }
 
@@ -641,6 +661,8 @@ public class DatabaseTest extends TestCase {
       } catch(IOException e) {
         // ignored
       }
+
+      db.close();
     }
   }
 
@@ -692,6 +714,8 @@ public class DatabaseTest extends TestCase {
       } catch(IOException e) {
         // ignored
       }
+
+      db.close();
     }
   }
 
@@ -776,6 +800,8 @@ public class DatabaseTest extends TestCase {
 
       table.reset();
       assertRowCount(7, table);
+
+      mdb.close();
     }
   }
 
@@ -798,6 +824,8 @@ public class DatabaseTest extends TestCase {
       assertEquals(new Integer(1), readRow.get("a"));
       assertEquals(lval, readRow.get("b"));
       assertEquals(tval, readRow.get("c"));
+
+      db.close();
     }
   }
 
@@ -979,6 +1007,8 @@ public class DatabaseTest extends TestCase {
         Date found = foundDates.get(i);
         assertSameDate(expected, found);
       }
+
+      db.close();
     }
   }
 
