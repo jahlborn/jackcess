@@ -120,8 +120,7 @@ public class TableTest extends TestCase {
     throws IOException
   {
     return _testTable.createRow(
-        row, _testTable.getFormat().MAX_ROW_SIZE,
-        _testTable.getPageChannel().createPageBuffer(), 0);
+        row, _testTable.getPageChannel().createPageBuffer());
   }
 
   private ByteBuffer[] encodeColumns(Object... row)

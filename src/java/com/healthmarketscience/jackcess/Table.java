@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -598,7 +599,7 @@ public class Table
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
     
-    return getRowColumn(getFormat(), rowBuffer, column, rowState);
+    return getRowColumn(getFormat(), rowBuffer, column, rowState, null);
   }
 
   /**
@@ -638,7 +639,7 @@ public class Table
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
         column.setRowValue(
-            rtn, getRowColumn(format, rowBuffer, column, rowState));
+            rtn, getRowColumn(format, rowBuffer, column, rowState, null));
       }
     }
     return rtn;
@@ -651,7 +652,8 @@ public class Table
   private static Object getRowColumn(JetFormat format,
                                      ByteBuffer rowBuffer,
                                      Column column,
-                                     RowState rowState)
+                                     RowState rowState,
+                                     Map<Column,byte[]> rawVarValues)
     throws IOException
   {
     byte[] columnData = null;
@@ -715,6 +717,11 @@ public class Table
       columnData = new byte[colDataLen];
       rowBuffer.position(colDataPos);
       rowBuffer.get(columnData);
+
+      if((rawVarValues != null) && column.isVariableLength()) {
+        // caller wants raw value as well
+        rawVarValues.put(column, columnData);
+      }
 
       // parse the column data.  we cache the row values in order to be able
       // to update the index on row deletion.  note, most of the returned
@@ -1453,9 +1460,7 @@ public class Table
       handleAutoNumbersForAdd(row);
       
       // write the row of data to a temporary buffer
-      rowData[i] = createRow(row, getFormat().MAX_ROW_SIZE,
-                             writeRowBufferH.getPageBuffer(getPageChannel()),
-                             0);
+      rowData[i] = createRow(row, writeRowBufferH.getPageBuffer(getPageChannel()));
       
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
@@ -1532,30 +1537,38 @@ public class Table
     // modified)
     handleAutoNumbersForUpdate(row, rowBuffer, rowState);
     
+    // hang on to the raw values of var length columns we are "keeping".  this
+    // will allow us to re-use pre-written var length data, which can save
+    // space for things like long value columns.
+    Map<Column,byte[]> rawVarValues = 
+      (!_varColumns.isEmpty() ? new HashMap<Column,byte[]>() : null);
+
     // fill in any "keep value" fields
     for(Column column : _columns) {
       if(column.getRowValue(row) == Column.KEEP_VALUE) {
         column.setRowValue(
-            row, getRowColumn(getFormat(), rowBuffer, column, rowState));
+            row, getRowColumn(getFormat(), rowBuffer, column, rowState,
+                              rawVarValues));
       }
     }
 
     // generate new row bytes
     ByteBuffer newRowData = createRow(
-        row, getFormat().MAX_ROW_SIZE,
-        _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize);
+        row, _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
+        rawVarValues);
 
     if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
       throw new IOException("Row size " + newRowData.limit() + 
                             " is too large");
     }
 
-    Object[] oldRowValues = (!_indexDatas.isEmpty() ?
-                             rowState.getRowValues() : null);
+    if(!_indexDatas.isEmpty()) {
+      Object[] oldRowValues = rowState.getRowValues();
 
-    // delete old values from indexes
-    for(IndexData indexData : _indexDatas) {
-      indexData.deleteRow(oldRowValues, rowId);
+      // delete old values from indexes
+      for(IndexData indexData : _indexDatas) {
+        indexData.deleteRow(oldRowValues, rowId);
+      }
     }
     
     // see if we can squeeze the new row data into the existing row
@@ -1724,19 +1737,24 @@ public class Table
     return dataPage;
   }
   
+  ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
+    throws IOException
+  {
+    return createRow(rowArray, buffer, 0, Collections.<Column,byte[]>emptyMap());
+  }
+
   /**
    * Serialize a row of Objects into a byte buffer.
-   * <p>
-   * Note, if this table has an auto-number column, the value written will be
-   * put back into the given row array.
    * 
    * @param rowArray row data, expected to be correct length for this table
-   * @param maxRowSize max size the data can be for this row
    * @param buffer buffer to which to write the row data
+   * @param minRowSize min size for result row
+   * @param rawVarValues optional, pre-written values for var length columns
+   *                     (enables re-use of previously written values).
    * @return the given buffer, filled with the row data
    */
-  ByteBuffer createRow(Object[] rowArray, int maxRowSize, ByteBuffer buffer,
-                       int minRowSize)
+  private ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer,
+                               int minRowSize, Map<Column,byte[]> rawVarValues)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);
@@ -1791,6 +1809,8 @@ public class Table
     // only need this info if this table contains any var length data
     if(_maxVarColumnCount > 0) {
 
+      int maxRowSize = getFormat().MAX_ROW_SIZE;
+
       // figure out how much space remains for var length data.  first,
       // account for already written space
       maxRowSize -= buffer.position();
@@ -1818,7 +1838,17 @@ public class Table
           // we have a value
           nullMask.markNotNull(varCol);
 
-          ByteBuffer varDataBuf = varCol.write(rowValue, maxRowSize);
+          byte[] rawValue = null;
+          ByteBuffer varDataBuf = null;
+          if(((rawValue = rawVarValues.get(varCol)) != null) && 
+             (rawValue.length <= maxRowSize)) {
+            // save time and potentially db space, re-use raw value
+            varDataBuf = ByteBuffer.wrap(rawValue);
+          } else {
+            // write column value
+            varDataBuf = varCol.write(rowValue, maxRowSize);
+          }
+
           maxRowSize -= varDataBuf.remaining();
           if(varCol.getType().isLongValue()) {
             // we already accounted for some amount of the long value data
@@ -1880,7 +1910,8 @@ public class Table
     }
 
     for(Column col : _autoNumColumns) {
-      col.setRowValue(row, getRowColumn(getFormat(), rowBuffer, col, rowState));
+      col.setRowValue(row, getRowColumn(getFormat(), rowBuffer, col, rowState, 
+                                        null));
     }
   }
 
