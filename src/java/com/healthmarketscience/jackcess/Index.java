@@ -29,7 +29,6 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -394,14 +393,15 @@ public class Index implements Comparable<Index> {
    * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeDefinitions(
-      ByteBuffer buffer, List<IndexBuilder> indexes, Charset charset)
+      TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
     // write logical index information
-    for(IndexBuilder idx : indexes) {
+    for(IndexBuilder idx : creator.getIndexes()) {
+      TableCreator.IndexState idxState = creator.getIndexState(idx);
       buffer.putInt(Table.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
-      buffer.putInt(idx.getIndexNumber()); // index num
-      buffer.putInt(idx.getIndexDataNumber()); // index data num
+      buffer.putInt(idxState.getIndexNumber()); // index num
+      buffer.putInt(idxState.getIndexDataNumber()); // index data num
       buffer.put((byte)0); // related table type
       buffer.putInt(INVALID_INDEX_NUMBER); // related index num
       buffer.putInt(0); // related table definition page number
@@ -412,8 +412,8 @@ public class Index implements Comparable<Index> {
     }
 
     // write index names
-    for(IndexBuilder idx : indexes) {
-      Table.writeName(buffer, idx.getName(), charset);
+    for(IndexBuilder idx : creator.getIndexes()) {
+      Table.writeName(buffer, idx.getName(), creator.getCharset());
     }
   }
 

@@ -438,10 +438,11 @@ public abstract class IndexData {
    * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeRowCountDefinitions(
-      ByteBuffer buffer, int indexCount, JetFormat format)
+      TableCreator creator, ByteBuffer buffer)
   {
     // index row counts (empty data)
-    ByteUtil.forward(buffer, (indexCount * format.SIZE_INDEX_DEFINITION));
+    ByteUtil.forward(buffer, (creator.getIndexCount() *
+                              creator.getFormat().SIZE_INDEX_DEFINITION));
   }
 
   /**
@@ -450,15 +451,14 @@ public abstract class IndexData {
    * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeDefinitions(
-      ByteBuffer buffer, List<Column> columns, List<IndexBuilder> indexes,
-      int tdefPageNumber, PageChannel pageChannel, JetFormat format)
+      TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
-    ByteBuffer rootPageBuffer = pageChannel.createPageBuffer();
+    ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
     writeDataPage(rootPageBuffer, SimpleIndexData.NEW_ROOT_DATA_PAGE, 
-                  tdefPageNumber, format);
+                  creator.getTdefPageNumber(), creator.getFormat());
 
-    for(IndexBuilder idx : indexes) {
+    for(IndexBuilder idx : creator.getIndexes()) {
       buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
 
       // write column information (always MAX_COLUMNS entries)
@@ -475,7 +475,7 @@ public abstract class IndexData {
           flags = idxCol.getFlags();
 
           // find actual table column number
-          for(Column col : columns) {
+          for(Column col : creator.getColumns()) {
             if(col.getName().equalsIgnoreCase(idxCol.getName())) {
               columnNumber = col.getColumnNumber();
               break;
@@ -492,13 +492,16 @@ public abstract class IndexData {
         buffer.put(flags); // column flags (e.g. ordering)
       }
 
-      buffer.put(idx.getUmapRowNumber()); // umap row
-      ByteUtil.put3ByteInt(buffer, idx.getUmapPageNumber()); // umap page
+      TableCreator.IndexState idxState = creator.getIndexState(idx);
+
+      buffer.put(idxState.getUmapRowNumber()); // umap row
+      ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber()); // umap page
 
       // write empty root index page
-      pageChannel.writePage(rootPageBuffer, idx.getRootPageNumber());
+      creator.getPageChannel().writePage(rootPageBuffer, 
+                                         idxState.getRootPageNumber());
 
-      buffer.putInt(idx.getRootPageNumber());
+      buffer.putInt(idxState.getRootPageNumber());
       buffer.putInt(0); // unknown
       buffer.put(idx.getFlags()); // index flags (unique, etc.)
       ByteUtil.forward(buffer, 5); // unknown
@@ -1007,7 +1010,8 @@ public abstract class IndexData {
   /**
    * Returns a new Entry of the correct type for the given data and page type.
    */
-  private Entry newEntry(ByteBuffer buffer, int entryLength, boolean isLeaf)
+  private static Entry newEntry(ByteBuffer buffer, int entryLength, 
+                                boolean isLeaf)
     throws IOException
   {
     if(isLeaf) {

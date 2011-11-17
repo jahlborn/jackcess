@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  * Interface which allows customization of the behavior of the
- * <code>Database<</code> import/copy methods.
+ * <code>Database</code> import/copy methods.
  *
  * @author James Ahlborn
  */

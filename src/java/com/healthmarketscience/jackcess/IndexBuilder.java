@@ -44,13 +44,6 @@ public class IndexBuilder
   /** the names and orderings of the indexed columns */
   private final List<Column> _columns = new ArrayList<Column>();
 
-  // used by table definition writing code
-  private int _indexNumber;
-  private int _indexDataNumber;
-  private byte _umapRowNumber;
-  private int _umapPageNumber;
-  private int _rootPageNumber;
-
   public IndexBuilder(String name) {
     _name = name;
   }
@@ -159,46 +152,6 @@ public class IndexBuilder
                                            " not found in table");
       }
     }
-  }
-
-  protected int getIndexNumber() {
-    return _indexNumber;
-  }
-
-  protected void setIndexNumber(int newIndexNumber) {
-    _indexNumber = newIndexNumber;
-  }
-
-  protected int getIndexDataNumber() {
-    return _indexDataNumber;
-  }
-
-  protected void setIndexDataNumber(int newIndexDataNumber) {
-    _indexDataNumber = newIndexDataNumber;
-  }
-
-  protected byte getUmapRowNumber() {
-    return _umapRowNumber;
-  }
-
-  protected void setUmapRowNumber(byte newUmapRowNumber) {
-    _umapRowNumber = newUmapRowNumber;
-  }
-
-  protected int getUmapPageNumber() {
-    return _umapPageNumber;
-  }
-
-  protected void setUmapPageNumber(int newUmapPageNumber) {
-    _umapPageNumber = newUmapPageNumber;
-  }
-
-  protected int getRootPageNumber() {
-    return _rootPageNumber;
-  }
-
-  protected void setRootPageNumber(int newRootPageNumber) {
-    _rootPageNumber = newRootPageNumber;
   }
 
   /**

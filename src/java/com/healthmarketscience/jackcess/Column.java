@@ -1988,10 +1988,10 @@ public class Column implements Comparable<Column> {
    * @param columns List of Columns to write definitions for
    */
   protected static void writeDefinitions(
-      ByteBuffer buffer, List<Column> columns, JetFormat format,
-      Charset charset)
+      TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
+    List<Column> columns = creator.getColumns();
     short columnNumber = (short) 0;
     short fixedOffset = (short) 0;
     short variableOffset = (short) 0;
@@ -2021,7 +2021,7 @@ public class Column implements Comparable<Column> {
       if(col.getType().isTextual()) {
         // this will write 4 bytes (note we don't support writing dbs which
         // use the text code page)
-        writeSortOrder(buffer, col.getTextSortOrder(), format);
+        writeSortOrder(buffer, col.getTextSortOrder(), creator.getFormat());
       } else {
         if(col.getType().getHasScalePrecision()) {
           buffer.put(col.getPrecision());  // numeric precision
@@ -2054,11 +2054,11 @@ public class Column implements Comparable<Column> {
       columnNumber++;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
-            buffer, position, format.SIZE_COLUMN_DEF_BLOCK));
+                  buffer, position, creator.getFormat().SIZE_COLUMN_DEF_BLOCK));
       }
     }
     for (Column col : columns) {
-      Table.writeName(buffer, col.getName(), charset);
+      Table.writeName(buffer, col.getName(), creator.getCharset());
     }
   }
 

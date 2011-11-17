@@ -47,10 +47,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -1226,100 +1224,24 @@ public class Database
                           List<IndexBuilder> indexes)
     throws IOException
   {
-    validateIdentifierName(name, _format.MAX_TABLE_NAME_LENGTH, "table");
-    
-    if(getTable(name) != null) {
+    if(lookupTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
     }
-    
-    if(columns.isEmpty()) {
-      throw new IllegalArgumentException(
-          "Cannot create table with no columns");
-    }
-    if(columns.size() > _format.MAX_COLUMNS_PER_TABLE) {
-      throw new IllegalArgumentException(
-          "Cannot create table with more than " +
-          _format.MAX_COLUMNS_PER_TABLE + " columns");
-    }
-    
-    Column.SortOrder dbSortOrder = null;
-    try {
-      dbSortOrder = getDefaultSortOrder();
-    } catch(IOException e) {
-      // ignored, just use the jet format default
-    }
 
-    Set<String> colNames = new HashSet<String>();
-    // next, validate the column definitions
-    for(Column column : columns) {
+    new TableCreator(this, name, columns, indexes).createTable();
+  }
 
-      // FIXME for now, we can't create complex columns
-      if(column.getType() == DataType.COMPLEX_TYPE) {
-        throw new UnsupportedOperationException(
-            "Complex column creation is not yet implemented");
-      }
-      
-      column.validate(_format);
-      if(!colNames.add(column.getName().toUpperCase())) {
-        throw new IllegalArgumentException("duplicate column name: " +
-                                           column.getName());
-      }
-
-      // set the sort order to the db default (if unspecified)
-      if(column.getType().isTextual() && (column.getTextSortOrder() == null)) {
-        column.setTextSortOrder(dbSortOrder);
-      }
-    }
-
-    List<Column> autoCols = Table.getAutoNumberColumns(columns);
-    if(autoCols.size() > 1) {
-      // for most autonumber types, we can only have one of each type
-      Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
-      for(Column c : autoCols) {
-        if(!c.getType().isMultipleAutoNumberAllowed() &&
-           !autoTypes.add(c.getType())) {
-          throw new IllegalArgumentException(
-              "Can have at most one AutoNumber column of type " + c.getType() +
-              " per table");
-        }
-      }
-    }
-
-    if(indexes == null) {
-      indexes = Collections.emptyList();
-    }
-    if(!indexes.isEmpty()) {
-      // now, validate the indexes
-      Set<String> idxNames = new HashSet<String>();
-      boolean foundPk = false;
-      for(IndexBuilder index : indexes) {
-        index.validate(colNames);
-        if(!idxNames.add(index.getName().toUpperCase())) {
-          throw new IllegalArgumentException("duplicate index name: " +
-                                             index.getName());
-        }
-        if(index.isPrimaryKey()) {
-          if(foundPk) {
-            throw new IllegalArgumentException(
-                "found second primary key index: " + index.getName());
-          }
-          foundPk = true;
-        }
-      }
-    }
-    
-    //Write the tdef page to disk.
-    int tdefPageNumber = Table.writeTableDefinition(columns, indexes,
-                                                    _pageChannel, _format,
-                                                    getCharset());
-    
+  /**
+   * Adds a newly created table to the relevant internal database structures.
+   */
+  void addNewTable(String name, int tdefPageNumber) throws IOException {
     //Add this table to our internal list.
     addTable(name, Integer.valueOf(tdefPageNumber));
     
     //Add this table to system tables
     addToSystemCatalog(name, tdefPageNumber);
-    addToAccessControlEntries(tdefPageNumber);    
+    addToAccessControlEntries(tdefPageNumber);
   }
 
   /**
