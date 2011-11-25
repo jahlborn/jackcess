@@ -94,6 +94,45 @@ public class ImportTest extends TestCase
             );
       assertTable(expectedRows, t);
 
+
+      ImportFilter oddFilter = new SimpleImportFilter() {
+        private int _num;
+        @Override
+        public Object[] filterRow(Object[] row) {
+          if((_num++ % 2) == 1) {
+            return null;
+          }
+          return row;
+        }
+      };
+
+      tableName = db.importFile(
+          "test2", new File("test/data/sample-input.tab"), "\\t", oddFilter);
+      t = db.getTable(tableName);
+
+      colNames = new ArrayList<String>();
+      for(Column c : t.getColumns()) {
+        colNames.add(c.getName());
+      }
+      assertEquals(Arrays.asList("Test1", "Test2", "Test3"), colNames);
+
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "Test1", "Foo",
+                "Test2", "Bar",
+                "Test3", "Ralph"),
+            createExpectedRow(
+                "Test1", "",
+                "Test2", "Partial line",
+                "Test3", null),
+            createExpectedRow(
+                "Test1", "buzz",
+                "Test2", "embedded\tseparator",
+                "Test3", "long")
+            );
+      assertTable(expectedRows, t);
+
       db.close();
     }
   }
