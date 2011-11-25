@@ -81,7 +81,8 @@ public class ExportTest extends TestCase
 
       StringWriter out = new StringWriter();
 
-      ExportUtil.exportWriter(db, "test", new BufferedWriter(out));
+      new ExportUtil.Builder(db, "test")
+        .exportWriter(new BufferedWriter(out));
 
       String expected = 
         "some text||some more,13,13.25,\"61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +
@@ -93,8 +94,11 @@ public class ExportTest extends TestCase
 
       out = new StringWriter();
       
-      ExportUtil.exportWriter(db, "test", new BufferedWriter(out),
-                              true, "||", '\'', SimpleExportFilter.INSTANCE);
+      new ExportUtil.Builder(db, "test")
+        .setHeader(true)
+        .setDelimiter("||")
+        .setQuote('\'')
+        .exportWriter(new BufferedWriter(out));
 
       expected = 
         "col1||col2||col3||col4||col5||col6" + NL +
@@ -117,9 +121,9 @@ public class ExportTest extends TestCase
 
       out = new StringWriter();
 
-      ExportUtil.exportWriter(db, "test", new BufferedWriter(out), false,
-                              ExportUtil.DEFAULT_DELIMITER, 
-                              ExportUtil.DEFAULT_QUOTE_CHAR, oddFilter);
+      new ExportUtil.Builder(db, "test")
+        .setFilter(oddFilter)
+        .exportWriter(new BufferedWriter(out));
 
       expected = 
         "some text||some more,13,13.25,\"61 62 63 64  65 66 67 68  69 6A 6B 6C  6D 6E 6F 70  71 72 73 74  75 76 77 78" + NL +

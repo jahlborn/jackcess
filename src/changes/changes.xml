@@ -24,6 +24,13 @@
         Allow ImportFilter and ExportFilter to return null from filterRow() to
         indicate that a row should be skipped.
       </action>
+      <action dev="jahlborn" type="update">
+        Add option to import file without headers to existing table.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add ImportUtil.Builder and ExportUtil.Builder to simplify
+        import/export operations.
+      </action>
     </release>
     <release version="1.2.5" date="2011-10-19">
       <action dev="jahlborn" type="update">

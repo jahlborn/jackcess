@@ -68,6 +68,7 @@ public class ExportUtil {
    *          The directory where the new files will be created
    * 
    * @see #exportAll(Database,File,String)
+   * @see Builder
    */
   public static void exportAll(Database db, File dir)
       throws IOException {
@@ -87,6 +88,7 @@ public class ExportUtil {
    *          The file extension of the new files
    * 
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportAll(Database db, File dir,
       String ext) throws IOException {
@@ -111,6 +113,7 @@ public class ExportUtil {
    *          If <code>true</code> the first line contains the column names
    * 
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportAll(Database db, File dir,
       String ext, boolean header)
@@ -142,6 +145,7 @@ public class ExportUtil {
    *          valid export filter
    * 
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportAll(Database db, File dir,
       String ext, boolean header, String delim,
@@ -166,6 +170,7 @@ public class ExportUtil {
    *          New file to create
    * 
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportFile(Database db, String tableName,
       File f) throws IOException {
@@ -194,6 +199,7 @@ public class ExportUtil {
    *          valid export filter
    * 
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportFile(Database db, String tableName,
       File f, boolean header, String delim, char quote,
@@ -227,6 +233,7 @@ public class ExportUtil {
    *          Writer to export to
    * 
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportWriter(Database db, String tableName,
       BufferedWriter out) throws IOException {
@@ -254,6 +261,7 @@ public class ExportUtil {
    *          valid export filter
    * 
    * @see #exportWriter(Cursor,BufferedWriter,boolean,String,char,ExportFilter)
+   * @see Builder
    */
   public static void exportWriter(Database db, String tableName,
       BufferedWriter out, boolean header, String delim,
@@ -279,6 +287,8 @@ public class ExportUtil {
    *          The quote character
    * @param filter
    *          valid export filter
+   *
+   * @see Builder
    */
   public static void exportWriter(Cursor cursor,
       BufferedWriter out, boolean header, String delim,
@@ -388,6 +398,104 @@ public class ExportUtil {
       out.write(c);
     }
     out.write(quote);
+  }
+
+
+  /**
+   * Builder which simplifies configuration of an export operation.
+   */
+  public static class Builder
+  {
+    private Database _db;
+    private String _tableName;
+    private String _ext = DEFAULT_FILE_EXT;
+    private Cursor _cursor;
+    private String _delim = DEFAULT_DELIMITER;
+    private char _quote = DEFAULT_QUOTE_CHAR;
+    private ExportFilter _filter = SimpleExportFilter.INSTANCE;
+    private boolean _header;
+
+    public Builder(Database db) {
+      this(db, null);
+    }
+
+    public Builder(Database db, String tableName) {
+      _db = db;
+      _tableName = tableName;
+    }
+
+    public Builder(Cursor cursor) {
+      _cursor = cursor;
+    }
+
+    public Builder setDatabase(Database db) {
+      _db = db;
+      return this;
+    }
+
+    public Builder setTableName(String tableName) {
+      _tableName = tableName;
+      return this;
+    }
+
+    public Builder setCursor(Cursor cursor) {
+      _cursor = cursor;
+      return this;
+    }
+
+    public Builder setDelimiter(String delim) {
+      _delim = delim;
+      return this;
+    }
+
+    public Builder setQuote(char quote) {
+      _quote = quote;
+      return this;
+    }
+
+    public Builder setFilter(ExportFilter filter) {
+      _filter = filter;
+      return this;
+    }
+
+    public Builder setHeader(boolean header) {
+      _header = header;
+      return this;
+    }
+
+    public Builder setFileNameExtension(String ext) {
+      _ext = ext;
+      return this;
+    }
+
+    /**
+     * @see ExportUtil#exportAll(Database,File,String,boolean,String,char,ExportFilter)
+     */
+    public void exportAll(File dir) throws IOException {
+      ExportUtil.exportAll(_db, dir, _ext, _header, _delim, _quote, _filter);
+    }
+
+    /**
+     * @see ExportUtil#exportFile(Database,String,File,boolean,String,char,ExportFilter)
+     */
+    public void exportFile(File f) throws IOException {
+      ExportUtil.exportFile(_db, _tableName, f, _header, _delim, _quote,
+                            _filter);
+    }
+
+    /**
+     * @see ExportUtil#exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
+     * @see ExportUtil#exportWriter(Cursor,BufferedWriter,boolean,String,char,ExportFilter)
+     */
+    public void exportWriter(BufferedWriter writer) throws IOException {
+      if(_cursor != null) {
+        ExportUtil.exportWriter(_cursor, writer, _header, _delim, 
+                                _quote, _filter);
+      } else {
+        ExportUtil.exportWriter(_db, _tableName, writer, _header, _delim, 
+                                _quote, _filter);
+      }
+    }
   }
 
 }

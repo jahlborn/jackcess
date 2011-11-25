@@ -58,8 +58,9 @@ public class ImportTest extends TestCase
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
-      String tableName = db.importFile(
-          "test", new File("test/data/sample-input.tab"), "\\t");
+      String tableName = new ImportUtil.Builder(db, "test")
+        .setDelimiter("\\t")
+        .importFile(new File("test/data/sample-input.tab"));
       Table t = db.getTable(tableName);
 
       List<String> colNames = new ArrayList<String>();
@@ -94,6 +95,48 @@ public class ImportTest extends TestCase
             );
       assertTable(expectedRows, t);
 
+      t = new TableBuilder("test2")
+        .addColumn(new ColumnBuilder("T1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("T2", DataType.TEXT))
+        .addColumn(new ColumnBuilder("T3", DataType.TEXT))
+        .toTable(db);
+
+      new ImportUtil.Builder(db, "test2")
+        .setDelimiter("\\t")
+        .setUseExistingTable(true)
+        .setHeader(false)
+        .importFile(new File("test/data/sample-input.tab"));
+
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "T1", "Test1",
+                "T2", "Test2",
+                "T3", "Test3"),
+            createExpectedRow(
+                "T1", "Foo",
+                "T2", "Bar",
+                "T3", "Ralph"),
+            createExpectedRow(
+                "T1", "S",
+                "T2", "Mouse",
+                "T3", "Rocks"),
+            createExpectedRow(
+                "T1", "",
+                "T2", "Partial line",
+                "T3", null),
+            createExpectedRow(
+                "T1", " Quoted Value",
+                "T2", " bazz ",
+                "T3", " Really \"Crazy" + ImportUtil.LINE_SEPARATOR
+                + "value\""),
+            createExpectedRow(
+                "T1", "buzz",
+                "T2", "embedded\tseparator",
+                "T3", "long")
+            );
+      assertTable(expectedRows, t);
+
 
       ImportFilter oddFilter = new SimpleImportFilter() {
         private int _num;
@@ -106,8 +149,10 @@ public class ImportTest extends TestCase
         }
       };
 
-      tableName = db.importFile(
-          "test2", new File("test/data/sample-input.tab"), "\\t", oddFilter);
+      tableName = new ImportUtil.Builder(db, "test3")
+        .setDelimiter("\\t")
+        .setFilter(oddFilter)
+        .importFile(new File("test/data/sample-input.tab"));
       t = db.getTable(tableName);
 
       colNames = new ArrayList<String>();
@@ -141,8 +186,9 @@ public class ImportTest extends TestCase
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
-      String tableName = db.importFile(
-          "test", new File("test/data/sample-input-only-headers.tab"), "\\t");
+      String tableName = new ImportUtil.Builder(db, "test")
+        .setDelimiter("\\t")
+        .importFile(new File("test/data/sample-input-only-headers.tab"));
 
       Table t = db.getTable(tableName);
 
@@ -273,7 +319,7 @@ public class ImportTest extends TestCase
       _precisions.add(precision);
     }
 
-    public <T> T getValue(List<T> values, Object index) {
+    private static <T> T getValue(List<T> values, Object index) {
       return values.get((Integer)index - 1);
     }
   }
