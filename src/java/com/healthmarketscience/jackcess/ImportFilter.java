@@ -56,7 +56,8 @@ public interface ImportFilter {
    * The desired values for the row.
    * @param row the row data as determined by the import code, may be directly
    *            modified
-   * @return the row data as it should be written to the import table
+   * @return the row data as it should be written to the import table.  if
+   *         {@code null}, the row will be skipped
    */
   public Object[] filterRow(Object[] row)
     throws SQLException, IOException;

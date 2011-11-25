@@ -20,6 +20,10 @@
         Reuse previously written memo/ole values when updating other values in
         a row in order to reduce unnecessary data duplication.
       </action>
+      <action dev="jahlborn" type="update">
+        Allow ImportFilter and ExportFilter to return null from filterRow() to
+        indicate that a row should be skipped.
+      </action>
     </release>
     <release version="1.2.5" date="2011-10-19">
       <action dev="jahlborn" type="update">

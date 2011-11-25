@@ -332,6 +332,9 @@ public class ExportUtil {
 
       // apply filter
       Object[] rowData = filter.filterRow(unfilteredRowData);
+      if(rowData == null) {
+        continue;
+      }
 
       // print row
       for (int i = 0; i < columns.size(); i++) {

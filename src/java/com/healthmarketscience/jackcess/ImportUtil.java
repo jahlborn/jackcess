@@ -164,7 +164,11 @@ public class ImportUtil
       for (int i = 0; i < row.length; i++) {
         row[i] = source.getObject(i + 1);
       }
-      rows.add(filter.filterRow(row));
+      row = filter.filterRow(row);
+      if(row == null) {
+        continue;
+      }
+      rows.add(row);
       if (rows.size() == COPY_TABLE_BATCH_SIZE) {
         table.addRows(rows);
         rows.clear();
@@ -385,7 +389,11 @@ public class ImportUtil
       while ((line = in.readLine()) != null)
       {
         Object[] data = splitLine(line, delimPat, quote, in, numColumns);
-        rows.add(filter.filterRow(data));
+        data = filter.filterRow(data);
+        if(data == null) {
+          continue;
+        }
+        rows.add(data);
         if (rows.size() == COPY_TABLE_BATCH_SIZE) {
           table.addRows(rows);
           rows.clear();
