@@ -447,10 +447,10 @@ public class ImportUtil
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
         List<Column> columns = new LinkedList<Column>();
-        String[] columnNames = splitLine(line, delimPat, quote, in, 0);
+        Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
       
         for (int i = 0; i < columnNames.length; i++) {
-          columns.add(new ColumnBuilder(columnNames[i], DataType.TEXT)
+          columns.add(new ColumnBuilder((String)columnNames[i], DataType.TEXT)
                       .escapeName()
                       .setLength((short)DataType.TEXT.getMaxSize())
                       .toColumn());
@@ -502,7 +502,7 @@ public class ImportUtil
    * Splits the given line using the given delimiter pattern and quote
    * character.  May read additional lines for quotes spanning newlines.
    */
-  private static String[] splitLine(String line, Pattern delim, char quote,
+  private static Object[] splitLine(String line, Pattern delim, char quote,
                                     BufferedReader in, int numColumns)
     throws IOException
   {
@@ -573,7 +573,7 @@ public class ImportUtil
       }
     }
 
-    return tokens.toArray(new String[Math.max(tokens.size(), numColumns)]);
+    return tokens.toArray(new Object[Math.max(tokens.size(), numColumns)]);
   }
 
   /**
