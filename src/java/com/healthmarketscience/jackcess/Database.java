@@ -697,6 +697,7 @@ public class Database
     FileChannel channel = openChannel(mdbFile, false);
     channel.truncate(0);
     transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
+    channel.force(true);
     return new Database(channel, autoSync, fileFormat, charset, timeZone,
                         null);
   }
