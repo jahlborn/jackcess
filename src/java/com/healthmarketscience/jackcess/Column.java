@@ -787,7 +787,7 @@ public class Column implements Comparable<Column> {
     return rowArray[_columnIndex];
   }
   
-  public Object getRowValue(Map<String,Object> rowMap) {
+  public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }
   

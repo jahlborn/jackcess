@@ -817,14 +817,14 @@ public abstract class IndexData {
   {
     return constructIndexRow(Collections.singletonMap(colName, value));
   }
-  
+
   /**
    * Constructs an array of values appropriate for this index from the given
    * column values.
    * @return the appropriate sparse array of data or {@code null} if not all
    *         columns for this index were provided
    */
-  public Object[] constructIndexRow(Map<String,Object> row)
+  public Object[] constructIndexRow(Map<String,?> row)
   {
     for(ColumnDescriptor col : _columns) {
       if(!row.containsKey(col.getName())) {

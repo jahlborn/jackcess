@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.7" date="TBD">
+      <action dev="jahlborn" type="update">
+        Rename and refactor the Cursor find methods to improve usability.
+      </action>
+    </release>
     <release version="1.2.6" date="2011-12-16">
       <action dev="jahlborn" type="update" issue="3358272">
         Add support for reading/writing complex column data (version history,

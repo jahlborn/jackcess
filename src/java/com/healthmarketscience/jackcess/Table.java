@@ -1339,7 +1339,7 @@ public class Table
    * appropriate for a call to {@link #addRow(Object...)}.
    * @usage _general_method_
    */
-  public Object[] asRow(Map<String,Object> rowMap) {
+  public Object[] asRow(Map<String,?> rowMap) {
     return asRow(rowMap, null);
   }
   
@@ -1348,14 +1348,14 @@ public class Table
    * appropriate for a call to {@link #updateCurrentRow(Object...)}.
    * @usage _general_method_
    */
-  public Object[] asUpdateRow(Map<String,Object> rowMap) {
+  public Object[] asUpdateRow(Map<String,?> rowMap) {
     return asRow(rowMap, Column.KEEP_VALUE);
   }
 
   /**
    * Converts a map of columnName -> columnValue to an array of row values.
    */
-  private Object[] asRow(Map<String,Object> rowMap, Object defaultValue)
+  private Object[] asRow(Map<String,?> rowMap, Object defaultValue)
   {
     Object[] row = new Object[_columns.size()];
     if(defaultValue != null) {

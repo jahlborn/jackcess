@@ -178,19 +178,22 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern".  See {@link #findRow(Map)} for details on the
+   * given row "pattern".  See {@link #findFirstRow(Map)} for details on the
    * rowPattern.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
    * 
    * @param table the table to search
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
   public static Map<String,Object> findRow(Table table,
-                                           Map<String,Object> rowPattern)
+                                           Map<String,?> rowPattern)
     throws IOException
   {
     Cursor cursor = createCursor(table);
-    if(cursor.findRow(rowPattern)) {
+    if(cursor.findFirstRow(rowPattern)) {
       return cursor.getCurrentRow();
     }
     return null;
@@ -198,8 +201,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern".  See {@link #findRow(Column,Object)} for details on
-   * the pattern.
+   * given row "pattern".  See {@link #findFirstRow(Column,Object)} for
+   * details on the pattern.
    * <p>
    * Note, a {@code null} result value is ambiguous in that it could imply no
    * match or a matching row with {@code null} for the desired value.  If
@@ -218,7 +221,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     Cursor cursor = createCursor(table);
-    if(cursor.findRow(columnPattern, valuePattern)) {
+    if(cursor.findFirstRow(columnPattern, valuePattern)) {
       return cursor.getCurrentRowValue(column);
     }
     return null;
@@ -226,8 +229,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in an indexed table which
-   * matches a given row "pattern".  See {@link #findRow(Map)} for details on
-   * the rowPattern.
+   * matches a given row "pattern".  See {@link #findFirstRow(Map)} for
+   * details on the rowPattern.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
    * 
    * @param table the table to search
    * @param index index to assist the search
@@ -235,11 +241,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return the matching row or {@code null} if a match could not be found.
    */
   public static Map<String,Object> findRow(Table table, Index index,
-                                           Map<String,Object> rowPattern)
+                                           Map<String,?> rowPattern)
     throws IOException
   {
     Cursor cursor = createIndexCursor(table, index);
-    if(cursor.findRow(rowPattern)) {
+    if(cursor.findFirstRow(rowPattern)) {
       return cursor.getCurrentRow();
     }
     return null;
@@ -247,8 +253,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   
   /**
    * Convenience method for finding a specific row in a table which matches a
-   * given row "pattern".  See {@link #findRow(Column,Object)} for details on
-   * the pattern.
+   * given row "pattern".  See {@link #findFirstRow(Column,Object)} for
+   * details on the pattern.
    * <p>
    * Note, a {@code null} result value is ambiguous in that it could imply no
    * match or a matching row with {@code null} for the desired value.  If
@@ -268,7 +274,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     throws IOException
   {
     Cursor cursor = createIndexCursor(table, index);
-    if(cursor.findRow(columnPattern, valuePattern)) {
+    if(cursor.findFirstRow(columnPattern, valuePattern)) {
       return cursor.getCurrentRowValue(column);
     }
     return null;
@@ -519,6 +525,128 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #columnMatchIterable(Column,Object)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> columnMatchIterable(
+      Column columnPattern, Object valuePattern)
+  {
+    return columnMatchIterable(null, columnPattern, valuePattern);
+  }
+  
+  /**
+   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given column pattern.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.  See
+   * {@link #findFirstRow(Column,Object)} for details on the columnPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> columnMatchIterator(
+      Column columnPattern, Object valuePattern)
+  {
+    return columnMatchIterator(null, columnPattern, valuePattern);
+  }
+  
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #columnMatchIterator(Collection,Column,Object)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> columnMatchIterable(
+      final Collection<String> columnNames,
+      final Column columnPattern, final Object valuePattern)
+  {
+    return new Iterable<Map<String, Object>>() {
+      public Iterator<Map<String, Object>> iterator() {
+        return Cursor.this.columnMatchIterator(
+            columnNames, columnPattern, valuePattern);
+      }
+    };
+  }
+  
+  /**
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given column pattern, returning only the given columns.  Use of
+   * the Iterator follows the same restrictions as a call to
+   * <code>getNextRow</code>.  See {@link #findFirstRow(Column,Object)} for
+   * details on the columnPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> columnMatchIterator(
+      Collection<String> columnNames, Column columnPattern, Object valuePattern)
+  {
+    return new ColumnMatchIterator(columnNames, columnPattern, valuePattern);
+  }
+
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #rowMatchIterator(Map)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> rowMatchIterable(
+      Map<String,?> rowPattern)
+  {
+    return rowMatchIterable(null, rowPattern);
+  }
+  
+  /**
+   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given row pattern.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.  See
+   * {@link #findFirstRow(Map)} for details on the rowPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> rowMatchIterator(
+      Map<String,?> rowPattern)
+  {
+    return rowMatchIterator(null, rowPattern);
+  }
+  
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #rowMatchIterator(Collection,Map)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Map<String, Object>> rowMatchIterable(
+      final Collection<String> columnNames,
+      final Map<String,?> rowPattern)
+  {
+    return new Iterable<Map<String, Object>>() {
+      public Iterator<Map<String, Object>> iterator() {
+        return Cursor.this.rowMatchIterator(
+            columnNames, rowPattern);
+      }
+    };
+  }
+  
+  /**
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given row pattern, returning only the given columns.  Use of
+   * the Iterator follows the same restrictions as a call to
+   * <code>getNextRow</code>.  See {@link #findFirstRow(Map)} for details on
+   * the rowPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterator<Map<String, Object>> rowMatchIterator(
+      Collection<String> columnNames, Map<String,?> rowPattern)
+  {
+    return new RowMatchIterator(columnNames, rowPattern);
+  }
+
+  /**
    * Delete the current row.
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table), or already deleted.
@@ -703,10 +831,23 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
+   * @deprecated renamed to {@link #findFirstRow(Column,Object)} to be more clear
+   */
+  @Deprecated
+  public boolean findRow(Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    return findFirstRow(columnPattern, valuePattern);
+  }
+
+  /**
    * Moves to the first row (as defined by the cursor) where the given column
    * has the given value.  This may be more efficient on some cursors than
    * others.  If a match is not found (or an exception is thrown), the cursor
    * is restored to its previous state.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
    *
    * @param columnPattern column from the table for this cursor which is being
    *                      matched by the valuePattern
@@ -715,14 +856,15 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  public boolean findRow(Column columnPattern, Object valuePattern)
+  public boolean findFirstRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
     Position curPos = _curPos;
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findRowImpl(columnPattern, valuePattern);
+      beforeFirst();
+      found = findNextRowImpl(columnPattern, valuePattern);
       return found;
     } finally {
       if(!found) {
@@ -736,7 +878,85 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
+   * Moves to the next row (as defined by the cursor) where the given column
+   * has the given value.  This may be more efficient on some cursors than
+   * others.  If a match is not found (or an exception is thrown), the cursor
+   * is restored to its previous state.
+   *
+   * @param columnPattern column from the table for this cursor which is being
+   *                      matched by the valuePattern
+   * @param valuePattern value which is equal to the corresponding value in
+   *                     the matched row
+   * @return {@code true} if a valid row was found with the given value,
+   *         {@code false} if no row was found
+   */
+  public boolean findNextRow(Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    Position curPos = _curPos;
+    Position prevPos = _prevPos;
+    boolean found = false;
+    try {
+      found = findNextRowImpl(columnPattern, valuePattern);
+      return found;
+    } finally {
+      if(!found) {
+        try {
+          restorePosition(curPos, prevPos);
+        } catch(IOException e) {
+          LOG.error("Failed restoring position", e);
+        }
+      }
+    }
+  }
+  
+  /**
+   * @deprecated renamed to {@link #findFirstRow(Map)} to be more clear
+   */
+  @Deprecated
+  public boolean findRow(Map<String,?> rowPattern)
+    throws IOException
+  {
+    return findFirstRow(rowPattern);
+  }
+
+  /**
    * Moves to the first row (as defined by the cursor) where the given columns
+   * have the given values.  This may be more efficient on some cursors than
+   * others.  If a match is not found (or an exception is thrown), the cursor
+   * is restored to its previous state.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
+   *
+   * @param rowPattern column names and values which must be equal to the
+   *                   corresponding values in the matched row
+   * @return {@code true} if a valid row was found with the given values,
+   *         {@code false} if no row was found
+   */
+  public boolean findFirstRow(Map<String,?> rowPattern)
+    throws IOException
+  {
+    Position curPos = _curPos;
+    Position prevPos = _prevPos;
+    boolean found = false;
+    try {
+      beforeFirst();
+      found = findNextRowImpl(rowPattern);
+      return found;
+    } finally {
+      if(!found) {
+        try {
+          restorePosition(curPos, prevPos);
+        } catch(IOException e) {
+          LOG.error("Failed restoring position", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Moves to the next row (as defined by the cursor) where the given columns
    * have the given values.  This may be more efficient on some cursors than
    * others.  If a match is not found (or an exception is thrown), the cursor
    * is restored to its previous state.
@@ -746,14 +966,14 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  public boolean findRow(Map<String,Object> rowPattern)
+  public boolean findNextRow(Map<String,?> rowPattern)
     throws IOException
   {
     Position curPos = _curPos;
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findRowImpl(rowPattern);
+      found = findNextRowImpl(rowPattern);
       return found;
     } finally {
       if(!found) {
@@ -786,7 +1006,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param rowPattern column names and values which must be equal to the
    *                   corresponding values in the current row
    */
-  public boolean currentRowMatches(Map<String,Object> rowPattern)
+  public boolean currentRowMatches(Map<String,?> rowPattern)
     throws IOException
   {
     Map<String,Object> row = getCurrentRow(rowPattern.keySet());
@@ -807,7 +1027,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
   
   /**
-   * Moves to the first row (as defined by the cursor) where the given column
+   * Moves to the next row (as defined by the cursor) where the given column
    * has the given value.  Caller manages save/restore on failure.
    * <p>
    * Default implementation scans the table from beginning to end.
@@ -819,10 +1039,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  protected boolean findRowImpl(Column columnPattern, Object valuePattern)
+  protected boolean findNextRowImpl(Column columnPattern, Object valuePattern)
     throws IOException
   {
-    beforeFirst();
     while(moveToNextRow()) {
       if(currentRowMatches(columnPattern, valuePattern)) {
         return true;
@@ -832,7 +1051,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   }
 
   /**
-   * Moves to the first row (as defined by the cursor) where the given columns
+   * Moves to the next row (as defined by the cursor) where the given columns
    * have the given values.  Caller manages save/restore on failure.
    * <p>
    * Default implementation scans the table from beginning to end.
@@ -842,10 +1061,9 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  protected boolean findRowImpl(Map<String,Object> rowPattern)
+  protected boolean findNextRowImpl(Map<String,?> rowPattern)
     throws IOException
   {
-    beforeFirst();
     while(moveToNextRow()) {
       if(currentRowMatches(rowPattern)) {
         return true;
@@ -1039,6 +1257,53 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       return moveToAnotherRow(_moveForward);
     }
   }
+
+
+  /**
+   * Row iterator for this cursor, modifiable.
+   */
+  private final class ColumnMatchIterator extends BaseIterator
+  {
+    private final Column _columnPattern;
+    private final Object _valuePattern;
+    
+    private ColumnMatchIterator(Collection<String> columnNames,
+                                Column columnPattern, Object valuePattern)
+    {
+      super(columnNames);
+      _columnPattern = columnPattern;
+      _valuePattern = valuePattern;
+      beforeFirst();
+    }
+
+    @Override
+    protected boolean findNext() throws IOException {
+      return findNextRow(_columnPattern, _valuePattern);
+    }
+  }
+
+
+  /**
+   * Row iterator for this cursor, modifiable.
+   */
+  private final class RowMatchIterator extends BaseIterator
+  {
+    private final Map<String,?> _rowPattern;
+    
+    private RowMatchIterator(Collection<String> columnNames,
+                             Map<String,?> rowPattern)
+    {
+      super(columnNames);
+      _rowPattern = rowPattern;
+      beforeFirst();
+    }
+
+    @Override
+    protected boolean findNext() throws IOException {
+      return findNextRow(_rowPattern);
+    }
+  }
+
 
   /**
    * Handles moving the cursor in a given direction.  Separates cursor

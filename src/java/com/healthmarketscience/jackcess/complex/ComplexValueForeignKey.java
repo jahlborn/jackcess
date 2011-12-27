@@ -256,8 +256,7 @@ public class ComplexValueForeignKey extends Number
     return value;
   }
   
-  public UnsupportedValue addUnsupportedValue(
-      Map<String,? extends Object> values)
+  public UnsupportedValue addUnsupportedValue(Map<String,?> values)
     throws IOException
   {
     reset();

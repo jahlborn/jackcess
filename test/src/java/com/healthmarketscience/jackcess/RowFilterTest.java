@@ -100,7 +100,7 @@ public class RowFilterTest extends TestCase
                                         rows)));
   }
 
-  private List<Map<String,Object>> toList(Iterable<Map<String,Object>> rows)
+  static List<Map<String,Object>> toList(Iterable<Map<String,Object>> rows)
   {
     List<Map<String,Object>> rowList = new ArrayList<Map<String,Object>>();
     for(Map<String,Object> row : rows) {

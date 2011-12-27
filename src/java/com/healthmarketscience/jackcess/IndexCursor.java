@@ -48,7 +48,7 @@ public class IndexCursor extends Cursor
     new ReverseIndexDirHandler();
   /** logical index which this cursor is using */
   private final Index _index;
-  /** Cursor over the entries of the relvant index */
+  /** Cursor over the entries of the relevant index */
   private final IndexData.EntryCursor _entryCursor;
   /** column names for the index entry columns */
   private Set<String> _indexEntryPattern;
@@ -157,22 +157,36 @@ public class IndexCursor extends Cursor
   }
 
   /**
+   * @deprecated renamed to {@link #findFirstRowByEntry(Object...)} to be more
+   * clear
+   */
+  @Deprecated
+  public boolean findRowByEntry(Object... entryValues) 
+    throws IOException 
+  {
+    return findFirstRowByEntry(entryValues);
+  }
+
+  /**
    * Moves to the first row (as defined by the cursor) where the index entries
    * match the given values.  If a match is not found (or an exception is
    * thrown), the cursor is restored to its previous state.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
    *
    * @param entryValues the column values for the index's columns.
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  public boolean findRowByEntry(Object... entryValues) 
+  public boolean findFirstRowByEntry(Object... entryValues) 
     throws IOException 
   {
     Position curPos = _curPos;
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findRowByEntryImpl(toRowValues(entryValues), true);
+      found = findFirstRowByEntryImpl(toRowValues(entryValues), true);
       return found;
     } finally {
       if(!found) {
@@ -199,7 +213,7 @@ public class IndexCursor extends Cursor
     Position prevPos = _prevPos;
     boolean found = false;
     try {
-      findRowByEntryImpl(toRowValues(entryValues), false);
+      findFirstRowByEntryImpl(toRowValues(entryValues), false);
       found = true;
     } finally {
       if(!found) {
@@ -305,15 +319,21 @@ public class IndexCursor extends Cursor
   }
 
   @Override
-  protected boolean findRowImpl(Column columnPattern, Object valuePattern)
+  protected boolean findNextRowImpl(Column columnPattern, Object valuePattern)
     throws IOException
   {
+    if(!isBeforeFirst()) {
+      // use the default table scan for finding rows mid-cursor
+      return super.findNextRowImpl(columnPattern, valuePattern);
+    }
+
+    // searching for the first match
     Object[] rowValues = _entryCursor.getIndexData().constructIndexRow(
         columnPattern.getName(), valuePattern);
 
     if(rowValues == null) {
       // bummer, use the default table scan
-      return super.findRowImpl(columnPattern, valuePattern);
+      return super.findNextRowImpl(columnPattern, valuePattern);
     }
       
     // sweet, we can use our index
@@ -335,8 +355,8 @@ public class IndexCursor extends Cursor
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  protected boolean findRowByEntryImpl(Object[] rowValues,
-                                       boolean requireMatch) 
+  protected boolean findFirstRowByEntryImpl(Object[] rowValues,
+                                            boolean requireMatch) 
     throws IOException 
   {
     if(!findPotentialRow(rowValues, requireMatch)) {
@@ -350,17 +370,23 @@ public class IndexCursor extends Cursor
   }
 
   @Override
-  protected boolean findRowImpl(Map<String,Object> rowPattern)
+  protected boolean findNextRowImpl(Map<String,?> rowPattern)
     throws IOException
   {
+    if(!isBeforeFirst()) {
+      // use the default table scan for finding rows mid-cursor
+      return super.findNextRowImpl(rowPattern);
+    }
+
+    // searching for the first match
     IndexData indexData = _entryCursor.getIndexData();
     Object[] rowValues = indexData.constructIndexRow(rowPattern);
 
     if(rowValues == null) {
       // bummer, use the default table scan
-      return super.findRowImpl(rowPattern);
+      return super.findNextRowImpl(rowPattern);
     }
-      
+
     // sweet, we can use our index
     if(!findPotentialRow(rowValues, true)) {
       // at end of index, no potential matches
@@ -368,7 +394,7 @@ public class IndexCursor extends Cursor
     }
 
     // find actual matching row
-    Map<String,Object> indexRowPattern = null;
+    Map<String,?> indexRowPattern = null;
     if(rowPattern.size() == indexData.getColumns().size()) {
       // the rowPattern matches our index columns exactly, so we can
       // streamline our testing below
@@ -376,10 +402,10 @@ public class IndexCursor extends Cursor
     } else {
       // the rowPattern has more columns than just the index, so we need to
       // do more work when testing below
-      indexRowPattern = new LinkedHashMap<String,Object>();
+      Map<String,Object> tmpRowPattern = new LinkedHashMap<String,Object>();
+      indexRowPattern = tmpRowPattern;
       for(IndexData.ColumnDescriptor idxCol : indexData.getColumns()) {
-        indexRowPattern.put(idxCol.getName(),
-                            rowValues[idxCol.getColumnIndex()]);
+        tmpRowPattern.put(idxCol.getName(), rowValues[idxCol.getColumnIndex()]);
       }
     }
       
@@ -562,7 +588,7 @@ public class IndexCursor extends Cursor
       super(columnNames);
       _rowValues = rowValues;
       try {
-        _hasNext = findRowByEntryImpl(rowValues, true);
+        _hasNext = findFirstRowByEntryImpl(rowValues, true);
         _validRow = _hasNext;
       } catch(IOException e) {
           throw new IllegalStateException(e);

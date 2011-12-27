@@ -356,7 +356,7 @@ public class Index implements Comparable<Index> {
    * @return the appropriate sparse array of data or {@code null} if not all
    *         columns for this index were provided
    */
-  public Object[] constructIndexRow(Map<String,Object> row)
+  public Object[] constructIndexRow(Map<String,?> row)
   {
     return getIndexData().constructIndexRow(row);
   }  

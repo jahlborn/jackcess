@@ -2168,7 +2168,7 @@ public class Database
     protected Cursor findRow(Integer parentId, String name) 
       throws IOException 
     {
-      return (_systemCatalogCursor.findRowByEntry(parentId, name) ?
+      return (_systemCatalogCursor.findFirstRowByEntry(parentId, name) ?
               _systemCatalogCursor : null);
     }
 
@@ -2181,7 +2181,7 @@ public class Database
           .toIndexCursor();
       }
 
-      return (_systemCatalogIdCursor.findRowByEntry(objectId) ?
+      return (_systemCatalogIdCursor.findFirstRowByEntry(objectId) ?
               _systemCatalogIdCursor : null);
     }
 
@@ -2234,7 +2234,7 @@ public class Database
       Map<String,Object> rowPat = new HashMap<String,Object>();
       rowPat.put(CAT_COL_PARENT_ID, parentId);  
       rowPat.put(CAT_COL_NAME, name);
-      return (_systemCatalogCursor.findRow(rowPat) ?
+      return (_systemCatalogCursor.findFirstRow(rowPat) ?
               _systemCatalogCursor : null);
     }
 
@@ -2242,7 +2242,7 @@ public class Database
     protected Cursor findRow(Integer objectId) throws IOException 
     {
       Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
-      return (_systemCatalogCursor.findRow(idCol, objectId) ?
+      return (_systemCatalogCursor.findFirstRow(idCol, objectId) ?
               _systemCatalogCursor : null);
     }
 

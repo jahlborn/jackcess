@@ -46,6 +46,10 @@ import junit.framework.TestCase;
  */
 public class CursorTest extends TestCase {
 
+  static final List<TestDB> INDEX_CURSOR_DBS = 
+    TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
+
+
   public CursorTest(String name) throws Exception {
     super(name);
   }
@@ -101,9 +105,6 @@ public class CursorTest extends TestCase {
     return expectedRows;
   }  
 
-  static final List<TestDB> INDEX_CURSOR_DBS = 
-    TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
-
   static Database createTestIndexTable(final TestDB indexCursorDB) 
     throws Exception 
   {
@@ -112,6 +113,52 @@ public class CursorTest extends TestCase {
     Table table = db.getTable("test");
 
     for(Map<String,Object> row : createUnorderedTestTableData()) {
+      table.addRow(row.get("id"), row.get("value"));
+    }
+
+    return db;
+  }
+
+  private static List<Map<String,Object>> createDupeTestTableData()
+    throws Exception
+  {
+    List<Map<String,Object>> expectedRows =
+      new ArrayList<Map<String,Object>>();
+    int[] ids = new int[]{3, 7, 6, 1, 2, 9, 0, 5, 4, 8};
+    for(int i : ids) {
+      expectedRows.add(createExpectedRow("id", i, "value", "data" + (i % 3)));
+    }
+    for(int i : ids) {
+      expectedRows.add(createExpectedRow("id", i, "value", "data" + (i % 5)));
+    }
+    return expectedRows;
+  }
+
+  private static Database createDupeTestTable(final FileFormat fileFormat) 
+    throws Exception 
+  {
+    Database db = create(fileFormat);
+
+    Table table = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("id", DataType.LONG))
+      .addColumn(new ColumnBuilder("value", DataType.TEXT))
+      .toTable(db);
+
+    for(Map<String,Object> row : createDupeTestTableData()) {
+      table.addRow(row.get("id"), row.get("value"));
+    }
+
+    return db;
+  }
+
+  static Database createDupeTestTable(final TestDB indexCursorDB) 
+    throws Exception 
+  {
+    Database db = openCopy(indexCursorDB);
+
+    Table table = db.getTable("test");
+
+    for(Map<String,Object> row : createDupeTestTableData()) {
       table.addRow(row.get("id"), row.get("value"));
     }
 
@@ -158,8 +205,8 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestSimple(Cursor cursor,
-                            List<Map<String, Object>> expectedRows)
+  private static void doTestSimple(Cursor cursor,
+                                   List<Map<String, Object>> expectedRows)
     throws Exception
   {
     if(expectedRows == null) {
@@ -186,8 +233,8 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestMove(Cursor cursor,
-                          List<Map<String, Object>> expectedRows)
+  private static void doTestMove(Cursor cursor,
+                                 List<Map<String, Object>> expectedRows)
     throws Exception
   {
     if(expectedRows == null) {
@@ -245,47 +292,47 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestSearch(Table table, Cursor cursor, Index index,
-                            Integer... outOfRangeValues)
+  private static void doTestSearch(Table table, Cursor cursor, Index index,
+                                   Integer... outOfRangeValues)
     throws Exception
   {
-    assertTrue(cursor.findRow(table.getColumn("id"), 3));
+    assertTrue(cursor.findFirstRow(table.getColumn("id"), 3));
     assertEquals(createExpectedRow("id", 3,
                                    "value", "data" + 3),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "id", 6,
                                     "value", "data" + 6)));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
 
-    assertFalse(cursor.findRow(createExpectedRow(
+    assertFalse(cursor.findFirstRow(createExpectedRow(
                                    "id", 8,
                                    "value", "data" + 13)));
-    assertFalse(cursor.findRow(table.getColumn("id"), 13));
+    assertFalse(cursor.findFirstRow(table.getColumn("id"), 13));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "value", "data" + 7)));
     assertEquals(createExpectedRow("id", 7,
                                    "value", "data" + 7),
                  cursor.getCurrentRow());
     
-    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 4));
+    assertTrue(cursor.findFirstRow(table.getColumn("value"), "data" + 4));
     assertEquals(createExpectedRow("id", 4,
                                    "value", "data" + 4),
                  cursor.getCurrentRow());
 
     for(Integer outOfRangeValue : outOfRangeValues) {
-      assertFalse(cursor.findRow(table.getColumn("id"),
+      assertFalse(cursor.findFirstRow(table.getColumn("id"),
                                  outOfRangeValue));
-      assertFalse(cursor.findRow(table.getColumn("value"),
+      assertFalse(cursor.findFirstRow(table.getColumn("value"),
                                  "data" + outOfRangeValue));
-      assertFalse(cursor.findRow(createExpectedRow(
+      assertFalse(cursor.findFirstRow(createExpectedRow(
                                      "id", outOfRangeValue,
                                      "value", "data" + outOfRangeValue)));
     }
@@ -329,8 +376,8 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestReverse(Cursor cursor,
-                             List<Map<String, Object>> expectedRows)
+  private static void doTestReverse(Cursor cursor,
+                                    List<Map<String, Object>> expectedRows)
     throws Exception
   {
     if(expectedRows == null) {
@@ -360,10 +407,10 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestLiveAddition(Table table,
-                                  Cursor cursor1,
-                                  Cursor cursor2,
-                                  Integer newRowNum) throws Exception
+  private static void doTestLiveAddition(Table table,
+                                         Cursor cursor1,
+                                         Cursor cursor2,
+                                         Integer newRowNum) throws Exception
   {
     cursor1.moveNextRows(11);
     cursor2.moveNextRows(11);
@@ -403,7 +450,7 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestLiveDeletion(
+  private static void doTestLiveDeletion(
           Cursor cursor1,
           Cursor cursor2,
           Cursor cursor3,
@@ -682,6 +729,128 @@ public class CursorTest extends TestCase {
     }
   }
 
+  public void testFindAllIndex() throws Exception {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = createDupeTestTable(fileFormat);
+
+      Table table = db.getTable("test");
+      Cursor cursor = Cursor.createCursor(table);
+
+      doTestFindAll(table, cursor, null);
+
+      db.close();
+    }
+  }
+
+  public void testFindAll() throws Exception {
+    for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
+      Database db = createDupeTestTable(indexCursorDB);
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+      Cursor cursor = Cursor.createIndexCursor(table, idx);
+
+      doTestFindAll(table, cursor, idx);
+
+      db.close();
+    }
+  }
+
+  private static void doTestFindAll(Table table, Cursor cursor, Index index)
+    throws Exception
+  {
+    Column valCol = table.getColumn("value");
+    List<Map<String,Object>> rows = RowFilterTest.toList(
+        cursor.columnMatchIterable(valCol, "data2"));
+
+    List<Map<String, Object>> expectedRows = null;
+
+    if(index == null) {
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 2, "value", "data2"),
+            createExpectedRow(
+                "id", 5, "value", "data2"),
+            createExpectedRow(
+                "id", 8, "value", "data2"),
+            createExpectedRow(
+                "id", 7, "value", "data2"),
+            createExpectedRow(
+                "id", 2, "value", "data2"));
+    } else {
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 2, "value", "data2"),
+            createExpectedRow(
+                "id", 2, "value", "data2"),
+            createExpectedRow(
+                "id", 5, "value", "data2"),
+            createExpectedRow(
+                "id", 7, "value", "data2"),
+            createExpectedRow(
+                "id", 8, "value", "data2"));
+    }
+    assertEquals(expectedRows, rows);
+
+    rows = RowFilterTest.toList(
+        cursor.columnMatchIterable(valCol, "data4"));
+
+    if(index == null) {
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 9, "value", "data4"),
+            createExpectedRow(
+                "id", 4, "value", "data4"));
+    } else {
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 4, "value", "data4"),
+            createExpectedRow(
+                "id", 9, "value", "data4"));
+    }
+    assertEquals(expectedRows, rows);
+
+    rows = RowFilterTest.toList(
+        cursor.columnMatchIterable(valCol, "data9"));
+
+    assertTrue(rows.isEmpty());
+
+    rows = RowFilterTest.toList(
+        cursor.rowMatchIterable(Collections.singletonMap("id", 8)));
+    
+    expectedRows =
+      createExpectedTable(
+          createExpectedRow(
+              "id", 8, "value", "data2"),
+          createExpectedRow(
+              "id", 8, "value", "data3"));
+    assertEquals(expectedRows, rows);
+
+    for(Map<String,Object> row : table) {
+      
+      expectedRows = new ArrayList<Map<String,Object>>();
+      for(Map<String,Object> tmpRow : cursor) {
+        if(row.equals(tmpRow)) {
+          expectedRows.add(tmpRow);
+        }
+      }
+      assertFalse(expectedRows.isEmpty());
+      
+      rows = RowFilterTest.toList(cursor.rowMatchIterable(row));
+
+      assertEquals(expectedRows, rows);
+    }
+
+    rows = RowFilterTest.toList(
+        cursor.rowMatchIterable(createExpectedRow(
+                                    "id", 8, "value", "data13")));    
+    assertTrue(rows.isEmpty());
+  }
+
   public void testId() throws Exception
   {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
@@ -742,8 +911,8 @@ public class CursorTest extends TestCase {
     }
   }
 
-  private void doTestMatchers(Table table, ColumnMatcher columnMatcher,
-                              boolean caseInsensitive)
+  private static void doTestMatchers(Table table, ColumnMatcher columnMatcher,
+                                     boolean caseInsensitive)
     throws Exception
   {
       assertTrue(columnMatcher.matches(table, "value", null, null));
@@ -758,26 +927,26 @@ public class CursorTest extends TestCase {
       assertTrue(columnMatcher.matches(table, "value", 13, 13));
   }
   
-  private void doTestMatcher(Table table, Cursor cursor, 
-                             ColumnMatcher columnMatcher,
-                             boolean caseInsensitive)
+  private static void doTestMatcher(Table table, Cursor cursor, 
+                                    ColumnMatcher columnMatcher,
+                                    boolean caseInsensitive)
     throws Exception
   {
     cursor.setColumnMatcher(columnMatcher);
 
-    assertTrue(cursor.findRow(table.getColumn("id"), 3));
+    assertTrue(cursor.findFirstRow(table.getColumn("id"), 3));
     assertEquals(createExpectedRow("id", 3,
                                    "value", "data" + 3),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "id", 6,
                                     "value", "data" + 6)));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "id", 6,
                                     "value", "Data" + 6)) == caseInsensitive);
     if(caseInsensitive) {
@@ -786,21 +955,21 @@ public class CursorTest extends TestCase {
                    cursor.getCurrentRow());
     }
 
-    assertFalse(cursor.findRow(createExpectedRow(
+    assertFalse(cursor.findFirstRow(createExpectedRow(
                                    "id", 8,
                                    "value", "data" + 13)));
-    assertFalse(cursor.findRow(table.getColumn("id"), 13));
+    assertFalse(cursor.findFirstRow(table.getColumn("id"), 13));
     assertEquals(createExpectedRow("id", 6,
                                    "value", "data" + 6),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "value", "data" + 7)));
     assertEquals(createExpectedRow("id", 7,
                                    "value", "data" + 7),
                  cursor.getCurrentRow());
     
-    assertTrue(cursor.findRow(createExpectedRow(
+    assertTrue(cursor.findFirstRow(createExpectedRow(
                                     "value", "Data" + 7)) == caseInsensitive);
     if(caseInsensitive) {
       assertEquals(createExpectedRow("id", 7,
@@ -808,12 +977,12 @@ public class CursorTest extends TestCase {
                    cursor.getCurrentRow());
     }
     
-    assertTrue(cursor.findRow(table.getColumn("value"), "data" + 4));
+    assertTrue(cursor.findFirstRow(table.getColumn("value"), "data" + 4));
     assertEquals(createExpectedRow("id", 4,
                                    "value", "data" + 4),
                  cursor.getCurrentRow());
 
-    assertTrue(cursor.findRow(table.getColumn("value"), "Data" + 4) 
+    assertTrue(cursor.findFirstRow(table.getColumn("value"), "Data" + 4) 
                == caseInsensitive);
     if(caseInsensitive) {
       assertEquals(createExpectedRow("id", 4,
@@ -831,17 +1000,17 @@ public class CursorTest extends TestCase {
       Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
       IndexCursor cursor = IndexCursor.createCursor(t1, idx);
 
-      assertFalse(cursor.findRowByEntry(-1));
+      assertFalse(cursor.findFirstRowByEntry(-1));
       cursor.findClosestRowByEntry(-1);
       assertEquals(0, cursor.getCurrentRow().get("id"));
 
-      assertTrue(cursor.findRowByEntry(1));
+      assertTrue(cursor.findFirstRowByEntry(1));
       assertEquals(1, cursor.getCurrentRow().get("id"));
       
       cursor.findClosestRowByEntry(2);
       assertEquals(2, cursor.getCurrentRow().get("id"));
 
-      assertFalse(cursor.findRowByEntry(4));
+      assertFalse(cursor.findFirstRowByEntry(4));
       cursor.findClosestRowByEntry(4);
       assertTrue(cursor.isAfterLast());
 

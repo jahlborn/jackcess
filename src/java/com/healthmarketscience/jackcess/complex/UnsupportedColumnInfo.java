@@ -79,13 +79,12 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
     return row;
   }
 
-  public static UnsupportedValue newValue(Map<String,? extends Object> values) {
+  public static UnsupportedValue newValue(Map<String,?> values) {
     return newValue(INVALID_COMPLEX_VALUE_ID, values);
   }
 
   public static UnsupportedValue newValue(
-      ComplexValueForeignKey complexValueFk, 
-      Map<String,? extends Object> values) {
+      ComplexValueForeignKey complexValueFk, Map<String,?> values) {
     return new UnsupportedValueImpl(INVALID_ID, complexValueFk, 
                                     new LinkedHashMap<String,Object>(values));
   }

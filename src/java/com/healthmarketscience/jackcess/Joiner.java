@@ -121,7 +121,7 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    */
-  public Map<String,Object> findFirstRow(Map<String,Object> fromRow)
+  public Map<String,Object> findFirstRow(Map<String,?> fromRow)
     throws IOException
   {
     return findFirstRow(fromRow, null);
@@ -136,12 +136,12 @@ public class Joiner
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
    */
-  public Map<String,Object> findFirstRow(Map<String,Object> fromRow,
+  public Map<String,Object> findFirstRow(Map<String,?> fromRow,
                                          Collection<String> columnNames)
     throws IOException
   {
     toEntryValues(fromRow);
-    return ((_toCursor.findRowByEntry(_entryValues) ?
+    return ((_toCursor.findFirstRowByEntry(_entryValues) ?
              _toCursor.getCurrentRow(columnNames) : null));
   }
 
@@ -152,7 +152,7 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    */
-  public Iterator<Map<String,Object>> findRows(Map<String,Object> fromRow)
+  public Iterator<Map<String,Object>> findRows(Map<String,?> fromRow)
   {
     return findRows(fromRow, null);
   }
@@ -165,7 +165,7 @@ public class Joiner
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
    */
-  public Iterator<Map<String,Object>> findRows(Map<String,Object> fromRow,
+  public Iterator<Map<String,Object>> findRows(Map<String,?> fromRow,
                                                Collection<String> columnNames)
   {
     toEntryValues(fromRow);
@@ -181,8 +181,7 @@ public class Joiner
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String,Object>> findRowsIterable(
-      Map<String,Object> fromRow)
+  public Iterable<Map<String,Object>> findRowsIterable(Map<String,?> fromRow)
   {
     return findRowsIterable(fromRow, null);
   }
@@ -198,7 +197,7 @@ public class Joiner
    *         operations, the actual exception will be contained within
    */
   public Iterable<Map<String,Object>> findRowsIterable(
-      final Map<String,Object> fromRow, final Collection<String> columnNames)
+      final Map<String,?> fromRow, final Collection<String> columnNames)
   {
     return new Iterable<Map<String, Object>>() {
       public Iterator<Map<String, Object>> iterator() {
@@ -211,7 +210,7 @@ public class Joiner
    * Fills in the _entryValues with the relevant info from the given "from"
    * table row.
    */
-  private void toEntryValues(Map<String,Object> fromRow)
+  private void toEntryValues(Map<String,?> fromRow)
   {
     for(int i = 0; i < _entryValues.length; ++i) {
       _entryValues[i] = fromRow.get(_fromCols.get(i).getName());

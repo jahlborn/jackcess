@@ -112,7 +112,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     Table complexColumns = db.getSystemComplexColumns();
     IndexCursor cursor = IndexCursor.createCursor(
         complexColumns, complexColumns.getPrimaryKeyIndex());
-    if(!cursor.findRowByEntry(complexTypeId)) {
+    if(!cursor.findFirstRowByEntry(complexTypeId)) {
       throw new IOException(
           "Could not find complex column info for complex column with id " +
           complexTypeId);
@@ -333,7 +333,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
         .toIndexCursor();
     }
 
-    if(!_pkCursor.findRowByEntry(id)) {
+    if(!_pkCursor.findFirstRowByEntry(id)) {
       throw new IllegalArgumentException("Row with id " + id +
                                          " does not exist");
     }    

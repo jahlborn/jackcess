@@ -97,7 +97,7 @@ public class ComplexColumnTest extends TestCase
                     "row8-memo", upTime);    
 
       Cursor cursor = Cursor.createCursor(t1);
-      assertTrue(cursor.findRow(t1.getColumn("id"), "row3"));
+      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
       ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(verCol);
       cursor.setCurrentRowValue(col, "new-value");
@@ -191,7 +191,7 @@ public class ComplexColumnTest extends TestCase
       checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
 
       Cursor cursor = Cursor.createCursor(t1);
-      assertTrue(cursor.findRow(t1.getColumn("id"), "row4"));
+      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));
       ComplexValueForeignKey row4ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       Attachment a = row4ValFk.addAttachment(null, "test_data.txt", "txt",
@@ -216,7 +216,7 @@ public class ComplexColumnTest extends TestCase
       row4ValFk.getAttachments().get(0).delete();
       checkAttachments(4, row4ValFk);
 
-      assertTrue(cursor.findRow(t1.getColumn("id"), "row2"));
+      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
       ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       row2ValFk.deleteAllValues();
@@ -267,7 +267,7 @@ public class ComplexColumnTest extends TestCase
       checkMultiValues(row8ValFk.get(), row8ValFk, "value1", "value2");
 
       Cursor cursor = Cursor.createCursor(t1);
-      assertTrue(cursor.findRow(t1.getColumn("id"), "row2"));
+      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
       ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       SingleValue v = row2ValFk.addMultiValue("value2");
@@ -287,7 +287,7 @@ public class ComplexColumnTest extends TestCase
       row2ValFk.getMultiValues().get(0).delete();
       checkMultiValues(2, row2ValFk);
 
-      assertTrue(cursor.findRow(t1.getColumn("id"), "row3"));
+      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
       ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       row3ValFk.deleteAllValues();
