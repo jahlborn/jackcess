@@ -186,6 +186,7 @@ public class Table
   
   /**
    * Only used by unit tests
+
    */
   Table(boolean testing, List<Column> columns) throws IOException {
     if(!testing) {
@@ -1424,12 +1425,13 @@ public class Table
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     for (int i = 0; i < rows.size(); i++) {
 
-      // we need to make sure the row is the right length (fill with null).
-      // note, if the row is copied the caller will not be able to access any
-      // generated auto-number value, but if they need that info they should
-      // use a row array of the right size!
+      // we need to make sure the row is the right length and is an Object[]
+      // (fill with null if too short).  note, if the row is copied the caller
+      // will not be able to access any generated auto-number value, but if
+      // they need that info they should use a row array of the right
+      // size/type!
       Object[] row = rows.get(i);
-      if(row.length < _columns.size()) {
+      if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
         row = dupeRow(row, _columns.size());
         // we copied the row, so put the copy back into the rows list
         rows.set(i, row);
@@ -1507,8 +1509,9 @@ public class Table
 
     requireNonDeletedRow(rowState, rowId);
 
-    // we need to make sure the row is the right length (fill with null).
-    if(row.length < _columns.size()) {
+    // we need to make sure the row is the right length & type (fill with
+    // null if too short).
+    if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
       row = dupeRow(row, _columns.size());
     }
 
@@ -2210,7 +2213,7 @@ public class Table
    */
   static Object[] dupeRow(Object[] row, int newRowLength) {
     Object[] copy = new Object[newRowLength];
-    System.arraycopy(row, 0, copy, 0, row.length);
+    System.arraycopy(row, 0, copy, 0, Math.min(row.length, newRowLength));
     return copy;
   }
 
