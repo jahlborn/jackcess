@@ -45,7 +45,7 @@ public class ComplexValueForeignKey extends Number
 {
   private static final long serialVersionUID = 20110805L;  
   
-  private final Column _column;
+  private transient final Column _column;
   private final int _value;
   private transient List<? extends ComplexValue> _values;
   
