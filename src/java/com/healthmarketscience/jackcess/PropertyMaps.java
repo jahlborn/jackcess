@@ -159,7 +159,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
       }
 
       if(!knownType) {
-        throw new IOException("Uknown property map type " +
+        throw new IOException("Unknown property map type " +
                               ByteUtil.toHexString(bb, 4));
       }
 

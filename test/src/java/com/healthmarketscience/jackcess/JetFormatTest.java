@@ -43,7 +43,8 @@ public class JetFormatTest extends TestCase {
     INDEX_PROPERTIES("testIndexProperties"),
     PROMOTION("testPromotion"),
     COMPLEX("complexDataTest"),
-    UNSUPPORTED("unsupportedFieldsTest");
+    UNSUPPORTED("unsupportedFieldsTest"),
+    LINKED("linkerTest");
 
     private final String _basename;
 

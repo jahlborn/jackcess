@@ -47,6 +47,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashMap;
@@ -182,6 +183,19 @@ public class Database
       }
     };
 
+  /**
+   * default link resolver used if none provided
+   * @usage _general_field_
+   */
+  public static final LinkResolver DEFAULT_LINK_RESOLVER = new LinkResolver() {
+      public Database resolveLinkedDatabase(Database linkerDb, 
+                                            String linkeeFileName)
+        throws IOException
+      {
+        return Database.open(new File(linkeeFileName));
+      }
+    };
+
   /** the resource path to be used when loading classpath resources */
   static final String RESOURCE_PATH = 
     System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
@@ -244,6 +258,10 @@ public class Database
   private static final String CAT_COL_FLAGS = "Flags";
   /** System catalog column name of the properties column */
   private static final String CAT_COL_PROPS = "LvProp";
+  /** System catalog column name of the remote database */
+  private static final String CAT_COL_DATABASE = "Database";
+  /** System catalog column name of the remote table name */
+  private static final String CAT_COL_FOREIGN_NAME = "ForeignName";
 
   /** top-level parentid for a database */
   private static final int DB_PARENT_ID = 0xF000000;
@@ -320,9 +338,11 @@ public class Database
   /** Name of the user-defined properties object */
   private static final String OBJECT_NAME_USERDEF_PROPS = "UserDefined";
   /** System object type for table definitions */
-  private static final Short TYPE_TABLE = (short) 1;
+  static final Short TYPE_TABLE = 1;
   /** System object type for query definitions */
-  private static final Short TYPE_QUERY = (short) 5;
+  private static final Short TYPE_QUERY = 5;
+  /** System object type for linked table definitions */
+  private static final Short TYPE_LINKED_TABLE = 6;
 
   /** max number of table lookups to cache */
   private static final int MAX_CACHED_LOOKUP_TABLES = 50;
@@ -330,7 +350,8 @@ public class Database
   /** the columns to read when reading system catalog normally */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
-                                      CAT_COL_FLAGS));
+                                      CAT_COL_FLAGS, CAT_COL_DATABASE, 
+                                      CAT_COL_FOREIGN_NAME));
   /** the columns to read when finding table names */
   private static Collection<String> SYSTEM_CATALOG_TABLE_NAME_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
@@ -380,7 +401,9 @@ public class Database
        "yesno"
     ));
   }
-  
+
+  /** the File of the database */
+  private final File _file;
   /** Buffer to hold database pages */
   private ByteBuffer _buffer;
   /** ID of the Tables system object */
@@ -446,6 +469,10 @@ public class Database
   private PropertyMaps _summaryPropMaps;
   /** user-defined properties */
   private PropertyMaps _userDefPropMaps;
+  /** linked table resolver */
+  private LinkResolver _linkResolver;
+  /** any linked databases which have been opened */
+  private Map<String,Database> _linkedDbs;
 
 
   /**
@@ -584,7 +611,8 @@ public class Database
       }
     }
 
-    return new Database(channel, autoSync, null, charset, timeZone, provider);
+    return new Database(mdbFile, channel, autoSync, null, charset, timeZone, 
+                        provider);
   }
   
   /**
@@ -698,8 +726,8 @@ public class Database
     channel.truncate(0);
     transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
     channel.force(true);
-    return new Database(channel, autoSync, fileFormat, charset, timeZone,
-                        null);
+    return new Database(mdbFile, channel, autoSync, fileFormat, charset, 
+                        timeZone, null);
   }
 
   /**
@@ -724,6 +752,7 @@ public class Database
   
   /**
    * Create a new database by reading it in from a FileChannel.
+   * @param file the File to which the channel is connected 
    * @param channel File channel of the database.  This needs to be a
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
@@ -739,14 +768,14 @@ public class Database
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected Database(FileChannel channel, boolean autoSync,
+  protected Database(File file, FileChannel channel, boolean autoSync,
                      FileFormat fileFormat, Charset charset, TimeZone timeZone,
                      CodecProvider provider)
     throws IOException
   {
     boolean success = false;
     try {
-
+      _file = file;
       _format = JetFormat.getFormat(channel);
       _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
       _columnOrder = getDefaultColumnOrder();
@@ -774,6 +803,13 @@ public class Database
         }
       }
     }
+  }
+
+  /**
+   * Returns the File underlying this Database
+   */
+  public File getFile() {
+    return _file;
   }
 
   /**
@@ -864,6 +900,35 @@ public class Database
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
+
+  /**
+   * Gets the currently configured LinkResolver (always non-{@code null}).
+   * This will be used to handle all linked database loading.
+   * @usage _intermediate_method_
+   */
+  public LinkResolver getLinkResolver() {
+    return((_linkResolver != null) ? _linkResolver : DEFAULT_LINK_RESOLVER);
+  }
+
+  /**
+   * Sets a new LinkResolver.  If {@code null}, resets to the
+   * {@link #DEFAULT_LINK_RESOLVER}.
+   * @usage _intermediate_method_
+   */
+  public void setLinkResolver(LinkResolver newLinkResolver) {
+    _linkResolver = newLinkResolver;
+  }    
+
+  /**
+   * Returns an unmodifiable view of the currently loaded linked databases,
+   * mapped from the linked database file name to the linked database.  This
+   * information may be useful for implementing a LinkResolver.
+   * @usage _intermediate_method_
+   */
+  public Map<String,Database> getLinkedDatabases() {
+    return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() : 
+            Collections.unmodifiableMap(_linkedDbs));
+  }
 
   /**
    * Gets currently configured TimeZone (always non-{@code null}).
@@ -1198,6 +1263,24 @@ public class Database
       return null;
     }
 
+    if(tableInfo.isLinked()) {
+
+      if(_linkedDbs == null) {
+        _linkedDbs = new HashMap<String,Database>();
+      }
+
+      String linkedDbName = ((LinkedTableInfo)tableInfo).linkedDbName;
+      String linkedTableName = ((LinkedTableInfo)tableInfo).linkedTableName;
+      Database linkedDb = _linkedDbs.get(linkedDbName);
+      if(linkedDb == null) {
+        linkedDb = getLinkResolver().resolveLinkedDatabase(this, linkedDbName);
+        _linkedDbs.put(linkedDbName, linkedDb);
+      }
+      
+      return linkedDb.getTable(linkedTableName, includeSystemTables, 
+                               useBigIndex);
+    }
+
     return readTable(tableInfo.tableName, tableInfo.pageNumber,
                      tableInfo.flags, useBigIndex);
   }
@@ -1234,14 +1317,45 @@ public class Database
   }
 
   /**
+   * Create a new table in this database
+   * @param name Name of the table to create
+   * @usage _general_method_
+   */
+  public void createLinkedTable(String name, String linkedDbName, 
+                                String linkedTableName)
+    throws IOException
+  {
+    if(lookupTable(name) != null) {
+      throw new IllegalArgumentException(
+          "Cannot create linked table with name of existing table");
+    }
+
+    validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
+    validateIdentifierName(linkedDbName, DataType.MEMO.getMaxSize(), 
+                           "linked database");
+    validateIdentifierName(linkedTableName, getFormat().MAX_TABLE_NAME_LENGTH, 
+                           "linked table");
+
+    int linkedTableId = _tableFinder.getNextFreeSyntheticId();
+
+    addNewTable(name, linkedTableId, TYPE_LINKED_TABLE, linkedDbName, 
+                linkedTableName);
+  }
+
+  /**
    * Adds a newly created table to the relevant internal database structures.
    */
-  void addNewTable(String name, int tdefPageNumber) throws IOException {
+  void addNewTable(String name, int tdefPageNumber, Short type, 
+                   String linkedDbName, String linkedTableName) 
+    throws IOException 
+  {
     //Add this table to our internal list.
-    addTable(name, Integer.valueOf(tdefPageNumber));
+    addTable(name, Integer.valueOf(tdefPageNumber), type, linkedDbName,
+             linkedTableName);
     
     //Add this table to system tables
-    addToSystemCatalog(name, tdefPageNumber);
+    addToSystemCatalog(name, tdefPageNumber, type, linkedDbName, 
+                       linkedTableName);
     addToAccessControlEntries(tdefPageNumber);
   }
 
@@ -1539,7 +1653,8 @@ public class Database
    * @param name Table name
    * @param pageNumber Page number that contains the table definition
    */
-  private void addToSystemCatalog(String name, int pageNumber)
+  private void addToSystemCatalog(String name, int pageNumber, Short type, 
+                                  String linkedDbName, String linkedTableName)
     throws IOException
   {
     Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
@@ -1554,7 +1669,7 @@ public class Database
       } else if (CAT_COL_NAME.equals(col.getName())) {
         catalogRow[idx] = name;
       } else if (CAT_COL_TYPE.equals(col.getName())) {
-        catalogRow[idx] = TYPE_TABLE;
+        catalogRow[idx] = type;
       } else if (CAT_COL_DATE_CREATE.equals(col.getName()) ||
                  CAT_COL_DATE_UPDATE.equals(col.getName())) {
         catalogRow[idx] = creationTime;
@@ -1567,6 +1682,10 @@ public class Database
         catalogRow[idx] = owner;
         owner[0] = (byte) 0xcf;
         owner[1] = (byte) 0x5f;
+      } else if (CAT_COL_DATABASE.equals(col.getName())) {
+        catalogRow[idx] = linkedDbName;
+      } else if (CAT_COL_FOREIGN_NAME.equals(col.getName())) {
+        catalogRow[idx] = linkedTableName;
       }
     }
     _systemCatalog.addRow(catalogRow);
@@ -1786,18 +1905,29 @@ public class Database
   }
 
   /**
-   * Flushes any current changes to the database file to disk.
+   * Flushes any current changes to the database file (and any linked
+   * databases) to disk.
    * @usage _general_method_
    */
   public void flush() throws IOException {
+    if(_linkedDbs != null) {
+      for(Database linkedDb : _linkedDbs.values()) {
+        linkedDb.flush();
+      }
+    }
     _pageChannel.flush();
   }
   
   /**
-   * Close the database file
+   * Close the database file (and any linked databases)
    * @usage _general_method_
    */
   public void close() throws IOException {
+    if(_linkedDbs != null) {
+      for(Database linkedDb : _linkedDbs.values()) {
+        linkedDb.close();
+      }
+    }
     _pageChannel.close();
   }
   
@@ -1848,12 +1978,28 @@ public class Database
   /**
    * Adds a table to the _tableLookup and resets the _tableNames set
    */
-  private void addTable(String tableName, Integer pageNumber)
+  private void addTable(String tableName, Integer pageNumber, Short type, 
+                        String linkedDbName, String linkedTableName)
   {
     _tableLookup.put(toLookupName(tableName),
-                     new TableInfo(pageNumber, tableName, 0));
+                     createTableInfo(tableName, pageNumber, 0, type, 
+                                     linkedDbName, linkedTableName));
     // clear this, will be created next time needed
     _tableNames = null;
+  }
+
+  /**
+   * Creates a TableInfo instance appropriate for the given table data.
+   */
+  private static TableInfo createTableInfo(
+      String tableName, Integer pageNumber, int flags, Short type, 
+      String linkedDbName, String linkedTableName)
+  {
+    if(TYPE_LINKED_TABLE.equals(type)) {
+      return new LinkedTableInfo(pageNumber, tableName, flags, linkedDbName,
+                                 linkedTableName);
+    }
+    return new TableInfo(pageNumber, tableName, flags);
   }
 
   /**
@@ -2036,6 +2182,10 @@ public class Database
     return stream;
   }
 
+  private static boolean isTableType(Short objType) {
+    return(TYPE_TABLE.equals(objType) || TYPE_LINKED_TABLE.equals(objType));
+  }
+
   /**
    * Utility class for storing table page number and actual name.
    */
@@ -2045,12 +2195,36 @@ public class Database
     public final String tableName;
     public final int flags;
 
-    private TableInfo(Integer newPageNumber,
-                      String newTableName, 
-                      int newFlags) {
+    private TableInfo(Integer newPageNumber, String newTableName, int newFlags) {
       pageNumber = newPageNumber;
       tableName = newTableName;
       flags = newFlags;
+    }
+
+    public boolean isLinked() {
+      return false;
+    }
+  }
+
+  /**
+   * Utility class for storing linked table info
+   */
+  private static class LinkedTableInfo extends TableInfo
+  {
+    private final String linkedDbName;
+    private final String linkedTableName;
+
+    private LinkedTableInfo(Integer newPageNumber, String newTableName, 
+                            int newFlags, String newLinkedDbName, 
+                            String newLinkedTableName) {
+      super(newPageNumber, newTableName, newFlags);
+      linkedDbName = newLinkedDbName;
+      linkedTableName = newLinkedTableName;
+    }
+
+    @Override
+    public boolean isLinked() {
+      return true;
     }
   }
 
@@ -2133,7 +2307,7 @@ public class Database
         Short type = (Short)row.get(CAT_COL_TYPE);
         int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
 
-        if((parentId == _tableParentId) && TYPE_TABLE.equals(type) && 
+        if((parentId == _tableParentId) && isTableType(type) && 
            (isSystemObject(flags) == systemTables)) {
           tableNames.add(tableName);
         }
@@ -2150,6 +2324,18 @@ public class Database
 
     public abstract TableInfo lookupTable(String tableName)
       throws IOException;
+
+    protected abstract int findMaxSyntheticId() throws IOException;
+
+    public int getNextFreeSyntheticId() throws IOException
+    {
+      int maxSynthId = findMaxSyntheticId();
+      if(maxSynthId >= -1) {
+        // bummer, no more ids available
+        throw new IllegalStateException("Too many database objects!");
+      }
+      return maxSynthId + 1;
+    }
   }
 
   /**
@@ -2163,6 +2349,14 @@ public class Database
     private DefaultTableFinder(IndexCursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
     }
+    
+    private void initIdCursor() throws IOException {
+      if(_systemCatalogIdCursor == null) {
+        _systemCatalogIdCursor = new CursorBuilder(_systemCatalog)
+          .setIndexByColumnNames(CAT_COL_ID)
+          .toIndexCursor();
+      }
+    }
 
     @Override
     protected Cursor findRow(Integer parentId, String name) 
@@ -2175,12 +2369,7 @@ public class Database
     @Override
     protected Cursor findRow(Integer objectId) throws IOException 
     {
-      if(_systemCatalogIdCursor == null) {
-        _systemCatalogIdCursor = new CursorBuilder(_systemCatalog)
-          .setIndexByColumnNames(CAT_COL_ID)
-          .toIndexCursor();
-      }
-
+      initIdCursor();
       return (_systemCatalogIdCursor.findFirstRowByEntry(objectId) ?
               _systemCatalogIdCursor : null);
     }
@@ -2199,11 +2388,15 @@ public class Database
       int flags = (Integer)row.get(CAT_COL_FLAGS);
       Short type = (Short)row.get(CAT_COL_TYPE);
 
-      if(!TYPE_TABLE.equals(type)) {
+      if(!isTableType(type)) {
         return null;
       }
 
-      return new TableInfo(pageNumber, realName, flags);
+      String linkedDbName = (String)row.get(CAT_COL_DATABASE);
+      String linkedTableName = (String)row.get(CAT_COL_FOREIGN_NAME);
+
+      return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
+                             linkedTableName);
     }
     
     @Override
@@ -2213,6 +2406,21 @@ public class Database
         .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
         .setEndEntry(_tableParentId, IndexData.MAX_VALUE)
         .toIndexCursor();
+    }
+
+    @Override
+    protected int findMaxSyntheticId() throws IOException {
+      initIdCursor();
+      _systemCatalogIdCursor.reset();
+
+      // synthetic ids count up from min integer.  so the current, highest,
+      // in-use synthetic id is the max id < 0.
+      _systemCatalogIdCursor.findClosestRowByEntry(0);
+      if(!_systemCatalogIdCursor.moveToPreviousRow()) {
+        return Integer.MIN_VALUE;
+      }
+      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      return (Integer)_systemCatalogIdCursor.getCurrentRowValue(idCol);
     }
   }
   
@@ -2253,7 +2461,7 @@ public class Database
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
         Short type = (Short)row.get(CAT_COL_TYPE);
-        if(!TYPE_TABLE.equals(type)) {
+        if(!isTableType(type)) {
           continue;
         }
 
@@ -2269,7 +2477,11 @@ public class Database
 
         Integer pageNumber = (Integer)row.get(CAT_COL_ID);
         int flags = (Integer)row.get(CAT_COL_FLAGS);
-        return new TableInfo(pageNumber, realName, flags);
+        String linkedDbName = (String)row.get(CAT_COL_DATABASE);
+        String linkedTableName = (String)row.get(CAT_COL_FOREIGN_NAME);
+
+        return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
+                               linkedTableName);
       }
 
       return null;
@@ -2278,6 +2490,21 @@ public class Database
     @Override
     protected Cursor getTableNamesCursor() throws IOException {
       return _systemCatalogCursor;
+    }
+
+    @Override
+    protected int findMaxSyntheticId() throws IOException {
+      // find max id < 0
+      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      _systemCatalogCursor.reset();
+      int curMaxSynthId = Integer.MIN_VALUE;
+      while(_systemCatalogCursor.moveToNextRow()) {
+        int id = (Integer)_systemCatalogCursor.getCurrentRowValue(idCol);
+        if((id > curMaxSynthId) && (id < 0)) {
+          curMaxSynthId = id;
+        }
+      }
+      return curMaxSynthId;
     }
   }
 
@@ -2331,6 +2558,5 @@ public class Database
         _tables.remove(oldRef.getPageNumber());
       }
     }
-  }
-  
+  }  
 }

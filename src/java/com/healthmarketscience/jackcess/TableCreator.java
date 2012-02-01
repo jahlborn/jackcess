@@ -132,7 +132,7 @@ class TableCreator
     Table.writeTableDefinition(this);
 
     // update the database with the new table info
-    _database.addNewTable(_name, _tdefPageNumber);
+    _database.addNewTable(_name, _tdefPageNumber, Database.TYPE_TABLE, null, null);
   }
 
   /**

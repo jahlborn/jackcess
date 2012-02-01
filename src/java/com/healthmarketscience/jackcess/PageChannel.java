@@ -120,6 +120,10 @@ public class PageChannel implements Channel, Flushable {
     return _format;
   }
 
+  public boolean isAutoSync() {
+    return _autoSync;
+  }
+
   /**
    * Returns the next page number based on the given file size.
    */

@@ -209,7 +209,7 @@ public class Table
    */
   protected Table(Database database, ByteBuffer tableBuffer,
                   int pageNumber, String name, int flags, boolean useBigIndex)
-  throws IOException
+    throws IOException
   {
     _database = database;
     _tableDefPageNumber = pageNumber;

@@ -1216,6 +1216,62 @@ public class DatabaseTest extends TestCase {
     }
   }
 
+  public void testLinkedTables() throws Exception {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.LINKED)) {
+      Database db = openCopy(testDB);
+
+      try {
+        db.getTable("Table2");
+        fail("FileNotFoundException should have been thrown");
+      } catch(FileNotFoundException e) {
+        // success
+      }
+
+      assertTrue(db.getLinkedDatabases().isEmpty());
+
+      final String linkeeDbName = "Z:\\jackcess_test\\linkeeTest.accdb";
+      final File linkeeFile = new File("test/data/linkeeTest.accdb");
+      db.setLinkResolver(new LinkResolver() {
+        public Database resolveLinkedDatabase(Database linkerdb, String dbName)
+          throws IOException {
+          assertEquals(linkeeDbName, dbName);
+          return Database.open(linkeeFile);
+        }
+      });
+
+      Table t2 = db.getTable("Table2");
+
+      assertEquals(1, db.getLinkedDatabases().size());
+      Database linkeeDb = db.getLinkedDatabases().get(linkeeDbName);
+      assertNotNull(linkeeDb);
+      assertEquals(linkeeFile, linkeeDb.getFile());
+      
+      List<Map<String, Object>> expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "ID", 1,
+                "Field1", "bar"));
+
+      assertTable(expectedRows, t2);
+
+      db.createLinkedTable("FooTable", linkeeDbName, "Table2");      
+
+      Table t3 = db.getTable("FooTable");
+
+      assertEquals(1, db.getLinkedDatabases().size());
+
+      expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "ID", 1,
+                "Field1", "buzz"));
+
+      assertTable(expectedRows, t3);
+      
+      db.close();
+    }
+  }
+
   private void checkRawValue(String expected, Object val)
   {
     if(expected != null) {
