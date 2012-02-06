@@ -985,8 +985,10 @@ public class Column implements Comparable<Column> {
   private static void writeCurrencyValue(ByteBuffer buffer, Object value)
     throws IOException
   {
+    Object inValue = value;
     try {
       BigDecimal decVal = toBigDecimal(value);
+      inValue = decVal;
 
       // adjust scale (will cause the an ArithmeticException if number has too
       // many decimal places)
@@ -997,7 +999,8 @@ public class Column implements Comparable<Column> {
       buffer.putLong(decVal.movePointRight(4).longValueExact());
     } catch(ArithmeticException e) {
       throw (IOException)
-        new IOException("Currency value out of range").initCause(e);
+        new IOException("Currency value '" + inValue + "' out of range")
+        .initCause(e);
     }
   }
 
@@ -1028,8 +1031,10 @@ public class Column implements Comparable<Column> {
   private void writeNumericValue(ByteBuffer buffer, Object value)
     throws IOException
   {
+    Object inValue = value;
     try {
       BigDecimal decVal = toBigDecimal(value);
+      inValue = decVal;
 
       boolean negative = (decVal.compareTo(BigDecimal.ZERO) < 0);
       if(negative) {
@@ -1069,7 +1074,8 @@ public class Column implements Comparable<Column> {
       buffer.put(intValBytes);
     } catch(ArithmeticException e) {
       throw (IOException)
-        new IOException("Numeric value out of range").initCause(e);
+        new IOException("Numeric value '" + inValue + "' out of range")
+        .initCause(e);
     }
   }
 
