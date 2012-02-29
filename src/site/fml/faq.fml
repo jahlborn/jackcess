@@ -258,6 +258,23 @@
       </answer>
     </faq>
     
+    <faq id="encoding">
+      <question>Why do I get an UnsupportedOperationException with the message
+                "Decoding not supported"?</question>
+      <answer>
+        This exception indicates that the Access database you are attempting
+        to open is "encrypted" using one of the various forms of encryption
+        utilized by Microsoft.  Due to various constraints, the Jackcess
+        project does not directly support decrypting Access databases, but
+        does, however, support plugging in encryption support using a custom
+        <a href="apidocs/com/healthmarketscience/jackcess/CodecProvider.html">CodecProvider</a>.
+        The separate <a href="http://jackcessencrypt.sourceforge.net/">Jackcess Encrypt
+        project</a> contains the <a href="http://jackcessencrypt.sourceforge.net/apidocs/com/healthmarketscience/jackcess/CryptCodecProvider.html">CryptCodecProvider</a>,
+        which implements of the Jackess CodecProvider interface and supports
+        some forms of Access database encryption.
+      </answer>
+    </faq>
+
     <faq id="hms">
       <question>Who is Health Market Science?</question>
       <answer>
