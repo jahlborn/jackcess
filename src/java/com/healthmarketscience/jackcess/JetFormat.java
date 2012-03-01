@@ -50,7 +50,7 @@ public abstract class JetFormat {
   public static final short TEXT_FIELD_MAX_LENGTH = 255 * TEXT_FIELD_UNIT_SIZE;
 
   public enum CodecType {
-    NONE, JET, MSISAM;
+    NONE, JET, MSISAM, OFFICE;
   }
   
   /** Offset in the file that holds the byte describing the Jet format
@@ -962,6 +962,11 @@ public abstract class JetFormat {
 
     private Jet12Format(String name) {
       super(name);
+    }
+
+    @Override
+    protected CodecType defineCodecType() { 
+      return CodecType.OFFICE; 
     }
 
     @Override

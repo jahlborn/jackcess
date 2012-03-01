@@ -61,6 +61,7 @@ public class DefaultCodecProvider implements CodecProvider
       return DUMMY_HANDLER;
 
     case JET:
+    case OFFICE:
       // check for an encode key.  if 0, not encoded
       ByteBuffer bb = channel.createPageBuffer();
       channel.readPage(bb, 0);
