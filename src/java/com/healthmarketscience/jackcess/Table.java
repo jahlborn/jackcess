@@ -715,9 +715,8 @@ public class Table
       }
 
       // grab the column data
-      columnData = new byte[colDataLen];
       rowBuffer.position(colDataPos);
-      rowBuffer.get(columnData);
+      columnData = ByteUtil.getBytes(rowBuffer, colDataLen);
 
       if((rawVarValues != null) && column.isVariableLength()) {
         // caller wants raw value as well
@@ -1322,8 +1321,7 @@ public class Table
    */
   private String readName(ByteBuffer buffer) { 
     int nameLength = readNameLength(buffer);
-    byte[] nameBytes = new byte[nameLength];
-    buffer.get(nameBytes);
+    byte[] nameBytes = ByteUtil.getBytes(buffer, nameLength);
     return Column.decodeUncompressedText(nameBytes, 
                                          getDatabase().getCharset());
   }

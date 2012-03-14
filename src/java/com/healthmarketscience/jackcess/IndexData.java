@@ -1690,8 +1690,7 @@ public abstract class IndexData {
       int colEntryLen = entryLen - (4 + extraTrailingLen);
 
       // read the entry bytes
-      _entryBytes = new byte[colEntryLen];
-      buffer.get(_entryBytes);
+      _entryBytes = ByteUtil.getBytes(buffer, colEntryLen);
 
       // read the rowId
       int page = ByteUtil.get3ByteInt(buffer, ENTRY_BYTE_ORDER);

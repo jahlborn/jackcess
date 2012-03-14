@@ -290,6 +290,48 @@ public final class ByteUtil {
     }
   }
 
+  /**
+   * Reads an array of bytes from the given buffer
+   * @param buffer Buffer containing the desired bytes
+   * @param len length of the desired bytes
+   * @return a new buffer with the given number of bytes from the current
+   *         position in the given buffer
+   */
+  public static byte[] getBytes(ByteBuffer buffer, int len)
+  {
+      byte[] bytes = new byte[len];
+      buffer.get(bytes);    
+      return bytes;
+  }
+
+  /**
+   * Reads an array of bytes from the given buffer at the given offset
+   * @param buffer Buffer containing the desired bytes
+   * @param offset Offset at which to read the bytes
+   * @param len length of the desired bytes
+   * @return a new buffer with the given number of bytes from the given
+   *         position in the given buffer
+   */
+  public static byte[] getBytes(ByteBuffer buffer, int offset, int len)
+  {
+    int origPos = buffer.position();
+    try {
+      buffer.position(offset);
+      return getBytes(buffer, len);
+    } finally {
+      buffer.position(origPos);
+    }
+  }
+
+  /**
+   * Concatenates and returns the given byte arrays.
+   */
+  public static byte[] concat(byte[] b1, byte[] b2) {
+    byte[] out = new byte[b1.length + b2.length];
+    System.arraycopy(b1, 0, out, 0, b1.length);
+    System.arraycopy(b2, 0, out, b1.length, b2.length);
+    return out;
+  }
   
   /**
    * Sets all bits in the given remaining byte range to 0.

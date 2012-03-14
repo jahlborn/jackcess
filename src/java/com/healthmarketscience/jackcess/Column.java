@@ -1011,8 +1011,7 @@ public class Column implements Comparable<Column> {
   {
     boolean negate = (buffer.get() != 0);
 
-    byte[] tmpArr = new byte[16];
-    buffer.get(tmpArr);
+    byte[] tmpArr = ByteUtil.getBytes(buffer, 16);
 
     if(buffer.order() != ByteOrder.BIG_ENDIAN) {
       fixNumericByteOrder(tmpArr);
@@ -1155,8 +1154,7 @@ public class Column implements Comparable<Column> {
   private static String readGUIDValue(ByteBuffer buffer, ByteOrder order)
   {
     if(order != ByteOrder.BIG_ENDIAN) {
-      byte[] tmpArr = new byte[16];
-      buffer.get(tmpArr);
+      byte[] tmpArr = ByteUtil.getBytes(buffer, 16);
 
         // the first 3 guid components are integer components which need to
         // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int

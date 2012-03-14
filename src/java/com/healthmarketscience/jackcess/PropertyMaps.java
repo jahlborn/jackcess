@@ -236,8 +236,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
         String propName = propNames.get(nameIdx);
         PropColumn col = getColumn(dataType, propName, dataSize);
 
-        byte[] data = new byte[dataSize];
-        bbBlock.get(data);
+        byte[] data = ByteUtil.getBytes(bbBlock, dataSize);
         Object value = col.read(data);
 
         map.put(propName, dataType, flag, value);
@@ -253,8 +252,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
      */
     private String readPropName(ByteBuffer buffer) { 
       int nameLength = buffer.getShort();
-      byte[] nameBytes = new byte[nameLength];
-      buffer.get(nameBytes);
+      byte[] nameBytes = ByteUtil.getBytes(buffer, nameLength);
       return Column.decodeUncompressedText(nameBytes, _database.getCharset());
     }
 
