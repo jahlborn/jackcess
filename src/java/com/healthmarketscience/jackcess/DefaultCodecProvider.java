@@ -99,21 +99,21 @@ public class DefaultCodecProvider implements CodecProvider
 
   /**
    * CodecHandler implementation which always throws
-   * UnsupportedOperationException, useful for databases with unsupported
+   * UnsupportedCodecException, useful for databases with unsupported
    * encodings.
    */
   public static class UnsupportedHandler implements CodecHandler
   {
     public void decodePage(ByteBuffer page, int pageNumber) throws IOException
     {
-      throw new UnsupportedOperationException("Decoding not supported");
+      throw new UnsupportedCodecException("Decoding not supported.  Please choose a CodecProvider which supports reading the current database encoding.");
     }
 
     public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
                                  int pageOffset) 
       throws IOException
     {
-      throw new UnsupportedOperationException("Encoding not supported");
+      throw new UnsupportedCodecException("Encoding not supported.  Please choose a CodecProvider which supports writing the current database encoding.");
     }
   }
 
