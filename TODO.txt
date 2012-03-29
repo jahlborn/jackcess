@@ -18,3 +18,5 @@ Missing pieces:
   * EASY? (have the code, do we trust it?)
 - implement createReadOnlyTemp(InputStream) (delete temp file on close)
   * EASY
+- figure out how msaccess manages page/row locks
+  * MEDIUM
