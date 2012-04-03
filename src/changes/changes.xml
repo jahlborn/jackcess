@@ -5,15 +5,15 @@
   </properties>
   <body>
     <release version="1.2.7" date="2012-04-02">
-      <action dev="jahlborn" type="update">
-        Rename and refactor the Cursor find methods to improve usability.
-      </action>
       <action dev="jahlborn" type="update" issue="3479560">
         Add initial support for linked tables.  Linked tables will now be
         loaded by the normal Database.getTable method.  Linked tables can be
         created using the new Database.createLinkedTable method.  Linked table
         resolution can be customized per Database by supplying a custom
         LinkResolver.
+      </action>
+      <action dev="jahlborn" type="update">
+        Rename and refactor the Cursor find methods to improve usability.
       </action>
     </release>
     <release version="1.2.6" date="2011-12-16">

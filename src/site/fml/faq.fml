@@ -218,16 +218,28 @@
       </answer>
     </faq>
 
+    <faq id="jdbc">
+      <question>Does Jackcess provide a JDBC driver for Microsoft Access databases?</question>
+      <answer>
+        Unfortunately, no.  The Jackcess API is a direct implementation of the
+        features available for interacting with an Access database.  There is
+        currently no implementation of the JDBC API included with the Jackcess
+        library.  While this library would be a great foundation for a JDBC
+        driver, implementing the JDBC API is currently outside the scope of
+        this project.  There have been a few attempts to use Jackcess to build
+        JDBC drivers for Access databases, but none of the projects seem to
+        have progressed very far before becoming inactive.
+      </answer>
+    </faq>
+
     <faq id="query">
       <question>Can Jackcess execute SQL queries?</question>
       <answer>
         As of the 1.1.19 release, Jackcess has the ability to <i>read</i> the
         Queries saved in an Access database (i.e. interpret the data stored in
         the system Queries table).  However, Jackcess does not have the
-        ability to <i>execute</i> these Queries.  There have been a few
-        attempts to use Jackcess to build JDBC drivers for Access databases,
-        but none of the projects seem to have progressed very far before
-        becoming inactive.
+        ability to <i>execute</i> these Queries.  See <a href="#jdbc">this question</a>
+        for more details regarding JDBC and Jackcess.
       </answer>
     </faq>
     
@@ -259,7 +271,7 @@
     </faq>
     
     <faq id="encoding">
-      <question>Why do I get an UnsupportedOperationException with the message
+      <question>Why do I get an UnsupportedCodecException with the message
                 "Decoding not supported"?</question>
       <answer>
         This exception indicates that the Access database you are attempting
