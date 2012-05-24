@@ -1372,14 +1372,21 @@ public class Table
   }
   
   /**
-   * Add a single row to this table and write it to disk
+   * Adds a single row to this table and writes it to disk.  The values are
+   * expected to be given in the order that the Columns are listed by the
+   * {@link #getColumns} method.  This is by default the storage order of the
+   * Columns in the database, however this order can be influenced by setting
+   * the ColumnOrder via {@link Database#setColumnOrder} prior to opening the
+   * Table.  The {@link #asRow} method can be used to easily convert a row Map into the
+   * appropriate row array for this Table.
    * <p>
-   * Note, if this table has an auto-number column, the value written will be
-   * put back into the given row array.
+   * Note, if this table has an auto-number column, the value generated will be
+   * put back into the given row array (assuming the given row array is at
+   * least as long as the number of Columns in this Table).
    *
-   * @param row row values for a single row.  the row will be modified if
-   *            this table contains an auto-number column, otherwise it
-   *            will not be modified.
+   * @param row row values for a single row.  the given row array will be
+   *            modified if this table contains an auto-number column,
+   *            otherwise it will not be modified.
    * @usage _general_method_
    */
   public void addRow(Object... row) throws IOException {
@@ -1392,7 +1399,10 @@ public class Table
    * is much more efficient than calling <code>addRow</code> multiple times.
    * <p>
    * Note, if this table has an auto-number column, the values written will be
-   * put back into the given row arrays.
+   * put back into the given row arrays (assuming the given row array is at
+   * least as long as the number of Columns in this Table).
+   *
+   * @see #addRow(Object...) for more details on row arrays
    * 
    * @param rows List of Object[] row values.  the rows will be modified if
    *             this table contains an auto-number column, otherwise they
