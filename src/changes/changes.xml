@@ -8,6 +8,9 @@
       <action dev="jahlborn" type="update" issue="3523179">
         Add osgi header information to the manifest.
       </action>
+      <action dev="jahlborn" type="fix" issue="3529534">
+        Fix NPE when running unit tests with db format MSISAM.
+      </action>
     </release>
     <release version="1.2.7" date="2012-04-02">
       <action dev="jahlborn" type="update" issue="3479560">

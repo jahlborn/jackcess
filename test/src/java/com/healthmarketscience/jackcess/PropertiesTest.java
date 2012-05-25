@@ -170,6 +170,9 @@ public class PropertiesTest extends TestCase
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS_FOR_READ) {
       File[] dbFiles = new File(DIR_TEST_DATA, ff.name()).listFiles();
+      if(dbFiles == null) {
+        continue;
+      }
       for(File f : dbFiles) {
 
         if(!f.isFile()) {
