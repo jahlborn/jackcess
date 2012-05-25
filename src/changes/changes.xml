@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.8" date="TBD">
+      <action dev="jahlborn" type="update" issue="3523179">
+        Add osgi header information to the manifest.
+      </action>
+    </release>
     <release version="1.2.7" date="2012-04-02">
       <action dev="jahlborn" type="update" issue="3479560">
         Add initial support for linked tables.  Linked tables will now be
