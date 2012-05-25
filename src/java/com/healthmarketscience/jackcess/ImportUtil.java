@@ -62,6 +62,44 @@ public class ImportUtil
   private ImportUtil() {}
 
   /**
+   * Returns a List of Column instances converted from the given
+   * ResultSetMetaData (this is the same method used by the various {@code
+   * importResultSet()} methods).
+   *
+   * @return a List of Columns
+   */
+  public static List<Column> toColumns(ResultSetMetaData md)
+    throws SQLException
+  {
+      List<Column> columns = new LinkedList<Column>();
+      for (int i = 1; i <= md.getColumnCount(); i++) {
+        Column column = new Column();
+        column.setName(Database.escapeIdentifier(md.getColumnName(i)));
+        int lengthInUnits = md.getColumnDisplaySize(i);
+        column.setSQLType(md.getColumnType(i), lengthInUnits);
+        DataType type = column.getType();
+        // we check for isTrueVariableLength here to avoid setting the length
+        // for a NUMERIC column, which pretends to be var-len, even though it
+        // isn't
+        if(type.isTrueVariableLength() && !type.isLongValue()) {
+          column.setLengthInUnits((short)lengthInUnits);
+        }
+        if(type.getHasScalePrecision()) {
+          int scale = md.getScale(i);
+          int precision = md.getPrecision(i);
+          if(type.isValidScale(scale)) {
+            column.setScale((byte)scale);
+          }
+          if(type.isValidPrecision(precision)) {
+            column.setPrecision((byte)precision);
+          }
+        }
+        columns.add(column);
+      }
+      return columns;
+  }
+
+  /**
    * Copy an existing JDBC ResultSet into a new table in this database.
    * <p>
    * Equivalent to:
@@ -129,34 +167,7 @@ public class ImportUtil
     name = Database.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
-      
-
-      List<Column> columns = new LinkedList<Column>();
-      for (int i = 1; i <= md.getColumnCount(); i++) {
-        Column column = new Column();
-        column.setName(Database.escapeIdentifier(md.getColumnName(i)));
-        int lengthInUnits = md.getColumnDisplaySize(i);
-        column.setSQLType(md.getColumnType(i), lengthInUnits);
-        DataType type = column.getType();
-        // we check for isTrueVariableLength here to avoid setting the length
-        // for a NUMERIC column, which pretends to be var-len, even though it
-        // isn't
-        if(type.isTrueVariableLength() && !type.isLongValue()) {
-          column.setLengthInUnits((short)lengthInUnits);
-        }
-        if(type.getHasScalePrecision()) {
-          int scale = md.getScale(i);
-          int precision = md.getPrecision(i);
-          if(type.isValidScale(scale)) {
-            column.setScale((byte)scale);
-          }
-          if(type.isValidPrecision(precision)) {
-            column.setPrecision((byte)precision);
-          }
-        }
-        columns.add(column);
-      }
-
+      List<Column> columns = toColumns(md);
       table = createUniqueTable(db, name, columns, md, filter);
     }
 
