@@ -76,6 +76,9 @@ public class PageChannel implements Channel, Flushable {
   private UsageMap _globalUsageMap;
   /** handler for the current database encoding type */
   private CodecHandler _codecHandler = DefaultCodecProvider.DUMMY_HANDLER;
+  /** temp page buffer used when pages cannot be partially encoded */
+  private final TempPageHolder _fullPageEncodeBufferH =
+    TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   
   /**
    * @param channel Channel containing the database
@@ -200,11 +203,12 @@ public class PageChannel implements Channel, Flushable {
   {
     validatePageNumber(pageNumber);
     
-    page.rewind();
+    page.rewind().position(pageOffset);
 
-    if((page.remaining() - pageOffset) > getFormat().PAGE_SIZE) {
+    int writeLen = page.remaining();
+    if((writeLen + pageOffset) > getFormat().PAGE_SIZE) {
       throw new IllegalArgumentException(
-          "Page buffer is too large, size " + (page.remaining() - pageOffset));
+          "Page buffer is too large, size " + (writeLen + pageOffset));
     }
     
     ByteBuffer encodedPage = page;
@@ -212,9 +216,35 @@ public class PageChannel implements Channel, Flushable {
       // re-mask header
       applyHeaderMask(page);
     } else {
+
+      if(!_codecHandler.canEncodePartialPage()) {
+        if((pageOffset > 0) && (writeLen < getFormat().PAGE_SIZE)) {
+
+          // current codec handler cannot encode part of a page, so need to
+          // copy the modified part into the current page contents in a temp
+          // buffer so that we can encode the entire page
+          ByteBuffer fullPage = _fullPageEncodeBufferH.setPage(
+              this, pageNumber);
+
+          // copy the modified part to the full page
+          fullPage.position(pageOffset);
+          fullPage.put(page);
+          fullPage.rewind();
+
+          // reset so we can write the whole page
+          page = fullPage;
+          pageOffset = 0;
+
+        } else {
+
+          _fullPageEncodeBufferH.possiblyInvalidate(pageNumber, null);
+        }
+      }
+
       // re-encode page
       encodedPage = _codecHandler.encodePage(page, pageNumber, pageOffset);
     }
+
     try {
       encodedPage.position(pageOffset);
       _channel.write(encodedPage, (getPageOffset(pageNumber) + pageOffset));
@@ -230,12 +260,11 @@ public class PageChannel implements Channel, Flushable {
   }
   
   /**
-   * Write a page to disk as a new page, appending it to the database
-   * @param page Page to write
-   * @return Page number at which the page was written
+   * Allocates a new page in the database.  Data in the page is undefined
+   * until it is written in a call to {@link #writePage(ByteBuffer,int)}.
    */
-  public int writeNewPage(ByteBuffer page) throws IOException
-  {
+  public int allocateNewPage() throws IOException {
+    // this will force the file to be extended with mostly undefined bytes
     long size = _channel.size();
     if(size >= getFormat().MAX_DATABASE_SIZE) {
       throw new IOException("Database is at maximum size " +
@@ -247,34 +276,22 @@ public class PageChannel implements Channel, Flushable {
                             getFormat().PAGE_SIZE);
     }
     
-    page.rewind();
-
-    if(page.remaining() > getFormat().PAGE_SIZE) {
-      throw new IllegalArgumentException("Page buffer is too large, size " +
-                                         page.remaining());
-    }
+    _forceBytes.rewind();
     
     // push the buffer to the end of the page, so that a full page's worth of
-    // data is written regardless of the incoming buffer size (we use a tiny
-    // buffer in allocateNewPage)
-    int pageOffset = (getFormat().PAGE_SIZE - page.remaining());
+    // data is written
+    int pageOffset = (getFormat().PAGE_SIZE - _forceBytes.remaining());
     long offset = size + pageOffset;
     int pageNumber = getNextPageNumber(size);
-    _channel.write(_codecHandler.encodePage(page, pageNumber, pageOffset),
-                   offset);
+
+    // since we are just allocating page space at this point and not writing
+    // meaningful data, we do _not_ encode the page.
+    _channel.write(_forceBytes, offset);
+
     // note, we "force" page removal because we know that this is an unused
     // page (since we just added it to the file)
     _globalUsageMap.removePageNumber(pageNumber, true);
     return pageNumber;
-  }
-
-  /**
-   * Allocates a new page in the database.  Data in the page is undefined
-   * until it is written in a call to {@link #writePage(ByteBuffer,int)}.
-   */
-  public int allocateNewPage() throws IOException {
-    // this will force the file to be extended with mostly undefined bytes
-    return writeNewPage(_forceBytes);
   }
 
   /**
@@ -353,5 +370,4 @@ public class PageChannel implements Channel, Flushable {
       .position(position)
       .mark();
   }
-  
 }

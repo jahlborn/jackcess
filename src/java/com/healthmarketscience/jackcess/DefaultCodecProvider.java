@@ -83,8 +83,11 @@ public class DefaultCodecProvider implements CodecProvider
    */
   public static class DummyHandler implements CodecHandler
   {
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException
-    {
+    public boolean canEncodePartialPage() {
+      return true;
+    }
+
+    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
       // does nothing
     }
 
@@ -104,8 +107,11 @@ public class DefaultCodecProvider implements CodecProvider
    */
   public static class UnsupportedHandler implements CodecHandler
   {
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException
-    {
+    public boolean canEncodePartialPage() {
+      return true;
+    }
+
+    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
       throw new UnsupportedCodecException("Decoding not supported.  Please choose a CodecProvider which supports reading the current database encoding.");
     }
 

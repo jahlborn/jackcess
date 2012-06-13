@@ -30,6 +30,13 @@ import java.nio.ByteBuffer;
  */
 public interface CodecHandler 
 {
+  /**
+   * Returns {@code true} if this handler can encode partial pages,
+   * {@code false} otherwise.  If this method returns {@code false}, the
+   * {@link #encodePage} method will never be called with a non-zero
+   * pageOffset.
+   */
+  public boolean canEncodePartialPage();
 
   /**
    * Decodes the given page buffer inline.

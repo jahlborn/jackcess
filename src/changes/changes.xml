@@ -15,6 +15,12 @@
       <action dev="jahlborn" type="fix" issue="3529534">
         Fix NPE when running unit tests with db format MSISAM.
       </action>
+      <action dev="jahlborn" type="fix" issue="3532250">
+        Fix writing partial pages when CodecHandler is in use.  Note, this fix
+        involves a backwards incompatible change to the CodecHandler interface
+        (Jackcess Encrypt 1.0.3 or later is compatible with this version of
+        Jackcess).
+      </action>
     </release>
     <release version="1.2.7" date="2012-04-02">
       <action dev="jahlborn" type="update" issue="3479560">
