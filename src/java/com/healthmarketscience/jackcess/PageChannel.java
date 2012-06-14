@@ -243,10 +243,12 @@ public class PageChannel implements Channel, Flushable {
 
       // re-encode page
       encodedPage = _codecHandler.encodePage(page, pageNumber, pageOffset);
+
+      // reset position/limit in case they were affected by encoding
+      encodedPage.position(pageOffset).limit(pageOffset + writeLen);
     }
 
     try {
-      encodedPage.position(pageOffset);
       _channel.write(encodedPage, (getPageOffset(pageNumber) + pageOffset));
       if(_autoSync) {
         flush();

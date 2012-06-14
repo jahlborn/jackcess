@@ -235,6 +235,7 @@ public class CodecHandlerTest extends TestCase
       throws IOException
     {
       ByteBuffer bb = _bufH.getPageBuffer(_channel);
+      bb.clear();
       simpleEncode(page.array(), bb.array(), pageNumber, pageOffset, 
                    page.limit());
       return bb;
@@ -268,6 +269,7 @@ public class CodecHandlerTest extends TestCase
       assertEquals(_channel.getFormat().PAGE_SIZE, page.limit());
 
       ByteBuffer bb = _bufH.getPageBuffer(_channel);
+      bb.clear();
       fullEncode(page.array(), bb.array(), pageNumber);
       return bb;
     }
