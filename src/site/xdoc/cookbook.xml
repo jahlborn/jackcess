@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Jackcess Cookbook</title>
+  </properties>
+  <body>
+    <section name="Introduction">
+      <p>
+        This cookbook will attempt to familiarize the reader with the various
+        nooks and crannies of the Jackcess API.  The API is large due to the
+        large feature-set that an Access Database provides, so this cookbook
+        will by no means be exhaustive.  However, this will hopefully give the
+        reader enough useful building blocks such that the rest of the API can
+        be discovered and utilized as necessary.
+      </p>
+      <p>
+        This cookbook is a cross between a tutorial and a reference, so the
+        reader should be able to skip to relevant sections without needing to
+        read the entire preceding text.
+      </p>
+      <p>
+        While this cookbook strives to present best practices for both the
+        Jackcess API and Java programming in general, at times, the code may
+        be trimmed for the sake of brevity.  For the same reason, pseudo-code
+        may be used in places where the actual code is not relevant to the
+        example.
+      </p>
+    </section>
+    <section name="The Basics">
+      <subsection name="Opening a Database">
+        <p>
+          So you have an Access Database and you want to do something with it.
+          You want to use Java, and you may not even be running on Windows (or
+          you tried the JDBC/ODBC bridge and it failed miserably).  Through
+          some Google-fu, you landed here at the Jackcess project.  Now what?
+        </p>
+        <p>
+          Well, the first thing you need to do is open the database.  The
+          entry point class in the Jackcess API is, suprisingly enough, the
+          <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database</a> class.
+        </p>
+        <source>
+  Database db = Database.open(new File("mydb.mdb"));
+</source>
+        <p>
+          That's it, now you have a Database instance (maybe this isn't that
+          difficult after all).
+        </p>
+        <p>
+          Important note, <i>always</i> make sure you close a Database
+          instance when you are finished with it (preferably in a finally
+          block like any other important resource).  Failure to close the
+          Database instance could result in data loss or database corruption.
+        </p>
+      </subsection>
+      <subsection name="Reading a Table">
+        <p>
+          Okay, so you have a Database instance, now what?  Since pretty much
+          everything in an Access database lives in a table, grabbing a <a href="apidocs/com/healthmarketscience/jackcess/Table.html">Table</a>
+          would be the logical next step.
+        </p>
+        <source>
+  Table table = db.getTable("Test");
+</source>
+        <p>
+          Where's the data?  While a <a
+          href="apidocs/com/healthmarketscience/jackcess/Cursor.html">Cursor</a>
+          is the best way to interact with the data in a Table, for the sake
+          of simplicity when just getting started we will use the simplified
+          iteration provided by the Table class itself.  When reading row
+          data, it is generally provided as a <code>Map&lt;String,Object&gt;</code> where the keys are the column
+          names and the values are the strongly typed column values.
+        </p>
+        <source>
+  for(Map&lt;String,Object&gt; row : table) {
+    System.out.prinln("The row data is: " + row);
+  }
+</source>
+      </subsection>
+    </section>
+  </body>
+</document>
