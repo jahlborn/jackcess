@@ -71,6 +71,12 @@ external database) into a new table:
           <a href="http://mdbtools.sf.net">mdbtools</a> - Open Source project
           for reading Access files, written in C.
         </li>
+        <li>
+          <a href="http://jackcessencrypt.sourceforge.net/">Jackcess
+          Encrypt</a> - Extension library for Jackcess which implements
+          support for some forms of Microsoft Access and Microsoft Money
+          encryption.
+        </li>
       </ul>
     </section>
   </body>
