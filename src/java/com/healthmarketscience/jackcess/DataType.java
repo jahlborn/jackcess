@@ -32,6 +32,9 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Date;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 
 /**
  * Access data type
@@ -40,56 +43,57 @@ import java.util.Map;
 public enum DataType {
 
   /**
-   * Corresponds to a java Boolean.  Accepts Boolean or {@code null} (which is
-   * considered {@code false}).  Equivalent to SQL {@link Types#BOOLEAN}.
+   * Corresponds to a java {@link Boolean}.  Accepts Boolean or {@code null}
+   * (which is considered {@code false}).  Equivalent to SQL {@link
+   * Types#BOOLEAN}.
    */
   BOOLEAN((byte) 0x01, Types.BOOLEAN, 0),
   /**
-   * Corresponds to a java Byte.  Accepts any Number (using
+   * Corresponds to a java {@link Byte}.  Accepts any {@link Number} (using
    * {@link Number#byteValue}), Boolean as 1 or 0, any Object converted to a
    * String and parsed as Double, or {@code null}.  Equivalent to SQL
    * {@link Types#TINYINT}, {@link Types#BIT}.
    */
   BYTE((byte) 0x02, Types.TINYINT, 1),
   /**
-   * Corresponds to a java Short.  Accepts any Number (using
+   * Corresponds to a java {@link Short}.  Accepts any {@link Number} (using
    * {@link Number#shortValue}), Boolean as 1 or 0, any Object converted to a
    * String and parsed as Double, or {@code null}.  Equivalent to SQL
    * {@link Types#SMALLINT}.
    */
   INT((byte) 0x03, Types.SMALLINT, 2),
   /**
-   * Corresponds to a java Integer.  Accepts any Number (using
+   * Corresponds to a java {@link Integer}.  Accepts any {@link Number} (using
    * {@link Number#intValue}), Boolean as 1 or 0, any Object converted to a
    * String and parsed as Double, or {@code null}.  Equivalent to SQL
    * {@link Types#INTEGER}, {@link Types#BIGINT}.
    */
   LONG((byte) 0x04, Types.INTEGER, 4),
   /**
-   * Corresponds to a java BigDecimal with at most 4 decimal places.  Accepts
-   * any Number (using {@link Number#doubleValue}), a BigInteger, a BigDecimal
-   * (with at most 4 decimal places), Boolean as 1 or 0, any Object converted
-   * to a String and parsed as BigDecimal, or {@code null}.  Equivalent to SQL
-   * {@link Types#DECIMAL}.
+   * Corresponds to a java {@link BigDecimal} with at most 4 decimal places.
+   * Accepts any {@link Number} (using {@link Number#doubleValue}), a
+   * BigInteger, a BigDecimal (with at most 4 decimal places), Boolean as 1 or
+   * 0, any Object converted to a String and parsed as BigDecimal, or {@code
+   * null}.  Equivalent to SQL {@link Types#DECIMAL}.
    */
   MONEY((byte) 0x05, Types.DECIMAL, 8),
   /**
-   * Corresponds to a java Float.  Accepts any Number (using
+   * Corresponds to a java {@link Float}.  Accepts any {@link Number} (using
    * {@link Number#floatValue}), Boolean as 1 or 0, any Object converted to a
    * String and parsed as Double, or {@code null}.  Equivalent to SQL
    * {@link Types#FLOAT}.
    */
   FLOAT((byte) 0x06, Types.FLOAT, 4),
   /**
-   * Corresponds to a java Double.  Accepts any Number (using
+   * Corresponds to a java {@link Double}.  Accepts any {@link Number} (using
    * {@link Number#doubleValue}), Boolean as 1 or 0, any Object converted to a
    * String and parsed as Double, or {@code null}.  Equivalent to SQL
    * {@link Types#DOUBLE}, {@link Types#REAL}.
    */
   DOUBLE((byte) 0x07, Types.DOUBLE, 8),
   /**
-   * Corresponds to a java Date.  Accepts a Date, any Number (using
-   * {@link Number#longValue}), or {@code null}.  Equivalent to SQL
+   * Corresponds to a java {@link Date}.  Accepts a Date, any {@link Number}
+   * (using {@link Number#longValue}), or {@code null}.  Equivalent to SQL
    * {@link Types#TIMESTAMP}, {@link Types#DATE}, {@link Types#TIME}.
    */
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
@@ -100,9 +104,9 @@ public enum DataType {
    */
   BINARY((byte) 0x09, Types.BINARY, null, true, false, 0, 255, 255, 1),
   /**
-   * Corresponds to a java String of max length 255 chars.  Accepts any
-   * CharSequence, any Object converted to a String , or {@code null}.
-   * Equivalent to SQL {@link Types#VARCHAR}, {@link Types#CHAR}.
+   * Corresponds to a java {@link String} of max length 255 chars.  Accepts
+   * any {@link CharSequence}, any Object converted to a String , or {@code
+   * null}.  Equivalent to SQL {@link Types#VARCHAR}, {@link Types#CHAR}.
    */
   TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
        50 * JetFormat.TEXT_FIELD_UNIT_SIZE,
@@ -115,18 +119,19 @@ public enum DataType {
   OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0x3FFFFFFF,
       1),
   /**
-   * Corresponds to a java String of max length 8388607 chars.  Accepts any
-   * CharSequence, any Object converted to a String , or {@code null}.
-   * Equivalent to SQL {@link Types#LONGVARCHAR}, {@link Types#CLOB}.
+   * Corresponds to a java {@link String} of max length 8388607 chars.
+   * Accepts any {@link CharSequence}, any Object converted to a String , or
+   * {@code null}.  Equivalent to SQL {@link Types#LONGVARCHAR}, {@link
+   * Types#CLOB}.
    */
   MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0x3FFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
-   * Unknown data.  Handled like BINARY.
+   * Unknown data.  Handled like {@link #BINARY}.
    */
   UNKNOWN_0D((byte) 0x0D, null, null, true, false, 0, 255, 255, 1),
   /**
-   * Corresponds to a java String with the pattern
+   * Corresponds to a java {@link String} with the pattern
    * <code>"{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}"</code>, also known as a
    * "Replication ID" in Access.  Accepts any
    * Object converted to a String matching this pattern (surrounding "{}" are
@@ -134,32 +139,32 @@ public enum DataType {
    */
   GUID((byte) 0x0F, null, 16),
   /**
-   * Corresponds to a java BigDecimal.  Accepts any Number (using
-   * {@link Number#doubleValue}), a BigInteger, a BigDecimal, Boolean as 1 or
-   * 0, any Object converted to a String and parsed as BigDecimal, or
-   * {@code null}.  Equivalent to SQL {@link Types#NUMERIC}.
+   * Corresponds to a java {@link BigDecimal}.  Accepts any {@link Number}
+   * (using {@link Number#doubleValue}), a {@link BigInteger}, a BigDecimal,
+   * Boolean as 1 or 0, any Object converted to a String and parsed as
+   * BigDecimal, or {@code null}.  Equivalent to SQL {@link Types#NUMERIC}.
    */
   // for some reason numeric is "var len" even though it has a fixed size...
   NUMERIC((byte) 0x10, Types.NUMERIC, 17, true, false, 17, 17, 17,
           true, 0, 0, 28, 1, 18, 28, 1),
   /**
-   * Unknown data (seems to be an alternative OLE type, used by
+   * Unknown data (seems to be an alternative {@link #OLE} type, used by
    * MSysAccessObjects table).  Handled like a fixed length BINARY/OLE.
    */
   UNKNOWN_11((byte) 0x11, null, 3992),
   /**
-   * Complex type corresponds to a special LONG autonumber field which is the
-   * key for a secondary table which holds the "real" data.
+   * Complex type corresponds to a special {@link #LONG} autonumber field
+   * which is the key for a secondary table which holds the "real" data.
    */
   COMPLEX_TYPE((byte) 0x12, null, 4),    
   /**
    * Dummy type for a fixed length type which is not currently supported.
-   * Handled like a fixed length BINARY.
+   * Handled like a fixed length {@link #BINARY}.
    */
   UNSUPPORTED_FIXEDLEN((byte) 0xFE, null, null),
   /**
-   * Placeholder type for a variable length type which is not currently supported.
-   * Handled like BINARY.
+   * Placeholder type for a variable length type which is not currently
+   * supported.  Handled like {@link #BINARY}.
    */
   UNSUPPORTED_VARLEN((byte) 0xFF, null, null, true, false, 0, null, 0x3FFFFFFF,
       1);
