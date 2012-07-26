@@ -27,7 +27,13 @@
         may be used in places where the actual code is not relevant to the
         example.
       </p>
+<macro name="toc">
+  <param name="section" value="2"/>
+  <param name="fromDepth" value="0"/>
+  <param name="toDepth" value="4"/>
+</macro>
     </section>
+
     <section name="The Basics">
       <subsection name="Opening a Database">
         <p>
@@ -68,17 +74,71 @@
           Where's the data?  While a <a
           href="apidocs/com/healthmarketscience/jackcess/Cursor.html">Cursor</a>
           is the best way to interact with the data in a Table, for the sake
-          of simplicity when just getting started we will use the simplified
+          of simplicity when just getting started, we will use the simplified
           iteration provided by the Table class itself.  When reading row
           data, it is generally provided as a <code>Map&lt;String,Object&gt;</code> where the keys are the column
           names and the values are the strongly typed column values.
         </p>
         <source>
   for(Map&lt;String,Object&gt; row : table) {
-    System.out.prinln("The row data is: " + row);
+    System.out.prinln("Look ma, a row: " + row);
   }
 </source>
+        <p>
+          So, what's in a row?  Well, let's assume your "Test" table is
+          defined in the following way in Access:
+        </p>
+        <blockquote>
+          <table>
+            <tr>
+              <th>Field Name</th><th>Data Type</th>
+            </tr>
+            <tr>
+              <td>ID</td><td>AutoNumber (Long Integer)</td>
+            </tr>
+            <tr>
+              <td>Name</td><td>Text</td>
+            </tr>
+            <tr>
+              <td>Salary</td><td>Currency</td>
+            </tr>
+            <tr>
+              <td>StartDate</td><td>Date/Time</td>
+            </tr>
+          </table>
+        </blockquote>
+        <p>
+          Then, given a row of data, we could inspect the various <a href="apidocs/com/healthmarketscience/jackcess/Column.html">Columns</a> and
+          their values like so:
+        </p>
+<source>
+  Map&lt;String,Object&gt; row = ...;
+  for(Column column : table.getColumns()) {
+    String columnName = column.getName();
+    Object value = row.get(columnName);
+    System.out.println("Column " + columnName + "(" + column.getType() + "): "
+                       + value + " (" + value.getClass() + ")");
+  }
+
+  // Example Output:
+  //
+  // Column ID(LONG): 27 (java.lang.Integer)
+  // Column Name(TEXT): Bob Smith (java.lang.String)
+  // Column Name(MONEY): 50000.00 (java.math.BigDecimal)
+  // Column StartDate(SHORT_DATE_TIME): Mon Jan 05 09:00:00 EDT 2010 (java.util.Date)
+</source>
+        <p>
+          As you can see in this example (and as previously mentioned), the
+          row values are <i>strongly typed</i> Java objects.  In Jackcess, the
+          column types are represented by a Java enum named <a href="apidocs/com/healthmarketscience/jackcess/DataType.html">DataType</a>.
+          The DataType javadoc details the Java types used to return row
+          values as well as the value types which are acceptable inputs for
+          new rows (more on this later).  One other thing to note in this
+          example is that the column names in the row Map are <i>case
+          sensitive</i> strings.
+        </p>
       </subsection>
     </section>
+
   </body>
 </document>
