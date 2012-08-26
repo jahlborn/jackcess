@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.9" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add some more functionality to Joiner to facilitate integrity
+        enforcement (hasRows and deleteRows).
+      </action>
+    </release>
     <release version="1.2.8" date="2012-07-10">
       <action dev="jahlborn" type="update" issue="3523179">
         Add osgi header information to the manifest.

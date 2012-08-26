@@ -45,7 +45,7 @@ public class JoinerTest extends TestCase {
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
-      Database db = open(testDB);
+      Database db = openCopy(testDB);
       Table t1 = db.getTable("Table1");
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");
@@ -74,11 +74,13 @@ public class JoinerTest extends TestCase {
       assertSame(t1t3, t3t1Join.getToIndex());
       
       doTestJoiner(t3t1Join, createT3T1Data());      
+
+      doTestJoinerDelete(t2t1Join);
     }    
   }
 
-  private void doTestJoiner(Joiner join,
-                            Map<Integer,List<Map<String,Object>>> expectedData)
+  private static void doTestJoiner(
+      Joiner join, Map<Integer,List<Map<String,Object>>> expectedData)
     throws Exception
   {
     final Set<String> colNames = new HashSet<String>(
@@ -98,10 +100,12 @@ public class JoinerTest extends TestCase {
       assertEquals(expectedData.get(id), joinedRows);
 
       if(!expectedRows.isEmpty()) {
+        assertTrue(join.hasRows(row));
         assertEquals(expectedRows.get(0), join.findFirstRow(row));
 
         assertEquals(row, revJoin.findFirstRow(expectedRows.get(0)));
       } else {
+        assertFalse(join.hasRows(row));
         assertNull(join.findFirstRow(row));
       }
       
@@ -125,6 +129,24 @@ public class JoinerTest extends TestCase {
       } else {
         assertNull(join.findFirstRow(row, colNames));
       }      
+    }
+  }
+
+  private static void doTestJoinerDelete(Joiner t2t1Join) throws Exception
+  {
+    assertEquals(4, countRows(t2t1Join.getToTable()));
+
+    Map<String,Object> row = createExpectedRow("id", 1);
+    assertTrue(t2t1Join.hasRows(row));
+
+    assertTrue(t2t1Join.deleteRows(row));
+
+    assertFalse(t2t1Join.hasRows(row));
+    assertFalse(t2t1Join.deleteRows(row));
+
+    assertEquals(2, countRows(t2t1Join.getToTable()));
+    for(Map<String,Object> t1Row : t2t1Join.getToTable()) {
+      assertFalse(t1Row.get("otherfk1").equals(1));
     }
   }
 

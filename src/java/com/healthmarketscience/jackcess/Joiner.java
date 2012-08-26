@@ -21,6 +21,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,15 @@ public class Joiner
   }
 
   /**
+   * Returns {@code true} if the "to" table has any rows based on the given
+   * columns in the "from" table, {@code false} otherwise.
+   */
+  public boolean hasRows(Map<String,?> fromRow) throws IOException {
+    toEntryValues(fromRow);
+    return _toCursor.findFirstRowByEntry(_entryValues);
+  }
+
+  /**
    * Returns the first row in the "to" table based on the given columns in the
    * "from" table if any, {@code null} if there is no matching row.
    *
@@ -140,9 +150,7 @@ public class Joiner
                                          Collection<String> columnNames)
     throws IOException
   {
-    toEntryValues(fromRow);
-    return ((_toCursor.findFirstRowByEntry(_entryValues) ?
-             _toCursor.getCurrentRow(columnNames) : null));
+    return (hasRows(fromRow) ? _toCursor.getCurrentRow(columnNames) : null);
   }
 
   /**
@@ -204,6 +212,26 @@ public class Joiner
         return findRows(fromRow, columnNames);
       }
     };
+  }
+
+  /**
+   * Deletes any rows in the "to" table based on the given columns in the
+   * "from" table.
+   * 
+   * @param fromRow row from the "from" table (which must include the relevant
+   *                columns for this join relationship)
+   * @return {@code true} if any "to" rows were deleted, {@code false}
+   *         otherwise
+   */
+  public boolean deleteRows(Map<String,?> fromRow) throws IOException {
+    boolean removed = false;
+    for(Iterator<Map<String,Object>> iter = findRows(
+            fromRow, Collections.<String>emptySet()); iter.hasNext(); ) {
+      iter.next();
+      iter.remove();
+      removed = true;
+    }
+    return removed;
   }
 
   /**
