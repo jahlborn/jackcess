@@ -62,6 +62,8 @@ public class PageChannel implements Channel, Flushable {
   
   /** Channel containing the database */
   private final FileChannel _channel;
+  /** whether or not the _channel should be closed by this class */
+  private final boolean _closeChannel;
   /** Format of the database in the channel */
   private final JetFormat _format;
   /** whether or not to force all writes to disk immediately */
@@ -84,10 +86,12 @@ public class PageChannel implements Channel, Flushable {
    * @param channel Channel containing the database
    * @param format Format of the database in the channel
    */
-  public PageChannel(FileChannel channel, JetFormat format, boolean autoSync)
+  public PageChannel(FileChannel channel, boolean closeChannel,
+                     JetFormat format, boolean autoSync)
     throws IOException
   {
     _channel = channel;
+    _closeChannel = closeChannel;
     _format = format;
     _autoSync = autoSync;
   }
@@ -115,6 +119,7 @@ public class PageChannel implements Channel, Flushable {
       throw new IllegalArgumentException();
     }
     _channel = null;
+    _closeChannel = false;
     _format = JetFormat.VERSION_4;
     _autoSync = false;
   }
@@ -338,7 +343,9 @@ public class PageChannel implements Channel, Flushable {
   
   public void close() throws IOException {
     flush();
-    _channel.close();
+    if(_closeChannel) {
+      _channel.close();
+    }
   }
   
   public boolean isOpen() {

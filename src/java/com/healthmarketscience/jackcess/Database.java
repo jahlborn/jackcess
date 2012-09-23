@@ -486,6 +486,7 @@ public class Database
    * @param mdbFile File containing the database
    * 
    * @see #open(File,boolean)
+   * @see DatabaseBuilder for more flexible Database opening
    * @usage _general_method_
    */
   public static Database open(File mdbFile) throws IOException {
@@ -494,17 +495,18 @@ public class Database
   
   /**
    * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * readOnly flag is {@code true}, the file will be opened read-only.
    * Auto-syncing is enabled for the returned Database.
    * <p>
    * Equivalent to:
    * {@code  open(mdbFile, readOnly, DEFAULT_AUTO_SYNC);}
    * 
    * @param mdbFile File containing the database
-   * @param readOnly iff <code>true</code>, force opening file in read-only
+   * @param readOnly iff {@code true}, force opening file in read-only
    *                 mode
    *
    * @see #open(File,boolean,boolean)
+   * @see DatabaseBuilder for more flexible Database opening
    * @usage _general_method_
    */
   public static Database open(File mdbFile, boolean readOnly)
@@ -515,9 +517,9 @@ public class Database
   
   /**
    * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * readOnly flag is {@code true}, the file will be opened read-only.
    * @param mdbFile File containing the database
-   * @param readOnly iff <code>true</code>, force opening file in read-only
+   * @param readOnly iff {@code true}, force opening file in read-only
    *                 mode
    * @param autoSync whether or not to enable auto-syncing on write.  if
    *                 {@code true}, writes will be immediately flushed to disk.
@@ -526,7 +528,9 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
+   * @see DatabaseBuilder for more flexible Database opening
    * @usage _general_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync)
@@ -537,9 +541,9 @@ public class Database
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * readOnly flag is {@code true}, the file will be opened read-only.
    * @param mdbFile File containing the database
-   * @param readOnly iff <code>true</code>, force opening file in read-only
+   * @param readOnly iff {@code true}, force opening file in read-only
    *                 mode
    * @param autoSync whether or not to enable auto-syncing on write.  if
    *                 {@code true}, writes will be immediately flushed to disk.
@@ -548,9 +552,11 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @see DatabaseBuilder for more flexible Database opening
    * @usage _intermediate_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
@@ -562,9 +568,9 @@ public class Database
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is <code>true</code>, the file will be opened read-only.
+   * readOnly flag is {@code true}, the file will be opened read-only.
    * @param mdbFile File containing the database
-   * @param readOnly iff <code>true</code>, force opening file in read-only
+   * @param readOnly iff {@code true}, force opening file in read-only
    *                 mode
    * @param autoSync whether or not to enable auto-syncing on write.  if
    *                 {@code true}, writes will be immediately flushed to disk.
@@ -573,11 +579,13 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @param provider CodecProvider for handling page encoding/decoding, may be
    *                 {@code null} if no special encoding is necessary
+   * @see DatabaseBuilder for more flexible Database opening
    * @usage _intermediate_method_
    */
   public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
@@ -585,34 +593,82 @@ public class Database
                               CodecProvider provider)
     throws IOException
   {
-    if(!mdbFile.exists() || !mdbFile.canRead()) {
-      throw new FileNotFoundException("given file does not exist: " + mdbFile);
+    return open(mdbFile, readOnly, null, autoSync, charset, timeZone,
+                provider);
+  }
+  
+  /**
+   * Open an existing Database.  If the existing file is not writeable or the
+   * readOnly flag is {@code true}, the file will be opened read-only.
+   * @param mdbFile File containing the database
+   * @param readOnly iff {@code true}, force opening file in read-only
+   *                 mode
+   * @param channel  pre-opened FileChannel.  if provided explicitly, it will
+   *                 not be closed by this Database instance
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
+   * @param charset  Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @param provider CodecProvider for handling page encoding/decoding, may be
+   *                 {@code null} if no special encoding is necessary
+   * @usage _advanced_method_
+   */
+  static Database open(File mdbFile, boolean readOnly, FileChannel channel,
+                       boolean autoSync, Charset charset, TimeZone timeZone, 
+                       CodecProvider provider)
+    throws IOException
+  {
+    boolean closeChannel = false;
+    if(channel == null) {
+      if(!mdbFile.exists() || !mdbFile.canRead()) {
+        throw new FileNotFoundException("given file does not exist: " + 
+                                        mdbFile);
+      }
+
+      // force read-only for non-writable files
+      readOnly |= !mdbFile.canWrite();
+
+      // open file channel
+      channel = openChannel(mdbFile, readOnly);
+      closeChannel = true;
     }
 
-    // force read-only for non-writable files
-    readOnly |= !mdbFile.canWrite();
+    boolean success = false;
+    try {
 
-    // open file channel
-    FileChannel channel = openChannel(mdbFile, readOnly);
+      if(!readOnly) {
 
-    if(!readOnly) {
+        // verify that format supports writing
+        JetFormat jetFormat = JetFormat.getFormat(channel);
 
-      // verify that format supports writing
-      JetFormat jetFormat = JetFormat.getFormat(channel);
+        if(jetFormat.READ_ONLY) {
+          throw new IOException("jet format '" + jetFormat +
+                                "' does not support writing");
+        }
+      }
 
-      if(jetFormat.READ_ONLY) {
-        // shutdown the channel (quietly)
+      Database db = new Database(mdbFile, channel, closeChannel, autoSync, 
+                                 null, charset, timeZone, provider);
+      success = true;
+      return db;
+
+    } finally {
+      if(!success && closeChannel) {
+        // something blew up, shutdown the channel (quietly)
         try {
           channel.close();
         } catch(Exception ignored) {
           // we don't care
         }
-        throw new IOException("jet format '" + jetFormat + "' does not support writing");
       }
     }
-
-    return new Database(mdbFile, channel, autoSync, null, charset, timeZone, 
-                        provider);
   }
   
   /**
@@ -625,6 +681,7 @@ public class Database
    *    already exists, it will be overwritten.</b>
    *
    * @see #create(File,boolean)
+   * @see DatabaseBuilder for more flexible Database creation
    * @usage _general_method_
    */
   public static Database create(File mdbFile) throws IOException {
@@ -642,6 +699,7 @@ public class Database
    *    already exists, it will be overwritten.</b>
    *
    * @see #create(File,boolean)
+   * @see DatabaseBuilder for more flexible Database creation
    * @usage _general_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile) 
@@ -665,7 +723,9 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
+   * @see DatabaseBuilder for more flexible Database creation
    * @usage _general_method_
    */
   public static Database create(File mdbFile, boolean autoSync)
@@ -686,7 +746,9 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
+   * @see DatabaseBuilder for more flexible Database creation
    * @usage _general_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile, 
@@ -708,9 +770,11 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @see DatabaseBuilder for more flexible Database creation
    * @usage _intermediate_method_
    */
   public static Database create(FileFormat fileFormat, File mdbFile, 
@@ -718,16 +782,63 @@ public class Database
                                 TimeZone timeZone)
     throws IOException
   {
+    return create(fileFormat, mdbFile, null, autoSync, charset, timeZone);
+  }
+
+  /**
+   * Create a new Database for the given fileFormat
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *                already exists, it will be overwritten.</b>
+   * @param channel  pre-opened FileChannel.  if provided explicitly, it will
+   *                 not be closed by this Database instance
+   * @param autoSync whether or not to enable auto-syncing on write.  if
+   *                 {@code true}, writes will be immediately flushed to disk.
+   *                 This leaves the database in a (fairly) consistent state
+   *                 on each write, but can be very inefficient for many
+   *                 updates.  if {@code false}, flushing to disk happens at
+   *                 the jvm's leisure, which can be much faster, but may
+   *                 leave the database in an inconsistent state if failures
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
+   * @param charset  Charset to use, if {@code null}, uses default
+   * @param timeZone TimeZone to use, if {@code null}, uses default
+   * @usage _advanced_method_
+   */
+  static Database create(FileFormat fileFormat, File mdbFile, 
+                         FileChannel channel, boolean autoSync,
+                         Charset charset, TimeZone timeZone)
+    throws IOException
+  {
     if (fileFormat.getJetFormat().READ_ONLY) {
       throw new IOException("jet format '" + fileFormat.getJetFormat() + "' does not support writing");
     }
 
-    FileChannel channel = openChannel(mdbFile, false);
-    channel.truncate(0);
-    transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
-    channel.force(true);
-    return new Database(mdbFile, channel, autoSync, fileFormat, charset, 
-                        timeZone, null);
+    boolean closeChannel = false;
+    if(channel == null) {
+      channel = openChannel(mdbFile, false);
+      closeChannel = true;
+    }
+
+    boolean success = false;
+    try {
+      channel.truncate(0);
+      transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
+      channel.force(true);
+      Database db = new Database(mdbFile, channel, closeChannel, autoSync, 
+                                 fileFormat, charset, timeZone, null);
+      success = true;
+      return db;
+    } finally {
+      if(!success && closeChannel) {
+        // something blew up, shutdown the channel (quietly)
+        try {
+          channel.close();
+        } catch(Exception ignored) {
+          // we don't care
+        }
+      }
+    }
   }
 
   /**
@@ -763,46 +874,33 @@ public class Database
    *                 updates.  if {@code false}, flushing to disk happens at
    *                 the jvm's leisure, which can be much faster, but may
    *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.
+   *                 are encountered during writing.  Writes may be flushed at
+   *                 any time using {@link #flush}.
    * @param fileFormat version of new database (if known)
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected Database(File file, FileChannel channel, boolean autoSync,
-                     FileFormat fileFormat, Charset charset, TimeZone timeZone,
-                     CodecProvider provider)
+  protected Database(File file, FileChannel channel, boolean closeChannel,
+                     boolean autoSync, FileFormat fileFormat, Charset charset,
+                     TimeZone timeZone, CodecProvider provider)
     throws IOException
   {
-    boolean success = false;
-    try {
-      _file = file;
-      _format = JetFormat.getFormat(channel);
-      _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
-      _columnOrder = getDefaultColumnOrder();
-      _fileFormat = fileFormat;
-      _pageChannel = new PageChannel(channel, _format, autoSync);
-      _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
-      if(provider == null) {
-        provider = DefaultCodecProvider.INSTANCE;
-      }
-      // note, it's slighly sketchy to pass ourselves along partially
-      // constructed, but only our _format and _pageChannel refs should be
-      // needed
-      _pageChannel.initialize(this, provider);
-      _buffer = _pageChannel.createPageBuffer();
-      readSystemCatalog();
-      success = true;
-
-    } finally {
-      if(!success && (channel != null)) {
-        // something blew up, shutdown the channel (quietly)
-        try {
-          channel.close();
-        } catch(Exception ignored) {
-          // we don't care
-        }
-      }
+    _file = file;
+    _format = JetFormat.getFormat(channel);
+    _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
+    _columnOrder = getDefaultColumnOrder();
+    _fileFormat = fileFormat;
+    _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
+    _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
+    if(provider == null) {
+      provider = DefaultCodecProvider.INSTANCE;
     }
+    // note, it's slighly sketchy to pass ourselves along partially
+    // constructed, but only our _format and _pageChannel refs should be
+    // needed
+    _pageChannel.initialize(this, provider);
+    _buffer = _pageChannel.createPageBuffer();
+    readSystemCatalog();
   }
 
   /**

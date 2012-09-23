@@ -82,8 +82,9 @@ public class CodecHandlerTest extends TestCase
       // apply encoding to file
       encodeFile(dbFile, pageSize, simple);
 
-      db = Database.open(dbFile, false, Database.DEFAULT_AUTO_SYNC, null, null, 
-                         (simple ? SIMPLE_PROVIDER : FULL_PROVIDER));
+      db = new DatabaseBuilder(dbFile)
+        .setCodecProvider(simple ? SIMPLE_PROVIDER : FULL_PROVIDER)
+        .open();
 
       Table t1 = new TableBuilder("test1")
         .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))

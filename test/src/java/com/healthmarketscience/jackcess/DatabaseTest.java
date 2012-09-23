@@ -78,7 +78,8 @@ public class DatabaseTest extends TestCase {
   public static Database open(FileFormat fileFormat, File file) 
     throws Exception 
   {
-    final Database db = Database.open(file, true, _autoSync);
+    final Database db = new DatabaseBuilder(file).setReadOnly(true)
+      .setAutoSync(_autoSync).open();
     assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), 
                  db.getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
@@ -96,7 +97,8 @@ public class DatabaseTest extends TestCase {
   public static Database create(FileFormat fileFormat, boolean keep) 
     throws Exception 
   {
-    return Database.create(fileFormat, createTempFile(keep), _autoSync);
+    return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
+      .setAutoSync(_autoSync).create();
   }
 
 
@@ -122,7 +124,7 @@ public class DatabaseTest extends TestCase {
   {
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
-    Database db = Database.open(tmp, false, _autoSync);
+    Database db = new DatabaseBuilder(tmp).setAutoSync(_autoSync).open();
     assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(),         
                  db.getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
@@ -547,7 +549,8 @@ public class DatabaseTest extends TestCase {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
     try {
-      Database.open(bogusFile, true, _autoSync);
+      new DatabaseBuilder(bogusFile).setReadOnly(true).
+        setAutoSync(_autoSync).open();
       fail("FileNotFoundException should have been thrown");
     } catch(FileNotFoundException e) {
     }

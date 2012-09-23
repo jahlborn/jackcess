@@ -139,7 +139,6 @@ public class JetFormatTest extends TestCase {
         
         // verify that the db is the file format expected
         try {
-//           System.out.println("FOO checking " + testFile);
           Database db = Database.open(testFile, true);
           FileFormat dbFileFormat = db.getFileFormat();
           db.close();

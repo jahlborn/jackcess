@@ -9,6 +9,10 @@
         Add some more functionality to Joiner to facilitate integrity
         enforcement (hasRows and deleteRows).
       </action>
+      <action dev="jahlborn" type="add">
+        Added DatabaseBuilder in for more convenient and flexible Database
+        open/create.
+      </action>
     </release>
     <release version="1.2.8" date="2012-07-10">
       <action dev="jahlborn" type="update" issue="3523179">
