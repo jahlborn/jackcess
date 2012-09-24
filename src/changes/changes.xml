@@ -13,6 +13,10 @@
         Added DatabaseBuilder in for more convenient and flexible Database
         open/create.
       </action>
+      <action dev="jahlborn" type="add">
+        Added the MemFileChannel (and associated support in DatabaseBuilder)
+        to enable working with Database files completely in memory.
+      </action>
     </release>
     <release version="1.2.8" date="2012-07-10">
       <action dev="jahlborn" type="update" issue="3523179">

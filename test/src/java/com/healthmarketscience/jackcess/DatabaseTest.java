@@ -37,6 +37,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.sql.Types;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -78,8 +79,17 @@ public class DatabaseTest extends TestCase {
   public static Database open(FileFormat fileFormat, File file) 
     throws Exception 
   {
+    return open(fileFormat, file, false);
+  }
+
+  private static Database open(FileFormat fileFormat, File file, 
+                               boolean inMem) 
+    throws Exception 
+  {
+    FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "r") 
+                           : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
-      .setAutoSync(_autoSync).open();
+      .setAutoSync(_autoSync).setChannel(channel).open();
     assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), 
                  db.getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
@@ -90,6 +100,10 @@ public class DatabaseTest extends TestCase {
     return open(testDB.getExpectedFileFormat(), testDB.getFile());
   }
 
+  public static Database openMem(TestDB testDB) throws Exception {
+    return open(testDB.getExpectedFileFormat(), testDB.getFile(), true);
+  }
+
   public static Database create(FileFormat fileFormat) throws Exception {
     return create(fileFormat, false);
   }
@@ -97,8 +111,20 @@ public class DatabaseTest extends TestCase {
   public static Database create(FileFormat fileFormat, boolean keep) 
     throws Exception 
   {
+    return create(fileFormat, keep, false);
+  }
+
+  public static Database createMem(FileFormat fileFormat) throws Exception {
+    return create(fileFormat, false, true);
+  }
+
+  private static Database create(FileFormat fileFormat, boolean keep, 
+                                 boolean inMem) 
+    throws Exception 
+  {
+    FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
     return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
-      .setAutoSync(_autoSync).create();
+      .setAutoSync(_autoSync).setChannel(channel).create();
   }
 
 
@@ -301,6 +327,20 @@ public class DatabaseTest extends TestCase {
   public void testWriteAndRead() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
+      doTestWriteAndRead(db);
+      db.close();
+    }
+  }
+  
+  public void testWriteAndReadInMem() throws Exception {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = createMem(fileFormat);
+      doTestWriteAndRead(db);
+      db.close();
+    }
+  }
+  
+  private static void doTestWriteAndRead(Database db) throws Exception {
       createTestTable(db);
       Object[] row = createTestRow();
       row[3] = null;
@@ -320,11 +360,8 @@ public class DatabaseTest extends TestCase {
         assertEquals(row[6], readRow.get("G"));
         assertEquals(row[7], readRow.get("H"));
       }
-
-      db.close();
-    }
   }
-  
+
   public void testWriteAndReadInBatch() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);

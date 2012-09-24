@@ -279,6 +279,11 @@ public class Database
   static final int SYSTEM_OBJECT_FLAGS = 
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
 
+  /** read-only channel access mode */
+  static final String RO_CHANNEL_MODE = "r";
+  /** read/write channel access mode */
+  static final String RW_CHANNEL_MODE = "rw";
+
   /**
    * Enum which indicates which version of Access created the database.
    * @usage _general_class_
@@ -857,7 +862,7 @@ public class Database
   static FileChannel openChannel(final File mdbFile, final boolean readOnly)
     throws FileNotFoundException
   {
-    final String mode = (readOnly ? "r" : "rw");
+    final String mode = (readOnly ? RO_CHANNEL_MODE : RW_CHANNEL_MODE);
     return new RandomAccessFile(mdbFile, mode).getChannel();
   }
   

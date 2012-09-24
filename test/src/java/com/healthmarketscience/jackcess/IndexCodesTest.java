@@ -68,7 +68,7 @@ public class IndexCodesTest extends TestCase {
   public void testIndexCodes() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES)) {
-      Database db = open(testDB);
+      Database db = openMem(testDB);
 
       for(Table t : db) {
         for(Index index : t.getIndexes()) {
