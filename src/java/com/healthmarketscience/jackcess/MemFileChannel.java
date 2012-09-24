@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -48,6 +49,7 @@ import java.nio.channels.WritableByteChannel;
  * operations are only supported within page boundaries.
  *
  * @author James Ahlborn
+ * @usage _advanced_class_
  */
 public class MemFileChannel extends FileChannel 
 {
@@ -320,7 +322,7 @@ public class MemFileChannel extends FileChannel
    * the given destination stream.
    * @see #transferTo(long,long,WritableByteChannel)
    */
-  public long transferTo(long position, long count, WritableByteChannel dst)
+  public long transferTo(long position, long count, OutputStream dst)
     throws IOException
   {
     return transferTo(position, count, Channels.newChannel(dst));

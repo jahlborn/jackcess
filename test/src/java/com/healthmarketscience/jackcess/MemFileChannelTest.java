@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -94,12 +95,26 @@ public class MemFileChannelTest extends TestCase
     assertEquals(testFile.length(), ch.size());
     assertEquals(0L, ch.position());
 
+    try {
+      ch.position(-1);
+      fail("IllegalArgumentException should have been thrown");
+    } catch(IllegalArgumentException ignored) {
+      // success
+    }
+    
     MemFileChannel ch2 = MemFileChannel.newChannel();
     ch.transferTo(ch2);
     ch2.force(true);
     assertEquals(testFile.length(), ch2.size());
     assertEquals(testFile.length(), ch2.position());
 
+    try {
+      ch2.truncate(-1L);
+      fail("IllegalArgumentException should have been thrown");
+    } catch(IllegalArgumentException ignored) {
+      // success
+    }
+    
     long trucSize = ch2.size()/3;
     ch2.truncate(trucSize);
     assertEquals(trucSize, ch2.size());
@@ -109,9 +124,9 @@ public class MemFileChannelTest extends TestCase
 
     File tmpFile = File.createTempFile("chtest_", ".dat");
     tmpFile.deleteOnExit();
-    FileChannel fc = new RandomAccessFile(tmpFile, "rw").getChannel();
+    FileOutputStream fc = new FileOutputStream(tmpFile);
 
-    copy(ch2, fc, bb);
+    ch2.transferTo(fc);
 
     fc.close();
 
