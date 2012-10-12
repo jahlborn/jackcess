@@ -44,10 +44,10 @@
     <url>http://sourceforge.net/tracker/?group_id=134943&amp;atid=731445</url>
   </issueManagement>
   <scm>
-    <connection>scm:svn:http://jackcess.svn.sourceforge.net/svnroot/jackcess/jackcess/trunk/</connection>
+    <connection>scm:svn:svn://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</connection>
     <!-- read/write svn connection -->
-    <developerConnection>scm:svn:https://jackcess.svn.sourceforge.net/svnroot/jackcess/jackcess/trunk/</developerConnection>
-    <url>http://jackcess.svn.sourceforge.net/viewvc/jackcess/jackcess/trunk/</url>
+    <developerConnection>scm:svn:svn+ssh://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</developerConnection>
+    <url>http://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</url>
   </scm>
   <build>
     <defaultGoal>install</defaultGoal>
