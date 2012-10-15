@@ -1312,6 +1312,44 @@ public class DatabaseTest extends TestCase {
     }
   }
 
+  public void testTimeZone() throws Exception
+  {
+    TimeZone tz = TimeZone.getTimeZone("America/New_York");
+    doTestTimeZone(tz);
+
+    tz = TimeZone.getTimeZone("Australia/Sydney");
+    doTestTimeZone(tz);
+  }
+
+  private static void doTestTimeZone(final TimeZone tz) throws Exception
+  {
+    Column col = new Column(true, null) {
+      @Override
+      protected TimeZone getTimeZone() { return tz; }
+    };
+
+    SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
+    df.setTimeZone(tz);
+
+    long startDate = df.parse("2012.01.01").getTime();
+    long endDate = df.parse("2013.01.01").getTime();
+
+    Calendar curCal = Calendar.getInstance(tz);
+    curCal.setTimeInMillis(startDate);
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
+    sdf.setTimeZone(tz);
+
+    while(curCal.getTimeInMillis() < endDate) {
+      Date curDate = curCal.getTime();
+      Date newDate = new Date(col.fromDateDouble(col.toDateDouble(curDate)));
+      if(curDate.getTime() != newDate.getTime()) {
+        assertEquals(sdf.format(curDate), sdf.format(newDate));
+      }
+      curCal.add(Calendar.MINUTE, 30);
+    }
+  }
+
   private void checkRawValue(String expected, Object val)
   {
     if(expected != null) {

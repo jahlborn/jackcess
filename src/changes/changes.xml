@@ -17,6 +17,9 @@
         Added the MemFileChannel (and associated support in DatabaseBuilder)
         to enable working with Database files completely in memory.
       </action>
+      <action dev="jahlborn" type="fix" issue="92">
+        Fix some more edge cases in date/time conversions.
+      </action>
     </release>
     <release version="1.2.8" date="2012-07-10">
       <action dev="jahlborn" type="update" issue="3523179">
@@ -184,7 +187,7 @@
         ColumnBuilder to optionally escape names.
       </action>
       <action dev="jahlborn" type="update" issue="2997751">
-        Add support for overriding charset and tiemzone used when
+        Add support for overriding charset and timezone used when
         reading/writing database.
       </action>
       <action dev="jahlborn" type="add" issue="3003375">

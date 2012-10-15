@@ -1093,11 +1093,11 @@ public class Column implements Comparable<Column> {
   /**
    * Returns a java long time value converted from an access date double.
    */
-  private long fromDateDouble(double value)
+  long fromDateDouble(double value)
   {
     long time = Math.round(value * MILLISECONDS_PER_DAY);
     time -= MILLIS_BETWEEN_EPOCH_AND_1900;
-    time -= getTimeZoneOffset(time);
+    time -= getFromLocalTimeZoneOffset(time);
     return time;
   }
 
@@ -1124,7 +1124,7 @@ public class Column implements Comparable<Column> {
    * Returns an access date double converted from a java Date/Calendar/Number
    * time value.
    */
-  private double toDateDouble(Object value)
+  double toDateDouble(Object value)
   {
       // seems access stores dates in the local timezone.  guess you just
       // hope you read it in the same timezone in which it was written!
@@ -1133,18 +1133,34 @@ public class Column implements Comparable<Column> {
                    ((value instanceof Calendar) ?
                     ((Calendar)value).getTimeInMillis() :
                     ((Number)value).longValue()));
-      time += getTimeZoneOffset(time);
+      time += getToLocalTimeZoneOffset(time);
       time += MILLIS_BETWEEN_EPOCH_AND_1900;
       return time / MILLISECONDS_PER_DAY;
   }
 
   /**
-   * Gets the timezone offset from UTC for the given time (including DST).
+   * Gets the timezone offset from UTC to local time for the given time
+   * (including DST).
    */
-  private long getTimeZoneOffset(long time)
+  private long getToLocalTimeZoneOffset(long time)
   {
     Calendar c = Calendar.getInstance(getTimeZone());
     c.setTimeInMillis(time);
+    return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
+  }  
+  
+  /**
+   * Gets the timezone offset from local time to UTC for the given time
+   * (including DST).
+   */
+  private long getFromLocalTimeZoneOffset(long time)
+  {
+    // getting from local time back to UTC is a little wonky (and not
+    // guaranteed to get you back to where you started)
+    Calendar c = Calendar.getInstance(getTimeZone());
+    c.setTimeInMillis(time);
+    // apply the zone offset first to get us closer to the original time
+    c.setTimeInMillis(time - c.get(Calendar.ZONE_OFFSET));
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
   }  
   
