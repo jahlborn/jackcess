@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.9" date="TBD">
+    <release version="1.2.9" date="2012-10-15">
       <action dev="jahlborn" type="update">
         Add some more functionality to Joiner to facilitate integrity
         enforcement (hasRows and deleteRows).
