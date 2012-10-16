@@ -17,22 +17,22 @@
         Added the MemFileChannel (and associated support in DatabaseBuilder)
         to enable working with Database files completely in memory.
       </action>
-      <action dev="jahlborn" type="fix" issue="92">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="92">
         Fix some more edge cases in date/time conversions.
       </action>
     </release>
     <release version="1.2.8" date="2012-07-10">
-      <action dev="jahlborn" type="update" issue="3523179">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3523179">
         Add osgi header information to the manifest.
       </action>
-      <action dev="jahlborn" type="update" issue="3523181">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3523181">
         Add ImportUtil.toColumns to enable more advanced Table creation
         implementations.
       </action>
-      <action dev="jahlborn" type="fix" issue="3529534">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3529534">
         Fix NPE when running unit tests with db format MSISAM.
       </action>
-      <action dev="jahlborn" type="fix" issue="3532250">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3532250">
         Fix writing partial pages when CodecHandler is in use.  Note, this fix
         involves a backwards incompatible change to the CodecHandler interface
         (Jackcess Encrypt 1.0.3 or later is compatible with this version of
@@ -40,7 +40,7 @@
       </action>
     </release>
     <release version="1.2.7" date="2012-04-02">
-      <action dev="jahlborn" type="update" issue="3479560">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3479560">
         Add initial support for linked tables.  Linked tables will now be
         loaded by the normal Database.getTable method.  Linked tables can be
         created using the new Database.createLinkedTable method.  Linked table
@@ -52,7 +52,7 @@
       </action>
     </release>
     <release version="1.2.6" date="2011-12-16">
-      <action dev="jahlborn" type="update" issue="3358272">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3358272">
         Add support for reading/writing complex column data (version history,
         attachments, multi-value columns).
       </action>
@@ -60,7 +60,7 @@
         Fix problem with creating tables with indexes where ms access could
         not open the created table.
       </action>
-      <action dev="jahlborn" type="fix" issue="3435774">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3435774">
         Fix problem with reading row from table with deleted/added columns.
       </action>
       <action dev="jahlborn" type="update">
@@ -115,7 +115,7 @@
         Add support for Access 2010, including new "General" sort order
         (support for super-long text index entries still needs work).
       </action>
-      <action dev="jahlborn" type="fix" issue="3287626">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3287626">
         Access expects a row to be at least big enough to hold all fixed
         values, even if they are null.
       </action>
@@ -125,11 +125,11 @@
       </action>
     </release>
     <release version="1.2.3" date="2011-03-05">
-      <action dev="jahlborn" type="fix" issue="3181334">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3181334">
         Add support for writing all fixed length column types into variable
         length fields.
       </action>
-      <action dev="jahlborn" type="fix" issue="3192058">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3192058">
         More fixes related to reading and interpreting index information.
         Handle multiple logical indexes backed by the same index data.
         Interpret foreign key constraint information.
@@ -151,21 +151,21 @@
       <action dev="jahlborn" type="update">
         Add support for reading database password.
       </action>
-      <action dev="jahlborn" type="update" issue="3065010">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3065010">
         Add support for plugging in implementations of various page
         encoding/decoding algorithms.  See the &lt;a href="http://jackcessencrypt.sourceforge.net/"&gt;Jackcess Encrypt&lt;/a&gt;
         project for a CodecProvider implementation which supports a few of the
         Access encodings.  (thanks to Vladimir Berezniker).
       </action>
-      <action dev="jahlborn" type="update" issue="3101578">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3101578">
         Implement some tweaks which allow jackcess to be used on the Android
         platform.  See the &lt;a href="faq.html#android"&gt;FAQ&lt;/a&gt; for more
         details.  (thanks to Miha Pirnat).
       </action>
-      <action dev="jahlborn" type="update" issue="3097387">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3097387">
         Allow output column order in tables to be configured.
       </action>
-      <action dev="jahlborn" type="update" issue="3105829">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3105829">
         Add support for custom column value matching when finding rows using a
         Cursor.
       </action>
@@ -174,41 +174,41 @@
       </action>
     </release>
     <release version="1.2.1" date="2010-08-01">
-      <action dev="jahlborn" type="add" issue="3005272">
+      <action dev="jahlborn" type="add" system="SourceForge" issue="3005272">
         Add ExportUtil and associated utilities for exporting tables to flat
         files (thanks to F. Gerbig).
       </action>
-      <action dev="jahlborn" type="fix" issue="3011084">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3011084">
         Fix some places where table/columns names were not being handled
         case-insensitively.
       </action>
-      <action dev="jahlborn" type="fix" issue="3029500">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3029500">
         Make Database.escapeIdentifier public; add methods to TableBuilder and
         ColumnBuilder to optionally escape names.
       </action>
-      <action dev="jahlborn" type="update" issue="2997751">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="2997751">
         Add support for overriding charset and timezone used when
         reading/writing database.
       </action>
-      <action dev="jahlborn" type="add" issue="3003375">
+      <action dev="jahlborn" type="add" system="SourceForge" issue="3003375">
         Add support for reading Access 97 (jet format 3) databases (thanks to
         F. Gerbig).
       </action>
     </release>
     <release version="1.2.0" date="2010-04-18">
-      <action dev="bhamail" type="update" issue="1451628">
+      <action dev="bhamail" type="update" system="SourceForge" issue="1451628">
         Add support for access 2002/2003/2007 databases.
       </action>
       <action dev="jahlborn" type="update">
         Enable "large" index support by default.  It can still be disabled via
         a variety of means, see the Database javadoc for more details.
       </action>
-      <action dev="bhamail" type="fix" issue="2968957">
+      <action dev="bhamail" type="fix" system="SourceForge" issue="2968957">
         Fix BigIndexTest to work in IDE's w/out sys.prop.
       </action>
     </release>
     <release version="1.1.21" date="2010-01-19">
-      <action dev="jahlborn" type="fix" issue="2899605">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2899605">
         Further improvements to date handling.
       </action>
       <action dev="jahlborn" type="update">
@@ -220,22 +220,22 @@
         reuse of existing tables.  make behavior/naming of copy and import
         methods consistent.  (ideas from submitted patch).
       </action>
-      <action dev="jahlborn" type="fix" issue="2919216">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2919216">
         Set overflow info in header row, not in last data row.
       </action>
-      <action dev="jahlborn" type="fix" issue="2920092">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2920092">
         Add support for indexing strings containing any characters from BMP 0.
       </action>
     </release>
     <release version="1.1.20" date="2009-11-18">
-      <action dev="jahlborn" type="fix" issue="2884599">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2884599">
         Add support for updating GUID indexes and for auto-number GUID
         fields.
       </action>
-      <action dev="jahlborn" type="update" issue="2802845">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="2802845">
         Add support for updating rows in a table.
       </action>
-      <action dev="jahlborn" type="fix" issue="2886370">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2886370">
         Support reading/writing fixed length text fields.
       </action>
     </release>
@@ -243,7 +243,7 @@
       <action dev="jahlborn" type="add">
         Add Query reading support.
       </action>
-      <action dev="jahlborn" type="fix" issue="2788029">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2788029">
         Be more forgiving for input column length.
       </action>
     </release>
@@ -260,24 +260,24 @@
       </action>
     </release>
     <release version="1.1.17" date="2008-09-23">
-      <action dev="jahlborn" type="fix" issue="2043499">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2043499">
         Fix simple index handling of tail index pages.
       </action>
     </release>
     <release version="1.1.16" date="2008-07-24">
-      <action dev="jahlborn" type="fix" issue="2019244">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
         Reserve minimum space for memo/ole fields so that greedy inline row
         usage does not cause spurious write failures for wide tables.
       </action>
-      <action dev="jahlborn" type="fix" issue="2018713">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2018713">
         Better column type translation for very large MEMO/OLE types in the
         Database.copyTable logic.
       </action>
-      <action dev="jahlborn" type="fix" issue="2019244">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
         Add some more limit checking into table creation based on what access
         supports (max rows per table, max identifier lengths).
       </action>
-      <action dev="jahlborn" type="fix" issue="2019244">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
         Share out-of-line long value pages in order to generate more compact
         database files.
       </action>
@@ -290,7 +290,7 @@
       </action>
     </release>
     <release version="1.1.15" date="2008-06-27">
-      <action dev="jahlborn" type="fix" issue="1998225">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1998225">
         Fix writing of large memo/ole fields.  Apparently Access does not like
         long value fields longer than 4076 bytes.
       </action>
@@ -299,21 +299,21 @@
       </action>
     </release>
     <release version="1.1.14" date="2008-04-29">
-      <action dev="jahlborn" type="fix" issue="1924705">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1924705">
         Need to store auto-number values back into row so that indexes can be
         updated correctly.
       </action>
-      <action dev="jahlborn" type="fix" issue="1942330">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1942330">
         Access seems to limit data pages to a max of 255 rows.
       </action>
-      <action dev="jahlborn" type="fix" issue="1564870">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1564870">
         Added experimental support for "large" indexes.  The current support
         is optional.  It can be enabled via a variety of means, see the
         Database javadoc for more details.
       </action>
     </release>
     <release version="1.1.13" date="2008-03-21">
-      <action dev="jahlborn" type="fix" issue="1913775">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1913775">
         More fixes for index parsing.  Believe index names are now correctly
         matched up with indexes.
       </action>
@@ -321,7 +321,7 @@
         Simplify comparison algorithms for RowId and Index.Entry using type
         attributes.
       </action>
-      <action dev="jahlborn" type="fix" issue="1906160">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1906160">
         Expand the characters supported in index updates to all of the
         ISO-8859-1 character set.
       </action>
@@ -338,7 +338,7 @@
       <action dev="jahlborn" type="fix">
         Fix creation of tables with auto-number columns.
       </action>
-      <action dev="jahlborn" type="fix" issue="1832723">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1832723">
         Completely fix problems with sporadic usage map corruption.
       </action>
       <action dev="jahlborn" type="update">
@@ -354,11 +354,11 @@
       <action dev="jahlborn" type="fix">
         Resolve more edge cases around date handling.
       </action>
-      <action dev="jahlborn" type="fix" issue="1899076">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1899076">
         Fix writing of large memo/ole fields.  Apparently Access does not like
         "inline" fields longer than 64 bytes.
       </action>
-      <action dev="jahlborn" type="fix" issue="1898793">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1898793">
         Fix generation of security access control entries.  Use userIds
         already existing in the database file instead of hard-coded userIds,
         if possible.
@@ -368,7 +368,7 @@
       <action dev="jahlborn" type="fix">
         Support reading inline usage maps with more than 512 pages.
       </action>
-      <action dev="jahlborn" type="fix" issue="1832723">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1832723">
         Fix some problems with sporadic usage map corruption.
       </action>
       <action dev="jahlborn" type="update">
@@ -385,11 +385,11 @@
         Move table iteration out of Table and into Cursor.  First stage in
         offering more complicated table access.
       </action>
-      <action dev="jahlborn" type="fix" issue="1681954">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1681954">
         Update table row count correctly on row deletion or bulk row addition,
         bug #1681954.
       </action>
-      <action dev="jahlborn" type="update" issue="1565216">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1565216">
         Add experimental support for auto-number columns, feature request
         #1565216.
       </action>
@@ -399,13 +399,13 @@
       </action>
     </release>
     <release version="1.1.9" date="2007-07-12">
-      <action dev="jahlborn" type="fix" issue="1675522">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1675522">
         Add support for writing large table definitions, bug #1675522.
       </action>
-      <action dev="jahlborn" type="fix" issue="1748827">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1748827">
         Fix handling of usage maps for large tables, bug #1748827.
       </action>
-      <action dev="jahlborn" type="fix" issue="1672071">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1672071">
         Fixed some edge cases for reading numeric columns, bug #1672071.
       </action>
     </release>
@@ -438,7 +438,7 @@
         Clean up index reading/writing of text columns, add support for more
         characters
       </action>
-      <action dev="jahlborn" type="update" issue="1563654">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1563654">
         Support reading 'compressed' indexes (fix 1563654)
       </action>
       <action dev="jahlborn" type="update">
@@ -453,23 +453,23 @@
       <action dev="jahlborn" type="fix">
         Fix decimal data type writing.
       </action>
-      <action dev="jahlborn" type="update" issue="1545857">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1545857">
         Add support for opening files read-only (fix 1545857)
       </action>
     </release>
     <release version="1.1.6" date="2006-08-07">
-      <action dev="jahlborn" type="fix" issue="1530312">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1530312">
         Handle more tables with more index slots than actual indexes (fix bug
         1530312)
       </action>
-      <action dev="jahlborn" type="fix" issue="1449812">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1449812">
         Clean up reading/writing 3-byte ints; long value length is 3-bytes
         (fix bug 1449812)
       </action>
       <action dev="jahlborn" type="fix">
         Fix handling of skipped rows
       </action>
-      <action dev="jahlborn" type="fix" issue="1306970">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1306970">
         When reading multi-page table def, flip buffer before parsing (fix bug
         1306970)
       </action>
@@ -548,13 +548,13 @@
       </action>
     </release>
     <release version="1.1.2" date="2005-8-26">
-      <action dev="javajedi" type="fix" issue="1273712">
+      <action dev="javajedi" type="fix" system="SourceForge" issue="1273712">
         Fixed bug where writing null values into fixed-width columns was
         failing.
       </action>
     </release>
     <release version="1.1.1" date="2005-8-20">
-      <action dev="javajedi" type="fix" issue="1261536">
+      <action dev="javajedi" type="fix" system="SourceForge" issue="1261536">
         Fixed bug in reading index count from table definition.  Skip overflow
         rows.
       </action>
