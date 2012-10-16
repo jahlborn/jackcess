@@ -10,7 +10,7 @@
         enforcement (hasRows and deleteRows).
       </action>
       <action dev="jahlborn" type="add">
-        Added DatabaseBuilder in for more convenient and flexible Database
+        Added DatabaseBuilder for more convenient and flexible Database
         open/create.
       </action>
       <action dev="jahlborn" type="add">
