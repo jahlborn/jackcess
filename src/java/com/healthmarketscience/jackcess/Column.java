@@ -139,6 +139,12 @@ public class Column implements Comparable<Column> {
   public static final byte AUTO_NUMBER_GUID_FLAG_MASK = (byte)0x40;
   
   /**
+   * mask for the hyperlink bit (on memo types)
+   * @usage _advanced_field_
+   */
+  public static final byte HYPERLINK_FLAG_MASK = (byte)0x80;
+  
+  /**
    * mask for the unknown bit (possible "can be null"?)
    * @usage _advanced_field_
    */
@@ -288,6 +294,11 @@ public class Column implements Comparable<Column> {
 
       _textInfo._compressedUnicode = ((buffer.get(offset +
         getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
+
+      if(_type == DataType.MEMO) {
+        // only memo fields can be hyperlinks
+        _textInfo._hyperlink = ((flags & HYPERLINK_FLAG_MASK) != 0);
+      }
     }
     
     setAutoNumberGenerator();
@@ -623,6 +634,23 @@ public class Column implements Comparable<Column> {
     modifyTextInfo();
     _textInfo._versionHistoryCol = versionHistoryCol;
   }
+
+  /**
+   * Returns whether or not this is a hyperlink column (only possible for
+   * columns of type MEMO).
+   * @usage _general_method_
+   */
+  public boolean isHyperlink() {
+    return _textInfo._hyperlink;
+  }
+
+  /**
+   * @usage _general_method_
+   */
+  public void setHyperlink(boolean hyperlink) {
+    modifyTextInfo();
+    _textInfo._hyperlink = hyperlink;
+  }
   
   /**
    * Returns extended functionality for "complex" columns.
@@ -769,6 +797,13 @@ public class Column implements Comparable<Column> {
       if(!getType().isTextual()) {
         throw new IllegalArgumentException(
             "Only textual columns allow unicode compression (text/memo)");
+      }
+    }
+
+    if(isHyperlink()) {
+      if(getType() != DataType.MEMO) {
+        throw new IllegalArgumentException(
+            "Only memo columns can be hyperlinks");
       }
     }
   }
@@ -1733,12 +1768,15 @@ public class Column implements Comparable<Column> {
    * Constructs a byte containing the flags for this column.
    */
   private byte getColumnBitFlags() {
-    byte flags = Column.UNKNOWN_FLAG_MASK;
+    byte flags = UNKNOWN_FLAG_MASK;
     if(!isVariableLength()) {
-      flags |= Column.FIXED_LEN_FLAG_MASK;
+      flags |= FIXED_LEN_FLAG_MASK;
     }
     if(isAutoNumber()) {
       flags |= getAutoNumberGenerator().getColumnFlags();
+    }
+    if(isHyperlink()) {
+      flags |= HYPERLINK_FLAG_MASK;
     }
     return flags;
   }
@@ -1764,6 +1802,9 @@ public class Column implements Comparable<Column> {
       }
       if(isAppendOnly()) {
         rtn.append("\n\tAppend only: " + isAppendOnly());
+      } 
+      if(isHyperlink()) {
+        rtn.append("\n\tHyperlink: " + isHyperlink());
       } 
     }      
     if(_autoNumber) {
@@ -2018,8 +2059,7 @@ public class Column implements Comparable<Column> {
     // we specifically put the "long variable" values after the normal
     // variable length values so that we have a better chance of fitting it
     // all (because "long variable" values can go in separate pages)
-    short longVariableOffset =
-      Column.countNonLongVariableLength(columns);
+    short longVariableOffset = countNonLongVariableLength(columns);
     for (Column col : columns) {
       // record this for later use when writing indexes
       col.setColumnNumber(columnNumber);
@@ -2398,5 +2438,8 @@ public class Column implements Comparable<Column> {
     /** complex column which tracks the version history for this "append only"
         column */
     private Column _versionHistoryCol;
+    /** whether or not this is a hyperlink column (only possible for columns
+        of type MEMO) */
+    private boolean _hyperlink;
   }
 }
