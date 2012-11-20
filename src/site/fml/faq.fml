@@ -16,17 +16,55 @@
     <faq id="formats">
       <question>What Access formats does it support?</question>
       <answer>
-        <p>As of the 1.2.0 release, Jackcess supports Access database versions
-           2000-2007. Access 97 databases are not supported.</p>
+        <p>As of the 1.2.4 release, Jackcess supports Access database versions
+           2000-2010 read/write and Access 97 read-only.</p>
       </answer>
     </faq>
 
     <faq id="passwords">
       <question>Are password protected databases supported?</question>
       <answer>
-        <p>Basic password protection is merely software enforced, and Jackcess
-           does not do any password checking at this point.  So, a password
-           protected database can be used the same as any other.</p>
+        <p>Basic password protection (Access 2003 or earlier) is merely
+           software enforced, and Jackcess does not do any password checking
+           at this point.  So, a password protected database can be used the
+           same as any other.</p>
+      </answer>
+    </faq>
+
+    <faq id="input">
+      <question>What sorts of input/data validation does Jackcess support?</question>
+      <answer>
+        <p>Data validation in Access is controlled via a variety of
+           mechanisms, not all of which are supported by Jackces.  See the
+           table below for details:</p>
+        <table>
+          <tr>
+            <th>Data Validation Type</th>
+            <th>Support</th>
+          </tr>
+          <tr>
+            <td>Data types (Text, Number, etc.)</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Field sizes (min/max length, precision, etc.)</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Unique constraints (indexes)</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>"Enforce Referential Integrity" (aka foreign key
+                constraints)</td>
+            <td>Off by default, optional support available in 1.2.10
+                release.</td>
+          </tr>
+          <tr>
+            <td>Field/Table Properties (Validation rules, Input masks, etc)</td>
+            <td>No</td>
+          </tr>
+        </table>
       </answer>
     </faq>
 
@@ -282,7 +320,7 @@
         <a href="apidocs/com/healthmarketscience/jackcess/CodecProvider.html">CodecProvider</a>.
         The separate <a href="http://jackcessencrypt.sourceforge.net/">Jackcess Encrypt
         project</a> contains the <a href="http://jackcessencrypt.sourceforge.net/apidocs/com/healthmarketscience/jackcess/CryptCodecProvider.html">CryptCodecProvider</a>,
-        which implements of the Jackess CodecProvider interface and supports
+        which implements the Jackess CodecProvider interface and supports
         some forms of Access database encryption.
       </answer>
     </faq>
@@ -303,14 +341,14 @@
       <question>It doesn't work!</question>
       <answer>
         <p>
-          Ok, that wasn't a question, but we'll try to respond anyway. :)
-          Jackcess is young, and not that robust yet.  As you might imagine,
-          it's kind of hard to test, simply by its nature.  There are
-          bugs that we are aware of, and certainly many more that we are not.
-          If you find what looks like a bug, please
-          <a href="http://sf.net/tracker/?group_id=134943&amp;atid=731445">report it.</a>
-          Even better, fix it, and
-          <a href="http://sf.net/tracker/?group_id=134943&amp;atid=731447">submit a patch.</a>
+          Ok, that wasn't a question, but we'll try to respond anyway. :) As
+          you might imagine, it's kind of hard to test, simply by its nature.
+          There are bugs that we are aware of, and certainly many more that we
+          are not.  If you find what looks like a bug, please <a
+          href="http://sf.net/tracker/?group_id=134943&amp;atid=731445">report
+          it.</a> Even better, fix it, and <a
+          href="http://sf.net/tracker/?group_id=134943&amp;atid=731447">submit
+          a patch.</a>
         </p>
       </answer>
     </faq>
