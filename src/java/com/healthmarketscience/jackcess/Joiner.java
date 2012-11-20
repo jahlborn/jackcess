@@ -90,29 +90,29 @@ public class Joiner
     return create(getToTable(), getFromTable());
   }
   
-  public Table getFromTable()
-  {
+  public Table getFromTable() {
     return getFromIndex().getTable();
   }
   
-  public Index getFromIndex()
-  {
+  public Index getFromIndex() {
     return _fromIndex;
   }
   
-  public Table getToTable()
-  {
+  public Table getToTable() {
     return getToCursor().getTable();
   }
   
-  public Index getToIndex()
-  {
+  public Index getToIndex() {
     return getToCursor().getIndex();
   }
   
-  public IndexCursor getToCursor()
-  {
+  public IndexCursor getToCursor() {
     return _toCursor;
+  }
+
+  public List<IndexData.ColumnDescriptor> getColumns() {
+    // note, this list is already unmodifiable, no need to re-wrap
+    return _fromCols;
   }
 
   /**
@@ -120,6 +120,15 @@ public class Joiner
    * columns in the "from" table, {@code false} otherwise.
    */
   public boolean hasRows(Map<String,?> fromRow) throws IOException {
+    toEntryValues(fromRow);
+    return _toCursor.findFirstRowByEntry(_entryValues);
+  }
+
+  /**
+   * Returns {@code true} if the "to" table has any rows based on the given
+   * columns in the "from" table, {@code false} otherwise.
+   */
+  boolean hasRows(Object[] fromRow) throws IOException {
     toEntryValues(fromRow);
     return _toCursor.findFirstRowByEntry(_entryValues);
   }
@@ -181,6 +190,21 @@ public class Joiner
   }
 
   /**
+   * Returns an Iterator with the selected columns over all the rows in the
+   * "to" table based on the given columns in the "from" table.
+   *
+   * @param fromRow row from the "from" table (which must include the relevant
+   *                columns for this join relationship)
+   * @param columnNames desired columns in the from table row
+   */
+  Iterator<Map<String,Object>> findRows(Object[] fromRow,
+                                        Collection<String> columnNames)
+  {
+    toEntryValues(fromRow);
+    return _toCursor.entryIterator(columnNames, _entryValues);
+  }
+
+  /**
    * Returns an Iterable whose iterator() method returns the result of a call
    * to {@link #findRows(Map)}
    * 
@@ -224,25 +248,89 @@ public class Joiner
    *         otherwise
    */
   public boolean deleteRows(Map<String,?> fromRow) throws IOException {
+    return deleteRowsImpl(findRows(fromRow, Collections.<String>emptySet()));
+  }
+
+  /**
+   * Deletes any rows in the "to" table based on the given columns in the
+   * "from" table.
+   * 
+   * @param fromRow row from the "from" table (which must include the relevant
+   *                columns for this join relationship)
+   * @return {@code true} if any "to" rows were deleted, {@code false}
+   *         otherwise
+   */
+  boolean deleteRows(Object[] fromRow) throws IOException {
+    return deleteRowsImpl(findRows(fromRow, Collections.<String>emptySet()));
+  }
+
+  /**
+   * Deletes all the rows and returns whether or not any "to"" rows were
+   * deleted.
+   */
+  private static boolean deleteRowsImpl(Iterator<Map<String,Object>> iter)
+    throws IOException 
+  {
     boolean removed = false;
-    for(Iterator<Map<String,Object>> iter = findRows(
-            fromRow, Collections.<String>emptySet()); iter.hasNext(); ) {
+    while(iter.hasNext()) {
       iter.next();
       iter.remove();
       removed = true;
     }
-    return removed;
+    return removed;    
   }
 
   /**
    * Fills in the _entryValues with the relevant info from the given "from"
    * table row.
    */
-  private void toEntryValues(Map<String,?> fromRow)
-  {
+  private void toEntryValues(Map<String,?> fromRow) {
     for(int i = 0; i < _entryValues.length; ++i) {
-      _entryValues[i] = fromRow.get(_fromCols.get(i).getName());
+      _entryValues[i] = _fromCols.get(i).getColumn().getRowValue(fromRow);
     }
   }
-  
+
+  /**
+   * Fills in the _entryValues with the relevant info from the given "from"
+   * table row.
+   */
+  private void toEntryValues(Object[] fromRow) {
+    for(int i = 0; i < _entryValues.length; ++i) {
+      _entryValues[i] = _fromCols.get(i).getColumn().getRowValue(fromRow);
+    }
+  }
+
+  /**
+   * Returns a pretty string describing the foreign key relationship backing
+   * this Joiner.
+   */
+  public String toFKString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Foreign Key from ");
+
+    String fromType = "] (primary)";
+    String toType = "] (secondary)";
+    if(!_fromIndex.getReference().isPrimaryTable()) {
+      fromType = "] (secondary)";
+      toType = "] (primary)";
+    }
+
+    sb.append(getFromTable().getName()).append("[");
+
+    sb.append(_fromCols.get(0).getName());
+    for(int i = 1; i < _fromCols.size(); ++i) {
+      sb.append(",").append(_fromCols.get(i).getName());
+    }
+    sb.append(fromType);
+    
+    sb.append(" to ").append(getToTable().getName()).append("[");
+    List<IndexData.ColumnDescriptor> toCols = _toCursor.getIndex().getColumns();
+    sb.append(toCols.get(0).getName());
+    for(int i = 1; i < toCols.size(); ++i) {
+      sb.append(",").append(toCols.get(i).getName());
+    }
+    sb.append(toType);
+    
+    return sb.toString();
+  }
 }

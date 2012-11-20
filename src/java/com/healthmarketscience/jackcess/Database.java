@@ -164,6 +164,13 @@ public class Database
   public static final String COLUMN_ORDER_PROPERTY = 
     "com.healthmarketscience.jackcess.columnOrder";
 
+  /** system property which can be used to set the default enforcement of
+   * foreign-key relationships.  Defaults to {@code false}.
+   * @usage _general_field_
+   */
+  public static final String FK_ENFORCE_PROPERTY = 
+    "com.healthmarketscience.jackcess.enforceForeignKeys";
+
   /**
    * default error handler used if none provided (just rethrows exception)
    * @usage _general_field_
@@ -462,6 +469,8 @@ public class Database
   private Short _defaultCodePage;
   /** the ordering used for table columns */
   private Table.ColumnOrder _columnOrder;
+  /** whether or not enforcement of foreign-keys is enabled */
+  private boolean _enforceForeignKeys;
   /** cache of in-use tables */
   private final TableCache _tableCache = new TableCache();
   /** handler for reading/writing properteies */
@@ -478,7 +487,9 @@ public class Database
   private LinkResolver _linkResolver;
   /** any linked databases which have been opened */
   private Map<String,Database> _linkedDbs;
-
+  /** shared state used when enforcing foreign keys */
+  private final FKEnforcer.SharedState _fkEnforcerSharedState =
+    FKEnforcer.initSharedState();
 
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -894,6 +905,7 @@ public class Database
     _format = JetFormat.getFormat(channel);
     _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
     _columnOrder = getDefaultColumnOrder();
+    _enforceForeignKeys = getDefaultEnforceForeignKeys();
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
@@ -1093,6 +1105,33 @@ public class Database
       newColumnOrder = getDefaultColumnOrder();
     }
     _columnOrder = newColumnOrder;
+  }
+
+  /**
+   * Gets currently foreign-key enforcement policy.
+   * @usage _intermediate_method_
+   */
+  public boolean isEnforceForeignKeys() {
+    return _enforceForeignKeys;
+  }
+
+  /**
+   * Sets a new foreign-key enforcement policy.  If {@code null}, resets to
+   * the value returned by {@link #isEnforceForeignKeys}.
+   * @usage _intermediate_method_
+   */
+  public void setEnforceForeignKeys(Boolean newEnforceForeignKeys) {
+    if(newEnforceForeignKeys == null) {
+      newEnforceForeignKeys = getDefaultEnforceForeignKeys();
+    }
+    _enforceForeignKeys = newEnforceForeignKeys;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  FKEnforcer.SharedState getFKEnforcerSharedState() {
+    return _fkEnforcerSharedState;
   }
 
   /**
@@ -2218,6 +2257,21 @@ public class Database
 
     // use default order
     return DEFAULT_COLUMN_ORDER;
+  }
+  
+  /**
+   * Returns the default enforce foreign-keys policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value #FK_ENFORCE_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultEnforceForeignKeys()
+  {
+    String prop = System.getProperty(FK_ENFORCE_PROPERTY);
+    if(prop != null) {
+      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
+    }
+    return false;
   }
   
   /**

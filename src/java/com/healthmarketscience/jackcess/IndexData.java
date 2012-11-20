@@ -566,8 +566,7 @@ public abstract class IndexData {
           newEntry.equalsEntryBytes(nextPos.getEntry())) ||
           ((prevPos != null) &&
            newEntry.equalsEntryBytes(prevPos.getEntry())));
-      if(isUnique() && !isNullEntry && isDupeEntry)
-      {
+      if(isUnique() && !isNullEntry && isDupeEntry) {
         throw new IOException(
             "New row " + Arrays.asList(row) +
             " violates uniqueness constraint for index " + this);

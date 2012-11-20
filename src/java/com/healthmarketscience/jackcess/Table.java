@@ -38,8 +38,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -138,15 +140,17 @@ public class Table
   /** List of columns in this table, ordered by column number */
   private List<Column> _columns = new ArrayList<Column>();
   /** List of variable length columns in this table, ordered by offset */
-  private List<Column> _varColumns = new ArrayList<Column>();
+  private final List<Column> _varColumns = new ArrayList<Column>();
   /** List of autonumber columns in this table, ordered by column number */
   private List<Column> _autoNumColumns;
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
-  private List<Index> _indexes = new ArrayList<Index>();
+  private final List<Index> _indexes = new ArrayList<Index>();
   /** List of index datas on this table (the actual backing data for an
       index) */
-  private List<IndexData> _indexDatas = new ArrayList<IndexData>();
+  private final List<IndexData> _indexDatas = new ArrayList<IndexData>();
+  /** List of columns in this table which are in one or more indexes */
+  private final Set<Column> _indexColumns = new LinkedHashSet<Column>();
   /** Table name as stored in Database */
   private final String _name;
   /** Usage map of pages that this table owns */
@@ -179,6 +183,8 @@ public class Table
   private PropertyMap _props;
   /** properties group for this table (and columns) */
   private PropertyMaps _propertyMaps;
+  /** foreign-key enforcer for this table */
+  private final FKEnforcer _fkEnforcer;
 
   /** common cursor for iterating through the table, kept here for historic
       reasons */
@@ -197,6 +203,7 @@ public class Table
     _name = null;
     _useBigIndex = true;
     setColumns(columns);
+    _fkEnforcer = null;
   }
   
   /**
@@ -216,23 +223,8 @@ public class Table
     _name = name;
     _flags = flags;
     _useBigIndex = useBigIndex; 
-    int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
-    ByteBuffer nextPageBuffer = null;
-    while (nextPage != 0) {
-      if (nextPageBuffer == null) {
-        nextPageBuffer = getPageChannel().createPageBuffer();
-      }
-      getPageChannel().readPage(nextPageBuffer, nextPage);
-      nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
-      ByteBuffer newBuffer = getPageChannel().createBuffer(
-          tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
-      newBuffer.put(tableBuffer);
-      newBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
-      tableBuffer = newBuffer;
-      tableBuffer.flip();
-    }
-    readTableDefinition(tableBuffer);
-    tableBuffer = null;
+    readTableDefinition(loadCompleteTableDefinitionBuffer(tableBuffer));
+    _fkEnforcer = new FKEnforcer(this);
   }
 
   /**
@@ -542,10 +534,28 @@ public class Table
     int pageNumber = rowState.getHeaderRowId().getPageNumber();
     int rowNumber = rowState.getHeaderRowId().getRowNumber();
 
-    // use any read rowValues to help update the indexes
-    Object[] rowValues = (!_indexDatas.isEmpty() ?
-                          rowState.getRowValues() : null);
-    
+    // attempt to fill in index column values
+    Object[] rowValues = null;
+    if(!_indexDatas.isEmpty()) {
+
+      // move to row data to get index values
+      rowBuffer = positionAtRowData(rowState, rowId);
+
+      for(Column idxCol : _indexColumns) {
+        getRowColumn(getFormat(), rowBuffer, idxCol, rowState, null);
+      }
+
+      // use any read rowValues to help update the indexes
+      rowValues = rowState.getRowValues();
+
+      // check foreign keys before proceeding w/ deletion
+      _fkEnforcer.deleteRow(rowValues);    
+
+      // move back to the header
+      rowBuffer = positionAtRowHeader(rowState, rowId);
+    }
+
+    // finally, pull the trigger
     int rowIndex = getRowStartOffset(rowNumber, getFormat());
     rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
                                       | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
@@ -1197,6 +1207,31 @@ public class Table
 
     pageChannel.writePage(rtn, umapPageNumber);
   }
+
+  /**
+   * Returns a single ByteBuffer which contains the entire table definition
+   * (which may span multiple database pages).
+   */
+  private ByteBuffer loadCompleteTableDefinitionBuffer(ByteBuffer tableBuffer)
+    throws IOException
+  {
+    int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
+    ByteBuffer nextPageBuffer = null;
+    while (nextPage != 0) {
+      if (nextPageBuffer == null) {
+        nextPageBuffer = getPageChannel().createPageBuffer();
+      }
+      getPageChannel().readPage(nextPageBuffer, nextPage);
+      nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
+      ByteBuffer newBuffer = getPageChannel().createBuffer(
+          tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
+      newBuffer.put(tableBuffer);
+      newBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
+      tableBuffer = newBuffer;
+      tableBuffer.flip();
+    }
+    return tableBuffer;
+  }
     
   /**
    * Read the table definition
@@ -1268,7 +1303,12 @@ public class Table
 
     // read index column information
     for (int i = 0; i < _indexCount; i++) {
-      _indexDatas.get(i).read(tableBuffer, _columns);
+      IndexData idxData = _indexDatas.get(i);
+      idxData.read(tableBuffer, _columns);
+      // keep track of all columns involved in indexes
+      for(IndexData.ColumnDescriptor iCol : idxData.getColumns()) {
+        _indexColumns.add(iCol.getColumn());
+      }
     }
 
     // read logical index info (may be more logical indexes than index datas)
@@ -1462,6 +1502,10 @@ public class Table
     
     for (int i = 0; i < rowData.length; i++) {
       int rowSize = rowData[i].remaining();
+      Object[] row = rows.get(i);
+
+      // handle foreign keys before adding to table
+      _fkEnforcer.addRow(row);
 
       // get page with space
       dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
@@ -1474,7 +1518,7 @@ public class Table
       // update the indexes
       RowId rowId = new RowId(pageNumber, rowNum);
       for(IndexData indexData : _indexDatas) {
-        indexData.addRow(rows.get(i), rowId);
+        indexData.addRow(row, rowId);
       }
     }
 
@@ -1523,29 +1567,32 @@ public class Table
       row = dupeRow(row, _columns.size());
     }
 
-    // fill in any auto-numbers (we don't allow autonumber values to be
-    // modified)
-    handleAutoNumbersForUpdate(row, rowBuffer, rowState);
-    
     // hang on to the raw values of var length columns we are "keeping".  this
     // will allow us to re-use pre-written var length data, which can save
     // space for things like long value columns.
-    Map<Column,byte[]> rawVarValues = 
+    Map<Column,byte[]> keepRawVarValues = 
       (!_varColumns.isEmpty() ? new HashMap<Column,byte[]>() : null);
 
-    // fill in any "keep value" fields
     for(Column column : _columns) {
-      if(column.getRowValue(row) == Column.KEEP_VALUE) {
-        column.setRowValue(
-            row, getRowColumn(getFormat(), rowBuffer, column, rowState,
-                              rawVarValues));
+      if(_autoNumColumns.contains(column)) {
+        // fill in any auto-numbers (we don't allow autonumber values to be
+        // modified)
+        column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column, 
+                                             rowState, null));
+      } else if(column.getRowValue(row) == Column.KEEP_VALUE) {
+        // fill in any "keep value" fields
+        column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column,
+                                             rowState, keepRawVarValues));
+      } else if(_indexColumns.contains(column)) {
+        // read row value to help update indexes
+        getRowColumn(getFormat(), rowBuffer, column, rowState, null);
       }
     }
 
     // generate new row bytes
     ByteBuffer newRowData = createRow(
         row, _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
-        rawVarValues);
+        keepRawVarValues);
 
     if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
       throw new IOException("Row size " + newRowData.limit() + 
@@ -1553,7 +1600,11 @@ public class Table
     }
 
     if(!_indexDatas.isEmpty()) {
+
       Object[] oldRowValues = rowState.getRowValues();
+
+      // check foreign keys before actually updating
+      _fkEnforcer.updateRow(oldRowValues, row);
 
       // delete old values from indexes
       for(IndexData indexData : _indexDatas) {
@@ -1889,23 +1940,6 @@ public class Table
   }
 
   /**
-   * Autonumber columns may not be modified on update.
-   */
-  private void handleAutoNumbersForUpdate(
-      Object[] row, ByteBuffer rowBuffer, RowState rowState)
-    throws IOException
-  {
-    if(_autoNumColumns.isEmpty()) {
-      return;
-    }
-
-    for(Column col : _autoNumColumns) {
-      col.setRowValue(row, getRowColumn(getFormat(), rowBuffer, col, rowState, 
-                                        null));
-    }
-  }
-
-  /**
    * Fill in all autonumber column values.
    */
   private void handleAutoNumbersForAdd(Object[] row)
@@ -2196,7 +2230,7 @@ public class Table
         autoCols.add(c);
       }
     }
-    return autoCols;
+    return (!autoCols.isEmpty() ? autoCols : Collections.<Column>emptyList());
   }
 
   /**
