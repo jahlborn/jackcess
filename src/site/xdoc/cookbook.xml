@@ -35,7 +35,7 @@
     </section>
 
     <section name="The Basics">
-      <subsection name="Opening a Database">
+      <subsection name="Opening an existing Database">
         <p>
           So you have an Access Database and you want to do something with it.
           You want to use Java, and you may not even be running on Windows (or
@@ -124,7 +124,7 @@
   //
   // Column ID(LONG): 27 (java.lang.Integer)
   // Column Name(TEXT): Bob Smith (java.lang.String)
-  // Column Name(MONEY): 50000.00 (java.math.BigDecimal)
+  // Column Salary(MONEY): 50000.00 (java.math.BigDecimal)
   // Column StartDate(SHORT_DATE_TIME): Mon Jan 05 09:00:00 EDT 2010 (java.util.Date)
 </source>
         <p>
@@ -135,7 +135,84 @@
           values as well as the value types which are acceptable inputs for
           new rows (more on this later).  One other thing to note in this
           example is that the column names in the row Map are <i>case
-          sensitive</i> strings.
+          sensitive</i> strings (although other parts of the API strive to
+          mimic Access's love of case-insensitivity).
+        </p>
+      </subsection>
+      <subsection name="Adding a Row">
+        <p>
+          Awesome, so now we can read what's already there.  Of course, lots
+          of tools can do that.  Now we want to write some data.
+        </p>
+        <p>
+          The main hurdle to writing data is figuring out how to get the data
+          in the right columns.  The primary method for adding a row to a
+          Table is the <a href="apidocs/com/healthmarketscience/jackcess/Table.html#addRow(java.lang.Object...)">addRow(Object...)</a>
+          method.  This method should be called with the appropriate, strongly
+          typed Java object values <i>in the order of the Columns of the
+          Table</i>.  The order of the Columns on the Table instance <i>may
+          not be the same as the display order of the columns in Access</i>.
+          (Re-read those last two sentences again, as it will save you a lot of
+          grief moving forward).
+        </p>
+        <p>
+          Additionally, when adding rows, we never provide a value for any
+          "auto" columns.  You can provide a value (any value in fact), but it
+          will be ignored (in the example below, we use a useful constant which
+          makes the intent clear to any future developer).
+        </p>
+        <p>
+          So, assuming that the order of the Columns on the Table instance is
+          "ID", "Name", "Salary", and "StartDate", this is how we would add a
+          row to the "Test" table:
+        </p>
+<source>
+  String name = "bob";
+  BigDecimal salary = new BigDecimal("1000.00");
+  Date startDate = new Date();
+
+  table.addRow(Column.AUTO_NUMBER, name, salary, startDate);
+</source>
+        <p>
+          There you have it, a new row in your Access database.
+        </p>
+      </subsection>
+    </section>
+    <section name="Starting from Scratch">
+      <subsection name="Creating a new Database">
+        <p>
+          While updating existing content is nice, and necessary, many times
+          we want to create an entire new Database.  While Jackcess doesn't
+          support everything you may need when creating a new database, it
+          does support a wide range of functionality, and adds more all the
+          time.  (If you started using Jackcess a while ago, you should
+          definitely keep tabs on the release notes, as your knowledge of what
+          is possible may be out of date).
+        </p>
+        <p>
+          As of version 1.2.10, Jackcess supports:
+        </p>
+        <ul>
+          <li>Creating databases for Access all versions 2000-2010</li>
+          <li>Creating columns for all simple data types</li>
+          <li>Creating tables with single-table Indexes</li>
+        </ul>
+        <p>
+          Some notable gaps:
+        </p>
+        <ul>
+          <li>Cannot currently create (index backed) foreign-key
+              constraints</li>
+          <li>Cannot currently create "complex" columns (attachment,
+              multi-value, versioned memo)</li>
+        </ul>
+        <p>
+          As long as your needs fall into the 
+        </p>
+      </subsection>
+      <subsection name="Creating a Table">
+        <p>
+          
         </p>
       </subsection>
     </section>
