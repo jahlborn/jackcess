@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.10" date="TBD">
+    <release version="1.2.10" date="2013-02-18">
       <action dev="jahlborn" type="update">
         Add info to the Column to support MEMO columns which are HYPERLINKS.
       </action>
