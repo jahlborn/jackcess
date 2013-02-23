@@ -28,7 +28,7 @@
         example.
       </p>
 <macro name="toc">
-  <param name="section" value="2"/>
+  <param name="section" value="0"/>
   <param name="fromDepth" value="0"/>
   <param name="toDepth" value="4"/>
 </macro>
@@ -178,6 +178,7 @@
         </p>
       </subsection>
     </section>
+
     <section name="Starting from Scratch">
       <subsection name="Creating a new Database">
         <p>
@@ -186,7 +187,7 @@
           support everything you may need when creating a new database, it
           does support a wide range of functionality, and adds more all the
           time.  (If you started using Jackcess a while ago, you should
-          definitely keep tabs on the release notes, as your knowledge of what
+          definitely keep tabs on the <a href="changes-report.html">release notes</a>, as your knowledge of what
           is possible may be out of date).
         </p>
         <p>
@@ -201,20 +202,66 @@
           Some notable gaps:
         </p>
         <ul>
-          <li>Cannot currently create (index backed) foreign-key
+          <li>Cannot currently create tables with (index backed) foreign-key
               constraints</li>
-          <li>Cannot currently create "complex" columns (attachment,
-              multi-value, versioned memo)</li>
+          <li>Cannot currently create tables with "complex" columns
+              (attachment, multi-value, versioned memo)</li>
         </ul>
         <p>
-          As long as your needs fall into the 
+          As long as your needs fall into the aforementioned constraints (or
+          if you can fake it), then let's get started!
         </p>
+        <p>
+          The first thing we need to choose is the desired <a href="apidocs/com/healthmarketscience/jackcess/Database.FileFormat.html">FileFormat</a>
+          of the new Database.  Armed with that information, we can start
+          putting the pieces together using the appropriate builder classes.
+          Notice that the result of creating the new Database is an open
+          Database instance.
+        </p>
+<source>
+  File file = new File("test.mdb");
+  Database db = new DatabaseBuilder(file)
+    .setFileFormat(Database.FileFormat.V2000)
+    .open();
+</source>
       </subsection>
       <subsection name="Creating a Table">
         <p>
-          
+          An empty Database isn't very useful, of course, so we probably want
+          to add a Table or two.  The following code will create the table
+          that we have used in the above examples.  Notice that, like Database
+          creation, the result of the Table creation is an open Table
+          instance.
         </p>
+<source>
+  Table table = new TableBuilder("Test")
+    .addColumn(new ColumnBuilder("ID", DataType.LONG)
+               .setAutoNumber(true))
+    .addColumn(new ColumnBuilder("Name", DataType.TEXT))
+    .addColumn(new ColumnBuilder("Salary", DataType.MONEY))
+    .addColumn(new ColumnBuilder("StartDate", DataType.SHORT_DATE_TIME))
+    .toTable(db);
+</source>
       </subsection>
+      <p>
+        That is a very simple Table.  In the real world, we often need Indexes
+        to speed up lookups and enforce uniqueness constraints.  Adding the
+        following to the previous example will make the "ID" column a primary
+        key and enable speedier lookups on the "Name" column.
+      </p>
+<source>
+  // new TableBuilder(...
+    .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+              .addColumns("ID").setPrimaryKey())
+    .addIndex(new IndexBuilder("NameIndex")
+              .addColumns("Name"))
+  // .toTable(...
+</source>
+      <p>
+        Don't forget to close the Database when you are finished building it
+        and now you have a fresh, new Database on which to test some more
+        recipes.
+      </p>
     </section>
 
   </body>
