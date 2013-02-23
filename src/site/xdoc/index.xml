@@ -20,6 +20,11 @@
       </p>
     </section>
     <section name="Sample code">
+        <p>
+          Here are a few snippets of code to whet your appetite.  For more
+          extensive examples, checkout the <a href="cookbook.html">cookbook</a>.  And, since Jackcess is heavily
+          unit tested, you can find even more example code in the <a href="xref-test/index.html">unit tests</a>.
+        </p>
         <ul>
           <li>Displaying the contents of a table:
             <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());
