@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -183,12 +184,12 @@ public class TableTest extends TestCase {
           return getTable().getPageChannel();
         }
         @Override
-        protected Charset getCharset() {
+        Charset getCharset() {
           return getFormat().CHARSET;
         }
         @Override
-        protected TimeZone getTimeZone() {
-          return TimeZone.getDefault();
+        Calendar getCalendar() { 
+          return Calendar.getInstance();
         }
       };
   }

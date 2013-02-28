@@ -46,6 +46,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -490,6 +491,8 @@ public class Database
   /** shared state used when enforcing foreign keys */
   private final FKEnforcer.SharedState _fkEnforcerSharedState =
     FKEnforcer.initSharedState();
+  /** Calendar for use interpreting dates/times in Columns */
+  private Calendar _calendar;
 
   /**
    * Open an existing Database.  If the existing file is not writeable, the
@@ -1063,6 +1066,8 @@ public class Database
       newTimeZone = getDefaultTimeZone();
     }
     _timeZone = newTimeZone;
+    // clear cached calendar when timezone is changed
+    _calendar = null;
   }    
 
   /**
@@ -1132,6 +1137,17 @@ public class Database
    */
   FKEnforcer.SharedState getFKEnforcerSharedState() {
     return _fkEnforcerSharedState;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  Calendar getCalendar()
+  {
+    if(_calendar == null) {
+      _calendar = Calendar.getInstance(_timeZone);
+    }
+    return _calendar;
   }
 
   /**

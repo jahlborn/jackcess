@@ -601,12 +601,12 @@ public class Column implements Comparable<Column> {
     return _fixedDataOffset;
   }
 
-  protected Charset getCharset() {
+  Charset getCharset() {
     return getDatabase().getCharset();
   }
 
-  protected TimeZone getTimeZone() {
-    return getDatabase().getTimeZone();
+  Calendar getCalendar() {
+    return getDatabase().getCalendar();
   }
 
   /**
@@ -1179,7 +1179,7 @@ public class Column implements Comparable<Column> {
    */
   private long getToLocalTimeZoneOffset(long time)
   {
-    Calendar c = Calendar.getInstance(getTimeZone());
+    Calendar c = getCalendar();
     c.setTimeInMillis(time);
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
   }  
@@ -1192,7 +1192,7 @@ public class Column implements Comparable<Column> {
   {
     // getting from local time back to UTC is a little wonky (and not
     // guaranteed to get you back to where you started)
-    Calendar c = Calendar.getInstance(getTimeZone());
+    Calendar c = getCalendar();
     c.setTimeInMillis(time);
     // apply the zone offset first to get us closer to the original time
     c.setTimeInMillis(time - c.get(Calendar.ZONE_OFFSET));

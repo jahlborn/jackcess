@@ -1325,7 +1325,7 @@ public class DatabaseTest extends TestCase {
   {
     Column col = new Column(true, null) {
       @Override
-      protected TimeZone getTimeZone() { return tz; }
+      Calendar getCalendar() { return Calendar.getInstance(tz); }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
