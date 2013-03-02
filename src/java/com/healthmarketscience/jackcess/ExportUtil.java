@@ -70,7 +70,7 @@ public class ExportUtil {
    * @see #exportAll(Database,File,String)
    * @see Builder
    */
-  public static void exportAll(Database db, File dir)
+  public static void exportAll(DatabaseImpl db, File dir)
       throws IOException {
     exportAll(db, dir, DEFAULT_FILE_EXT);
   }
@@ -90,7 +90,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(Database db, File dir,
+  public static void exportAll(DatabaseImpl db, File dir,
       String ext) throws IOException {
     for (String tableName : db.getTableNames()) {
       exportFile(db, tableName, new File(dir, tableName + "." + ext), false,
@@ -115,7 +115,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(Database db, File dir,
+  public static void exportAll(DatabaseImpl db, File dir,
       String ext, boolean header)
       throws IOException {
     for (String tableName : db.getTableNames()) {
@@ -147,7 +147,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(Database db, File dir,
+  public static void exportAll(DatabaseImpl db, File dir,
       String ext, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException {
@@ -172,7 +172,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportFile(Database db, String tableName,
+  public static void exportFile(DatabaseImpl db, String tableName,
       File f) throws IOException {
     exportFile(db, tableName, f, false, DEFAULT_DELIMITER, DEFAULT_QUOTE_CHAR, 
         SimpleExportFilter.INSTANCE);
@@ -201,7 +201,7 @@ public class ExportUtil {
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportFile(Database db, String tableName,
+  public static void exportFile(DatabaseImpl db, String tableName,
       File f, boolean header, String delim, char quote,
       ExportFilter filter) throws IOException {
     BufferedWriter out = null;
@@ -235,7 +235,7 @@ public class ExportUtil {
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportWriter(Database db, String tableName,
+  public static void exportWriter(DatabaseImpl db, String tableName,
       BufferedWriter out) throws IOException {
     exportWriter(db, tableName, out, false, DEFAULT_DELIMITER, 
                  DEFAULT_QUOTE_CHAR, SimpleExportFilter.INSTANCE);
@@ -263,7 +263,7 @@ public class ExportUtil {
    * @see #exportWriter(Cursor,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportWriter(Database db, String tableName,
+  public static void exportWriter(DatabaseImpl db, String tableName,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException 
@@ -406,7 +406,7 @@ public class ExportUtil {
    */
   public static class Builder
   {
-    private Database _db;
+    private DatabaseImpl _db;
     private String _tableName;
     private String _ext = DEFAULT_FILE_EXT;
     private Cursor _cursor;
@@ -415,11 +415,11 @@ public class ExportUtil {
     private ExportFilter _filter = SimpleExportFilter.INSTANCE;
     private boolean _header;
 
-    public Builder(Database db) {
+    public Builder(DatabaseImpl db) {
       this(db, null);
     }
 
-    public Builder(Database db, String tableName) {
+    public Builder(DatabaseImpl db, String tableName) {
       _db = db;
       _tableName = tableName;
     }
@@ -428,7 +428,7 @@ public class ExportUtil {
       _cursor = cursor;
     }
 
-    public Builder setDatabase(Database db) {
+    public Builder setDatabase(DatabaseImpl db) {
       _db = db;
       return this;
     }

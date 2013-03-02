@@ -75,9 +75,9 @@ public class GeneralLegacyIndexCodes {
 
   // stash the codes in some resource files
   private static final String CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes_genleg.txt";
+    DatabaseImpl.RESOURCE_PATH + "index_codes_genleg.txt";
   private static final String EXT_CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes_ext_genleg.txt";
+    DatabaseImpl.RESOURCE_PATH + "index_codes_ext_genleg.txt";
 
   /**
    * Enum which classifies the types of char encoding strategies used when
@@ -326,7 +326,7 @@ public class GeneralLegacyIndexCodes {
 
       reader = new BufferedReader(
           new InputStreamReader(
-              Database.getResourceAsStream(codesFilePath), "US-ASCII"));
+              DatabaseImpl.getResourceAsStream(codesFilePath), "US-ASCII"));
       
       int start = asUnsignedChar(firstChar);
       int end = asUnsignedChar(lastChar);

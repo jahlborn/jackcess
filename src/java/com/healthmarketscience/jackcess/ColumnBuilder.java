@@ -161,7 +161,7 @@ public class ColumnBuilder {
    */
   public ColumnBuilder escapeName()
   {
-    _name = Database.escapeIdentifier(_name);
+    _name = DatabaseImpl.escapeIdentifier(_name);
     return this;
   }
 

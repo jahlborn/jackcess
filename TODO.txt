@@ -20,3 +20,15 @@ Missing pieces:
   * EASY
 - figure out how msaccess manages page/row locks
   * MEDIUM
+
+Refactor goals:
+- simplify public API (separate "internal" and "external" api)
+- separate table creation objects from existing metadata objects
+- remove "simple" index support?
+- remove "table traversal methods" from Table?
+- enable integrity by default?
+- remove import/export methods from Database?
+- move database open/create options to DBBuilder
+- tweak how import filters work to make them more flexible?
+- tweak lookup apis (specify column vs column name)
+- separate classes into more packages (api,builder,util,impl)

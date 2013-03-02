@@ -93,7 +93,7 @@ public class MemFileChannel extends FileChannel
    * affect the original File source.
    */
   public static MemFileChannel newChannel(File file) throws IOException {
-    return newChannel(file, Database.RW_CHANNEL_MODE);
+    return newChannel(file, DatabaseImpl.RW_CHANNEL_MODE);
   }
 
   /**
@@ -109,7 +109,7 @@ public class MemFileChannel extends FileChannel
     FileChannel in = null;
     try {
       return newChannel(in = new RandomAccessFile(
-                            file, Database.RO_CHANNEL_MODE).getChannel(),
+                            file, DatabaseImpl.RO_CHANNEL_MODE).getChannel(),
                         mode);
     } finally {
       if(in != null) {
@@ -127,7 +127,7 @@ public class MemFileChannel extends FileChannel
    * given InputStream.
    */
   public static MemFileChannel newChannel(InputStream in) throws IOException {
-    return newChannel(in, Database.RW_CHANNEL_MODE);
+    return newChannel(in, DatabaseImpl.RW_CHANNEL_MODE);
   }
 
   /**
@@ -148,7 +148,7 @@ public class MemFileChannel extends FileChannel
   public static MemFileChannel newChannel(ReadableByteChannel in) 
     throws IOException
   {
-    return newChannel(in, Database.RW_CHANNEL_MODE);
+    return newChannel(in, DatabaseImpl.RW_CHANNEL_MODE);
   }
 
   /**

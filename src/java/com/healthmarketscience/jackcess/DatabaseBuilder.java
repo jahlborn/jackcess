@@ -149,15 +149,15 @@ public class DatabaseBuilder
    * Opens an existingnew Database using the configured information.
    */
   public Database open() throws IOException {
-    return Database.open(_mdbFile, _readOnly, _channel, _autoSync, _charset,
-                         _timeZone, _codecProvider);
+    return DatabaseImpl.open(_mdbFile, _readOnly, _channel, _autoSync, _charset,
+                             _timeZone, _codecProvider);
   }
 
   /**
    * Creates a new Database using the configured information.
    */
   public Database create() throws IOException {
-    return Database.create(_fileFormat, _mdbFile, _channel, _autoSync, _charset,
-                           _timeZone);
+    return DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
+                               _charset, _timeZone);
   }
 }

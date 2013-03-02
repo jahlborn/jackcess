@@ -27,11 +27,8 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -42,8 +39,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -68,29 +63,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * An Access database.
- * <p>
- * There is optional support for large indexes (enabled by default).  This
- * optional support can be disabled via a few different means:
- * <ul>
- * <li>Setting the system property {@value #USE_BIG_INDEX_PROPERTY} to
- *     {@code "false"} will disable "large" index support across the jvm</li>
- * <li>Calling {@link #setUseBigIndex} on a Database instance will override
- *     any system property setting for "large" index support for all tables
- *     subsequently created from that instance</li>
- * <li>Calling {@link #getTable(String,boolean)} can selectively
- *     enable/disable "large" index support on a per-table basis (overriding
- *     any Database or system property setting)</li>
- * </ul>
  *
  * @author Tim McCune
  * @usage _general_class_
  */
-public class Database
-  implements Iterable<Table>, Closeable, Flushable
-{
-  
-  private static final Log LOG = LogFactory.getLog(Database.class);
+public class DatabaseImpl extends Database
+{  
+  private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
   /** this is the default "userId" used if we cannot find existing info.  this
       seems to be some standard "Admin" userId for access files */
@@ -99,110 +78,6 @@ public class Database
     SYS_DEFAULT_SID[0] = (byte) 0xA6;
     SYS_DEFAULT_SID[1] = (byte) 0x33;
   }
-
-  /** default value for the auto-sync value ({@code true}).  this is slower,
-   *  but leaves more chance of a useable database in the face of failures.
-   * @usage _general_field_
-   */
-  public static final boolean DEFAULT_AUTO_SYNC = true;
-
-  /** the default value for the resource path used to load classpath
-   *  resources.
-   * @usage _general_field_
-   */
-  public static final String DEFAULT_RESOURCE_PATH = 
-    "com/healthmarketscience/jackcess/";
-
-  /**
-   * the default sort order for table columns.
-   * @usage _intermediate_field_
-   */
-  public static final Table.ColumnOrder DEFAULT_COLUMN_ORDER = 
-    Table.ColumnOrder.DATA;
-
-  /** (boolean) system property which can be used to disable the default big
-   *  index support.
-   * @usage _general_field_
-   */
-  public static final String USE_BIG_INDEX_PROPERTY =
-    "com.healthmarketscience.jackcess.bigIndex";
-
-  /** system property which can be used to set the default TimeZone used for
-   *  date calculations.
-   * @usage _general_field_
-   */
-  public static final String TIMEZONE_PROPERTY =
-    "com.healthmarketscience.jackcess.timeZone";
-
-  /** system property prefix which can be used to set the default Charset
-   *  used for text data (full property includes the JetFormat version).
-   * @usage _general_field_
-   */
-  public static final String CHARSET_PROPERTY_PREFIX =
-    "com.healthmarketscience.jackcess.charset.";
-
-  /** system property which can be used to set the path from which classpath
-   *  resources are loaded (must end with a "/" if non-empty).  Default value
-   *  is {@link #DEFAULT_RESOURCE_PATH} if unspecified.
-   * @usage _general_field_
-   */
-  public static final String RESOURCE_PATH_PROPERTY = 
-    "com.healthmarketscience.jackcess.resourcePath";
-
-  /** (boolean) system property which can be used to indicate that the current
-   *  vm has a poor nio implementation (specifically for
-   *  FileChannel.transferFrom)
-   * @usage _intermediate_field_
-   */
-  public static final String BROKEN_NIO_PROPERTY = 
-    "com.healthmarketscience.jackcess.brokenNio";
-
-  /** system property which can be used to set the default sort order for
-   *  table columns.  Value should be one {@link Table.ColumnOrder} enum
-   *  values.
-   * @usage _intermediate_field_
-   */
-  public static final String COLUMN_ORDER_PROPERTY = 
-    "com.healthmarketscience.jackcess.columnOrder";
-
-  /** system property which can be used to set the default enforcement of
-   * foreign-key relationships.  Defaults to {@code false}.
-   * @usage _general_field_
-   */
-  public static final String FK_ENFORCE_PROPERTY = 
-    "com.healthmarketscience.jackcess.enforceForeignKeys";
-
-  /**
-   * default error handler used if none provided (just rethrows exception)
-   * @usage _general_field_
-   */
-  public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
-      public Object handleRowError(Column column,
-                                   byte[] columnData,
-                                   Table.RowState rowState,
-                                   Exception error)
-        throws IOException
-      {
-        // really can only be RuntimeException or IOException
-        if(error instanceof IOException) {
-          throw (IOException)error;
-        }
-        throw (RuntimeException)error;
-      }
-    };
-
-  /**
-   * default link resolver used if none provided
-   * @usage _general_field_
-   */
-  public static final LinkResolver DEFAULT_LINK_RESOLVER = new LinkResolver() {
-      public Database resolveLinkedDatabase(Database linkerDb, 
-                                            String linkeeFileName)
-        throws IOException
-      {
-        return Database.open(new File(linkeeFileName));
-      }
-    };
 
   /** the resource path to be used when loading classpath resources */
   static final String RESOURCE_PATH = 
@@ -291,41 +166,6 @@ public class Database
   static final String RO_CHANNEL_MODE = "r";
   /** read/write channel access mode */
   static final String RW_CHANNEL_MODE = "rw";
-
-  /**
-   * Enum which indicates which version of Access created the database.
-   * @usage _general_class_
-   */
-  public static enum FileFormat {
-
-    V1997(null, JetFormat.VERSION_3),
-    V2000(RESOURCE_PATH + "empty.mdb", JetFormat.VERSION_4),
-    V2003(RESOURCE_PATH + "empty2003.mdb", JetFormat.VERSION_4),
-    V2007(RESOURCE_PATH + "empty2007.accdb", JetFormat.VERSION_12, ".accdb"),
-    V2010(RESOURCE_PATH + "empty2010.accdb", JetFormat.VERSION_14, ".accdb"),
-    MSISAM(null, JetFormat.VERSION_MSISAM, ".mny");
-
-    private final String _emptyFile;
-    private final JetFormat _format;
-    private final String _ext;
-
-    private FileFormat(String emptyDBFile, JetFormat jetFormat) {
-      this(emptyDBFile, jetFormat, ".mdb");
-    }
-
-    private FileFormat(String emptyDBFile, JetFormat jetFormat, String ext) {
-      _emptyFile = emptyDBFile;
-      _format = jetFormat;
-      _ext = ext;
-    }
-
-    public JetFormat getJetFormat() { return _format; }
-
-    public String getFileExtension() { return _ext; }
-
-    @Override
-    public String toString() { return name() + ", jetFormat: " + getJetFormat(); }
-  }
 
   /** Prefix for column or table names that are reserved words */
   private static final String ESCAPE_PREFIX = "x";
@@ -454,8 +294,6 @@ public class Database
   private Table _complexCols;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
-  /** "big index support" is optional, but enabled by default */
-  private Boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _dbErrorHandler;
   /** the file format of the database */
@@ -495,128 +333,6 @@ public class Database
   private Calendar _calendar;
 
   /**
-   * Open an existing Database.  If the existing file is not writeable, the
-   * file will be opened read-only.  Auto-syncing is enabled for the returned
-   * Database.
-   * <p>
-   * Equivalent to:
-   * {@code  open(mdbFile, false);}
-   * 
-   * @param mdbFile File containing the database
-   * 
-   * @see #open(File,boolean)
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _general_method_
-   */
-  public static Database open(File mdbFile) throws IOException {
-    return open(mdbFile, false);
-  }
-  
-  /**
-   * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is {@code true}, the file will be opened read-only.
-   * Auto-syncing is enabled for the returned Database.
-   * <p>
-   * Equivalent to:
-   * {@code  open(mdbFile, readOnly, DEFAULT_AUTO_SYNC);}
-   * 
-   * @param mdbFile File containing the database
-   * @param readOnly iff {@code true}, force opening file in read-only
-   *                 mode
-   *
-   * @see #open(File,boolean,boolean)
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _general_method_
-   */
-  public static Database open(File mdbFile, boolean readOnly)
-    throws IOException
-  {
-    return open(mdbFile, readOnly, DEFAULT_AUTO_SYNC);
-  }
-  
-  /**
-   * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is {@code true}, the file will be opened read-only.
-   * @param mdbFile File containing the database
-   * @param readOnly iff {@code true}, force opening file in read-only
-   *                 mode
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _general_method_
-   */
-  public static Database open(File mdbFile, boolean readOnly, boolean autoSync)
-    throws IOException
-  {    
-    return open(mdbFile, readOnly, autoSync, null, null);
-  }
-
-  /**
-   * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is {@code true}, the file will be opened read-only.
-   * @param mdbFile File containing the database
-   * @param readOnly iff {@code true}, force opening file in read-only
-   *                 mode
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @param charset Charset to use, if {@code null}, uses default
-   * @param timeZone TimeZone to use, if {@code null}, uses default
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _intermediate_method_
-   */
-  public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
-                              Charset charset, TimeZone timeZone)
-    throws IOException
-  {    
-    return open(mdbFile, readOnly, autoSync, charset, timeZone, null);
-  }
-
-  /**
-   * Open an existing Database.  If the existing file is not writeable or the
-   * readOnly flag is {@code true}, the file will be opened read-only.
-   * @param mdbFile File containing the database
-   * @param readOnly iff {@code true}, force opening file in read-only
-   *                 mode
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @param charset Charset to use, if {@code null}, uses default
-   * @param timeZone TimeZone to use, if {@code null}, uses default
-   * @param provider CodecProvider for handling page encoding/decoding, may be
-   *                 {@code null} if no special encoding is necessary
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _intermediate_method_
-   */
-  public static Database open(File mdbFile, boolean readOnly, boolean autoSync,
-                              Charset charset, TimeZone timeZone, 
-                              CodecProvider provider)
-    throws IOException
-  {
-    return open(mdbFile, readOnly, null, autoSync, charset, timeZone,
-                provider);
-  }
-  
-  /**
    * Open an existing Database.  If the existing file is not writeable or the
    * readOnly flag is {@code true}, the file will be opened read-only.
    * @param mdbFile File containing the database
@@ -639,7 +355,7 @@ public class Database
    *                 {@code null} if no special encoding is necessary
    * @usage _advanced_method_
    */
-  static Database open(File mdbFile, boolean readOnly, FileChannel channel,
+  static DatabaseImpl open(File mdbFile, boolean readOnly, FileChannel channel,
                        boolean autoSync, Charset charset, TimeZone timeZone, 
                        CodecProvider provider)
     throws IOException
@@ -673,7 +389,7 @@ public class Database
         }
       }
 
-      Database db = new Database(mdbFile, channel, closeChannel, autoSync, 
+      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
                                  null, charset, timeZone, provider);
       success = true;
       return db;
@@ -690,120 +406,6 @@ public class Database
     }
   }
   
-  /**
-   * Create a new Access 2000 Database 
-   * <p>
-   * Equivalent to:
-   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
-   * 
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   *
-   * @see #create(File,boolean)
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _general_method_
-   */
-  public static Database create(File mdbFile) throws IOException {
-    return create(mdbFile, DEFAULT_AUTO_SYNC);
-  }
-  
-  /**
-   * Create a new Database for the given fileFormat
-   * <p>
-   * Equivalent to:
-   * {@code  create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);}
-   * 
-   * @param fileFormat version of new database.
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   *
-   * @see #create(File,boolean)
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _general_method_
-   */
-  public static Database create(FileFormat fileFormat, File mdbFile) 
-    throws IOException 
-  {
-    return create(fileFormat, mdbFile, DEFAULT_AUTO_SYNC);
-  }
-  
-  /**
-   * Create a new Access 2000 Database
-   * <p>
-   * Equivalent to:
-   * {@code  create(FileFormat.V2000, mdbFile, DEFAULT_AUTO_SYNC);}
-   * 
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _general_method_
-   */
-  public static Database create(File mdbFile, boolean autoSync)
-    throws IOException
-  {
-    return create(FileFormat.V2000, mdbFile, autoSync);
-  }
-
-  /**
-   * Create a new Database for the given fileFormat
-   * @param fileFormat version of new database.
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _general_method_
-   */
-  public static Database create(FileFormat fileFormat, File mdbFile, 
-                                boolean autoSync)
-    throws IOException
-  {
-    return create(fileFormat, mdbFile, autoSync, null, null);
-  }
-
-  /**
-   * Create a new Database for the given fileFormat
-   * @param fileFormat version of new database.
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   * @param autoSync whether or not to enable auto-syncing on write.  if
-   *                 {@code true}, writes will be immediately flushed to disk.
-   *                 This leaves the database in a (fairly) consistent state
-   *                 on each write, but can be very inefficient for many
-   *                 updates.  if {@code false}, flushing to disk happens at
-   *                 the jvm's leisure, which can be much faster, but may
-   *                 leave the database in an inconsistent state if failures
-   *                 are encountered during writing.  Writes may be flushed at
-   *                 any time using {@link #flush}.
-   * @param charset Charset to use, if {@code null}, uses default
-   * @param timeZone TimeZone to use, if {@code null}, uses default
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _intermediate_method_
-   */
-  public static Database create(FileFormat fileFormat, File mdbFile, 
-                                boolean autoSync, Charset charset,
-                                TimeZone timeZone)
-    throws IOException
-  {
-    return create(fileFormat, mdbFile, null, autoSync, charset, timeZone);
-  }
-
   /**
    * Create a new Database for the given fileFormat
    * @param fileFormat version of new database.
@@ -824,7 +426,7 @@ public class Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @usage _advanced_method_
    */
-  static Database create(FileFormat fileFormat, File mdbFile, 
+  static DatabaseImpl create(FileFormat fileFormat, File mdbFile, 
                          FileChannel channel, boolean autoSync,
                          Charset charset, TimeZone timeZone)
     throws IOException
@@ -844,7 +446,7 @@ public class Database
       channel.truncate(0);
       transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
       channel.force(true);
-      Database db = new Database(mdbFile, channel, closeChannel, autoSync, 
+      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
                                  fileFormat, charset, timeZone, null);
       success = true;
       return db;
@@ -899,7 +501,7 @@ public class Database
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected Database(File file, FileChannel channel, boolean closeChannel,
+  protected DatabaseImpl(File file, FileChannel channel, boolean closeChannel,
                      boolean autoSync, FileFormat fileFormat, Charset charset,
                      TimeZone timeZone, CodecProvider provider)
     throws IOException
@@ -923,9 +525,7 @@ public class Database
     readSystemCatalog();
   }
 
-  /**
-   * Returns the File underlying this Database
-   */
+  @Override
   public File getFile() {
     return _file;
   }
@@ -944,18 +544,12 @@ public class Database
     return _format;
   }
   
-  /**
-   * @return The system catalog table
-   * @usage _advanced_method_
-   */
+  @Override
   public Table getSystemCatalog() {
     return _systemCatalog;
   }
   
-  /**
-   * @return The system Access Control Entries table (loaded on demand)
-   * @usage _advanced_method_
-   */
+  @Override
   public Table getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
       _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
@@ -982,85 +576,40 @@ public class Database
     }
     return _complexCols;
   }
-    
-  /**
-   * Whether or not big index support is enabled for tables.
-   * @usage _advanced_method_
-   */
-  public boolean doUseBigIndex() {
-    return (_useBigIndex != null ? _useBigIndex : true);
-  }
 
-  /**
-   * Set whether or not big index support is enabled for tables.
-   * @usage _intermediate_method_
-   */
-  public void setUseBigIndex(boolean useBigIndex) {
-    _useBigIndex = useBigIndex;
-  }
-
-  /**
-   * Gets the currently configured ErrorHandler (always non-{@code null}).
-   * This will be used to handle all errors unless overridden at the Table or
-   * Cursor level.
-   * @usage _intermediate_method_
-   */
+  @Override
   public ErrorHandler getErrorHandler() {
     return((_dbErrorHandler != null) ? _dbErrorHandler :
            DEFAULT_ERROR_HANDLER);
   }
 
-  /**
-   * Sets a new ErrorHandler.  If {@code null}, resets to the
-   * {@link #DEFAULT_ERROR_HANDLER}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
 
-  /**
-   * Gets the currently configured LinkResolver (always non-{@code null}).
-   * This will be used to handle all linked database loading.
-   * @usage _intermediate_method_
-   */
+  @Override
   public LinkResolver getLinkResolver() {
     return((_linkResolver != null) ? _linkResolver : DEFAULT_LINK_RESOLVER);
   }
 
-  /**
-   * Sets a new LinkResolver.  If {@code null}, resets to the
-   * {@link #DEFAULT_LINK_RESOLVER}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setLinkResolver(LinkResolver newLinkResolver) {
     _linkResolver = newLinkResolver;
   }    
 
-  /**
-   * Returns an unmodifiable view of the currently loaded linked databases,
-   * mapped from the linked database file name to the linked database.  This
-   * information may be useful for implementing a LinkResolver.
-   * @usage _intermediate_method_
-   */
+  @Override
   public Map<String,Database> getLinkedDatabases() {
     return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() : 
             Collections.unmodifiableMap(_linkedDbs));
   }
 
-  /**
-   * Gets currently configured TimeZone (always non-{@code null}).
-   * @usage _intermediate_method_
-   */
+  @Override
   public TimeZone getTimeZone() {
     return _timeZone;
   }
 
-  /**
-   * Sets a new TimeZone.  If {@code null}, resets to the value returned by
-   * {@link #getDefaultTimeZone}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setTimeZone(TimeZone newTimeZone) {
     if(newTimeZone == null) {
       newTimeZone = getDefaultTimeZone();
@@ -1070,20 +619,13 @@ public class Database
     _calendar = null;
   }    
 
-  /**
-   * Gets currently configured Charset (always non-{@code null}).
-   * @usage _intermediate_method_
-   */
+  @Override
   public Charset getCharset()
   {
     return _charset;
   }
 
-  /**
-   * Sets a new Charset.  If {@code null}, resets to the value returned by
-   * {@link #getDefaultCharset}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setCharset(Charset newCharset) {
     if(newCharset == null) {
       newCharset = getDefaultCharset(getFormat());
@@ -1091,20 +633,12 @@ public class Database
     _charset = newCharset;
   }
 
-  /**
-   * Gets currently configured {@link Table.ColumnOrder} (always non-{@code
-   * null}).
-   * @usage _intermediate_method_
-   */
+  @Override
   public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
   }
 
-  /**
-   * Sets a new Table.ColumnOrder.  If {@code null}, resets to the value
-   * returned by {@link #getDefaultColumnOrder}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
     if(newColumnOrder == null) {
       newColumnOrder = getDefaultColumnOrder();
@@ -1112,19 +646,12 @@ public class Database
     _columnOrder = newColumnOrder;
   }
 
-  /**
-   * Gets currently foreign-key enforcement policy.
-   * @usage _intermediate_method_
-   */
+  @Override
   public boolean isEnforceForeignKeys() {
     return _enforceForeignKeys;
   }
 
-  /**
-   * Sets a new foreign-key enforcement policy.  If {@code null}, resets to
-   * the value returned by {@link #isEnforceForeignKeys}.
-   * @usage _intermediate_method_
-   */
+  @Override
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys) {
     if(newEnforceForeignKeys == null) {
       newEnforceForeignKeys = getDefaultEnforceForeignKeys();
@@ -1161,17 +688,12 @@ public class Database
     return _propsHandler;
   }
 
-  /**
-   * Returns the FileFormat of this database (which may involve inspecting the
-   * database itself).
-   * @throws IllegalStateException if the file format cannot be determined
-   * @usage _general_method_
-   */
+  @Override
   public FileFormat getFileFormat() throws IOException {
 
     if(_fileFormat == null) {
 
-      Map<String,Database.FileFormat> possibleFileFormats =
+      Map<String,FileFormat> possibleFileFormats =
         getFormat().getPossibleFileFormats();
 
       if(possibleFileFormats.size() == 1) {
@@ -1282,7 +804,7 @@ public class Database
    */
   private void readSystemCatalog() throws IOException {
     _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
-                               SYSTEM_OBJECT_FLAGS, defaultUseBigIndex());
+                               SYSTEM_OBJECT_FLAGS);
 
     try {
       _tableFinder = new DefaultTableFinder(
@@ -1313,10 +835,7 @@ public class Database
     }
   }
   
-  /**
-   * @return The names of all of the user tables (String)
-   * @usage _general_method_
-   */
+  @Override
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
       Set<String> tableNames =
@@ -1327,13 +846,7 @@ public class Database
     return _tableNames;
   }
 
-  /**
-   * @return The names of all of the system tables (String).  Note, in order
-   *         to read these tables, you must use {@link #getSystemTable}.
-   *         <i>Extreme care should be taken if modifying these tables
-   *         directly!</i>.
-   * @usage _intermediate_method_
-   */
+  @Override
   public Set<String> getSystemTableNames() throws IOException {
     Set<String> sysTableNames =
       new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
@@ -1341,37 +854,14 @@ public class Database
     return sysTableNames;
   }
 
-  /**
-   * @return an unmodifiable Iterator of the user Tables in this Database.
-   * @throws IllegalStateException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   * @throws ConcurrentModificationException if a table is added to the
-   *         database while an Iterator is in use.
-   * @usage _general_method_
-   */
+  @Override
   public Iterator<Table> iterator() {
     return new TableIterator();
   }
 
-  /**
-   * @param name Table name
-   * @return The table, or null if it doesn't exist
-   * @usage _general_method_
-   */
+  @Override
   public Table getTable(String name) throws IOException {
-    return getTable(name, defaultUseBigIndex());
-  }
-  
-  /**
-   * @param name Table name
-   * @param useBigIndex whether or not "big index support" should be enabled
-   *                    for the table (this value will override any other
-   *                    settings)
-   * @return The table, or null if it doesn't exist
-   * @usage _intermediate_method_
-   */
-  public Table getTable(String name, boolean useBigIndex) throws IOException {
-    return getTable(name, false, useBigIndex);
+    return getTable(name, false);
   }
 
   /**
@@ -1397,19 +887,15 @@ public class Database
     String name = (String)objectRow.get(CAT_COL_NAME);
     int flags = (Integer)objectRow.get(CAT_COL_FLAGS);
 
-    return readTable(name, tableDefPageNumber, flags, defaultUseBigIndex());
+    return readTable(name, tableDefPageNumber, flags);
   }
 
   /**
    * @param name Table name
    * @param includeSystemTables whether to consider returning a system table
-   * @param useBigIndex whether or not "big index support" should be enabled
-   *                    for the table (this value will override any other
-   *                    settings)
    * @return The table, or null if it doesn't exist
    */
-  private Table getTable(String name, boolean includeSystemTables, 
-                         boolean useBigIndex) 
+  private Table getTable(String name, boolean includeSystemTables) 
     throws IOException 
   {
     TableInfo tableInfo = lookupTable(name);
@@ -1435,12 +921,12 @@ public class Database
         _linkedDbs.put(linkedDbName, linkedDb);
       }
       
-      return linkedDb.getTable(linkedTableName, includeSystemTables, 
-                               useBigIndex);
+      return ((DatabaseImpl)linkedDb).getTable(linkedTableName, 
+                                               includeSystemTables);
     }
 
     return readTable(tableInfo.tableName, tableInfo.pageNumber,
-                     tableInfo.flags, useBigIndex);
+                     tableInfo.flags);
   }
   
   /**
@@ -1466,6 +952,7 @@ public class Database
                           List<IndexBuilder> indexes)
     throws IOException
   {
+    // FIXME, rework table creation
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
@@ -1483,6 +970,7 @@ public class Database
                                 String linkedTableName)
     throws IOException
   {
+    // FIXME, rework table creation
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create linked table with name of existing table");
@@ -1517,10 +1005,7 @@ public class Database
     addToAccessControlEntries(tdefPageNumber);
   }
 
-  /**
-   * Finds all the relationships in the database between the given tables.
-   * @usage _intermediate_method_
-   */
+  @Override
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
@@ -1557,12 +1042,8 @@ public class Database
     return relationships;
   }
 
-  /**
-   * Finds all the queries in the database.
-   * @usage _intermediate_method_
-   */
-  public List<Query> getQueries()
-    throws IOException
+  @Override
+  public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
     if(_queries == null) {
@@ -1612,29 +1093,13 @@ public class Database
     return queries;
   }
 
-  /**
-   * Returns a reference to <i>any</i> available table in this access
-   * database, including system tables.
-   * <p>
-   * Warning, this method is not designed for common use, only for the
-   * occassional time when access to a system table is necessary.  Messing
-   * with system tables can strip the paint off your house and give your whole
-   * family a permanent, orange afro.  You have been warned.
-   * 
-   * @param tableName Table name, may be a system table
-   * @return The table, or {@code null} if it doesn't exist
-   * @usage _intermediate_method_
-   */
-  public Table getSystemTable(String tableName)
-    throws IOException
+  @Override
+  public Table getSystemTable(String tableName) throws IOException
   {
-    return getTable(tableName, true, defaultUseBigIndex());
+    return getTable(tableName, true);
   }
 
-  /**
-   * @return the core properties for the database
-   * @usage _general_method_
-   */
+  @Override
   public PropertyMap getDatabaseProperties() throws IOException {
     if(_dbPropMaps == null) {
       _dbPropMaps = getPropertiesForDbObject(OBJECT_NAME_DB_PROPS);
@@ -1642,10 +1107,7 @@ public class Database
     return _dbPropMaps.getDefault();
   }
 
-  /**
-   * @return the summary properties for the database
-   * @usage _general_method_
-   */
+  @Override
   public PropertyMap getSummaryProperties() throws IOException {
     if(_summaryPropMaps == null) {
       _summaryPropMaps = getPropertiesForDbObject(OBJECT_NAME_SUMMARY_PROPS);
@@ -1653,10 +1115,7 @@ public class Database
     return _summaryPropMaps.getDefault();
   }
 
-  /**
-   * @return the user-defined properties for the database
-   * @usage _general_method_
-   */
+  @Override
   public PropertyMap getUserDefinedProperties() throws IOException {
     if(_userDefPropMaps == null) {
       _userDefPropMaps = getPropertiesForDbObject(OBJECT_NAME_USERDEF_PROPS);
@@ -1706,10 +1165,7 @@ public class Database
     return readProperties(propsBytes, objectId);
   }
 
-  /**
-   * @return the current database password, or {@code null} if none set.
-   * @usage _general_method_
-   */
+  @Override
   public String getDatabasePassword() throws IOException
   {
     ByteBuffer buffer = takeSharedBuffer();
@@ -1905,8 +1361,7 @@ public class Database
   /**
    * Reads a table with the given name from the given pageNumber.
    */
-  private Table readTable(String name, int pageNumber, int flags,
-                          boolean useBigIndex)
+  private Table readTable(String name, int pageNumber, int flags)
     throws IOException
   {
     // first, check for existing table
@@ -1926,7 +1381,7 @@ public class Database
             ", but page type is " + pageType);
       }
       return _tableCache.put(
-          new Table(this, buffer, pageNumber, name, flags, useBigIndex));
+          new Table(this, buffer, pageNumber, name, flags));
     } finally {
       releaseSharedBuffer(buffer);
     }
@@ -1952,121 +1407,7 @@ public class Database
     return Cursor.createCursor(table);
   }
   
-  /**
-   * Copy an existing JDBC ResultSet into a new table in this database
-   * 
-   * @param name Name of the new table to create
-   * @param source ResultSet to copy from
-   *
-   * @return the name of the copied table
-   *
-   * @see ImportUtil#importResultSet(ResultSet,Database,String)
-   * @usage _general_method_
-   */
-  public String copyTable(String name, ResultSet source)
-    throws SQLException, IOException
-  {
-    return ImportUtil.importResultSet(source, this, name);
-  }
-  
-  /**
-   * Copy an existing JDBC ResultSet into a new table in this database
-   * 
-   * @param name Name of the new table to create
-   * @param source ResultSet to copy from
-   * @param filter valid import filter
-   *
-   * @return the name of the imported table
-   *
-   * @see ImportUtil#importResultSet(ResultSet,Database,String,ImportFilter)
-   * @usage _general_method_
-   */
-  public String copyTable(String name, ResultSet source, ImportFilter filter)
-    throws SQLException, IOException
-  {
-    return ImportUtil.importResultSet(source, this, name, filter);
-  }
-  
-  /**
-   * Copy a delimited text file into a new table in this database
-   * 
-   * @param name Name of the new table to create
-   * @param f Source file to import
-   * @param delim Regular expression representing the delimiter string.
-   *
-   * @return the name of the imported table
-   *
-   * @see ImportUtil#importFile(File,Database,String,String)
-   * @usage _general_method_
-   */
-  public String importFile(String name, File f, String delim)
-    throws IOException
-  {
-    return ImportUtil.importFile(f, this, name, delim);
-  }
-
-  /**
-   * Copy a delimited text file into a new table in this database
-   * 
-   * @param name Name of the new table to create
-   * @param f Source file to import
-   * @param delim Regular expression representing the delimiter string.
-   * @param filter valid import filter
-   *
-   * @return the name of the imported table
-   *
-   * @see ImportUtil#importFile(File,Database,String,String,ImportFilter)
-   * @usage _general_method_
-   */
-  public String importFile(String name, File f, String delim,
-                           ImportFilter filter)
-    throws IOException
-  {
-    return ImportUtil.importFile(f, this, name, delim, filter);
-  }
-
-  /**
-   * Copy a delimited text file into a new table in this database
-   * 
-   * @param name Name of the new table to create
-   * @param in Source reader to import
-   * @param delim Regular expression representing the delimiter string.
-   *
-   * @return the name of the imported table
-   *
-   * @see ImportUtil#importReader(BufferedReader,Database,String,String)
-   * @usage _general_method_
-   */
-  public String importReader(String name, BufferedReader in, String delim)
-    throws IOException
-  {
-    return ImportUtil.importReader(in, this, name, delim);
-  }
-  
-  /**
-   * Copy a delimited text file into a new table in this database
-   * @param name Name of the new table to create
-   * @param in Source reader to import
-   * @param delim Regular expression representing the delimiter string.
-   * @param filter valid import filter
-   *
-   * @return the name of the imported table
-   *
-   * @see ImportUtil#importReader(BufferedReader,Database,String,String,ImportFilter)
-   * @usage _general_method_
-   */
-  public String importReader(String name, BufferedReader in, String delim,
-                             ImportFilter filter)
-    throws IOException
-  {
-    return ImportUtil.importReader(in, this, name, delim, filter);
-  }
-
-  /**
-   * Flushes any current changes to the database file (and any linked
-   * databases) to disk.
-   * @usage _general_method_
-   */
+  @Override
   public void flush() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -2076,10 +1417,7 @@ public class Database
     _pageChannel.flush();
   }
   
-  /**
-   * Close the database file (and any linked databases)
-   * @usage _general_method_
-   */
+  @Override
   public void close() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -2197,22 +1535,6 @@ public class Database
   }
 
   /**
-   * Returns {@code false} if "big index support" has been disabled explicity
-   * on the this Database or via a system property, {@code true} otherwise.
-   * @usage _advanced_method_
-   */
-  public boolean defaultUseBigIndex() {
-    if(_useBigIndex != null) {
-      return _useBigIndex;
-    }
-    String prop = System.getProperty(USE_BIG_INDEX_PROPERTY);
-    if(prop != null) {
-      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
-    }
-    return true;
-  }
-
-  /**
    * Returns the default TimeZone.  This is normally the platform default
    * TimeZone as returned by {@link TimeZone#getDefault}, but can be
    * overridden using the system property {@value #TIMEZONE_PROPERTY}.
@@ -2277,7 +1599,7 @@ public class Database
   
   /**
    * Returns the default enforce foreign-keys policy.  This defaults to
-   * {@code false}, but can be overridden using the system
+   * {@code true}, but can be overridden using the system
    * property {@value #FK_ENFORCE_PROPERTY}.
    * @usage _advanced_method_
    */
@@ -2287,7 +1609,7 @@ public class Database
     if(prop != null) {
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
-    return false;
+    return true;
   }
   
   /**
@@ -2338,7 +1660,7 @@ public class Database
   static InputStream getResourceAsStream(String resourceName)
     throws IOException
   {
-    InputStream stream = Database.class.getClassLoader()
+    InputStream stream = DatabaseImpl.class.getClassLoader()
       .getResourceAsStream(resourceName);
     
     if(stream == null) {

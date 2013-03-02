@@ -51,7 +51,7 @@ public class UsageMap
   private static final int INVALID_BIT_INDEX = -1;
   
   /** owning database */
-  private final Database _database;
+  private final DatabaseImpl _database;
   /** Page number of the map table declaration */
   private final int _tablePageNum;
   /** Offset of the data page at which the usage map data starts */
@@ -82,7 +82,7 @@ public class UsageMap
    * @param pageNum Page number that this usage map is contained in
    * @param rowStart Offset at which the declaration starts in the buffer
    */
-  private UsageMap(Database database, ByteBuffer tableBuffer,
+  private UsageMap(DatabaseImpl database, ByteBuffer tableBuffer,
                    int pageNum, short rowStart)
     throws IOException
   {
@@ -98,7 +98,7 @@ public class UsageMap
     }
   }
 
-  public Database getDatabase() {
+  public DatabaseImpl getDatabase() {
     return _database;
   }
   
@@ -117,7 +117,7 @@ public class UsageMap
    * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
    *         which type of map is found
    */
-  public static UsageMap read(Database database, int pageNum,
+  public static UsageMap read(DatabaseImpl database, int pageNum,
                               int rowNum, boolean assumeOutOfRangeBitsOn)
     throws IOException
   {

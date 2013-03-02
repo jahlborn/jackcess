@@ -56,7 +56,7 @@ public class TableBuilder {
     _name = name;
     _escapeIdentifiers = escapeIdentifiers;
     if(_escapeIdentifiers) {
-      _name = Database.escapeIdentifier(_name);
+      _name = DatabaseImpl.escapeIdentifier(_name);
     }
   }
 
@@ -66,7 +66,7 @@ public class TableBuilder {
    */
   public TableBuilder addColumn(Column column) {
     if(_escapeIdentifiers) {
-      column.setName(Database.escapeIdentifier(column.getName()));
+      column.setName(DatabaseImpl.escapeIdentifier(column.getName()));
     }
     _columns.add(column);
     return this;
@@ -84,9 +84,9 @@ public class TableBuilder {
    */
   public TableBuilder addIndex(IndexBuilder index) {
     if(_escapeIdentifiers) {
-      index.setName(Database.escapeIdentifier(index.getName()));
+      index.setName(DatabaseImpl.escapeIdentifier(index.getName()));
       for(IndexBuilder.Column col : index.getColumns()) {
-        col.setName(Database.escapeIdentifier(col.getName()));
+        col.setName(DatabaseImpl.escapeIdentifier(col.getName()));
       }
     }
     _indexes.add(index);
@@ -113,11 +113,11 @@ public class TableBuilder {
   }
   
   /**
-   * Escapes the new table's name using {@link Database#escapeIdentifier}.
+   * Escapes the new table's name using {@link DatabaseImpl#escapeIdentifier}.
    */
   public TableBuilder escapeName()
   {
-    _name = Database.escapeIdentifier(_name);
+    _name = DatabaseImpl.escapeIdentifier(_name);
     return this;
   }
 
@@ -125,7 +125,7 @@ public class TableBuilder {
    * Creates a new Table in the given Database with the currently configured
    * attributes.
    */
-  public Table toTable(Database db)
+  public Table toTable(DatabaseImpl db)
     throws IOException
   {
     db.createTable(_name, _columns, _indexes);

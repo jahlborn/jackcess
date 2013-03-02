@@ -43,7 +43,7 @@ import java.util.RandomAccess;
 import static com.healthmarketscience.jackcess.IndexData.*;
 
 /**
- * Manager of the index pages for a BigIndex.
+ * Manager of the index pages for a IndexData.
  * @author James Ahlborn
  */
 public class IndexPageCache
@@ -53,7 +53,7 @@ public class IndexPageCache
   }
 
   /** the index whose pages this cache is managing */
-  private final BigIndexData _indexData;
+  private final IndexData _indexData;
   /** the root page for the index */
   private DataPageMain _rootPage;
   /** the currently loaded pages for this index, pageNumber -> page */
@@ -63,11 +63,11 @@ public class IndexPageCache
   private final List<CacheDataPage> _modifiedPages =
     new ArrayList<CacheDataPage>();
   
-  public IndexPageCache(BigIndexData indexData) {
+  public IndexPageCache(IndexData indexData) {
     _indexData = indexData;
   }
 
-  public BigIndexData getIndexData() {
+  public IndexData getIndexData() {
     return _indexData;
   }
   

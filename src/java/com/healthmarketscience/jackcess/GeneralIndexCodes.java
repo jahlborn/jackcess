@@ -31,9 +31,9 @@ public class GeneralIndexCodes extends GeneralLegacyIndexCodes {
 
   // stash the codes in some resource files
   private static final String CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes_gen.txt";
+    DatabaseImpl.RESOURCE_PATH + "index_codes_gen.txt";
   private static final String EXT_CODES_FILE = 
-    Database.RESOURCE_PATH + "index_codes_ext_gen.txt";
+    DatabaseImpl.RESOURCE_PATH + "index_codes_ext_gen.txt";
 
   private static final class Codes
   {

@@ -486,7 +486,7 @@ public final class ByteUtil {
    * Convert the given number of bytes from the given database page to a
    * hexidecimal string for display.
    */
-  public static String toHexString(Database db, int pageNumber, int size)
+  public static String toHexString(DatabaseImpl db, int pageNumber, int size)
     throws IOException
   {
     ByteBuffer buffer = db.getPageChannel().createPageBuffer();

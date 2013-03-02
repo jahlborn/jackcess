@@ -334,7 +334,7 @@ public class Column implements Comparable<Column> {
   /**
    * @usage _general_method_
    */
-  public Database getDatabase() {       
+  public DatabaseImpl getDatabase() {       
     return getTable().getDatabase();
   }
   
@@ -742,7 +742,7 @@ public class Column implements Comparable<Column> {
     if(getType() == null) {
       throw new IllegalArgumentException("must have type");
     }
-    Database.validateIdentifierName(getName(), format.MAX_COLUMN_NAME_LENGTH,
+    DatabaseImpl.validateIdentifierName(getName(), format.MAX_COLUMN_NAME_LENGTH,
                                     "column");
 
     if(getType().isUnsupported()) {

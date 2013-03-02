@@ -77,7 +77,7 @@ public class PropertyMap implements Iterable<PropertyMap.Property>
    * @return the property with the given name, if any
    */
   public Property get(String name) {
-    return _props.get(Database.toLookupName(name));
+    return _props.get(DatabaseImpl.toLookupName(name));
   }
 
   /**
@@ -104,7 +104,7 @@ public class PropertyMap implements Iterable<PropertyMap.Property>
    * Puts a property into this map with the given information.
    */
   public void put(String name, DataType type, byte flag, Object value) {
-    _props.put(Database.toLookupName(name), 
+    _props.put(DatabaseImpl.toLookupName(name), 
                new Property(name, type, flag, value));
   }
 

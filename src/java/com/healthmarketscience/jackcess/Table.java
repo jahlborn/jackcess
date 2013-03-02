@@ -116,7 +116,7 @@ public class Table
     };
 
   /** owning database */
-  private final Database _database;
+  private final DatabaseImpl _database;
   /** additional table flags from the catalog entry */
   private int _flags;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
@@ -175,8 +175,6 @@ public class Table
   /** page buffer used to write out-of-line "long value" data */
   private final TempPageHolder _longValueBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
-  /** "big index support" is optional */
-  private final boolean _useBigIndex;
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _tableErrorHandler;
   /** properties for this table */
@@ -201,7 +199,6 @@ public class Table
     _database = null;
     _tableDefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     _name = null;
-    _useBigIndex = true;
     setColumns(columns);
     _fkEnforcer = null;
   }
@@ -211,18 +208,15 @@ public class Table
    * @param tableBuffer Buffer to read the table with
    * @param pageNumber Page number of the table definition
    * @param name Table name
-   * @param useBigIndex whether or not "big index support" should be enabled
-   *                    for the table
    */
-  protected Table(Database database, ByteBuffer tableBuffer,
-                  int pageNumber, String name, int flags, boolean useBigIndex)
+  protected Table(DatabaseImpl database, ByteBuffer tableBuffer,
+                  int pageNumber, String name, int flags)
     throws IOException
   {
     _database = database;
     _tableDefPageNumber = pageNumber;
     _name = name;
     _flags = flags;
-    _useBigIndex = useBigIndex; 
     readTableDefinition(loadCompleteTableDefinitionBuffer(tableBuffer));
     _fkEnforcer = new FKEnforcer(this);
   }
@@ -240,14 +234,7 @@ public class Table
    * @usage _general_method_
    */
   public boolean isHidden() {
-    return((_flags & Database.HIDDEN_OBJECT_FLAG) != 0);
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public boolean doUseBigIndex() {
-    return _useBigIndex;
+    return((_flags & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
   }
 
   /**
@@ -267,7 +254,7 @@ public class Table
   /**
    * @usage _general_method_
    */
-  public Database getDatabase() {
+  public DatabaseImpl getDatabase() {
     return _database;
   }
   
@@ -1416,7 +1403,7 @@ public class Table
    * expected to be given in the order that the Columns are listed by the
    * {@link #getColumns} method.  This is by default the storage order of the
    * Columns in the database, however this order can be influenced by setting
-   * the ColumnOrder via {@link Database#setColumnOrder} prior to opening the
+   * the ColumnOrder via {@link DatabaseImpl#setColumnOrder} prior to opening the
    * Table.  The {@link #asRow} method can be used to easily convert a row Map into the
    * appropriate row array for this Table.
    * <p>

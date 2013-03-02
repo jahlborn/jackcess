@@ -99,7 +99,7 @@ public class PageChannel implements Channel, Flushable {
   /**
    * Does second-stage initialization, must be called after construction.
    */
-  public void initialize(Database database, CodecProvider codecProvider)
+  public void initialize(DatabaseImpl database, CodecProvider codecProvider)
     throws IOException
   {
     // initialize page en/decoding support

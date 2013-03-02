@@ -31,7 +31,7 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DatabaseImpl;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.JetFormat;
 import com.healthmarketscience.jackcess.PageChannel;
@@ -108,7 +108,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     int complexTypeId = buffer.getInt(
         offset + column.getFormat().OFFSET_COLUMN_COMPLEX_ID);
 
-    Database db = column.getDatabase();
+    DatabaseImpl db = column.getDatabase();
     Table complexColumns = db.getSystemComplexColumns();
     IndexCursor cursor = IndexCursor.createCursor(
         complexColumns, complexColumns.getPrimaryKeyIndex());
@@ -162,7 +162,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return _column;
   }
 
-  public Database getDatabase() {
+  public DatabaseImpl getDatabase() {
     return getColumn().getDatabase();
   }
   

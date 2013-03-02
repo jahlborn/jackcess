@@ -51,7 +51,7 @@ import static com.healthmarketscience.jackcess.ByteUtil.ByteStream;
  * 
  * @author Tim McCune
  */
-public abstract class IndexData {
+public class IndexData {
   
   protected static final Log LOG = LogFactory.getLog(Index.class);
 
@@ -70,6 +70,8 @@ public abstract class IndexData {
   /** special object which will always be greater than any other value, when
       searching for an index entry range in a multi-value index */
   public static final Object MIN_VALUE = new Object();
+
+  private static final DataPage NEW_ROOT_DATA_PAGE = new RootDataPage();
   
   protected static final int INVALID_INDEX_PAGE_NUMBER = 0;          
   
@@ -176,6 +178,8 @@ public abstract class IndexData {
   private boolean _primaryKey;
   /** FIXME, for SimpleIndex, we can't write multi-page indexes or indexes using the entry compression scheme */
   private boolean _readOnly;
+  /** Cache which manages the index pages */
+  private final IndexPageCache _pageCache;
   
   protected IndexData(Table table, int number, int uniqueEntryCount,
                       int uniqueEntryCountOffset)
@@ -185,6 +189,7 @@ public abstract class IndexData {
     _uniqueEntryCount = uniqueEntryCount;
     _uniqueEntryCountOffset = uniqueEntryCountOffset;
     _maxPageEntrySize = calcMaxPageEntrySize(_table.getFormat());
+    _pageCache = new IndexPageCache(this);
   }
 
   /**
@@ -200,11 +205,7 @@ public abstract class IndexData {
        (number * format.SIZE_INDEX_DEFINITION) + 4);
     int uniqueEntryCount = tableBuffer.getInt(uniqueEntryCountOffset);
 
-    return(table.doUseBigIndex() ?
-           new BigIndexData(table, number, uniqueEntryCount,
-                            uniqueEntryCountOffset) :
-           new SimpleIndexData(table, number, uniqueEntryCount, 
-                               uniqueEntryCountOffset));
+    return new IndexData(table, number, uniqueEntryCount, uniqueEntryCountOffset);
   }
 
   public Table getTable() {
@@ -342,6 +343,13 @@ public abstract class IndexData {
   }
 
   /**
+   * Used by unit tests to validate the internal status of the index.
+   */
+  void validate() throws IOException {
+    _pageCache.validate();
+  }
+
+  /**
    * Returns the number of index entries in the index.  Only called by unit
    * tests.
    * <p>
@@ -367,7 +375,7 @@ public abstract class IndexData {
    */
   public void initialize() throws IOException {
     if(!_initialized) {
-      readIndexEntries();
+      _pageCache.setRootPageNumber(getRootPageNumber());
       _initialized = true;
     }
   }
@@ -386,7 +394,7 @@ public abstract class IndexData {
       throw new UnsupportedOperationException(
           "FIXME cannot write indexes of this type yet, see Database javadoc for info on enabling large index support");
     }
-    updateImpl();
+    _pageCache.write();
   }
 
   /**
@@ -455,7 +463,7 @@ public abstract class IndexData {
     throws IOException
   {
     ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
-    writeDataPage(rootPageBuffer, SimpleIndexData.NEW_ROOT_DATA_PAGE, 
+    writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE, 
                   creator.getTdefPageNumber(), creator.getFormat());
 
     for(IndexBuilder idx : creator.getIndexes()) {
@@ -855,6 +863,7 @@ public abstract class IndexData {
         throw new RuntimeException(e);
       }
     }
+    rtn.append("\n").append(_pageCache.toString());
     return rtn.toString();
   }
   
@@ -865,10 +874,6 @@ public abstract class IndexData {
     throws IOException
   {
     if(dataPage.getCompressedEntrySize() > _maxPageEntrySize) {
-      if(this instanceof SimpleIndexData) {
-        throw new UnsupportedOperationException(
-            "FIXME cannot write large index yet, see Database javadoc for info on enabling large index support");
-      }
       throw new IllegalStateException("data page is too large");
     }
     
@@ -1115,30 +1120,24 @@ public abstract class IndexData {
     
     return _entryBuffer.toByteArray();
   }  
-  
-  /**
-   * Writes the current index state to the database.  Index has already been
-   * initialized.
-   */
-  protected abstract void updateImpl() throws IOException;
-  
-  /**
-   * Reads the actual index entries.
-   */
-  protected abstract void readIndexEntries()
-    throws IOException;
 
   /**
    * Finds the data page for the given entry.
    */
-  protected abstract DataPage findDataPage(Entry entry)
-    throws IOException;
+  protected DataPage findDataPage(Entry entry)
+    throws IOException
+  {
+    return _pageCache.findCacheDataPage(entry);
+  }
   
   /**
    * Gets the data page for the pageNumber.
    */
-  protected abstract DataPage getDataPage(int pageNumber)
-    throws IOException;
+  protected DataPage getDataPage(int pageNumber)
+    throws IOException
+  {
+    return _pageCache.getCacheDataPage(pageNumber);
+  }
   
   /**
    * Flips the first bit in the byte at the given index.
@@ -2375,5 +2374,52 @@ public abstract class IndexData {
     }
   }
 
+  /**
+   * Simple implementation of a DataPage
+   */
+  private static final class RootDataPage extends DataPage {
+
+    @Override
+    public int getPageNumber() { return 0; }
+    
+    @Override
+    public boolean isLeaf() { return true; }
+    @Override
+    public void setLeaf(boolean isLeaf) { }
+
+    @Override
+    public int getPrevPageNumber() { return 0; }
+    @Override
+    public void setPrevPageNumber(int pageNumber) { }
+
+    @Override
+    public int getNextPageNumber() { return 0; }
+    @Override
+    public void setNextPageNumber(int pageNumber) { }
+
+    @Override
+    public int getChildTailPageNumber() { return 0; }
+    @Override
+    public void setChildTailPageNumber(int pageNumber) { }
+    
+    @Override
+    public int getTotalEntrySize() { return 0; }
+    @Override
+    public void setTotalEntrySize(int totalSize) { }
+
+    @Override
+    public byte[] getEntryPrefix() { return EMPTY_PREFIX; }
+    @Override
+    public void setEntryPrefix(byte[] entryPrefix) { }
+
+    @Override
+    public List<Entry> getEntries() { return Collections.emptyList(); }    
+    @Override
+    public void setEntries(List<Entry> entries) { }
+    @Override
+    public void addEntry(int idx, Entry entry) { }
+    @Override
+    public void removeEntry(int idx) { }
+  }
 
 }

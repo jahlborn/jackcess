@@ -85,7 +85,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
    *         creating if necessary
    */
   private PropertyMap get(String name, short type) {
-    String lookupName = Database.toLookupName(name);
+    String lookupName = DatabaseImpl.toLookupName(name);
     PropertyMap map = _maps.get(lookupName);
     if(map == null) {
       map = new PropertyMap(name, type);
@@ -98,7 +98,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
    * Adds the given PropertyMap to this group.
    */
   public void put(PropertyMap map) {
-    _maps.put(Database.toLookupName(map.getName()), map);
+    _maps.put(DatabaseImpl.toLookupName(map.getName()), map);
   }
 
   public Iterator<PropertyMap> iterator() {
@@ -123,12 +123,12 @@ public class PropertyMaps implements Iterable<PropertyMap>
   static final class Handler
   {
     /** the current database */
-    private final Database _database;
+    private final DatabaseImpl _database;
     /** cache of PropColumns used to read/write property values */
     private final Map<DataType,PropColumn> _columns = 
       new HashMap<DataType,PropColumn>();
 
-    Handler(Database database) {
+    Handler(DatabaseImpl database) {
       _database = database;
     }
 
@@ -305,7 +305,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
     private class PropColumn extends Column
     {
       @Override
-      public Database getDatabase() {
+      public DatabaseImpl getDatabase() {
         return _database;
       }
     }

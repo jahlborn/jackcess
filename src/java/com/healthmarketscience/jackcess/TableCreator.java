@@ -37,7 +37,7 @@ import java.util.Set;
  */
 class TableCreator 
 {
-  private final Database _database;
+  private final DatabaseImpl _database;
   private final String _name;
   private final List<Column> _columns;
   private final List<IndexBuilder> _indexes;
@@ -48,7 +48,7 @@ class TableCreator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(Database database, String name, List<Column> columns,
+  public TableCreator(DatabaseImpl database, String name, List<Column> columns,
                       List<IndexBuilder> indexes) {
     _database = database;
     _name = name;
@@ -132,7 +132,7 @@ class TableCreator
     Table.writeTableDefinition(this);
 
     // update the database with the new table info
-    _database.addNewTable(_name, _tdefPageNumber, Database.TYPE_TABLE, null, null);
+    _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
   }
 
   /**
@@ -140,7 +140,7 @@ class TableCreator
    */
   private void validate() {
 
-    Database.validateIdentifierName(
+    DatabaseImpl.validateIdentifierName(
         _name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
     
     if((_columns == null) || _columns.isEmpty()) {
