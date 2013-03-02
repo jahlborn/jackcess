@@ -44,8 +44,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -79,6 +79,12 @@ public class DatabaseImpl extends Database
     SYS_DEFAULT_SID[1] = (byte) 0x33;
   }
 
+  /** the default value for the resource path used to load classpath
+   *  resources.
+   */
+  public static final String DEFAULT_RESOURCE_PATH = 
+    "com/healthmarketscience/jackcess/";
+
   /** the resource path to be used when loading classpath resources */
   static final String RESOURCE_PATH = 
     System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
@@ -86,6 +92,19 @@ public class DatabaseImpl extends Database
   /** whether or not this jvm has "broken" nio support */
   static final boolean BROKEN_NIO = Boolean.TRUE.toString().equalsIgnoreCase(
       System.getProperty(BROKEN_NIO_PROPERTY));
+
+  /** additional internal details about each FileFormat */
+  private static final Map<Database.FileFormat,FileFormatDetails> FILE_FORMAT_DETAILS =
+    new EnumMap<Database.FileFormat,FileFormatDetails>(Database.FileFormat.class);
+
+  static {
+    addFileFormatDetails(FileFormat.V1997, null, JetFormat.VERSION_3);
+    addFileFormatDetails(FileFormat.V2000, "empty", JetFormat.VERSION_4);
+    addFileFormatDetails(FileFormat.V2003, "empty2003", JetFormat.VERSION_4);
+    addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
+    addFileFormatDetails(FileFormat.V2010, "empty2010", JetFormat.VERSION_14);
+    addFileFormatDetails(FileFormat.MSISAM, null, JetFormat.VERSION_MSISAM);
+  }
   
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
@@ -431,8 +450,10 @@ public class DatabaseImpl extends Database
                          Charset charset, TimeZone timeZone)
     throws IOException
   {
-    if (fileFormat.getJetFormat().READ_ONLY) {
-      throw new IOException("jet format '" + fileFormat.getJetFormat() + "' does not support writing");
+    FileFormatDetails details = getFileFormatDetails(fileFormat);
+    if (details.getFormat().READ_ONLY) {
+      throw new IOException("file format " + fileFormat +       
+                            " does not support writing");
     }
 
     boolean closeChannel = false;
@@ -444,7 +465,7 @@ public class DatabaseImpl extends Database
     boolean success = false;
     try {
       channel.truncate(0);
-      transferFrom(channel, getResourceAsStream(fileFormat._emptyFile));
+      transferFrom(channel, getResourceAsStream(details.getEmptyFilePath()));
       channel.force(true);
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
                                  fileFormat, charset, timeZone, null);
@@ -1681,6 +1702,19 @@ public class DatabaseImpl extends Database
     return(TYPE_TABLE.equals(objType) || TYPE_LINKED_TABLE.equals(objType));
   }
 
+  static FileFormatDetails getFileFormatDetails(FileFormat fileFormat) {
+    return FILE_FORMAT_DETAILS.get(fileFormat);
+  }
+
+  private static void addFileFormatDetails(
+      FileFormat fileFormat, String emptyFileName, JetFormat format)
+  {
+    String emptyFile = 
+      ((emptyFileName != null) ? 
+       RESOURCE_PATH + emptyFileName + fileFormat.getFileExtension() : null);
+    FILE_FORMAT_DETAILS.put(fileFormat, new FileFormatDetails(emptyFile, format));
+  }
+
   /**
    * Utility class for storing table page number and actual name.
    */
@@ -2053,5 +2087,28 @@ public class DatabaseImpl extends Database
         _tables.remove(oldRef.getPageNumber());
       }
     }
-  }  
+  }
+
+  /**
+   * Internal details for each FileForrmat
+   * @usage _advanced_class_
+   */
+  static final class FileFormatDetails
+  {
+    private final String _emptyFile;
+    private final JetFormat _format;
+
+    private FileFormatDetails(String emptyFile, JetFormat format) {
+      _emptyFile = emptyFile;
+      _format = format;
+    }
+
+    public String getEmptyFilePath() {
+      return _emptyFile;
+    }
+
+    public JetFormat getFormat() {
+      return _format;
+    }
+  }
 }

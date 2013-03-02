@@ -115,24 +115,24 @@ public abstract class JetFormat {
 
   // use nested inner class to avoid problematic static init loops
   private static final class PossibleFileFormats {
-    private static final Map<String,DatabaseImpl.FileFormat> POSSIBLE_VERSION_3 = 
-      Collections.singletonMap((String)null, DatabaseImpl.FileFormat.V1997);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_3 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V1997);
 
-    private static final Map<String,DatabaseImpl.FileFormat> POSSIBLE_VERSION_4 = 
-      new HashMap<String,DatabaseImpl.FileFormat>();
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_4 = 
+      new HashMap<String,Database.FileFormat>();
 
-    private static final Map<String,DatabaseImpl.FileFormat> POSSIBLE_VERSION_12 = 
-      Collections.singletonMap((String)null, DatabaseImpl.FileFormat.V2007);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_12 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V2007);
 
-    private static final Map<String,DatabaseImpl.FileFormat> POSSIBLE_VERSION_14 = 
-      Collections.singletonMap((String)null, DatabaseImpl.FileFormat.V2010);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_14 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V2010);
 
-    private static final Map<String,DatabaseImpl.FileFormat> POSSIBLE_VERSION_MSISAM = 
-      Collections.singletonMap((String)null, DatabaseImpl.FileFormat.MSISAM);
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_MSISAM = 
+      Collections.singletonMap((String)null, Database.FileFormat.MSISAM);
 
     static {
-      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2000, DatabaseImpl.FileFormat.V2000);
-      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2003, DatabaseImpl.FileFormat.V2003);
+      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2000, Database.FileFormat.V2000);
+      POSSIBLE_VERSION_4.put(ACCESS_VERSION_2003, Database.FileFormat.V2003);
     }
   }
 
@@ -494,7 +494,7 @@ public abstract class JetFormat {
 
   protected abstract boolean defineLegacyNumericIndexes();
 
-  protected abstract Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats();
+  protected abstract Map<String,Database.FileFormat> getPossibleFileFormats();
 
   protected abstract boolean isSupportedDataType(DataType type);
 
@@ -708,7 +708,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_3;
     }
@@ -926,7 +926,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_4;
     }
@@ -948,7 +948,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats()
+    protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_MSISAM;
     }
@@ -973,7 +973,7 @@ public abstract class JetFormat {
     protected boolean defineLegacyNumericIndexes() { return false; }
 
     @Override
-    protected Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats() {
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_12;
     }
 
@@ -1000,7 +1000,7 @@ public abstract class JetFormat {
     }
 
     @Override
-    protected Map<String,DatabaseImpl.FileFormat> getPossibleFileFormats() {
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_14;
     }
   }
