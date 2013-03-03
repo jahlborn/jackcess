@@ -60,21 +60,19 @@ public class DebugErrorHandler extends ReplacementErrorHandler
   }
 
   @Override
-  public Object handleRowError(Column column,
-                               byte[] columnData,
-                               Table.RowState rowState,
-                               Exception error)
+  public Object handleRowError(Column column, byte[] columnData, 
+                               Location location, Exception error)
     throws IOException
   {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Failed reading column " + column + ", row " +
-                rowState + ", bytes " +
+                location + ", bytes " +
                 ((columnData != null) ?
                  ByteUtil.toHexString(columnData) : "null"),
                 error);
     }
 
-    return super.handleRowError(column, columnData, rowState, error);
+    return super.handleRowError(column, columnData, location, error);
   }
 
 }

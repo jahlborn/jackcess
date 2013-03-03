@@ -26,7 +26,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.ByteUtil;
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableImpl;
 
 
 /**
@@ -47,7 +47,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   private final Column _fileFlagsCol;
   
   public AttachmentColumnInfo(Column column, int complexId,
-                              Table typeObjTable, Table flatTable)
+                              TableImpl typeObjTable, TableImpl flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
@@ -183,7 +183,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   }
 
   
-  public static boolean isAttachmentColumn(Table typeObjTable) {
+  public static boolean isAttachmentColumn(TableImpl typeObjTable) {
     // attachment data has these columns FileURL(MEMO), FileName(TEXT),
     // FileType(TEXT), FileData(OLE), FileTimeStamp(SHORT_DATE_TIME),
     // FileFlags(LONG)

@@ -27,7 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.Table.RowState;
+import com.healthmarketscience.jackcess.TableImpl.RowState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -53,7 +53,7 @@ public class IndexCursor extends Cursor
   /** column names for the index entry columns */
   private Set<String> _indexEntryPattern;
 
-  private IndexCursor(Table table, Index index,
+  private IndexCursor(TableImpl table, Index index,
                       IndexData.EntryCursor entryCursor)
     throws IOException
   {
@@ -76,7 +76,7 @@ public class IndexCursor extends Cursor
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
-  public static IndexCursor createCursor(Table table, Index index)
+  public static IndexCursor createCursor(TableImpl table, Index index)
     throws IOException
   {
     return createCursor(table, index, null, null);
@@ -99,7 +99,7 @@ public class IndexCursor extends Cursor
    *               {@code null} for the last entry
    */
   public static IndexCursor createCursor(
-      Table table, Index index, Object[] startRow, Object[] endRow)
+      TableImpl table, Index index, Object[] startRow, Object[] endRow)
     throws IOException
   {
     return createCursor(table, index, startRow, true, endRow, true);
@@ -123,7 +123,7 @@ public class IndexCursor extends Cursor
    *               the last entry
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
-  public static IndexCursor createCursor(Table table, Index index,
+  public static IndexCursor createCursor(TableImpl table, Index index,
                                          Object[] startRow,
                                          boolean startInclusive,
                                          Object[] endRow,

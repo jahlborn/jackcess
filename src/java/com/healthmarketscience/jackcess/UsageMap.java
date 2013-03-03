@@ -125,8 +125,8 @@ public class UsageMap
     PageChannel pageChannel = database.getPageChannel();
     ByteBuffer tableBuffer = pageChannel.createPageBuffer();
     pageChannel.readPage(tableBuffer, pageNum);
-    short rowStart = Table.findRowStart(tableBuffer, rowNum, format);
-    int rowEnd = Table.findRowEnd(tableBuffer, rowNum, format);
+    short rowStart = TableImpl.findRowStart(tableBuffer, rowNum, format);
+    int rowEnd = TableImpl.findRowEnd(tableBuffer, rowNum, format);
     tableBuffer.limit(rowEnd);    
     byte mapType = tableBuffer.get(rowStart);
     UsageMap rtn = new UsageMap(database, tableBuffer, pageNum, rowStart);

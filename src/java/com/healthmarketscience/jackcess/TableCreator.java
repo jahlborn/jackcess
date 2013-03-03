@@ -129,7 +129,7 @@ class TableCreator
     _umapPageNumber = reservePageNumber();
     
     //Write the tdef page to disk.
-    Table.writeTableDefinition(this);
+    TableImpl.writeTableDefinition(this);
 
     // update the database with the new table info
     _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
@@ -182,7 +182,7 @@ class TableCreator
       }
     }
 
-    List<Column> autoCols = Table.getAutoNumberColumns(_columns);
+    List<Column> autoCols = TableImpl.getAutoNumberColumns(_columns);
     if(autoCols.size() > 1) {
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);

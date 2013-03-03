@@ -34,7 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import com.healthmarketscience.jackcess.Table.RowState;
+import com.healthmarketscience.jackcess.TableImpl.RowState;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -75,7 +75,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /** identifier for this cursor */
   private final Id _id;
   /** owning table */
-  private final Table _table;
+  private final TableImpl _table;
   /** State used for reading the table rows */
   private final RowState _rowState;
   /** the first (exclusive) row id for this cursor */
@@ -89,7 +89,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /** ColumnMatcher to be used when matching column values */
   protected ColumnMatcher _columnMatcher = SimpleColumnMatcher.INSTANCE;
 
-  protected Cursor(Id id, Table table, Position firstPos, Position lastPos) {
+  protected Cursor(Id id, TableImpl table, Position firstPos, Position lastPos) {
     _id = id;
     _table = table;
     _rowState = _table.createRowState();
@@ -103,7 +103,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * Creates a normal, un-indexed cursor for the given table.
    * @param table the table over which this cursor will traverse
    */
-  public static Cursor createCursor(Table table) {
+  public static Cursor createCursor(TableImpl table) {
     return new TableScanCursor(table);
   }
 
@@ -118,7 +118,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
-  public static Cursor createIndexCursor(Table table, Index index)
+  public static Cursor createIndexCursor(TableImpl table, Index index)
     throws IOException
   {
     return IndexCursor.createCursor(table, index);
@@ -140,7 +140,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param endRow the last row of data for the cursor (inclusive), or
    *               {@code null} for the last entry
    */
-  public static Cursor createIndexCursor(Table table, Index index,
+  public static Cursor createIndexCursor(TableImpl table, Index index,
                                          Object[] startRow, Object[] endRow)
     throws IOException
   {
@@ -165,7 +165,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *               the last entry
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
-  public static Cursor createIndexCursor(Table table, Index index,
+  public static Cursor createIndexCursor(TableImpl table, Index index,
                                          Object[] startRow,
                                          boolean startInclusive,
                                          Object[] endRow,
@@ -188,7 +188,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(Table table,
+  public static Map<String,Object> findRow(TableImpl table,
                                            Map<String,?> rowPattern)
     throws IOException
   {
@@ -216,7 +216,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(Table table, Column column,
+  public static Object findValue(TableImpl table, Column column,
                                  Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -240,7 +240,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(Table table, Index index,
+  public static Map<String,Object> findRow(TableImpl table, Index index,
                                            Map<String,?> rowPattern)
     throws IOException
   {
@@ -269,7 +269,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(Table table, Index index, Column column,
+  public static Object findValue(TableImpl table, Index index, Column column,
                                  Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -284,7 +284,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     return _id;
   }
 
-  public Table getTable() {
+  public TableImpl getTable() {
     return _table;
   }
 
@@ -438,7 +438,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   {
     // we need to ensure that the "deleted" flag has been read for this row
     // (or re-read if the table has been recently modified)
-    Table.positionAtRowData(_rowState, _curPos.getRowId());
+    TableImpl.positionAtRowData(_rowState, _curPos.getRowId());
     return _rowState.isDeleted();
   }
   
@@ -826,7 +826,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     _rowState.reset();
     _prevPos = _curPos;
     _curPos = findAnotherPosition(_rowState, _curPos, moveForward);
-    Table.positionAtRowHeader(_rowState, _curPos.getRowId());
+    TableImpl.positionAtRowHeader(_rowState, _curPos.getRowId());
     return(!_curPos.equals(getDirHandler(moveForward).getEndPosition()));
   }
   
@@ -1330,7 +1330,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     /** Cursor over the pages that this table owns */
     private final UsageMap.PageCursor _ownedPagesCursor;
     
-    private TableScanCursor(Table table) {
+    private TableScanCursor(TableImpl table) {
       super(new Id(table, null), table,
             FIRST_SCAN_POSITION, LAST_SCAN_POSITION);
       _ownedPagesCursor = table.getOwnedPagesCursor();
@@ -1376,7 +1376,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
       // figure out how many rows are left on this page so we can find the
       // next row
       RowId curRowId = curPos.getRowId();
-      Table.positionAtRowHeader(rowState, curRowId);
+      TableImpl.positionAtRowHeader(rowState, curRowId);
       int currentRowNumber = curRowId.getRowNumber();
     
       // loop until we find the next valid row or run out of pages
@@ -1384,14 +1384,14 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
 
         currentRowNumber = handler.getAnotherRowNumber(currentRowNumber);
         curRowId = new RowId(curRowId.getPageNumber(), currentRowNumber);
-        Table.positionAtRowHeader(rowState, curRowId);
+        TableImpl.positionAtRowHeader(rowState, curRowId);
         
         if(!rowState.isValid()) {
           
           // load next page
           curRowId = new RowId(handler.getAnotherPageNumber(),
                                RowId.INVALID_ROW_NUMBER);
-          Table.positionAtRowHeader(rowState, curRowId);
+          TableImpl.positionAtRowHeader(rowState, curRowId);
           
           if(!rowState.isHeaderPageNumberValid()) {
             //No more owned pages.  No more rows.
@@ -1486,7 +1486,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
     private final String _tableName;
     private final String _indexName;
 
-    protected Id(Table table, Index index) {
+    protected Id(TableImpl table, Index index) {
       _tableName = table.getName();
       _indexName = ((index != null) ? index.getName() : null);
     }

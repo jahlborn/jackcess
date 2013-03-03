@@ -35,7 +35,7 @@ import com.healthmarketscience.jackcess.DatabaseImpl;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.JetFormat;
 import com.healthmarketscience.jackcess.PageChannel;
-import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,7 +58,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
   private final Column _column;
   private final int _complexTypeId;
-  private final Table _flatTable;
+  private final TableImpl _flatTable;
   private final List<Column> _typeCols;
   private final Column _pkCol;
   private final Column _complexValFkCol;
@@ -66,7 +66,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   private IndexCursor _complexValIdCursor;
   
   protected ComplexColumnInfo(Column column, int complexTypeId,
-                              Table typeObjTable, Table flatTable)
+                              TableImpl typeObjTable, TableImpl flatTable)
     throws IOException
   {
     _column = column;
@@ -109,7 +109,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
         offset + column.getFormat().OFFSET_COLUMN_COMPLEX_ID);
 
     DatabaseImpl db = column.getDatabase();
-    Table complexColumns = db.getSystemComplexColumns();
+    TableImpl complexColumns = db.getSystemComplexColumns();
     IndexCursor cursor = IndexCursor.createCursor(
         complexColumns, complexColumns.getPrimaryKeyIndex());
     if(!cursor.findFirstRowByEntry(complexTypeId)) {
@@ -127,8 +127,8 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     int flatTableId = (Integer)cColRow.get(COL_FLAT_TABLE_ID);
     int typeObjId = (Integer)cColRow.get(COL_COMPLEX_TYPE_OBJECT_ID);
 
-    Table typeObjTable = db.getTable(typeObjId);
-    Table flatTable = db.getTable(flatTableId);
+    TableImpl typeObjTable = db.getTable(typeObjId);
+    TableImpl flatTable = db.getTable(flatTableId);
 
     if((typeObjTable == null) || (flatTable == null)) {
       throw new IOException(
@@ -370,7 +370,8 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return rtn.toString();
   }
 
-  protected static void diffFlatColumns(Table typeObjTable, Table flatTable,
+  protected static void diffFlatColumns(TableImpl typeObjTable, 
+                                        TableImpl flatTable,
                                         List<Column> typeCols,
                                         List<Column> otherCols)
   {

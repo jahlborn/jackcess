@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableImpl;
 
 /**
  * Complex column info for an unsupported complex type.
@@ -35,8 +35,8 @@ import com.healthmarketscience.jackcess.Table;
 public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
 {
 
-  public UnsupportedColumnInfo(Column column, int complexId, Table typeObjTable,
-                               Table flatTable)
+  public UnsupportedColumnInfo(Column column, int complexId, TableImpl typeObjTable,
+                               TableImpl flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);

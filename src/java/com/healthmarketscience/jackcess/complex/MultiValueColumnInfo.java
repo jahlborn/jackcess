@@ -27,7 +27,7 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableImpl;
 
 /**
  * Complex column info for a column holding multiple values per row.
@@ -43,7 +43,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   private final Column _valueCol;
   
   public MultiValueColumnInfo(Column column, int complexId,
-                              Table typeObjTable, Table flatTable) 
+                              TableImpl typeObjTable, TableImpl flatTable) 
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
@@ -88,7 +88,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
     return new SingleValueImpl(INVALID_ID, complexValueFk, value);
   }
 
-  public static boolean isMultiValueColumn(Table typeObjTable) {
+  public static boolean isMultiValueColumn(TableImpl typeObjTable) {
     // if we found a single value of a "simple" type, then we are dealing with
     // a multi-value column
     List<Column> typeCols = typeObjTable.getColumns();

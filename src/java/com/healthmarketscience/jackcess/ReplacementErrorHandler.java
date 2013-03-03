@@ -56,10 +56,8 @@ public class ReplacementErrorHandler implements ErrorHandler
     _replacement = replacement;
   }
 
-  public Object handleRowError(Column column,
-                               byte[] columnData,
-                               Table.RowState rowState,
-                               Exception error)
+  public Object handleRowError(Column column, byte[] columnData,
+                               Location location, Exception error)
     throws IOException
   {
     return _replacement;

@@ -300,17 +300,17 @@ public class DatabaseImpl extends Database
   /** Reads and writes database pages */
   private final PageChannel _pageChannel;
   /** System catalog table */
-  private Table _systemCatalog;
+  private TableImpl _systemCatalog;
   /** utility table finder */
   private TableFinder _tableFinder;
   /** System access control entries table (initialized on first use) */
-  private Table _accessControlEntries;
+  private TableImpl _accessControlEntries;
   /** System relationships table (initialized on first use) */
-  private Table _relationships;
+  private TableImpl _relationships;
   /** System queries table (initialized on first use) */
-  private Table _queries;
+  private TableImpl _queries;
   /** System complex columns table (initialized on first use) */
-  private Table _complexCols;
+  private TableImpl _complexCols;
   /** SIDs to use for the ACEs added for new tables */
   private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
   /** optional error handler to use when row errors are encountered */
@@ -566,12 +566,12 @@ public class DatabaseImpl extends Database
   }
   
   @Override
-  public Table getSystemCatalog() {
+  public TableImpl getSystemCatalog() {
     return _systemCatalog;
   }
   
   @Override
-  public Table getAccessControlEntries() throws IOException {
+  public TableImpl getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
       _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
       if(_accessControlEntries == null) {
@@ -587,7 +587,7 @@ public class DatabaseImpl extends Database
    * @return the complex column system table (loaded on demand)
    * @usage _advanced_method_
    */
-  public Table getSystemComplexColumns() throws IOException {
+  public TableImpl getSystemComplexColumns() throws IOException {
     if(_complexCols == null) {
       _complexCols = getSystemTable(TABLE_SYSTEM_COMPLEX_COLS);
       if(_complexCols == null) {
@@ -881,7 +881,7 @@ public class DatabaseImpl extends Database
   }
 
   @Override
-  public Table getTable(String name) throws IOException {
+  public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
 
@@ -890,10 +890,10 @@ public class DatabaseImpl extends Database
    * @return The table, or null if it doesn't exist
    * @usage _advanced_method_
    */
-  public Table getTable(int tableDefPageNumber) throws IOException {
+  public TableImpl getTable(int tableDefPageNumber) throws IOException {
 
     // first, check for existing table
-    Table table = _tableCache.get(tableDefPageNumber);
+    TableImpl table = _tableCache.get(tableDefPageNumber);
     if(table != null) {
       return table;
     }
@@ -916,7 +916,7 @@ public class DatabaseImpl extends Database
    * @param includeSystemTables whether to consider returning a system table
    * @return The table, or null if it doesn't exist
    */
-  private Table getTable(String name, boolean includeSystemTables) 
+  private TableImpl getTable(String name, boolean includeSystemTables) 
     throws IOException 
   {
     TableInfo tableInfo = lookupTable(name);
@@ -1115,7 +1115,7 @@ public class DatabaseImpl extends Database
   }
 
   @Override
-  public Table getSystemTable(String tableName) throws IOException
+  public TableImpl getSystemTable(String tableName) throws IOException
   {
     return getTable(tableName, true);
   }
@@ -1382,11 +1382,11 @@ public class DatabaseImpl extends Database
   /**
    * Reads a table with the given name from the given pageNumber.
    */
-  private Table readTable(String name, int pageNumber, int flags)
+  private TableImpl readTable(String name, int pageNumber, int flags)
     throws IOException
   {
     // first, check for existing table
-    Table table = _tableCache.get(pageNumber);
+    TableImpl table = _tableCache.get(pageNumber);
     if(table != null) {
       return table;
     }
@@ -1402,7 +1402,7 @@ public class DatabaseImpl extends Database
             ", but page type is " + pageType);
       }
       return _tableCache.put(
-          new Table(this, buffer, pageNumber, name, flags));
+          new TableImpl(this, buffer, pageNumber, name, flags));
     } finally {
       releaseSharedBuffer(buffer);
     }
@@ -1413,7 +1413,7 @@ public class DatabaseImpl extends Database
    * an existing index), otherwise a simple table cursor.
    */
   private static Cursor createCursorWithOptionalIndex(
-      Table table, String colName, Object colValue)
+      TableImpl table, String colName, Object colValue)
     throws IOException
   {
     try {
@@ -2041,12 +2041,12 @@ public class DatabaseImpl extends Database
    * WeakReference for a Table which holds the table pageNumber (for later
    * cache purging).
    */
-  private static final class WeakTableReference extends WeakReference<Table>
+  private static final class WeakTableReference extends WeakReference<TableImpl>
   {
     private final Integer _pageNumber;
 
-    private WeakTableReference(Integer pageNumber, Table table, 
-                               ReferenceQueue<Table> queue) {
+    private WeakTableReference(Integer pageNumber, TableImpl table, 
+                               ReferenceQueue<TableImpl> queue) {
       super(table, queue);
       _pageNumber = pageNumber;
     }
@@ -2063,14 +2063,15 @@ public class DatabaseImpl extends Database
   {
     private final Map<Integer,WeakTableReference> _tables = 
       new HashMap<Integer,WeakTableReference>();
-    private final ReferenceQueue<Table> _queue = new ReferenceQueue<Table>();
+    private final ReferenceQueue<TableImpl> _queue = 
+      new ReferenceQueue<TableImpl>();
 
-    public Table get(Integer pageNumber) {
+    public TableImpl get(Integer pageNumber) {
       WeakTableReference ref = _tables.get(pageNumber);
       return ((ref != null) ? ref.get() : null);
     }
 
-    public Table put(Table table) {
+    public TableImpl put(TableImpl table) {
       purgeOldRefs();
   
       Integer pageNumber = table.getTableDefPageNumber();

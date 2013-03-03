@@ -115,7 +115,7 @@ public class Index implements Comparable<Index> {
     return _data;
   }
 
-  public Table getTable() {
+  public TableImpl getTable() {
     return getIndexData().getTable();
   }
   
@@ -173,7 +173,7 @@ public class Index implements Comparable<Index> {
       return null;
     }
 
-    Table refTable = getTable().getDatabase().getTable(
+    TableImpl refTable = getTable().getDatabase().getTable(
         _reference.getOtherTablePageNumber());
 
     if(refTable == null) {
@@ -399,7 +399,7 @@ public class Index implements Comparable<Index> {
     // write logical index information
     for(IndexBuilder idx : creator.getIndexes()) {
       TableCreator.IndexState idxState = creator.getIndexState(idx);
-      buffer.putInt(Table.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
+      buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
       buffer.putInt(idxState.getIndexNumber()); // index num
       buffer.putInt(idxState.getIndexDataNumber()); // index data num
       buffer.put((byte)0); // related table type
@@ -413,7 +413,7 @@ public class Index implements Comparable<Index> {
 
     // write index names
     for(IndexBuilder idx : creator.getIndexes()) {
-      Table.writeName(buffer, idx.getName(), creator.getCharset());
+      TableImpl.writeName(buffer, idx.getName(), creator.getCharset());
     }
   }
 

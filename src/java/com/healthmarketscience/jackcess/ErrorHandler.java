@@ -51,15 +51,30 @@ public interface ErrorHandler
    * @param columnData the actual column data for the column being read (which
    *                   may be {@code null} depending on when the exception
    *                   was thrown during the reading process)
-   * @param rowState the current row state for the caller
+   * @param location the current location of the error
    * @param error the error that was encountered
    *
    * @return replacement for this row's column
    */
   public Object handleRowError(Column column,
                                byte[] columnData,
-                               Table.RowState rowState,
+                               Location location,
                                Exception error)
     throws IOException;
 
+  /**
+   * Provides location information for an error.
+   */
+  public interface Location 
+  {
+    /**
+     * @return the table in which the error occurred
+     */
+    public Table getTable();
+
+    /**
+     * Contains details about the errored row, useful for debugging.
+     */
+    public String toString();
+  }
 }

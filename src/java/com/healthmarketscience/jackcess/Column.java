@@ -187,7 +187,7 @@ public class Column implements Comparable<Column> {
 
   
   /** owning table */
-  private final Table _table;
+  private final TableImpl _table;
   /** Whether or not the column is of variable length */
   private boolean _variableLength;
   /** Whether or not the column is an autonumber column */
@@ -236,7 +236,7 @@ public class Column implements Comparable<Column> {
   /**
    * Only used by unit tests
    */
-  Column(boolean testing, Table table) {
+  Column(boolean testing, TableImpl table) {
     if(!testing) {
       throw new IllegalArgumentException();
     }
@@ -250,7 +250,7 @@ public class Column implements Comparable<Column> {
    * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
-  public Column(Table table, ByteBuffer buffer, int offset, int displayIndex)
+  public Column(TableImpl table, ByteBuffer buffer, int offset, int displayIndex)
     throws IOException
   {
     _table = table;
@@ -327,7 +327,7 @@ public class Column implements Comparable<Column> {
   /**
    * @usage _general_method_
    */
-  public Table getTable() {
+  public TableImpl getTable() {
     return _table;
   }
 
@@ -933,8 +933,8 @@ public class Column implements Comparable<Column> {
         {
           getPageChannel().readPage(lvalPage, pageNum);
 
-          short rowStart = Table.findRowStart(lvalPage, rowNum, getFormat());
-          short rowEnd = Table.findRowEnd(lvalPage, rowNum, getFormat());
+          short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
+          short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
 
           if((rowEnd - rowStart) != length) {
             throw new IOException("Unexpected lval row length");
@@ -953,8 +953,8 @@ public class Column implements Comparable<Column> {
           lvalPage.clear();
           getPageChannel().readPage(lvalPage, pageNum);
 
-          short rowStart = Table.findRowStart(lvalPage, rowNum, getFormat());
-          short rowEnd = Table.findRowEnd(lvalPage, rowNum, getFormat());
+          short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
+          short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
           
           // read next page information
           lvalPage.position(rowStart);
@@ -1325,7 +1325,7 @@ public class Column implements Comparable<Column> {
       case LONG_VALUE_TYPE_OTHER_PAGE:
         lvalPage = getLongValuePage(value.length, lvalBufferH);
         firstLvalPageNum = lvalBufferH.getPageNumber();
-        firstLvalRow = (byte)Table.addDataPageRow(lvalPage, value.length,
+        firstLvalRow = (byte)TableImpl.addDataPageRow(lvalPage, value.length,
                                                   getFormat(), 0);
         lvalPage.put(value);
         getPageChannel().writePage(lvalPage, firstLvalPageNum);
@@ -1363,7 +1363,7 @@ public class Column implements Comparable<Column> {
           }
 
           // add row to this page
-          byte lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
+          byte lvalRow = (byte)TableImpl.addDataPageRow(lvalPage, chunkLength + 4,
                                                     getFormat(), 0);
           
           // write next page info (we'll always be writing into row 0 for
@@ -1437,7 +1437,7 @@ public class Column implements Comparable<Column> {
     ByteBuffer lvalPage = null;
     if(lvalBufferH.getPageNumber() != PageChannel.INVALID_PAGE_NUMBER) {
       lvalPage = lvalBufferH.getPage(getPageChannel());
-      if(Table.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
+      if(TableImpl.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
         // the current page has space
         return lvalPage;
       }
@@ -2066,7 +2066,7 @@ public class Column implements Comparable<Column> {
 
       int position = buffer.position();
       buffer.put(col.getType().getValue());
-      buffer.putInt(Table.MAGIC_TABLE_NUMBER);  //constant magic number
+      buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
       buffer.putShort(columnNumber);  //Column Number
       if (col.isVariableLength()) {
         if(!col.getType().isLongValue()) {
@@ -2118,7 +2118,7 @@ public class Column implements Comparable<Column> {
       }
     }
     for (Column col : columns) {
-      Table.writeName(buffer, col.getName(), creator.getCharset());
+      TableImpl.writeName(buffer, col.getName(), creator.getCharset());
     }
   }
 

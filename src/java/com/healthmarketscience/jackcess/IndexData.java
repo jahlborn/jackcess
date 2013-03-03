@@ -141,7 +141,7 @@ public class IndexData {
         
   
   /** owning table */
-  private final Table _table;
+  private final TableImpl _table;
   /** 0-based index data number */
   private final int _number;
   /** Page number of the root index data */
@@ -181,7 +181,7 @@ public class IndexData {
   /** Cache which manages the index pages */
   private final IndexPageCache _pageCache;
   
-  protected IndexData(Table table, int number, int uniqueEntryCount,
+  protected IndexData(TableImpl table, int number, int uniqueEntryCount,
                       int uniqueEntryCountOffset)
   {
     _table  = table;
@@ -196,7 +196,7 @@ public class IndexData {
    * Creates an IndexData appropriate for the given table, using information
    * from the given table definition buffer.
    */
-  public static IndexData create(Table table, ByteBuffer tableBuffer,
+  public static IndexData create(TableImpl table, ByteBuffer tableBuffer,
                                  int number, JetFormat format)
     throws IOException
   {
@@ -208,7 +208,7 @@ public class IndexData {
     return new IndexData(table, number, uniqueEntryCount, uniqueEntryCountOffset);
   }
 
-  public Table getTable() {
+  public TableImpl getTable() {
     return _table;
   }
   

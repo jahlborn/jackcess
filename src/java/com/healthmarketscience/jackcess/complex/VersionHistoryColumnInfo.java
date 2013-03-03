@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableImpl;
 
 /**
  * Complex column info for a column which tracking the version history of an
@@ -45,7 +45,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   private final Column _modifiedCol;
   
   public VersionHistoryColumnInfo(Column column, int complexId,
-                                  Table typeObjTable, Table flatTable) 
+                                  TableImpl typeObjTable, TableImpl flatTable) 
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
@@ -151,7 +151,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
     return new VersionImpl(INVALID_ID, complexValueFk, value, modifiedDate);
   }
 
-  public static boolean isVersionHistoryColumn(Table typeObjTable) {
+  public static boolean isVersionHistoryColumn(TableImpl typeObjTable) {
     // version history data has these columns <value>(MEMO),
     // <modified>(SHORT_DATE_TIME)
     List<Column> typeCols = typeObjTable.getColumns();

@@ -44,7 +44,7 @@ final class FKEnforcer
   private static final ColumnMatcher MATCHER =
     CaseInsensitiveColumnMatcher.INSTANCE;
 
-  private final Table _table;
+  private final TableImpl _table;
   private final List<Column> _cols;
   private List<Joiner> _primaryJoinersChkUp;
   private List<Joiner> _primaryJoinersChkDel;
@@ -52,7 +52,7 @@ final class FKEnforcer
   private List<Joiner> _primaryJoinersDoDel;
   private List<Joiner> _secondaryJoiners;
 
-  FKEnforcer(Table table) {
+  FKEnforcer(TableImpl table) {
     _table = table;
 
     // at this point, only init the index columns

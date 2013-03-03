@@ -40,8 +40,13 @@ import com.healthmarketscience.jackcess.query.Query;
  * the data via the relevant {@link Table}.  When a Database instance is no
  * longer useful, it should <b>always</b> be closed ({@link #close}) to avoid
  * corruption.
+ * <p>
+ * Note, Database instances (and all the related objects) are <i>not</i>
+ * thread-safe.  However, separate Database instances (and their respective
+ * objects) can be used by separate threads without a problem.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public abstract class Database implements Iterable<Table>, Closeable, Flushable
 {
@@ -109,7 +114,7 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    */
   public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
       public Object handleRowError(Column column, byte[] columnData,
-                                   Table.RowState rowState, Exception error)
+                                   Location location, Exception error)
         throws IOException
       {
         // really can only be RuntimeException or IOException

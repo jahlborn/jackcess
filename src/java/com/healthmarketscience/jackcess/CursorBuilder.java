@@ -278,9 +278,9 @@ public class CursorBuilder {
   {
     Cursor cursor = null;
     if(_index == null) {
-      cursor = Cursor.createCursor(_table);
+      cursor = Cursor.createCursor((TableImpl)_table);
     } else {
-      cursor = Cursor.createIndexCursor(_table, _index,
+      cursor = Cursor.createIndexCursor((TableImpl)_table, _index,
                                         _startRow, _startRowInclusive,
                                         _endRow, _endRowInclusive);
     }
