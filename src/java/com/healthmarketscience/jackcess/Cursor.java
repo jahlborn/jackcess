@@ -118,7 +118,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
-  public static Cursor createIndexCursor(TableImpl table, Index index)
+  public static Cursor createIndexCursor(TableImpl table, IndexImpl index)
     throws IOException
   {
     return IndexCursor.createCursor(table, index);
@@ -140,7 +140,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param endRow the last row of data for the cursor (inclusive), or
    *               {@code null} for the last entry
    */
-  public static Cursor createIndexCursor(TableImpl table, Index index,
+  public static Cursor createIndexCursor(TableImpl table, IndexImpl index,
                                          Object[] startRow, Object[] endRow)
     throws IOException
   {
@@ -165,7 +165,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *               the last entry
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
-  public static Cursor createIndexCursor(TableImpl table, Index index,
+  public static Cursor createIndexCursor(TableImpl table, IndexImpl index,
                                          Object[] startRow,
                                          boolean startInclusive,
                                          Object[] endRow,
@@ -240,7 +240,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(TableImpl table, Index index,
+  public static Map<String,Object> findRow(TableImpl table, IndexImpl index,
                                            Map<String,?> rowPattern)
     throws IOException
   {
@@ -269,7 +269,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(TableImpl table, Index index, Column column,
+  public static Object findValue(TableImpl table, IndexImpl index, Column column,
                                  Column columnPattern, Object valuePattern)
     throws IOException
   {

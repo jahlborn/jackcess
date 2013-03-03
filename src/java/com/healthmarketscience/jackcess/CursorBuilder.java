@@ -44,9 +44,9 @@ import java.util.List;
  */
 public class CursorBuilder {
   /** the table which the cursor will traverse */
-  private final Table _table;
+  private final TableImpl _table;
   /** optional index to use in traversal */
-  private Index _index;
+  private IndexImpl _index;
   /** optional start row for an index cursor */
   private Object[] _startRow;
   /** whether or not start row for an index cursor is inclusive */
@@ -63,7 +63,7 @@ public class CursorBuilder {
   private ColumnMatcher _columnMatcher;
 
   public CursorBuilder(Table table) {
-    _table = table;
+    _table = (TableImpl)table;
   }
 
   /**
@@ -96,7 +96,7 @@ public class CursorBuilder {
    * Sets an index to use for the cursor.
    */
   public CursorBuilder setIndex(Index index) {
-    _index = index;
+    _index = (IndexImpl)index;
     return this;
   }
 
@@ -139,7 +139,7 @@ public class CursorBuilder {
    */
   private CursorBuilder setIndexByColumns(List<String> searchColumns) {
     boolean found = false;
-    for(Index index : _table.getIndexes()) {
+    for(IndexImpl index : _table.getIndexes()) {
       
       Collection<IndexData.ColumnDescriptor> indexColumns = index.getColumns();
       if(indexColumns.size() != searchColumns.size()) {
@@ -278,9 +278,9 @@ public class CursorBuilder {
   {
     Cursor cursor = null;
     if(_index == null) {
-      cursor = Cursor.createCursor((TableImpl)_table);
+      cursor = Cursor.createCursor(_table);
     } else {
-      cursor = Cursor.createIndexCursor((TableImpl)_table, _index,
+      cursor = Cursor.createIndexCursor(_table, _index,
                                         _startRow, _startRowInclusive,
                                         _endRow, _endRowInclusive);
     }

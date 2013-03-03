@@ -57,8 +57,8 @@ final class FKEnforcer
 
     // at this point, only init the index columns
     Set<Column> cols = new TreeSet<Column>();
-    for(Index idx : _table.getIndexes()) {
-      Index.ForeignKeyReference ref = idx.getReference();
+    for(IndexImpl idx : _table.getIndexes()) {
+      IndexImpl.ForeignKeyReference ref = idx.getReference();
       if(ref != null) {
         // compile an ordered list of all columns in this table which are
         // involved in foreign key relationships with other tables
@@ -88,8 +88,8 @@ final class FKEnforcer
     _primaryJoinersDoDel = new ArrayList<Joiner>(1);
     _secondaryJoiners = new ArrayList<Joiner>(1);
 
-    for(Index idx : _table.getIndexes()) {
-      Index.ForeignKeyReference ref = idx.getReference();
+    for(IndexImpl idx : _table.getIndexes()) {
+      IndexImpl.ForeignKeyReference ref = idx.getReference();
       if(ref != null) {
 
         Joiner joiner = Joiner.create(idx);

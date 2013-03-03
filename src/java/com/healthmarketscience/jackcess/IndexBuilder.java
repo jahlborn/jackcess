@@ -61,7 +61,7 @@ public class IndexBuilder
   }
 
   public boolean isPrimaryKey() {
-    return (getType() == Index.PRIMARY_KEY_INDEX_TYPE);
+    return (getType() == IndexImpl.PRIMARY_KEY_INDEX_TYPE);
   }
 
   public boolean isUnique() {
@@ -108,7 +108,7 @@ public class IndexBuilder
    * unique).
    */
   public IndexBuilder setPrimaryKey() {
-    _type = Index.PRIMARY_KEY_INDEX_TYPE;
+    _type = IndexImpl.PRIMARY_KEY_INDEX_TYPE;
     return setUnique();
   }
 

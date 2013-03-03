@@ -102,7 +102,7 @@ public abstract class Table implements Iterable<Map<String, Object>>
    * @return All of the Indexes on this table (unmodifiable List)
    * @usage _intermediate_method_
    */
-  public abstract List<Index> getIndexes();
+  public abstract List<? extends Index> getIndexes();
 
   /**
    * @return the index with the given name

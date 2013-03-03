@@ -1270,7 +1270,7 @@ public class IndexData {
    * Information about the columns in an index.  Also encodes new index
    * values.
    */
-  public static abstract class ColumnDescriptor
+  public static abstract class ColumnDescriptor implements Index.ColumnInfo
   {
     private final Column _column;
     private final byte _flags;

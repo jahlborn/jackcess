@@ -47,13 +47,13 @@ public class IndexCursor extends Cursor
   private final IndexDirHandler _reverseDirHandler =
     new ReverseIndexDirHandler();
   /** logical index which this cursor is using */
-  private final Index _index;
+  private final IndexImpl _index;
   /** Cursor over the entries of the relevant index */
   private final IndexData.EntryCursor _entryCursor;
   /** column names for the index entry columns */
   private Set<String> _indexEntryPattern;
 
-  private IndexCursor(TableImpl table, Index index,
+  private IndexCursor(TableImpl table, IndexImpl index,
                       IndexData.EntryCursor entryCursor)
     throws IOException
   {
@@ -76,7 +76,7 @@ public class IndexCursor extends Cursor
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
-  public static IndexCursor createCursor(TableImpl table, Index index)
+  public static IndexCursor createCursor(TableImpl table, IndexImpl index)
     throws IOException
   {
     return createCursor(table, index, null, null);
@@ -99,7 +99,7 @@ public class IndexCursor extends Cursor
    *               {@code null} for the last entry
    */
   public static IndexCursor createCursor(
-      TableImpl table, Index index, Object[] startRow, Object[] endRow)
+      TableImpl table, IndexImpl index, Object[] startRow, Object[] endRow)
     throws IOException
   {
     return createCursor(table, index, startRow, true, endRow, true);
@@ -123,7 +123,7 @@ public class IndexCursor extends Cursor
    *               the last entry
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
-  public static IndexCursor createCursor(TableImpl table, Index index,
+  public static IndexCursor createCursor(TableImpl table, IndexImpl index,
                                          Object[] startRow,
                                          boolean startInclusive,
                                          Object[] endRow,
@@ -152,7 +152,7 @@ public class IndexCursor extends Cursor
     return cursor;
   }  
 
-  public Index getIndex() {
+  public IndexImpl getIndex() {
     return _index;
   }
 

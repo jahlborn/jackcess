@@ -34,12 +34,12 @@ import java.util.Map;
  */
 public class Joiner 
 {
-  private final Index _fromIndex;
+  private final IndexImpl _fromIndex;
   private final List<IndexData.ColumnDescriptor> _fromCols;
   private final IndexCursor _toCursor;
   private final Object[] _entryValues;
   
-  private Joiner(Index fromIndex, IndexCursor toCursor)
+  private Joiner(IndexImpl fromIndex, IndexCursor toCursor)
   {
     _fromIndex = fromIndex;
     _fromCols = _fromIndex.getColumns();
@@ -56,7 +56,7 @@ public class Joiner
    * @throws IllegalArgumentException if there is no relationship between the
    *         given tables
    */
-  public static Joiner create(Table fromTable, Table toTable)
+  public static Joiner create(TableImpl fromTable, TableImpl toTable)
     throws IOException
   {
     return create(fromTable.getForeignKeyIndex(toTable));
@@ -69,10 +69,10 @@ public class Joiner
    *
    * @param fromIndex the index backing one side of a foreign-key relationship
    */
-  public static Joiner create(Index fromIndex)
+  public static Joiner create(IndexImpl fromIndex)
     throws IOException
   {
-    Index toIndex = fromIndex.getReferencedIndex();
+    IndexImpl toIndex = fromIndex.getReferencedIndex();
     IndexCursor toCursor = IndexCursor.createCursor(
         toIndex.getTable(), toIndex);
     // text lookups are always case-insensitive
@@ -90,19 +90,19 @@ public class Joiner
     return create(getToTable(), getFromTable());
   }
   
-  public Table getFromTable() {
+  public TableImpl getFromTable() {
     return getFromIndex().getTable();
   }
   
-  public Index getFromIndex() {
+  public IndexImpl getFromIndex() {
     return _fromIndex;
   }
   
-  public Table getToTable() {
+  public TableImpl getToTable() {
     return getToCursor().getTable();
   }
   
-  public Index getToIndex() {
+  public IndexImpl getToIndex() {
     return getToCursor().getIndex();
   }
   

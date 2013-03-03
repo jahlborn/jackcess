@@ -130,7 +130,7 @@ public class TableImpl extends Table
   private List<Column> _autoNumColumns;
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
-  private final List<Index> _indexes = new ArrayList<Index>();
+  private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
   /** List of index datas on this table (the actual backing data for an
       index) */
   private final List<IndexData> _indexDatas = new ArrayList<IndexData>();
@@ -362,13 +362,13 @@ public class TableImpl extends Table
   }
   
   @Override
-  public List<Index> getIndexes() {
+  public List<IndexImpl> getIndexes() {
     return Collections.unmodifiableList(_indexes);
   }
 
   @Override
-  public Index getIndex(String name) {
-    for(Index index : _indexes) {
+  public IndexImpl getIndex(String name) {
+    for(IndexImpl index : _indexes) {
       if(index.getName().equalsIgnoreCase(name)) {
         return index;
       }
@@ -378,8 +378,8 @@ public class TableImpl extends Table
   }
 
   @Override
-  public Index getPrimaryKeyIndex() {
-    for(Index index : _indexes) {
+  public IndexImpl getPrimaryKeyIndex() {
+    for(IndexImpl index : _indexes) {
       if(index.isPrimaryKey()) {
         return index;
       }
@@ -389,8 +389,8 @@ public class TableImpl extends Table
   }
   
   @Override
-  public Index getForeignKeyIndex(Table otherTable) {
-    for(Index index : _indexes) {
+  public IndexImpl getForeignKeyIndex(Table otherTable) {
+    for(IndexImpl index : _indexes) {
       if(index.isForeignKey() && (index.getReference() != null) &&
          (index.getReference().getOtherTablePageNumber() ==
           ((TableImpl)otherTable).getTableDefPageNumber())) {
@@ -940,7 +940,7 @@ public class TableImpl extends Table
     if(creator.hasIndexes()) {
       // index and index data definitions
       IndexData.writeDefinitions(creator, buffer);
-      Index.writeDefinitions(creator, buffer);
+      IndexImpl.writeDefinitions(creator, buffer);
     }
 
     //End of tabledef
@@ -1246,7 +1246,7 @@ public class TableImpl extends Table
 
     // read logical index info (may be more logical indexes than index datas)
     for (int i = 0; i < _logicalIndexCount; i++) {
-      _indexes.add(new Index(tableBuffer, _indexDatas, getFormat()));
+      _indexes.add(new IndexImpl(tableBuffer, _indexDatas, getFormat()));
     }
 
     // read logical index names
