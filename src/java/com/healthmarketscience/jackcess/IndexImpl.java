@@ -43,7 +43,7 @@ import org.apache.commons.logging.LogFactory;
  * 
  * @author Tim McCune
  */
-public class IndexImpl extends Index implements Comparable<IndexImpl> 
+public class IndexImpl implements Index, Comparable<IndexImpl> 
 {
   protected static final Log LOG = LogFactory.getLog(IndexImpl.class);
     
@@ -115,7 +115,6 @@ public class IndexImpl extends Index implements Comparable<IndexImpl>
     return _data;
   }
 
-  @Override
   public TableImpl getTable() {
     return getIndexData().getTable();
   }
@@ -144,7 +143,6 @@ public class IndexImpl extends Index implements Comparable<IndexImpl>
     return getIndexData().getUniqueEntryCountOffset();
   }
 
-  @Override
   public String getName() {
     return _name;
   }
@@ -153,12 +151,10 @@ public class IndexImpl extends Index implements Comparable<IndexImpl>
     _name = name;
   }
 
-  @Override
   public boolean isPrimaryKey() {
     return _indexType == PRIMARY_KEY_INDEX_TYPE;
   }
 
-  @Override
   public boolean isForeignKey() {
     return _indexType == FOREIGN_KEY_INDEX_TYPE;
   }
@@ -167,7 +163,6 @@ public class IndexImpl extends Index implements Comparable<IndexImpl>
     return _reference;
   }
 
-  @Override
   public IndexImpl getReferencedIndex() throws IOException {
 
     if(_reference == null) {
@@ -211,17 +206,14 @@ public class IndexImpl extends Index implements Comparable<IndexImpl>
     return refIndex;
   }
 
-  @Override
   public boolean shouldIgnoreNulls() {
     return getIndexData().shouldIgnoreNulls();
   }
 
-  @Override
   public boolean isUnique() {
     return getIndexData().isUnique();
   }
   
-  @Override
   public List<IndexData.ColumnDescriptor> getColumns() {
     return getIndexData().getColumns();
   }

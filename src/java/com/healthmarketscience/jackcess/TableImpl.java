@@ -54,7 +54,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _general_class_
  */
-public class TableImpl extends Table
+public class TableImpl implements Table
 {  
   private static final Log LOG = LogFactory.getLog(TableImpl.class);
 
@@ -206,12 +206,10 @@ public class TableImpl extends Table
     _fkEnforcer = new FKEnforcer(this);
   }
 
-  @Override
   public String getName() {
     return _name;
   }
 
-  @Override
   public boolean isHidden() {
     return((_flags & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
   }
@@ -223,12 +221,10 @@ public class TableImpl extends Table
     return _maxColumnCount;
   }
   
-  @Override
   public int getColumnCount() {
     return _columns.size();
   }
   
-  @Override
   public DatabaseImpl getDatabase() {
     return _database;
   }
@@ -247,13 +243,11 @@ public class TableImpl extends Table
     return getDatabase().getPageChannel();
   }
 
-  @Override
   public ErrorHandler getErrorHandler() {
     return((_tableErrorHandler != null) ? _tableErrorHandler :
            getDatabase().getErrorHandler());
   }
 
-  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _tableErrorHandler = newErrorHandler;
   }    
@@ -301,12 +295,10 @@ public class TableImpl extends Table
     return _longValueBufferH;
   }
 
-  @Override
   public List<ColumnImpl> getColumns() {
     return Collections.unmodifiableList(_columns);
   }
 
-  @Override
   public ColumnImpl getColumn(String name) {
     for(ColumnImpl column : _columns) {
       if(column.getName().equalsIgnoreCase(name)) {
@@ -341,7 +333,6 @@ public class TableImpl extends Table
     _autoNumColumns = getAutoNumberColumns(columns);
   }
 
-  @Override
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
       _props = getPropertyMaps().getDefault();
@@ -361,12 +352,10 @@ public class TableImpl extends Table
     return _propertyMaps;
   }
   
-  @Override
   public List<IndexImpl> getIndexes() {
     return Collections.unmodifiableList(_indexes);
   }
 
-  @Override
   public IndexImpl getIndex(String name) {
     for(IndexImpl index : _indexes) {
       if(index.getName().equalsIgnoreCase(name)) {
@@ -377,7 +366,6 @@ public class TableImpl extends Table
                                        " does not exist on this table");
   }
 
-  @Override
   public IndexImpl getPrimaryKeyIndex() {
     for(IndexImpl index : _indexes) {
       if(index.isPrimaryKey()) {
@@ -388,7 +376,6 @@ public class TableImpl extends Table
                                        " does not have a primary key index");
   }
   
-  @Override
   public IndexImpl getForeignKeyIndex(Table otherTable) {
     for(IndexImpl index : _indexes) {
       if(index.isForeignKey() && (index.getReference() != null) &&
@@ -1306,12 +1293,10 @@ public class TableImpl extends Table
     return ByteUtil.getUnsignedVarInt(buffer, getFormat().SIZE_NAME_LENGTH);
   }
   
-  @Override
   public Object[] asRow(Map<String,?> rowMap) {
     return asRow(rowMap, null);
   }
   
-  @Override
   public Object[] asUpdateRow(Map<String,?> rowMap) {
     return asRow(rowMap, Column.KEEP_VALUE);
   }
@@ -1336,12 +1321,10 @@ public class TableImpl extends Table
     return row;
   }
   
-  @Override
   public void addRow(Object... row) throws IOException {
     addRows(Collections.singletonList(row), _singleRowBufferH);
   }
   
-  @Override
   public void addRows(List<? extends Object[]> rows) throws IOException {
     addRows(rows, _multiRowBufferH);
   }
@@ -1872,7 +1855,6 @@ public class TableImpl extends Table
     }
   }
 
-  @Override
   public int getRowCount() {
     return _rowCount;
   }

@@ -26,32 +26,32 @@ import java.util.List;
  *
  * @author James Ahlborn
  */
-public abstract class Index 
+public interface Index 
 {
 
-  public abstract Table getTable();
+  public Table getTable();
 
-  public abstract String getName();
+  public String getName();
 
-  public abstract boolean isPrimaryKey();
+  public boolean isPrimaryKey();
 
-  public abstract boolean isForeignKey();
+  public boolean isForeignKey();
 
   /**
    * @return the Columns for this index (unmodifiable)
    */
-  public abstract List<? extends Index.Column> getColumns();
+  public List<? extends Index.Column> getColumns();
 
   /**
    * @return the Index referenced by this Index's ForeignKeyReference (if it
    *         has one), otherwise {@code null}.
    */
-  public abstract Index getReferencedIndex() throws IOException;
+  public Index getReferencedIndex() throws IOException;
 
   /**
    * Whether or not {@code null} values are actually recorded in the index.
    */
-  public abstract boolean shouldIgnoreNulls();
+  public boolean shouldIgnoreNulls();
 
   /**
    * Whether or not index entries must be unique.
@@ -65,7 +65,7 @@ public abstract class Index
    *     case <i>will violate</i> the unique constraint</li>
    * </ul>
    */
-  public abstract boolean isUnique();
+  public boolean isUnique();
 
   /**
    * Information about a Column in an Index

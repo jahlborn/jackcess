@@ -28,7 +28,7 @@ import java.util.Map;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public abstract class Table implements Iterable<Map<String, Object>>
+public interface Table extends Iterable<Map<String, Object>>
 {
   /**
    * enum which controls the ordering of the columns in a table.
@@ -47,23 +47,23 @@ public abstract class Table implements Iterable<Map<String, Object>>
    * @return The name of the table
    * @usage _general_method_
    */
-  public abstract String getName();
+  public String getName();
 
   /**
    * Whether or not this table has been marked as hidden.
    * @usage _general_method_
    */
-  public abstract boolean isHidden();
+  public boolean isHidden();
 
   /**
    * @usage _general_method_
    */
-  public abstract int getColumnCount();
+  public int getColumnCount();
 
   /**
    * @usage _general_method_
    */
-  public abstract Database getDatabase();
+  public Database getDatabase();
 
   /**
    * Gets the currently configured ErrorHandler (always non-{@code null}).
@@ -71,45 +71,45 @@ public abstract class Table implements Iterable<Map<String, Object>>
    * level.
    * @usage _intermediate_method_
    */
-  public abstract ErrorHandler getErrorHandler();
+  public ErrorHandler getErrorHandler();
 
   /**
    * Sets a new ErrorHandler.  If {@code null}, resets to using the
    * ErrorHandler configured at the Database level.
    * @usage _intermediate_method_
    */
-  public abstract void setErrorHandler(ErrorHandler newErrorHandler);
+  public void setErrorHandler(ErrorHandler newErrorHandler);
 
   /**
    * @return All of the columns in this table (unmodifiable List)
    * @usage _general_method_
    */
-  public abstract List<? extends Column> getColumns();
+  public List<? extends Column> getColumns();
 
   /**
    * @return the column with the given name
    * @usage _general_method_
    */
-  public abstract Column getColumn(String name);
+  public Column getColumn(String name);
 
   /**
    * @return the properties for this table
    * @usage _general_method_
    */
-  public abstract PropertyMap getProperties() throws IOException;
+  public PropertyMap getProperties() throws IOException;
 
   /**
    * @return All of the Indexes on this table (unmodifiable List)
    * @usage _intermediate_method_
    */
-  public abstract List<? extends Index> getIndexes();
+  public List<? extends Index> getIndexes();
 
   /**
    * @return the index with the given name
    * @throws IllegalArgumentException if there is no index with the given name
    * @usage _intermediate_method_
    */
-  public abstract Index getIndex(String name);
+  public Index getIndex(String name);
 
   /**
    * @return the primary key index for this table
@@ -117,7 +117,7 @@ public abstract class Table implements Iterable<Map<String, Object>>
    *         table
    * @usage _intermediate_method_
    */
-  public abstract Index getPrimaryKeyIndex();
+  public Index getPrimaryKeyIndex();
 
   /**
    * @return the foreign key index joining this table to the given other table
@@ -125,30 +125,30 @@ public abstract class Table implements Iterable<Map<String, Object>>
    *         table and the given table
    * @usage _intermediate_method_
    */
-  public abstract Index getForeignKeyIndex(Table otherTable);
+  public Index getForeignKeyIndex(Table otherTable);
 
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}.
    * @usage _general_method_
    */
-  public abstract Object[] asRow(Map<String,?> rowMap);
+  public Object[] asRow(Map<String,?> rowMap);
 
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #updateCurrentRow(Object...)}.
    * @usage _general_method_
    */
-  public abstract Object[] asUpdateRow(Map<String,?> rowMap);
+  public Object[] asUpdateRow(Map<String,?> rowMap);
 
   /**
    * Adds a single row to this table and writes it to disk.  The values are
    * expected to be given in the order that the Columns are listed by the
    * {@link #getColumns} method.  This is by default the storage order of the
    * Columns in the database, however this order can be influenced by setting
-   * the ColumnOrder via {@link DatabaseImpl#setColumnOrder} prior to opening the
-   * Table.  The {@link #asRow} method can be used to easily convert a row Map into the
-   * appropriate row array for this Table.
+   * the ColumnOrder via {@link DatabaseImpl#setColumnOrder} prior to opening
+   * the Table.  The {@link #asRow} method can be used to easily convert a row
+   * Map into the appropriate row array for this Table.
    * <p>
    * Note, if this table has an auto-number column, the value generated will be
    * put back into the given row array (assuming the given row array is at
@@ -159,7 +159,7 @@ public abstract class Table implements Iterable<Map<String, Object>>
    *            otherwise it will not be modified.
    * @usage _general_method_
    */
-  public abstract void addRow(Object... row) throws IOException;
+  public void addRow(Object... row) throws IOException;
 
   /**
    * Add multiple rows to this table, only writing to disk after all
@@ -177,10 +177,10 @@ public abstract class Table implements Iterable<Map<String, Object>>
    *             will not be modified.
    * @usage _general_method_
    */
-  public abstract void addRows(List<? extends Object[]> rows) throws IOException;
+  public void addRows(List<? extends Object[]> rows) throws IOException;
 
   /**
    * @usage _general_method_
    */
-  public abstract int getRowCount();
+  public int getRowCount();
 }

@@ -34,12 +34,13 @@ import com.healthmarketscience.jackcess.query.Query;
 
 /**
  * An Access database instance.  A new instance can be instantiated by opening
- * an existing database file ({@link #open}) or creating a new database file
- * ({@link #create}) (for more advanced opening/creating using {@link
- * DatabaseBuilder}).  Once a Database has been opened, you can interact with
- * the data via the relevant {@link Table}.  When a Database instance is no
- * longer useful, it should <b>always</b> be closed ({@link #close}) to avoid
- * corruption.
+ * an existing database file ({@link DatabaseBuilder#open(File)}) or creating
+ * a new database file ({@link DatabaseBuilder#create(FileFormat,File)}) (for
+ * more advanced opening/creating use {@link DatabaseBuilder}).  Once a
+ * Database has been opened, you can interact with the data via the relevant
+ * {@link Table}.  When a Database instance is no longer useful, it should
+ * <b>always</b> be closed ({@link
+ * #close}) to avoid corruption.
  * <p>
  * Note, Database instances (and all the related objects) are <i>not</i>
  * thread-safe.  However, separate Database instances (and their respective
@@ -48,7 +49,7 @@ import com.healthmarketscience.jackcess.query.Query;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public abstract class Database implements Iterable<Table>, Closeable, Flushable
+public interface Database extends Iterable<Table>, Closeable, Flushable
 {
   /** default value for the auto-sync value ({@code true}).  this is slower,
    *  but leaves more chance of a useable database in the face of failures.
@@ -134,7 +135,7 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
                                             String linkeeFileName)
         throws IOException
       {
-        return Database.open(new File(linkeeFileName));
+        return DatabaseBuilder.open(new File(linkeeFileName));
       }
     };
 
@@ -169,45 +170,15 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
   }
 
   /**
-   * Open an existing Database.  If the existing file is not writeable, the
-   * file will be opened read-only.  Auto-syncing is enabled for the returned
-   * Database.
-   * 
-   * @param mdbFile File containing the database
-   * 
-   * @see DatabaseBuilder for more flexible Database opening
-   * @usage _general_method_
-   */
-  public static Database open(File mdbFile) throws IOException {
-    return new DatabaseBuilder(mdbFile).open();
-  }
-  
-  /**
-   * Create a new Database for the given fileFormat
-   * 
-   * @param fileFormat version of new database.
-   * @param mdbFile Location to write the new database to.  <b>If this file
-   *    already exists, it will be overwritten.</b>
-   *
-   * @see DatabaseBuilder for more flexible Database creation
-   * @usage _general_method_
-   */
-  public static Database create(FileFormat fileFormat, File mdbFile) 
-    throws IOException 
-  {
-    return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
-  }
-  
-  /**
    * Returns the File underlying this Database
    */
-  public abstract File getFile();
+  public File getFile();
 
   /**
    * @return The names of all of the user tables (String)
    * @usage _general_method_
    */
-  public abstract Set<String> getTableNames() throws IOException;
+  public Set<String> getTableNames() throws IOException;
 
   /**
    * @return The names of all of the system tables (String).  Note, in order
@@ -216,7 +187,7 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    *         directly!</i>.
    * @usage _intermediate_method_
    */
-  public abstract Set<String> getSystemTableNames() throws IOException;
+  public Set<String> getSystemTableNames() throws IOException;
 
   /**
    * @return an unmodifiable Iterator of the user Tables in this Database.
@@ -226,27 +197,27 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    *         database while an Iterator is in use.
    * @usage _general_method_
    */
-  public abstract Iterator<Table> iterator();
+  public Iterator<Table> iterator();
 
   /**
    * @param name Table name
    * @return The table, or null if it doesn't exist
    * @usage _general_method_
    */
-  public abstract Table getTable(String name) throws IOException;
+  public Table getTable(String name) throws IOException;
 
   /**
    * Finds all the relationships in the database between the given tables.
    * @usage _intermediate_method_
    */
-  public abstract List<Relationship> getRelationships(Table table1, Table table2)
+  public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException;
 
   /**
    * Finds all the queries in the database.
    * @usage _intermediate_method_
    */
-  public abstract List<Query> getQueries() throws IOException;
+  public List<Query> getQueries() throws IOException;
 
   /**
    * Returns a reference to <i>any</i> available table in this access
@@ -261,38 +232,38 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    * @return The table, or {@code null} if it doesn't exist
    * @usage _intermediate_method_
    */
-  public abstract Table getSystemTable(String tableName) throws IOException;
+  public Table getSystemTable(String tableName) throws IOException;
 
   /**
    * @return the core properties for the database
    * @usage _general_method_
    */
-  public abstract PropertyMap getDatabaseProperties() throws IOException;
+  public PropertyMap getDatabaseProperties() throws IOException;
 
   /**
    * @return the summary properties for the database
    * @usage _general_method_
    */
-  public abstract PropertyMap getSummaryProperties() throws IOException;
+  public PropertyMap getSummaryProperties() throws IOException;
 
   /**
    * @return the user-defined properties for the database
    * @usage _general_method_
    */
-  public abstract PropertyMap getUserDefinedProperties() throws IOException;
+  public PropertyMap getUserDefinedProperties() throws IOException;
 
   /**
    * @return the current database password, or {@code null} if none set.
    * @usage _general_method_
    */
-  public abstract String getDatabasePassword() throws IOException;
+  public String getDatabasePassword() throws IOException;
 
   /**
    * Flushes any current changes to the database file (and any linked
    * databases) to disk.
    * @usage _general_method_
    */
-  public abstract void flush() throws IOException;
+  public void flush() throws IOException;
 
   /**
    * Close the database file (and any linked databases).  A Database
@@ -302,19 +273,19 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    * OutputStream or jdbc Connection).
    * @usage _general_method_
    */
-  public abstract void close() throws IOException;
+  public void close() throws IOException;
 
   /**
    * @return The system catalog table
    * @usage _advanced_method_
    */
-  public abstract Table getSystemCatalog();
+  public Table getSystemCatalog();
 
   /**
    * @return The system Access Control Entries table (loaded on demand)
    * @usage _advanced_method_
    */
-  public abstract Table getAccessControlEntries() throws IOException;
+  public Table getAccessControlEntries() throws IOException;
 
   /**
    * Gets the currently configured ErrorHandler (always non-{@code null}).
@@ -322,28 +293,28 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    * Cursor level.
    * @usage _intermediate_method_
    */
-  public abstract ErrorHandler getErrorHandler();
+  public ErrorHandler getErrorHandler();
 
   /**
    * Sets a new ErrorHandler.  If {@code null}, resets to the
    * {@link #DEFAULT_ERROR_HANDLER}.
    * @usage _intermediate_method_
    */
-  public abstract void setErrorHandler(ErrorHandler newErrorHandler);
+  public void setErrorHandler(ErrorHandler newErrorHandler);
 
   /**
    * Gets the currently configured LinkResolver (always non-{@code null}).
    * This will be used to handle all linked database loading.
    * @usage _intermediate_method_
    */
-  public abstract LinkResolver getLinkResolver();
+  public LinkResolver getLinkResolver();
 
   /**
    * Sets a new LinkResolver.  If {@code null}, resets to the
    * {@link #DEFAULT_LINK_RESOLVER}.
    * @usage _intermediate_method_
    */
-  public abstract void setLinkResolver(LinkResolver newLinkResolver);
+  public void setLinkResolver(LinkResolver newLinkResolver);
 
   /**
    * Returns an unmodifiable view of the currently loaded linked databases,
@@ -351,57 +322,57 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    * information may be useful for implementing a LinkResolver.
    * @usage _intermediate_method_
    */
-  public abstract Map<String,Database> getLinkedDatabases();
+  public Map<String,Database> getLinkedDatabases();
 
   /**
    * Gets currently configured TimeZone (always non-{@code null}).
    * @usage _intermediate_method_
    */
-  public abstract TimeZone getTimeZone();
+  public TimeZone getTimeZone();
 
   /**
    * Sets a new TimeZone.  If {@code null}, resets to the default value.
    * @usage _intermediate_method_
    */
-  public abstract void setTimeZone(TimeZone newTimeZone);
+  public void setTimeZone(TimeZone newTimeZone);
 
   /**
    * Gets currently configured Charset (always non-{@code null}).
    * @usage _intermediate_method_
    */
-  public abstract Charset getCharset();
+  public Charset getCharset();
 
   /**
    * Sets a new Charset.  If {@code null}, resets to the default value.
    * @usage _intermediate_method_
    */
-  public abstract void setCharset(Charset newCharset);
+  public void setCharset(Charset newCharset);
 
   /**
    * Gets currently configured {@link Table.ColumnOrder} (always non-{@code
    * null}).
    * @usage _intermediate_method_
    */
-  public abstract Table.ColumnOrder getColumnOrder();
+  public Table.ColumnOrder getColumnOrder();
 
   /**
    * Sets a new Table.ColumnOrder.  If {@code null}, resets to the default value.
    * @usage _intermediate_method_
    */
-  public abstract void setColumnOrder(Table.ColumnOrder newColumnOrder);
+  public void setColumnOrder(Table.ColumnOrder newColumnOrder);
 
   /**
    * Gets currently foreign-key enforcement policy.
    * @usage _intermediate_method_
    */
-  public abstract boolean isEnforceForeignKeys();
+  public boolean isEnforceForeignKeys();
 
   /**
    * Sets a new foreign-key enforcement policy.  If {@code null}, resets to
    * the default value.
    * @usage _intermediate_method_
    */
-  public abstract void setEnforceForeignKeys(Boolean newEnforceForeignKeys);
+  public void setEnforceForeignKeys(Boolean newEnforceForeignKeys);
 
   /**
    * Returns the FileFormat of this database (which may involve inspecting the
@@ -409,6 +380,6 @@ public abstract class Database implements Iterable<Table>, Closeable, Flushable
    * @throws IllegalStateException if the file format cannot be determined
    * @usage _general_method_
    */
-  public abstract FileFormat getFileFormat() throws IOException;
+  public FileFormat getFileFormat() throws IOException;
 
 }

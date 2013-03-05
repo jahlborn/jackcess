@@ -47,7 +47,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,7 +66,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _general_class_
  */
-public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
+public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   private static final Log LOG = LogFactory.getLog(ColumnImpl.class);
 
@@ -309,12 +308,10 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     }
   }
 
-  @Override
   public TableImpl getTable() {
     return _table;
   }
 
-  @Override
   public DatabaseImpl getDatabase() {       
     return getTable().getDatabase();
   }
@@ -333,7 +330,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     return getDatabase().getPageChannel();
   }
   
-  @Override
   public String getName() {
     return _name;
   }
@@ -345,7 +341,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _name = name;
   }
   
-  @Override
   public boolean isVariableLength() {
     return _variableLength;
   }
@@ -357,7 +352,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _variableLength = variableLength;
   }
   
-  @Override
   public boolean isAutoNumber() {
     return _autoNumber;
   }
@@ -384,7 +378,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _columnNumber = newColumnNumber;
   }
 
-  @Override
   public int getColumnIndex() {
     return _columnIndex;
   }
@@ -423,12 +416,10 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     }
   }
 
-  @Override
   public DataType getType() {
     return _type;
   }
   
-  @Override
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
   }
@@ -447,7 +438,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     setType(DataType.fromSQLType(type, lengthInUnits));
   }
   
-  @Override
   public boolean isCompressedUnicode() {
     return _textInfo._compressedUnicode;
   }
@@ -460,7 +450,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _textInfo._compressedUnicode = newCompessedUnicode;
   }
 
-  @Override
   public byte getPrecision() {
     return _numericInfo._precision;
   }
@@ -473,7 +462,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _numericInfo._precision = newPrecision;
   }
   
-  @Override
   public byte getScale() {
     return _numericInfo._scale;
   }
@@ -515,7 +503,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _columnLength = length;
   }
 
-  @Override
   public short getLength() {
     return _columnLength;
   }
@@ -527,7 +514,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     setLength((short)getType().fromUnitSize(unitLength));
   }
 
-  @Override
   public short getLengthInUnits() {
     return (short)getType().toUnitSize(getLength());
   }
@@ -568,7 +554,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     return getDatabase().getCalendar();
   }
 
-  @Override
   public boolean isAppendOnly() {
     return (getVersionHistoryColumn() != null);
   }
@@ -590,7 +575,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _textInfo._versionHistoryCol = versionHistoryCol;
   }
 
-  @Override
   public boolean isHyperlink() {
     return _textInfo._hyperlink;
   }
@@ -603,7 +587,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     _textInfo._hyperlink = hyperlink;
   }
   
-  @Override
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return _complexInfo;
   }
@@ -657,7 +640,6 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     return _autoNumberGenerator;
   }
 
-  @Override
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
       _props = getTable().getPropertyMaps().get(getName());
@@ -753,24 +735,20 @@ public class ColumnImpl extends Column implements Comparable<ColumnImpl> {
     }
   }
 
-  @Override
   public Object setRowValue(Object[] rowArray, Object value) {
     rowArray[_columnIndex] = value;
     return value;
   }
   
-  @Override
   public Object setRowValue(Map<String,Object> rowMap, Object value) {
     rowMap.put(_name, value);
     return value;
   }
   
-  @Override
   public Object getRowValue(Object[] rowArray) {
     return rowArray[_columnIndex];
   }
   
-  @Override
   public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }

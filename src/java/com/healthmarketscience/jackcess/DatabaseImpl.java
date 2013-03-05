@@ -67,7 +67,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _general_class_
  */
-public class DatabaseImpl extends Database
+public class DatabaseImpl implements Database
 {  
   private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
@@ -546,7 +546,6 @@ public class DatabaseImpl extends Database
     readSystemCatalog();
   }
 
-  @Override
   public File getFile() {
     return _file;
   }
@@ -565,12 +564,10 @@ public class DatabaseImpl extends Database
     return _format;
   }
   
-  @Override
   public TableImpl getSystemCatalog() {
     return _systemCatalog;
   }
   
-  @Override
   public TableImpl getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
       _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
@@ -598,39 +595,32 @@ public class DatabaseImpl extends Database
     return _complexCols;
   }
 
-  @Override
   public ErrorHandler getErrorHandler() {
     return((_dbErrorHandler != null) ? _dbErrorHandler :
            DEFAULT_ERROR_HANDLER);
   }
 
-  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }    
 
-  @Override
   public LinkResolver getLinkResolver() {
     return((_linkResolver != null) ? _linkResolver : DEFAULT_LINK_RESOLVER);
   }
 
-  @Override
   public void setLinkResolver(LinkResolver newLinkResolver) {
     _linkResolver = newLinkResolver;
   }    
 
-  @Override
   public Map<String,Database> getLinkedDatabases() {
     return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() : 
             Collections.unmodifiableMap(_linkedDbs));
   }
 
-  @Override
   public TimeZone getTimeZone() {
     return _timeZone;
   }
 
-  @Override
   public void setTimeZone(TimeZone newTimeZone) {
     if(newTimeZone == null) {
       newTimeZone = getDefaultTimeZone();
@@ -640,13 +630,11 @@ public class DatabaseImpl extends Database
     _calendar = null;
   }    
 
-  @Override
   public Charset getCharset()
   {
     return _charset;
   }
 
-  @Override
   public void setCharset(Charset newCharset) {
     if(newCharset == null) {
       newCharset = getDefaultCharset(getFormat());
@@ -654,12 +642,10 @@ public class DatabaseImpl extends Database
     _charset = newCharset;
   }
 
-  @Override
   public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
   }
 
-  @Override
   public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
     if(newColumnOrder == null) {
       newColumnOrder = getDefaultColumnOrder();
@@ -667,12 +653,10 @@ public class DatabaseImpl extends Database
     _columnOrder = newColumnOrder;
   }
 
-  @Override
   public boolean isEnforceForeignKeys() {
     return _enforceForeignKeys;
   }
 
-  @Override
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys) {
     if(newEnforceForeignKeys == null) {
       newEnforceForeignKeys = getDefaultEnforceForeignKeys();
@@ -709,7 +693,6 @@ public class DatabaseImpl extends Database
     return _propsHandler;
   }
 
-  @Override
   public FileFormat getFileFormat() throws IOException {
 
     if(_fileFormat == null) {
@@ -856,7 +839,6 @@ public class DatabaseImpl extends Database
     }
   }
   
-  @Override
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
       Set<String> tableNames =
@@ -867,7 +849,6 @@ public class DatabaseImpl extends Database
     return _tableNames;
   }
 
-  @Override
   public Set<String> getSystemTableNames() throws IOException {
     Set<String> sysTableNames =
       new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
@@ -875,12 +856,10 @@ public class DatabaseImpl extends Database
     return sysTableNames;
   }
 
-  @Override
   public Iterator<Table> iterator() {
     return new TableIterator();
   }
 
-  @Override
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
@@ -1026,7 +1005,6 @@ public class DatabaseImpl extends Database
     addToAccessControlEntries(tdefPageNumber);
   }
 
-  @Override
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
@@ -1070,7 +1048,6 @@ public class DatabaseImpl extends Database
     return relationships;
   }
 
-  @Override
   public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
@@ -1121,13 +1098,11 @@ public class DatabaseImpl extends Database
     return queries;
   }
 
-  @Override
   public TableImpl getSystemTable(String tableName) throws IOException
   {
     return getTable(tableName, true);
   }
 
-  @Override
   public PropertyMap getDatabaseProperties() throws IOException {
     if(_dbPropMaps == null) {
       _dbPropMaps = getPropertiesForDbObject(OBJECT_NAME_DB_PROPS);
@@ -1135,7 +1110,6 @@ public class DatabaseImpl extends Database
     return _dbPropMaps.getDefault();
   }
 
-  @Override
   public PropertyMap getSummaryProperties() throws IOException {
     if(_summaryPropMaps == null) {
       _summaryPropMaps = getPropertiesForDbObject(OBJECT_NAME_SUMMARY_PROPS);
@@ -1143,7 +1117,6 @@ public class DatabaseImpl extends Database
     return _summaryPropMaps.getDefault();
   }
 
-  @Override
   public PropertyMap getUserDefinedProperties() throws IOException {
     if(_userDefPropMaps == null) {
       _userDefPropMaps = getPropertiesForDbObject(OBJECT_NAME_USERDEF_PROPS);
@@ -1193,7 +1166,6 @@ public class DatabaseImpl extends Database
     return readProperties(propsBytes, objectId);
   }
 
-  @Override
   public String getDatabasePassword() throws IOException
   {
     ByteBuffer buffer = takeSharedBuffer();
@@ -1435,7 +1407,6 @@ public class DatabaseImpl extends Database
     return Cursor.createCursor(table);
   }
   
-  @Override
   public void flush() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1445,7 +1416,6 @@ public class DatabaseImpl extends Database
     _pageChannel.flush();
   }
   
-  @Override
   public void close() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {

@@ -160,4 +160,36 @@ public class DatabaseBuilder
     return DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
                                _charset, _timeZone);
   }
+
+  /**
+   * Open an existing Database.  If the existing file is not writeable, the
+   * file will be opened read-only.  Auto-syncing is enabled for the returned
+   * Database.
+   * 
+   * @param mdbFile File containing the database
+   * 
+   * @see DatabaseBuilder for more flexible Database opening
+   * @usage _general_method_
+   */
+  public static Database open(File mdbFile) throws IOException {
+    return new DatabaseBuilder(mdbFile).open();
+  }
+  
+  /**
+   * Create a new Database for the given fileFormat
+   * 
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   *
+   * @see DatabaseBuilder for more flexible Database creation
+   * @usage _general_method_
+   */
+  public static Database create(Database.FileFormat fileFormat, File mdbFile) 
+    throws IOException 
+  {
+    return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
+  }
+  
+
 }

@@ -30,7 +30,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
  *
  * @author James Ahlborn
  */
-public abstract class Column 
+public interface Column 
 {
   /**
    * Meaningless placeholder object for inserting values in an autonumber
@@ -50,99 +50,99 @@ public abstract class Column
   /**
    * @usage _general_method_
    */
-  public abstract Table getTable();
+  public Table getTable();
 
   /**
    * @usage _general_method_
    */
-  public abstract Database getDatabase();
+  public Database getDatabase();
 
   /**
    * @usage _general_method_
    */
-  public abstract String getName();
+  public String getName();
 
   /**
    * @usage _advanced_method_
    */
-  public abstract boolean isVariableLength();
+  public boolean isVariableLength();
 
   /**
    * @usage _general_method_
    */
-  public abstract boolean isAutoNumber();
+  public boolean isAutoNumber();
 
   /**
    * @usage _advanced_method_
    */
-  public abstract int getColumnIndex();
+  public int getColumnIndex();
 
   /**
    * @usage _general_method_
    */
-  public abstract DataType getType();
+  public DataType getType();
 
   /**
    * @usage _general_method_
    */
-  public abstract int getSQLType() throws SQLException;
+  public int getSQLType() throws SQLException;
 
   /**
    * @usage _general_method_
    */
-  public abstract boolean isCompressedUnicode();
+  public boolean isCompressedUnicode();
 
   /**
    * @usage _general_method_
    */
-  public abstract byte getPrecision();
+  public byte getPrecision();
 
   /**
    * @usage _general_method_
    */
-  public abstract byte getScale();
+  public byte getScale();
 
   /**
    * @usage _general_method_
    */
-  public abstract short getLength();
+  public short getLength();
 
   /**
    * @usage _general_method_
    */
-  public abstract short getLengthInUnits();
+  public short getLengthInUnits();
 
   /**
    * Whether or not this column is "append only" (its history is tracked by a
    * separate version history column).
    * @usage _general_method_
    */
-  public abstract boolean isAppendOnly();
+  public boolean isAppendOnly();
 
   /**
    * Returns whether or not this is a hyperlink column (only possible for
    * columns of type MEMO).
    * @usage _general_method_
    */
-  public abstract boolean isHyperlink();
+  public boolean isHyperlink();
 
   /**
    * Returns extended functionality for "complex" columns.
    * @usage _general_method_
    */
-  public abstract ComplexColumnInfo<? extends ComplexValue> getComplexInfo();
+  public ComplexColumnInfo<? extends ComplexValue> getComplexInfo();
 
   /**
    * @return the properties for this column
    * @usage _general_method_
    */
-  public abstract PropertyMap getProperties() throws IOException;
+  public PropertyMap getProperties() throws IOException;
 
-  public abstract Object setRowValue(Object[] rowArray, Object value);
+  public Object setRowValue(Object[] rowArray, Object value);
   
-  public abstract Object setRowValue(Map<String,Object> rowMap, Object value);
+  public Object setRowValue(Map<String,Object> rowMap, Object value);
   
-  public abstract Object getRowValue(Object[] rowArray);
+  public Object getRowValue(Object[] rowArray);
   
-  public abstract Object getRowValue(Map<String,?> rowMap);
+  public Object getRowValue(Map<String,?> rowMap);
 }
