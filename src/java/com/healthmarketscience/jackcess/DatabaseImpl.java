@@ -596,8 +596,7 @@ public class DatabaseImpl implements Database
   }
 
   public ErrorHandler getErrorHandler() {
-    return((_dbErrorHandler != null) ? _dbErrorHandler :
-           DEFAULT_ERROR_HANDLER);
+    return((_dbErrorHandler != null) ? _dbErrorHandler : ErrorHandler.DEFAULT);
   }
 
   public void setErrorHandler(ErrorHandler newErrorHandler) {
@@ -605,7 +604,7 @@ public class DatabaseImpl implements Database
   }    
 
   public LinkResolver getLinkResolver() {
-    return((_linkResolver != null) ? _linkResolver : DEFAULT_LINK_RESOLVER);
+    return((_linkResolver != null) ? _linkResolver : LinkResolver.DEFAULT);
   }
 
   public void setLinkResolver(LinkResolver newLinkResolver) {

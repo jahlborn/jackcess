@@ -19,6 +19,7 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -28,6 +29,19 @@ import java.io.IOException;
  */
 public interface LinkResolver 
 {
+  /**
+   * default link resolver used if none provided
+   * @usage _general_field_
+   */
+  public static final LinkResolver DEFAULT = new LinkResolver() {
+      public Database resolveLinkedDatabase(Database linkerDb,
+                                            String linkeeFileName)
+        throws IOException
+      {
+        return DatabaseBuilder.open(new File(linkeeFileName));
+      }
+    };
+
   /**
    * Returns the appropriate Database instance for the linkeeFileName from the
    * given linkerDb.

@@ -110,36 +110,6 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     "com.healthmarketscience.jackcess.enforceForeignKeys";
 
   /**
-   * default error handler used if none provided (just rethrows exception)
-   * @usage _general_field_
-   */
-  public static final ErrorHandler DEFAULT_ERROR_HANDLER = new ErrorHandler() {
-      public Object handleRowError(Column column, byte[] columnData,
-                                   Location location, Exception error)
-        throws IOException
-      {
-        // really can only be RuntimeException or IOException
-        if(error instanceof IOException) {
-          throw (IOException)error;
-        }
-        throw (RuntimeException)error;
-      }
-    };
-
-  /**
-   * default link resolver used if none provided
-   * @usage _general_field_
-   */
-  public static final LinkResolver DEFAULT_LINK_RESOLVER = new LinkResolver() {
-      public Database resolveLinkedDatabase(Database linkerDb,
-                                            String linkeeFileName)
-        throws IOException
-      {
-        return DatabaseBuilder.open(new File(linkeeFileName));
-      }
-    };
-
-  /**
    * Enum which indicates which version of Access created the database.
    * @usage _general_class_
    */
@@ -297,7 +267,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Sets a new ErrorHandler.  If {@code null}, resets to the
-   * {@link #DEFAULT_ERROR_HANDLER}.
+   * {@link ErrorHandler#DEFAULT}.
    * @usage _intermediate_method_
    */
   public void setErrorHandler(ErrorHandler newErrorHandler);
@@ -311,7 +281,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Sets a new LinkResolver.  If {@code null}, resets to the
-   * {@link #DEFAULT_LINK_RESOLVER}.
+   * {@link LinkResolver#DEFAULT}.
    * @usage _intermediate_method_
    */
   public void setLinkResolver(LinkResolver newLinkResolver);

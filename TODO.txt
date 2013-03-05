@@ -33,3 +33,4 @@ Refactor goals:
 - tweak lookup apis (specify column vs column name)
 - separate classes into more packages (api,builder,util,impl)
 - remove debug log blocks
+- add Row interface

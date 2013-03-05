@@ -33,13 +33,29 @@ import java.io.IOException;
  * Handler for errors encountered while reading a column of row data from a
  * Table.  An instance of this class may be configured at the Database, Table,
  * or Cursor level to customize error handling as desired.  The default
- * instance used is {@link Database#DEFAULT_ERROR_HANDLER}, which just
- * rethrows any exceptions encountered.
+ * instance used is {@link #DEFAULT}, which just rethrows any exceptions
+ * encountered.
  * 
  * @author James Ahlborn
  */
 public interface ErrorHandler 
 {
+  /**
+   * default error handler used if none provided (just rethrows exception)
+   * @usage _general_field_
+   */
+  public static final ErrorHandler DEFAULT = new ErrorHandler() {
+      public Object handleRowError(Column column, byte[] columnData,
+                                   Location location, Exception error)
+        throws IOException
+      {
+        // really can only be RuntimeException or IOException
+        if(error instanceof IOException) {
+          throw (IOException)error;
+        }
+        throw (RuntimeException)error;
+      }
+    };
 
   /**
    * Handles an error encountered while reading a column of data from a Table
