@@ -171,7 +171,7 @@ public class TableImpl implements Table
 
   /** common cursor for iterating through the table, kept here for historic
       reasons */
-  private Cursor _cursor;
+  private CursorImpl _cursor;
   
   /**
    * Only used by unit tests
@@ -403,9 +403,9 @@ public class TableImpl implements Table
     return _logicalIndexCount;
   }
 
-  private Cursor getInternalCursor() {
+  private CursorImpl getInternalCursor() {
     if(_cursor == null) {
-      _cursor = Cursor.createCursor(this);
+      _cursor = CursorImpl.createCursor(this);
     }
     return _cursor;
   }

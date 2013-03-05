@@ -268,7 +268,7 @@ public class ExportUtil {
       char quote, ExportFilter filter)
       throws IOException 
   {
-    exportWriter(Cursor.createCursor(db.getTable(tableName)), out, header,
+    exportWriter(CursorImpl.createCursor(db.getTable(tableName)), out, header,
                  delim, quote, filter);
   }
 
@@ -290,7 +290,7 @@ public class ExportUtil {
    *
    * @see Builder
    */
-  public static void exportWriter(Cursor cursor,
+  public static void exportWriter(CursorImpl cursor,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException 
@@ -409,7 +409,7 @@ public class ExportUtil {
     private DatabaseImpl _db;
     private String _tableName;
     private String _ext = DEFAULT_FILE_EXT;
-    private Cursor _cursor;
+    private CursorImpl _cursor;
     private String _delim = DEFAULT_DELIMITER;
     private char _quote = DEFAULT_QUOTE_CHAR;
     private ExportFilter _filter = SimpleExportFilter.INSTANCE;
@@ -424,7 +424,7 @@ public class ExportUtil {
       _tableName = tableName;
     }
 
-    public Builder(Cursor cursor) {
+    public Builder(CursorImpl cursor) {
       _cursor = cursor;
     }
 
@@ -438,7 +438,7 @@ public class ExportUtil {
       return this;
     }
 
-    public Builder setCursor(Cursor cursor) {
+    public Builder setCursor(CursorImpl cursor) {
       _cursor = cursor;
       return this;
     }

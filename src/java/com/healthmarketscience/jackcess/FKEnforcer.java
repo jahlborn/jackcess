@@ -236,7 +236,7 @@ final class FKEnforcer
                                             Object[] newFromRow)
     throws IOException
   {
-    IndexCursor toCursor = joiner.getToCursor();
+    IndexCursorImpl toCursor = joiner.getToCursor();
     List<IndexData.ColumnDescriptor> fromCols = joiner.getColumns();
     List<IndexData.ColumnDescriptor> toCols = joiner.getToIndex().getColumns();
     Object[] toRow = new Object[joiner.getToTable().getColumnCount()];

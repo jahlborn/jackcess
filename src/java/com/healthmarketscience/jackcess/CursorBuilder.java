@@ -58,7 +58,7 @@ public class CursorBuilder {
   /** whether to start at beginning or end of cursor */
   private boolean _beforeFirst = true;
   /** optional save point to restore to the cursor */
-  private Cursor.Savepoint _savepoint;
+  private CursorImpl.SavepointImpl _savepoint;
   /** ColumnMatcher to be used when matching column values */
   private ColumnMatcher _columnMatcher;
 
@@ -87,7 +87,7 @@ public class CursorBuilder {
   /**
    * Sets a savepoint to restore for the initial position of the cursor.
    */
-  public CursorBuilder restoreSavepoint(Cursor.Savepoint savepoint) {
+  public CursorBuilder restoreSavepoint(CursorImpl.SavepointImpl savepoint) {
     _savepoint = savepoint;
     return this;
   }
@@ -273,14 +273,14 @@ public class CursorBuilder {
    * Returns a new cursor for the table, constructed to the given
    * specifications.
    */
-  public Cursor toCursor()
+  public CursorImpl toCursor()
     throws IOException
   {
-    Cursor cursor = null;
+    CursorImpl cursor = null;
     if(_index == null) {
-      cursor = Cursor.createCursor(_table);
+      cursor = CursorImpl.createCursor(_table);
     } else {
-      cursor = Cursor.createIndexCursor(_table, _index,
+      cursor = CursorImpl.createIndexCursor(_table, _index,
                                         _startRow, _startRowInclusive,
                                         _endRow, _endRowInclusive);
     }
@@ -299,10 +299,10 @@ public class CursorBuilder {
    * Returns a new index cursor for the table, constructed to the given
    * specifications.
    */
-  public IndexCursor toIndexCursor()
+  public IndexCursorImpl toIndexCursor()
     throws IOException
   {
-    return (IndexCursor)toCursor();
+    return (IndexCursorImpl)toCursor();
   }
 
 }

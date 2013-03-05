@@ -33,7 +33,7 @@ import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.DatabaseImpl;
-import com.healthmarketscience.jackcess.IndexCursor;
+import com.healthmarketscience.jackcess.IndexCursorImpl;
 import com.healthmarketscience.jackcess.JetFormat;
 import com.healthmarketscience.jackcess.PageChannel;
 import com.healthmarketscience.jackcess.TableImpl;
@@ -63,8 +63,8 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   private final List<ColumnImpl> _typeCols;
   private final ColumnImpl _pkCol;
   private final ColumnImpl _complexValFkCol;
-  private IndexCursor _pkCursor;
-  private IndexCursor _complexValIdCursor;
+  private IndexCursorImpl _pkCursor;
+  private IndexCursorImpl _complexValIdCursor;
   
   protected ComplexColumnInfo(ColumnImpl column, int complexTypeId,
                               TableImpl typeObjTable, TableImpl flatTable)
@@ -111,7 +111,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
     DatabaseImpl db = column.getDatabase();
     TableImpl complexColumns = db.getSystemComplexColumns();
-    IndexCursor cursor = IndexCursor.createCursor(
+    IndexCursorImpl cursor = IndexCursorImpl.createCursor(
         complexColumns, complexColumns.getPrimaryKeyIndex());
     if(!cursor.findFirstRowByEntry(complexTypeId)) {
       throw new IOException(

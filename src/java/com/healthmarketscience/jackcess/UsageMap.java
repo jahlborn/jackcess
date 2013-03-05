@@ -811,7 +811,7 @@ public class UsageMap
      *         {@link RowId#LAST_PAGE_NUMBER} otherwise
      */
     public int getNextPage() {
-      return getAnotherPage(Cursor.MOVE_FORWARD);
+      return getAnotherPage(CursorImpl.MOVE_FORWARD);
     }
 
     /**
@@ -819,7 +819,7 @@ public class UsageMap
      *         {@link RowId#FIRST_PAGE_NUMBER} otherwise
      */
     public int getPreviousPage() {
-      return getAnotherPage(Cursor.MOVE_REVERSE);
+      return getAnotherPage(CursorImpl.MOVE_REVERSE);
     }
 
     /**
@@ -857,7 +857,7 @@ public class UsageMap
      * page in the map
      */
     public void beforeFirst() {
-      reset(Cursor.MOVE_FORWARD);
+      reset(CursorImpl.MOVE_FORWARD);
     }
 
     /**
@@ -865,7 +865,7 @@ public class UsageMap
      * last page in the map
      */
     public void afterLast() {
-      reset(Cursor.MOVE_REVERSE);
+      reset(CursorImpl.MOVE_REVERSE);
     }
 
     /**

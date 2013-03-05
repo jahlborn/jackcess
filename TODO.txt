@@ -34,3 +34,4 @@ Refactor goals:
 - separate classes into more packages (api,builder,util,impl)
 - remove debug log blocks
 - add Row interface
+- change savepoint to use table number instead of name?

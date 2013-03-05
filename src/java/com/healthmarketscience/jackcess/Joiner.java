@@ -36,10 +36,10 @@ public class Joiner
 {
   private final IndexImpl _fromIndex;
   private final List<IndexData.ColumnDescriptor> _fromCols;
-  private final IndexCursor _toCursor;
+  private final IndexCursorImpl _toCursor;
   private final Object[] _entryValues;
   
-  private Joiner(IndexImpl fromIndex, IndexCursor toCursor)
+  private Joiner(IndexImpl fromIndex, IndexCursorImpl toCursor)
   {
     _fromIndex = fromIndex;
     _fromCols = _fromIndex.getColumns();
@@ -73,7 +73,7 @@ public class Joiner
     throws IOException
   {
     IndexImpl toIndex = fromIndex.getReferencedIndex();
-    IndexCursor toCursor = IndexCursor.createCursor(
+    IndexCursorImpl toCursor = IndexCursorImpl.createCursor(
         toIndex.getTable(), toIndex);
     // text lookups are always case-insensitive
     toCursor.setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE);
@@ -106,7 +106,7 @@ public class Joiner
     return getToCursor().getIndex();
   }
   
-  public IndexCursor getToCursor() {
+  public IndexCursorImpl getToCursor() {
     return _toCursor;
   }
 

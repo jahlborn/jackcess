@@ -638,7 +638,7 @@ public class IndexData {
       Position tmpPos = null;
       Position endPos = cursor._lastPos;
       while(!endPos.equals(
-                tmpPos = cursor.getAnotherPosition(Cursor.MOVE_FORWARD))) {
+                tmpPos = cursor.getAnotherPosition(CursorImpl.MOVE_FORWARD))) {
         if(tmpPos.getEntry().getRowId().equals(oldEntry.getRowId())) {
           dataPage = tmpPos.getDataPage();
           idx = tmpPos.getIndex();
@@ -1981,11 +1981,11 @@ public class IndexData {
     }
 
     public void beforeFirst() {
-      reset(Cursor.MOVE_FORWARD);
+      reset(CursorImpl.MOVE_FORWARD);
     }
 
     public void afterLast() {
-      reset(Cursor.MOVE_REVERSE);
+      reset(CursorImpl.MOVE_REVERSE);
     }
 
     protected void reset(boolean moveForward)
@@ -2021,7 +2021,7 @@ public class IndexData {
      *         {@code #getLastEntry} otherwise
      */
     public Entry getNextEntry() throws IOException {
-      return getAnotherPosition(Cursor.MOVE_FORWARD).getEntry();
+      return getAnotherPosition(CursorImpl.MOVE_FORWARD).getEntry();
     }
 
     /**
@@ -2029,7 +2029,7 @@ public class IndexData {
      *         {@code #getFirstEntry} otherwise
      */
     public Entry getPreviousEntry() throws IOException {
-      return getAnotherPosition(Cursor.MOVE_REVERSE).getEntry();
+      return getAnotherPosition(CursorImpl.MOVE_REVERSE).getEntry();
     }
 
     /**
