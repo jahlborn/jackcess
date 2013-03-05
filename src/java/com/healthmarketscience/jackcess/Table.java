@@ -84,7 +84,7 @@ public abstract class Table implements Iterable<Map<String, Object>>
    * @return All of the columns in this table (unmodifiable List)
    * @usage _general_method_
    */
-  public abstract List<Column> getColumns();
+  public abstract List<? extends Column> getColumns();
 
   /**
    * @return the column with the given name

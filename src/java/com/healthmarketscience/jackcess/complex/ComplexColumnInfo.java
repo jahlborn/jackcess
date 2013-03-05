@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.DatabaseImpl;
@@ -46,7 +47,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class ComplexColumnInfo<V extends ComplexValue>
 {
-  private static final Log LOG = LogFactory.getLog(Column.class);
+  private static final Log LOG = LogFactory.getLog(ComplexColumnInfo.class);
 
   public static final int INVALID_ID = -1;
   public static final ComplexValueForeignKey INVALID_COMPLEX_VALUE_ID =
@@ -56,16 +57,16 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   private static final String COL_TABLE_ID = "ConceptualTableID";
   private static final String COL_FLAT_TABLE_ID = "FlatTableID";
 
-  private final Column _column;
+  private final ColumnImpl _column;
   private final int _complexTypeId;
   private final TableImpl _flatTable;
-  private final List<Column> _typeCols;
-  private final Column _pkCol;
-  private final Column _complexValFkCol;
+  private final List<ColumnImpl> _typeCols;
+  private final ColumnImpl _pkCol;
+  private final ColumnImpl _complexValFkCol;
   private IndexCursor _pkCursor;
   private IndexCursor _complexValIdCursor;
   
-  protected ComplexColumnInfo(Column column, int complexTypeId,
+  protected ComplexColumnInfo(ColumnImpl column, int complexTypeId,
                               TableImpl typeObjTable, TableImpl flatTable)
     throws IOException
   {
@@ -76,15 +77,15 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     // the flat table has all the "value" columns and 2 extra columns, a
     // primary key for each row, and a LONG value which is essentially a
     // foreign key to the main table.
-    List<Column> typeCols = new ArrayList<Column>();
-    List<Column> otherCols = new ArrayList<Column>();
+    List<ColumnImpl> typeCols = new ArrayList<ColumnImpl>();
+    List<ColumnImpl> otherCols = new ArrayList<ColumnImpl>();
     diffFlatColumns(typeObjTable, flatTable, typeCols, otherCols);
 
     _typeCols = Collections.unmodifiableList(typeCols);
 
-    Column pkCol = null;
-    Column complexValFkCol = null;
-    for(Column col : otherCols) {
+    ColumnImpl pkCol = null;
+    ColumnImpl complexValFkCol = null;
+    for(ColumnImpl col : otherCols) {
       if(col.isAutoNumber()) {
         pkCol = col;
       } else if(col.getType() == DataType.LONG) {
@@ -102,7 +103,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   }
 
   public static ComplexColumnInfo<? extends ComplexValue> create(
-      Column column, ByteBuffer buffer, int offset)
+      ColumnImpl column, ByteBuffer buffer, int offset)
     throws IOException
   {
     int complexTypeId = buffer.getInt(
@@ -158,7 +159,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     // nothing to do in base class
   }
   
-  public Column getColumn() {
+  public ColumnImpl getColumn() {
     return _column;
   }
 
@@ -174,15 +175,15 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return getDatabase().getPageChannel();
   }
 
-  public Column getPrimaryKeyColumn() {
+  public ColumnImpl getPrimaryKeyColumn() {
     return _pkCol;
   }
 
-  public Column getComplexValueForeignKeyColumn() {
+  public ColumnImpl getComplexValueForeignKeyColumn() {
     return _complexValFkCol;
   }
 
-  protected List<Column> getTypeColumns() {
+  protected List<ColumnImpl> getTypeColumns() {
     return _typeCols;
   }
   
@@ -372,12 +373,12 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
   protected static void diffFlatColumns(TableImpl typeObjTable, 
                                         TableImpl flatTable,
-                                        List<Column> typeCols,
-                                        List<Column> otherCols)
+                                        List<ColumnImpl> typeCols,
+                                        List<ColumnImpl> otherCols)
   {
     // each "flat"" table has the columns from the "type" table, plus some
     // others.  separate the "flat" columns into these 2 buckets
-    for(Column col : flatTable.getColumns()) {
+    for(ColumnImpl col : flatTable.getColumns()) {
       boolean found = false;
       try {
         typeObjTable.getColumn(col.getName());
@@ -433,7 +434,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
       _complexValueFk = complexValueFk;
     }
 
-    public Column getColumn() {
+    public ColumnImpl getColumn() {
       return _complexValueFk.getColumn();
     }
     

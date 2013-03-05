@@ -25,7 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.TableImpl;
 
 /**
@@ -41,18 +41,18 @@ import com.healthmarketscience.jackcess.TableImpl;
  */
 public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version> 
 {
-  private final Column _valueCol;
-  private final Column _modifiedCol;
+  private final ColumnImpl _valueCol;
+  private final ColumnImpl _modifiedCol;
   
-  public VersionHistoryColumnInfo(Column column, int complexId,
+  public VersionHistoryColumnInfo(ColumnImpl column, int complexId,
                                   TableImpl typeObjTable, TableImpl flatTable) 
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
 
-    Column valueCol = null;
-    Column modifiedCol = null;
-    for(Column col : getTypeColumns()) {
+    ColumnImpl valueCol = null;
+    ColumnImpl modifiedCol = null;
+    for(ColumnImpl col : getTypeColumns()) {
       switch(col.getType()) {
       case SHORT_DATE_TIME:
         modifiedCol = col;
@@ -75,16 +75,16 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
 
     // link up with the actual versioned column.  it should have the same name
     // as the "value" column in the type table.
-    Column versionedCol = getColumn().getTable().getColumn(
+    ColumnImpl versionedCol = getColumn().getTable().getColumn(
         getValueColumn().getName());
     versionedCol.setVersionHistoryColumn(getColumn());
   }
     
-  public Column getValueColumn() {
+  public ColumnImpl getValueColumn() {
     return _valueCol;
   }
 
-  public Column getModifiedDateColumn() {
+  public ColumnImpl getModifiedDateColumn() {
     return _modifiedCol;
   }
   
@@ -154,7 +154,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   public static boolean isVersionHistoryColumn(TableImpl typeObjTable) {
     // version history data has these columns <value>(MEMO),
     // <modified>(SHORT_DATE_TIME)
-    List<Column> typeCols = typeObjTable.getColumns();
+    List<ColumnImpl> typeCols = typeObjTable.getColumns();
     if(typeCols.size() < 2) {
       return false;
     }
@@ -162,7 +162,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
     int numMemo = 0;
     int numDate = 0;
     
-    for(Column col : typeCols) {
+    for(ColumnImpl col : typeCols) {
       switch(col.getType()) {
       case SHORT_DATE_TIME:
         ++numDate;

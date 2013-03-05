@@ -303,8 +303,8 @@ public class ExportUtil {
         "(?:" + Pattern.quote(delimiter) + ")|(?:" + 
         Pattern.quote("" + quote) + ")|(?:[\n\r])");
 
-    List<Column> origCols = cursor.getTable().getColumns();
-    List<Column> columns = new ArrayList<Column>(origCols);
+    List<ColumnImpl> origCols = cursor.getTable().getColumns();
+    List<ColumnImpl> columns = new ArrayList<ColumnImpl>(origCols);
     columns = filter.filterColumns(columns);
 
     Collection<String> columnNames = null;
@@ -312,14 +312,14 @@ public class ExportUtil {
 
       // columns have been filtered
       columnNames = new HashSet<String>();
-      for (Column c : columns) {
+      for (ColumnImpl c : columns) {
         columnNames.add(c.getName());
       }
     }
 
     // print the header row (if desired)
     if (header) {
-      for (Iterator<Column> iter = columns.iterator(); iter.hasNext();) {
+      for (Iterator<ColumnImpl> iter = columns.iterator(); iter.hasNext();) {
 
         writeValue(out, iter.next().getName(), quote, needsQuotePattern);
 

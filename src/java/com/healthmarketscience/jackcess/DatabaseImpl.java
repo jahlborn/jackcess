@@ -322,7 +322,7 @@ public class DatabaseImpl extends Database
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
   /** language sort order to be used for textual columns */
-  private Column.SortOrder _defaultSortOrder;
+  private ColumnImpl.SortOrder _defaultSortOrder;
   /** default code page to be used for textual columns (in some dbs) */
   private Short _defaultCodePage;
   /** the ordering used for table columns */
@@ -773,7 +773,7 @@ public class DatabaseImpl extends Database
    *         textual columns
    * @usage _intermediate_method_
    */
-  public Column.SortOrder getDefaultSortOrder() throws IOException {
+  public ColumnImpl.SortOrder getDefaultSortOrder() throws IOException {
 
     if(_defaultSortOrder == null) {
       initRootPageInfo();
@@ -801,7 +801,7 @@ public class DatabaseImpl extends Database
     ByteBuffer buffer = takeSharedBuffer();
     try {
       _pageChannel.readPage(buffer, 0);
-      _defaultSortOrder = Column.readSortOrder(
+      _defaultSortOrder = ColumnImpl.readSortOrder(
           buffer, _format.OFFSET_SORT_ORDER, _format);
       _defaultCodePage = buffer.getShort(_format.OFFSET_CODE_PAGE);
     } finally {
@@ -956,7 +956,7 @@ public class DatabaseImpl extends Database
    * @param columns List of Columns in the table
    * @usage _general_method_
    */
-  public void createTable(String name, List<Column> columns)
+  public void createTable(String name, List<ColumnImpl> columns)
     throws IOException
   {
     createTable(name, columns, null);
@@ -969,7 +969,7 @@ public class DatabaseImpl extends Database
    * @param indexes List of IndexBuilders describing indexes for the table
    * @usage _general_method_
    */
-  public void createTable(String name, List<Column> columns,
+  public void createTable(String name, List<ColumnImpl> columns,
                           List<IndexBuilder> indexes)
     throws IOException
   {
@@ -1030,6 +1030,13 @@ public class DatabaseImpl extends Database
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
+    return getRelationships((TableImpl)table1, (TableImpl)table2);
+  }
+
+  public List<Relationship> getRelationships(
+      TableImpl table1, TableImpl table2)
+    throws IOException
+  {
     // the relationships table does not get loaded until first accessed
     if(_relationships == null) {
       _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
@@ -1046,7 +1053,7 @@ public class DatabaseImpl extends Database
       // we "order" the two tables given so that we will return a collection
       // of relationships in the same order regardless of whether we are given
       // (TableFoo, TableBar) or (TableBar, TableFoo).
-      Table tmp = table1;
+      TableImpl tmp = table1;
       table1 = table2;
       table2 = tmp;
     }
@@ -1219,7 +1226,7 @@ public class DatabaseImpl extends Database
         return null;
       }
 
-      String pwd = Column.decodeUncompressedText(pwdBytes, getCharset());
+      String pwd = ColumnImpl.decodeUncompressedText(pwdBytes, getCharset());
 
       // remove any trailing null chars
       int idx = pwd.indexOf('\0');
@@ -1238,7 +1245,7 @@ public class DatabaseImpl extends Database
    * given cursor and adds them to the given list.
    */
   private static void collectRelationships(
-      Cursor cursor, Table fromTable, Table toTable,
+      Cursor cursor, TableImpl fromTable, TableImpl toTable,
       List<Relationship> relationships)
   {
     for(Map<String,Object> row : cursor) {
@@ -1272,9 +1279,9 @@ public class DatabaseImpl extends Database
 
         // add column info
         int colIdx = (Integer)row.get(REL_COL_COLUMN_INDEX);
-        Column fromCol = fromTable.getColumn(
+        ColumnImpl fromCol = fromTable.getColumn(
             (String)row.get(REL_COL_FROM_COLUMN));
-        Column toCol = toTable.getColumn(
+        ColumnImpl toCol = toTable.getColumn(
             (String)row.get(REL_COL_TO_COLUMN));
 
         rel.getFromColumns().set(colIdx, fromCol);
@@ -1295,10 +1302,10 @@ public class DatabaseImpl extends Database
     Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
     int idx = 0;
     Date creationTime = new Date();
-    for (Iterator<Column> iter = _systemCatalog.getColumns().iterator();
+    for (Iterator<ColumnImpl> iter = _systemCatalog.getColumns().iterator();
          iter.hasNext(); idx++)
     {
-      Column col = iter.next();
+      ColumnImpl col = iter.next();
       if (CAT_COL_ID.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(pageNumber);
       } else if (CAT_COL_NAME.equals(col.getName())) {
@@ -1336,11 +1343,11 @@ public class DatabaseImpl extends Database
       initNewTableSIDs();
     }
 
-    Table acEntries = getAccessControlEntries();
-    Column acmCol = acEntries.getColumn(ACE_COL_ACM);
-    Column inheritCol = acEntries.getColumn(ACE_COL_F_INHERITABLE);
-    Column objIdCol = acEntries.getColumn(ACE_COL_OBJECT_ID);
-    Column sidCol = acEntries.getColumn(ACE_COL_SID);
+    TableImpl acEntries = getAccessControlEntries();
+    ColumnImpl acmCol = acEntries.getColumn(ACE_COL_ACM);
+    ColumnImpl inheritCol = acEntries.getColumn(ACE_COL_F_INHERITABLE);
+    ColumnImpl objIdCol = acEntries.getColumn(ACE_COL_OBJECT_ID);
+    ColumnImpl sidCol = acEntries.getColumn(ACE_COL_SID);
 
     // construct a collection of ACE entries mimicing those of our parent, the
     // "Tables" system object
@@ -1804,7 +1811,7 @@ public class DatabaseImpl extends Database
       if(cur == null) {  
         return null;
       }
-      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (Integer)cur.getCurrentRowValue(idCol);
     }
 
@@ -1948,7 +1955,7 @@ public class DatabaseImpl extends Database
       if(!_systemCatalogIdCursor.moveToPreviousRow()) {
         return Integer.MIN_VALUE;
       }
-      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (Integer)_systemCatalogIdCursor.getCurrentRowValue(idCol);
     }
   }
@@ -1978,7 +1985,7 @@ public class DatabaseImpl extends Database
     @Override
     protected Cursor findRow(Integer objectId) throws IOException 
     {
-      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (_systemCatalogCursor.findFirstRow(idCol, objectId) ?
               _systemCatalogCursor : null);
     }
@@ -2024,7 +2031,7 @@ public class DatabaseImpl extends Database
     @Override
     protected int findMaxSyntheticId() throws IOException {
       // find max id < 0
-      Column idCol = _systemCatalog.getColumn(CAT_COL_ID);
+      ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       _systemCatalogCursor.reset();
       int curMaxSynthId = Integer.MIN_VALUE;
       while(_systemCatalogCursor.moveToNextRow()) {

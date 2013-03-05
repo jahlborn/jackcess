@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.ByteUtil;
-import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.TableImpl;
 
 
@@ -39,27 +39,27 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   private static final String FILE_NAME_COL_NAME = "FileName";
   private static final String FILE_TYPE_COL_NAME = "FileType";
 
-  private final Column _fileUrlCol;
-  private final Column _fileNameCol;
-  private final Column _fileTypeCol;
-  private final Column _fileDataCol;
-  private final Column _fileTimeStampCol;
-  private final Column _fileFlagsCol;
+  private final ColumnImpl _fileUrlCol;
+  private final ColumnImpl _fileNameCol;
+  private final ColumnImpl _fileTypeCol;
+  private final ColumnImpl _fileDataCol;
+  private final ColumnImpl _fileTimeStampCol;
+  private final ColumnImpl _fileFlagsCol;
   
-  public AttachmentColumnInfo(Column column, int complexId,
+  public AttachmentColumnInfo(ColumnImpl column, int complexId,
                               TableImpl typeObjTable, TableImpl flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
 
-    Column fileUrlCol = null;
-    Column fileNameCol = null;
-    Column fileTypeCol = null;
-    Column fileDataCol = null;
-    Column fileTimeStampCol = null;
-    Column fileFlagsCol = null;
+    ColumnImpl fileUrlCol = null;
+    ColumnImpl fileNameCol = null;
+    ColumnImpl fileTypeCol = null;
+    ColumnImpl fileDataCol = null;
+    ColumnImpl fileTimeStampCol = null;
+    ColumnImpl fileFlagsCol = null;
 
-    for(Column col : getTypeColumns()) {
+    for(ColumnImpl col : getTypeColumns()) {
       switch(col.getType()) {
       case TEXT:
         if(FILE_NAME_COL_NAME.equalsIgnoreCase(col.getName())) {
@@ -100,27 +100,27 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     _fileFlagsCol = fileFlagsCol;
   }
 
-  public Column getFileUrlColumn() {
+  public ColumnImpl getFileUrlColumn() {
     return _fileUrlCol;
   }
   
-  public Column getFileNameColumn() {
+  public ColumnImpl getFileNameColumn() {
     return _fileNameCol;
   }
 
-  public Column getFileTypeColumn() {
+  public ColumnImpl getFileTypeColumn() {
     return _fileTypeCol;
   }
   
-  public Column getFileDataColumn() {
+  public ColumnImpl getFileDataColumn() {
     return _fileDataCol;
   }
   
-  public Column getFileTimeStampColumn() {
+  public ColumnImpl getFileTimeStampColumn() {
     return _fileTimeStampCol;
   }
   
-  public Column getFileFlagsColumn() {
+  public ColumnImpl getFileFlagsColumn() {
     return _fileFlagsCol;
   }  
   
@@ -187,7 +187,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     // attachment data has these columns FileURL(MEMO), FileName(TEXT),
     // FileType(TEXT), FileData(OLE), FileTimeStamp(SHORT_DATE_TIME),
     // FileFlags(LONG)
-    List<Column> typeCols = typeObjTable.getColumns();
+    List<ColumnImpl> typeCols = typeObjTable.getColumns();
     if(typeCols.size() < 6) {
       return false;
     }
@@ -198,7 +198,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     int numOle= 0;
     int numLong = 0;
     
-    for(Column col : typeCols) {
+    for(ColumnImpl col : typeCols) {
       switch(col.getType()) {
       case TEXT:
         ++numText;

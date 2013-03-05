@@ -258,7 +258,7 @@ public abstract class JetFormat {
   public final boolean LEGACY_NUMERIC_INDEXES;
   
   public final Charset CHARSET;
-  public final Column.SortOrder DEFAULT_SORT_ORDER;
+  public final ColumnImpl.SortOrder DEFAULT_SORT_ORDER;
   
   /**
    * @param channel the database file.
@@ -490,7 +490,7 @@ public abstract class JetFormat {
   protected abstract int defineMaxIndexNameLength();
   
   protected abstract Charset defineCharset();
-  protected abstract Column.SortOrder defineDefaultSortOrder();
+  protected abstract ColumnImpl.SortOrder defineDefaultSortOrder();
 
   protected abstract boolean defineLegacyNumericIndexes();
 
@@ -703,8 +703,8 @@ public abstract class JetFormat {
     protected Charset defineCharset() { return Charset.defaultCharset(); }
 
     @Override
-    protected Column.SortOrder defineDefaultSortOrder() {
-      return Column.GENERAL_LEGACY_SORT_ORDER;
+    protected ColumnImpl.SortOrder defineDefaultSortOrder() {
+      return ColumnImpl.GENERAL_LEGACY_SORT_ORDER;
     }
 
     @Override
@@ -921,8 +921,8 @@ public abstract class JetFormat {
     protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
 
     @Override
-    protected Column.SortOrder defineDefaultSortOrder() {
-      return Column.GENERAL_LEGACY_SORT_ORDER;
+    protected ColumnImpl.SortOrder defineDefaultSortOrder() {
+      return ColumnImpl.GENERAL_LEGACY_SORT_ORDER;
     }
 
     @Override
@@ -995,8 +995,8 @@ public abstract class JetFormat {
       }
 
     @Override
-    protected Column.SortOrder defineDefaultSortOrder() {
-      return Column.GENERAL_SORT_ORDER;
+    protected ColumnImpl.SortOrder defineDefaultSortOrder() {
+      return ColumnImpl.GENERAL_SORT_ORDER;
     }
 
     @Override

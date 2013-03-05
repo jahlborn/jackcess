@@ -41,7 +41,7 @@ public class TableBuilder {
   /** name of the new table */
   private String _name;
   /** columns for the new table */
-  private List<Column> _columns = new ArrayList<Column>();
+  private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   /** indexes for the new table */
   private List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
   /** whether or not table/column/index names are automatically escaped */
@@ -64,7 +64,7 @@ public class TableBuilder {
   /**
    * Adds a Column to the new table.
    */
-  public TableBuilder addColumn(Column column) {
+  public TableBuilder addColumn(ColumnImpl column) {
     if(_escapeIdentifiers) {
       column.setName(DatabaseImpl.escapeIdentifier(column.getName()));
     }
@@ -125,10 +125,10 @@ public class TableBuilder {
    * Creates a new Table in the given Database with the currently configured
    * attributes.
    */
-  public Table toTable(DatabaseImpl db)
+  public Table toTable(Database db)
     throws IOException
   {
-    db.createTable(_name, _columns, _indexes);
+    ((DatabaseImpl)db).createTable(_name, _columns, _indexes);
     return db.getTable(_name);
   }
   

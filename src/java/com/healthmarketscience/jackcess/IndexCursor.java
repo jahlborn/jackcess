@@ -319,7 +319,7 @@ public class IndexCursor extends Cursor
   }
 
   @Override
-  protected boolean findNextRowImpl(Column columnPattern, Object valuePattern)
+  protected boolean findNextRowImpl(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     if(!isBeforeFirst()) {

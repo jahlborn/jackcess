@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.TableImpl;
 
@@ -40,9 +40,9 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
       DataType.BYTE, DataType.INT, DataType.LONG, DataType.FLOAT,
       DataType.DOUBLE, DataType.GUID, DataType.NUMERIC, DataType.TEXT);
 
-  private final Column _valueCol;
+  private final ColumnImpl _valueCol;
   
-  public MultiValueColumnInfo(Column column, int complexId,
+  public MultiValueColumnInfo(ColumnImpl column, int complexId,
                               TableImpl typeObjTable, TableImpl flatTable) 
     throws IOException
   {
@@ -57,7 +57,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
     return ComplexDataType.MULTI_VALUE;
   }
 
-  public Column getValueColumn() {
+  public ColumnImpl getValueColumn() {
     return _valueCol;
   }
 
@@ -91,7 +91,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   public static boolean isMultiValueColumn(TableImpl typeObjTable) {
     // if we found a single value of a "simple" type, then we are dealing with
     // a multi-value column
-    List<Column> typeCols = typeObjTable.getColumns();
+    List<ColumnImpl> typeCols = typeObjTable.getColumns();
     return ((typeCols.size() == 1) &&
             VALUE_TYPES.contains(typeCols.get(0).getType()));
   }

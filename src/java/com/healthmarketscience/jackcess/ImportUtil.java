@@ -68,12 +68,12 @@ public class ImportUtil
    *
    * @return a List of Columns
    */
-  public static List<Column> toColumns(ResultSetMetaData md)
+  public static List<ColumnImpl> toColumns(ResultSetMetaData md)
     throws SQLException
   {
-      List<Column> columns = new LinkedList<Column>();
+      List<ColumnImpl> columns = new LinkedList<ColumnImpl>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
-        Column column = new Column();
+        ColumnImpl column = new ColumnImpl();
         column.setName(DatabaseImpl.escapeIdentifier(md.getColumnName(i)));
         int lengthInUnits = md.getColumnDisplaySize(i);
         column.setSQLType(md.getColumnType(i), lengthInUnits);
@@ -167,7 +167,7 @@ public class ImportUtil
     name = DatabaseImpl.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
-      List<Column> columns = toColumns(md);
+      List<ColumnImpl> columns = toColumns(md);
       table = createUniqueTable(db, name, columns, md, filter);
     }
 
@@ -457,7 +457,7 @@ public class ImportUtil
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
-        List<Column> columns = new LinkedList<Column>();
+        List<ColumnImpl> columns = new LinkedList<ColumnImpl>();
         Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
       
         for (int i = 0; i < columnNames.length; i++) {
@@ -591,7 +591,7 @@ public class ImportUtil
    * Returns a new table with a unique name and the given table definition.
    */
   private static Table createUniqueTable(DatabaseImpl db, String name,
-                                         List<Column> columns,
+                                         List<ColumnImpl> columns,
                                          ResultSetMetaData md, 
                                          ImportFilter filter)
     throws IOException, SQLException

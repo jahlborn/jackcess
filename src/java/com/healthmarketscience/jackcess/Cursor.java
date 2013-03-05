@@ -216,8 +216,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(TableImpl table, Column column,
-                                 Column columnPattern, Object valuePattern)
+  public static Object findValue(TableImpl table, ColumnImpl column,
+                                 ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     Cursor cursor = createCursor(table);
@@ -269,8 +269,8 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(TableImpl table, IndexImpl index, Column column,
-                                 Column columnPattern, Object valuePattern)
+  public static Object findValue(TableImpl table, IndexImpl index, ColumnImpl column,
+                                 ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     Cursor cursor = createIndexCursor(table, index);
@@ -531,7 +531,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *         operations, the actual exception will be contained within
    */
   public Iterable<Map<String, Object>> columnMatchIterable(
-      Column columnPattern, Object valuePattern)
+      ColumnImpl columnPattern, Object valuePattern)
   {
     return columnMatchIterable(null, columnPattern, valuePattern);
   }
@@ -546,7 +546,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *         operations, the actual exception will be contained within
    */
   public Iterator<Map<String, Object>> columnMatchIterator(
-      Column columnPattern, Object valuePattern)
+      ColumnImpl columnPattern, Object valuePattern)
   {
     return columnMatchIterator(null, columnPattern, valuePattern);
   }
@@ -559,7 +559,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   public Iterable<Map<String, Object>> columnMatchIterable(
       final Collection<String> columnNames,
-      final Column columnPattern, final Object valuePattern)
+      final ColumnImpl columnPattern, final Object valuePattern)
   {
     return new Iterable<Map<String, Object>>() {
       public Iterator<Map<String, Object>> iterator() {
@@ -580,7 +580,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    *         operations, the actual exception will be contained within
    */
   public Iterator<Map<String, Object>> columnMatchIterator(
-      Collection<String> columnNames, Column columnPattern, Object valuePattern)
+      Collection<String> columnNames, ColumnImpl columnPattern, Object valuePattern)
   {
     return new ColumnMatchIterator(columnNames, columnPattern, valuePattern);
   }
@@ -834,7 +834,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @deprecated renamed to {@link #findFirstRow(Column,Object)} to be more clear
    */
   @Deprecated
-  public boolean findRow(Column columnPattern, Object valuePattern)
+  public boolean findRow(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     return findFirstRow(columnPattern, valuePattern);
@@ -856,7 +856,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  public boolean findFirstRow(Column columnPattern, Object valuePattern)
+  public boolean findFirstRow(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     Position curPos = _curPos;
@@ -890,7 +890,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  public boolean findNextRow(Column columnPattern, Object valuePattern)
+  public boolean findNextRow(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     Position curPos = _curPos;
@@ -993,7 +993,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @param valuePattern value which is tested for equality with the
    *                     corresponding value in the current row
    */
-  public boolean currentRowMatches(Column columnPattern, Object valuePattern)
+  public boolean currentRowMatches(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     return _columnMatcher.matches(getTable(), columnPattern.getName(),
@@ -1039,7 +1039,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  protected boolean findNextRowImpl(Column columnPattern, Object valuePattern)
+  protected boolean findNextRowImpl(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
     while(moveToNextRow()) {
@@ -1129,7 +1129,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
   /**
    * Returns the given column from the current row.
    */
-  public Object getCurrentRowValue(Column column)
+  public Object getCurrentRowValue(ColumnImpl column)
     throws IOException
   {
     return _table.getRowValue(_rowState, _curPos.getRowId(), column);
@@ -1140,7 +1140,7 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table), or deleted.
    */
-  public void setCurrentRowValue(Column column, Object value)
+  public void setCurrentRowValue(ColumnImpl column, Object value)
     throws IOException
   {
     Object[] row = new Object[_table.getColumnCount()];
@@ -1264,11 +1264,11 @@ public abstract class Cursor implements Iterable<Map<String, Object>>
    */
   private final class ColumnMatchIterator extends BaseIterator
   {
-    private final Column _columnPattern;
+    private final ColumnImpl _columnPattern;
     private final Object _valuePattern;
     
     private ColumnMatchIterator(Collection<String> columnNames,
-                                Column columnPattern, Object valuePattern)
+                                ColumnImpl columnPattern, Object valuePattern)
     {
       super(columnNames);
       _columnPattern = columnPattern;

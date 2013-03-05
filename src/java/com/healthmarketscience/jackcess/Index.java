@@ -40,13 +40,18 @@ public abstract class Index
   /**
    * @return the Columns for this index (unmodifiable)
    */
-  public abstract List<? extends ColumnInfo> getColumns();
+  public abstract List<? extends Index.Column> getColumns();
 
   /**
    * @return the Index referenced by this Index's ForeignKeyReference (if it
    *         has one), otherwise {@code null}.
    */
   public abstract Index getReferencedIndex() throws IOException;
+
+  /**
+   * Whether or not {@code null} values are actually recorded in the index.
+   */
+  public abstract boolean shouldIgnoreNulls();
 
   /**
    * Whether or not index entries must be unique.
@@ -65,9 +70,9 @@ public abstract class Index
   /**
    * Information about a Column in an Index
    */
-  public interface ColumnInfo {
+  public interface Column {
 
-    public Column getColumn();
+    public com.healthmarketscience.jackcess.Column getColumn();
 
     public boolean isAscending();
 

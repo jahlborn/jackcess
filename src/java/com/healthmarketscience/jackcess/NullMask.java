@@ -73,7 +73,7 @@ public class NullMask {
    *    columns, returns the actual value of the column (where
    *    non-{@code null} == {@code true})
    */
-  public boolean isNull(Column column) {
+  public boolean isNull(ColumnImpl column) {
     int columnNumber = column.getColumnNumber();
     // if new columns were added to the table, old null masks may not include
     // them (meaning the field is null)
@@ -89,7 +89,7 @@ public class NullMask {
    * boolean value is {@code true}).
    * @param column column to be marked non-{@code null}
    */
-  public void markNotNull(Column column) {
+  public void markNotNull(ColumnImpl column) {
     int columnNumber = column.getColumnNumber();
     int maskIndex = byteIndex(columnNumber);
     _mask[maskIndex] = (byte) (_mask[maskIndex] | bitMask(columnNumber));

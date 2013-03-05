@@ -45,7 +45,7 @@ public class SimpleImportFilter implements ImportFilter {
   public SimpleImportFilter() {
   }
   
-  public List<Column> filterColumns(List<Column> destColumns,
+  public List<ColumnImpl> filterColumns(List<ColumnImpl> destColumns,
                                     ResultSetMetaData srcColumns)
      throws SQLException, IOException
   {

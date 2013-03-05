@@ -253,7 +253,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
     private String readPropName(ByteBuffer buffer) { 
       int nameLength = buffer.getShort();
       byte[] nameBytes = ByteUtil.getBytes(buffer, nameLength);
-      return Column.decodeUncompressedText(nameBytes, _database.getCharset());
+      return ColumnImpl.decodeUncompressedText(nameBytes, _database.getCharset());
     }
 
     /**
@@ -302,7 +302,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
     /**
      * Column adapted to work w/out a Table.
      */
-    private class PropColumn extends Column
+    private class PropColumn extends ColumnImpl
     {
       @Override
       public DatabaseImpl getDatabase() {

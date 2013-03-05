@@ -59,10 +59,10 @@ public class Relationship {
   private final Table _toTable;
   /** the columns in the "from" table in this relationship (aligned w/
       toColumns list) */
-  private List<Column> _toColumns;
+  private List<ColumnImpl> _toColumns;
   /** the columns in the "to" table in this relationship (aligned w/
       toColumns list) */
-  private List<Column> _fromColumns;
+  private List<ColumnImpl> _fromColumns;
   /** the various flags describing this relationship */
   private final int _flags;
 
@@ -71,11 +71,11 @@ public class Relationship {
   {
     _name = name;
     _fromTable = fromTable;
-    _fromColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _fromColumns = new ArrayList<ColumnImpl>(
+        Collections.nCopies(numCols, (ColumnImpl)null));
     _toTable = toTable;
-    _toColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _toColumns = new ArrayList<ColumnImpl>(
+        Collections.nCopies(numCols, (ColumnImpl)null));
     _flags = flags;
   }
 
@@ -87,7 +87,7 @@ public class Relationship {
     return _fromTable;
   }
 
-  public List<Column> getFromColumns() {
+  public List<ColumnImpl> getFromColumns() {
     return _fromColumns;
   }
 
@@ -95,7 +95,7 @@ public class Relationship {
     return _toTable;
   }
 
-  public List<Column> getToColumns() {
+  public List<ColumnImpl> getToColumns() {
     return _toColumns;
   }
 

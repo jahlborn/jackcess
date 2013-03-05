@@ -49,8 +49,8 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
 
     // convert both values to Strings and compare case-insensitively
     try {
-      CharSequence cs1 = Column.toCharSequence(value1);
-      CharSequence cs2 = Column.toCharSequence(value2);
+      CharSequence cs1 = ColumnImpl.toCharSequence(value1);
+      CharSequence cs2 = ColumnImpl.toCharSequence(value2);
 
       return((cs1 == cs2) ||
              ((cs1 != null) && (cs2 != null) &&

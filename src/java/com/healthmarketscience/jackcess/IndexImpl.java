@@ -45,8 +45,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class IndexImpl extends Index implements Comparable<IndexImpl> 
 {
-  
-  protected static final Log LOG = LogFactory.getLog(Index.class);
+  protected static final Log LOG = LogFactory.getLog(IndexImpl.class);
     
   /** index type for primary key indexes */
   static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;

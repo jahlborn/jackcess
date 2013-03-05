@@ -126,9 +126,9 @@ public class CursorBuilder {
    * @throws IllegalArgumentException if no index can be found on the table
    *         with the given columns
    */
-  public CursorBuilder setIndexByColumns(Column... columns) {
+  public CursorBuilder setIndexByColumns(ColumnImpl... columns) {
     List<String> colNames = new ArrayList<String>();
-    for(Column col : columns) {
+    for(ColumnImpl col : columns) {
       colNames.add(col.getName());
     }
     return setIndexByColumns(colNames);

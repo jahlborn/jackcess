@@ -81,9 +81,9 @@ public class TableImpl extends Table
 
   /** comparator which sorts variable length columns based on their index into
       the variable length offset table */
-  private static final Comparator<Column> VAR_LEN_COLUMN_COMPARATOR =
-    new Comparator<Column>() {
-      public int compare(Column c1, Column c2) {
+  private static final Comparator<ColumnImpl> VAR_LEN_COLUMN_COMPARATOR =
+    new Comparator<ColumnImpl>() {
+      public int compare(ColumnImpl c1, ColumnImpl c2) {
         return ((c1.getVarLenTableIndex() < c2.getVarLenTableIndex()) ? -1 :
                 ((c1.getVarLenTableIndex() > c2.getVarLenTableIndex()) ? 1 :
                  0));
@@ -91,9 +91,9 @@ public class TableImpl extends Table
     };
 
   /** comparator which sorts columns based on their display index */
-  private static final Comparator<Column> DISPLAY_ORDER_COMPARATOR =
-    new Comparator<Column>() {
-      public int compare(Column c1, Column c2) {
+  private static final Comparator<ColumnImpl> DISPLAY_ORDER_COMPARATOR =
+    new Comparator<ColumnImpl>() {
+      public int compare(ColumnImpl c1, ColumnImpl c2) {
         return ((c1.getDisplayIndex() < c2.getDisplayIndex()) ? -1 :
                 ((c1.getDisplayIndex() > c2.getDisplayIndex()) ? 1 :
                  0));
@@ -123,11 +123,11 @@ public class TableImpl extends Table
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
-  private List<Column> _columns = new ArrayList<Column>();
+  private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   /** List of variable length columns in this table, ordered by offset */
-  private final List<Column> _varColumns = new ArrayList<Column>();
+  private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
   /** List of autonumber columns in this table, ordered by column number */
-  private List<Column> _autoNumColumns;
+  private List<ColumnImpl> _autoNumColumns;
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
   private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
@@ -135,7 +135,7 @@ public class TableImpl extends Table
       index) */
   private final List<IndexData> _indexDatas = new ArrayList<IndexData>();
   /** List of columns in this table which are in one or more indexes */
-  private final Set<Column> _indexColumns = new LinkedHashSet<Column>();
+  private final Set<ColumnImpl> _indexColumns = new LinkedHashSet<ColumnImpl>();
   /** Table name as stored in Database */
   private final String _name;
   /** Usage map of pages that this table owns */
@@ -177,7 +177,7 @@ public class TableImpl extends Table
    * Only used by unit tests
 
    */
-  TableImpl(boolean testing, List<Column> columns) throws IOException {
+  TableImpl(boolean testing, List<ColumnImpl> columns) throws IOException {
     if(!testing) {
       throw new IllegalArgumentException();
     }
@@ -302,13 +302,13 @@ public class TableImpl extends Table
   }
 
   @Override
-  public List<Column> getColumns() {
+  public List<ColumnImpl> getColumns() {
     return Collections.unmodifiableList(_columns);
   }
 
   @Override
-  public Column getColumn(String name) {
-    for(Column column : _columns) {
+  public ColumnImpl getColumn(String name) {
+    for(ColumnImpl column : _columns) {
       if(column.getName().equalsIgnoreCase(name)) {
         return column;
       }
@@ -320,12 +320,12 @@ public class TableImpl extends Table
   /**
    * Only called by unit tests
    */
-  private void setColumns(List<Column> columns) {
+  private void setColumns(List<ColumnImpl> columns) {
     _columns = columns;
     int colIdx = 0;
     int varLenIdx = 0;
     int fixedOffset = 0;
-    for(Column col : _columns) {
+    for(ColumnImpl col : _columns) {
       col.setColumnNumber((short)colIdx);
       col.setColumnIndex(colIdx++);
       if(col.isVariableLength()) {
@@ -470,7 +470,7 @@ public class TableImpl extends Table
       // move to row data to get index values
       rowBuffer = positionAtRowData(rowState, rowId);
 
-      for(Column idxCol : _indexColumns) {
+      for(ColumnImpl idxCol : _indexColumns) {
         getRowColumn(getFormat(), rowBuffer, idxCol, rowState, null);
       }
 
@@ -528,7 +528,7 @@ public class TableImpl extends Table
    * e.g. {@link Cursor#getCurrentRowValue}.
    * @usage _advanced_method_
    */
-  public Object getRowValue(RowState rowState, RowId rowId, Column column)
+  public Object getRowValue(RowState rowState, RowId rowId, ColumnImpl column)
     throws IOException
   {
     if(this != column.getTable()) {
@@ -570,13 +570,13 @@ public class TableImpl extends Table
 	  JetFormat format,
       RowState rowState,
       ByteBuffer rowBuffer,
-      Collection<Column> columns,
+      Collection<ColumnImpl> columns,
       Collection<String> columnNames)
     throws IOException
   {
     Map<String, Object> rtn = new LinkedHashMap<String, Object>(
         columns.size());
-    for(Column column : columns) {
+    for(ColumnImpl column : columns) {
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
         // Add the value to the row data
@@ -593,9 +593,9 @@ public class TableImpl extends Table
    */
   private static Object getRowColumn(JetFormat format,
                                      ByteBuffer rowBuffer,
-                                     Column column,
+                                     ColumnImpl column,
                                      RowState rowState,
-                                     Map<Column,byte[]> rawVarValues)
+                                     Map<ColumnImpl,byte[]> rawVarValues)
     throws IOException
   {
     byte[] columnData = null;
@@ -675,7 +675,7 @@ public class TableImpl extends Table
 
       // cache "raw" row value.  see note about caching above
       rowState.setRowValue(column.getColumnIndex(), 
-                           Column.rawDataWrapper(columnData));
+                           ColumnImpl.rawDataWrapper(columnData));
 
       return rowState.handleRowError(column, columnData, e);
     }
@@ -910,7 +910,7 @@ public class TableImpl extends Table
 
     // total up the amount of space used by the column and index names (2
     // bytes per char + 2 bytes for the length)
-    for(Column col : creator.getColumns()) {
+    for(ColumnImpl col : creator.getColumns()) {
       int nameByteLen = (col.getName().length() *
                          JetFormat.TEXT_FIELD_UNIT_SIZE);
       totalTableDefSize += nameByteLen + 2;
@@ -935,7 +935,7 @@ public class TableImpl extends Table
     }
 
     // column definitions
-    Column.writeDefinitions(creator, buffer); 
+    ColumnImpl.writeDefinitions(creator, buffer); 
     
     if(creator.hasIndexes()) {
       // index and index data definitions
@@ -1011,7 +1011,7 @@ public class TableImpl extends Table
       TableCreator creator, ByteBuffer buffer, int totalTableDefSize)
     throws IOException
   {
-    List<Column> columns = creator.getColumns();
+    List<ColumnImpl> columns = creator.getColumns();
 
     //Start writing the tdef
     writeTablePageHeader(buffer);
@@ -1025,7 +1025,7 @@ public class TableImpl extends Table
     }
     buffer.put(TYPE_USER); //Table type
     buffer.putShort((short) columns.size()); //Max columns a row will have
-    buffer.putShort(Column.countVariableLength(columns));  //Number of variable columns in table
+    buffer.putShort(ColumnImpl.countVariableLength(columns));  //Number of variable columns in table
     buffer.putShort((short) columns.size()); //Number of columns in table
     buffer.putInt(creator.getLogicalIndexCount());  //Number of logical indexes in table
     buffer.putInt(creator.getIndexCount());  //Number of indexes in table
@@ -1061,7 +1061,7 @@ public class TableImpl extends Table
    */
   static void writeName(ByteBuffer buffer, String name, Charset charset)
   {
-      ByteBuffer encName = Column.encodeUncompressedText(name, charset);
+      ByteBuffer encName = ColumnImpl.encodeUncompressedText(name, charset);
       buffer.putShort((short) encName.remaining());
       buffer.put(encName);
   }
@@ -1206,7 +1206,7 @@ public class TableImpl extends Table
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
     int dispIndex = 0;
     for (int i = 0; i < columnCount; i++) {
-      Column column = new Column(this, tableBuffer,
+      ColumnImpl column = new ColumnImpl(this, tableBuffer,
           colOffset + (i * getFormat().SIZE_COLUMN_HEADER), dispIndex++);
       _columns.add(column);
       if(column.isVariableLength()) {
@@ -1218,7 +1218,7 @@ public class TableImpl extends Table
     tableBuffer.position(colOffset +
                          (columnCount * getFormat().SIZE_COLUMN_HEADER));
     for (int i = 0; i < columnCount; i++) {
-      Column column = _columns.get(i);
+      ColumnImpl column = _columns.get(i);
       column.setName(readName(tableBuffer));
     }    
     Collections.sort(_columns);
@@ -1226,7 +1226,7 @@ public class TableImpl extends Table
 
     // setup the data index for the columns
     int colIdx = 0;
-    for(Column col : _columns) {
+    for(ColumnImpl col : _columns) {
       col.setColumnIndex(colIdx++);
     }
 
@@ -1261,7 +1261,7 @@ public class TableImpl extends Table
       Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
     }
 
-    for(Column col : _columns) {
+    for(ColumnImpl col : _columns) {
       // some columns need to do extra work after the table is completely
       // loaded
       col.postTableLoadInit();
@@ -1295,7 +1295,7 @@ public class TableImpl extends Table
   private String readName(ByteBuffer buffer) { 
     int nameLength = readNameLength(buffer);
     byte[] nameBytes = ByteUtil.getBytes(buffer, nameLength);
-    return Column.decodeUncompressedText(nameBytes, 
+    return ColumnImpl.decodeUncompressedText(nameBytes, 
                                          getDatabase().getCharset());
   }
   
@@ -1328,7 +1328,7 @@ public class TableImpl extends Table
     if(rowMap == null) {
       return row;
     }
-    for(Column col : _columns) {
+    for(ColumnImpl col : _columns) {
       if(rowMap.containsKey(col.getName())) {
         col.setRowValue(row, col.getRowValue(rowMap));
       }
@@ -1464,10 +1464,10 @@ public class TableImpl extends Table
     // hang on to the raw values of var length columns we are "keeping".  this
     // will allow us to re-use pre-written var length data, which can save
     // space for things like long value columns.
-    Map<Column,byte[]> keepRawVarValues = 
-      (!_varColumns.isEmpty() ? new HashMap<Column,byte[]>() : null);
+    Map<ColumnImpl,byte[]> keepRawVarValues = 
+      (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
 
-    for(Column column : _columns) {
+    for(ColumnImpl column : _columns) {
       if(_autoNumColumns.contains(column)) {
         // fill in any auto-numbers (we don't allow autonumber values to be
         // modified)
@@ -1675,7 +1675,7 @@ public class TableImpl extends Table
   ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
     throws IOException
   {
-    return createRow(rowArray, buffer, 0, Collections.<Column,byte[]>emptyMap());
+    return createRow(rowArray, buffer, 0, Collections.<ColumnImpl,byte[]>emptyMap());
   }
 
   /**
@@ -1689,7 +1689,7 @@ public class TableImpl extends Table
    * @return the given buffer, filled with the row data
    */
   private ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer,
-                               int minRowSize, Map<Column,byte[]> rawVarValues)
+                               int minRowSize, Map<ColumnImpl,byte[]> rawVarValues)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);
@@ -1698,7 +1698,7 @@ public class TableImpl extends Table
     //Fixed length column data comes first
     int fixedDataStart = buffer.position();
     int fixedDataEnd = fixedDataStart;
-    for (Column col : _columns) {
+    for (ColumnImpl col : _columns) {
 
       if(col.isVariableLength()) {
         continue;
@@ -1708,7 +1708,7 @@ public class TableImpl extends Table
 
       if (col.getType() == DataType.BOOLEAN) {
         
-        if(Column.toBooleanValue(rowValue)) {
+        if(ColumnImpl.toBooleanValue(rowValue)) {
           //Booleans are stored in the null mask
           nullMask.markNotNull(col);
         }
@@ -1756,7 +1756,7 @@ public class TableImpl extends Table
       // for each non-null long value column we need to reserve a small
       // amount of space so that we don't end up running out of row space
       // later by being too greedy
-      for (Column varCol : _varColumns) {
+      for (ColumnImpl varCol : _varColumns) {
         if((varCol.getType().isLongValue()) &&
            (varCol.getRowValue(rowArray) != null)) {
           maxRowSize -= getFormat().SIZE_LONG_VALUE_DEF;
@@ -1766,7 +1766,7 @@ public class TableImpl extends Table
       //Now write out variable length column data
       short[] varColumnOffsets = new short[_maxVarColumnCount];
       int varColumnOffsetsIndex = 0;
-      for (Column varCol : _varColumns) {
+      for (ColumnImpl varCol : _varColumns) {
         short offset = (short) buffer.position();
         Object rowValue = varCol.getRowValue(rowArray);
         if (rowValue != null) {
@@ -1844,9 +1844,9 @@ public class TableImpl extends Table
     }
 
     Object complexAutoNumber = null;
-    for(Column col : _autoNumColumns) {
+    for(ColumnImpl col : _autoNumColumns) {
       // ignore given row value, use next autonumber
-      Column.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
+      ColumnImpl.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
       Object rowValue = null;
       if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
         rowValue = autoNumGen.getNext(null);
@@ -1908,7 +1908,7 @@ public class TableImpl extends Table
     rtn.append("\nIndex (data) count: " + _indexCount);
     rtn.append("\nLogical Index count: " + _logicalIndexCount);
     rtn.append("\nColumns:\n");
-    for(Column col : _columns) {
+    for(ColumnImpl col : _columns) {
       rtn.append(col);
     }
     rtn.append("\nIndexes:\n");
@@ -1937,8 +1937,8 @@ public class TableImpl extends Table
   public String display(long limit) throws IOException {
     reset();
     StringBuilder rtn = new StringBuilder();
-    for(Iterator<Column> iter = _columns.iterator(); iter.hasNext(); ) {
-      Column col = iter.next();
+    for(Iterator<ColumnImpl> iter = _columns.iterator(); iter.hasNext(); ) {
+      ColumnImpl col = iter.next();
       rtn.append(col.getName());
       if (iter.hasNext()) {
         rtn.append("\t");
@@ -2115,14 +2115,16 @@ public class TableImpl extends Table
    * @return the "AutoNumber" columns in the given collection of columns.
    * @usage _advanced_method_
    */
-  public static List<Column> getAutoNumberColumns(Collection<Column> columns) {
-    List<Column> autoCols = new ArrayList<Column>(1);
-    for(Column c : columns) {
+  public static List<ColumnImpl> getAutoNumberColumns(
+      Collection<ColumnImpl> columns) 
+  {
+    List<ColumnImpl> autoCols = new ArrayList<ColumnImpl>(1);
+    for(ColumnImpl c : columns) {
       if(c.isAutoNumber()) {
         autoCols.add(c);
       }
     }
-    return (!autoCols.isEmpty() ? autoCols : Collections.<Column>emptyList());
+    return (!autoCols.isEmpty() ? autoCols : Collections.<ColumnImpl>emptyList());
   }
 
   /**
@@ -2392,8 +2394,7 @@ public class TableImpl extends Table
       return _finalRowBuffer;
     }
 
-    private Object handleRowError(Column column,
-                                  byte[] columnData,
+    private Object handleRowError(ColumnImpl column, byte[] columnData,
                                   Exception error)
       throws IOException
     {

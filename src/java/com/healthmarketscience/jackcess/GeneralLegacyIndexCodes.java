@@ -490,7 +490,7 @@ public class GeneralLegacyIndexCodes {
     throws IOException
   {
     // first, convert to string
-    String str = Column.toCharSequence(value).toString();
+    String str = ColumnImpl.toCharSequence(value).toString();
 
     // all text columns (including memos) are only indexed up to the max
     // number of chars in a VARCHAR column

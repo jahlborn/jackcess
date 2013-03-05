@@ -402,7 +402,7 @@ public class IndexData {
    * @param tableBuffer table definition buffer to read from initial info
    * @param availableColumns Columns that this index may use
    */
-  public void read(ByteBuffer tableBuffer, List<Column> availableColumns)
+  public void read(ByteBuffer tableBuffer, List<ColumnImpl> availableColumns)
     throws IOException
   {
     ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX); //Forward past Unknown
@@ -413,8 +413,8 @@ public class IndexData {
       if (columnNumber != COLUMN_UNUSED) {
         // find the desired column by column number (which is not necessarily
         // the same as the column index)
-        Column idxCol = null;
-        for(Column col : availableColumns) {
+        ColumnImpl idxCol = null;
+        for(ColumnImpl col : availableColumns) {
           if(col.getColumnNumber() == columnNumber) {
             idxCol = col;
             break;
@@ -483,7 +483,7 @@ public class IndexData {
           flags = idxCol.getFlags();
 
           // find actual table column number
-          for(Column col : creator.getColumns()) {
+          for(ColumnImpl col : creator.getColumns()) {
             if(col.getName().equalsIgnoreCase(idxCol.getName())) {
               columnNumber = col.getColumnNumber();
               break;
@@ -1099,7 +1099,7 @@ public class IndexData {
     
     for(ColumnDescriptor col : _columns) {
       Object value = values[col.getColumnIndex()];
-      if(Column.isRawData(value)) {
+      if(ColumnImpl.isRawData(value)) {
         // ignore it, we could not parse it
         continue;
       }
@@ -1169,7 +1169,7 @@ public class IndexData {
   /**
    * Writes the value of the given column type to a byte array and returns it.
    */
-  private static byte[] encodeNumberColumnValue(Object value, Column column)
+  private static byte[] encodeNumberColumnValue(Object value, ColumnImpl column)
     throws IOException
   {
     // always write in big endian order
@@ -1186,17 +1186,17 @@ public class IndexData {
   /**
    * Constructs a ColumnDescriptor of the relevant type for the given Column.
    */
-  private ColumnDescriptor newColumnDescriptor(Column col, byte flags)
+  private ColumnDescriptor newColumnDescriptor(ColumnImpl col, byte flags)
     throws IOException
   {
     switch(col.getType()) {
     case TEXT:
     case MEMO:
-      Column.SortOrder sortOrder = col.getTextSortOrder();
-      if(Column.GENERAL_LEGACY_SORT_ORDER.equals(sortOrder)) {
+      ColumnImpl.SortOrder sortOrder = col.getTextSortOrder();
+      if(ColumnImpl.GENERAL_LEGACY_SORT_ORDER.equals(sortOrder)) {
         return new GenLegTextColumnDescriptor(col, flags);
       }
-      if(Column.GENERAL_SORT_ORDER.equals(sortOrder)) {
+      if(ColumnImpl.GENERAL_SORT_ORDER.equals(sortOrder)) {
         return new GenTextColumnDescriptor(col, flags);
       }
       // unsupported sort order
@@ -1270,19 +1270,19 @@ public class IndexData {
    * Information about the columns in an index.  Also encodes new index
    * values.
    */
-  public static abstract class ColumnDescriptor implements Index.ColumnInfo
+  public static abstract class ColumnDescriptor implements Index.Column
   {
-    private final Column _column;
+    private final ColumnImpl _column;
     private final byte _flags;
 
-    private ColumnDescriptor(Column column, byte flags)
+    private ColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       _column = column;
       _flags = flags;
     }
 
-    public Column getColumn() {
+    public ColumnImpl getColumn() {
       return _column;
     }
 
@@ -1336,7 +1336,7 @@ public class IndexData {
    */
   private static final class IntegerColumnDescriptor extends ColumnDescriptor
   {
-    private IntegerColumnDescriptor(Column column, byte flags)
+    private IntegerColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1368,7 +1368,7 @@ public class IndexData {
   private static final class FloatingPointColumnDescriptor
     extends ColumnDescriptor
   {
-    private FloatingPointColumnDescriptor(Column column, byte flags)
+    private FloatingPointColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1408,7 +1408,7 @@ public class IndexData {
   private static class LegacyFixedPointColumnDescriptor
     extends ColumnDescriptor
   {
-    private LegacyFixedPointColumnDescriptor(Column column, byte flags)
+    private LegacyFixedPointColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1459,7 +1459,7 @@ public class IndexData {
   private static final class FixedPointColumnDescriptor
     extends LegacyFixedPointColumnDescriptor
   {
-    private FixedPointColumnDescriptor(Column column, byte flags)
+    private FixedPointColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1485,7 +1485,7 @@ public class IndexData {
    */
   private static final class ByteColumnDescriptor extends ColumnDescriptor
   {
-    private ByteColumnDescriptor(Column column, byte flags)
+    private ByteColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1514,7 +1514,7 @@ public class IndexData {
    */
   private static final class BooleanColumnDescriptor extends ColumnDescriptor
   {
-    private BooleanColumnDescriptor(Column column, byte flags)
+    private BooleanColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1531,7 +1531,7 @@ public class IndexData {
       throws IOException
     {
       bout.write(
-          Column.toBooleanValue(value) ?
+          ColumnImpl.toBooleanValue(value) ?
           (isAscending() ? ASC_BOOLEAN_TRUE : DESC_BOOLEAN_TRUE) :
           (isAscending() ? ASC_BOOLEAN_FALSE : DESC_BOOLEAN_FALSE));
     }
@@ -1543,7 +1543,7 @@ public class IndexData {
   private static final class GenLegTextColumnDescriptor 
     extends ColumnDescriptor
   {
-    private GenLegTextColumnDescriptor(Column column, byte flags)
+    private GenLegTextColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1564,7 +1564,7 @@ public class IndexData {
    */
   private static final class GenTextColumnDescriptor extends ColumnDescriptor
   {
-    private GenTextColumnDescriptor(Column column, byte flags)
+    private GenTextColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1585,7 +1585,7 @@ public class IndexData {
    */
   private static final class GuidColumnDescriptor extends ColumnDescriptor
   {
-    private GuidColumnDescriptor(Column column, byte flags)
+    private GuidColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);
@@ -1620,7 +1620,7 @@ public class IndexData {
    */
   private static final class ReadOnlyColumnDescriptor extends ColumnDescriptor
   {
-    private ReadOnlyColumnDescriptor(Column column, byte flags)
+    private ReadOnlyColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
     {
       super(column, flags);

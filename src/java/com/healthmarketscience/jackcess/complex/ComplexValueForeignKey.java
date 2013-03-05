@@ -25,7 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnImpl;
 
 /**
  * Value which is returned for a complex column.  This value corresponds to a
@@ -45,11 +45,11 @@ public class ComplexValueForeignKey extends Number
 {
   private static final long serialVersionUID = 20110805L;  
   
-  private transient final Column _column;
+  private transient final ColumnImpl _column;
   private final int _value;
   private transient List<? extends ComplexValue> _values;
   
-  public ComplexValueForeignKey(Column column, int value) {
+  public ComplexValueForeignKey(ColumnImpl column, int value) {
     _column = column;
     _value = value;
   }
@@ -58,7 +58,7 @@ public class ComplexValueForeignKey extends Number
     return _value;
   }
 
-  public Column getColumn() {
+  public ColumnImpl getColumn() {
     return _column;
   }
   

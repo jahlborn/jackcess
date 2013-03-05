@@ -142,7 +142,7 @@ public class ColumnBuilder {
   /**
    * Sets all attributes except name from the given Column template.
    */
-  public ColumnBuilder setFromColumn(Column template) {
+  public ColumnBuilder setFromColumn(ColumnImpl template) {
     DataType type = template.getType();
     setType(type);
     setLength(template.getLength());
@@ -168,8 +168,8 @@ public class ColumnBuilder {
   /**
    * Creates a new Column with the currently configured attributes.
    */
-  public Column toColumn() {
-    Column col = new Column();
+  public ColumnImpl toColumn() {
+    ColumnImpl col = new ColumnImpl();
     col.setName(_name);
     col.setType(_type);
     if(_length != null) {

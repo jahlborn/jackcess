@@ -39,7 +39,7 @@ class TableCreator
 {
   private final DatabaseImpl _database;
   private final String _name;
-  private final List<Column> _columns;
+  private final List<ColumnImpl> _columns;
   private final List<IndexBuilder> _indexes;
   private final Map<IndexBuilder,IndexState> _indexStates = 
     new HashMap<IndexBuilder,IndexState>();
@@ -48,7 +48,7 @@ class TableCreator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(DatabaseImpl database, String name, List<Column> columns,
+  public TableCreator(DatabaseImpl database, String name, List<ColumnImpl> columns,
                       List<IndexBuilder> indexes) {
     _database = database;
     _name = name;
@@ -77,7 +77,7 @@ class TableCreator
     return _umapPageNumber;
   }
 
-  public List<Column> getColumns() {
+  public List<ColumnImpl> getColumns() {
     return _columns;
   }
 
@@ -153,7 +153,7 @@ class TableCreator
           getFormat().MAX_COLUMNS_PER_TABLE + " columns");
     }
     
-    Column.SortOrder dbSortOrder = null;
+    ColumnImpl.SortOrder dbSortOrder = null;
     try {
       dbSortOrder = _database.getDefaultSortOrder();
     } catch(IOException e) {
@@ -162,7 +162,7 @@ class TableCreator
 
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
-    for(Column column : _columns) {
+    for(ColumnImpl column : _columns) {
 
       // FIXME for now, we can't create complex columns
       if(column.getType() == DataType.COMPLEX_TYPE) {
@@ -182,11 +182,11 @@ class TableCreator
       }
     }
 
-    List<Column> autoCols = TableImpl.getAutoNumberColumns(_columns);
+    List<ColumnImpl> autoCols = TableImpl.getAutoNumberColumns(_columns);
     if(autoCols.size() > 1) {
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
-      for(Column c : autoCols) {
+      for(ColumnImpl c : autoCols) {
         if(!c.getType().isMultipleAutoNumberAllowed() &&
            !autoTypes.add(c.getType())) {
           throw new IllegalArgumentException(

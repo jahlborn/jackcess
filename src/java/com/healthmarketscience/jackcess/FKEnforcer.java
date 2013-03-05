@@ -45,7 +45,7 @@ final class FKEnforcer
     CaseInsensitiveColumnMatcher.INSTANCE;
 
   private final TableImpl _table;
-  private final List<Column> _cols;
+  private final List<ColumnImpl> _cols;
   private List<Joiner> _primaryJoinersChkUp;
   private List<Joiner> _primaryJoinersChkDel;
   private List<Joiner> _primaryJoinersDoUp;
@@ -56,7 +56,7 @@ final class FKEnforcer
     _table = table;
 
     // at this point, only init the index columns
-    Set<Column> cols = new TreeSet<Column>();
+    Set<ColumnImpl> cols = new TreeSet<ColumnImpl>();
     for(IndexImpl idx : _table.getIndexes()) {
       IndexImpl.ForeignKeyReference ref = idx.getReference();
       if(ref != null) {
@@ -68,8 +68,8 @@ final class FKEnforcer
       }
     }
     _cols = !cols.isEmpty() ?
-      Collections.unmodifiableList(new ArrayList<Column>(cols)) :
-      Collections.<Column>emptyList();
+      Collections.unmodifiableList(new ArrayList<ColumnImpl>(cols)) :
+      Collections.<ColumnImpl>emptyList();
   }
 
   /**
@@ -257,7 +257,7 @@ final class FKEnforcer
   }
 
   private boolean anyUpdates(Object[] oldRow, Object[] newRow) {
-    for(Column col : _cols) {
+    for(ColumnImpl col : _cols) {
       if(!MATCHER.matches(_table, col.getName(),
                           col.getRowValue(oldRow), col.getRowValue(newRow))) {
         return true;
@@ -271,7 +271,7 @@ final class FKEnforcer
   {
     Table fromTable = joiner.getFromTable();
     for(IndexData.ColumnDescriptor iCol : joiner.getColumns()) {
-      Column col = iCol.getColumn();
+      ColumnImpl col = iCol.getColumn();
       if(!MATCHER.matches(fromTable, col.getName(),
                           col.getRowValue(oldRow), col.getRowValue(newRow))) {
         return true;

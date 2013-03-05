@@ -48,7 +48,7 @@ public interface ImportFilter {
    *                   JDBC source
    * @return the columns to use when creating the import table
    */
-  public List<Column> filterColumns(List<Column> destColumns,
+  public List<ColumnImpl> filterColumns(List<ColumnImpl> destColumns,
                                     ResultSetMetaData srcColumns)
      throws SQLException, IOException;
 
