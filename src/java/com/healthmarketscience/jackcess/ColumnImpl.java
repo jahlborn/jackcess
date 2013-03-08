@@ -204,26 +204,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private PropertyMap _props;  
   
   /**
-   * @usage _general_method_
-   */
-  public ColumnImpl() {
-    this(null);
-  }
-  
-  /**
    * @usage _advanced_method_
    */
-  public ColumnImpl(JetFormat format) {
-    _table = null;
-  }
-
-  /**
-   * Only used by unit tests
-   */
-  ColumnImpl(boolean testing, TableImpl table) {
-    if(!testing) {
-      throw new IllegalArgumentException();
-    }
+  ColumnImpl(TableImpl table) {
     _table = table;
   }
     
@@ -239,9 +222,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     _table = table;
     _displayIndex = displayIndex;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Column def block:\n" + ByteUtil.toHexString(buffer, offset, 25));
-    }
     
     byte colType = buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE);
     _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
@@ -422,20 +402,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
-  }
-  
-  /**
-   * @usage _general_method_
-   */
-  public void setSQLType(int type) throws SQLException {
-    setSQLType(type, 0);
-  }
-  
-  /**
-   * @usage _general_method_
-   */
-  public void setSQLType(int type, int lengthInUnits) throws SQLException {
-    setType(DataType.fromSQLType(type, lengthInUnits));
   }
   
   public boolean isCompressedUnicode() {
@@ -659,82 +625,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
   }
   
-  /**
-   * Checks that this column definition is valid.
-   *
-   * @throws IllegalArgumentException if this column definition is invalid.
-   * @usage _advanced_method_
-   */
-  public void validate(JetFormat format) {
-    if(getType() == null) {
-      throw new IllegalArgumentException("must have type");
-    }
-    DatabaseImpl.validateIdentifierName(getName(), format.MAX_COLUMN_NAME_LENGTH,
-                                    "column");
-
-    if(getType().isUnsupported()) {
-      throw new IllegalArgumentException(
-          "Cannot create column with unsupported type " + getType());
-    }
-    if(!format.isSupportedDataType(getType())) {
-      throw new IllegalArgumentException(
-          "Database format " + format + " does not support type " + getType());
-    }
-    
-    if(isVariableLength() != getType().isVariableLength()) {
-      throw new IllegalArgumentException("invalid variable length setting");
-    }
-
-    if(!isVariableLength()) {
-      if(getLength() != getType().getFixedSize()) {
-        if(getLength() < getType().getFixedSize()) {
-          throw new IllegalArgumentException("invalid fixed length size");
-        }
-        LOG.warn("Column length " + getLength() + 
-                 " longer than expected fixed size " + 
-                 getType().getFixedSize());
-      }
-    } else if(!getType().isLongValue()) {
-      if(!getType().isValidSize(getLength())) {
-        throw new IllegalArgumentException("var length out of range");
-      }
-    }
-
-    if(getType().getHasScalePrecision()) {
-      if(!getType().isValidScale(getScale())) {
-        throw new IllegalArgumentException(
-            "Scale must be from " + getType().getMinScale() + " to " +
-            getType().getMaxScale() + " inclusive");
-      }
-      if(!getType().isValidPrecision(getPrecision())) {
-        throw new IllegalArgumentException(
-            "Precision must be from " + getType().getMinPrecision() + " to " +
-            getType().getMaxPrecision() + " inclusive");
-      }
-    }
-
-    if(isAutoNumber()) {
-      if(!getType().mayBeAutoNumber()) {
-        throw new IllegalArgumentException(
-            "Auto number column must be long integer or guid");
-      }
-    }
-
-    if(isCompressedUnicode()) {
-      if(!getType().isTextual()) {
-        throw new IllegalArgumentException(
-            "Only textual columns allow unicode compression (text/memo)");
-      }
-    }
-
-    if(isHyperlink()) {
-      if(getType() != DataType.MEMO) {
-        throw new IllegalArgumentException(
-            "Only memo columns can be hyperlinks");
-      }
-    }
-  }
-
   public Object setRowValue(Object[] rowArray, Object value) {
     rowArray[_columnIndex] = value;
     return value;
@@ -1694,15 +1584,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Constructs a byte containing the flags for this column.
    */
-  private byte getColumnBitFlags() {
+  private static byte getColumnBitFlags(ColumnBuilder col) {
     byte flags = UNKNOWN_FLAG_MASK;
-    if(!isVariableLength()) {
+    if(!col.getType().isVariableLength()) {
       flags |= FIXED_LEN_FLAG_MASK;
     }
-    if(isAutoNumber()) {
-      flags |= getAutoNumberGenerator().getColumnFlags();
+    if(col.isAutoNumber()) {
+      byte autoNumFlags = 0;
+      switch(col.getType()) {
+      case LONG:
+      case COMPLEX_TYPE:
+        autoNumFlags = AUTO_NUMBER_FLAG_MASK;
+        break;
+      case GUID:
+        autoNumFlags = AUTO_NUMBER_GUID_FLAG_MASK;
+        break;
+      default:
+        // unknown autonum type
+      }
+      flags |= autoNumFlags;
     }
-    if(isHyperlink()) {
+    if(col.isHyperlink()) {
       flags |= HYPERLINK_FLAG_MASK;
     }
     return flags;
@@ -1791,10 +1693,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @return The number of variable length columns found in the list
    * @usage _advanced_method_
    */
-  public static short countVariableLength(List<ColumnImpl> columns) {
+  public static short countVariableLength(List<ColumnBuilder> columns) {
     short rtn = 0;
-    for (ColumnImpl col : columns) {
-      if (col.isVariableLength()) {
+    for (ColumnBuilder col : columns) {
+      if (col.getType().isVariableLength()) {
         rtn++;
       }
     }
@@ -1807,10 +1709,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    *         found in the list
    * @usage _advanced_method_
    */
-  public static short countNonLongVariableLength(List<ColumnImpl> columns) {
+  public static short countNonLongVariableLength(List<ColumnBuilder> columns) {
     short rtn = 0;
-    for (ColumnImpl col : columns) {
-      if (col.isVariableLength() && !col.getType().isLongValue()) {
+    for (ColumnBuilder col : columns) {
+      if (col.getType().isVariableLength() && !col.getType().isLongValue()) {
         rtn++;
       }
     }
@@ -1978,7 +1880,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   protected static void writeDefinitions(TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
-    List<ColumnImpl> columns = creator.getColumns();
+    List<ColumnBuilder> columns = creator.getColumns();
     short columnNumber = (short) 0;
     short fixedOffset = (short) 0;
     short variableOffset = (short) 0;
@@ -1986,7 +1888,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // variable length values so that we have a better chance of fitting it
     // all (because "long variable" values can go in separate pages)
     short longVariableOffset = countNonLongVariableLength(columns);
-    for (ColumnImpl col : columns) {
+    for (ColumnBuilder col : columns) {
       // record this for later use when writing indexes
       col.setColumnNumber(columnNumber);
 
@@ -1994,7 +1896,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.put(col.getType().getValue());
       buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
       buffer.putShort(columnNumber);  //Column Number
-      if (col.isVariableLength()) {
+      if (col.getType().isVariableLength()) {
         if(!col.getType().isLongValue()) {
           buffer.putShort(variableOffset++);
         } else {
@@ -2018,7 +1920,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         }
         buffer.putShort((short) 0); //Unknown
       }
-      buffer.put(col.getColumnBitFlags()); // misc col flags
+      buffer.put(getColumnBitFlags(col)); // misc col flags
       if (col.isCompressedUnicode()) {  //Compressed
         buffer.put((byte) 1);
       } else {
@@ -2026,7 +1928,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
       buffer.putInt(0); //Unknown, but always 0.
       //Offset for fixed length columns
-      if (col.isVariableLength()) {
+      if (col.getType().isVariableLength()) {
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
@@ -2038,12 +1940,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         buffer.putShort((short)0x0000); // unused
       }
       columnNumber++;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
-                  buffer, position, creator.getFormat().SIZE_COLUMN_DEF_BLOCK));
-      }
     }
-    for (ColumnImpl col : columns) {
+    for (ColumnBuilder col : columns) {
       TableImpl.writeName(buffer, col.getName(), creator.getCharset());
     }
   }
@@ -2170,11 +2068,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     public abstract Object getNext(Object prevRowValue);
 
     /**
-     * Returns the flags used when writing this column.
-     */
-    public abstract int getColumnFlags();
-
-    /**
      * Returns the type of values generated by this generator.
      */
     public abstract DataType getType();
@@ -2194,11 +2087,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     public Object getNext(Object prevRowValue) {
       // the table stores the last long autonumber used
       return getTable().getNextLongAutoNumber();
-    }
-
-    @Override
-    public int getColumnFlags() {
-      return AUTO_NUMBER_FLAG_MASK;
     }
 
     @Override
@@ -2223,11 +2111,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // format guids consistently w/ Column.readGUIDValue()
       _lastAutoNumber = "{" + UUID.randomUUID() + "}";
       return _lastAutoNumber;
-    }
-
-    @Override
-    public int getColumnFlags() {
-      return AUTO_NUMBER_GUID_FLAG_MASK;
     }
 
     @Override
@@ -2258,11 +2141,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
 
     @Override
-    public int getColumnFlags() {
-      return AUTO_NUMBER_FLAG_MASK;
-    }
-
-    @Override
     public DataType getType() {
       return DataType.COMPLEX_TYPE;
     }
@@ -2283,11 +2161,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     @Override
     public Object getNext(Object prevRowValue) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getColumnFlags() {
       throw new UnsupportedOperationException();
     }
 

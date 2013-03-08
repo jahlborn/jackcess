@@ -41,6 +41,16 @@ import java.util.List;
 public interface ImportFilter {
 
   /**
+   * Called before any calls {@link #filterColumns} and {@link #filterRow} for
+   * a single import operation.  Allows the given instance to return a
+   * per-call instance which can maintain state.
+   *
+   * @return the ImportFilter instance to use for the rest of the import
+   *         operation
+   */
+  public ImportFilter init();
+
+  /**
    * The columns that should be used to create the imported table.
    * @param destColumns the columns as determined by the import code, may be
    *                    directly modified and returned
@@ -48,8 +58,8 @@ public interface ImportFilter {
    *                   JDBC source
    * @return the columns to use when creating the import table
    */
-  public List<ColumnImpl> filterColumns(List<ColumnImpl> destColumns,
-                                    ResultSetMetaData srcColumns)
+  public List<ColumnBuilder> filterColumns(List<ColumnBuilder> destColumns,
+                                           ResultSetMetaData srcColumns)
      throws SQLException, IOException;
 
   /**

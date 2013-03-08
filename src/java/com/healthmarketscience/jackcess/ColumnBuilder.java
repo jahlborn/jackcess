@@ -29,6 +29,9 @@ package com.healthmarketscience.jackcess;
 
 import java.sql.SQLException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Builder style class for constructing a Column.
  *
@@ -36,20 +39,29 @@ import java.sql.SQLException;
  */
 public class ColumnBuilder {
 
+  private static final Log LOG = LogFactory.getLog(ColumnBuilder.class);
+
   /** name of the new column */
   private String _name;
   /** the type of the new column */
   private DataType _type;
   /** optional length for the new column */
-  private Integer _length;
+  private Short _length;
   /** optional precision for the new column */
-  private Integer _precision;
+  private Byte _precision;
   /** optional scale for the new column */
-  private Integer _scale;
+  private Byte _scale;
   /** whether or not the column is auto-number */
   private boolean _autoNumber;
   /** whether or not the column allows compressed unicode */
-  private Boolean _compressedUnicode;
+  private boolean _compressedUnicode;
+  /** whether or not the column is a hyperlink (memo only) */
+  private boolean _hyperlink;
+  /** 0-based column number */
+  private short _columnNumber;
+  /** the collating sort order for a text field */
+  private ColumnImpl.SortOrder _sortOrder;
+
 
   public ColumnBuilder(String name) {
     this(name, null);
@@ -60,12 +72,20 @@ public class ColumnBuilder {
     _type = type;
   }
 
+  public String getName() {
+    return _name;
+  }
+
   /**
    * Sets the type for the new column.
    */
   public ColumnBuilder setType(DataType type) {
     _type = type;
     return this;
+  }
+
+  public DataType getType() {
+    return _type;
   }
 
   /**
@@ -89,24 +109,40 @@ public class ColumnBuilder {
    * Sets the precision for the new column.
    */
   public ColumnBuilder setPrecision(int newPrecision) {
-    _precision = newPrecision;
+    _precision = (byte)newPrecision;
     return this;
+  }
+
+  public byte getPrecision() {
+    return ((_precision != null) ? _precision :
+            (byte)(_type.getHasScalePrecision() ? _type.getDefaultPrecision() : 0));
   }
 
   /**
    * Sets the scale for the new column.
    */
   public ColumnBuilder setScale(int newScale) {
-    _scale = newScale;
+    _scale = (byte)newScale;
     return this;
+  }
+
+  public byte getScale() {
+    return ((_scale != null) ? _scale :
+            (byte)(_type.getHasScalePrecision() ? _type.getDefaultScale() : 0));
   }
 
   /**
    * Sets the length (in bytes) for the new column.
    */
   public ColumnBuilder setLength(int length) {
-    _length = length;
+    _length = (short)length;
     return this;
+  }
+
+  public short getLength() {
+    return ((_length != null) ? _length :
+            (short)(!_type.isVariableLength() ? _type.getFixedSize() :
+                    (!_type.isLongValue() ? _type.getDefaultSize() : 0)));
   }
 
   /**
@@ -131,6 +167,10 @@ public class ColumnBuilder {
     return this;
   }
 
+  public boolean isAutoNumber() {
+    return _autoNumber;
+  }
+
   /**
    * Sets whether of not the new column allows unicode compression.
    */
@@ -139,10 +179,26 @@ public class ColumnBuilder {
     return this;
   }
 
+  public boolean isCompressedUnicode() {
+    return _compressedUnicode;
+  }
+
+  /**
+   * Sets whether of not the new column allows unicode compression.
+   */
+  public ColumnBuilder setHyperlink(boolean hyperlink) {
+    _hyperlink = hyperlink;
+    return this;
+  }
+
+  public boolean isHyperlink() {
+    return _hyperlink;
+  }
+
   /**
    * Sets all attributes except name from the given Column template.
    */
-  public ColumnBuilder setFromColumn(ColumnImpl template) {
+  public ColumnBuilder setFromColumn(Column template) {
     DataType type = template.getType();
     setType(type);
     setLength(template.getLength());
@@ -152,12 +208,31 @@ public class ColumnBuilder {
       setPrecision(template.getPrecision());
     }
     setCompressedUnicode(template.isCompressedUnicode());
+    setHyperlink(template.isHyperlink());
     
     return this;
   }
 
   /**
-   * Escapes the new column's name using {@link Database#escapeIdentifier}.
+   * Sets all attributes except name from the given Column template.
+   */
+  public ColumnBuilder setFromColumn(ColumnBuilder template) {
+    DataType type = template.getType();
+    setType(type);
+    setLength(template.getLength());
+    setAutoNumber(template.isAutoNumber());
+    if(type.getHasScalePrecision()) {
+      setScale(template.getScale());
+      setPrecision(template.getPrecision());
+    }
+    setCompressedUnicode(template.isCompressedUnicode());
+    setHyperlink(template.isHyperlink());
+    
+    return this;
+  }
+
+  /**
+   * Escapes the new column's name using {@link DatabaseImpl#escapeIdentifier}.
    */
   public ColumnBuilder escapeName()
   {
@@ -165,29 +240,100 @@ public class ColumnBuilder {
     return this;
   }
 
+  short getColumnNumber() {
+    return _columnNumber;
+  }
+
+  void setColumnNumber(short newColumnNumber) {
+    _columnNumber = newColumnNumber;
+  }
+
+  ColumnImpl.SortOrder getTextSortOrder() {
+    return _sortOrder;
+  }
+
+  void setTextSortOrder(ColumnImpl.SortOrder newTextSortOrder) {
+    _sortOrder = newTextSortOrder;
+  }
+
+  /**
+   * Checks that this column definition is valid.
+   *
+   * @throws IllegalArgumentException if this column definition is invalid.
+   * @usage _advanced_method_
+   */
+  public void validate(JetFormat format) {
+    if(getType() == null) {
+      throw new IllegalArgumentException("must have type");
+    }
+    DatabaseImpl.validateIdentifierName(
+        getName(), format.MAX_COLUMN_NAME_LENGTH, "column");
+
+    if(getType().isUnsupported()) {
+      throw new IllegalArgumentException(
+          "Cannot create column with unsupported type " + getType());
+    }
+    if(!format.isSupportedDataType(getType())) {
+      throw new IllegalArgumentException(
+          "Database format " + format + " does not support type " + getType());
+    }
+    
+    if(!getType().isVariableLength()) {
+      if(getLength() != getType().getFixedSize()) {
+        if(getLength() < getType().getFixedSize()) {
+          throw new IllegalArgumentException("invalid fixed length size");
+        }
+        LOG.warn("Column length " + getLength() + 
+                 " longer than expected fixed size " + 
+                 getType().getFixedSize());
+      }
+    } else if(!getType().isLongValue()) {
+      if(!getType().isValidSize(getLength())) {
+        throw new IllegalArgumentException("var length out of range");
+      }
+    }
+
+    if(getType().getHasScalePrecision()) {
+      if(!getType().isValidScale(getScale())) {
+        throw new IllegalArgumentException(
+            "Scale must be from " + getType().getMinScale() + " to " +
+            getType().getMaxScale() + " inclusive");
+      }
+      if(!getType().isValidPrecision(getPrecision())) {
+        throw new IllegalArgumentException(
+            "Precision must be from " + getType().getMinPrecision() + " to " +
+            getType().getMaxPrecision() + " inclusive");
+      }
+    }
+
+    if(isAutoNumber()) {
+      if(!getType().mayBeAutoNumber()) {
+        throw new IllegalArgumentException(
+            "Auto number column must be long integer or guid");
+      }
+    }
+
+    if(isCompressedUnicode()) {
+      if(!getType().isTextual()) {
+        throw new IllegalArgumentException(
+            "Only textual columns allow unicode compression (text/memo)");
+      }
+    }
+
+    if(isHyperlink()) {
+      if(getType() != DataType.MEMO) {
+        throw new IllegalArgumentException(
+            "Only memo columns can be hyperlinks");
+      }
+    }
+  }
+
   /**
    * Creates a new Column with the currently configured attributes.
    */
-  public ColumnImpl toColumn() {
-    ColumnImpl col = new ColumnImpl();
-    col.setName(_name);
-    col.setType(_type);
-    if(_length != null) {
-      col.setLength(_length.shortValue());
-    }
-    if(_precision != null) {
-      col.setPrecision(_precision.byteValue());
-    }
-    if(_scale != null) {
-      col.setScale(_scale.byteValue());
-    }
-    if(_autoNumber) {
-      col.setAutoNumber(true);
-    }
-    if(_compressedUnicode != null) {
-      col.setCompressedUnicode(_compressedUnicode);
-    }
-    return col;
+  public ColumnBuilder toColumn() {
+    // for backwards compat w/ old code
+    return this;
   }
   
 }

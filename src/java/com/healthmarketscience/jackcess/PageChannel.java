@@ -166,9 +166,6 @@ public class PageChannel implements Channel, Flushable {
     throws IOException
   {
     validatePageNumber(pageNumber);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Reading in page " + Integer.toHexString(pageNumber));
-    }
     buffer.clear();
     int bytesRead = _channel.read(
         buffer, (long) pageNumber * (long) getFormat().PAGE_SIZE);

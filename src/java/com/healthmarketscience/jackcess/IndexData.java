@@ -483,7 +483,7 @@ public class IndexData {
           flags = idxCol.getFlags();
 
           // find actual table column number
-          for(ColumnImpl col : creator.getColumns()) {
+          for(ColumnBuilder col : creator.getColumns()) {
             if(col.getName().equalsIgnoreCase(idxCol.getName())) {
               columnNumber = col.getColumnNumber();
               break;

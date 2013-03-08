@@ -103,7 +103,7 @@ public class TableImpl implements Table
   /** owning database */
   private final DatabaseImpl _database;
   /** additional table flags from the catalog entry */
-  private int _flags;
+  private final int _flags;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
   private byte _tableType;
   /** Number of actual indexes on the table */
@@ -123,7 +123,7 @@ public class TableImpl implements Table
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
-  private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
+  private final List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   /** List of variable length columns in this table, ordered by offset */
   private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
   /** List of autonumber columns in this table, ordered by column number */
@@ -186,6 +186,7 @@ public class TableImpl implements Table
     _name = null;
     setColumns(columns);
     _fkEnforcer = null;
+    _flags = 0;
   }
   
   /**
@@ -313,7 +314,7 @@ public class TableImpl implements Table
    * Only called by unit tests
    */
   private void setColumns(List<ColumnImpl> columns) {
-    _columns = columns;
+    _columns.addAll(columns);
     int colIdx = 0;
     int varLenIdx = 0;
     int fixedOffset = 0;
@@ -897,7 +898,7 @@ public class TableImpl implements Table
 
     // total up the amount of space used by the column and index names (2
     // bytes per char + 2 bytes for the length)
-    for(ColumnImpl col : creator.getColumns()) {
+    for(ColumnBuilder col : creator.getColumns()) {
       int nameByteLen = (col.getName().length() *
                          JetFormat.TEXT_FIELD_UNIT_SIZE);
       totalTableDefSize += nameByteLen + 2;
@@ -998,7 +999,7 @@ public class TableImpl implements Table
       TableCreator creator, ByteBuffer buffer, int totalTableDefSize)
     throws IOException
   {
-    List<ColumnImpl> columns = creator.getColumns();
+    List<ColumnBuilder> columns = creator.getColumns();
 
     //Start writing the tdef
     writeTablePageHeader(buffer);
@@ -1020,13 +1021,6 @@ public class TableImpl implements Table
     ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber());  //Usage map page number
     buffer.put((byte) 1); //Free map row number
     ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber());  //Free map page number
-    if (LOG.isDebugEnabled()) {
-      int position = buffer.position();
-      buffer.rewind();
-      LOG.debug("Creating new table def block:\n" + ByteUtil.toHexString(
-                buffer, creator.getFormat().SIZE_TDEF_HEADER));
-      buffer.position(position);
-    }
   }
 
   /**
@@ -1158,11 +1152,6 @@ public class TableImpl implements Table
    */
   private void readTableDefinition(ByteBuffer tableBuffer) throws IOException
   {
-    if (LOG.isDebugEnabled()) {
-      tableBuffer.rewind();
-      LOG.debug("Table def block:\n" + ByteUtil.toHexString(tableBuffer,
-          getFormat().SIZE_TDEF_HEADER));
-    }
     _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
     _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
     if(getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER >= 0) {
@@ -1638,9 +1627,6 @@ public class TableImpl implements Table
    * @return Page number of the new page
    */
   private ByteBuffer newDataPage() throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating new data page");
-    }
     ByteBuffer dataPage = _addRowBufferH.setNewPage(getPageChannel());
     dataPage.put(PageTypes.DATA); //Page type
     dataPage.put((byte) 1); //Unknown
@@ -1810,9 +1796,6 @@ public class TableImpl implements Table
 
     nullMask.write(buffer);  //Null mask
     buffer.flip();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating new data block:\n" + ByteUtil.toHexString(buffer, buffer.limit()));
-    }
     return buffer;
   }
 

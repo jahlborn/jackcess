@@ -35,3 +35,6 @@ Refactor goals:
 - remove debug log blocks
 - add Row interface
 - change savepoint to use table number instead of name?
+- don't use columnimpl for creating tables
+  - clean up columnimpl/tableimpl constructors
+- add updateCurrentRow(Map), add updateRow(Row)

@@ -68,13 +68,12 @@ public class ImportUtil
    *
    * @return a List of Columns
    */
-  public static List<ColumnImpl> toColumns(ResultSetMetaData md)
+  public static List<ColumnBuilder> toColumns(ResultSetMetaData md)
     throws SQLException
   {
-      List<ColumnImpl> columns = new LinkedList<ColumnImpl>();
+      List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
-        ColumnImpl column = new ColumnImpl();
-        column.setName(DatabaseImpl.escapeIdentifier(md.getColumnName(i)));
+        ColumnBuilder column = new ColumnBuilder(md.getColumnName(i)).escapeName();
         int lengthInUnits = md.getColumnDisplaySize(i);
         column.setSQLType(md.getColumnType(i), lengthInUnits);
         DataType type = column.getType();
@@ -164,10 +163,13 @@ public class ImportUtil
   {
     ResultSetMetaData md = source.getMetaData();
 
+    // allow filter to setup per-call state
+    filter = filter.init();
+
     name = DatabaseImpl.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
-      List<ColumnImpl> columns = toColumns(md);
+      List<ColumnBuilder> columns = toColumns(md);
       table = createUniqueTable(db, name, columns, md, filter);
     }
 
@@ -452,12 +454,15 @@ public class ImportUtil
 
     Pattern delimPat = Pattern.compile(delim);
 
+    // allow filter to setup per-call state
+    filter = filter.init();
+
     try {
       name = DatabaseImpl.escapeIdentifier(name);
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
-        List<ColumnImpl> columns = new LinkedList<ColumnImpl>();
+        List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
         Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
       
         for (int i = 0; i < columnNames.length; i++) {
@@ -591,7 +596,7 @@ public class ImportUtil
    * Returns a new table with a unique name and the given table definition.
    */
   private static Table createUniqueTable(DatabaseImpl db, String name,
-                                         List<ColumnImpl> columns,
+                                         List<ColumnBuilder> columns,
                                          ResultSetMetaData md, 
                                          ImportFilter filter)
     throws IOException, SQLException

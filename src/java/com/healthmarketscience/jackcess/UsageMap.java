@@ -92,10 +92,6 @@ public class UsageMap
     _rowStart = rowStart;
     _tableBuffer.position(_rowStart + getFormat().OFFSET_USAGE_MAP_START);
     _startOffset = _tableBuffer.position();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Usage map block:\n" + ByteUtil.toHexString(_tableBuffer, _rowStart,
-          tableBuffer.limit() - _rowStart));
-    }
   }
 
   public DatabaseImpl getDatabase() {

@@ -934,7 +934,7 @@ public class DatabaseImpl implements Database
    * @param columns List of Columns in the table
    * @usage _general_method_
    */
-  public void createTable(String name, List<ColumnImpl> columns)
+  public void createTable(String name, List<ColumnBuilder> columns)
     throws IOException
   {
     createTable(name, columns, null);
@@ -947,7 +947,7 @@ public class DatabaseImpl implements Database
    * @param indexes List of IndexBuilders describing indexes for the table
    * @usage _general_method_
    */
-  public void createTable(String name, List<ColumnImpl> columns,
+  public void createTable(String name, List<ColumnBuilder> columns,
                           List<IndexBuilder> indexes)
     throws IOException
   {

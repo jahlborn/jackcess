@@ -21,6 +21,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -39,7 +40,7 @@ class TableCreator
 {
   private final DatabaseImpl _database;
   private final String _name;
-  private final List<ColumnImpl> _columns;
+  private final List<ColumnBuilder> _columns;
   private final List<IndexBuilder> _indexes;
   private final Map<IndexBuilder,IndexState> _indexStates = 
     new HashMap<IndexBuilder,IndexState>();
@@ -48,7 +49,7 @@ class TableCreator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(DatabaseImpl database, String name, List<ColumnImpl> columns,
+  public TableCreator(DatabaseImpl database, String name, List<ColumnBuilder> columns,
                       List<IndexBuilder> indexes) {
     _database = database;
     _name = name;
@@ -77,7 +78,7 @@ class TableCreator
     return _umapPageNumber;
   }
 
-  public List<ColumnImpl> getColumns() {
+  public List<ColumnBuilder> getColumns() {
     return _columns;
   }
 
@@ -162,7 +163,7 @@ class TableCreator
 
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
-    for(ColumnImpl column : _columns) {
+    for(ColumnBuilder column : _columns) {
 
       // FIXME for now, we can't create complex columns
       if(column.getType() == DataType.COMPLEX_TYPE) {
@@ -182,11 +183,11 @@ class TableCreator
       }
     }
 
-    List<ColumnImpl> autoCols = TableImpl.getAutoNumberColumns(_columns);
+    List<ColumnBuilder> autoCols = getAutoNumberColumns();
     if(autoCols.size() > 1) {
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
-      for(ColumnImpl c : autoCols) {
+      for(ColumnBuilder c : autoCols) {
         if(!c.getType().isMultipleAutoNumberAllowed() &&
            !autoTypes.add(c.getType())) {
           throw new IllegalArgumentException(
@@ -215,6 +216,17 @@ class TableCreator
         }
       }
     }
+  }
+
+  private List<ColumnBuilder> getAutoNumberColumns() 
+  {
+    List<ColumnBuilder> autoCols = new ArrayList<ColumnBuilder>(1);
+    for(ColumnBuilder c : _columns) {
+      if(c.isAutoNumber()) {
+        autoCols.add(c);
+      }
+    }
+    return autoCols;
   }
 
   /**

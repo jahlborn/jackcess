@@ -39,6 +39,16 @@ import java.util.List;
 public interface ExportFilter {
 
   /**
+   * Called before any calls {@link #filterColumns} and {@link #filterRow} for
+   * a single export operation.  Allows the given instance to return a
+   * per-call instance which can maintain state.
+   *
+   * @return the ExportFilter instance to use for the rest of the export
+   *         operation
+   */
+  public ExportFilter init();
+
+  /**
    * The columns that should be used to create the exported file.
    * 
    * @param columns
@@ -46,7 +56,8 @@ public interface ExportFilter {
    *          modified and returned
    * @return the columns to use when creating the export file
    */
-  public List<ColumnImpl> filterColumns(List<ColumnImpl> columns) throws IOException;
+  public List<ColumnImpl> filterColumns(List<ColumnImpl> columns) 
+    throws IOException;
 
   /**
    * The desired values for the row.

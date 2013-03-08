@@ -43,6 +43,10 @@ public class SimpleExportFilter implements ExportFilter {
   public SimpleExportFilter() {
   }
 
+  public ExportFilter init() {
+    return this;
+  }
+
   public List<ColumnImpl> filterColumns(List<ColumnImpl> columns) throws IOException {
     return columns;
   }

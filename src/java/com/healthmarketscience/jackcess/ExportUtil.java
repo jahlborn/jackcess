@@ -303,6 +303,9 @@ public class ExportUtil {
         "(?:" + Pattern.quote(delimiter) + ")|(?:" + 
         Pattern.quote("" + quote) + ")|(?:[\n\r])");
 
+    // allow filter to setup per-call state
+    filter = filter.init();
+
     List<ColumnImpl> origCols = cursor.getTable().getColumns();
     List<ColumnImpl> columns = new ArrayList<ColumnImpl>(origCols);
     columns = filter.filterColumns(columns);

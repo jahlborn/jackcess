@@ -304,6 +304,10 @@ public class PropertyMaps implements Iterable<PropertyMap>
      */
     private class PropColumn extends ColumnImpl
     {
+      private PropColumn() {
+        super(null);
+      }
+      
       @Override
       public DatabaseImpl getDatabase() {
         return _database;
