@@ -281,11 +281,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
 
         // create column with ability to read/write the given data type
         col = ((colType == DataType.BOOLEAN) ? 
-               new BooleanPropColumn() : new PropColumn());
-        col.setType(colType);
-        if(col.isVariableLength()) {
-          col.setLength((short)colType.getMaxSize());
-        }
+               new BooleanPropColumn() : new PropColumn(colType));
       }
 
       return col;
@@ -304,8 +300,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
      */
     private class PropColumn extends ColumnImpl
     {
-      private PropColumn() {
-        super(null);
+      private PropColumn(DataType type) {
+        super(null, type, 0, 0, 0);
       }
       
       @Override
@@ -320,6 +316,10 @@ public class PropertyMaps implements Iterable<PropertyMap>
      */
     private final class BooleanPropColumn extends PropColumn
     {
+      private BooleanPropColumn() {
+        super(DataType.BOOLEAN);
+      }
+
       @Override
       public Object read(byte[] data) throws IOException {
         return ((data[0] != 0) ? Boolean.TRUE : Boolean.FALSE);

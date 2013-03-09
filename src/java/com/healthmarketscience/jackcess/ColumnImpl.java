@@ -173,31 +173,31 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /** owning table */
   private final TableImpl _table;
   /** Whether or not the column is of variable length */
-  private boolean _variableLength;
+  private final boolean _variableLength;
   /** Whether or not the column is an autonumber column */
-  private boolean _autoNumber;
+  private final boolean _autoNumber;
   /** Data type */
-  private DataType _type;
+  private final DataType _type;
   /** Maximum column length */
-  private short _columnLength;
+  private final short _columnLength;
   /** 0-based column number */
-  private short _columnNumber;
+  private final short _columnNumber;
   /** index of the data for this column within a list of row data */
   private int _columnIndex;
   /** display index of the data for this column */
-  private int _displayIndex;
+  private final int _displayIndex;
   /** Column name */
   private String _name;
   /** the offset of the fixed data in the row */
-  private int _fixedDataOffset;
+  private final int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
-  private int _varLenTableIndex;
+  private final int _varLenTableIndex;
   /** information specific to numeric columns */
   private NumericInfo _numericInfo = DEFAULT_NUMERIC_INFO;
   /** information specific to text columns */
   private TextInfo _textInfo = DEFAULT_TEXT_INFO;
   /** the auto number generator for this column (if autonumber column) */
-  private AutoNumberGenerator _autoNumberGenerator;
+  private final AutoNumberGenerator _autoNumberGenerator;
   /** additional information specific to complex columns */
   private ComplexColumnInfo<? extends ComplexValue> _complexInfo;
   /** properties for this column, if any */
@@ -206,8 +206,28 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * @usage _advanced_method_
    */
-  ColumnImpl(TableImpl table) {
+  protected ColumnImpl(TableImpl table, DataType type, int colNumber,
+                       int fixedOffset, int varLenIndex) {
     _table = table;
+    _type = type;
+
+    if(!_type.isVariableLength()) {
+      _columnLength = (short)type.getFixedSize();
+    } else {
+      _columnLength = (short)type.getMaxSize();
+    }
+    _variableLength = type.isVariableLength();
+    if(type.getHasScalePrecision()) {
+      modifyNumericInfo();
+      _numericInfo._scale = (byte)type.getDefaultScale();
+      _numericInfo._precision =(byte)type.getDefaultPrecision();
+    }
+    _autoNumber = false;
+    _autoNumberGenerator = null;
+    _columnNumber = (short)colNumber;
+    _displayIndex = 0;
+    _fixedDataOffset = fixedOffset;
+    _varLenTableIndex = varLenIndex;
   }
     
   /**
@@ -217,7 +237,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
-  public ColumnImpl(TableImpl table, ByteBuffer buffer, int offset, int displayIndex)
+  public ColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
+                    int displayIndex)
     throws IOException
   {
     _table = table;
@@ -229,16 +250,19 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     
     byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
-    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
+    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK))
+                   != 0);
 
+    DataType type = null;
     try {
-      _type = DataType.fromByte(colType);
+      type = DataType.fromByte(colType);
     } catch(IOException e) {
       LOG.warn("Unsupported column type " + colType);
-      _type = (_variableLength ? DataType.UNSUPPORTED_VARLEN :
-               DataType.UNSUPPORTED_FIXEDLEN);
+      type = (_variableLength ? DataType.UNSUPPORTED_VARLEN :
+              DataType.UNSUPPORTED_FIXEDLEN);
       setUnknownDataType(colType);
     }
+    _type = type;
     
     if (_type.getHasScalePrecision()) {
       modifyNumericInfo();
@@ -265,12 +289,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
     }
     
-    setAutoNumberGenerator();
+    _autoNumberGenerator = createAutoNumberGenerator();
     
     if(_variableLength) {
       _varLenTableIndex = buffer.getShort(offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
+      _fixedDataOffset = 0;
     } else {
       _fixedDataOffset = buffer.getShort(offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
+      _varLenTableIndex = 0;
     }
 
     // load complex info
@@ -317,19 +343,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * @usage _advanced_method_
    */
-  public void setName(String name) {
+  void setName(String name) {
     _name = name;
   }
   
   public boolean isVariableLength() {
     return _variableLength;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setVariableLength(boolean variableLength) {
-    _variableLength = variableLength;
   }
   
   public boolean isAutoNumber() {
@@ -337,25 +356,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
-   * @usage _general_method_
-   */
-  public void setAutoNumber(boolean autoNumber) {
-    _autoNumber = autoNumber;
-    setAutoNumberGenerator();
-  }
-
-  /**
    * @usage _advanced_method_
    */
   public short getColumnNumber() {
     return _columnNumber;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setColumnNumber(short newColumnNumber) {
-    _columnNumber = newColumnNumber;
   }
 
   public int getColumnIndex() {
@@ -376,26 +380,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _displayIndex;
   }
 
-  /**
-   * Also sets the length and the variable length flag, inferred from the
-   * type.  For types with scale/precision, sets the scale and precision to
-   * default values.
-   * @usage _general_method_
-   */
-  public void setType(DataType type) {
-    _type = type;
-    if(!type.isVariableLength()) {
-      setLength((short)type.getFixedSize());
-    } else if(!type.isLongValue()) {
-      setLength((short)type.getDefaultSize());
-    }
-    setVariableLength(type.isVariableLength());
-    if(type.getHasScalePrecision()) {
-      setScale((byte)type.getDefaultScale());
-      setPrecision((byte)type.getDefaultPrecision());
-    }
-  }
-
   public DataType getType() {
     return _type;
   }
@@ -408,36 +392,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _textInfo._compressedUnicode;
   }
 
-  /**
-   * @usage _general_method_
-   */
-  public void setCompressedUnicode(boolean newCompessedUnicode) {
-    modifyTextInfo();
-    _textInfo._compressedUnicode = newCompessedUnicode;
-  }
-
   public byte getPrecision() {
     return _numericInfo._precision;
   }
   
-  /**
-   * @usage _general_method_
-   */
-  public void setPrecision(byte newPrecision) {
-    modifyNumericInfo();
-    _numericInfo._precision = newPrecision;
-  }
-  
   public byte getScale() {
     return _numericInfo._scale;
-  }
-
-  /**
-   * @usage _general_method_
-   */
-  public void setScale(byte newScale) {
-    modifyNumericInfo();
-    _numericInfo._scale = newScale;
   }
 
   /**
@@ -461,34 +421,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public short getTextCodePage() {
     return _textInfo._codePage;
   }
-  
-  /**
-   * @usage _general_method_
-   */
-  public void setLength(short length) {
-    _columnLength = length;
-  }
 
   public short getLength() {
     return _columnLength;
   }
 
-  /**
-   * @usage _general_method_
-   */
-  public void setLengthInUnits(short unitLength) {
-    setLength((short)getType().fromUnitSize(unitLength));
-  }
-
   public short getLengthInUnits() {
     return (short)getType().toUnitSize(getLength());
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setVarLenTableIndex(int idx) {
-    _varLenTableIndex = idx;
   }
   
   /**
@@ -496,13 +435,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public int getVarLenTableIndex() {
     return _varLenTableIndex;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setFixedDataOffset(int newOffset) {
-    _fixedDataOffset = newOffset;
   }
   
   /**
@@ -544,14 +476,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public boolean isHyperlink() {
     return _textInfo._hyperlink;
   }
-
-  /**
-   * @usage _general_method_
-   */
-  public void setHyperlink(boolean hyperlink) {
-    modifyTextInfo();
-    _textInfo._hyperlink = hyperlink;
-  }
   
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return _complexInfo;
@@ -568,32 +492,21 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _numericInfo._scale;
   }
   
-  private void setAutoNumberGenerator()
-  {
+  private AutoNumberGenerator createAutoNumberGenerator() {
     if(!_autoNumber || (_type == null)) {
-      _autoNumberGenerator = null;
-      return;
-    }
-
-    if((_autoNumberGenerator != null) && 
-       (_autoNumberGenerator.getType() == _type)) {
-      // keep existing
-      return;
+      return null;
     }
 
     switch(_type) {
     case LONG:
-      _autoNumberGenerator = new LongAutoNumberGenerator();
-      break;
+      return new LongAutoNumberGenerator();
     case GUID:
-      _autoNumberGenerator = new GuidAutoNumberGenerator();
-      break;
+      return new GuidAutoNumberGenerator();
     case COMPLEX_TYPE:
-      _autoNumberGenerator = new ComplexTypeAutoNumberGenerator();
-      break;
+      return new ComplexTypeAutoNumberGenerator();
     default:
       LOG.warn("Unknown auto number column type " + _type);
-      _autoNumberGenerator = new UnsupportedAutoNumberGenerator(_type);
+      return new UnsupportedAutoNumberGenerator(_type);
     }
   }
 

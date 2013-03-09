@@ -105,29 +105,23 @@ public class TableImpl implements Table
   /** additional table flags from the catalog entry */
   private final int _flags;
   /** Type of the table (either TYPE_SYSTEM or TYPE_USER) */
-  private byte _tableType;
+  private final byte _tableType;
   /** Number of actual indexes on the table */
-  private int _indexCount;
+  private final int _indexCount;
   /** Number of logical indexes for the table */
-  private int _logicalIndexCount;
-  /** Number of rows in the table */
-  private int _rowCount;
-  /** last long auto number for the table */
-  private int _lastLongAutoNumber;
-  /** last complex type auto number for the table */
-  private int _lastComplexTypeAutoNumber;
+  private final int _logicalIndexCount;
   /** page number of the definition of this table */
   private final int _tableDefPageNumber;
   /** max Number of columns in the table (includes previous deletions) */
-  private short _maxColumnCount;
+  private final short _maxColumnCount;
   /** max Number of variable columns in the table */
-  private short _maxVarColumnCount;
+  private final short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
   private final List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   /** List of variable length columns in this table, ordered by offset */
   private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
   /** List of autonumber columns in this table, ordered by column number */
-  private List<ColumnImpl> _autoNumColumns;
+  private final List<ColumnImpl> _autoNumColumns = new ArrayList<ColumnImpl>(1);
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
   private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
@@ -139,9 +133,15 @@ public class TableImpl implements Table
   /** Table name as stored in Database */
   private final String _name;
   /** Usage map of pages that this table owns */
-  private UsageMap _ownedPages;
+  private final UsageMap _ownedPages;
   /** Usage map of pages that this table owns with free space on them */
-  private UsageMap _freeSpacePages;
+  private final UsageMap _freeSpacePages;
+  /** Number of rows in the table */
+  private int _rowCount;
+  /** last long auto number for the table */
+  private int _lastLongAutoNumber;
+  /** last complex type auto number for the table */
+  private int _lastComplexTypeAutoNumber;
   /** modification count for the table, keeps row-states up-to-date */
   private int _modCount;
   /** page buffer used to update data pages when adding rows */
@@ -175,7 +175,7 @@ public class TableImpl implements Table
   
   /**
    * Only used by unit tests
-
+   * @usage _advanced_method_
    */
   TableImpl(boolean testing, List<ColumnImpl> columns) throws IOException {
     if(!testing) {
@@ -184,9 +184,24 @@ public class TableImpl implements Table
     _database = null;
     _tableDefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     _name = null;
-    setColumns(columns);
+
+    _columns.addAll(columns);
+    for(ColumnImpl col : _columns) {
+      if(col.getType().isVariableLength()) {
+        _varColumns.add(col);
+      }
+    }
+    _maxColumnCount = (short)_columns.size();
+    _maxVarColumnCount = (short)_varColumns.size();
+    getAutoNumberColumns();
+
     _fkEnforcer = null;
     _flags = 0;
+    _tableType = TYPE_USER;
+    _indexCount = 0;
+    _logicalIndexCount = 0;
+    _ownedPages = null;
+    _freeSpacePages = null;
   }
   
   /**
@@ -203,7 +218,50 @@ public class TableImpl implements Table
     _tableDefPageNumber = pageNumber;
     _name = name;
     _flags = flags;
-    readTableDefinition(loadCompleteTableDefinitionBuffer(tableBuffer));
+
+    // read table definition
+    tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer);
+    _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
+    _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
+    if(getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER >= 0) {
+      _lastComplexTypeAutoNumber = tableBuffer.getInt(
+          getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER);
+    }
+    _tableType = tableBuffer.get(getFormat().OFFSET_TABLE_TYPE);
+    _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
+    _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
+    short columnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_COLS);
+    _logicalIndexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
+    _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
+
+    int rowNum = ByteUtil.getUnsignedByte(
+        tableBuffer, getFormat().OFFSET_OWNED_PAGES);
+    int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
+    _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
+    rowNum = ByteUtil.getUnsignedByte(
+        tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES);
+    pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
+    _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
+    
+    for (int i = 0; i < _indexCount; i++) {
+      _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
+    }
+    
+    readColumnDefinitions(tableBuffer, columnCount);
+
+    readIndexDefinitions(tableBuffer);
+
+    // re-sort columns if necessary
+    if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
+      Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
+    }
+
+    for(ColumnImpl col : _columns) {
+      // some columns need to do extra work after the table is completely
+      // loaded
+      col.postTableLoadInit();
+    }
+
     _fkEnforcer = new FKEnforcer(this);
   }
 
@@ -308,30 +366,6 @@ public class TableImpl implements Table
     }
     throw new IllegalArgumentException("Column with name " + name +
                                        " does not exist in this table");
-  }
-    
-  /**
-   * Only called by unit tests
-   */
-  private void setColumns(List<ColumnImpl> columns) {
-    _columns.addAll(columns);
-    int colIdx = 0;
-    int varLenIdx = 0;
-    int fixedOffset = 0;
-    for(ColumnImpl col : _columns) {
-      col.setColumnNumber((short)colIdx);
-      col.setColumnIndex(colIdx++);
-      if(col.isVariableLength()) {
-        col.setVarLenTableIndex(varLenIdx++);
-        _varColumns.add(col);
-      } else {
-        col.setFixedDataOffset(fixedOffset);
-        fixedOffset += col.getType().getFixedSize();
-      }
-    }
-    _maxColumnCount = (short)_columns.size();
-    _maxVarColumnCount = (short)_varColumns.size();
-    _autoNumColumns = getAutoNumberColumns(columns);
   }
 
   public PropertyMap getProperties() throws IOException {
@@ -1147,37 +1181,9 @@ public class TableImpl implements Table
     return tableBuffer;
   }
     
-  /**
-   * Read the table definition
-   */
-  private void readTableDefinition(ByteBuffer tableBuffer) throws IOException
+  private void readColumnDefinitions(ByteBuffer tableBuffer, short columnCount)
+    throws IOException
   {
-    _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
-    _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
-    if(getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER >= 0) {
-      _lastComplexTypeAutoNumber = tableBuffer.getInt(
-          getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER);
-    }
-    _tableType = tableBuffer.get(getFormat().OFFSET_TABLE_TYPE);
-    _maxColumnCount = tableBuffer.getShort(getFormat().OFFSET_MAX_COLS);
-    _maxVarColumnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_VAR_COLS);
-    short columnCount = tableBuffer.getShort(getFormat().OFFSET_NUM_COLS);
-    _logicalIndexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
-    _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
-
-    int rowNum = ByteUtil.getUnsignedByte(
-        tableBuffer, getFormat().OFFSET_OWNED_PAGES);
-    int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
-    _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
-    rowNum = ByteUtil.getUnsignedByte(
-        tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES);
-    pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
-    _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
-    
-    for (int i = 0; i < _indexCount; i++) {
-      _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
-    }
-    
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
     int dispIndex = 0;
@@ -1198,7 +1204,7 @@ public class TableImpl implements Table
       column.setName(readName(tableBuffer));
     }    
     Collections.sort(_columns);
-    _autoNumColumns = getAutoNumberColumns(_columns);
+    getAutoNumberColumns();
 
     // setup the data index for the columns
     int colIdx = 0;
@@ -1209,7 +1215,10 @@ public class TableImpl implements Table
     // sort variable length columns based on their index into the variable
     // length offset table, because we will write the columns in this order
     Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
+  }
 
+  private void readIndexDefinitions(ByteBuffer tableBuffer) throws IOException
+  {
     // read index column information
     for (int i = 0; i < _indexCount; i++) {
       IndexData idxData = _indexDatas.get(i);
@@ -1231,17 +1240,6 @@ public class TableImpl implements Table
     }
     
     Collections.sort(_indexes);
-
-    // re-sort columns if necessary
-    if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
-      Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
-    }
-
-    for(ColumnImpl col : _columns) {
-      // some columns need to do extra work after the table is completely
-      // loaded
-      col.postTableLoadInit();
-    }
   }
   
   /**
@@ -2076,20 +2074,12 @@ public class TableImpl implements Table
     return rowSize + format.SIZE_ROW_LOCATION;
   }
 
-  /**
-   * @return the "AutoNumber" columns in the given collection of columns.
-   * @usage _advanced_method_
-   */
-  public static List<ColumnImpl> getAutoNumberColumns(
-      Collection<ColumnImpl> columns) 
-  {
-    List<ColumnImpl> autoCols = new ArrayList<ColumnImpl>(1);
-    for(ColumnImpl c : columns) {
+  private void getAutoNumberColumns() {
+    for(ColumnImpl c : _columns) {
       if(c.isAutoNumber()) {
-        autoCols.add(c);
+        _autoNumColumns.add(c);
       }
     }
-    return (!autoCols.isEmpty() ? autoCols : Collections.<ColumnImpl>emptyList());
   }
 
   /**

@@ -46,6 +46,9 @@ public class TableTest extends TestCase {
   private final PageChannel _pageChannel = new PageChannel(true);
   private List<Column> _columns = new ArrayList<Column>();
   private Table _testTable;
+  private int _varLenIdx;
+  private int _fixedOffset;
+  
   
   public TableTest(String name) {
     super(name);
@@ -169,8 +172,20 @@ public class TableTest extends TestCase {
     return _testTable;
   }
 
-  private Column newTestColumn() {
-    return new Column(true, null) {
+  private Column newTestColumn(DataType type) {
+
+    int nextColIdx = _columns.size();
+    int nextVarLenIdx = 0;
+    int nextFixedOff = 0;
+
+    if(type.isVariableLength()) {
+      nextVarLenIdx = _varLenIdx++;
+    } else {
+      nextFixedOff = _fixedOffset;
+      _fixedOffset += type.getFixedSize();
+    }
+
+    return new Column(null, type, nextColIdx, nextFixedOff, nextVarLenIdx) {
         @Override
         public Table getTable() {
           return _testTable;

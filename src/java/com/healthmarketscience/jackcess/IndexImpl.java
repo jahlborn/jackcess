@@ -147,7 +147,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return _name;
   }
   
-  public void setName(String name) {
+  void setName(String name) {
     _name = name;
   }
 
