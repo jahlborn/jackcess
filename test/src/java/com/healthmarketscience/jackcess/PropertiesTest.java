@@ -105,7 +105,7 @@ public class PropertiesTest extends TestCase
     for(TestDB testDb : SUPPORTED_DBS_TEST_FOR_READ) {
       Database db = open(testDb);
 
-      Table t = db.getTable("Table1");
+      TableImpl t = (TableImpl)db.getTable("Table1");
       assertEquals(t.getTableDefPageNumber(), 
                    t.getPropertyMaps().getObjectId());
       PropertyMap tProps = t.getProperties();
@@ -189,7 +189,7 @@ public class PropertiesTest extends TestCase
         for(Map<String,Object> row : db.getSystemCatalog()) {
           int id = (Integer)row.get("Id");
           byte[] propBytes = (byte[])row.get("LvProp");
-          PropertyMaps propMaps = db.getPropertiesForObject(id);
+          PropertyMaps propMaps = ((DatabaseImpl)db).getPropertiesForObject(id);
           int byteLen = ((propBytes != null) ? propBytes.length : 0);
           if(byteLen == 0) {
             assertTrue(propMaps.isEmpty());

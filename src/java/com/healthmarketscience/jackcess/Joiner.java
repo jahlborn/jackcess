@@ -34,12 +34,12 @@ import java.util.Map;
  */
 public class Joiner 
 {
-  private final IndexImpl _fromIndex;
-  private final List<IndexData.ColumnDescriptor> _fromCols;
-  private final IndexCursorImpl _toCursor;
+  private final Index _fromIndex;
+  private final List<? extends Index.Column> _fromCols;
+  private final IndexCursor _toCursor;
   private final Object[] _entryValues;
   
-  private Joiner(IndexImpl fromIndex, IndexCursorImpl toCursor)
+  private Joiner(Index fromIndex, IndexCursor toCursor)
   {
     _fromIndex = fromIndex;
     _fromCols = _fromIndex.getColumns();
@@ -56,7 +56,7 @@ public class Joiner
    * @throws IllegalArgumentException if there is no relationship between the
    *         given tables
    */
-  public static Joiner create(TableImpl fromTable, TableImpl toTable)
+  public static Joiner create(Table fromTable, Table toTable)
     throws IOException
   {
     return create(fromTable.getForeignKeyIndex(toTable));
@@ -69,11 +69,11 @@ public class Joiner
    *
    * @param fromIndex the index backing one side of a foreign-key relationship
    */
-  public static Joiner create(IndexImpl fromIndex)
+  public static Joiner create(Index fromIndex)
     throws IOException
   {
-    IndexImpl toIndex = fromIndex.getReferencedIndex();
-    IndexCursorImpl toCursor = IndexCursorImpl.createCursor(
+    Index toIndex = fromIndex.getReferencedIndex();
+    IndexCursor toCursor = CursorBuilder.createCursor(
         toIndex.getTable(), toIndex);
     // text lookups are always case-insensitive
     toCursor.setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE);
@@ -90,27 +90,27 @@ public class Joiner
     return create(getToTable(), getFromTable());
   }
   
-  public TableImpl getFromTable() {
+  public Table getFromTable() {
     return getFromIndex().getTable();
   }
   
-  public IndexImpl getFromIndex() {
+  public Index getFromIndex() {
     return _fromIndex;
   }
   
-  public TableImpl getToTable() {
+  public Table getToTable() {
     return getToCursor().getTable();
   }
   
-  public IndexImpl getToIndex() {
+  public Index getToIndex() {
     return getToCursor().getIndex();
   }
   
-  public IndexCursorImpl getToCursor() {
+  public IndexCursor getToCursor() {
     return _toCursor;
   }
 
-  public List<IndexData.ColumnDescriptor> getColumns() {
+  public List<? extends Index.Column> getColumns() {
     // note, this list is already unmodifiable, no need to re-wrap
     return _fromCols;
   }
@@ -310,7 +310,7 @@ public class Joiner
 
     String fromType = "] (primary)";
     String toType = "] (secondary)";
-    if(!_fromIndex.getReference().isPrimaryTable()) {
+    if(!((IndexImpl)_fromIndex).getReference().isPrimaryTable()) {
       fromType = "] (secondary)";
       toType = "] (primary)";
     }
@@ -324,7 +324,7 @@ public class Joiner
     sb.append(fromType);
     
     sb.append(" to ").append(getToTable().getName()).append("[");
-    List<IndexData.ColumnDescriptor> toCols = _toCursor.getIndex().getColumns();
+    List<? extends Index.Column> toCols = _toCursor.getIndex().getColumns();
     sb.append(toCols.get(0).getName());
     for(int i = 1; i < toCols.size(); ++i) {
       sb.append(",").append(toCols.get(i).getName());

@@ -95,12 +95,12 @@ public class ErrorHandlerTest extends TestCase
                                         "val", null)),
                   table);
 
-      Cursor c1 = Cursor.createCursor(table);
-      Cursor c2 = Cursor.createCursor(table);
-      Cursor c3 = Cursor.createCursor(table);
+      Cursor c1 = CursorBuilder.createCursor(table);
+      Cursor c2 = CursorBuilder.createCursor(table);
+      Cursor c3 = CursorBuilder.createCursor(table);
 
       c2.setErrorHandler(new DebugErrorHandler("#error"));
-      c3.setErrorHandler(Database.DEFAULT_ERROR_HANDLER);
+      c3.setErrorHandler(ErrorHandler.DEFAULT);
 
       assertCursor(createExpectedTable(
                       createExpectedRow("col", "row1",
@@ -169,10 +169,10 @@ public class ErrorHandlerTest extends TestCase
     
   }
 
-  private static class BogusColumn extends Column
+  private static class BogusColumn extends ColumnImpl
   {
     private BogusColumn(Table table) {
-      super(true, table);
+      super((TableImpl)table, DataType.TEXT, 0, 0, 0);
     }
     
     @Override

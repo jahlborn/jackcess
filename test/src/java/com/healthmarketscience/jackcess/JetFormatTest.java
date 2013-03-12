@@ -79,7 +79,8 @@ public class JetFormatTest extends TestCase {
         continue;
       }
       supportedForRead.add(ff);
-      if(ff.getJetFormat().READ_ONLY || (ff == FileFormat.MSISAM)) {
+      if(DatabaseImpl.getFileFormatDetails(ff).getFormat().READ_ONLY ||
+         (ff == FileFormat.MSISAM)) {
         continue;
       }
       supported.add(ff);
@@ -112,7 +113,7 @@ public class JetFormatTest extends TestCase {
     }
 
     public final JetFormat getExpectedFormat() { 
-      return expectedFileFormat.getJetFormat(); 
+      return DatabaseImpl.getFileFormatDetails(expectedFileFormat).getFormat(); 
     }
 
     @Override
@@ -139,7 +140,7 @@ public class JetFormatTest extends TestCase {
         
         // verify that the db is the file format expected
         try {
-          Database db = Database.open(testFile, true);
+          Database db = new DatabaseBuilder(testFile).setReadOnly(true).open();
           FileFormat dbFileFormat = db.getFileFormat();
           db.close();
           if(dbFileFormat != fileFormat) {
@@ -181,13 +182,13 @@ public class JetFormatTest extends TestCase {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      final FileChannel channel = Database.openChannel(testDB.dbFile, false);
+      final FileChannel channel = DatabaseImpl.openChannel(testDB.dbFile, false);
       try {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
         assertEquals("Unexpected JetFormat for dbFile: " + 
                      testDB.dbFile.getAbsolutePath(),
-                     testDB.expectedFileFormat.getJetFormat(), fmtActual);
+                     testDB.getExpectedFormat(), fmtActual);
 
       } finally {
         channel.close();

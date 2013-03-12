@@ -169,9 +169,9 @@ public class TableImpl implements Table
   /** foreign-key enforcer for this table */
   private final FKEnforcer _fkEnforcer;
 
-  /** common cursor for iterating through the table, kept here for historic
-      reasons */
-  private CursorImpl _cursor;
+  /** default cursor for iterating through the table, kept here for basic
+      table traversal */
+  private CursorImpl _defaultCursor;
   
   /**
    * Only used by unit tests
@@ -438,30 +438,15 @@ public class TableImpl implements Table
     return _logicalIndexCount;
   }
 
-  private CursorImpl getInternalCursor() {
-    if(_cursor == null) {
-      _cursor = CursorImpl.createCursor(this);
+  public CursorImpl getDefaultCursor() {
+    if(_defaultCursor == null) {
+      _defaultCursor = CursorImpl.createCursor(this);
     }
-    return _cursor;
+    return _defaultCursor;
   }
   
-  /**
-   * After calling this method, getNextRow will return the first row in the
-   * table, see {@link Cursor#reset}.
-   * @usage _general_method_
-   */
   public void reset() {
-    // FIXME remove internal cursor?
-    getInternalCursor().reset();
-  }
-  
-  /**
-   * Delete the current row (retrieved by a call to {@link #getNextRow()}).
-   * @usage _general_method_
-   */
-  public void deleteCurrentRow() throws IOException {
-    // FIXME remove internal cursor?
-    getInternalCursor().deleteCurrentRow();
+    getDefaultCursor().reset();
   }
 
   /**
@@ -521,25 +506,8 @@ public class TableImpl implements Table
     updateTableDefinition(-1);
   }
   
-  /**
-   * @return The next row in this table (Column name -> Column value)
-   * @usage _general_method_
-   */
   public Map<String, Object> getNextRow() throws IOException {
-    // FIXME remove internal cursor?
-    return getNextRow(null);
-  }
-
-  /**
-   * @param columnNames Only column names in this collection will be returned
-   * @return The next row in this table (Column name -> Column value)
-   * @usage _general_method_
-   */
-  public Map<String, Object> getNextRow(Collection<String> columnNames) 
-    throws IOException
-  {
-    // FIXME remove internal cursor?
-    return getInternalCursor().getNextRow(columnNames);
+    return getDefaultCursor().getNextRow();
   }
   
   /**
@@ -889,24 +857,8 @@ public class TableImpl implements Table
    */
   public Iterator<Map<String, Object>> iterator()
   {
-    // FIXME remove internal cursor?
-    return iterator(null);
-  }
-  
-  /**
-   * Calls <code>reset</code> on this table and returns a modifiable
-   * Iterator which will iterate through all the rows of this table, returning
-   * only the given columns.  Use of the Iterator follows the same
-   * restrictions as a call to <code>getNextRow</code>.
-   * @throws IllegalStateException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   * @usage _general_method_
-   */
-  public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
-  {
-    // FIXME remove internal cursor?
     reset();
-    return getInternalCursor().iterator(columnNames);
+    return getDefaultCursor().iterator();
   }
 
   /**
@@ -1389,20 +1341,6 @@ public class TableImpl implements Table
     
     // Update tdef page
     updateTableDefinition(rows.size());
-  }
-
-  /**
-   * Updates the current row to the new values.
-   * <p>
-   * Note, if this table has an auto-number column(s), the existing value(s)
-   * will be maintained, unchanged.
-   *
-   * @param row new row values for the current row.
-   * @usage _general_method_
-   */
-  public void updateCurrentRow(Object... row) throws IOException {
-    // FIXME remove internal cursor?
-     getInternalCursor().updateCurrentRow(row);
   }
   
   /**

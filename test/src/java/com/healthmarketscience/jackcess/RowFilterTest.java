@@ -66,12 +66,12 @@ public class RowFilterTest extends TestCase
 
     assertEquals(Arrays.asList(row0, row2, row4), 
                  toList(RowFilter.matchPattern(
-                            new ColumnBuilder(COL1, DataType.TEXT).toColumn(),
+                            new ColumnImpl(null, DataType.TEXT, 0, 0, 0),
                             "foo").apply(rows)));
     assertEquals(Arrays.asList(row1, row3, row5), 
                  toList(RowFilter.invert(
                             RowFilter.matchPattern(
-                                new ColumnBuilder(COL1, DataType.TEXT).toColumn(),
+                                new ColumnImpl(null, DataType.TEXT, 0, 0, 0),
                                 "foo")).apply(rows)));
 
     assertEquals(Arrays.asList(row0, row2, row4), 

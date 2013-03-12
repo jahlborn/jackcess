@@ -56,7 +56,7 @@ public interface ExportFilter {
    *          modified and returned
    * @return the columns to use when creating the export file
    */
-  public List<ColumnImpl> filterColumns(List<ColumnImpl> columns) 
+  public List<Column> filterColumns(List<Column> columns) 
     throws IOException;
 
   /**

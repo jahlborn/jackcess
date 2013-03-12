@@ -44,8 +44,8 @@ import junit.framework.TestCase;
 public class TableTest extends TestCase {
 
   private final PageChannel _pageChannel = new PageChannel(true);
-  private List<Column> _columns = new ArrayList<Column>();
-  private Table _testTable;
+  private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
+  private TableImpl _testTable;
   private int _varLenIdx;
   private int _fixedOffset;
   
@@ -53,17 +53,18 @@ public class TableTest extends TestCase {
   public TableTest(String name) {
     super(name);
   }
+
+  private void reset() {
+    _testTable = null;
+    _columns = new ArrayList<ColumnImpl>();
+    _varLenIdx = 0;
+    _fixedOffset = 0;
+  }
   
   public void testCreateRow() throws Exception {
-    Column col = newTestColumn();
-    col.setType(DataType.INT);
-    _columns.add(col);
-    col = newTestColumn();
-    col.setType(DataType.TEXT);
-    _columns.add(col);
-    col = newTestColumn();
-    col.setType(DataType.TEXT);
-    _columns.add(col);
+    newTestColumn(DataType.INT, false);
+    newTestColumn(DataType.TEXT, false);
+    newTestColumn(DataType.TEXT, false);
     newTestTable();
     
     int colCount = _columns.size();
@@ -80,13 +81,8 @@ public class TableTest extends TestCase {
   }
 
   public void testUnicodeCompression() throws Exception {
-    Column col = newTestColumn();
-    col = newTestColumn();
-    col.setType(DataType.TEXT);
-    _columns.add(col);
-    col = newTestColumn();
-    col.setType(DataType.MEMO);
-    _columns.add(col);
+    newTestColumn(DataType.TEXT, false);
+    newTestColumn(DataType.MEMO, false);
     newTestTable();
 
     String small = "this is a string";
@@ -97,9 +93,10 @@ public class TableTest extends TestCase {
     ByteBuffer[] buf1 = encodeColumns(small, large);
     ByteBuffer[] buf2 = encodeColumns(smallNotAscii, largeNotAscii);
 
-    for(Column tmp : _columns) {
-      tmp.setCompressedUnicode(true);
-    }
+    reset();
+    newTestColumn(DataType.TEXT, true);
+    newTestColumn(DataType.MEMO, true);
+    newTestTable();
     
     ByteBuffer[] bufCmp1 = encodeColumns(small, large);
     ByteBuffer[] bufCmp2 = encodeColumns(smallNotAscii, largeNotAscii);
@@ -132,7 +129,7 @@ public class TableTest extends TestCase {
   {
     ByteBuffer[] result = new ByteBuffer[_columns.size()];
     for(int i = 0; i < _columns.size(); ++i) {
-      Column col = _columns.get(i);
+      ColumnImpl col = _columns.get(i);
       result[i] = col.write(row[i], _testTable.getFormat().MAX_ROW_SIZE);
     }
     return result;
@@ -143,7 +140,7 @@ public class TableTest extends TestCase {
   {
     Object[] result = new Object[_columns.size()];
     for(int i = 0; i < _columns.size(); ++i) {
-      Column col = _columns.get(i);
+      ColumnImpl col = _columns.get(i);
       result[i] = col.read(toBytes(buffers[i]));
     }
     return result;
@@ -156,10 +153,10 @@ public class TableTest extends TestCase {
     return b;
   }
 
-  private Table newTestTable() 
+  private TableImpl newTestTable() 
     throws Exception
   {
-    _testTable = new Table(true, _columns) {
+    _testTable = new TableImpl(true, _columns) {
         @Override
         public PageChannel getPageChannel() {
           return _pageChannel;
@@ -172,7 +169,7 @@ public class TableTest extends TestCase {
     return _testTable;
   }
 
-  private Column newTestColumn(DataType type) {
+  private void newTestColumn(DataType type, final boolean compressedUnicode) {
 
     int nextColIdx = _columns.size();
     int nextVarLenIdx = 0;
@@ -185,9 +182,9 @@ public class TableTest extends TestCase {
       _fixedOffset += type.getFixedSize();
     }
 
-    return new Column(null, type, nextColIdx, nextFixedOff, nextVarLenIdx) {
+    ColumnImpl col = new ColumnImpl(null, type, nextColIdx, nextFixedOff, nextVarLenIdx) {
         @Override
-        public Table getTable() {
+        public TableImpl getTable() {
           return _testTable;
         }
         @Override
@@ -206,7 +203,13 @@ public class TableTest extends TestCase {
         Calendar getCalendar() { 
           return Calendar.getInstance();
         }
+        @Override
+        public boolean isCompressedUnicode() {
+          return compressedUnicode;
+        }
       };
+
+    _columns.add(col);
   }
   
 }

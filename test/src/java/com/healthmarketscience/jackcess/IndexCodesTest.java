@@ -86,7 +86,7 @@ public class IndexCodesTest extends TestCase {
 //         index.initialize();
 //         System.out.println("Ind " + index);
 
-    Cursor cursor = Cursor.createIndexCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(t, index);
     while(cursor.moveToNextRow()) {
 
       Map<String,Object> row = cursor.getCurrentRow();
@@ -111,8 +111,8 @@ public class IndexCodesTest extends TestCase {
                               Cursor.Position expectedPos)
     throws Exception
   {
-    Object[] idxRow = index.constructIndexRow(expectedRow);
-    Cursor cursor = Cursor.createIndexCursor(t, index, idxRow, idxRow);
+    Object[] idxRow = ((IndexImpl)index).constructIndexRow(expectedRow);
+    Cursor cursor = CursorBuilder.createCursor(t, index, idxRow, idxRow);
 
     Cursor.Position startPos = cursor.getSavepoint().getCurrentPosition();
     
@@ -258,11 +258,11 @@ public class IndexCodesTest extends TestCase {
     Table t = db.getTable("Table5");
 
     Index ind = t.getIndexes().iterator().next();
-    ind.initialize();
+    ((IndexImpl)ind).initialize();
     
     System.out.println("Ind " + ind);
 
-    Cursor cursor = Cursor.createIndexCursor(t, ind);
+    Cursor cursor = CursorBuilder.createCursor(t, ind);
     while(cursor.moveToNextRow()) {
       System.out.println("=======");
       String entryStr = 
@@ -311,10 +311,10 @@ public class IndexCodesTest extends TestCase {
 
     Table t = db.getTable("Table1");
     Index index = t.getIndex("B");
-    index.initialize();
+    ((IndexImpl)index).initialize();
     System.out.println("Ind " + index);
 
-    Cursor cursor = Cursor.createIndexCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(t, index);
     while(cursor.moveToNextRow()) {
       System.out.println("=======");
       System.out.println("Savepoint: " + cursor.getSavepoint());
@@ -330,7 +330,7 @@ public class IndexCodesTest extends TestCase {
 
     Table t = db.getTable("Table1");
     Index index = t.getIndexes().iterator().next();
-    index.initialize();
+    ((IndexImpl)index).initialize();
     System.out.println("Ind " + index);
 
     Pattern inlinePat = Pattern.compile("7F 0E 02 0E 02 (.*)0E 02 0E 02 01 00");
@@ -349,7 +349,7 @@ public class IndexCodesTest extends TestCase {
     Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
     
     
-    Cursor cursor = Cursor.createIndexCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(t, index);
     while(cursor.moveToNextRow()) {
 //       System.out.println("=======");
 //       System.out.println("Savepoint: " + cursor.getSavepoint());
@@ -509,7 +509,7 @@ public class IndexCodesTest extends TestCase {
 
     Table t = db.getTable("Table1");
     Index index = t.getIndexes().iterator().next();
-    index.initialize();
+    ((IndexImpl)index).initialize();
     System.out.println("Ind " + index);
 
     Pattern inlinePat = Pattern.compile("7F 4A 4A (.*)4A 4A 01 00");
@@ -528,7 +528,7 @@ public class IndexCodesTest extends TestCase {
     Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
     
     
-    Cursor cursor = Cursor.createIndexCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(t, index);
     while(cursor.moveToNextRow()) {
 //       System.out.println("=======");
 //       System.out.println("Savepoint: " + cursor.getSavepoint());

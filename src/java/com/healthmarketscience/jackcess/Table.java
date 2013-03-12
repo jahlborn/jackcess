@@ -142,6 +142,11 @@ public interface Table extends Iterable<Map<String, Object>>
   public Object[] asUpdateRow(Map<String,?> rowMap);
 
   /**
+   * @usage _general_method_
+   */
+  public int getRowCount();
+
+  /**
    * Adds a single row to this table and writes it to disk.  The values are
    * expected to be given in the order that the Columns are listed by the
    * {@link #getColumns} method.  This is by default the storage order of the
@@ -180,7 +185,24 @@ public interface Table extends Iterable<Map<String, Object>>
   public void addRows(List<? extends Object[]> rows) throws IOException;
 
   /**
+   * After calling this method, {@link #getNextRow} will return the first row
+   * in the table, see {@link Cursor#reset} (uses the default cursor).
    * @usage _general_method_
    */
-  public int getRowCount();
+  public void reset();
+
+  /**
+   * @return The next row in this table (Column name -> Column value) (uses
+   *         the default cursor)
+   * @usage _general_method_
+   */
+  public Map<String, Object> getNextRow() throws IOException;
+
+  /**
+   * @return a simple Cursor, initialized on demand and held by this table.
+   *         This cursor backs the row traversal methods available on the
+   *         Table interface.  For advanced Table traversal and manipulation,
+   *         use the Cursor directly.
+   */
+  public Cursor getDefaultCursor();
 }

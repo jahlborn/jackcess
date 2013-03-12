@@ -47,7 +47,7 @@ public class SimpleExportFilter implements ExportFilter {
     return this;
   }
 
-  public List<ColumnImpl> filterColumns(List<ColumnImpl> columns) throws IOException {
+  public List<Column> filterColumns(List<Column> columns) throws IOException {
     return columns;
   }
 

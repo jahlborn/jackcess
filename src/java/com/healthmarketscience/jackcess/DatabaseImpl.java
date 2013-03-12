@@ -951,7 +951,6 @@ public class DatabaseImpl implements Database
                           List<IndexBuilder> indexes)
     throws IOException
   {
-    // FIXME, rework table creation
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create table with name of existing table");
@@ -960,16 +959,10 @@ public class DatabaseImpl implements Database
     new TableCreator(this, name, columns, indexes).createTable();
   }
 
-  /**
-   * Create a new table in this database
-   * @param name Name of the table to create
-   * @usage _general_method_
-   */
   public void createLinkedTable(String name, String linkedDbName, 
                                 String linkedTableName)
     throws IOException
   {
-    // FIXME, rework table creation
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(
           "Cannot create linked table with name of existing table");
@@ -1037,7 +1030,7 @@ public class DatabaseImpl implements Database
       
 
     List<Relationship> relationships = new ArrayList<Relationship>();
-    CursorImpl cursor = createCursorWithOptionalIndex(
+    Cursor cursor = createCursorWithOptionalIndex(
         _relationships, REL_COL_FROM_TABLE, table1.getName());
     collectRelationships(cursor, table1, table2, relationships);
     cursor = createCursorWithOptionalIndex(
@@ -1216,7 +1209,7 @@ public class DatabaseImpl implements Database
    * given cursor and adds them to the given list.
    */
   private static void collectRelationships(
-      CursorImpl cursor, TableImpl fromTable, TableImpl toTable,
+      Cursor cursor, TableImpl fromTable, TableImpl toTable,
       List<Relationship> relationships)
   {
     for(Map<String,Object> row : cursor) {
@@ -1341,7 +1334,7 @@ public class DatabaseImpl implements Database
   {
     // search for ACEs matching the tableParentId.  use the index on the
     // objectId column if found (should be there)
-    CursorImpl cursor = createCursorWithOptionalIndex(
+    Cursor cursor = createCursorWithOptionalIndex(
         getAccessControlEntries(), ACE_COL_OBJECT_ID, _tableParentId);
     
     for(Map<String, Object> row : cursor) {
@@ -1390,7 +1383,7 @@ public class DatabaseImpl implements Database
    * Creates a Cursor restricted to the given column value if possible (using
    * an existing index), otherwise a simple table cursor.
    */
-  private static CursorImpl createCursorWithOptionalIndex(
+  private static Cursor createCursorWithOptionalIndex(
       TableImpl table, String colName, Object colValue)
     throws IOException
   {
@@ -1776,7 +1769,7 @@ public class DatabaseImpl implements Database
     public Integer findObjectId(Integer parentId, String name) 
       throws IOException 
     {
-      CursorImpl cur = findRow(parentId, name);
+      Cursor cur = findRow(parentId, name);
       if(cur == null) {  
         return null;
       }
@@ -1788,7 +1781,7 @@ public class DatabaseImpl implements Database
                                            Collection<String> columns) 
       throws IOException 
     {
-      CursorImpl cur = findRow(parentId, name);
+      Cursor cur = findRow(parentId, name);
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
     }
 
@@ -1796,7 +1789,7 @@ public class DatabaseImpl implements Database
         Integer objectId, Collection<String> columns)
       throws IOException
     {
-      CursorImpl cur = findRow(objectId);
+      Cursor cur = findRow(objectId);
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
     }
 
@@ -1819,13 +1812,13 @@ public class DatabaseImpl implements Database
       }
     }
 
-    protected abstract CursorImpl findRow(Integer parentId, String name)
+    protected abstract Cursor findRow(Integer parentId, String name)
       throws IOException;
 
-    protected abstract CursorImpl findRow(Integer objectId) 
+    protected abstract Cursor findRow(Integer objectId) 
       throws IOException;
 
-    protected abstract CursorImpl getTableNamesCursor() throws IOException;
+    protected abstract Cursor getTableNamesCursor() throws IOException;
 
     public abstract TableInfo lookupTable(String tableName)
       throws IOException;
@@ -1848,10 +1841,10 @@ public class DatabaseImpl implements Database
    */
   private final class DefaultTableFinder extends TableFinder
   {
-    private final IndexCursorImpl _systemCatalogCursor;
-    private IndexCursorImpl _systemCatalogIdCursor;
+    private final IndexCursor _systemCatalogCursor;
+    private IndexCursor _systemCatalogIdCursor;
 
-    private DefaultTableFinder(IndexCursorImpl systemCatalogCursor) {
+    private DefaultTableFinder(IndexCursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
     }
     
@@ -1864,7 +1857,7 @@ public class DatabaseImpl implements Database
     }
 
     @Override
-    protected CursorImpl findRow(Integer parentId, String name) 
+    protected Cursor findRow(Integer parentId, String name) 
       throws IOException 
     {
       return (_systemCatalogCursor.findFirstRowByEntry(parentId, name) ?
@@ -1872,7 +1865,7 @@ public class DatabaseImpl implements Database
     }
 
     @Override
-    protected CursorImpl findRow(Integer objectId) throws IOException 
+    protected Cursor findRow(Integer objectId) throws IOException 
     {
       initIdCursor();
       return (_systemCatalogIdCursor.findFirstRowByEntry(objectId) ?
@@ -1905,7 +1898,7 @@ public class DatabaseImpl implements Database
     }
     
     @Override
-    protected CursorImpl getTableNamesCursor() throws IOException {
+    protected Cursor getTableNamesCursor() throws IOException {
       return new CursorBuilder(_systemCatalog)
         .setIndex(_systemCatalogCursor.getIndex())
         .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
@@ -1934,14 +1927,14 @@ public class DatabaseImpl implements Database
    */
   private final class FallbackTableFinder extends TableFinder
   {
-    private final CursorImpl _systemCatalogCursor;
+    private final Cursor _systemCatalogCursor;
 
-    private FallbackTableFinder(CursorImpl systemCatalogCursor) {
+    private FallbackTableFinder(Cursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
     }
 
     @Override
-    protected CursorImpl findRow(Integer parentId, String name) 
+    protected Cursor findRow(Integer parentId, String name) 
       throws IOException 
     {
       Map<String,Object> rowPat = new HashMap<String,Object>();
@@ -1952,7 +1945,7 @@ public class DatabaseImpl implements Database
     }
 
     @Override
-    protected CursorImpl findRow(Integer objectId) throws IOException 
+    protected Cursor findRow(Integer objectId) throws IOException 
     {
       ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (_systemCatalogCursor.findFirstRow(idCol, objectId) ?
@@ -1993,7 +1986,7 @@ public class DatabaseImpl implements Database
     }
     
     @Override
-    protected CursorImpl getTableNamesCursor() throws IOException {
+    protected Cursor getTableNamesCursor() throws IOException {
       return _systemCatalogCursor;
     }
 

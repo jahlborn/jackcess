@@ -456,11 +456,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return (getVersionHistoryColumn() != null);
   }
   
-  /**
-   * Returns the column which tracks the version history for an "append only"
-   * column.
-   * @usage _intermediate_method_
-   */
   public ColumnImpl getVersionHistoryColumn() {
     return _textInfo._versionHistoryCol;
   }

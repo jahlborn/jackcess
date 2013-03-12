@@ -221,13 +221,13 @@ public class ImportTest extends TestCase
       rs.addColumn(Types.VARCHAR, "col7", Integer.MAX_VALUE, 0, 0);
 
       Database db = create(fileFormat);
-      db.copyTable("Test1", (ResultSet)Proxy.newProxyInstance(
+      ImportUtil.importResultSet((ResultSet)Proxy.newProxyInstance(
                        Thread.currentThread().getContextClassLoader(),
                        new Class[]{ResultSet.class},
-                       rs));
+                       rs), db, "Test1");
 
       Table t = db.getTable("Test1");
-      List<Column> columns = t.getColumns();
+      List<? extends Column> columns = t.getColumns();
       assertEquals(7, columns.size());
 
       Column c = columns.get(0);

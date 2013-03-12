@@ -70,7 +70,7 @@ public class ExportUtil {
    * @see #exportAll(Database,File,String)
    * @see Builder
    */
-  public static void exportAll(DatabaseImpl db, File dir)
+  public static void exportAll(Database db, File dir)
       throws IOException {
     exportAll(db, dir, DEFAULT_FILE_EXT);
   }
@@ -90,7 +90,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(DatabaseImpl db, File dir,
+  public static void exportAll(Database db, File dir,
       String ext) throws IOException {
     for (String tableName : db.getTableNames()) {
       exportFile(db, tableName, new File(dir, tableName + "." + ext), false,
@@ -115,7 +115,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(DatabaseImpl db, File dir,
+  public static void exportAll(Database db, File dir,
       String ext, boolean header)
       throws IOException {
     for (String tableName : db.getTableNames()) {
@@ -147,7 +147,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportAll(DatabaseImpl db, File dir,
+  public static void exportAll(Database db, File dir,
       String ext, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException {
@@ -172,7 +172,7 @@ public class ExportUtil {
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportFile(DatabaseImpl db, String tableName,
+  public static void exportFile(Database db, String tableName,
       File f) throws IOException {
     exportFile(db, tableName, f, false, DEFAULT_DELIMITER, DEFAULT_QUOTE_CHAR, 
         SimpleExportFilter.INSTANCE);
@@ -201,7 +201,7 @@ public class ExportUtil {
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportFile(DatabaseImpl db, String tableName,
+  public static void exportFile(Database db, String tableName,
       File f, boolean header, String delim, char quote,
       ExportFilter filter) throws IOException {
     BufferedWriter out = null;
@@ -235,7 +235,7 @@ public class ExportUtil {
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportWriter(DatabaseImpl db, String tableName,
+  public static void exportWriter(Database db, String tableName,
       BufferedWriter out) throws IOException {
     exportWriter(db, tableName, out, false, DEFAULT_DELIMITER, 
                  DEFAULT_QUOTE_CHAR, SimpleExportFilter.INSTANCE);
@@ -263,12 +263,12 @@ public class ExportUtil {
    * @see #exportWriter(Cursor,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
-  public static void exportWriter(DatabaseImpl db, String tableName,
+  public static void exportWriter(Database db, String tableName,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException 
   {
-    exportWriter(CursorImpl.createCursor(db.getTable(tableName)), out, header,
+    exportWriter(CursorBuilder.createCursor(db.getTable(tableName)), out, header,
                  delim, quote, filter);
   }
 
@@ -290,7 +290,7 @@ public class ExportUtil {
    *
    * @see Builder
    */
-  public static void exportWriter(CursorImpl cursor,
+  public static void exportWriter(Cursor cursor,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
       throws IOException 
@@ -306,8 +306,8 @@ public class ExportUtil {
     // allow filter to setup per-call state
     filter = filter.init();
 
-    List<ColumnImpl> origCols = cursor.getTable().getColumns();
-    List<ColumnImpl> columns = new ArrayList<ColumnImpl>(origCols);
+    List<? extends Column> origCols = cursor.getTable().getColumns();
+    List<Column> columns = new ArrayList<Column>(origCols);
     columns = filter.filterColumns(columns);
 
     Collection<String> columnNames = null;
@@ -315,14 +315,14 @@ public class ExportUtil {
 
       // columns have been filtered
       columnNames = new HashSet<String>();
-      for (ColumnImpl c : columns) {
+      for (Column c : columns) {
         columnNames.add(c.getName());
       }
     }
 
     // print the header row (if desired)
     if (header) {
-      for (Iterator<ColumnImpl> iter = columns.iterator(); iter.hasNext();) {
+      for (Iterator<Column> iter = columns.iterator(); iter.hasNext();) {
 
         writeValue(out, iter.next().getName(), quote, needsQuotePattern);
 
@@ -409,29 +409,29 @@ public class ExportUtil {
    */
   public static class Builder
   {
-    private DatabaseImpl _db;
+    private Database _db;
     private String _tableName;
     private String _ext = DEFAULT_FILE_EXT;
-    private CursorImpl _cursor;
+    private Cursor _cursor;
     private String _delim = DEFAULT_DELIMITER;
     private char _quote = DEFAULT_QUOTE_CHAR;
     private ExportFilter _filter = SimpleExportFilter.INSTANCE;
     private boolean _header;
 
-    public Builder(DatabaseImpl db) {
+    public Builder(Database db) {
       this(db, null);
     }
 
-    public Builder(DatabaseImpl db, String tableName) {
+    public Builder(Database db, String tableName) {
       _db = db;
       _tableName = tableName;
     }
 
-    public Builder(CursorImpl cursor) {
+    public Builder(Cursor cursor) {
       _cursor = cursor;
     }
 
-    public Builder setDatabase(DatabaseImpl db) {
+    public Builder setDatabase(Database db) {
       _db = db;
       return this;
     }
@@ -441,7 +441,7 @@ public class ExportUtil {
       return this;
     }
 
-    public Builder setCursor(CursorImpl cursor) {
+    public Builder setCursor(Cursor cursor) {
       _cursor = cursor;
       return this;
     }

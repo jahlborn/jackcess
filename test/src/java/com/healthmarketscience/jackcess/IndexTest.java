@@ -110,8 +110,8 @@ public class IndexTest extends TestCase {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database mdb = open(testDB);
 
-      Table table = mdb.getTable("Table1");
-      for(Index idx : table.getIndexes()) {
+      TableImpl table = (TableImpl)mdb.getTable("Table1");
+      for(IndexImpl idx : table.getIndexes()) {
         idx.initialize();
       }
       assertEquals(4, table.getIndexes().size());
@@ -122,8 +122,8 @@ public class IndexTest extends TestCase {
                         "Table2Table1", "otherfk1",
                         "Table3Table1", "otherfk2");
 
-      table = mdb.getTable("Table2");
-      for(Index idx : table.getIndexes()) {
+      table = (TableImpl)mdb.getTable("Table2");
+      for(IndexImpl idx : table.getIndexes()) {
         idx.initialize();
       }
       assertEquals(3, table.getIndexes().size());
@@ -134,8 +134,8 @@ public class IndexTest extends TestCase {
                         "PrimaryKey", "id",
                         ".rC", "id");
 
-      Index pkIdx = table.getIndex("PrimaryKey");
-      Index fkIdx = table.getIndex(".rC");
+      IndexImpl pkIdx = table.getIndex("PrimaryKey");
+      IndexImpl fkIdx = table.getIndex(".rC");
       assertNotSame(pkIdx, fkIdx);
       assertTrue(fkIdx.isForeignKey());
       assertSame(pkIdx.getIndexData(), fkIdx.getIndexData());
@@ -143,8 +143,8 @@ public class IndexTest extends TestCase {
       assertEquals(Arrays.asList(pkIdx, fkIdx), indexData.getIndexes());
       assertSame(pkIdx, indexData.getPrimaryIndex());
 
-      table = mdb.getTable("Table3");
-      for(Index idx : table.getIndexes()) {
+      table = (TableImpl)mdb.getTable("Table3");
+      for(IndexImpl idx : table.getIndexes()) {
         idx.initialize();
       }
       assertEquals(3, table.getIndexes().size());
@@ -171,8 +171,8 @@ public class IndexTest extends TestCase {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX)) {
       // this file has an index with "compressed" entries and node pages
       Database db = open(testDB);
-      Table t = db.getTable("Table1");
-      Index index = t.getIndexes().get(0);
+      TableImpl t = (TableImpl)db.getTable("Table1");
+      IndexImpl index = t.getIndexes().get(0);
       assertFalse(index.isInitialized());
       assertEquals(512, countRows(t));
       assertEquals(512, index.getIndexData().getEntryCount());
@@ -180,23 +180,12 @@ public class IndexTest extends TestCase {
 
       // copy to temp file and attempt to edit
       db = openCopy(testDB);
-      t = db.getTable("Table1");
+      t = (TableImpl)db.getTable("Table1");
       index = t.getIndexes().get(0);
 
       System.out.println("IndexTest: Index type: " + 
                          index.getIndexData().getClass());
-      try {
-        t.addRow(99, "abc", "def");
-        if(index.getIndexData() instanceof SimpleIndexData) {
-          // SimpleIndex doesn't support writing these indexes
-          fail("Should have thrown UnsupportedOperationException");
-        }
-      } catch(UnsupportedOperationException e) {
-        // success
-        if(index.getIndexData() instanceof BigIndexData) {
-          throw e;
-        }
-      }
+      t.addRow(99, "abc", "def");
     }
   }
 
@@ -212,28 +201,28 @@ public class IndexTest extends TestCase {
       assertRowCount(12, table);
 
       for(Index index : table.getIndexes()) {
-        assertEquals(12, index.getIndexData().getEntryCount());
+        assertEquals(12, ((IndexImpl)index).getIndexData().getEntryCount());
       }
 
       table.reset();
       table.getNextRow();
       table.getNextRow();
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       table.getNextRow();
-      table.deleteCurrentRow();
-      table.getNextRow();
-      table.getNextRow();
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       table.getNextRow();
       table.getNextRow();
+      table.getDefaultCursor().deleteCurrentRow();
       table.getNextRow();
-      table.deleteCurrentRow();
+      table.getNextRow();
+      table.getNextRow();
+      table.getDefaultCursor().deleteCurrentRow();
 
       table.reset();
       assertRowCount(8, table);
 
       for(Index index : table.getIndexes()) {
-        assertEquals(8, index.getIndexData().getEntryCount());
+        assertEquals(8, ((IndexImpl)index).getIndexData().getEntryCount());
       }
     }
   }
@@ -254,9 +243,9 @@ public class IndexTest extends TestCase {
     throws Exception
   {
     Table orig = db.getTable(tableName);
-    Index origI = orig.getIndex("DataIndex");
+    IndexImpl origI = (IndexImpl)orig.getIndex("DataIndex");
     Table temp = db.getTable(tableName + "_temp");
-    Index tempI = temp.getIndex("DataIndex");
+    IndexImpl tempI = (IndexImpl)temp.getIndex("DataIndex");
 
     // copy from orig table to temp table
     for(Map<String,Object> row : orig) {
@@ -266,8 +255,8 @@ public class IndexTest extends TestCase {
     assertEquals(origI.getIndexData().getEntryCount(), 
                  tempI.getIndexData().getEntryCount());
 
-    Cursor origC = Cursor.createIndexCursor(orig, origI);
-    Cursor tempC = Cursor.createIndexCursor(temp, tempI);
+    Cursor origC = CursorBuilder.createCursor(orig, origI);
+    Cursor tempC = CursorBuilder.createCursor(temp, tempI);
 
     while(true) {
       boolean origHasNext = origC.moveToNextRow();
@@ -340,7 +329,7 @@ public class IndexTest extends TestCase {
 
       IOException failure = null;
       try {
-        index.addRow(row, new RowId(400 + i, 0));
+        ((IndexImpl)index).addRow(row, new RowId(400 + i, 0));
       } catch(IOException e) {
         failure = e;
       }
@@ -357,8 +346,8 @@ public class IndexTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       Database db = openCopy(testDB);
       Table table = db.getTable("Table1");
-      Index indA = table.getIndex("PrimaryKey");
-      Index indB = table.getIndex("B");
+      IndexImpl indA = (IndexImpl)table.getIndex("PrimaryKey");
+      IndexImpl indB = (IndexImpl)table.getIndex("B");
 
       assertEquals(2, indA.getUniqueEntryCount());
       assertEquals(2, indB.getUniqueEntryCount());
@@ -382,8 +371,8 @@ public class IndexTest extends TestCase {
       indB = null;
 
       table = db.getTable("Table1");
-      indA = table.getIndex("PrimaryKey");
-      indB = table.getIndex("B");
+      indA = (IndexImpl)table.getIndex("PrimaryKey");
+      indB = (IndexImpl)table.getIndex("B");
 
       assertEquals(12, indA.getIndexData().getEntryCount());
       assertEquals(12, indB.getIndexData().getEntryCount());
@@ -391,7 +380,7 @@ public class IndexTest extends TestCase {
       assertEquals(12, indA.getUniqueEntryCount());
       assertEquals(8, indB.getUniqueEntryCount());
 
-      Cursor c = Cursor.createCursor(table);
+      Cursor c = CursorBuilder.createCursor(table);
       assertTrue(c.moveToNextRow());
 
       final Map<String,Object> row = c.getCurrentRow();
@@ -443,7 +432,7 @@ public class IndexTest extends TestCase {
         .toTable(db);
 
       assertEquals(1, t.getIndexes().size());
-      Index idx = t.getIndexes().get(0);
+      IndexImpl idx = (IndexImpl)t.getIndexes().get(0);
       
       assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());       
       assertEquals(1, idx.getColumns().size());
@@ -478,8 +467,8 @@ public class IndexTest extends TestCase {
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");
 
-      Index t2t1 = t1.getIndex("Table2Table1");
-      Index t3t1 = t1.getIndex("Table3Table1");
+      IndexImpl t2t1 = (IndexImpl)t1.getIndex("Table2Table1");
+      IndexImpl t3t1 = (IndexImpl)t1.getIndex("Table3Table1");
 
 
       assertTrue(t2t1.isForeignKey());
@@ -498,7 +487,7 @@ public class IndexTest extends TestCase {
       
       Index t1pk = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
       assertNotNull(t1pk);
-      assertNull(t1pk.getReference());
+      assertNull(((IndexImpl)t1pk).getReference());
       assertNull(t1pk.getReferencedIndex());
     }    
   }
@@ -506,7 +495,7 @@ public class IndexTest extends TestCase {
   private void doCheckForeignKeyIndex(Table ta, Index ia, Table tb)
     throws Exception
   {
-    Index ib = ia.getReferencedIndex();
+    IndexImpl ib = (IndexImpl)ia.getReferencedIndex();
     assertNotNull(ib);
     assertSame(tb, ib.getTable());
 

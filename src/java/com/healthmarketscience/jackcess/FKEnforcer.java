@@ -236,9 +236,9 @@ final class FKEnforcer
                                             Object[] newFromRow)
     throws IOException
   {
-    IndexCursorImpl toCursor = joiner.getToCursor();
-    List<IndexData.ColumnDescriptor> fromCols = joiner.getColumns();
-    List<IndexData.ColumnDescriptor> toCols = joiner.getToIndex().getColumns();
+    IndexCursor toCursor = joiner.getToCursor();
+    List<? extends Index.Column> fromCols = joiner.getColumns();
+    List<? extends Index.Column> toCols = joiner.getToIndex().getColumns();
     Object[] toRow = new Object[joiner.getToTable().getColumnCount()];
 
     for(Iterator<Map<String,Object>> iter = joiner.findRows(
@@ -270,8 +270,8 @@ final class FKEnforcer
                                     Object[] newRow)
   {
     Table fromTable = joiner.getFromTable();
-    for(IndexData.ColumnDescriptor iCol : joiner.getColumns()) {
-      ColumnImpl col = iCol.getColumn();
+    for(Index.Column iCol : joiner.getColumns()) {
+      Column col = iCol.getColumn();
       if(!MATCHER.matches(fromTable, col.getName(),
                           col.getRowValue(oldRow), col.getRowValue(newRow))) {
         return true;

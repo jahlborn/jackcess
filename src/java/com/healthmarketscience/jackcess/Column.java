@@ -137,6 +137,13 @@ public interface Column
    * @usage _general_method_
    */
   public PropertyMap getProperties() throws IOException;
+  
+  /**
+   * Returns the column which tracks the version history for an "append only"
+   * column.
+   * @usage _intermediate_method_
+   */
+  public Column getVersionHistoryColumn();
 
   public Object setRowValue(Object[] rowArray, Object value);
   

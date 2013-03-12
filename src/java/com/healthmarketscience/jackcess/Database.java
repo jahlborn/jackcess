@@ -229,6 +229,17 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public String getDatabasePassword() throws IOException;
 
   /**
+   * Create a new table in this database
+   * @param name Name of the table to create in this database
+   * @param linkedDbName path to the linked database
+   * @param linkedTableName name of the table in the linked database
+   * @usage _general_method_
+   */
+  public void createLinkedTable(String name, String linkedDbName,
+                                String linkedTableName)
+    throws IOException;
+
+  /**
    * Flushes any current changes to the database file (and any linked
    * databases) to disk.
    * @usage _general_method_

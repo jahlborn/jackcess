@@ -101,7 +101,8 @@ public abstract class RowFilter
    * @return a filter which matches table rows which match the value in the
    *         row pattern
    */
-  public static RowFilter matchPattern(final Column columnPattern, final Object valuePattern) 
+  public static RowFilter matchPattern(final Column columnPattern, 
+                                       final Object valuePattern) 
   {
     return new RowFilter() {
         @Override

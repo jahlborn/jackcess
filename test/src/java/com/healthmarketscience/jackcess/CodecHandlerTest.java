@@ -75,7 +75,7 @@ public class CodecHandlerTest extends TestCase
   {
     for(Database.FileFormat ff : SUPPORTED_FILEFORMATS) {
       Database db = DatabaseTest.create(ff);
-      int pageSize = db.getFormat().PAGE_SIZE;
+      int pageSize = ((DatabaseImpl)db).getFormat().PAGE_SIZE;
       File dbFile = db.getFile();
       db.close();
 

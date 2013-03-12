@@ -42,8 +42,8 @@ public final class UsageMapTest extends TestCase {
                                           final int expectedFirstPage, final int expectedLastPage)
             throws IOException {
 
-        final Database db = Database.open(dbFile);
-        final UsageMap usageMap = UsageMap.read(db,
+        final Database db = DatabaseBuilder.open(dbFile);
+        final UsageMap usageMap = UsageMap.read((DatabaseImpl)db,
                 PageChannel.PAGE_GLOBAL_USAGE_MAP,
                 PageChannel.ROW_GLOBAL_USAGE_MAP,
                 true);

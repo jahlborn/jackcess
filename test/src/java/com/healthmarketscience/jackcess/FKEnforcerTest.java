@@ -49,11 +49,11 @@ public class FKEnforcerTest extends TestCase
 
       t1.addRow(20, 0, 20, "some data", 20);
 
-      Cursor c = Cursor.createCursor(t2);
+      Cursor c = CursorBuilder.createCursor(t2);
       c.moveToNextRow();
       c.updateCurrentRow(30, "foo30");
 
-      c = Cursor.createCursor(t3);
+      c = CursorBuilder.createCursor(t3);
       c.moveToNextRow();
       c.deleteCurrentRow();
 
@@ -80,7 +80,7 @@ public class FKEnforcerTest extends TestCase
       }
 
       try {
-        Cursor c = Cursor.createCursor(t2);
+        Cursor c = CursorBuilder.createCursor(t2);
         c.moveToNextRow();
         c.updateCurrentRow(30, "foo30");
         fail("IOException should have been thrown");
@@ -90,7 +90,7 @@ public class FKEnforcerTest extends TestCase
       }
 
       try {
-        Cursor c = Cursor.createCursor(t3);
+        Cursor c = CursorBuilder.createCursor(t3);
         c.moveToNextRow();
         c.deleteCurrentRow();
         fail("IOException should have been thrown");
@@ -99,7 +99,7 @@ public class FKEnforcerTest extends TestCase
         assertTrue(ignored.getMessage().contains("Table3[id]"));
       }
 
-      Cursor c = Cursor.createCursor(t3);
+      Cursor c = CursorBuilder.createCursor(t3);
       Column col = t3.getColumn("id");
       for(Map<String,Object> row : c) {
         int id = (Integer)row.get("id");
@@ -116,7 +116,7 @@ public class FKEnforcerTest extends TestCase
 
       assertTable(expectedRows, t1);
 
-      c = Cursor.createCursor(t2);
+      c = CursorBuilder.createCursor(t2);
       for(Iterator<?> iter = c.iterator(); iter.hasNext(); ) {
         iter.next();
         iter.remove();

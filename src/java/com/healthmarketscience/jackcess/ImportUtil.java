@@ -112,7 +112,7 @@ public class ImportUtil
    * @see #importResultSet(ResultSet,Database,String,ImportFilter)
    * @see Builder
    */
-  public static String importResultSet(ResultSet source, DatabaseImpl db,
+  public static String importResultSet(ResultSet source, Database db,
                                        String name)
     throws SQLException, IOException
   {
@@ -134,7 +134,7 @@ public class ImportUtil
    * @see #importResultSet(ResultSet,Database,String,ImportFilter,boolean)
    * @see Builder
    */
-  public static String importResultSet(ResultSet source, DatabaseImpl db,
+  public static String importResultSet(ResultSet source, Database db,
                                        String name, ImportFilter filter)
     throws SQLException, IOException
   {
@@ -156,7 +156,7 @@ public class ImportUtil
    * 
    * @see Builder
    */
-  public static String importResultSet(ResultSet source, DatabaseImpl db,
+  public static String importResultSet(ResultSet source, Database db,
                                        String name, ImportFilter filter,
                                        boolean useExistingTable)
     throws SQLException, IOException
@@ -213,7 +213,7 @@ public class ImportUtil
    * @see #importFile(File,Database,String,String,ImportFilter)
    * @see Builder
    */
-  public static String importFile(File f, DatabaseImpl db, String name,
+  public static String importFile(File f, Database db, String name,
                                   String delim)
     throws IOException
   {
@@ -236,7 +236,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter)
    * @see Builder
    */
-  public static String importFile(File f, DatabaseImpl db, String name,
+  public static String importFile(File f, Database db, String name,
                                   String delim, ImportFilter filter)
     throws IOException
   {
@@ -264,7 +264,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter,boolean)
    * @see Builder
    */
-  public static String importFile(File f, DatabaseImpl db, String name, 
+  public static String importFile(File f, Database db, String name, 
                                   String delim, char quote, 
                                   ImportFilter filter,
                                   boolean useExistingTable)
@@ -294,7 +294,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,char,ImportFilter,boolean,boolean)
    * @see Builder
    */
-  public static String importFile(File f, DatabaseImpl db, String name, 
+  public static String importFile(File f, Database db, String name, 
                                   String delim, char quote, 
                                   ImportFilter filter,
                                   boolean useExistingTable,
@@ -332,7 +332,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter)
    * @see Builder
    */
-  public static String importReader(BufferedReader in, DatabaseImpl db, 
+  public static String importReader(BufferedReader in, Database db, 
                                     String name, String delim)
     throws IOException
   {
@@ -355,7 +355,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter,boolean)
    * @see Builder
    */
-  public static String importReader(BufferedReader in, DatabaseImpl db, 
+  public static String importReader(BufferedReader in, Database db, 
                                     String name, String delim,
                                     ImportFilter filter)
     throws IOException
@@ -382,7 +382,7 @@ public class ImportUtil
    * 
    * @see Builder
    */
-  public static String importReader(BufferedReader in, DatabaseImpl db, 
+  public static String importReader(BufferedReader in, Database db, 
                                     String name, String delim,
                                     ImportFilter filter, 
                                     boolean useExistingTable)
@@ -412,7 +412,7 @@ public class ImportUtil
    * 
    * @see Builder
    */
-  public static String importReader(BufferedReader in, DatabaseImpl db, 
+  public static String importReader(BufferedReader in, Database db, 
                                     String name, String delim, char quote,
                                     ImportFilter filter,
                                     boolean useExistingTable)
@@ -441,7 +441,7 @@ public class ImportUtil
    * 
    * @see Builder
    */
-  public static String importReader(BufferedReader in, DatabaseImpl db, 
+  public static String importReader(BufferedReader in, Database db, 
                                     String name, String delim, char quote,
                                     ImportFilter filter,
                                     boolean useExistingTable, boolean header)
@@ -595,7 +595,7 @@ public class ImportUtil
   /**
    * Returns a new table with a unique name and the given table definition.
    */
-  private static Table createUniqueTable(DatabaseImpl db, String name,
+  private static Table createUniqueTable(Database db, String name,
                                          List<ColumnBuilder> columns,
                                          ResultSetMetaData md, 
                                          ImportFilter filter)
@@ -608,7 +608,7 @@ public class ImportUtil
       name = baseName + (counter++);
     }
     
-    db.createTable(name, filter.filterColumns(columns, md));
+    ((DatabaseImpl)db).createTable(name, filter.filterColumns(columns, md));
 
     return db.getTable(name);
   }
@@ -618,7 +618,7 @@ public class ImportUtil
    */
   public static class Builder
   {
-    private DatabaseImpl _db;
+    private Database _db;
     private String _tableName;
     private String _delim = ExportUtil.DEFAULT_DELIMITER;
     private char _quote = ExportUtil.DEFAULT_QUOTE_CHAR;
@@ -626,16 +626,16 @@ public class ImportUtil
     private boolean _useExistingTable;
     private boolean _header = true;
 
-    public Builder(DatabaseImpl db) {
+    public Builder(Database db) {
       this(db, null);
     }
 
-    public Builder(DatabaseImpl db, String tableName) {
+    public Builder(Database db, String tableName) {
       _db = db;
       _tableName = tableName;
     }
 
-    public Builder setDatabaseImpl(DatabaseImpl db) {
+    public Builder setDatabase(Database db) {
       _db = db;
       return this;
     }

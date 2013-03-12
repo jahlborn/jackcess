@@ -90,8 +90,9 @@ public class DatabaseTest extends TestCase {
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(_autoSync).setChannel(channel).open();
-    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(), 
-                 db.getFormat());
+    assertEquals("Wrong JetFormat.", 
+                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(), 
+                 ((DatabaseImpl)db).getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
   }
@@ -151,8 +152,9 @@ public class DatabaseTest extends TestCase {
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
     Database db = new DatabaseBuilder(tmp).setAutoSync(_autoSync).open();
-    assertEquals("Wrong JetFormat.", fileFormat.getJetFormat(),         
-                 db.getFormat());
+    assertEquals("Wrong JetFormat.", 
+                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
+                 ((DatabaseImpl)db).getFormat());
     assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
   }
@@ -163,7 +165,7 @@ public class DatabaseTest extends TestCase {
       Database db = create(fileFormat);
 
       try {
-        db.createTable("test", Collections.<Column>emptyList());
+        ((DatabaseImpl)db).createTable("test", Collections.<ColumnBuilder>emptyList());
         fail("created table with no columns?");
       } catch(IllegalArgumentException e) {
         // success
@@ -231,7 +233,7 @@ public class DatabaseTest extends TestCase {
   public void testGetColumns() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      List<Column> columns = open(testDB).getTable("Table1").getColumns();
+      List<? extends Column> columns = open(testDB).getTable("Table1").getColumns();
       assertEquals(9, columns.size());
       checkColumn(columns, 0, "A", DataType.TEXT);
       checkColumn(columns, 1, "B", DataType.TEXT);
@@ -245,8 +247,8 @@ public class DatabaseTest extends TestCase {
     }
   }
   
-  static void checkColumn(List<Column> columns, int columnNumber, String name,
-      DataType dataType)
+  static void checkColumn(List<? extends Column> columns, int columnNumber, 
+                          String name, DataType dataType)
     throws Exception
   {
     Column column = columns.get(columnNumber);
@@ -406,7 +408,7 @@ public class DatabaseTest extends TestCase {
       table.reset();
       table.getNextRow();
       table.getNextRow();
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
 
       table.reset();
 
@@ -429,17 +431,17 @@ public class DatabaseTest extends TestCase {
       assertRowCount(10, table);
       table.reset();
       table.getNextRow();
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       assertRowCount(9, table);
       table.reset();
       table.getNextRow();
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       assertRowCount(8, table);
       table.reset();
       for (int i = 0; i < 8; i++) {
         table.getNextRow();
       }
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       assertRowCount(7, table);
       table.addRow(row);
       assertRowCount(8, table);
@@ -447,7 +449,7 @@ public class DatabaseTest extends TestCase {
       for (int i = 0; i < 3; i++) {
         table.getNextRow();
       }
-      table.deleteCurrentRow();
+      table.getDefaultCursor().deleteCurrentRow();
       assertRowCount(7, table);
       table.reset();
       assertEquals(2, table.getNextRow().get("D"));
@@ -711,9 +713,9 @@ public class DatabaseTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Column col = new ColumnBuilder("A", DataType.NUMERIC)
+      ColumnBuilder col = new ColumnBuilder("A", DataType.NUMERIC)
         .setScale(4).setPrecision(8).toColumn();
-      assertTrue(col.isVariableLength());
+      assertTrue(col.getType().isVariableLength());
 
       Table table = new TableBuilder("test")
         .addColumn(col)
@@ -809,7 +811,7 @@ public class DatabaseTest extends TestCase {
   public void testMultiPageTableDef() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
-      List<Column> columns = open(testDB).getTable("Table2").getColumns();
+      List<? extends Column> columns = open(testDB).getTable("Table2").getColumns();
       assertEquals(89, columns.size());
     }
   }
@@ -875,7 +877,7 @@ public class DatabaseTest extends TestCase {
       Database db = openCopy(testDB);
       Table t = db.getTable("jobDB1");
 
-      assertTrue(t.getOwnedPagesCursor().getUsageMap().toString()
+      assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
                  .startsWith("(InlineHandler)"));
 
       String lval = createNonAsciiString(255); // "--255 chars long text--";
@@ -890,7 +892,7 @@ public class DatabaseTest extends TestCase {
       }
       assertEquals(1000, ids.size());
 
-      assertTrue(t.getOwnedPagesCursor().getUsageMap().toString()
+      assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
                  .startsWith("(ReferenceHandler)"));
 
       db.close();
@@ -904,7 +906,7 @@ public class DatabaseTest extends TestCase {
 
       final int numColumns = 90;
 
-      List<Column> columns = new ArrayList<Column>();
+      List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
       List<String> colNames = new ArrayList<String>();
       for(int i = 0; i < numColumns; ++i) {
         String colName = "MyColumnName" + i;
@@ -912,7 +914,7 @@ public class DatabaseTest extends TestCase {
         columns.add(new ColumnBuilder(colName, DataType.TEXT).toColumn());
       }
 
-      db.createTable("test", columns);
+      ((DatabaseImpl)db).createTable("test", columns);
 
       Table t = db.getTable("test");
 
@@ -1119,7 +1121,7 @@ public class DatabaseTest extends TestCase {
         t.addRow("row" + i, Column.AUTO_NUMBER, "initial data");
       }
 
-      Cursor c = Cursor.createCursor(t);
+      Cursor c = CursorBuilder.createCursor(t);
       c.reset();
       c.moveNextRows(2);
       Map<String,Object> row = c.getCurrentRow();
@@ -1222,8 +1224,8 @@ public class DatabaseTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
       Database db = open(testDB);
-      assertEquals(db.getFormat().DEFAULT_SORT_ORDER,
-                   db.getDefaultSortOrder());
+      assertEquals(((DatabaseImpl)db).getFormat().DEFAULT_SORT_ORDER,
+                   ((DatabaseImpl)db).getDefaultSortOrder());
       db.close();
     }
   }
@@ -1275,7 +1277,7 @@ public class DatabaseTest extends TestCase {
         public Database resolveLinkedDatabase(Database linkerdb, String dbName)
           throws IOException {
           assertEquals(linkeeDbName, dbName);
-          return Database.open(linkeeFile);
+          return DatabaseBuilder.open(linkeeFile);
         }
       });
 
@@ -1323,7 +1325,7 @@ public class DatabaseTest extends TestCase {
 
   private static void doTestTimeZone(final TimeZone tz) throws Exception
   {
-    Column col = new Column(true, null) {
+    ColumnImpl col = new ColumnImpl(null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
       @Override
       Calendar getCalendar() { return Calendar.getInstance(tz); }
     };
@@ -1353,7 +1355,7 @@ public class DatabaseTest extends TestCase {
   private void checkRawValue(String expected, Object val)
   {
     if(expected != null) {
-      assertTrue(Column.isRawData(val));
+      assertTrue(ColumnImpl.isRawData(val));
       assertEquals(expected, val.toString());
     } else {
       assertNull(val);
@@ -1408,15 +1410,16 @@ public class DatabaseTest extends TestCase {
   
   static int countRows(Table table) throws Exception {
     int rtn = 0;
-    for(Map<String, Object> row : Cursor.createCursor(table)) {
+    for(Map<String, Object> row : CursorBuilder.createCursor(table)) {
       rtn++;
     }
     return rtn;
   }
 
   static void assertTable(List<Map<String, Object>> expectedTable, Table table)
+    throws IOException
   {
-    assertCursor(expectedTable, Cursor.createCursor(table));
+    assertCursor(expectedTable, CursorBuilder.createCursor(table));
   }
   
   static void assertCursor(List<Map<String, Object>> expectedTable, 
@@ -1475,7 +1478,7 @@ public class DatabaseTest extends TestCase {
   static void dumpTable(Table table, PrintWriter writer) throws Exception {
     // make sure all indexes are read
     for(Index index : table.getIndexes()) {
-      index.initialize();
+      ((IndexImpl)index).initialize();
     }
     
     writer.println("TABLE: " + table.getName());
@@ -1484,7 +1487,7 @@ public class DatabaseTest extends TestCase {
       colNames.add(col.getName());
     }
     writer.println("COLUMNS: " + colNames);
-    for(Map<String, Object> row : Cursor.createCursor(table)) {
+    for(Map<String, Object> row : CursorBuilder.createCursor(table)) {
       writer.println(massageRow(row));
     }
   }
@@ -1515,7 +1518,7 @@ public class DatabaseTest extends TestCase {
 
   static void dumpIndex(Index index, PrintWriter writer) throws Exception {
     writer.println("INDEX: " + index);
-    IndexData.EntryCursor ec = index.cursor();
+    IndexData.EntryCursor ec = ((IndexImpl)index).cursor();
     IndexData.Entry lastE = ec.getLastEntry();
     IndexData.Entry e = null;
     while((e = ec.getNextEntry()) != lastE) {
