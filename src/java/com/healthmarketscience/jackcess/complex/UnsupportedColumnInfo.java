@@ -24,8 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.ColumnImpl;
-import com.healthmarketscience.jackcess.TableImpl;
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Table;
 
 /**
  * Complex column info for an unsupported complex type.
@@ -35,14 +35,14 @@ import com.healthmarketscience.jackcess.TableImpl;
 public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
 {
 
-  public UnsupportedColumnInfo(ColumnImpl column, int complexId, TableImpl typeObjTable,
-                               TableImpl flatTable)
+  public UnsupportedColumnInfo(Column column, int complexId, Table typeObjTable,
+                               Table flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
   }
 
-  public List<ColumnImpl> getValueColumns() {
+  public List<Column> getValueColumns() {
     return getTypeColumns();
   }
 
@@ -60,7 +60,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
 
     Map<String,Object> values = new LinkedHashMap<String,Object>();
-    for(ColumnImpl col : getValueColumns()) {
+    for(Column col : getValueColumns()) {
       col.setRowValue(values, col.getRowValue(rawValue));
     }
 
@@ -72,7 +72,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
     super.asRow(row, value);
 
     Map<String,Object> values = value.getValues();
-    for(ColumnImpl col : getValueColumns()) {
+    for(Column col : getValueColumns()) {
       col.setRowValue(row, col.getRowValue(values));
     }
 

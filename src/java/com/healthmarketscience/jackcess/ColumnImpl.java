@@ -199,7 +199,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /** the auto number generator for this column (if autonumber column) */
   private final AutoNumberGenerator _autoNumberGenerator;
   /** additional information specific to complex columns */
-  private ComplexColumnInfo<? extends ComplexValue> _complexInfo;
+  private final ComplexColumnInfo<? extends ComplexValue> _complexInfo;
   /** properties for this column, if any */
   private PropertyMap _props;  
   
@@ -229,6 +229,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _displayIndex = colNumber;
     _fixedDataOffset = fixedOffset;
     _varLenTableIndex = varLenIndex;
+    _complexInfo = null;
   }
     
   /**
@@ -302,8 +303,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     // load complex info
     if(_type == DataType.COMPLEX_TYPE) {
-      _complexInfo = ComplexColumnInfo.create(this, buffer, offset);
-    }
+      _complexInfo = ComplexColumnSupport.create(this, buffer, offset);
+    } else {
+      _complexInfo = null;
+    } 
   }
 
   /**
@@ -406,14 +409,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public SortOrder getTextSortOrder() {
     return _textInfo._sortOrder;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setTextSortOrder(SortOrder newTextSortOrder) {
-    modifyTextInfo();
-    _textInfo._sortOrder = newTextSortOrder;
   }
 
   /**

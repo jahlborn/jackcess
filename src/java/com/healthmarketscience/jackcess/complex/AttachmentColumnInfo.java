@@ -21,12 +21,11 @@ package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.ByteUtil;
-import com.healthmarketscience.jackcess.ColumnImpl;
-import com.healthmarketscience.jackcess.TableImpl;
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Table;
 
 
 /**
@@ -39,27 +38,27 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   private static final String FILE_NAME_COL_NAME = "FileName";
   private static final String FILE_TYPE_COL_NAME = "FileType";
 
-  private final ColumnImpl _fileUrlCol;
-  private final ColumnImpl _fileNameCol;
-  private final ColumnImpl _fileTypeCol;
-  private final ColumnImpl _fileDataCol;
-  private final ColumnImpl _fileTimeStampCol;
-  private final ColumnImpl _fileFlagsCol;
+  private final Column _fileUrlCol;
+  private final Column _fileNameCol;
+  private final Column _fileTypeCol;
+  private final Column _fileDataCol;
+  private final Column _fileTimeStampCol;
+  private final Column _fileFlagsCol;
   
-  public AttachmentColumnInfo(ColumnImpl column, int complexId,
-                              TableImpl typeObjTable, TableImpl flatTable)
+  public AttachmentColumnInfo(Column column, int complexId,
+                              Table typeObjTable, Table flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
 
-    ColumnImpl fileUrlCol = null;
-    ColumnImpl fileNameCol = null;
-    ColumnImpl fileTypeCol = null;
-    ColumnImpl fileDataCol = null;
-    ColumnImpl fileTimeStampCol = null;
-    ColumnImpl fileFlagsCol = null;
+    Column fileUrlCol = null;
+    Column fileNameCol = null;
+    Column fileTypeCol = null;
+    Column fileDataCol = null;
+    Column fileTimeStampCol = null;
+    Column fileFlagsCol = null;
 
-    for(ColumnImpl col : getTypeColumns()) {
+    for(Column col : getTypeColumns()) {
       switch(col.getType()) {
       case TEXT:
         if(FILE_NAME_COL_NAME.equalsIgnoreCase(col.getName())) {
@@ -100,27 +99,27 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     _fileFlagsCol = fileFlagsCol;
   }
 
-  public ColumnImpl getFileUrlColumn() {
+  public Column getFileUrlColumn() {
     return _fileUrlCol;
   }
   
-  public ColumnImpl getFileNameColumn() {
+  public Column getFileNameColumn() {
     return _fileNameCol;
   }
 
-  public ColumnImpl getFileTypeColumn() {
+  public Column getFileTypeColumn() {
     return _fileTypeCol;
   }
   
-  public ColumnImpl getFileDataColumn() {
+  public Column getFileDataColumn() {
     return _fileDataCol;
   }
   
-  public ColumnImpl getFileTimeStampColumn() {
+  public Column getFileTimeStampColumn() {
     return _fileTimeStampCol;
   }
   
-  public ColumnImpl getFileFlagsColumn() {
+  public Column getFileFlagsColumn() {
     return _fileFlagsCol;
   }  
   
@@ -183,49 +182,6 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   }
 
   
-  public static boolean isAttachmentColumn(TableImpl typeObjTable) {
-    // attachment data has these columns FileURL(MEMO), FileName(TEXT),
-    // FileType(TEXT), FileData(OLE), FileTimeStamp(SHORT_DATE_TIME),
-    // FileFlags(LONG)
-    List<ColumnImpl> typeCols = typeObjTable.getColumns();
-    if(typeCols.size() < 6) {
-      return false;
-    }
-
-    int numMemo = 0;
-    int numText = 0;
-    int numDate = 0;
-    int numOle= 0;
-    int numLong = 0;
-    
-    for(ColumnImpl col : typeCols) {
-      switch(col.getType()) {
-      case TEXT:
-        ++numText;
-        break;
-      case LONG:
-        ++numLong;
-        break;
-      case SHORT_DATE_TIME:
-        ++numDate;
-        break;
-      case OLE:
-        ++numOle;
-        break;
-      case MEMO:
-        ++numMemo;
-        break;
-      default:
-        // ignore
-      }
-    }
-
-    // be flexible, allow for extra columns...
-    return((numMemo >= 1) && (numText >= 2) && (numOle >= 1) &&
-           (numDate >= 1) && (numLong >= 1));
-  }
-
-
   private static class AttachmentImpl extends ComplexValueImpl
     implements Attachment
   {

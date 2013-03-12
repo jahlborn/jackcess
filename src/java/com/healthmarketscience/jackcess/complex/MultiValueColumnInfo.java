@@ -20,14 +20,10 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import com.healthmarketscience.jackcess.ColumnImpl;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.TableImpl;
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Table;
 
 /**
  * Complex column info for a column holding multiple values per row.
@@ -36,14 +32,10 @@ import com.healthmarketscience.jackcess.TableImpl;
  */
 public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
 {
-  private static final Set<DataType> VALUE_TYPES = EnumSet.of(
-      DataType.BYTE, DataType.INT, DataType.LONG, DataType.FLOAT,
-      DataType.DOUBLE, DataType.GUID, DataType.NUMERIC, DataType.TEXT);
-
-  private final ColumnImpl _valueCol;
+  private final Column _valueCol;
   
-  public MultiValueColumnInfo(ColumnImpl column, int complexId,
-                              TableImpl typeObjTable, TableImpl flatTable) 
+  public MultiValueColumnInfo(Column column, int complexId,
+                              Table typeObjTable, Table flatTable) 
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
@@ -57,7 +49,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
     return ComplexDataType.MULTI_VALUE;
   }
 
-  public ColumnImpl getValueColumn() {
+  public Column getValueColumn() {
     return _valueCol;
   }
 
@@ -88,13 +80,6 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
     return new SingleValueImpl(INVALID_ID, complexValueFk, value);
   }
 
-  public static boolean isMultiValueColumn(TableImpl typeObjTable) {
-    // if we found a single value of a "simple" type, then we are dealing with
-    // a multi-value column
-    List<ColumnImpl> typeCols = typeObjTable.getColumns();
-    return ((typeCols.size() == 1) &&
-            VALUE_TYPES.contains(typeCols.get(0).getType()));
-  }
 
   private static class SingleValueImpl extends ComplexValueImpl
     implements SingleValue

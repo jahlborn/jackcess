@@ -20,7 +20,6 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,16 +28,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.ColumnImpl;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.DatabaseImpl;
+import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.JetFormat;
-import com.healthmarketscience.jackcess.PageChannel;
-import com.healthmarketscience.jackcess.TableImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.Table;
 
 /**
  * Base class for the additional information tracked for complex columns.
@@ -47,27 +41,21 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class ComplexColumnInfo<V extends ComplexValue>
 {
-  private static final Log LOG = LogFactory.getLog(ComplexColumnInfo.class);
-
   public static final int INVALID_ID = -1;
   public static final ComplexValueForeignKey INVALID_COMPLEX_VALUE_ID =
     new ComplexValueForeignKey(null, INVALID_ID);
-  
-  private static final String COL_COMPLEX_TYPE_OBJECT_ID = "ComplexTypeObjectID";
-  private static final String COL_TABLE_ID = "ConceptualTableID";
-  private static final String COL_FLAT_TABLE_ID = "FlatTableID";
 
-  private final ColumnImpl _column;
+  private final Column _column;
   private final int _complexTypeId;
-  private final TableImpl _flatTable;
-  private final List<ColumnImpl> _typeCols;
-  private final ColumnImpl _pkCol;
-  private final ColumnImpl _complexValFkCol;
+  private final Table _flatTable;
+  private final List<Column> _typeCols;
+  private final Column _pkCol;
+  private final Column _complexValFkCol;
   private IndexCursor _pkCursor;
   private IndexCursor _complexValIdCursor;
   
-  protected ComplexColumnInfo(ColumnImpl column, int complexTypeId,
-                              TableImpl typeObjTable, TableImpl flatTable)
+  protected ComplexColumnInfo(Column column, int complexTypeId,
+                              Table typeObjTable, Table flatTable)
     throws IOException
   {
     _column = column;
@@ -77,15 +65,15 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     // the flat table has all the "value" columns and 2 extra columns, a
     // primary key for each row, and a LONG value which is essentially a
     // foreign key to the main table.
-    List<ColumnImpl> typeCols = new ArrayList<ColumnImpl>();
-    List<ColumnImpl> otherCols = new ArrayList<ColumnImpl>();
+    List<Column> typeCols = new ArrayList<Column>();
+    List<Column> otherCols = new ArrayList<Column>();
     diffFlatColumns(typeObjTable, flatTable, typeCols, otherCols);
 
     _typeCols = Collections.unmodifiableList(typeCols);
 
-    ColumnImpl pkCol = null;
-    ColumnImpl complexValFkCol = null;
-    for(ColumnImpl col : otherCols) {
+    Column pkCol = null;
+    Column complexValFkCol = null;
+    for(Column col : otherCols) {
       if(col.isAutoNumber()) {
         pkCol = col;
       } else if(col.getType() == DataType.LONG) {
@@ -102,88 +90,27 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     _complexValFkCol = complexValFkCol;
   }
 
-  public static ComplexColumnInfo<? extends ComplexValue> create(
-      ColumnImpl column, ByteBuffer buffer, int offset)
-    throws IOException
-  {
-    int complexTypeId = buffer.getInt(
-        offset + column.getFormat().OFFSET_COLUMN_COMPLEX_ID);
-
-    DatabaseImpl db = column.getDatabase();
-    TableImpl complexColumns = db.getSystemComplexColumns();
-    IndexCursor cursor = CursorBuilder.createCursor(
-        complexColumns, complexColumns.getPrimaryKeyIndex());
-    if(!cursor.findFirstRowByEntry(complexTypeId)) {
-      throw new IOException(
-          "Could not find complex column info for complex column with id " +
-          complexTypeId);
-    }
-    Map<String,Object> cColRow = cursor.getCurrentRow();
-    int tableId = (Integer)cColRow.get(COL_TABLE_ID);
-    if(tableId != column.getTable().getTableDefPageNumber()) {
-      throw new IOException(
-          "Found complex column for table " + tableId + " but expected table " +
-          column.getTable().getTableDefPageNumber());
-    }
-    int flatTableId = (Integer)cColRow.get(COL_FLAT_TABLE_ID);
-    int typeObjId = (Integer)cColRow.get(COL_COMPLEX_TYPE_OBJECT_ID);
-
-    TableImpl typeObjTable = db.getTable(typeObjId);
-    TableImpl flatTable = db.getTable(flatTableId);
-
-    if((typeObjTable == null) || (flatTable == null)) {
-      throw new IOException(
-          "Could not find supporting tables (" + typeObjId + ", " + flatTableId
-          + ") for complex column with id " + complexTypeId);
-    }
-    
-    // we inspect the structore of the "type table" to determine what kind of
-    // complex info we are dealing with
-    if(MultiValueColumnInfo.isMultiValueColumn(typeObjTable)) {
-      return new MultiValueColumnInfo(column, complexTypeId, typeObjTable,
-                                      flatTable);
-    } else if(AttachmentColumnInfo.isAttachmentColumn(typeObjTable)) {
-      return new AttachmentColumnInfo(column, complexTypeId, typeObjTable,
-                                      flatTable);
-    } else if(VersionHistoryColumnInfo.isVersionHistoryColumn(typeObjTable)) {
-      return new VersionHistoryColumnInfo(column, complexTypeId, typeObjTable,
-                                          flatTable);
-    }
-    
-    LOG.warn("Unsupported complex column type " + typeObjTable.getName());
-    return new UnsupportedColumnInfo(column, complexTypeId, typeObjTable,
-                                     flatTable);
-  }
-
   public void postTableLoadInit() throws IOException {
     // nothing to do in base class
   }
   
-  public ColumnImpl getColumn() {
+  public Column getColumn() {
     return _column;
   }
 
-  public DatabaseImpl getDatabase() {
+  public Database getDatabase() {
     return getColumn().getDatabase();
   }
-  
-  public JetFormat getFormat() {
-    return getDatabase().getFormat();
-  }
 
-  public PageChannel getPageChannel() {
-    return getDatabase().getPageChannel();
-  }
-
-  public ColumnImpl getPrimaryKeyColumn() {
+  public Column getPrimaryKeyColumn() {
     return _pkCol;
   }
 
-  public ColumnImpl getComplexValueForeignKeyColumn() {
+  public Column getComplexValueForeignKeyColumn() {
     return _complexValFkCol;
   }
 
-  protected List<ColumnImpl> getTypeColumns() {
+  protected List<Column> getTypeColumns() {
     return _typeCols;
   }
   
@@ -371,14 +298,14 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return rtn.toString();
   }
 
-  protected static void diffFlatColumns(TableImpl typeObjTable, 
-                                        TableImpl flatTable,
-                                        List<ColumnImpl> typeCols,
-                                        List<ColumnImpl> otherCols)
+  protected static void diffFlatColumns(Table typeObjTable, 
+                                        Table flatTable,
+                                        List<Column> typeCols,
+                                        List<Column> otherCols)
   {
     // each "flat"" table has the columns from the "type" table, plus some
     // others.  separate the "flat" columns into these 2 buckets
-    for(ColumnImpl col : flatTable.getColumns()) {
+    for(Column col : flatTable.getColumns()) {
       boolean found = false;
       try {
         typeObjTable.getColumn(col.getName());
@@ -434,7 +361,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
       _complexValueFk = complexValueFk;
     }
 
-    public ColumnImpl getColumn() {
+    public Column getColumn() {
       return _complexValueFk.getColumn();
     }
     
