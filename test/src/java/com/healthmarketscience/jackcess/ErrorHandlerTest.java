@@ -143,14 +143,15 @@ public class ErrorHandlerTest extends TestCase
   }
 
   @SuppressWarnings("unchecked")
-  private void replaceColumn(Table t, String colName) throws Exception
+  private static void replaceColumn(Table t, String colName) throws Exception
   {
-    Field colsField = Table.class.getDeclaredField("_columns");
+    Field colsField = TableImpl.class.getDeclaredField("_columns");
     colsField.setAccessible(true);
     List<Column> cols = (List<Column>)colsField.get(t);
 
     Column srcCol = null;
-    Column destCol = new BogusColumn(t);
+    ColumnImpl destCol = new BogusColumn(t);
+    destCol.setName(colName);
     for(int i = 0; i < cols.size(); ++i) {
       srcCol = cols.get(i);
       if(srcCol.getName().equals(colName)) {
@@ -172,7 +173,7 @@ public class ErrorHandlerTest extends TestCase
   private static class BogusColumn extends ColumnImpl
   {
     private BogusColumn(Table table) {
-      super((TableImpl)table, DataType.TEXT, 0, 0, 0);
+      super((TableImpl)table, DataType.LONG, 1, 0, 0);
     }
     
     @Override

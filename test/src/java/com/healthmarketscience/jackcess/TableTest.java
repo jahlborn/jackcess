@@ -62,6 +62,7 @@ public class TableTest extends TestCase {
   }
   
   public void testCreateRow() throws Exception {
+    reset();
     newTestColumn(DataType.INT, false);
     newTestColumn(DataType.TEXT, false);
     newTestColumn(DataType.TEXT, false);
@@ -81,6 +82,7 @@ public class TableTest extends TestCase {
   }
 
   public void testUnicodeCompression() throws Exception {
+    reset();
     newTestColumn(DataType.TEXT, false);
     newTestColumn(DataType.MEMO, false);
     newTestTable();

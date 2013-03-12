@@ -43,6 +43,7 @@ public class FKEnforcerTest extends TestCase
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
       Database db = openCopy(testDB);
+      db.setEnforceForeignKeys(false);
       Table t1 = db.getTable("Table1");
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");
@@ -66,7 +67,6 @@ public class FKEnforcerTest extends TestCase
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
       Database db = openCopy(testDB);
-      db.setEnforceForeignKeys(true);
       Table t1 = db.getTable("Table1");
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");

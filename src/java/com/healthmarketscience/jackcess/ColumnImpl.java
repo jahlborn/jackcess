@@ -225,7 +225,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _autoNumber = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
-    _displayIndex = 0;
+    _columnIndex = colNumber;
+    _displayIndex = colNumber;
     _fixedDataOffset = fixedOffset;
     _varLenTableIndex = varLenIndex;
   }

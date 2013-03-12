@@ -64,14 +64,15 @@ public class RowFilterTest extends TestCase
 
     List<Map<String,Object>> rows = Arrays.asList(row0, row1, row2, row3, row4, row5);
 
+    ColumnImpl testCol = new ColumnImpl(null, DataType.TEXT, 0, 0, 0);
+    testCol.setName(COL1);
     assertEquals(Arrays.asList(row0, row2, row4), 
-                 toList(RowFilter.matchPattern(
-                            new ColumnImpl(null, DataType.TEXT, 0, 0, 0),
+                 toList(RowFilter.matchPattern(testCol,
                             "foo").apply(rows)));
     assertEquals(Arrays.asList(row1, row3, row5), 
                  toList(RowFilter.invert(
                             RowFilter.matchPattern(
-                                new ColumnImpl(null, DataType.TEXT, 0, 0, 0),
+                                testCol,
                                 "foo")).apply(rows)));
 
     assertEquals(Arrays.asList(row0, row2, row4), 
