@@ -46,7 +46,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.ErrorHandler;
+import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.DataType;

@@ -29,9 +29,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.healthmarketscience.jackcess.ColumnMatcher;
-import com.healthmarketscience.jackcess.Joiner;
-import com.healthmarketscience.jackcess.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.Joiner;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.Column;

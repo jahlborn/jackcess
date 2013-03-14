@@ -18,26 +18,27 @@ USA
 
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
+
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.Table;
+import org.apache.commons.lang.ObjectUtils;
 
 /**
- * Interface for handling comparisons between column values.
+ * Simple concrete implementation of ColumnMatcher which test for equality.
  *
  * @author James Ahlborn
  */
-public interface ColumnMatcher 
-{
+public class SimpleColumnMatcher implements ColumnMatcher {
 
-  /**
-   * Returns {@code true} if the given value1 should be considered a match for
-   * the given value2 for the given column in the given table, {@code false}
-   * otherwise.
-   *
-   * @param table the relevant table
-   * @param columnName the name of the relevant column within the table
-   * @param value1 the first value to match (may be {@code null})
-   * @param value2 the second value to match (may be {@code null})
-   */
+  public static final SimpleColumnMatcher INSTANCE = new SimpleColumnMatcher();
+
+  public SimpleColumnMatcher() {
+  }
+
   public boolean matches(Table table, String columnName, Object value1,
-                         Object value2);
+                         Object value2)
+  {
+    return ObjectUtils.equals(value1, value2);
+  }
 }

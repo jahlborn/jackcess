@@ -25,11 +25,12 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.util.Iterator;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.Column;
 import org.apache.commons.lang.ObjectUtils;
 
 

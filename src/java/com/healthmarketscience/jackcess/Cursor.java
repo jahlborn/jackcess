@@ -24,6 +24,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
  * of traversing a table.  Cursors should be fairly robust in the face of

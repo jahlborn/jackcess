@@ -31,10 +31,10 @@ import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.CaseInsensitiveColumnMatcher;
-import com.healthmarketscience.jackcess.SimpleColumnMatcher;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 
 /**
  * Cursor backed by an index with extended traversal options.

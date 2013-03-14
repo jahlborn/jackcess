@@ -38,9 +38,13 @@ import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.util.RowFilterTest;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 
 /**
  * @author James Ahlborn

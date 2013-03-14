@@ -25,9 +25,11 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
+import javax.xml.stream.Location;
+import com.healthmarketscience.jackcess.Column;
 
 /**
  * Simple implementation of an ErrorHandler which always returns the

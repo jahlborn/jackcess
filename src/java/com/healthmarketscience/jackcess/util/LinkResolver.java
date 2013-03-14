@@ -17,10 +17,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.File;
 import java.io.IOException;
+
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DatabaseBuilder;
 
 /**
  * Resolver for linked databases.

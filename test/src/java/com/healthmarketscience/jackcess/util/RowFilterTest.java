@@ -25,17 +25,17 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
+import com.healthmarketscience.jackcess.DataType;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import junit.framework.TestCase;
 
 /**
  * @author James Ahlborn
@@ -102,7 +102,8 @@ public class RowFilterTest extends TestCase
                                         rows)));
   }
 
-  static List<Map<String,Object>> toList(Iterable<Map<String,Object>> rows)
+  public static List<Map<String,Object>> toList(
+      Iterable<Map<String,Object>> rows)
   {
     List<Map<String,Object>> rowList = new ArrayList<Map<String,Object>>();
     for(Map<String,Object> row : rows) {

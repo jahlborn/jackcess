@@ -25,12 +25,14 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.util.ImportFilter;
 
 /**
  * Simple concrete implementation of ImportFilter which just returns the given

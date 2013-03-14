@@ -25,7 +25,7 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -33,11 +33,19 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteOrder;
 import java.util.List;
 
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.Cursor;
+import com.healthmarketscience.jackcess.CursorBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 
 /**

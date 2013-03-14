@@ -25,9 +25,12 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
+
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Table;
 
 /**
  * Handler for errors encountered while reading a column of row data from a

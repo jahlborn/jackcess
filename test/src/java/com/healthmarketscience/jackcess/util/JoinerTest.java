@@ -17,7 +17,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +27,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
 

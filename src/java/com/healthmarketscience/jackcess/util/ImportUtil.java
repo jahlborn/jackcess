@@ -25,7 +25,7 @@ Suite 200
 King of Prussia, PA 19406
  */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -41,9 +41,13 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  *

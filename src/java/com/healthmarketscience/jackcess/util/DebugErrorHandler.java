@@ -25,13 +25,16 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
+import javax.xml.stream.Location;
 
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.util.ReplacementErrorHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.impl.ByteUtil;
 
 /**
  * Implementation of ErrorHandler which is useful for generating debug

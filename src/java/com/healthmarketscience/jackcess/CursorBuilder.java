@@ -39,6 +39,8 @@ import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.CursorImpl;
 import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+
 
 /**
  * Builder style class for constructing a Cursor.  By default, a cursor is

@@ -67,6 +67,9 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.util.MemFileChannel;
+import com.healthmarketscience.jackcess.util.LinkResolver;
+
 
 /**
  * @author Tim McCune
@@ -1415,7 +1418,7 @@ public class DatabaseTest extends TestCase {
     assertEquals(expectedRowCount, table.getRowCount());
   }
   
-  static int countRows(Table table) throws Exception {
+  public static int countRows(Table table) throws Exception {
     int rtn = 0;
     for(Map<String, Object> row : CursorBuilder.createCursor(table)) {
       rtn++;
@@ -1430,8 +1433,8 @@ public class DatabaseTest extends TestCase {
     assertCursor(expectedTable, CursorBuilder.createCursor(table));
   }
   
-  static void assertCursor(List<Map<String, Object>> expectedTable, 
-                           Cursor cursor)
+  public static void assertCursor(List<Map<String, Object>> expectedTable, 
+                                  Cursor cursor)
   {
     List<Map<String, Object>> foundTable =
       new ArrayList<Map<String, Object>>();
@@ -1581,7 +1584,7 @@ public class DatabaseTest extends TestCase {
     return tmp;
   }
 
-  static byte[] toByteArray(File file)
+  public static byte[] toByteArray(File file)
     throws IOException
   {
     // FIXME should really be using commons io IOUtils here, but don't want

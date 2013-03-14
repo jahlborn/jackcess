@@ -17,7 +17,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,6 +29,8 @@ import java.nio.channels.NonWritableChannelException;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
+
+import com.healthmarketscience.jackcess.DatabaseTest;
 
 /**
  *

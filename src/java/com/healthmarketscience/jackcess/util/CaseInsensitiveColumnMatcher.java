@@ -18,10 +18,11 @@ USA
 
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 
+import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 /**

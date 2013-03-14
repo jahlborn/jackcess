@@ -39,12 +39,12 @@ import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.ErrorHandler;
-import com.healthmarketscience.jackcess.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.SimpleColumnMatcher;
+import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
