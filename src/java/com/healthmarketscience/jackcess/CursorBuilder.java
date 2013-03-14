@@ -35,6 +35,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.impl.CursorImpl;
+import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
 
 /**
  * Builder style class for constructing a Cursor.  By default, a cursor is
@@ -142,12 +146,12 @@ public class CursorBuilder {
     boolean found = false;
     for(IndexImpl index : _table.getIndexes()) {
       
-      Collection<IndexData.ColumnDescriptor> indexColumns = index.getColumns();
+      Collection<? extends Index.Column> indexColumns = index.getColumns();
       if(indexColumns.size() != searchColumns.size()) {
         continue;
       }
       Iterator<String> sIter = searchColumns.iterator();
-      Iterator<IndexData.ColumnDescriptor> iIter = indexColumns.iterator();
+      Iterator<? extends Index.Column> iIter = indexColumns.iterator();
       boolean matches = true;
       while(sIter.hasNext()) {
         String sColName = sIter.next();

@@ -33,6 +33,8 @@ import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+
 /**
  * FileChannel implementation which maintains the entire "file" in memory.
  * This enables working with a Database entirely in memory (for situations

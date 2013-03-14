@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import com.healthmarketscience.jackcess.query.Query;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * An Access database instance.  A new instance can be instantiated by opening

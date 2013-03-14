@@ -23,6 +23,10 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.PropertyMaps;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+
 /**
  * Map of properties for a given database object.
  *
@@ -52,7 +56,7 @@ public class PropertyMap implements Iterable<PropertyMap.Property>
   private final Map<String,Property> _props = 
     new LinkedHashMap<String,Property>();
 
-  PropertyMap(String name, short type) {
+  public PropertyMap(String name, short type) {
     _mapName = name;
     _mapType = type;
   }

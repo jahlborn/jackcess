@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
 
 /**

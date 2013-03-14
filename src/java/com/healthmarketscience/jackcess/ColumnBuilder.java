@@ -31,6 +31,9 @@ import java.sql.SQLException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * Builder style class for constructing a Column.
@@ -240,19 +243,31 @@ public class ColumnBuilder {
     return this;
   }
 
-  short getColumnNumber() {
+  /**
+   * @usage _advanced_method_
+   */
+  public short getColumnNumber() {
     return _columnNumber;
   }
 
-  void setColumnNumber(short newColumnNumber) {
+  /**
+   * @usage _advanced_method_
+   */
+  public void setColumnNumber(short newColumnNumber) {
     _columnNumber = newColumnNumber;
   }
 
-  ColumnImpl.SortOrder getTextSortOrder() {
+  /**
+   * @usage _advanced_method_
+   */
+  public ColumnImpl.SortOrder getTextSortOrder() {
     return _sortOrder;
   }
 
-  void setTextSortOrder(ColumnImpl.SortOrder newTextSortOrder) {
+  /**
+   * @usage _advanced_method_
+   */
+  public void setTextSortOrder(ColumnImpl.SortOrder newTextSortOrder) {
     _sortOrder = newTextSortOrder;
   }
 

@@ -25,6 +25,9 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.TimeZone;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.CodecProvider;
+
 /**
  * Builder style class for opening/creating a Database.
  *

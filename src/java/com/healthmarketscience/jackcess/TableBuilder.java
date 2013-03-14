@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+
 /**
  * Builder style class for constructing a Column.
  *

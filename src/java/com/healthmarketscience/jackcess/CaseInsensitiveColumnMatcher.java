@@ -22,6 +22,8 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+
 /**
  * Concrete implementation of ColumnMatcher which tests textual columns
  * case-insensitively ({@link DataType#TEXT} and {@link DataType#MEMO}), and

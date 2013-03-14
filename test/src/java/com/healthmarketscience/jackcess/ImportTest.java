@@ -43,6 +43,7 @@ import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.impl.JetFormatTest;
 
 /** 
  *  @author Rob Di Marco

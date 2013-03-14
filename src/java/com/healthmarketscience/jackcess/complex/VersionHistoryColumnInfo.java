@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.Table;
 
 /**

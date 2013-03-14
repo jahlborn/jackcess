@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+
 /**
  * Utility for finding rows based on pre-defined, foreign-key table
  * relationships.
@@ -127,8 +129,9 @@ public class Joiner
   /**
    * Returns {@code true} if the "to" table has any rows based on the given
    * columns in the "from" table, {@code false} otherwise.
+   * @usage _intermediate_method_
    */
-  boolean hasRows(Object[] fromRow) throws IOException {
+  public boolean hasRows(Object[] fromRow) throws IOException {
     toEntryValues(fromRow);
     return _toCursor.findFirstRowByEntry(_entryValues);
   }
@@ -196,9 +199,10 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
+   * @usage _intermediate_method_
    */
-  Iterator<Map<String,Object>> findRows(Object[] fromRow,
-                                        Collection<String> columnNames)
+  public Iterator<Map<String,Object>> findRows(Object[] fromRow,
+                                               Collection<String> columnNames)
   {
     toEntryValues(fromRow);
     return _toCursor.entryIterator(columnNames, _entryValues);
@@ -259,8 +263,9 @@ public class Joiner
    *                columns for this join relationship)
    * @return {@code true} if any "to" rows were deleted, {@code false}
    *         otherwise
+   * @usage _intermediate_method_
    */
-  boolean deleteRows(Object[] fromRow) throws IOException {
+  public boolean deleteRows(Object[] fromRow) throws IOException {
     return deleteRowsImpl(findRows(fromRow, Collections.<String>emptySet()));
   }
 

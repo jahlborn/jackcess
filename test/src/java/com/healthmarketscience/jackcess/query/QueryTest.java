@@ -44,7 +44,7 @@ import org.apache.commons.lang.StringUtils;
 import static org.apache.commons.lang.SystemUtils.LINE_SEPARATOR;
 import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 
 
 /**

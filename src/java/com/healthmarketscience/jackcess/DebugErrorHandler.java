@@ -31,6 +31,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 
 /**
  * Implementation of ErrorHandler which is useful for generating debug

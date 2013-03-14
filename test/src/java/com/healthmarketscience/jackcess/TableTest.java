@@ -36,6 +36,10 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.PageChannel;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 
 /**
@@ -43,7 +47,7 @@ import junit.framework.TestCase;
  */
 public class TableTest extends TestCase {
 
-  private final PageChannel _pageChannel = new PageChannel(true);
+  private final PageChannel _pageChannel = new PageChannel(true) {};
   private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   private TableImpl _testTable;
   private int _varLenIdx;
@@ -198,11 +202,11 @@ public class TableTest extends TestCase {
           return getTable().getPageChannel();
         }
         @Override
-        Charset getCharset() {
+        protected Charset getCharset() {
           return getFormat().CHARSET;
         }
         @Override
-        Calendar getCalendar() { 
+        protected Calendar getCalendar() { 
           return Calendar.getInstance();
         }
         @Override

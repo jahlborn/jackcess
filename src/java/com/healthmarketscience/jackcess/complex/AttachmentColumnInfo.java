@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.ByteUtil;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
 

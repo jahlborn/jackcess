@@ -24,6 +24,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.impl.IndexData;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+
 /**
  * Builder style class for constructing an Index.
  *

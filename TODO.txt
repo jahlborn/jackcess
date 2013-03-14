@@ -38,3 +38,4 @@ Refactor goals:
 - don't use columnimpl for creating tables
   - clean up columnimpl/tableimpl constructors
 - add updateCurrentRow(Map), add updateRow(Row)
+- sort out query types

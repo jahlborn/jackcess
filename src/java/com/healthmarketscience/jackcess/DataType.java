@@ -36,6 +36,8 @@ import java.util.Date;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import com.healthmarketscience.jackcess.impl.JetFormat;
+
 /**
  * Access data type
  * @author Tim McCune

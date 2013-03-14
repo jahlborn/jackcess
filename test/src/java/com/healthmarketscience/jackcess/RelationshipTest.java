@@ -33,7 +33,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 
 /**
  * @author James Ahlborn

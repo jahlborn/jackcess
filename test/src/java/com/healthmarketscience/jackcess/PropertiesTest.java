@@ -26,10 +26,12 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
-
+import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * @author James Ahlborn

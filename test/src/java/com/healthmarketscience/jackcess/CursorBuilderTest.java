@@ -29,7 +29,8 @@ package com.healthmarketscience.jackcess;
 
 import junit.framework.TestCase;
 
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
  * @author James Ahlborn

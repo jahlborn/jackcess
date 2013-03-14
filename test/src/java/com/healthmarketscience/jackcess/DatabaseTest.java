@@ -57,9 +57,16 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import junit.framework.TestCase;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.IndexData;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
  * @author Tim McCune
@@ -1327,7 +1334,7 @@ public class DatabaseTest extends TestCase {
   {
     ColumnImpl col = new ColumnImpl(null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
       @Override
-      Calendar getCalendar() { return Calendar.getInstance(tz); }
+      protected Calendar getCalendar() { return Calendar.getInstance(tz); }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
@@ -1385,7 +1392,7 @@ public class DatabaseTest extends TestCase {
       .toTable(db);
   }
 
-  static String createString(int len) {
+  public static String createString(int len) {
     return createString(len, 'a');
   }
 
@@ -1416,7 +1423,8 @@ public class DatabaseTest extends TestCase {
     return rtn;
   }
 
-  static void assertTable(List<Map<String, Object>> expectedTable, Table table)
+  public static void assertTable(List<Map<String, Object>> expectedTable, 
+                                 Table table)
     throws IOException
   {
     assertCursor(expectedTable, CursorBuilder.createCursor(table));
@@ -1433,7 +1441,7 @@ public class DatabaseTest extends TestCase {
     assertEquals(expectedTable, foundTable);
   }
   
-  static Map<String, Object> createExpectedRow(Object... rowElements) {
+  public static Map<String, Object> createExpectedRow(Object... rowElements) {
     Map<String, Object> row = new LinkedHashMap<String, Object>();
     for(int i = 0; i < rowElements.length; i += 2) {
       row.put((String)rowElements[i],
@@ -1443,7 +1451,7 @@ public class DatabaseTest extends TestCase {
   }    
 
   @SuppressWarnings("unchecked")
-  static List<Map<String, Object>> createExpectedTable(Map... rows) {
+  public static List<Map<String, Object>> createExpectedTable(Map... rows) {
     return Arrays.<Map<String, Object>>asList(rows);
   }    
   
