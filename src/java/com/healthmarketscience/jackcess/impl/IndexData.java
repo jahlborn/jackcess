@@ -60,11 +60,11 @@ public class IndexData {
 
   /** special entry which is less than any other entry */
   public static final Entry FIRST_ENTRY =
-    createSpecialEntry(RowId.FIRST_ROW_ID);
+    createSpecialEntry(RowIdImpl.FIRST_ROW_ID);
   
   /** special entry which is greater than any other entry */
   public static final Entry LAST_ENTRY =
-    createSpecialEntry(RowId.LAST_ROW_ID);
+    createSpecialEntry(RowIdImpl.LAST_ROW_ID);
 
   /** special object which will always be greater than any other value, when
       searching for an index entry range in a multi-value index */
@@ -529,7 +529,7 @@ public class IndexData {
    * @param row Row to add
    * @param rowId rowId of the row to be added
    */
-  public void addRow(Object[] row, RowId rowId)
+  public void addRow(Object[] row, RowIdImpl rowId)
     throws IOException
   {
     int nullCount = countNullValues(row);
@@ -603,7 +603,7 @@ public class IndexData {
    * @param row Row to remove
    * @param rowId rowId of the row to be removed
    */
-  public void deleteRow(Object[] row, RowId rowId)
+  public void deleteRow(Object[] row, RowIdImpl rowId)
     throws IOException
   {
     int nullCount = countNullValues(row);
@@ -700,7 +700,7 @@ public class IndexData {
       startEntryBytes = createEntryBytes(startRow);
       startEntry = new Entry(startEntryBytes,
                              (startInclusive ?
-                              RowId.FIRST_ROW_ID : RowId.LAST_ROW_ID));
+                              RowIdImpl.FIRST_ROW_ID : RowIdImpl.LAST_ROW_ID));
     }
     Entry endEntry = LAST_ENTRY;
     if(endRow != null) {
@@ -711,7 +711,7 @@ public class IndexData {
                               createEntryBytes(endRow));
       endEntry = new Entry(endEntryBytes,
                            (endInclusive ?
-                            RowId.LAST_ROW_ID : RowId.FIRST_ROW_ID));
+                            RowIdImpl.LAST_ROW_ID : RowIdImpl.FIRST_ROW_ID));
     }
     return new EntryCursor(findEntryPosition(startEntry),
                            findEntryPosition(endEntry));
@@ -1184,7 +1184,7 @@ public class IndexData {
   /**
    * Creates one of the special index entries.
    */
-  private static Entry createSpecialEntry(RowId rowId) {
+  private static Entry createSpecialEntry(RowIdImpl rowId) {
     return new Entry((byte[])null, rowId);
   }
 
@@ -1241,16 +1241,17 @@ public class IndexData {
   /**
    * Returns the EntryType based on the given entry info.
    */
-  private static EntryType determineEntryType(byte[] entryBytes, RowId rowId)
+  private static EntryType determineEntryType(byte[] entryBytes, 
+                                              RowIdImpl rowId)
   {
     if(entryBytes != null) {
-      return ((rowId.getType() == RowId.Type.NORMAL) ?
+      return ((rowId.getType() == RowIdImpl.Type.NORMAL) ?
               EntryType.NORMAL :
-              ((rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+              ((rowId.getType() == RowIdImpl.Type.ALWAYS_FIRST) ?
                EntryType.FIRST_VALID : EntryType.LAST_VALID));
     } else if(!rowId.isValid()) {
       // this is a "special" entry (first/last)
-      return ((rowId.getType() == RowId.Type.ALWAYS_FIRST) ?
+      return ((rowId.getType() == RowIdImpl.Type.ALWAYS_FIRST) ?
               EntryType.ALWAYS_FIRST : EntryType.ALWAYS_LAST);
     }
     throw new IllegalArgumentException("Values was null for valid entry");
@@ -1645,7 +1646,7 @@ public class IndexData {
   public static class Entry implements Comparable<Entry>
   {
     /** page/row on which this row is stored */
-    private final RowId _rowId;
+    private final RowIdImpl _rowId;
     /** the entry value */
     private final byte[] _entryBytes;
     /** comparable type for the entry */
@@ -1657,7 +1658,7 @@ public class IndexData {
      * @param rowId rowId in which the row is stored
      * @param type the type of the entry
      */
-    private Entry(byte[] entryBytes, RowId rowId, EntryType type) {
+    private Entry(byte[] entryBytes, RowIdImpl rowId, EntryType type) {
       _rowId = rowId;
       _entryBytes = entryBytes;
       _type = type;
@@ -1668,7 +1669,7 @@ public class IndexData {
      * @param entryBytes encoded bytes for this index entry
      * @param rowId rowId in which the row is stored
      */
-    private Entry(byte[] entryBytes, RowId rowId)
+    private Entry(byte[] entryBytes, RowIdImpl rowId)
     {
       this(entryBytes, rowId, determineEntryType(entryBytes, rowId));
     }
@@ -1699,11 +1700,11 @@ public class IndexData {
       int page = ByteUtil.get3ByteInt(buffer, ENTRY_BYTE_ORDER);
       int row = ByteUtil.getUnsignedByte(buffer);
       
-      _rowId = new RowId(page, row);
+      _rowId = new RowIdImpl(page, row);
       _type = EntryType.NORMAL;
     }
     
-    public RowId getRowId() {
+    public RowIdImpl getRowId() {
       return _rowId;
     }
 
@@ -1857,7 +1858,7 @@ public class IndexData {
      * @param type the type of the entry
      * @param subPageNumber the sub-page to which this node entry refers
      */
-    private NodeEntry(byte[] entryBytes, RowId rowId, EntryType type,
+    private NodeEntry(byte[] entryBytes, RowIdImpl rowId, EntryType type,
                       Integer subPageNumber) {
       super(entryBytes, rowId, type);
       _subPageNumber = subPageNumber;
@@ -2006,8 +2007,8 @@ public class IndexData {
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(
-          new Entry(IndexData.this.createEntryBytes(row), RowId.FIRST_ROW_ID));
+      restorePosition(new Entry(IndexData.this.createEntryBytes(row), 
+                                RowIdImpl.FIRST_ROW_ID));
     }
     
     /**
@@ -2017,8 +2018,8 @@ public class IndexData {
     public void afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(
-          new Entry(IndexData.this.createEntryBytes(row), RowId.LAST_ROW_ID));
+      restorePosition(new Entry(IndexData.this.createEntryBytes(row), 
+                                RowIdImpl.LAST_ROW_ID));
     }
     
     /**

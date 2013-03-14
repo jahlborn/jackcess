@@ -36,16 +36,16 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import junit.framework.TestCase;
-
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.impl.IndexData;
-import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.IndexCodesTest;
+import com.healthmarketscience.jackcess.impl.IndexData;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.RowIdImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import junit.framework.TestCase;
 
 /**
  * @author James Ahlborn
@@ -334,7 +334,7 @@ public class IndexTest extends TestCase {
 
       IOException failure = null;
       try {
-        ((IndexImpl)index).addRow(row, new RowId(400 + i, 0));
+        ((IndexImpl)index).addRow(row, new RowIdImpl(400 + i, 0));
       } catch(IOException e) {
         failure = e;
       }

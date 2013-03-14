@@ -198,13 +198,14 @@ public class UsageMap
   }
 
   protected int getFirstPageNumber() {
-    return bitIndexToPageNumber(getNextBitIndex(-1), RowId.LAST_PAGE_NUMBER);
+    return bitIndexToPageNumber(getNextBitIndex(-1), 
+                                RowIdImpl.LAST_PAGE_NUMBER);
   }
 
   protected int getNextPageNumber(int curPage) {
     return bitIndexToPageNumber(
         getNextBitIndex(pageNumberToBitIndex(curPage)),
-        RowId.LAST_PAGE_NUMBER);
+        RowIdImpl.LAST_PAGE_NUMBER);
   }    
   
   protected int getNextBitIndex(int curIndex) {
@@ -213,13 +214,13 @@ public class UsageMap
   
   protected int getLastPageNumber() {
     return bitIndexToPageNumber(getPrevBitIndex(_pageNumbers.length()),
-                                RowId.FIRST_PAGE_NUMBER);
+                                RowIdImpl.FIRST_PAGE_NUMBER);
   }
 
   protected int getPrevPageNumber(int curPage) {
     return bitIndexToPageNumber(
         getPrevBitIndex(pageNumberToBitIndex(curPage)),
-        RowId.FIRST_PAGE_NUMBER);
+        RowIdImpl.FIRST_PAGE_NUMBER);
   }    
   
   protected int getPrevBitIndex(int curIndex) {
@@ -912,9 +913,9 @@ public class UsageMap
 
     private int updatePosition(int pageNumber) {
       if(pageNumber < UsageMap.this.getFirstPageNumber()) {
-        pageNumber = RowId.FIRST_PAGE_NUMBER;
+        pageNumber = RowIdImpl.FIRST_PAGE_NUMBER;
       } else if(pageNumber > UsageMap.this.getLastPageNumber()) {
-        pageNumber = RowId.LAST_PAGE_NUMBER;
+        pageNumber = RowIdImpl.LAST_PAGE_NUMBER;
       }
       return pageNumber;
     }
@@ -949,11 +950,11 @@ public class UsageMap
       }
       @Override
       public int getBeginningPageNumber() {
-        return RowId.FIRST_PAGE_NUMBER;
+        return RowIdImpl.FIRST_PAGE_NUMBER;
       }
       @Override
       public int getEndPageNumber() {
-        return RowId.LAST_PAGE_NUMBER;
+        return RowIdImpl.LAST_PAGE_NUMBER;
       }
     }
         
@@ -970,11 +971,11 @@ public class UsageMap
       }
       @Override
       public int getBeginningPageNumber() {
-        return RowId.LAST_PAGE_NUMBER;
+        return RowIdImpl.LAST_PAGE_NUMBER;
       }
       @Override
       public int getEndPageNumber() {
-        return RowId.FIRST_PAGE_NUMBER;
+        return RowIdImpl.FIRST_PAGE_NUMBER;
       }
     }
         

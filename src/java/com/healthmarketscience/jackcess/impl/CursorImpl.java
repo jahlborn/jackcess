@@ -73,10 +73,10 @@ public abstract class CursorImpl implements Cursor
   
   /** first position for the TableScanCursor */
   private static final ScanPosition FIRST_SCAN_POSITION =
-    new ScanPosition(RowId.FIRST_ROW_ID);
+    new ScanPosition(RowIdImpl.FIRST_ROW_ID);
   /** last position for the TableScanCursor */
   private static final ScanPosition LAST_SCAN_POSITION =
-    new ScanPosition(RowId.LAST_ROW_ID);
+    new ScanPosition(RowIdImpl.LAST_ROW_ID);
 
   /** identifier for this cursor */
   private final IdImpl _id;
@@ -1136,7 +1136,7 @@ public abstract class CursorImpl implements Cursor
       
       // figure out how many rows are left on this page so we can find the
       // next row
-      RowId curRowId = curPos.getRowId();
+      RowIdImpl curRowId = curPos.getRowId();
       TableImpl.positionAtRowHeader(rowState, curRowId);
       int currentRowNumber = curRowId.getRowNumber();
     
@@ -1144,14 +1144,14 @@ public abstract class CursorImpl implements Cursor
       while(true) {
 
         currentRowNumber = handler.getAnotherRowNumber(currentRowNumber);
-        curRowId = new RowId(curRowId.getPageNumber(), currentRowNumber);
+        curRowId = new RowIdImpl(curRowId.getPageNumber(), currentRowNumber);
         TableImpl.positionAtRowHeader(rowState, curRowId);
         
         if(!rowState.isValid()) {
           
           // load next page
-          curRowId = new RowId(handler.getAnotherPageNumber(),
-                               RowId.INVALID_ROW_NUMBER);
+          curRowId = new RowIdImpl(handler.getAnotherPageNumber(),
+                               RowIdImpl.INVALID_ROW_NUMBER);
           TableImpl.positionAtRowHeader(rowState, curRowId);
           
           if(!rowState.isHeaderPageNumberValid()) {
@@ -1293,7 +1293,7 @@ public abstract class CursorImpl implements Cursor
     /**
      * Returns the unique RowId of the position of the cursor.
      */
-    public abstract RowId getRowId();
+    public abstract RowIdImpl getRowId();
 
     /**
      * Returns {@code true} if the subclass specific info in a Position is
@@ -1344,14 +1344,14 @@ public abstract class CursorImpl implements Cursor
    */
   private static final class ScanPosition extends PositionImpl
   {
-    private final RowId _rowId;
+    private final RowIdImpl _rowId;
 
-    private ScanPosition(RowId rowId) {
+    private ScanPosition(RowIdImpl rowId) {
       _rowId = rowId;
     }
 
     @Override
-    public RowId getRowId() {
+    public RowIdImpl getRowId() {
       return _rowId;
     }
 

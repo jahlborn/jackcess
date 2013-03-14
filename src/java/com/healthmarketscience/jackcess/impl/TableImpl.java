@@ -473,7 +473,9 @@ public class TableImpl implements Table
    * allows for more complex table interactions.
    * @usage _advanced_method_
    */
-  public void deleteRow(RowState rowState, RowId rowId) throws IOException {
+  public void deleteRow(RowState rowState, RowIdImpl rowId) 
+    throws IOException 
+  {
     requireValidRowId(rowId);
     
     // ensure that the relevant row state is up-to-date
@@ -534,7 +536,8 @@ public class TableImpl implements Table
    * e.g. {@link Cursor#getCurrentRowValue}.
    * @usage _advanced_method_
    */
-  public Object getRowValue(RowState rowState, RowId rowId, ColumnImpl column)
+  public Object getRowValue(RowState rowState, RowIdImpl rowId,
+                            ColumnImpl column)
     throws IOException
   {
     if(this != column.getTable()) {
@@ -556,7 +559,7 @@ public class TableImpl implements Table
    * @usage _advanced_method_
    */
   public Map<String, Object> getRow(
-      RowState rowState, RowId rowId, Collection<String> columnNames)
+      RowState rowState, RowIdImpl rowId, Collection<String> columnNames)
     throws IOException
   {
     requireValidRowId(rowId);
@@ -759,7 +762,8 @@ public class TableImpl implements Table
    * @return a ByteBuffer of the relevant page, or null if row was invalid
    * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowHeader(RowState rowState, RowId rowId)
+  public static ByteBuffer positionAtRowHeader(RowState rowState, 
+                                               RowIdImpl rowId)
     throws IOException
   {
     ByteBuffer rowBuffer = rowState.setHeaderRow(rowId);
@@ -803,7 +807,8 @@ public class TableImpl implements Table
    *         invalid or deleted
    * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowData(RowState rowState, RowId rowId)
+  public static ByteBuffer positionAtRowData(RowState rowState, 
+                                             RowIdImpl rowId)
     throws IOException
   {
     positionAtRowHeader(rowState, rowId);
@@ -850,7 +855,7 @@ public class TableImpl implements Table
         int overflowRowNum = ByteUtil.getUnsignedByte(rowBuffer, rowStart);
         int overflowPageNum = ByteUtil.get3ByteInt(rowBuffer, rowStart + 1);
         rowBuffer = rowState.setOverflowRow(
-            new RowId(overflowPageNum, overflowRowNum));
+            new RowIdImpl(overflowPageNum, overflowRowNum));
         rowNum = overflowRowNum;
       
       } else {
@@ -1347,7 +1352,7 @@ public class TableImpl implements Table
       dataPage.put(rowData[i]);
 
       // update the indexes
-      RowId rowId = new RowId(pageNumber, rowNum);
+      RowIdImpl rowId = new RowIdImpl(pageNumber, rowNum);
       for(IndexData indexData : _indexDatas) {
         indexData.addRow(row, rowId);
       }
@@ -1368,7 +1373,7 @@ public class TableImpl implements Table
    * {@link Cursor#setCurrentRowValue} and {@link Cursor#updateCurrentRow}.
    * @usage _advanced_method_
    */
-  public void updateRow(RowState rowState, RowId rowId, Object... row) 
+  public void updateRow(RowState rowState, RowIdImpl rowId, Object... row) 
     throws IOException 
   {
     requireValidRowId(rowId);
@@ -1453,7 +1458,7 @@ public class TableImpl implements Table
                                   PageChannel.INVALID_PAGE_NUMBER);
       pageNumber = _addRowBufferH.getPageNumber();
 
-      RowId headerRowId = rowState.getHeaderRowId();      
+      RowIdImpl headerRowId = rowState.getHeaderRowId();      
       ByteBuffer headerPage = rowState.getHeaderPage();
       if(pageNumber == headerRowId.getPageNumber()) {
         // new row is on the same page as header row, share page
@@ -1945,7 +1950,7 @@ public class TableImpl implements Table
   /**
    * @throws IllegalStateException if the given rowId is invalid
    */
-  private static void requireValidRowId(RowId rowId) {
+  private static void requireValidRowId(RowIdImpl rowId) {
     if(!rowId.isValid()) {
       throw new IllegalArgumentException("Given rowId is invalid: " + rowId);
     }
@@ -1954,7 +1959,8 @@ public class TableImpl implements Table
   /**
    * @throws IllegalStateException if the given row is invalid or deleted
    */
-  private static void requireNonDeletedRow(RowState rowState, RowId rowId) {
+  private static void requireNonDeletedRow(RowState rowState, RowIdImpl rowId)
+  {
     if(!rowState.isValid()) {
       throw new IllegalArgumentException(
           "Given rowId is invalid for this table: " + rowId);
@@ -2084,7 +2090,7 @@ public class TableImpl implements Table
     /** Buffer used for reading the header row data pages */
     private final TempPageHolder _headerRowBufferH;
     /** the header rowId */
-    private RowId _headerRowId = RowId.FIRST_ROW_ID;
+    private RowIdImpl _headerRowId = RowIdImpl.FIRST_ROW_ID;
     /** the number of rows on the header page */
     private int _rowsOnHeaderPage;
     /** the rowState status */
@@ -2099,7 +2105,7 @@ public class TableImpl implements Table
     private ByteBuffer _finalRowBuffer;
     /** the rowId which contains the final data (after following any overflow
         pointers) */
-    private RowId _finalRowId = null;
+    private RowIdImpl _finalRowId = null;
     /** true if the row values array has data */
     private boolean _haveRowValues;
     /** values read from the last row */
@@ -2171,7 +2177,7 @@ public class TableImpl implements Table
       return _finalRowBuffer;
     }
 
-    public RowId getFinalRowId() {
+    public RowIdImpl getFinalRowId() {
       if(_finalRowId == null) {
         _finalRowId = getHeaderRowId();
       }
@@ -2239,7 +2245,7 @@ public class TableImpl implements Table
       _varColOffsets = varColOffsets;
     }
     
-    public RowId getHeaderRowId() {
+    public RowIdImpl getHeaderRowId() {
       return _headerRowId;
     }
 
@@ -2254,7 +2260,7 @@ public class TableImpl implements Table
       return _headerRowBufferH.getPage(getPageChannel());
     }
 
-    private ByteBuffer setHeaderRow(RowId rowId)
+    private ByteBuffer setHeaderRow(RowIdImpl rowId)
       throws IOException
     {
       checkForModification();
@@ -2289,7 +2295,7 @@ public class TableImpl implements Table
       return _finalRowBuffer;
     }
 
-    private ByteBuffer setOverflowRow(RowId rowId)
+    private ByteBuffer setOverflowRow(RowIdImpl rowId)
       throws IOException
     {
       // this should never see modifications because it only happens within

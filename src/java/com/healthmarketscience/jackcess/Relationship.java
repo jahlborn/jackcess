@@ -31,8 +31,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
-
 /**
  * Information about a relationship between two tables in the database.
  *
@@ -61,10 +59,10 @@ public class Relationship {
   private final Table _toTable;
   /** the columns in the "from" table in this relationship (aligned w/
       toColumns list) */
-  private List<ColumnImpl> _toColumns;
+  private final List<Column> _toColumns;
   /** the columns in the "to" table in this relationship (aligned w/
       toColumns list) */
-  private List<ColumnImpl> _fromColumns;
+  private final List<Column> _fromColumns;
   /** the various flags describing this relationship */
   private final int _flags;
 
@@ -73,11 +71,11 @@ public class Relationship {
   {
     _name = name;
     _fromTable = fromTable;
-    _fromColumns = new ArrayList<ColumnImpl>(
-        Collections.nCopies(numCols, (ColumnImpl)null));
+    _fromColumns = new ArrayList<Column>(
+        Collections.nCopies(numCols, (Column)null));
     _toTable = toTable;
-    _toColumns = new ArrayList<ColumnImpl>(
-        Collections.nCopies(numCols, (ColumnImpl)null));
+    _toColumns = new ArrayList<Column>(
+        Collections.nCopies(numCols, (Column)null));
     _flags = flags;
   }
 
@@ -89,7 +87,7 @@ public class Relationship {
     return _fromTable;
   }
 
-  public List<ColumnImpl> getFromColumns() {
+  public List<Column> getFromColumns() {
     return _fromColumns;
   }
 
@@ -97,7 +95,7 @@ public class Relationship {
     return _toTable;
   }
 
-  public List<ColumnImpl> getToColumns() {
+  public List<Column> getToColumns() {
     return _toColumns;
   }
 

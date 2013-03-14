@@ -502,7 +502,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
 
     @Override
-    public RowId getRowId() {
+    public RowIdImpl getRowId() {
       return getEntry().getRowId();
     }
     

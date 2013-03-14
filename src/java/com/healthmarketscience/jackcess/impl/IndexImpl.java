@@ -253,7 +253,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
    * @param row Row to add
    * @param rowId rowId of the row to be added
    */
-  public void addRow(Object[] row, RowId rowId)
+  public void addRow(Object[] row, RowIdImpl rowId)
     throws IOException
   {
     getIndexData().addRow(row, rowId);
@@ -267,7 +267,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
    * @param row Row to remove
    * @param rowId rowId of the row to be removed
    */
-  public void deleteRow(Object[] row, RowId rowId)
+  public void deleteRow(Object[] row, RowIdImpl rowId)
     throws IOException
   {
     getIndexData().deleteRow(row, rowId);
