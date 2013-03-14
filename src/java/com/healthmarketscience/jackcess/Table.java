@@ -138,7 +138,7 @@ public interface Table extends Iterable<Map<String, Object>>
 
   /**
    * Converts a map of columnName -> columnValue to an array of row values
-   * appropriate for a call to {@link #updateCurrentRow(Object...)}.
+   * appropriate for a call to {@link Cursor#updateCurrentRow(Object...)}.
    * @usage _general_method_
    */
   public Object[] asUpdateRow(Map<String,?> rowMap);
@@ -153,7 +153,7 @@ public interface Table extends Iterable<Map<String, Object>>
    * expected to be given in the order that the Columns are listed by the
    * {@link #getColumns} method.  This is by default the storage order of the
    * Columns in the database, however this order can be influenced by setting
-   * the ColumnOrder via {@link DatabaseImpl#setColumnOrder} prior to opening
+   * the ColumnOrder via {@link Database#setColumnOrder} prior to opening
    * the Table.  The {@link #asRow} method can be used to easily convert a row
    * Map into the appropriate row array for this Table.
    * <p>
