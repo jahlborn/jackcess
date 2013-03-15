@@ -57,18 +57,19 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
-import junit.framework.TestCase;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.impl.JetFormat;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
-import com.healthmarketscience.jackcess.util.MemFileChannel;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.RowImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.LinkResolver;
+import com.healthmarketscience.jackcess.util.MemFileChannel;
+import junit.framework.TestCase;
 
 
 /**
@@ -986,7 +987,7 @@ public class DatabaseTest extends TestCase {
 
     table.reset();
 
-    List<Map<String, Object>> expectedRows =
+    List<? extends Map<String, Object>> expectedRows =
       createExpectedTable(
           createExpectedRow(
               "a", 1,
@@ -1298,7 +1299,7 @@ public class DatabaseTest extends TestCase {
       assertNotNull(linkeeDb);
       assertEquals(linkeeFile, linkeeDb.getFile());
       
-      List<Map<String, Object>> expectedRows =
+      List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
             createExpectedRow(
                 "ID", 1,
@@ -1426,15 +1427,17 @@ public class DatabaseTest extends TestCase {
     return rtn;
   }
 
-  public static void assertTable(List<Map<String, Object>> expectedTable, 
-                                 Table table)
+  public static void assertTable(
+      List<? extends Map<String, Object>> expectedTable, 
+      Table table)
     throws IOException
   {
     assertCursor(expectedTable, CursorBuilder.createCursor(table));
   }
   
-  public static void assertCursor(List<Map<String, Object>> expectedTable, 
-                                  Cursor cursor)
+  public static void assertCursor(
+      List<? extends Map<String, Object>> expectedTable, 
+      Cursor cursor)
   {
     List<Map<String, Object>> foundTable =
       new ArrayList<Map<String, Object>>();
@@ -1444,8 +1447,8 @@ public class DatabaseTest extends TestCase {
     assertEquals(expectedTable, foundTable);
   }
   
-  public static Map<String, Object> createExpectedRow(Object... rowElements) {
-    Map<String, Object> row = new LinkedHashMap<String, Object>();
+  public static RowImpl createExpectedRow(Object... rowElements) {
+    RowImpl row = new RowImpl();
     for(int i = 0; i < rowElements.length; i += 2) {
       row.put((String)rowElements[i],
               rowElements[i + 1]);
@@ -1454,8 +1457,8 @@ public class DatabaseTest extends TestCase {
   }    
 
   @SuppressWarnings("unchecked")
-  public static List<Map<String, Object>> createExpectedTable(Map... rows) {
-    return Arrays.<Map<String, Object>>asList(rows);
+  public static List<Row> createExpectedTable(Row... rows) {
+    return Arrays.<Row>asList(rows);
   }    
   
   static void dumpDatabase(Database mdb) throws Exception {

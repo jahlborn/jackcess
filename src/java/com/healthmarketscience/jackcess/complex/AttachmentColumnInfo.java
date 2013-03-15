@@ -23,9 +23,10 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 
 
 /**
@@ -131,7 +132,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
 
   @Override
   protected AttachmentImpl toValue(ComplexValueForeignKey complexValueFk,
-                                   Map<String,Object> rawValue) {
+                                   Row rawValue) {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
     String url = (String)getFileUrlColumn().getRowValue(rawValue);
     String name = (String)getFileNameColumn().getRowValue(rawValue);

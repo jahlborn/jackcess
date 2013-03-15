@@ -75,7 +75,7 @@ public class ImportTest extends TestCase
       }
       assertEquals(Arrays.asList("Test1", "Test2", "Test3"), colNames);
 
-      List<Map<String, Object>> expectedRows =
+      List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
             createExpectedRow(
                 "Test1", "Foo",

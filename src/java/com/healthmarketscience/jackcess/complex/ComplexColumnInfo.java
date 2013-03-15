@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.Row;
 
 /**
  * Base class for the additional information tracked for complex columns.
@@ -120,13 +121,13 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
       .size();
   }
   
-  public List<Map<String,Object>> getRawValues(int complexValueFk)
+  public List<Row> getRawValues(int complexValueFk)
     throws IOException
   {
     return getRawValues(complexValueFk, null);
   }
 
-  private Iterator<Map<String,Object>> getComplexValFkIter(
+  private Iterator<Row> getComplexValFkIter(
       int complexValueFk, Collection<String> columnNames)
     throws IOException
   {
@@ -139,17 +140,17 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return _complexValIdCursor.entryIterator(columnNames, complexValueFk);
   }
   
-  public List<Map<String,Object>> getRawValues(int complexValueFk,
-                                               Collection<String> columnNames)
+  public List<Row> getRawValues(int complexValueFk,
+                                Collection<String> columnNames)
     throws IOException
   {
-    Iterator<Map<String,Object>> entryIter =
+    Iterator<Row> entryIter =
       getComplexValFkIter(complexValueFk, columnNames);
     if(!entryIter.hasNext()) {
       return Collections.emptyList();
     }
 
-    List<Map<String,Object>> values = new ArrayList<Map<String,Object>>();
+    List<Row> values = new ArrayList<Row>();
     while(entryIter.hasNext()) {
       values.add(entryIter.next());
     }
@@ -160,7 +161,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   public List<V> getValues(ComplexValueForeignKey complexValueFk)
     throws IOException
   {
-    List<Map<String,Object>> rawValues = getRawValues(complexValueFk.get());
+    List<Row> rawValues = getRawValues(complexValueFk.get());
     if(rawValues.isEmpty()) {
       return Collections.emptyList();
     }
@@ -169,18 +170,18 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   }
   
   protected List<V> toValues(ComplexValueForeignKey complexValueFk,
-                             List<Map<String,Object>> rawValues)
+                             List<Row> rawValues)
     throws IOException
   {
     List<V> values = new ArrayList<V>();
-    for(Map<String,Object> rawValue : rawValues) {
+    for(Row rawValue : rawValues) {
       values.add(toValue(complexValueFk, rawValue));
     }
 
     return values;
   }
 
-  public int addRawValue(Map<String,Object> rawValue) throws IOException {
+  public int addRawValue(Row rawValue) throws IOException {
     Object[] row = _flatTable.asRow(rawValue);
     _flatTable.addRow(row);
     return (Integer)_pkCol.getRowValue(row);
@@ -200,7 +201,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     }
   }
 
-  public int updateRawValue(Map<String,Object> rawValue) throws IOException {
+  public int updateRawValue(Row rawValue) throws IOException {
     Integer id = (Integer)_pkCol.getRowValue(rawValue);
     updateRow(id, _flatTable.asUpdateRow(rawValue));
     return id;
@@ -218,7 +219,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     }
   }
 
-  public void deleteRawValue(Map<String,Object> rawValue) throws IOException {
+  public void deleteRawValue(Row rawValue) throws IOException {
     deleteRow((Integer)_pkCol.getRowValue(rawValue));
   }
   
@@ -233,7 +234,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   }
 
   public void deleteAllValues(int complexValueFk) throws IOException {
-    Iterator<Map<String,Object>> entryIter =
+    Iterator<Row> entryIter =
       getComplexValFkIter(complexValueFk, Collections.<String>emptySet());
     try {
       while(entryIter.hasNext()) {
@@ -325,7 +326,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
   protected abstract V toValue(
       ComplexValueForeignKey complexValueFk,
-      Map<String,Object> rawValues)
+      Row rawValues)
     throws IOException;
   
   protected static abstract class ComplexValueImpl implements ComplexValue

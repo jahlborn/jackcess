@@ -26,8 +26,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 /**
  * Complex column info for a column which tracking the version history of an
@@ -114,7 +115,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
 
   @Override
   protected List<Version> toValues(ComplexValueForeignKey complexValueFk,
-                                   List<Map<String,Object>> rawValues)
+                                   List<Row> rawValues)
     throws IOException
   {
     List<Version> versions = super.toValues(complexValueFk, rawValues);
@@ -127,7 +128,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
 
   @Override
   protected VersionImpl toValue(ComplexValueForeignKey complexValueFk,
-                                Map<String,Object> rawValue) {
+                                Row rawValue) {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
     String value = (String)getValueColumn().getRowValue(rawValue);
     Date modifiedDate = (Date)getModifiedDateColumn().getRowValue(rawValue);

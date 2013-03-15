@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Row;
 
 /**
  * Value which is returned for a complex column.  This value corresponds to a
@@ -122,8 +123,7 @@ public class ComplexValueForeignKey extends Number
     return getComplexInfo().countValues(get());
   }
   
-  public List<Map<String,Object>> getRawValues()
-    throws IOException
+  public List<Row> getRawValues() throws IOException
   {
     return getComplexInfo().getRawValues(get());
   }  

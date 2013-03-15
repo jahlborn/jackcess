@@ -30,7 +30,6 @@ package com.healthmarketscience.jackcess.query;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,6 +38,7 @@ import java.util.Map;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.impl.RowImpl;
 
 import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
@@ -54,8 +54,7 @@ public abstract class Query
 {
   protected static final Log LOG = LogFactory.getLog(Query.class);  
 
-  private static final Row EMPTY_ROW = 
-    new Row(Collections.<String,Object>emptyMap());
+  private static final Row EMPTY_ROW = new Row();
 
   public enum Type 
   {
@@ -593,7 +592,18 @@ public abstract class Query
     public final Integer objectId;
     public final byte[] order;
 
-    public Row(Map<String,Object> tableRow) {
+    private Row() {
+      this.attribute = null;
+      this.expression = null;
+      this.flag = null;
+      this.extra = null;
+      this.name1 = null;
+      this.name2= null;
+      this.objectId = null;
+      this.order = null;
+    }
+
+    public Row(com.healthmarketscience.jackcess.Row tableRow) {
       this((Byte)tableRow.get(COL_ATTRIBUTE),
            (String)tableRow.get(COL_EXPRESSION),
            (Short)tableRow.get(COL_FLAG),
@@ -618,9 +628,9 @@ public abstract class Query
       this.order = order;
     }
 
-    public Map<String,Object> toTableRow()
+    public com.healthmarketscience.jackcess.Row toTableRow()
     {
-      Map<String,Object> tableRow = new LinkedHashMap<String,Object>();
+      com.healthmarketscience.jackcess.Row tableRow = new RowImpl();
 
       tableRow.put(COL_ATTRIBUTE, attribute);
       tableRow.put(COL_EXPRESSION, expression);

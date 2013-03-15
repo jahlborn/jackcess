@@ -33,7 +33,7 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public interface Table extends Iterable<Map<String, Object>>
+public interface Table extends Iterable<Row>
 {
   /**
    * enum which controls the ordering of the columns in a table.
@@ -201,7 +201,7 @@ public interface Table extends Iterable<Map<String, Object>>
    *         the default cursor)
    * @usage _general_method_
    */
-  public Map<String, Object> getNextRow() throws IOException;
+  public Row getNextRow() throws IOException;
 
   /**
    * @return a simple Cursor, initialized on demand and held by this table.

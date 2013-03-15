@@ -24,6 +24,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.Row;
 
 /**
  * Complex column info for a column holding multiple values per row.
@@ -56,7 +57,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   @Override
   protected SingleValueImpl toValue(
       ComplexValueForeignKey complexValueFk,
-      Map<String,Object> rawValue)
+      Row rawValue)
   {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
     Object value = getValueColumn().getRowValue(rawValue);

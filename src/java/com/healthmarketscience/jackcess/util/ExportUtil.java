@@ -36,13 +36,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -339,8 +339,8 @@ public class ExportUtil {
     }
 
     // print the data rows
-    Map<String, Object> row;
     Object[] unfilteredRowData = new Object[columns.size()];
+    Row row;
     while ((row = cursor.getNextRow(columnNames)) != null) {
 
       // fill raw row data in array

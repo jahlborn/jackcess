@@ -26,6 +26,8 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.impl.RowImpl;
 
 /**
  * Complex column info for an unsupported complex type.
@@ -55,7 +57,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
   @Override
   protected UnsupportedValueImpl toValue(
       ComplexValueForeignKey complexValueFk,
-      Map<String,Object> rawValue)
+      Row rawValue)
   {
     int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
 

@@ -32,6 +32,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import org.apache.commons.lang.ObjectUtils;
+import com.healthmarketscience.jackcess.Row;
 
 
 /**
@@ -49,7 +50,7 @@ public abstract class RowFilter
    * {@code false} otherwise.
    * @param row current row to test for inclusion in the filter
    */
-  public abstract boolean matches(Map<String, Object> row);
+  public abstract boolean matches(Row row);
 
   /**
    * Returns an iterable which filters the given iterable based on this
@@ -59,8 +60,7 @@ public abstract class RowFilter
    *
    * @return a filtering iterable
    */
-  public Iterable<Map<String, Object>> apply(
-      Iterable<Map<String, Object>> iterable)
+  public Iterable<Row> apply(Iterable<? extends Row> iterable)
   {
     return new FilterIterable(iterable);
   }
@@ -76,13 +76,13 @@ public abstract class RowFilter
    * @return a filter which matches table rows which match the values in the
    *         row pattern
    */
-  public static RowFilter matchPattern(final Map<String, Object> rowPattern) 
+  public static RowFilter matchPattern(final Map<String,?> rowPattern) 
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Map<String, Object> row) 
+        public boolean matches(Row row) 
         {
-          for(Map.Entry<String,Object> e : rowPattern.entrySet()) {
+          for(Map.Entry<String,?> e : rowPattern.entrySet()) {
             if(!ObjectUtils.equals(e.getValue(), row.get(e.getKey()))) {
               return false;
             }
@@ -107,7 +107,7 @@ public abstract class RowFilter
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Map<String, Object> row) 
+        public boolean matches(Row row) 
         {
           return ObjectUtils.equals(valuePattern, columnPattern.getRowValue(row));
         }
@@ -127,7 +127,7 @@ public abstract class RowFilter
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Map<String, Object> row) 
+        public boolean matches(Row row) 
         {
           return !filter.matches(row);
         }
@@ -145,22 +145,23 @@ public abstract class RowFilter
    * @return a filtering iterable (or the given iterable if a {@code null}
    *         filter was given)
    */
-  public static Iterable<Map<String, Object>> apply(
-      RowFilter rowFilter,
-      Iterable<Map<String, Object>> iterable)
+  @SuppressWarnings("unchecked")
+  public static Iterable<Row> apply(RowFilter rowFilter,
+                                    Iterable<? extends Row> iterable)
   {
-    return((rowFilter != null) ? rowFilter.apply(iterable) : iterable);
+    return((rowFilter != null) ? rowFilter.apply(iterable) : 
+           (Iterable<Row>)iterable);
   }
 
 
   /**
    * Iterable which creates a filtered view of a another row iterable.
    */
-  private class FilterIterable implements Iterable<Map<String, Object>>
+  private class FilterIterable implements Iterable<Row>
   {
-    private final Iterable<Map<String, Object>> _iterable;
+    private final Iterable<? extends Row> _iterable;
 
-    private FilterIterable(Iterable<Map<String, Object>> iterable) 
+    private FilterIterable(Iterable<? extends Row> iterable) 
     {
       _iterable = iterable;
     }
@@ -171,12 +172,11 @@ public abstract class RowFilter
      * iterable, returning only rows for which the {@link RowFilter#matches}
      * method returns {@code true}
      */
-    public Iterator<Map<String, Object>> iterator() 
+    public Iterator<Row> iterator() 
     {
-      return new Iterator<Map<String, Object>>() {
-        private final Iterator<Map<String, Object>> _iter =
-          _iterable.iterator();
-        private Map<String, Object> _next;
+      return new Iterator<Row>() {
+        private final Iterator<? extends Row> _iter = _iterable.iterator();
+        private Row _next;
 
         public boolean hasNext() {
           while(_iter.hasNext()) {
@@ -189,7 +189,7 @@ public abstract class RowFilter
           return false;
         }
 
-        public Map<String, Object> next() {
+        public Row next() {
           return _next;
         }
 

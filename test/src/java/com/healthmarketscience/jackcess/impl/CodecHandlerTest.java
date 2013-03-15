@@ -134,8 +134,8 @@ public class CodecHandlerTest extends TestCase
       Cursor c2 = new CursorBuilder(t2).setIndex(t2.getPrimaryKeyIndex())
         .toCursor();
 
-      Iterator<Map<String,Object>> i1 = c1.iterator();
-      Iterator<Map<String,Object>> i2 = c2.reverseIterable().iterator();
+      Iterator<? extends Map<String,Object>> i1 = c1.iterator();
+      Iterator<? extends Map<String,Object>> i2 = c2.reverseIterable().iterator();
 
       int t1rows = 0;
       int t2rows = 0;

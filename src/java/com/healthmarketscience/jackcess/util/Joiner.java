@@ -30,6 +30,7 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
@@ -147,7 +148,7 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    */
-  public Map<String,Object> findFirstRow(Map<String,?> fromRow)
+  public Row findFirstRow(Map<String,?> fromRow)
     throws IOException
   {
     return findFirstRow(fromRow, null);
@@ -162,7 +163,7 @@ public class Joiner
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
    */
-  public Map<String,Object> findFirstRow(Map<String,?> fromRow,
+  public Row findFirstRow(Map<String,?> fromRow,
                                          Collection<String> columnNames)
     throws IOException
   {
@@ -176,7 +177,7 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    */
-  public Iterator<Map<String,Object>> findRows(Map<String,?> fromRow)
+  public Iterator<Row> findRows(Map<String,?> fromRow)
   {
     return findRows(fromRow, null);
   }
@@ -189,7 +190,7 @@ public class Joiner
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
    */
-  public Iterator<Map<String,Object>> findRows(Map<String,?> fromRow,
+  public Iterator<Row> findRows(Map<String,?> fromRow,
                                                Collection<String> columnNames)
   {
     toEntryValues(fromRow);
@@ -205,7 +206,7 @@ public class Joiner
    * @param columnNames desired columns in the from table row
    * @usage _intermediate_method_
    */
-  public Iterator<Map<String,Object>> findRows(Object[] fromRow,
+  public Iterator<Row> findRows(Object[] fromRow,
                                                Collection<String> columnNames)
   {
     toEntryValues(fromRow);
@@ -221,7 +222,7 @@ public class Joiner
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String,Object>> findRowsIterable(Map<String,?> fromRow)
+  public Iterable<Row> findRowsIterable(Map<String,?> fromRow)
   {
     return findRowsIterable(fromRow, null);
   }
@@ -236,11 +237,11 @@ public class Joiner
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String,Object>> findRowsIterable(
+  public Iterable<Row> findRowsIterable(
       final Map<String,?> fromRow, final Collection<String> columnNames)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return findRows(fromRow, columnNames);
       }
     };
@@ -277,7 +278,7 @@ public class Joiner
    * Deletes all the rows and returns whether or not any "to"" rows were
    * deleted.
    */
-  private static boolean deleteRowsImpl(Iterator<Map<String,Object>> iter)
+  private static boolean deleteRowsImpl(Iterator<Row> iter)
     throws IOException 
   {
     boolean removed = false;

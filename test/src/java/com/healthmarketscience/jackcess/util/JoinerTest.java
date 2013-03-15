@@ -30,7 +30,9 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.RowImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
 
@@ -83,23 +85,23 @@ public class JoinerTest extends TestCase {
   }
 
   private static void doTestJoiner(
-      Joiner join, Map<Integer,List<Map<String,Object>>> expectedData)
+      Joiner join, Map<Integer,List<Row>> expectedData)
     throws Exception
   {
     final Set<String> colNames = new HashSet<String>(
         Arrays.asList("id", "data"));
 
     Joiner revJoin = join.createReverse();
-    for(Map<String,Object> row : join.getFromTable()) {
+    for(Row row : join.getFromTable()) {
       Integer id = (Integer)row.get("id");
 
-      List<Map<String,Object>> joinedRows =
-        new ArrayList<Map<String,Object>>();
-      for(Map<String,Object> t1Row : join.findRowsIterable(row)) {
+      List<Row> joinedRows =
+        new ArrayList<Row>();
+      for(Row t1Row : join.findRowsIterable(row)) {
         joinedRows.add(t1Row);
       }
 
-      List<Map<String,Object>> expectedRows = expectedData.get(id);
+      List<Row> expectedRows = expectedData.get(id);
       assertEquals(expectedData.get(id), joinedRows);
 
       if(!expectedRows.isEmpty()) {
@@ -112,16 +114,15 @@ public class JoinerTest extends TestCase {
         assertNull(join.findFirstRow(row));
       }
       
-      List<Map<String,Object>> expectedRows2 = new
-        ArrayList<Map<String,Object>>();
-      for(Map<String,Object> tmpRow : expectedRows) {
-        Map<String,Object> tmpRow2 = new HashMap<String,Object>(tmpRow);
+      List<Row> expectedRows2 = new ArrayList<Row>();
+      for(Row tmpRow : expectedRows) {
+        Row tmpRow2 = new RowImpl(tmpRow);
         tmpRow2.keySet().retainAll(colNames);
         expectedRows2.add(tmpRow2);
       }
       
-      joinedRows = new ArrayList<Map<String,Object>>();
-      for(Map<String,Object> t1Row : join.findRowsIterable(row, colNames)) {
+      joinedRows = new ArrayList<Row>();
+      for(Row t1Row : join.findRowsIterable(row, colNames)) {
         joinedRows.add(t1Row);
       }
 
@@ -139,7 +140,7 @@ public class JoinerTest extends TestCase {
   {
     assertEquals(4, countRows(t2t1Join.getToTable()));
 
-    Map<String,Object> row = createExpectedRow("id", 1);
+    Row row = createExpectedRow("id", 1);
     assertTrue(t2t1Join.hasRows(row));
 
     assertTrue(t2t1Join.deleteRows(row));
@@ -148,15 +149,15 @@ public class JoinerTest extends TestCase {
     assertFalse(t2t1Join.deleteRows(row));
 
     assertEquals(2, countRows(t2t1Join.getToTable()));
-    for(Map<String,Object> t1Row : t2t1Join.getToTable()) {
+    for(Row t1Row : t2t1Join.getToTable()) {
       assertFalse(t1Row.get("otherfk1").equals(1));
     }
   }
 
-  private static Map<Integer,List<Map<String,Object>>> createT2T1Data()
+  private static Map<Integer,List<Row>> createT2T1Data()
   {
-    Map<Integer,List<Map<String,Object>>> data = new
-      HashMap<Integer,List<Map<String,Object>>>();
+    Map<Integer,List<Row>> data = new
+      HashMap<Integer,List<Row>>();
 
     data.put(0,
              createExpectedTable(
@@ -178,10 +179,9 @@ public class JoinerTest extends TestCase {
     return data;
   }
   
-  private static Map<Integer,List<Map<String,Object>>> createT3T1Data()
+  private static Map<Integer,List<Row>> createT3T1Data()
   {
-    Map<Integer,List<Map<String,Object>>> data = new
-      HashMap<Integer,List<Map<String,Object>>>();
+    Map<Integer,List<Row>> data = new HashMap<Integer,List<Row>>();
 
     data.put(10,
              createExpectedTable(

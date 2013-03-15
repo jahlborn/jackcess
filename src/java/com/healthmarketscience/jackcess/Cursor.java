@@ -43,7 +43,7 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
  *
  * @author James Ahlborn
  */
-public interface Cursor extends Iterable<Map<String, Object>>
+public interface Cursor extends Iterable<Row>
 {
 
   // FIXME, include iterable and iterator methods?
@@ -136,7 +136,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> reverseIterable();
+  public Iterable<Row> reverseIterable();
   
   /**
    * Returns an Iterable whose iterator() method calls <code>afterLast</code>
@@ -147,7 +147,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> reverseIterable(
+  public Iterable<Row> reverseIterable(
       Collection<String> columnNames);
 
   /**
@@ -158,7 +158,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> iterator();
+  public Iterator<Row> iterator();
 
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
@@ -166,7 +166,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> iterable(
+  public Iterable<Row> iterable(
       Collection<String> columnNames);
 
   /**
@@ -177,7 +177,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> iterator(Collection<String> columnNames);
+  public Iterator<Row> iterator(Collection<String> columnNames);
 
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
@@ -185,7 +185,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> columnMatchIterable(
+  public Iterable<Row> columnMatchIterable(
       Column columnPattern, Object valuePattern);
 
   /**
@@ -197,7 +197,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       Column columnPattern, Object valuePattern);
 
   /**
@@ -210,7 +210,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       Collection<String> columnNames, Column columnPattern, Object valuePattern);
 
   /**
@@ -219,7 +219,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> rowMatchIterable(
+  public Iterable<Row> rowMatchIterable(
       Map<String,?> rowPattern);
 
   /**
@@ -231,7 +231,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> rowMatchIterator(
+  public Iterator<Row> rowMatchIterator(
       Map<String,?> rowPattern);
 
   /**
@@ -240,7 +240,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String, Object>> rowMatchIterable(
+  public Iterable<Row> rowMatchIterable(
       Collection<String> columnNames,
       Map<String,?> rowPattern);
 
@@ -254,7 +254,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String, Object>> rowMatchIterator(
+  public Iterator<Row> rowMatchIterator(
       Collection<String> columnNames, Map<String,?> rowPattern);
 
   /**
@@ -276,7 +276,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @return The next row in this table (Column name -> Column value), or
    *         {@code null} if no next row is found
    */
-  public Map<String, Object> getNextRow() throws IOException;
+  public Row getNextRow() throws IOException;
 
   /**
    * Moves to the next row in the table and returns it.
@@ -284,7 +284,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @return The next row in this table (Column name -> Column value), or
    *         {@code null} if no next row is found
    */
-  public Map<String, Object> getNextRow(Collection<String> columnNames) 
+  public Row getNextRow(Collection<String> columnNames) 
     throws IOException;
 
   /**
@@ -292,7 +292,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @return The previous row in this table (Column name -> Column value), or
    *         {@code null} if no previous row is found
    */
-  public Map<String, Object> getPreviousRow() throws IOException;
+  public Row getPreviousRow() throws IOException;
 
   /**
    * Moves to the previous row in the table and returns it.
@@ -300,7 +300,7 @@ public interface Cursor extends Iterable<Map<String, Object>>
    * @return The previous row in this table (Column name -> Column value), or
    *         {@code null} if no previous row is found
    */
-  public Map<String, Object> getPreviousRow(Collection<String> columnNames) 
+  public Row getPreviousRow(Collection<String> columnNames) 
     throws IOException;
 
   /**
@@ -413,13 +413,13 @@ public interface Cursor extends Iterable<Map<String, Object>>
   /**
    * Returns the current row in this cursor (Column name -> Column value).
    */
-  public Map<String, Object> getCurrentRow() throws IOException;
+  public Row getCurrentRow() throws IOException;
 
   /**
    * Returns the current row in this cursor (Column name -> Column value).
    * @param columnNames Only column names in this collection will be returned
    */
-  public Map<String, Object> getCurrentRow(Collection<String> columnNames)
+  public Row getCurrentRow(Collection<String> columnNames)
     throws IOException;
 
   /**

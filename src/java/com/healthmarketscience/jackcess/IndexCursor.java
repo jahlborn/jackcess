@@ -73,7 +73,7 @@ public interface IndexCursor extends Cursor
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String,Object>> entryIterator(Object... entryValues);
+  public Iterator<Row> entryIterator(Object... entryValues);
 
   /**
    * Returns a modifiable Iterator which will iterate through all the rows of
@@ -82,7 +82,7 @@ public interface IndexCursor extends Cursor
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterator<Map<String,Object>> entryIterator(
+  public Iterator<Row> entryIterator(
       Collection<String> columnNames, Object... entryValues);
 
   /**
@@ -91,7 +91,7 @@ public interface IndexCursor extends Cursor
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String,Object>> entryIterable(Object... entryValues);
+  public Iterable<Row> entryIterable(Object... entryValues);
 
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
@@ -99,7 +99,7 @@ public interface IndexCursor extends Cursor
    * @throws IllegalStateException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
-  public Iterable<Map<String,Object>> entryIterable(
+  public Iterable<Row> entryIterable(
       Collection<String> columnNames, Object... entryValues);
 
 }

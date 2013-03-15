@@ -27,14 +27,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.IndexCursor;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.util.ColumnMatcher;
-import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
-import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 
 /**
  * Cursor backed by an index with extended traversal options.
@@ -207,27 +208,27 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     return currentRowMatchesEntryImpl(toRowValues(entryValues));
   }
   
-  public Iterator<Map<String,Object>> entryIterator(Object... entryValues)
+  public Iterator<Row> entryIterator(Object... entryValues)
   {
     return entryIterator((Collection<String>)null, entryValues);
   }
   
-  public Iterator<Map<String,Object>> entryIterator(
+  public Iterator<Row> entryIterator(
       Collection<String> columnNames, Object... entryValues)
   {
     return new EntryIterator(columnNames, toRowValues(entryValues));
   }
   
-  public Iterable<Map<String,Object>> entryIterable(Object... entryValues)
+  public Iterable<Row> entryIterable(Object... entryValues)
   {
     return entryIterable((Collection<String>)null, entryValues);
   }
   
-  public Iterable<Map<String,Object>> entryIterable(
+  public Iterable<Row> entryIterable(
       final Collection<String> columnNames, final Object... entryValues)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return new EntryIterator(columnNames, toRowValues(entryValues));
       }
     };
@@ -389,7 +390,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
 
     // check the next row to see if it actually matches
-    Map<String,Object> row = getCurrentRow(_indexEntryPattern);
+    Row row = getCurrentRow(_indexEntryPattern);
 
     for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
       String columnName = col.getName();

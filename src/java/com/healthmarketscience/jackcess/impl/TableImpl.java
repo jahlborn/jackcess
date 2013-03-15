@@ -43,17 +43,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.PropertyMap;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
-import com.healthmarketscience.jackcess.PropertyMap;
-import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Index;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A single database table
@@ -524,7 +525,7 @@ public class TableImpl implements Table
     updateTableDefinition(-1);
   }
   
-  public Map<String, Object> getNextRow() throws IOException {
+  public Row getNextRow() throws IOException {
     return getDefaultCursor().getNextRow();
   }
   
@@ -558,7 +559,7 @@ public class TableImpl implements Table
    * @param columnNames Only column names in this collection will be returned
    * @usage _advanced_method_
    */
-  public Map<String, Object> getRow(
+  public RowImpl getRow(
       RowState rowState, RowIdImpl rowId, Collection<String> columnNames)
     throws IOException
   {
@@ -575,16 +576,15 @@ public class TableImpl implements Table
    * Reads the row data from the given row buffer.  Leaves limit unchanged.
    * Saves parsed row values to the given rowState.
    */
-  private static Map<String, Object> getRow(
-	  JetFormat format,
+  private static RowImpl getRow(
+      JetFormat format,
       RowState rowState,
       ByteBuffer rowBuffer,
       Collection<ColumnImpl> columns,
       Collection<String> columnNames)
     throws IOException
   {
-    Map<String, Object> rtn = new LinkedHashMap<String, Object>(
-        columns.size());
+    RowImpl rtn = new RowImpl(columns.size());
     for(ColumnImpl column : columns) {
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {
@@ -876,7 +876,7 @@ public class TableImpl implements Table
    *         operations, the actual exception will be contained within
    * @usage _general_method_
    */
-  public Iterator<Map<String, Object>> iterator()
+  public Iterator<Row> iterator()
   {
     reset();
     return getDefaultCursor().iterator();
@@ -1870,7 +1870,7 @@ public class TableImpl implements Table
       }
     }
     rtn.append("\n");
-    Map<String, Object> row;
+    Row row;
     int rowCount = 0;
     while ((rowCount++ < limit) && (row = getNextRow()) != null) {
       for(Iterator<Object> iter = row.values().iterator(); iter.hasNext(); ) {

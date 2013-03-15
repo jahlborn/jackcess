@@ -406,7 +406,7 @@ public class CursorBuilder {
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(Table table, Map<String,?> rowPattern)
+  public static Row findRow(Table table, Map<String,?> rowPattern)
     throws IOException
   {
     Cursor cursor = createCursor(table);
@@ -457,8 +457,7 @@ public class CursorBuilder {
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(Table table, Index index,
-                                           Map<String,?> rowPattern)
+  public static Row findRow(Table table, Index index, Map<String,?> rowPattern)
     throws IOException
   {
     Cursor cursor = createCursor(table, index);

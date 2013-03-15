@@ -38,14 +38,14 @@ import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import com.healthmarketscience.jackcess.util.RowFilterTest;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
-import com.healthmarketscience.jackcess.util.ColumnMatcher;
-import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.RowFilterTest;
+import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
+import junit.framework.TestCase;
 
 /**
  * @author James Ahlborn
@@ -767,10 +767,10 @@ public class CursorTest extends TestCase {
     throws Exception
   {
     Column valCol = table.getColumn("value");
-    List<Map<String,Object>> rows = RowFilterTest.toList(
+    List<? extends Map<String,Object>> rows = RowFilterTest.toList(
         cursor.columnMatchIterable(valCol, "data2"));
 
-    List<Map<String, Object>> expectedRows = null;
+    List<? extends Map<String, Object>> expectedRows = null;
 
     if(index == null) {
       expectedRows =
@@ -839,12 +839,13 @@ public class CursorTest extends TestCase {
 
     for(Map<String,Object> row : table) {
       
-      expectedRows = new ArrayList<Map<String,Object>>();
+      List<Map<String,Object>> tmpRows = new ArrayList<Map<String,Object>>();
       for(Map<String,Object> tmpRow : cursor) {
         if(row.equals(tmpRow)) {
-          expectedRows.add(tmpRow);
+          tmpRows.add(tmpRow);
         }
       }
+      expectedRows = tmpRows;
       assertFalse(expectedRows.isEmpty());
       
       rows = RowFilterTest.toList(cursor.rowMatchIterable(row));
@@ -1043,7 +1044,7 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
       expectedData = new ArrayList<String>();
-      for(Iterator<Map<String,Object>> iter = cursor.entryIterator(1);
+      for(Iterator<? extends Map<String,Object>> iter = cursor.entryIterator(1);
           iter.hasNext(); ) {
         expectedData.add((String)iter.next().get("data"));
         iter.remove();
@@ -1097,7 +1098,7 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
       expectedData = new ArrayList<String>();
-      for(Iterator<Map<String,Object>> iter = cursor.iterator();
+      for(Iterator<? extends Map<String,Object>> iter = cursor.iterator();
           iter.hasNext(); ) {
         Map<String,Object> row = iter.next();
         if(row.get("otherfk1").equals(1)) {

@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
@@ -112,7 +113,7 @@ public class FKEnforcerTest extends TestCase
         c.setCurrentRowValue(col, id);
       }
 
-      List<Map<String, Object>> expectedRows =
+      List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
             createT1Row(0, 0, 30, "baz0", 0),
             createT1Row(1, 1, 31, "baz11", 0),
@@ -134,7 +135,7 @@ public class FKEnforcerTest extends TestCase
     
   }
 
-  private static Map<String,Object> createT1Row(
+  private static Row createT1Row(
       int id1, int fk1, int fk2, String data, int fk3)
   {
     return createExpectedRow("id", id1, "otherfk1", fk1, "otherfk2", fk2,

@@ -26,6 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.CursorBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.IndexCursor;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.AttachmentColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
@@ -34,11 +40,7 @@ import com.healthmarketscience.jackcess.complex.UnsupportedColumnInfo;
 import com.healthmarketscience.jackcess.complex.VersionHistoryColumnInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.CursorBuilder;
-import com.healthmarketscience.jackcess.Column;
+
 
 /**
  * Utility code for loading complex columns.
@@ -77,7 +79,7 @@ public class ComplexColumnSupport
           "Could not find complex column info for complex column with id " +
           complexTypeId);
     }
-    Map<String,Object> cColRow = cursor.getCurrentRow();
+    Row cColRow = cursor.getCurrentRow();
     int tableId = (Integer)cColRow.get(COL_TABLE_ID);
     if(tableId != column.getTable().getTableDefPageNumber()) {
       throw new IOException(

@@ -57,23 +57,25 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
 
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.Cursor;
+import com.healthmarketscience.jackcess.CursorBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.IndexCursor;
+import com.healthmarketscience.jackcess.PropertyMap;
+import com.healthmarketscience.jackcess.Relationship;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.query.Query;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.LinkResolver;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.util.ErrorHandler;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.util.LinkResolver;
-import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.Relationship;
-import com.healthmarketscience.jackcess.PropertyMap;
-import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
-import com.healthmarketscience.jackcess.CursorBuilder;
-import com.healthmarketscience.jackcess.DataType;
+
 
 /**
  *
@@ -891,7 +893,7 @@ public class DatabaseImpl implements Database
     }
     
     // lookup table info from system catalog
-    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+    Row objectRow = _tableFinder.getObjectRow(
         tableDefPageNumber, SYSTEM_CATALOG_COLUMNS);
     if(objectRow == null) {
       return null;
@@ -1065,10 +1067,10 @@ public class DatabaseImpl implements Database
     }
 
     // find all the queries from the system catalog
-    List<Map<String,Object>> queryInfo = new ArrayList<Map<String,Object>>();
+    List<Row> queryInfo = new ArrayList<Row>();
     Map<Integer,List<Query.Row>> queryRowMap = 
       new HashMap<Integer,List<Query.Row>>();
-    for(Map<String,Object> row :
+    for(Row row :
           CursorImpl.createCursor(_systemCatalog).iterable(SYSTEM_CATALOG_COLUMNS))
     {
       String name = (String) row.get(CAT_COL_NAME);
@@ -1080,7 +1082,7 @@ public class DatabaseImpl implements Database
     }
 
     // find all the query rows
-    for(Map<String,Object> row : CursorImpl.createCursor(_queries)) {
+    for(Row row : CursorImpl.createCursor(_queries)) {
       Query.Row queryRow = new Query.Row(row);
       List<Query.Row> queryRows = queryRowMap.get(queryRow.objectId);
       if(queryRows == null) {
@@ -1093,7 +1095,7 @@ public class DatabaseImpl implements Database
 
     // lastly, generate all the queries
     List<Query> queries = new ArrayList<Query>();
-    for(Map<String,Object> row : queryInfo) {
+    for(Row row : queryInfo) {
       String name = (String) row.get(CAT_COL_NAME);
       Integer id = (Integer)row.get(CAT_COL_ID);
       int flags = (Integer)row.get(CAT_COL_FLAGS);
@@ -1137,7 +1139,7 @@ public class DatabaseImpl implements Database
   public PropertyMaps getPropertiesForObject(int objectId)
     throws IOException
   {
-    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+    Row objectRow = _tableFinder.getObjectRow(
         objectId, SYSTEM_CATALOG_PROPS_COLUMNS);
     byte[] propsBytes = null;
     if(objectRow != null) {
@@ -1161,7 +1163,7 @@ public class DatabaseImpl implements Database
       }
     }
 
-    Map<String,Object> objectRow = _tableFinder.getObjectRow(
+    Row objectRow = _tableFinder.getObjectRow(
         _dbParentId, dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
     byte[] propsBytes = null;
     int objectId = -1;
@@ -1226,7 +1228,7 @@ public class DatabaseImpl implements Database
       Cursor cursor, TableImpl fromTable, TableImpl toTable,
       List<Relationship> relationships)
   {
-    for(Map<String,Object> row : cursor) {
+    for(Row row : cursor) {
       String fromName = (String)row.get(REL_COL_FROM_TABLE);
       String toName = (String)row.get(REL_COL_TO_TABLE);
       
@@ -1351,7 +1353,7 @@ public class DatabaseImpl implements Database
     Cursor cursor = createCursorWithOptionalIndex(
         getAccessControlEntries(), ACE_COL_OBJECT_ID, _tableParentId);
     
-    for(Map<String, Object> row : cursor) {
+    for(Row row : cursor) {
       Integer objId = (Integer)row.get(ACE_COL_OBJECT_ID);
       if(_tableParentId.equals(objId)) {
         _newTableSIDs.add((byte[])row.get(ACE_COL_SID));
@@ -1791,7 +1793,7 @@ public class DatabaseImpl implements Database
       return (Integer)cur.getCurrentRowValue(idCol);
     }
 
-    public Map<String,Object> getObjectRow(Integer parentId, String name,
+    public Row getObjectRow(Integer parentId, String name,
                                            Collection<String> columns) 
       throws IOException 
     {
@@ -1799,7 +1801,7 @@ public class DatabaseImpl implements Database
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
     }
 
-    public Map<String,Object> getObjectRow(
+    public Row getObjectRow(
         Integer objectId, Collection<String> columns)
       throws IOException
     {
@@ -1811,7 +1813,7 @@ public class DatabaseImpl implements Database
                               boolean systemTables)
       throws IOException
     {
-      for(Map<String,Object> row : getTableNamesCursor().iterable(
+      for(Row row : getTableNamesCursor().iterable(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
         String tableName = (String)row.get(CAT_COL_NAME);
@@ -1893,7 +1895,7 @@ public class DatabaseImpl implements Database
         return null;
       }
 
-      Map<String,Object> row = _systemCatalogCursor.getCurrentRow(
+      Row row = _systemCatalogCursor.getCurrentRow(
           SYSTEM_CATALOG_COLUMNS);
       Integer pageNumber = (Integer)row.get(CAT_COL_ID);
       String realName = (String)row.get(CAT_COL_NAME);
@@ -1969,7 +1971,7 @@ public class DatabaseImpl implements Database
     @Override
     public TableInfo lookupTable(String tableName) throws IOException {
 
-      for(Map<String,Object> row : _systemCatalogCursor.iterable(
+      for(Row row : _systemCatalogCursor.iterable(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
         Short type = (Short)row.get(CAT_COL_TYPE);

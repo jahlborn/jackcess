@@ -29,13 +29,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.IndexCursor;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.Joiner;
-import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Table;
 
 /**
  * Utility class used by Table to enforce foreign-key relationships (if
@@ -248,7 +249,7 @@ final class FKEnforcer
     List<? extends Index.Column> toCols = joiner.getToIndex().getColumns();
     Object[] toRow = new Object[joiner.getToTable().getColumnCount()];
 
-    for(Iterator<Map<String,Object>> iter = joiner.findRows(
+    for(Iterator<Row> iter = joiner.findRows(
             oldFromRow, Collections.<String>emptySet()); iter.hasNext(); ) {
       iter.next();
 

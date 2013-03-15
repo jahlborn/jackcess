@@ -42,6 +42,7 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
@@ -195,7 +196,7 @@ public abstract class CursorImpl implements Cursor
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(TableImpl table,
+  public static Row findRow(TableImpl table,
                                            Map<String,?> rowPattern)
     throws IOException
   {
@@ -247,7 +248,7 @@ public abstract class CursorImpl implements Cursor
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Map<String,Object> findRow(TableImpl table, IndexImpl index,
+  public static Row findRow(TableImpl table, IndexImpl index,
                                            Map<String,?> rowPattern)
     throws IOException
   {
@@ -410,65 +411,65 @@ public abstract class CursorImpl implements Cursor
     _rowState.reset();
   }  
 
-  public Iterable<Map<String, Object>> reverseIterable() {
+  public Iterable<Row> reverseIterable() {
     return reverseIterable(null);
   }
   
-  public Iterable<Map<String, Object>> reverseIterable(
+  public Iterable<Row> reverseIterable(
       final Collection<String> columnNames)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return new RowIterator(columnNames, MOVE_REVERSE);
       }
     };
   }
   
-  public Iterator<Map<String, Object>> iterator()
+  public Iterator<Row> iterator()
   {
     return iterator(null);
   }
   
-  public Iterable<Map<String, Object>> iterable(
+  public Iterable<Row> iterable(
       final Collection<String> columnNames)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return CursorImpl.this.iterator(columnNames);
       }
     };
   }
   
-  public Iterator<Map<String, Object>> iterator(Collection<String> columnNames)
+  public Iterator<Row> iterator(Collection<String> columnNames)
   {
     return new RowIterator(columnNames, MOVE_FORWARD);
   }
 
-  public Iterable<Map<String, Object>> columnMatchIterable(
+  public Iterable<Row> columnMatchIterable(
       Column columnPattern, Object valuePattern)
   {
     return columnMatchIterable((ColumnImpl)columnPattern, valuePattern);
   }
 
-  public Iterable<Map<String, Object>> columnMatchIterable(
+  public Iterable<Row> columnMatchIterable(
       ColumnImpl columnPattern, Object valuePattern)
   {
     return columnMatchIterable(null, columnPattern, valuePattern);
   }
 
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       Column columnPattern, Object valuePattern)
   {
     return columnMatchIterator((ColumnImpl)columnPattern, valuePattern);
   } 
  
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       ColumnImpl columnPattern, Object valuePattern)
   {
     return columnMatchIterator(null, columnPattern, valuePattern);
   }
 
-  public Iterable<Map<String, Object>> columnMatchIterable(
+  public Iterable<Row> columnMatchIterable(
       Collection<String> columnNames,
       Column columnPattern, Object valuePattern)
   {
@@ -476,19 +477,19 @@ public abstract class CursorImpl implements Cursor
                                valuePattern);
   } 
  
-  public Iterable<Map<String, Object>> columnMatchIterable(
+  public Iterable<Row> columnMatchIterable(
       final Collection<String> columnNames,
       final ColumnImpl columnPattern, final Object valuePattern)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return CursorImpl.this.columnMatchIterator(
             columnNames, columnPattern, valuePattern);
       }
     };
   }
 
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       Collection<String> columnNames, Column columnPattern, 
       Object valuePattern)
   {
@@ -496,38 +497,38 @@ public abstract class CursorImpl implements Cursor
                                valuePattern);
   } 
  
-  public Iterator<Map<String, Object>> columnMatchIterator(
+  public Iterator<Row> columnMatchIterator(
       Collection<String> columnNames, ColumnImpl columnPattern, 
       Object valuePattern)
   {
     return new ColumnMatchIterator(columnNames, columnPattern, valuePattern);
   }
 
-  public Iterable<Map<String, Object>> rowMatchIterable(
+  public Iterable<Row> rowMatchIterable(
       Map<String,?> rowPattern)
   {
     return rowMatchIterable(null, rowPattern);
   }
   
-  public Iterator<Map<String, Object>> rowMatchIterator(
+  public Iterator<Row> rowMatchIterator(
       Map<String,?> rowPattern)
   {
     return rowMatchIterator(null, rowPattern);
   }
   
-  public Iterable<Map<String, Object>> rowMatchIterable(
+  public Iterable<Row> rowMatchIterable(
       final Collection<String> columnNames,
       final Map<String,?> rowPattern)
   {
-    return new Iterable<Map<String, Object>>() {
-      public Iterator<Map<String, Object>> iterator() {
+    return new Iterable<Row>() {
+      public Iterator<Row> iterator() {
         return CursorImpl.this.rowMatchIterator(
             columnNames, rowPattern);
       }
     };
   }
   
-  public Iterator<Map<String, Object>> rowMatchIterator(
+  public Iterator<Row> rowMatchIterator(
       Collection<String> columnNames, Map<String,?> rowPattern)
   {
     return new RowMatchIterator(columnNames, rowPattern);
@@ -541,21 +542,21 @@ public abstract class CursorImpl implements Cursor
     _table.updateRow(_rowState, _curPos.getRowId(), row);
   }
 
-  public Map<String, Object> getNextRow() throws IOException {
+  public Row getNextRow() throws IOException {
     return getNextRow(null);
   }
 
-  public Map<String, Object> getNextRow(Collection<String> columnNames) 
+  public Row getNextRow(Collection<String> columnNames) 
     throws IOException
   {
     return getAnotherRow(columnNames, MOVE_FORWARD);
   }
 
-  public Map<String, Object> getPreviousRow() throws IOException {
+  public Row getPreviousRow() throws IOException {
     return getPreviousRow(null);
   }
 
-  public Map<String, Object> getPreviousRow(Collection<String> columnNames) 
+  public Row getPreviousRow(Collection<String> columnNames) 
     throws IOException
   {
     return getAnotherRow(columnNames, MOVE_REVERSE);
@@ -570,7 +571,7 @@ public abstract class CursorImpl implements Cursor
    *         "next" may be backwards if moveForward is {@code false}, or
    *         {@code null} if there is not another row in the given direction.
    */
-  private Map<String, Object> getAnotherRow(Collection<String> columnNames,
+  private Row getAnotherRow(Collection<String> columnNames,
                                             boolean moveForward) 
     throws IOException
   {
@@ -784,7 +785,7 @@ public abstract class CursorImpl implements Cursor
   public boolean currentRowMatches(Map<String,?> rowPattern)
     throws IOException
   {
-    Map<String,Object> row = getCurrentRow(rowPattern.keySet());
+    Row row = getCurrentRow(rowPattern.keySet());
 
     if(rowPattern.size() != row.size()) {
       return false;
@@ -872,12 +873,12 @@ public abstract class CursorImpl implements Cursor
     return numMovedRows;
   }
 
-  public Map<String, Object> getCurrentRow() throws IOException
+  public Row getCurrentRow() throws IOException
   {
     return getCurrentRow(null);
   }
 
-  public Map<String, Object> getCurrentRow(Collection<String> columnNames)
+  public Row getCurrentRow(Collection<String> columnNames)
     throws IOException
   {
     return _table.getRow(_rowState, _curPos.getRowId(), columnNames);
@@ -946,7 +947,7 @@ public abstract class CursorImpl implements Cursor
    * Base implementation of iterator for this cursor, modifiable.
    */
   protected abstract class BaseIterator
-    implements Iterator<Map<String, Object>>
+    implements Iterator<Row>
   {
     protected final Collection<String> _columnNames;
     protected Boolean _hasNext;
@@ -969,12 +970,12 @@ public abstract class CursorImpl implements Cursor
       return _hasNext; 
     }
     
-    public Map<String, Object> next() {
+    public Row next() {
       if(!hasNext()) {
         throw new NoSuchElementException();
       }
       try {
-        Map<String, Object> rtn = getCurrentRow(_columnNames);
+        Row rtn = getCurrentRow(_columnNames);
         _hasNext = null;
         return rtn;
       } catch(IOException e) {
