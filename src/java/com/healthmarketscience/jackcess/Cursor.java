@@ -34,10 +34,9 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
  * traversed, row updates may or may not be seen).  Multiple cursors may
  * traverse the same table simultaneously.
  * <p>
- * The Cursor provides a variety of static utility methods to construct
- * cursors with given characteristics or easily search for specific values.
- * For even friendlier and more flexible construction, see
- * {@link CursorBuilder}.
+ * The {@link CursorBuilder} provides a variety of static utility methods to
+ * construct cursors with given characteristics or easily search for specific
+ * values as well as friendly and flexible construction options.
  * <p>
  * Is not thread-safe.
  *
@@ -224,8 +223,10 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Delete the current row.
+   * <p/>
+   * Note, re-deleting an already deleted row is allowed (it does nothing).
    * @throws IllegalStateException if the current row is not valid (at
-   *         beginning or end of table), or already deleted.
+   *         beginning or end of table)
    */
   public void deleteCurrentRow() throws IOException;
 
@@ -235,6 +236,13 @@ public interface Cursor extends Iterable<Row>
    *         beginning or end of table), or deleted.
    */
   public void updateCurrentRow(Object... row) throws IOException;
+
+  /**
+   * Update the current row.
+   * @throws IllegalStateException if the current row is not valid (at
+   *         beginning or end of table), or deleted.
+   */
+  public void updateCurrentRowFromMap(Map<String,?> row) throws IOException;
 
   /**
    * Moves to the next row in the table and returns it.

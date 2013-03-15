@@ -43,7 +43,6 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 
@@ -286,6 +285,10 @@ public abstract class CursorImpl implements Cursor
       return cursor.getCurrentRowValue(column);
     }
     return null;
+  }
+
+  public RowState getRowState() {
+    return _rowState;
   }
   
   public IdImpl getId() {
@@ -586,6 +589,10 @@ public abstract class CursorImpl implements Cursor
 
   public void updateCurrentRow(Object... row) throws IOException {
     _table.updateRow(_rowState, _curPos.getRowId(), row);
+  }
+
+  public void updateCurrentRowFromMap(Map<String,?> row) throws IOException {
+    _table.updateRow(_rowState, _curPos.getRowId(), _table.asUpdateRow(row));
   }
 
   public Row getNextRow() throws IOException {

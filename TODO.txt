@@ -42,3 +42,4 @@ Refactor goals:
 - clean up javadocs
   - enhance public api classes
   - add @usage tags to util classes
+- add unit tests for Row update/delete methods, add/update *FromMap methods

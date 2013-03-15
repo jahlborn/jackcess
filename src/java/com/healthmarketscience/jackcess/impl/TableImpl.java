@@ -466,6 +466,10 @@ public class TableImpl implements Table
     getDefaultCursor().reset();
   }
 
+  public void deleteRow(Row row) throws IOException {
+    deleteRow(getDefaultCursor().getRowState(), (RowIdImpl)row.getId());
+  }
+
   /**
    * Delete the row on which the given rowState is currently positioned.
    * <p>
@@ -482,6 +486,10 @@ public class TableImpl implements Table
     // ensure that the relevant row state is up-to-date
     ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
 
+    if(rowState.isDeleted()) {
+      // don't care about duplicate deletion
+      return;
+    }
     requireNonDeletedRow(rowState, rowId);
     
     // delete flag always gets set in the "header" row (even if data is on
@@ -1284,11 +1292,45 @@ public class TableImpl implements Table
   public void addRow(Object... row) throws IOException {
     addRows(Collections.singletonList(row), _singleRowBufferH);
   }
-  
+
+  public void addRowFromMap(Map<String,Object> row) throws IOException {
+    Object[] rowValues = asRow(row);
+
+    addRow(rowValues);
+
+    returnAutoNumValues(row, rowValues);
+  }
+    
   public void addRows(List<? extends Object[]> rows) throws IOException {
     addRows(rows, _multiRowBufferH);
   }
   
+  public void addRowsFromMaps(List<? extends Map<String,Object>> rows) 
+    throws IOException 
+  {
+    List<Object[]> rowValuesList = new ArrayList<Object[]>(rows.size());
+    for(Map<String,Object> row : rows) {
+      rowValuesList.add(asRow(row));
+    } 
+
+    addRows(rowValuesList);
+
+    if(!_autoNumColumns.isEmpty()) {
+      for(int i = 0; i < rowValuesList.size(); ++i) {
+        Map<String,Object> row = rows.get(i);
+        Object[] rowValues = rowValuesList.get(i);
+        returnAutoNumValues(row, rowValues);
+      }
+    }
+  }
+
+  private void returnAutoNumValues(Map<String,Object> row, Object[] rowValues)
+  {
+    for(ColumnImpl col : _autoNumColumns) {
+      col.setRowValue(row, col.getRowValue(rowValues));
+    }
+  }
+
   /**
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.
@@ -1364,6 +1406,11 @@ public class TableImpl implements Table
     updateTableDefinition(rows.size());
   }
   
+  public void updateRow(Row row) throws IOException {
+    updateRow(getDefaultCursor().getRowState(), (RowIdImpl)row.getId(),
+              asUpdateRow(row));
+  }
+
   /**
    * Update the row on which the given rowState is currently positioned.
    * <p>

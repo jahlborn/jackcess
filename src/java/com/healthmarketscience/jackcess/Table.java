@@ -172,6 +172,15 @@ public interface Table extends Iterable<Row>
   public void addRow(Object... row) throws IOException;
 
   /**
+   * Calls {@link #asRow} on the given row map and passes the result to {@link
+   * #addRow}.
+   * <p/>
+   * Note, if this table has an auto-number column, the value generated will be
+   * put back into the given row map.
+   */
+  public void addRowFromMap(Map<String,Object> row) throws IOException;
+
+  /**
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.  This
    * is much more efficient than calling <code>addRow</code> multiple times.
@@ -188,6 +197,30 @@ public interface Table extends Iterable<Row>
    * @usage _general_method_
    */
   public void addRows(List<? extends Object[]> rows) throws IOException;
+
+  /**
+   * Calls {@link #asRow} on the given row maps and passes the results to
+   * {@link #addRows}.
+   * <p/>
+   * Note, if this table has an auto-number column, the values generated will
+   * be put back into the appropriate row maps.
+   */
+  public void addRowsFromMaps(List<? extends Map<String,Object>> rows) 
+    throws IOException;
+
+  /**
+   * Update the given row.  Provided Row must have previously been returned
+   * from this Table.
+   * @throws IllegalStateException if the given row is not valid, or deleted.
+   */
+  public void updateRow(Row row) throws IOException;
+
+  /**
+   * Delete the given row.  Provided Row must have previously been returned
+   * from this Table.
+   * @throws IllegalStateException if the given row is not valid
+   */
+  public void deleteRow(Row row) throws IOException;
 
   /**
    * After calling this method, {@link #getNextRow} will return the first row
