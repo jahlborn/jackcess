@@ -40,16 +40,6 @@ import com.healthmarketscience.jackcess.Column;
 public interface ExportFilter {
 
   /**
-   * Called before any calls {@link #filterColumns} and {@link #filterRow} for
-   * a single export operation.  Allows the given instance to return a
-   * per-call instance which can maintain state.
-   *
-   * @return the ExportFilter instance to use for the rest of the export
-   *         operation
-   */
-  public ExportFilter init();
-
-  /**
    * The columns that should be used to create the exported file.
    * 
    * @param columns

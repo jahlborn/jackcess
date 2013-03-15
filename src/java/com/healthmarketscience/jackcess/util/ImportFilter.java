@@ -42,16 +42,6 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 public interface ImportFilter {
 
   /**
-   * Called before any calls {@link #filterColumns} and {@link #filterRow} for
-   * a single import operation.  Allows the given instance to return a
-   * per-call instance which can maintain state.
-   *
-   * @return the ImportFilter instance to use for the rest of the import
-   *         operation
-   */
-  public ImportFilter init();
-
-  /**
    * The columns that should be used to create the imported table.
    * @param destColumns the columns as determined by the import code, may be
    *                    directly modified and returned

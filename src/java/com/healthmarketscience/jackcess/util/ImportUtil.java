@@ -168,9 +168,6 @@ public class ImportUtil
   {
     ResultSetMetaData md = source.getMetaData();
 
-    // allow filter to setup per-call state
-    filter = filter.init();
-
     name = DatabaseImpl.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
@@ -458,9 +455,6 @@ public class ImportUtil
     }
 
     Pattern delimPat = Pattern.compile(delim);
-
-    // allow filter to setup per-call state
-    filter = filter.init();
 
     try {
       name = DatabaseImpl.escapeIdentifier(name);

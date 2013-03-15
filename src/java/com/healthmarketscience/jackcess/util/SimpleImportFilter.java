@@ -47,10 +47,6 @@ public class SimpleImportFilter implements ImportFilter {
   public SimpleImportFilter() {
   }
 
-  public ImportFilter init() {
-    return this;
-  }
-  
   public List<ColumnBuilder> filterColumns(List<ColumnBuilder> destColumns,
                                            ResultSetMetaData srcColumns)
      throws SQLException, IOException
