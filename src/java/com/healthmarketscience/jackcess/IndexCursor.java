@@ -70,7 +70,7 @@ public interface IndexCursor extends Cursor
   /**
    * Returns a modifiable Iterator which will iterate through all the rows of
    * this table which match the given index entries.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> entryIterator(Object... entryValues);
@@ -79,7 +79,7 @@ public interface IndexCursor extends Cursor
    * Returns a modifiable Iterator which will iterate through all the rows of
    * this table which match the given index entries, returning only the given
    * columns.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> entryIterator(
@@ -88,7 +88,7 @@ public interface IndexCursor extends Cursor
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
    * to {@link #entryIterator(Object...)}
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> entryIterable(Object... entryValues);
@@ -96,7 +96,7 @@ public interface IndexCursor extends Cursor
   /**
    * Returns an Iterable whose iterator() method returns the result of a call
    * to {@link #entryIterator(Collection,Object...)}
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> entryIterable(

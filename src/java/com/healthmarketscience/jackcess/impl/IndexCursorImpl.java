@@ -30,6 +30,7 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
+import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
@@ -537,7 +538,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
         _hasNext = findFirstRowByEntryImpl(rowValues, true);
         _validRow = _hasNext;
       } catch(IOException e) {
-          throw new IllegalStateException(e);
+          throw new RuntimeIOException(e);
       }
     }
 

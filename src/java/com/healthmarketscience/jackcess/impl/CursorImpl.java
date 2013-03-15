@@ -43,6 +43,7 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 
@@ -448,7 +449,7 @@ public abstract class CursorImpl implements Cursor
    * Iterator which will iterate through all the rows of this table, returning
    * only the given columns.  Use of the Iterator follows the same
    * restrictions as a call to <code>getNextRow</code>.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> iterator(Collection<String> columnNames)
@@ -474,7 +475,7 @@ public abstract class CursorImpl implements Cursor
    * match the given column pattern.  Use of the Iterator follows the same
    * restrictions as a call to <code>getNextRow</code>.  See
    * {@link #findFirstRow(Column,Object)} for details on the columnPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> columnMatchIterator(
@@ -516,7 +517,7 @@ public abstract class CursorImpl implements Cursor
    * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.  See {@link #findFirstRow(Column,Object)} for
    * details on the columnPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> columnMatchIterator(
@@ -546,7 +547,7 @@ public abstract class CursorImpl implements Cursor
    * match the given row pattern.  Use of the Iterator follows the same
    * restrictions as a call to <code>getNextRow</code>.  See
    * {@link #findFirstRow(Map)} for details on the rowPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> rowMatchIterator(
@@ -574,7 +575,7 @@ public abstract class CursorImpl implements Cursor
    * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.  See {@link #findFirstRow(Map)} for details on
    * the rowPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> rowMatchIterator(
@@ -1017,7 +1018,7 @@ public abstract class CursorImpl implements Cursor
           _hasNext = findNext();
           _validRow = _hasNext;
         } catch(IOException e) {
-          throw new IllegalStateException(e);
+          throw new RuntimeIOException(e);
         }
       }
       return _hasNext; 
@@ -1032,7 +1033,7 @@ public abstract class CursorImpl implements Cursor
         _hasNext = null;
         return rtn;
       } catch(IOException e) {
-        throw new IllegalStateException(e);
+        throw new RuntimeIOException(e);
       }
     }
 
@@ -1042,7 +1043,7 @@ public abstract class CursorImpl implements Cursor
           deleteCurrentRow();
           _validRow = false;
         } catch(IOException e) {
-          throw new IllegalStateException(e);
+          throw new RuntimeIOException(e);
         }
       } else {
         throw new IllegalStateException("Not at valid row");

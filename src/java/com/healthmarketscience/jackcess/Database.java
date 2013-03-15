@@ -165,7 +165,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * @return an unmodifiable Iterator of the user Tables in this Database.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    * @throws ConcurrentModificationException if a table is added to the
    *         database while an Iterator is in use.

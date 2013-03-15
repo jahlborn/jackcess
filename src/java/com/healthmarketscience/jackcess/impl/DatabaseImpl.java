@@ -67,6 +67,7 @@ import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
@@ -1753,7 +1754,7 @@ public class DatabaseImpl implements Database
       try {
         _tableNameIter = getTableNames().iterator();
       } catch(IOException e) {
-        throw new IllegalStateException(e);
+        throw new RuntimeIOException(e);
       }
     }
 
@@ -1772,7 +1773,7 @@ public class DatabaseImpl implements Database
       try {
         return getTable(_tableNameIter.next());
       } catch(IOException e) {
-        throw new IllegalStateException(e);
+        throw new RuntimeIOException(e);
       }
     }
   }

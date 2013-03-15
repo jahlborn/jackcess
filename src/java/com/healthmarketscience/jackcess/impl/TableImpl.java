@@ -880,7 +880,7 @@ public class TableImpl implements Table
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * <code>getNextRow</code>.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    * @usage _general_method_
    */

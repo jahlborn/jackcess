@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 
+import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
@@ -59,8 +60,8 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
              ((cs1 != null) && (cs2 != null) &&
               cs1.toString().equalsIgnoreCase(cs2.toString())));
     } catch(IOException e) {
-      throw new IllegalStateException("Could not read column " + columnName 
-                                      + " value", e);
+      throw new RuntimeIOException("Could not read column " + columnName 
+                                   + " value", e);
     }
   }
 

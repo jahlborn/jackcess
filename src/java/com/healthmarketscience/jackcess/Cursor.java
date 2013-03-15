@@ -130,7 +130,7 @@ public interface Cursor extends Iterable<Row>
    * this cursor and returns a modifiable Iterator which will iterate through
    * all the rows of this table in reverse order.  Use of the Iterator follows
    * the same restrictions as a call to {@link #getPreviousRow}.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> reverseIterable();
@@ -141,7 +141,7 @@ public interface Cursor extends Iterable<Row>
    * all the rows of this table in reverse order, returning only the given
    * columns.  Use of the Iterator follows the same restrictions as a call to
    * {@link #getPreviousRow}.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> reverseIterable(
@@ -152,7 +152,7 @@ public interface Cursor extends Iterable<Row>
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> iterator();
@@ -162,7 +162,7 @@ public interface Cursor extends Iterable<Row>
    * this table and returns a modifiable Iterator which will iterate through
    * all the rows of this table, returning only the given columns.  Use of the
    * Iterator follows the same restrictions as a call to {@link #getNextRow}.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> iterable(
@@ -175,7 +175,7 @@ public interface Cursor extends Iterable<Row>
    * the Iterator follows the same restrictions as a call to {@link
    * #getNextRow}.  See {@link #findFirstRow(Column,Object)} for details on
    * #the columnPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> columnMatchIterable(
@@ -188,7 +188,7 @@ public interface Cursor extends Iterable<Row>
    * returning only the given columns.  Use of the Iterator follows the same
    * restrictions as a call to {@link #getNextRow}.  See {@link
    * #findFirstRow(Column,Object)} for details on the columnPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> columnMatchIterable(
@@ -201,7 +201,7 @@ public interface Cursor extends Iterable<Row>
    * all the rows of this table which match the given row pattern.  Use of the
    * Iterator follows the same restrictions as a call to {@link #getNextRow}.
    * See {@link #findFirstRow(Map)} for details on the rowPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> rowMatchIterable(
@@ -214,7 +214,7 @@ public interface Cursor extends Iterable<Row>
    * only the given columns.  Use of the Iterator follows the same
    * restrictions as a call to {@link #getNextRow}.  See {@link
    * #findFirstRow(Map)} for details on the rowPattern.
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> rowMatchIterable(

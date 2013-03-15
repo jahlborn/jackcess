@@ -219,7 +219,7 @@ public class Joiner
    * 
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> findRowsIterable(Map<String,?> fromRow)
@@ -234,7 +234,7 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
-   * @throws IllegalStateException if an IOException is thrown by one of the
+   * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterable<Row> findRowsIterable(
