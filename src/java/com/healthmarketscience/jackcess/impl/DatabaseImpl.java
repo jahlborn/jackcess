@@ -1250,8 +1250,8 @@ public class DatabaseImpl implements Database
           // new relationship
           int numCols = (Integer)row.get(REL_COL_COLUMN_COUNT);
           int flags = (Integer)row.get(REL_COL_FLAGS);
-          rel = new Relationship(relName, fromTable, toTable,
-                                 flags, numCols);
+          rel = new RelationshipImpl(relName, fromTable, toTable,
+                                     flags, numCols);
           relationships.add(rel);
         }
 

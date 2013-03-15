@@ -36,7 +36,7 @@ import com.healthmarketscience.jackcess.DataType;
  *
  * @author James Ahlborn
  */
-public class PropertyMaps implements Iterable<PropertyMap>
+public class PropertyMaps implements Iterable<PropertyMapImpl>
 {
   /** the name of the "default" properties for a PropertyMaps instance */
   public static final String DEFAULT_NAME = "";
@@ -47,8 +47,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
 
   /** maps the PropertyMap name (case-insensitive) to the PropertyMap
       instance */
-  private final Map<String,PropertyMap> _maps = 
-    new LinkedHashMap<String,PropertyMap>();
+  private final Map<String,PropertyMapImpl> _maps = 
+    new LinkedHashMap<String,PropertyMapImpl>();
   private final int _objectId;
 
   public PropertyMaps(int objectId) {
@@ -71,7 +71,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
    * @return the unnamed "default" PropertyMap in this group, creating if
    *         necessary.
    */
-  public PropertyMap getDefault() {
+  public PropertyMapImpl getDefault() {
     return get(DEFAULT_NAME, DEFAULT_PROPERTY_VALUE_LIST);
   }
 
@@ -79,7 +79,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
    * @return the PropertyMap with the given name in this group, creating if
    *         necessary
    */
-  public PropertyMap get(String name) {
+  public PropertyMapImpl get(String name) {
     return get(name, COLUMN_PROPERTY_VALUE_LIST);
   }
 
@@ -87,11 +87,11 @@ public class PropertyMaps implements Iterable<PropertyMap>
    * @return the PropertyMap with the given name and type in this group,
    *         creating if necessary
    */
-  private PropertyMap get(String name, short type) {
+  private PropertyMapImpl get(String name, short type) {
     String lookupName = DatabaseImpl.toLookupName(name);
-    PropertyMap map = _maps.get(lookupName);
+    PropertyMapImpl map = _maps.get(lookupName);
     if(map == null) {
-      map = new PropertyMap(name, type);
+      map = new PropertyMapImpl(name, type);
       _maps.put(lookupName, map);
     }
     return map;
@@ -100,18 +100,18 @@ public class PropertyMaps implements Iterable<PropertyMap>
   /**
    * Adds the given PropertyMap to this group.
    */
-  public void put(PropertyMap map) {
+  public void put(PropertyMapImpl map) {
     _maps.put(DatabaseImpl.toLookupName(map.getName()), map);
   }
 
-  public Iterator<PropertyMap> iterator() {
+  public Iterator<PropertyMapImpl> iterator() {
     return _maps.values().iterator();
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    for(Iterator<PropertyMap> iter = iterator(); iter.hasNext(); ) {
+    for(Iterator<PropertyMapImpl> iter = iterator(); iter.hasNext(); ) {
       sb.append(iter.next());
       if(iter.hasNext()) {
         sb.append("\n");
@@ -207,7 +207,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
      * @return the PropertyMap created from the values parsed from the given
      *         data chunk combined with the given property names
      */
-    private PropertyMap readPropertyValues(
+    private PropertyMapImpl readPropertyValues(
         ByteBuffer bbBlock, List<String> propNames, short blockType) 
       throws IOException
     {
@@ -224,7 +224,7 @@ public class PropertyMaps implements Iterable<PropertyMap>
         bbBlock.position(endPos);
       }
       
-      PropertyMap map = new PropertyMap(mapName, blockType);
+      PropertyMapImpl map = new PropertyMapImpl(mapName, blockType);
 
       // read the values
       while(bbBlock.hasRemaining()) {
@@ -290,8 +290,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
       return col;
     }
 
-    private boolean isPseudoGuidColumn(DataType dataType, String propName, 
-                                       int dataSize) {
+    private static boolean isPseudoGuidColumn(
+        DataType dataType, String propName, int dataSize) {
       // guids seem to be marked as "binary" fields
       return((dataType == DataType.BINARY) && 
              (dataSize == DataType.GUID.getFixedSize()) &&

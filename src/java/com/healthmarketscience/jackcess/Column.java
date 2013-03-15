@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 
 /**
+ * Access database column definition
  *
  * @author James Ahlborn
  */

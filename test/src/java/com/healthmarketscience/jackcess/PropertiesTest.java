@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
@@ -51,12 +52,12 @@ public class PropertiesTest extends TestCase
     assertFalse(maps.iterator().hasNext());
     assertEquals(10, maps.getObjectId());
 
-    PropertyMap defMap = maps.getDefault();
+    PropertyMapImpl defMap = maps.getDefault();
     assertTrue(defMap.isEmpty());
     assertEquals(0, defMap.getSize());
     assertFalse(defMap.iterator().hasNext());
 
-    PropertyMap colMap = maps.get("testcol");
+    PropertyMapImpl colMap = maps.get("testcol");
     assertTrue(colMap.isEmpty());
     assertEquals(0, colMap.getSize());
     assertFalse(colMap.iterator().hasNext());

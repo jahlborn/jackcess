@@ -20,7 +20,10 @@ USA
 package com.healthmarketscience.jackcess;
 
 /**
- * Uniquely identifies a row of data within the access database.
+ * Uniquely identifies a row of data within the access database.  While RowIds
+ * are largely opaque identifiers, they are comparable to each other (within
+ * the same table) and have valid {@link #equals}, {@link #hashCode} and
+ * {@link #toString} methods.
  *
  * @author James Ahlborn
  */

@@ -26,6 +26,9 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 
 /**
+ * A single database table
+ * <p>
+ * Is not thread-safe.
  *
  * @author James Ahlborn
  * @usage _general_class_
