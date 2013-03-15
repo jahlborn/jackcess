@@ -440,6 +440,14 @@ public abstract class CursorImpl implements Cursor
     };
   }
   
+  /**
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table, returning
+   * only the given columns.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
   public Iterator<Row> iterator(Collection<String> columnNames)
   {
     return new RowIterator(columnNames, MOVE_FORWARD);
@@ -457,6 +465,15 @@ public abstract class CursorImpl implements Cursor
     return columnMatchIterable(null, columnPattern, valuePattern);
   }
 
+  /**
+   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given column pattern.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.  See
+   * {@link #findFirstRow(Column,Object)} for details on the columnPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
   public Iterator<Row> columnMatchIterator(
       Column columnPattern, Object valuePattern)
   {
@@ -489,6 +506,16 @@ public abstract class CursorImpl implements Cursor
     };
   }
 
+  /**
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given column pattern, returning only the given columns.  Use of
+   * the Iterator follows the same restrictions as a call to
+   * <code>getNextRow</code>.  See {@link #findFirstRow(Column,Object)} for
+   * details on the columnPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
   public Iterator<Row> columnMatchIterator(
       Collection<String> columnNames, Column columnPattern, 
       Object valuePattern)
@@ -510,6 +537,15 @@ public abstract class CursorImpl implements Cursor
     return rowMatchIterable(null, rowPattern);
   }
   
+  /**
+   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given row pattern.  Use of the Iterator follows the same
+   * restrictions as a call to <code>getNextRow</code>.  See
+   * {@link #findFirstRow(Map)} for details on the rowPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
   public Iterator<Row> rowMatchIterator(
       Map<String,?> rowPattern)
   {
@@ -528,6 +564,16 @@ public abstract class CursorImpl implements Cursor
     };
   }
   
+  /**
+   * Calls <code>beforeFirst</code> on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table which
+   * match the given row pattern, returning only the given columns.  Use of
+   * the Iterator follows the same restrictions as a call to
+   * <code>getNextRow</code>.  See {@link #findFirstRow(Map)} for details on
+   * the rowPattern.
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
   public Iterator<Row> rowMatchIterator(
       Collection<String> columnNames, Map<String,?> rowPattern)
   {
