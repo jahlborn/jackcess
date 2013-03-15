@@ -28,5 +28,8 @@ import java.util.Map;
  */
 public interface Row extends Map<String,Object>
 {
-
+  /**
+   * @return the id of this row 
+   */
+  public RowId getId();
 }

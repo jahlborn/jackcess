@@ -35,12 +35,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.RowId;
+import com.healthmarketscience.jackcess.impl.RowIdImpl;
+import com.healthmarketscience.jackcess.impl.RowImpl;
+import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.impl.RowImpl;
-
-import static com.healthmarketscience.jackcess.query.QueryFormat.*;
 
 
 /**
@@ -583,6 +584,7 @@ public abstract class Query
    */
   public static final class Row
   {
+    private final RowId _id;
     public final Byte attribute;
     public final String expression;
     public final Short flag;
@@ -593,6 +595,7 @@ public abstract class Query
     public final byte[] order;
 
     private Row() {
+      this._id = null;
       this.attribute = null;
       this.expression = null;
       this.flag = null;
@@ -604,7 +607,8 @@ public abstract class Query
     }
 
     public Row(com.healthmarketscience.jackcess.Row tableRow) {
-      this((Byte)tableRow.get(COL_ATTRIBUTE),
+      this(tableRow.getId(),
+           (Byte)tableRow.get(COL_ATTRIBUTE),
            (String)tableRow.get(COL_EXPRESSION),
            (Short)tableRow.get(COL_FLAG),
            (Integer)tableRow.get(COL_EXTRA),
@@ -614,10 +618,11 @@ public abstract class Query
            (byte[])tableRow.get(COL_ORDER));
     }
 
-    public Row(Byte attribute, String expression, Short flag,
+    public Row(RowId id, Byte attribute, String expression, Short flag,
                Integer extra, String name1, String name2,
                Integer objectId, byte[] order)
     {
+      this._id = id;
       this.attribute = attribute;
       this.expression = expression;
       this.flag = flag;
@@ -630,7 +635,7 @@ public abstract class Query
 
     public com.healthmarketscience.jackcess.Row toTableRow()
     {
-      com.healthmarketscience.jackcess.Row tableRow = new RowImpl();
+      com.healthmarketscience.jackcess.Row tableRow = new RowImpl((RowIdImpl)_id);
 
       tableRow.put(COL_ATTRIBUTE, attribute);
       tableRow.put(COL_EXPRESSION, expression);

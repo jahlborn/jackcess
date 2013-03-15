@@ -584,7 +584,7 @@ public class TableImpl implements Table
       Collection<String> columnNames)
     throws IOException
   {
-    RowImpl rtn = new RowImpl(columns.size());
+    RowImpl rtn = new RowImpl(rowState.getHeaderRowId(), columns.size());
     for(ColumnImpl column : columns) {
 
       if((columnNames == null) || (columnNames.contains(column.getName()))) {

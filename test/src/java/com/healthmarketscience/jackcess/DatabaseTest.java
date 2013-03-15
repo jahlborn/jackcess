@@ -66,6 +66,7 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowImpl;
+import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
@@ -1448,7 +1449,7 @@ public class DatabaseTest extends TestCase {
   }
   
   public static RowImpl createExpectedRow(Object... rowElements) {
-    RowImpl row = new RowImpl();
+    RowImpl row = new RowImpl((RowIdImpl)null);
     for(int i = 0; i < rowElements.length; i += 2) {
       row.put((String)rowElements[i],
               rowElements[i + 1]);

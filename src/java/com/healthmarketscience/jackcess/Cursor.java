@@ -70,8 +70,8 @@ public interface Cursor extends Iterable<Row>
   public ColumnMatcher getColumnMatcher();
 
   /**
-   * Sets a new ColumnMatcher.  If {@code null}, resets to using the
-   * default matcher, {@link SimpleColumnMatcher#INSTANCE}.
+   * Sets a new ColumnMatcher.  If {@code null}, resets to using the default
+   * matcher (default depends on Cursor type).
    */
   public void setColumnMatcher(ColumnMatcher columnMatcher);
 
@@ -198,6 +198,16 @@ public interface Cursor extends Iterable<Row>
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> columnMatchIterator(
+      Column columnPattern, Object valuePattern);
+
+  /**
+   * Returns an Iterable whose iterator() method returns the result of a call
+   * to {@link #columnMatchIterator(Collection,Column,Object)}
+   * @throws IllegalStateException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   */
+  public Iterable<Row> columnMatchIterable(
+      Collection<String> columnNames,
       Column columnPattern, Object valuePattern);
 
   /**

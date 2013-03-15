@@ -487,7 +487,7 @@ public class QueryTest extends TestCase
   {
     Short flag = ((flagNum != null) ? flagNum.shortValue() : null);
     Integer extra = ((extraNum != null) ? extraNum.intValue() : null);
-    return new Row(attr, expr, flag, extra, name1, name2, null, null);
+    return new Row(null, attr, expr, flag, extra, name1, name2, null, null);
   }
 
   private static void setFlag(Query query, Number newFlagNum)

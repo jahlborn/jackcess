@@ -25,6 +25,9 @@ import com.healthmarketscience.jackcess.Row;
 
 /**
  * A row of data as column->value pairs.
+ * </p>
+ * Note that the {@link #equals} and {@link #hashCode} methods work on the row
+ * contents <i>only</i> (i.e. they ignore the id).
  *
  * @author James Ahlborn
  */
@@ -32,17 +35,31 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 {
   private static final long serialVersionUID = 20130314L;  
 
-  public RowImpl() 
+  private final RowIdImpl _id;
+
+  public RowImpl(RowIdImpl id) 
   {
+    _id = id;
   }
 
-  public RowImpl(int expectedSize) 
+  public RowImpl(RowIdImpl id, int expectedSize) 
   {
     super(expectedSize);
+    _id = id;
   }
 
   public RowImpl(Row row) 
   {
     super(row);
+    _id = (RowIdImpl)row.getId();
+  }
+
+  public RowIdImpl getId() {
+    return _id;
+  }
+
+  @Override
+  public String toString() {
+    return "Row id=[" + _id + "], content=" + super.toString();
   }
 }
