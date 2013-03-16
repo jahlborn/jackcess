@@ -35,10 +35,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
-import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.healthmarketscience.jackcess.Cursor;
+import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Column;
@@ -72,13 +72,6 @@ public abstract class CursorImpl implements Cursor
   /** boolean value indicating reverse movement */
   public static final boolean MOVE_REVERSE = false;
   
-  /** first position for the TableScanCursor */
-  private static final ScanPosition FIRST_SCAN_POSITION =
-    new ScanPosition(RowIdImpl.FIRST_ROW_ID);
-  /** last position for the TableScanCursor */
-  private static final ScanPosition LAST_SCAN_POSITION =
-    new ScanPosition(RowIdImpl.LAST_ROW_ID);
-
   /** identifier for this cursor */
   private final IdImpl _id;
   /** owning table */
@@ -1133,196 +1126,36 @@ public abstract class CursorImpl implements Cursor
 
   
   /**
-   * Simple un-indexed cursor.
-   */
-  private static final class TableScanCursor extends CursorImpl
-  {
-    /** ScanDirHandler for forward traversal */
-    private final ScanDirHandler _forwardDirHandler =
-      new ForwardScanDirHandler();
-    /** ScanDirHandler for backward traversal */
-    private final ScanDirHandler _reverseDirHandler =
-      new ReverseScanDirHandler();
-    /** Cursor over the pages that this table owns */
-    private final UsageMap.PageCursor _ownedPagesCursor;
-    
-    private TableScanCursor(TableImpl table) {
-      super(new IdImpl(table, null), table,
-            FIRST_SCAN_POSITION, LAST_SCAN_POSITION);
-      _ownedPagesCursor = table.getOwnedPagesCursor();
-    }
-
-    @Override
-    protected ScanDirHandler getDirHandler(boolean moveForward) {
-      return (moveForward ? _forwardDirHandler : _reverseDirHandler);
-    }
-
-    @Override
-    protected boolean isUpToDate() {
-      return(super.isUpToDate() && _ownedPagesCursor.isUpToDate());
-    }
-    
-    @Override
-    protected void reset(boolean moveForward) {
-      _ownedPagesCursor.reset(moveForward);
-      super.reset(moveForward);
-    }
-
-    @Override
-    protected void restorePositionImpl(PositionImpl curPos, PositionImpl prevPos)
-      throws IOException
-    {
-      if(!(curPos instanceof ScanPosition) ||
-         !(prevPos instanceof ScanPosition)) {
-        throw new IllegalArgumentException(
-            "Restored positions must be scan positions");
-      }
-      _ownedPagesCursor.restorePosition(curPos.getRowId().getPageNumber(),
-                                        prevPos.getRowId().getPageNumber());
-      super.restorePositionImpl(curPos, prevPos);
-    }
-
-    @Override
-    protected PositionImpl findAnotherPosition(
-        RowState rowState, PositionImpl curPos, boolean moveForward)
-      throws IOException
-    {
-      ScanDirHandler handler = getDirHandler(moveForward);
-      
-      // figure out how many rows are left on this page so we can find the
-      // next row
-      RowIdImpl curRowId = curPos.getRowId();
-      TableImpl.positionAtRowHeader(rowState, curRowId);
-      int currentRowNumber = curRowId.getRowNumber();
-    
-      // loop until we find the next valid row or run out of pages
-      while(true) {
-
-        currentRowNumber = handler.getAnotherRowNumber(currentRowNumber);
-        curRowId = new RowIdImpl(curRowId.getPageNumber(), currentRowNumber);
-        TableImpl.positionAtRowHeader(rowState, curRowId);
-        
-        if(!rowState.isValid()) {
-          
-          // load next page
-          curRowId = new RowIdImpl(handler.getAnotherPageNumber(),
-                               RowIdImpl.INVALID_ROW_NUMBER);
-          TableImpl.positionAtRowHeader(rowState, curRowId);
-          
-          if(!rowState.isHeaderPageNumberValid()) {
-            //No more owned pages.  No more rows.
-            return handler.getEndPosition();
-          }
-
-          // update row count and initial row number
-          currentRowNumber = handler.getInitialRowNumber(
-              rowState.getRowsOnHeaderPage());
-
-        } else if(!rowState.isDeleted()) {
-          
-          // we found a valid, non-deleted row, return it
-          return new ScanPosition(curRowId);
-        }
-        
-      }
-    }
-
-    /**
-     * Handles moving the table scan cursor in a given direction.  Separates
-     * cursor logic from value storage.
-     */
-    private abstract class ScanDirHandler extends DirHandler {
-      public abstract int getAnotherRowNumber(int curRowNumber);
-      public abstract int getAnotherPageNumber();
-      public abstract int getInitialRowNumber(int rowsOnPage);
-    }
-    
-    /**
-     * Handles moving the table scan cursor forward.
-     */
-    private final class ForwardScanDirHandler extends ScanDirHandler {
-      @Override
-      public PositionImpl getBeginningPosition() {
-        return getFirstPosition();
-      }
-      @Override
-      public PositionImpl getEndPosition() {
-        return getLastPosition();
-      }
-      @Override
-      public int getAnotherRowNumber(int curRowNumber) {
-        return curRowNumber + 1;
-      }
-      @Override
-      public int getAnotherPageNumber() {
-        return _ownedPagesCursor.getNextPage();
-      }
-      @Override
-      public int getInitialRowNumber(int rowsOnPage) {
-        return -1;
-      }
-    }
-    
-    /**
-     * Handles moving the table scan cursor backward.
-     */
-    private final class ReverseScanDirHandler extends ScanDirHandler {
-      @Override
-      public PositionImpl getBeginningPosition() {
-        return getLastPosition();
-      }
-      @Override
-      public PositionImpl getEndPosition() {
-        return getFirstPosition();
-      }
-      @Override
-      public int getAnotherRowNumber(int curRowNumber) {
-        return curRowNumber - 1;
-      }
-      @Override
-      public int getAnotherPageNumber() {
-        return _ownedPagesCursor.getPreviousPage();
-      }
-      @Override
-      public int getInitialRowNumber(int rowsOnPage) {
-        return rowsOnPage;
-      }
-    }
-    
-  }
-
-
-  /**
    * Identifier for a cursor.  Will be equal to any other cursor of the same
    * type for the same table.  Primarily used to check the validity of a
    * Savepoint.
    */
   protected static final class IdImpl implements Id
   {
-    private final String _tableName;
-    private final String _indexName;
+    private final int _tablePageNumber;
+    private final int _indexNumber;
 
-    protected IdImpl(TableImpl table, Index index) {
-      _tableName = table.getName();
-      _indexName = ((index != null) ? index.getName() : null);
+    protected IdImpl(TableImpl table, IndexImpl index) {
+      _tablePageNumber = table.getTableDefPageNumber();
+      _indexNumber = ((index != null) ? index.getIndexNumber() : -1);
     }
 
     @Override
     public int hashCode() {
-      return _tableName.hashCode();
+      return _tablePageNumber;
     }
 
     @Override
     public boolean equals(Object o) {
       return((this == o) ||
              ((o != null) && (getClass() == o.getClass()) &&
-              ObjectUtils.equals(_tableName, ((IdImpl)o)._tableName) &&
-              ObjectUtils.equals(_indexName, ((IdImpl)o)._indexName)));
+              (_tablePageNumber == ((IdImpl)o)._tablePageNumber) &&
+              (_indexNumber == ((IdImpl)o)._indexNumber)));
     }
 
     @Override
     public String toString() {
-      return getClass().getSimpleName() + " " + _tableName + ":" + _indexName;
+      return getClass().getSimpleName() + " " + _tablePageNumber + ":" + _indexNumber;
     }
   }
 
@@ -1391,33 +1224,6 @@ public abstract class CursorImpl implements Cursor
     public String toString() {
       return getClass().getSimpleName() + " " + _cursorId + " CurPosition " + 
         _curPos + ", PrevPosition " + _prevPos;
-    }
-  }
-  
-  /**
-   * Value object which maintains the current position of a TableScanCursor.
-   */
-  private static final class ScanPosition extends PositionImpl
-  {
-    private final RowIdImpl _rowId;
-
-    private ScanPosition(RowIdImpl rowId) {
-      _rowId = rowId;
-    }
-
-    @Override
-    public RowIdImpl getRowId() {
-      return _rowId;
-    }
-
-    @Override
-    protected boolean equalsImpl(Object o) {
-      return getRowId().equals(((ScanPosition)o).getRowId());
-    }
-    
-    @Override
-    public String toString() {
-      return "RowId = " + getRowId();
     }
   }
   
