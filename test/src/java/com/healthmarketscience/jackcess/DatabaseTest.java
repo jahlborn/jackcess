@@ -1259,7 +1259,7 @@ public class DatabaseTest extends TestCase {
                    row);
 
       List<Row> rows = RowFilterTest.toList(t);
-      assertEquals(10, rows.size());
+      assertEquals(50, rows.size());
 
       for(Row r : rows) {
         r.put("data", "final data " + r.get("id"));
