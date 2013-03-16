@@ -146,10 +146,11 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
           "JetFormat " + table.getFormat() + 
           " does not currently support index lookups");
     }
-    if(index.getIndexData().isReadOnly()) {
+    if(index.getIndexData().getUnsupportedReason() != null) {
       throw new IllegalArgumentException(
           "Given index " + index + 
-          " is not usable for indexed lookups because it is read-only");
+          " is not usable for indexed lookups due to " +
+          index.getIndexData().getUnsupportedReason());
     }
     IndexCursorImpl cursor = new IndexCursorImpl(table, index,
                                          index.cursor(startRow, startInclusive,

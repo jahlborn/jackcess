@@ -37,15 +37,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.IndexBuilder;
+import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
+import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
-import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
-import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.ColumnBuilder;
 
 /**
  * Access table index data.  This is the actual data which backs a logical
@@ -179,8 +177,8 @@ public class IndexData {
   private final int _maxPageEntrySize;
   /** whether or not this index data is backing a primary key logical index */
   private boolean _primaryKey;
-  /** FIXME, for SimpleIndex, we can't write multi-page indexes or indexes using the entry compression scheme */
-  private boolean _readOnly;
+  /** if non-null, the reason why we cannot create entries for this index */
+  private String _unsupportedReason;
   /** Cache which manages the index pages */
   private final IndexPageCache _pageCache;
   
@@ -322,12 +320,13 @@ public class IndexData {
     return _rootPageNumber;
   }
 
-  protected void setReadOnly() {
-    _readOnly = true;
+  private void setUnsupportedReason(String reason) {
+    _unsupportedReason = reason;
+    LOG.warn(reason + ", making read-only");
   }
 
-  protected boolean isReadOnly() {
-    return _readOnly;
+  String getUnsupportedReason() {
+    return _unsupportedReason;
   }
 
   protected int getMaxPageEntrySize() {
@@ -395,9 +394,9 @@ public class IndexData {
     // make sure we've parsed the entries
     initialize();
     
-    if(_readOnly) {
+    if(_unsupportedReason != null) {
       throw new UnsupportedOperationException(
-          "FIXME cannot write indexes of this type yet, see Database javadoc for info on enabling large index support");
+          "Cannot write indexes of this type due to " + _unsupportedReason);
     }
     _pageCache.write();
   }
@@ -1205,9 +1204,8 @@ public class IndexData {
         return new GenTextColumnDescriptor(col, flags);
       }
       // unsupported sort order
-      LOG.warn("Unsupported collating sort order " + sortOrder + 
-               " for text index, making read-only");
-      setReadOnly();
+      setUnsupportedReason("unsupported collating sort order " + sortOrder +
+                           " for text index");
       return new ReadOnlyColumnDescriptor(col, flags);
     case INT:
     case LONG:
@@ -1230,10 +1228,9 @@ public class IndexData {
       return new GuidColumnDescriptor(col, flags);
 
     default:
-      // FIXME we can't modify this index at this point in time
-      LOG.warn("Unsupported data type " + col.getType() + 
-               " for index, making read-only");
-      setReadOnly();
+      // we can't modify this index at this point in time
+      setUnsupportedReason("unsupported data type " + col.getType() + 
+                           " for index");
       return new ReadOnlyColumnDescriptor(col, flags);
     }
   }
@@ -1624,7 +1621,7 @@ public class IndexData {
   /**
    * ColumnDescriptor for columns which we cannot currently write.
    */
-  private static final class ReadOnlyColumnDescriptor extends ColumnDescriptor
+  private final class ReadOnlyColumnDescriptor extends ColumnDescriptor
   {
     private ReadOnlyColumnDescriptor(ColumnImpl column, byte flags)
       throws IOException
@@ -1636,7 +1633,8 @@ public class IndexData {
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
-      throw new UnsupportedOperationException("should not be called");
+      throw new UnsupportedOperationException(
+          "Cannot write indexes of this type due to " + _unsupportedReason);
     }
   }
     
