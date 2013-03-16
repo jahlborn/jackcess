@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +49,6 @@ import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import org.apache.commons.logging.Log;
@@ -466,16 +464,13 @@ public class TableImpl implements Table
     getDefaultCursor().reset();
   }
 
-  public void deleteRow(Row row) throws IOException {
+  public Row deleteRow(Row row) throws IOException {
     deleteRow(getDefaultCursor().getRowState(), (RowIdImpl)row.getId());
+    return row;
   }
 
   /**
-   * Delete the row on which the given rowState is currently positioned.
-   * <p>
-   * Note, this method is not generally meant to be used directly.  You should
-   * use the {@link #deleteCurrentRow} method or use the Cursor class, which
-   * allows for more complex table interactions.
+   * Delete the row for the given rowId.
    * @usage _advanced_method_
    */
   public void deleteRow(RowState rowState, RowIdImpl rowId) 
@@ -539,10 +534,6 @@ public class TableImpl implements Table
   
   /**
    * Reads a single column from the given row.
-   * <p>
-   * Note, this method is not generally meant to be used directly.  Instead
-   * use the Cursor class, which allows for more complex table interactions,
-   * e.g. {@link Cursor#getCurrentRowValue}.
    * @usage _advanced_method_
    */
   public Object getRowValue(RowState rowState, RowIdImpl rowId,
@@ -874,19 +865,7 @@ public class TableImpl implements Table
     }
   }
 
-  
-  /**
-   * Calls <code>reset</code> on this table and returns a modifiable
-   * Iterator which will iterate through all the rows of this table.  Use of
-   * the Iterator follows the same restrictions as a call to
-   * <code>getNextRow</code>.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   * @usage _general_method_
-   */
-  public Iterator<Row> iterator()
-  {
-    reset();
+  public Iterator<Row> iterator() {
     return getDefaultCursor().iterator();
   }
 
@@ -1289,23 +1268,28 @@ public class TableImpl implements Table
     return row;
   }
   
-  public void addRow(Object... row) throws IOException {
-    addRows(Collections.singletonList(row), _singleRowBufferH);
+  public Object[] addRow(Object... row) throws IOException {
+    return addRows(Collections.singletonList(row), _singleRowBufferH).get(0);
   }
 
-  public void addRowFromMap(Map<String,Object> row) throws IOException {
+  public <M extends Map<String,Object>> M addRowFromMap(M row) 
+    throws IOException 
+  {
     Object[] rowValues = asRow(row);
 
     addRow(rowValues);
 
-    returnAutoNumValues(row, rowValues);
+    returnRowValues(row, rowValues, _autoNumColumns);
+    return row;
   }
     
-  public void addRows(List<? extends Object[]> rows) throws IOException {
-    addRows(rows, _multiRowBufferH);
+  public List<? extends Object[]> addRows(List<? extends Object[]> rows) 
+    throws IOException 
+  {
+    return addRows(rows, _multiRowBufferH);
   }
   
-  public void addRowsFromMaps(List<? extends Map<String,Object>> rows) 
+  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows) 
     throws IOException 
   {
     List<Object[]> rowValuesList = new ArrayList<Object[]>(rows.size());
@@ -1319,14 +1303,16 @@ public class TableImpl implements Table
       for(int i = 0; i < rowValuesList.size(); ++i) {
         Map<String,Object> row = rows.get(i);
         Object[] rowValues = rowValuesList.get(i);
-        returnAutoNumValues(row, rowValues);
+        returnRowValues(row, rowValues, _autoNumColumns);
       }
     }
+    return rows;
   }
 
-  private void returnAutoNumValues(Map<String,Object> row, Object[] rowValues)
+  private static void returnRowValues(Map<String,Object> row, Object[] rowValues,
+                                      List<ColumnImpl> cols)
   {
-    for(ColumnImpl col : _autoNumColumns) {
+    for(ColumnImpl col : cols) {
       col.setRowValue(row, col.getRowValue(rowValues));
     }
   }
@@ -1338,16 +1324,15 @@ public class TableImpl implements Table
    * @param writeRowBufferH TempBufferHolder used to generate buffers for
    *                        writing the row data
    */
-  private void addRows(List<? extends Object[]> inRows,
-                       TempBufferHolder writeRowBufferH)
+  private List<? extends Object[]> addRows(List<? extends Object[]> rows,
+                                           TempBufferHolder writeRowBufferH)
     throws IOException
   {
-    if(inRows.isEmpty()) {
-      return;
+    if(rows.isEmpty()) {
+      return rows;
     }
 
-    // copy the input rows to a modifiable list so we can update the elements
-    List<Object[]> rows = new ArrayList<Object[]>(inRows);
+    List<Object[]> dupeRows = null;
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
     for (int i = 0; i < rows.size(); i++) {
 
@@ -1359,15 +1344,22 @@ public class TableImpl implements Table
       Object[] row = rows.get(i);
       if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
         row = dupeRow(row, _columns.size());
+        // copy the input rows to a modifiable list so we can update the
+        // elements
+        if(dupeRows == null) {
+          dupeRows = new ArrayList<Object[]>(rows);
+          rows = dupeRows;
+        }
         // we copied the row, so put the copy back into the rows list
-        rows.set(i, row);
+        dupeRows.set(i, row);
       }
 
       // fill in autonumbers
       handleAutoNumbersForAdd(row);
       
       // write the row of data to a temporary buffer
-      rowData[i] = createRow(row, writeRowBufferH.getPageBuffer(getPageChannel()));
+      rowData[i] = createRow(row, 
+                             writeRowBufferH.getPageBuffer(getPageChannel()));
       
       if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
         throw new IOException("Row size " + rowData[i].limit() +
@@ -1404,23 +1396,29 @@ public class TableImpl implements Table
     
     // Update tdef page
     updateTableDefinition(rows.size());
+
+    return rows;
   }
   
-  public void updateRow(Row row) throws IOException {
-    updateRow(getDefaultCursor().getRowState(), (RowIdImpl)row.getId(),
-              asUpdateRow(row));
+  public Row updateRow(Row row) throws IOException {
+    return updateRowFromMap(
+        getDefaultCursor().getRowState(), (RowIdImpl)row.getId(), row);
+  }
+
+  public <M extends Map<String,Object>> M updateRowFromMap(
+      RowState rowState, RowIdImpl rowId, M row) 
+     throws IOException 
+  {
+    Object[] rowValues = updateRow(rowState, rowId, asUpdateRow(row));
+    returnRowValues(row, rowValues, _columns);
+    return row;
   }
 
   /**
-   * Update the row on which the given rowState is currently positioned.
-   * <p>
-   * Note, this method is not generally meant to be used directly.  You should
-   * use the {@link #updateCurrentRow} method or use the Cursor class, which
-   * allows for more complex table interactions, e.g.
-   * {@link Cursor#setCurrentRowValue} and {@link Cursor#updateCurrentRow}.
+   * Update the row for the given rowId.
    * @usage _advanced_method_
    */
-  public void updateRow(RowState rowState, RowIdImpl rowId, Object... row) 
+  public Object[] updateRow(RowState rowState, RowIdImpl rowId, Object... row) 
     throws IOException 
   {
     requireValidRowId(rowId);
@@ -1547,6 +1545,8 @@ public class TableImpl implements Table
     writeDataPage(dataPage, pageNumber);
 
     updateTableDefinition(0);
+
+    return row;
   }
    
   private ByteBuffer findFreeRowSpace(int rowSize, ByteBuffer dataPage, 
@@ -1651,7 +1651,8 @@ public class TableImpl implements Table
   public ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
     throws IOException
   {
-    return createRow(rowArray, buffer, 0, Collections.<ColumnImpl,byte[]>emptyMap());
+    return createRow(rowArray, buffer, 0,
+                     Collections.<ColumnImpl,byte[]>emptyMap());
   }
 
   /**
@@ -1665,7 +1666,8 @@ public class TableImpl implements Table
    * @return the given buffer, filled with the row data
    */
   private ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer,
-                               int minRowSize, Map<ColumnImpl,byte[]> rawVarValues)
+                               int minRowSize, 
+                               Map<ColumnImpl,byte[]> rawVarValues)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);

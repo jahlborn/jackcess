@@ -65,11 +65,12 @@ import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
+import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
+import com.healthmarketscience.jackcess.util.RowFilterTest;
 import junit.framework.TestCase;
 
 
@@ -410,11 +411,13 @@ public class DatabaseTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
       createTestTable(db);
-      Object[] row1 = createTestRow("Tim1");
-      Object[] row2 = createTestRow("Tim2");
-      Object[] row3 = createTestRow("Tim3");
+      Map<String,Object> row1 = createTestRowMap("Tim1");
+      Map<String,Object> row2 = createTestRowMap("Tim2");
+      Map<String,Object> row3 = createTestRowMap("Tim3");
       Table table = db.getTable("Test");
-      table.addRows(Arrays.asList(row1, row2, row3));
+      @SuppressWarnings("unchecked")
+      List<Map<String,Object>> rows = Arrays.asList(row1, row2, row3);
+      table.addRowsFromMaps(rows);
       assertRowCount(3, table);
 
       table.reset();
@@ -467,6 +470,38 @@ public class DatabaseTest extends TestCase {
       assertEquals(2, table.getNextRow().get("D"));
 
       db.close();
+    }
+  }
+
+  public void testDeleteRow() throws Exception {
+
+    // make sure correct row is deleted
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+      createTestTable(db);
+      Table table = db.getTable("Test");
+      for(int i = 0; i < 10; ++i) {
+        table.addRowFromMap(createTestRowMap("Tim" + i));
+      }
+      assertRowCount(10, table);
+
+      table.reset();
+
+      List<Row> rows = RowFilterTest.toList(table);
+      
+      Row r1 = rows.remove(7);
+      Row r2 = rows.remove(3);
+      assertEquals(8, rows.size());
+
+      assertSame(r2, table.deleteRow(r2));
+      assertSame(r1, table.deleteRow(r1));
+
+      assertTable(rows, table);
+
+      table.deleteRow(r2);
+      table.deleteRow(r1);
+
+      assertTable(rows, table);      
     }
   }
 
@@ -977,14 +1012,25 @@ public class DatabaseTest extends TestCase {
 
   private void doTestAutoNumber(Table table) throws Exception
   {
-    table.addRow(null, "row1");
-    table.addRow(13, "row2");
-    table.addRow("flubber", "row3");
+    Object[] row = {null, "row1"};
+    assertSame(row, table.addRow(row));
+    assertEquals(1, ((Integer)row[0]).intValue());
+    row = table.addRow(13, "row2");
+    assertEquals(2, ((Integer)row[0]).intValue());
+    row = table.addRow("flubber", "row3");
+    assertEquals(3, ((Integer)row[0]).intValue());
 
     table.reset();
 
-    table.addRow(Column.AUTO_NUMBER, "row4");
-    table.addRow(Column.AUTO_NUMBER, "row5");
+    row = table.addRow(Column.AUTO_NUMBER, "row4");
+    assertEquals(4, ((Integer)row[0]).intValue());
+    row = table.addRow(Column.AUTO_NUMBER, "row5");
+    assertEquals(5, ((Integer)row[0]).intValue());
+
+    Object[] smallRow = {Column.AUTO_NUMBER};
+    row = table.addRow(smallRow);
+    assertNotSame(row, smallRow);
+    assertEquals(6, ((Integer)row[0]).intValue());    
 
     table.reset();
 
@@ -1004,7 +1050,10 @@ public class DatabaseTest extends TestCase {
               "b", "row4"),
           createExpectedRow(
               "a", 5,
-              "b", "row5"));
+              "b", "row5"),
+          createExpectedRow(
+              "a", 6,
+              "b", null));
 
     assertTable(expectedRows, table);    
   }
@@ -1143,7 +1192,15 @@ public class DatabaseTest extends TestCase {
                                      "data", "initial data"),
                    row);
 
-      c.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "new data");
+      Map<String,Object> newRow = createExpectedRow(
+          "name", Column.KEEP_VALUE,
+          "id", Column.AUTO_NUMBER,
+          "data", "new data");
+      assertSame(newRow, c.updateCurrentRowFromMap(newRow));
+      assertEquals(createExpectedRow("name", "row1",
+                                     "id", 2,
+                                     "data", "new data"),
+                   newRow);
 
       c.moveNextRows(3);
       row = c.getCurrentRow();
@@ -1200,6 +1257,23 @@ public class DatabaseTest extends TestCase {
                                      "id", 9,
                                      "data", newText),
                    row);
+
+      List<Row> rows = RowFilterTest.toList(t);
+      assertEquals(10, rows.size());
+
+      for(Row r : rows) {
+        r.put("data", "final data " + r.get("id"));
+      }
+
+      for(Row r : rows) {
+        assertSame(r, t.updateRow(r));
+      }
+
+      t.reset();
+
+      for(Row r : t) {
+        assertEquals("final data " + r.get("id"), r.get("data"));
+      }
 
       db.close();
     }
@@ -1383,6 +1457,12 @@ public class DatabaseTest extends TestCase {
     return createTestRow("Tim");
   }
   
+  static Map<String,Object> createTestRowMap(String col1Val) {
+    return createExpectedRow("A", col1Val, "B", "R", "C", "McCune",
+                             "D", 1234, "E", (byte) 0xad, "F", 555.66d,
+                             "G", 777.88f, "H", (short) 999, "I", new Date());
+  }
+
   static void createTestTable(Database db) throws Exception {
     new TableBuilder("test")
       .addColumn(new ColumnBuilder("A", DataType.TEXT))

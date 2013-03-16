@@ -232,17 +232,21 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Update the current row.
+   * @return the given row values if long enough, otherwise a new array,
+   *         updated with the current row values
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table), or deleted.
    */
-  public void updateCurrentRow(Object... row) throws IOException;
+  public Object[] updateCurrentRow(Object... row) throws IOException;
 
   /**
    * Update the current row.
+   * @return the given row, updated with the current row values
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table), or deleted.
    */
-  public void updateCurrentRowFromMap(Map<String,?> row) throws IOException;
+  public <M extends Map<String,Object>> M updateCurrentRowFromMap(M row) 
+    throws IOException;
 
   /**
    * Moves to the next row in the table and returns it.

@@ -189,8 +189,7 @@ public abstract class CursorImpl implements Cursor
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Row findRow(TableImpl table,
-                                           Map<String,?> rowPattern)
+  public static Row findRow(TableImpl table, Map<String,?> rowPattern)
     throws IOException
   {
     CursorImpl cursor = createCursor(table);
@@ -242,7 +241,7 @@ public abstract class CursorImpl implements Cursor
    * @return the matching row or {@code null} if a match could not be found.
    */
   public static Row findRow(TableImpl table, IndexImpl index,
-                                           Map<String,?> rowPattern)
+                            Map<String,?> rowPattern)
     throws IOException
   {
     CursorImpl cursor = createIndexCursor(table, index);
@@ -581,12 +580,14 @@ public abstract class CursorImpl implements Cursor
     _table.deleteRow(_rowState, _curPos.getRowId());
   }
 
-  public void updateCurrentRow(Object... row) throws IOException {
-    _table.updateRow(_rowState, _curPos.getRowId(), row);
+  public Object[] updateCurrentRow(Object... row) throws IOException {
+    return _table.updateRow(_rowState, _curPos.getRowId(), row);
   }
 
-  public void updateCurrentRowFromMap(Map<String,?> row) throws IOException {
-    _table.updateRow(_rowState, _curPos.getRowId(), _table.asUpdateRow(row));
+  public <M extends Map<String,Object>> M updateCurrentRowFromMap(M row) 
+    throws IOException 
+  {
+    return _table.updateRowFromMap(_rowState, _curPos.getRowId(), row);
   }
 
   public Row getNextRow() throws IOException {

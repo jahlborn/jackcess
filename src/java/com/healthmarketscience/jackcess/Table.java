@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -167,9 +168,11 @@ public interface Table extends Iterable<Row>
    * @param row row values for a single row.  the given row array will be
    *            modified if this table contains an auto-number column,
    *            otherwise it will not be modified.
+   * @return the given row values if long enough, otherwise a new array.  the
+   *         returned array will contain any autonumbers generated
    * @usage _general_method_
    */
-  public void addRow(Object... row) throws IOException;
+  public Object[] addRow(Object... row) throws IOException;
 
   /**
    * Calls {@link #asRow} on the given row map and passes the result to {@link
@@ -177,13 +180,16 @@ public interface Table extends Iterable<Row>
    * <p/>
    * Note, if this table has an auto-number column, the value generated will be
    * put back into the given row map.
+   * @return the given row map, which will contain any autonumbers generated
+   * @usage _general_method_
    */
-  public void addRowFromMap(Map<String,Object> row) throws IOException;
+  public <M extends Map<String,Object>> M addRowFromMap(M row) 
+    throws IOException;
 
   /**
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.  This
-   * is much more efficient than calling <code>addRow</code> multiple times.
+   * is much more efficient than calling {@link #addRow} multiple times.
    * <p>
    * Note, if this table has an auto-number column, the values written will be
    * put back into the given row arrays (assuming the given row array is at
@@ -194,9 +200,14 @@ public interface Table extends Iterable<Row>
    * @param rows List of Object[] row values.  the rows will be modified if
    *             this table contains an auto-number column, otherwise they
    *             will not be modified.
+   * @return the given row values list (unless row values were to small), with
+   *         appropriately sized row values (the ones passed in if long
+   *         enough).  the returned arrays will contain any autonumbers
+   *         generated
    * @usage _general_method_
    */
-  public void addRows(List<? extends Object[]> rows) throws IOException;
+  public List<? extends Object[]> addRows(List<? extends Object[]> rows) 
+    throws IOException;
 
   /**
    * Calls {@link #asRow} on the given row maps and passes the results to
@@ -204,34 +215,54 @@ public interface Table extends Iterable<Row>
    * <p/>
    * Note, if this table has an auto-number column, the values generated will
    * be put back into the appropriate row maps.
+   * @return the given row map list, where the row maps will contain any
+   *         autonumbers generated
+   * @usage _general_method_
    */
-  public void addRowsFromMaps(List<? extends Map<String,Object>> rows) 
+  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows) 
     throws IOException;
 
   /**
    * Update the given row.  Provided Row must have previously been returned
    * from this Table.
+   * @return the given row, updated with the current row values
    * @throws IllegalStateException if the given row is not valid, or deleted.
    */
-  public void updateRow(Row row) throws IOException;
+  public Row updateRow(Row row) throws IOException;
 
   /**
    * Delete the given row.  Provided Row must have previously been returned
    * from this Table.
+   * @return the given row
    * @throws IllegalStateException if the given row is not valid
    */
-  public void deleteRow(Row row) throws IOException;
+  public Row deleteRow(Row row) throws IOException;
+
+  /**
+   * Calls {@link #reset} on this table and returns a modifiable
+   * Iterator which will iterate through all the rows of this table.  Use of
+   * the Iterator follows the same restrictions as a call to
+   * {@link #getNextRow}.
+   * <p/>
+   * For more advanced iteration, use the {@link #getDefaultCursor default
+   * cursor} directly.
+   * @throws RuntimeIOException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   * @usage _general_method_
+   */
+  public Iterator<Row> iterator();
 
   /**
    * After calling this method, {@link #getNextRow} will return the first row
-   * in the table, see {@link Cursor#reset} (uses the default cursor).
+   * in the table, see {@link Cursor#reset} (uses the {@link #getDefaultCursor
+   * default cursor}).
    * @usage _general_method_
    */
   public void reset();
 
   /**
    * @return The next row in this table (Column name -> Column value) (uses
-   *         the default cursor)
+   *         the {@link #getDefaultCursor default cursor})
    * @usage _general_method_
    */
   public Row getNextRow() throws IOException;
