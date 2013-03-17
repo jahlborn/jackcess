@@ -44,3 +44,4 @@ Refactor goals:
   - add @usage tags to util classes
 * add unit tests for Row update/delete methods, add/update *FromMap methods
 * add reason to unsupop throws for indexes
+- remove static methods in CursorImpl/IndexCursorImpl

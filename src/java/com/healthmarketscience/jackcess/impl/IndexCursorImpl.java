@@ -29,7 +29,6 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
@@ -71,46 +70,6 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     _index.initialize();
     _entryCursor = entryCursor;
   }
-
-  /**
-   * Creates an indexed cursor for the given table.
-   * <p>
-   * Note, index based table traversal may not include all rows, as certain
-   * types of indexes do not include all entries (namely, some indexes ignore
-   * null entries, see {@link Index#shouldIgnoreNulls}).
-   * 
-   * @param table the table over which this cursor will traverse
-   * @param index index for the table which will define traversal order as
-   *              well as enhance certain lookups
-   */
-  public static IndexCursorImpl createCursor(TableImpl table, IndexImpl index)
-    throws IOException
-  {
-    return createCursor(table, index, null, null);
-  }
-  
-  /**
-   * Creates an indexed cursor for the given table, narrowed to the given
-   * range.
-   * <p>
-   * Note, index based table traversal may not include all rows, as certain
-   * types of indexes do not include all entries (namely, some indexes ignore
-   * null entries, see {@link Index#shouldIgnoreNulls}).
-   * 
-   * @param table the table over which this cursor will traverse
-   * @param index index for the table which will define traversal order as
-   *              well as enhance certain lookups
-   * @param startRow the first row of data for the cursor (inclusive), or
-   *                 {@code null} for the first entry
-   * @param endRow the last row of data for the cursor (inclusive), or
-   *               {@code null} for the last entry
-   */
-  public static IndexCursorImpl createCursor(
-      TableImpl table, IndexImpl index, Object[] startRow, Object[] endRow)
-    throws IOException
-  {
-    return createCursor(table, index, startRow, true, endRow, true);
-  }
   
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
@@ -131,10 +90,10 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
   public static IndexCursorImpl createCursor(TableImpl table, IndexImpl index,
-                                         Object[] startRow,
-                                         boolean startInclusive,
-                                         Object[] endRow,
-                                         boolean endInclusive)
+                                             Object[] startRow,
+                                             boolean startInclusive,
+                                             Object[] endRow,
+                                             boolean endInclusive)
     throws IOException
   {
     if(table != index.getTable()) {
@@ -152,9 +111,9 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
           " is not usable for indexed lookups due to " +
           index.getIndexData().getUnsupportedReason());
     }
-    IndexCursorImpl cursor = new IndexCursorImpl(table, index,
-                                         index.cursor(startRow, startInclusive,
-                                                      endRow, endInclusive));
+    IndexCursorImpl cursor = new IndexCursorImpl(
+        table, index, index.cursor(startRow, startInclusive,
+                                   endRow, endInclusive));
     // init the column matcher appropriately for the index type
     cursor.setColumnMatcher(null);
     return cursor;
