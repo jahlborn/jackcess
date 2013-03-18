@@ -24,7 +24,7 @@ import java.io.IOException;
 import com.healthmarketscience.jackcess.Column;
 
 /**
- * Base class for a value in a complex column (where there may be multiple
+ * Base interface for a value in a complex column (where there may be multiple
  * values for a single row in the main table).
  *
  * @author James Ahlborn

@@ -33,15 +33,16 @@ Refactor goals:
 - tweak lookup apis (specify column vs column name)
 - separate classes into more packages (api,builder,util,impl)
 * remove debug log blocks
-- add Row interface
-- change savepoint to use table number instead of name?
+* add Row interface
+* change savepoint to use table number instead of name?
 * don't use columnimpl for creating tables
   * clean up columnimpl/tableimpl constructors
-- add updateCurrentRow(Map), add updateRow(Row)
+* add updateCurrentRow(Map), add updateRow(Row)
 - sort out query types
 - clean up javadocs
   - enhance public api classes
   - add @usage tags to util classes
 * add unit tests for Row update/delete methods, add/update *FromMap methods
 * add reason to unsupop throws for indexes
-- remove static methods in CursorImpl/IndexCursorImpl
+* remove static methods in CursorImpl/IndexCursorImpl
+- add RowId to ComplexValue
