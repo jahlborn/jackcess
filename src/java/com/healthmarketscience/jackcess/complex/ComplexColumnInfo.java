@@ -32,8 +32,12 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RowId;
+import com.healthmarketscience.jackcess.RuntimeIOException;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 
 /**
  * Base class for the additional information tracked for complex columns.
@@ -42,9 +46,11 @@ import com.healthmarketscience.jackcess.Row;
  */
 public abstract class ComplexColumnInfo<V extends ComplexValue>
 {
-  public static final int INVALID_ID = -1;
-  public static final ComplexValueForeignKey INVALID_COMPLEX_VALUE_ID =
-    new ComplexValueForeignKey(null, INVALID_ID);
+  private static final int INVALID_ID_VALUE = -1;
+  public static final ComplexValue.Id INVALID_ID = new ComplexValueIdImpl(
+      INVALID_ID_VALUE, null);
+  public static final ComplexValueForeignKey INVALID_FK =
+    new ComplexValueForeignKey(null, INVALID_ID_VALUE);
 
   private final Column _column;
   private final int _complexTypeId;
@@ -52,7 +58,6 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   private final List<Column> _typeCols;
   private final Column _pkCol;
   private final Column _complexValFkCol;
-  private IndexCursor _pkCursor;
   private IndexCursor _complexValIdCursor;
   
   protected ComplexColumnInfo(Column column, int complexTypeId,
@@ -181,16 +186,18 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     return values;
   }
 
-  public int addRawValue(Row rawValue) throws IOException {
-    Object[] row = _flatTable.asRow(rawValue);
+  public ComplexValue.Id addRawValue(Map<String,?> rawValue)
+    throws IOException 
+  {
+    Object[] row = ((TableImpl)_flatTable).asRowWithRowId(rawValue);
     _flatTable.addRow(row);
-    return (Integer)_pkCol.getRowValue(row);
+    return getValueId(row);
   }
 
-  public int addValue(V value) throws IOException {
+  public ComplexValue.Id addValue(V value) throws IOException {
     Object[] row = asRow(newRowArray(), value);
     _flatTable.addRow(row);
-    int id = (Integer)_pkCol.getRowValue(row);
+    ComplexValue.Id id = getValueId(row);
     value.setId(id);
     return id;
   }
@@ -201,14 +208,13 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     }
   }
 
-  public int updateRawValue(Row rawValue) throws IOException {
-    Integer id = (Integer)_pkCol.getRowValue(rawValue);
-    updateRow(id, _flatTable.asUpdateRow(rawValue));
-    return id;
+  public ComplexValue.Id updateRawValue(Row rawValue) throws IOException {
+    _flatTable.updateRow(rawValue);
+    return getValueId(rawValue);
   }
   
-  public int updateValue(V value) throws IOException {
-    int id = value.getId();
+  public ComplexValue.Id updateValue(V value) throws IOException {
+    ComplexValue.Id id = value.getId();
     updateRow(id, asRow(newRowArray(), value));
     return id;
   }
@@ -220,11 +226,11 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   }
 
   public void deleteRawValue(Row rawValue) throws IOException {
-    deleteRow((Integer)_pkCol.getRowValue(rawValue));
+    deleteRow(rawValue.getId());
   }
   
   public void deleteValue(V value) throws IOException {
-    deleteRow(value.getId());
+    deleteRow(value.getId().getRowId());
   }
 
   public void deleteValues(Collection<? extends V> values) throws IOException {
@@ -241,11 +247,8 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
         entryIter.next();
         entryIter.remove();
       }
-    } catch(RuntimeException e) {
-      if(e.getCause() instanceof IOException) {
-        throw (IOException)e.getCause();
-      }
-      throw e;
+    } catch(RuntimeIOException e) {
+      throw (IOException)e.getCause();
     }
   }
 
@@ -255,40 +258,38 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     deleteAllValues(complexValueFk.get());
   }
 
-  private void moveToRow(Integer id) throws IOException {
-    if(_pkCursor == null) {
-      _pkCursor = new CursorBuilder(_flatTable)
-        .setIndexByColumns(_pkCol)
-        .toIndexCursor();
-    }
-
-    if(!_pkCursor.findFirstRowByEntry(id)) {
-      throw new IllegalArgumentException("Row with id " + id +
-                                         " does not exist");
-    }    
-  }
-
-  private void updateRow(Integer id, Object[] row) throws IOException {
-    moveToRow(id);
-    _pkCursor.updateCurrentRow(row);
+  private void updateRow(ComplexValue.Id id, Object[] row) throws IOException {
+    ((TableImpl)_flatTable).updateRow(id.getRowId(), row);
   }
   
-  private void deleteRow(Integer id) throws IOException {
-    moveToRow(id);
-    _pkCursor.deleteCurrentRow();
+  private void deleteRow(RowId rowId) throws IOException {
+    ((TableImpl)_flatTable).deleteRow(rowId);
   }
   
+  protected ComplexValueIdImpl getValueId(Row row) {
+    int idVal = (Integer)getPrimaryKeyColumn().getRowValue(row);
+    return new ComplexValueIdImpl(idVal, row.getId());
+  }
+
+  protected ComplexValueIdImpl getValueId(Object[] row) {
+    int idVal = (Integer)getPrimaryKeyColumn().getRowValue(row);
+    return new ComplexValueIdImpl(idVal, (RowId)row[row.length - 1]);
+  }
+
   protected Object[] asRow(Object[] row, V value) {
-    int id = value.getId();
-    _pkCol.setRowValue(row, ((id != INVALID_ID) ? id : Column.AUTO_NUMBER));
-    int cId = value.getComplexValueForeignKey().get();
+    ComplexValue.Id id = value.getId();
+    _pkCol.setRowValue(
+        row, ((id != INVALID_ID) ? id : Column.AUTO_NUMBER));
+    ComplexValueForeignKey cFk = value.getComplexValueForeignKey();
     _complexValFkCol.setRowValue(
-        row, ((cId != INVALID_ID) ? cId : Column.AUTO_NUMBER));
+        row, ((cFk != INVALID_FK) ? cFk : Column.AUTO_NUMBER));
     return row;
   }
 
   private Object[] newRowArray() {
-    return new Object[_flatTable.getColumnCount()];
+    Object[] row = new Object[_flatTable.getColumnCount() + 1];
+    row[row.length - 1] = ColumnImpl.RETURN_ROW_ID;
+    return row;
   }
   
   @Override
@@ -307,14 +308,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     // each "flat"" table has the columns from the "type" table, plus some
     // others.  separate the "flat" columns into these 2 buckets
     for(Column col : flatTable.getColumns()) {
-      boolean found = false;
-      try {
-        typeObjTable.getColumn(col.getName());
-        found = true;
-      } catch(IllegalArgumentException e) {
-        // FIXME better way to test this?
-      }
-      if(found) {
+      if(((TableImpl)typeObjTable).hasColumn(col.getName())) {
         typeCols.add(col);
       } else {
         otherCols.add(col);
@@ -331,19 +325,23 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
   
   protected static abstract class ComplexValueImpl implements ComplexValue
   {
-    private int _id;
+    private Id _id;
     private ComplexValueForeignKey _complexValueFk;
 
-    protected ComplexValueImpl(int id, ComplexValueForeignKey complexValueFk) {
+    protected ComplexValueImpl(Id id, ComplexValueForeignKey complexValueFk) {
       _id = id;
       _complexValueFk = complexValueFk;
     }
 
-    public int getId() {
+    public Id getId() {
       return _id;
     }
 
-    public void setId(int id) {
+    public void setId(Id id) {
+      if(_id == id) {
+        // harmless, ignore
+        return;
+      }
       if(_id != INVALID_ID) {
         throw new IllegalStateException("id may not be reset");
       }
@@ -356,7 +354,11 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
     public void setComplexValueForeignKey(ComplexValueForeignKey complexValueFk)
     {
-      if(_complexValueFk != INVALID_COMPLEX_VALUE_ID) {
+      if(_complexValueFk == complexValueFk) {
+        // harmless, ignore
+        return;
+      }
+      if(_complexValueFk != INVALID_FK) {
         throw new IllegalStateException("complexValueFk may not be reset");
       }
       _complexValueFk = complexValueFk;
@@ -368,7 +370,7 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     
     @Override
     public int hashCode() {
-      return ((_id * 37) ^ _complexValueFk.hashCode());
+      return ((_id.get() * 37) ^ _complexValueFk.hashCode());
     }
 
     @Override
@@ -378,6 +380,80 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
                (_id == ((ComplexValueImpl)o)._id) &&
                _complexValueFk.equals(((ComplexValueImpl)o)._complexValueFk)));
     }
+  }
+
+  /**
+   * Implementation of ComplexValue.Id.
+   */
+  private static final class ComplexValueIdImpl extends ComplexValue.Id
+  {
+    private static final long serialVersionUID = 20130318L;    
+
+    private final int _value;
+    private final RowId _rowId;
+
+    protected ComplexValueIdImpl(int value, RowId rowId) {
+      _value = value;
+      _rowId = rowId;
+    }
+    
+    @Override
+    public int get() {
+      return _value;
+    }
+
+    @Override
+    public RowId getRowId() {
+      return _rowId;
+    }
+  
+    @Override
+    public byte byteValue() {
+      return (byte)get();
+    }
+  
+    @Override
+    public short shortValue() {
+      return (short)get();
+    }
+  
+    @Override
+    public int intValue() {
+      return get();
+    }
+  
+    @Override
+    public long longValue() {
+      return get();
+    }
+  
+    @Override
+    public float floatValue() {
+      return get();
+    }
+  
+    @Override
+    public double doubleValue() {
+      return get();
+    }
+    
+    @Override
+    public int hashCode() {
+      return _value;
+    }
+  
+    @Override
+    public boolean equals(Object o) {
+      return ((this == o) ||
+              ((o != null) && (getClass() == o.getClass()) &&
+               (_value == ((ComplexValueIdImpl)o)._value)));
+    }
+
+    @Override
+    public String toString()
+    {
+      return String.valueOf(_value);
+    }  
   }
   
 }

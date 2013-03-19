@@ -20,7 +20,6 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
-import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
@@ -59,7 +58,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
       ComplexValueForeignKey complexValueFk,
       Row rawValue)
   {
-    int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
+    ComplexValue.Id id = getValueId(rawValue);
     Object value = getValueColumn().getRowValue(rawValue);
 
     return new SingleValueImpl(id, complexValueFk, value);
@@ -73,7 +72,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   }
   
   public static SingleValue newSingleValue(Object value) {
-    return newSingleValue(INVALID_COMPLEX_VALUE_ID, value);
+    return newSingleValue(INVALID_FK, value);
   }
 
   public static SingleValue newSingleValue(
@@ -87,7 +86,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   {
     private Object _value;
 
-    private SingleValueImpl(int id, ComplexValueForeignKey complexValueFk,
+    private SingleValueImpl(Id id, ComplexValueForeignKey complexValueFk,
                             Object value)
     {
       super(id, complexValueFk);

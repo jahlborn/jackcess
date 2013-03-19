@@ -49,6 +49,7 @@ import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import org.apache.commons.logging.Log;
@@ -380,6 +381,15 @@ public class TableImpl implements Table
     throw new IllegalArgumentException("Column with name " + name +
                                        " does not exist in this table");
   }
+  
+  public boolean hasColumn(String name) {
+    for(ColumnImpl column : _columns) {
+      if(column.getName().equalsIgnoreCase(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
@@ -465,8 +475,20 @@ public class TableImpl implements Table
   }
 
   public Row deleteRow(Row row) throws IOException {
-    deleteRow(getDefaultCursor().getRowState(), (RowIdImpl)row.getId());
+    deleteRow(row.getId());
     return row;
+  }
+
+  /**
+   * Delete the row with the given id.  Provided RowId must have previously
+   * been returned from this Table.
+   * @return the given rowId
+   * @throws IllegalStateException if the given row is not valid
+   * @usage _intermediate_method_
+   */
+  public RowId deleteRow(RowId rowId) throws IOException {
+    deleteRow(getDefaultCursor().getRowState(), (RowIdImpl)rowId);
+    return rowId;
   }
 
   /**
@@ -1241,21 +1263,40 @@ public class TableImpl implements Table
   }
   
   public Object[] asRow(Map<String,?> rowMap) {
-    return asRow(rowMap, null);
+    return asRow(rowMap, null, false);
+  }
+  
+  /**
+   * Converts a map of columnName -> columnValue to an array of row values
+   * appropriate for a call to {@link #addRow(Object...)}, where the generated
+   * RowId will be an extra value at the end of the array.
+   * @see ColumnImpl#RETURN_ROW_ID
+   * @usage _intermediate_method_
+   */
+  public Object[] asRowWithRowId(Map<String,?> rowMap) {
+    return asRow(rowMap, null, true);
   }
   
   public Object[] asUpdateRow(Map<String,?> rowMap) {
-    return asRow(rowMap, Column.KEEP_VALUE);
+    return asRow(rowMap, Column.KEEP_VALUE, false);
   }
 
   /**
    * Converts a map of columnName -> columnValue to an array of row values.
    */
-  private Object[] asRow(Map<String,?> rowMap, Object defaultValue)
+  private Object[] asRow(Map<String,?> rowMap, Object defaultValue, 
+                         boolean returnRowId)
   {
-    Object[] row = new Object[_columns.size()];
+    int len = _columns.size();
+    if(returnRowId) {
+      ++len;
+    }
+    Object[] row = new Object[len];
     if(defaultValue != null) {
       Arrays.fill(row, defaultValue);
+    }
+    if(returnRowId) {
+      row[len - 1] = ColumnImpl.RETURN_ROW_ID;
     }
     if(rowMap == null) {
       return row;
@@ -1334,6 +1375,7 @@ public class TableImpl implements Table
 
     List<Object[]> dupeRows = null;
     ByteBuffer[] rowData = new ByteBuffer[rows.size()];
+    int numCols = _columns.size();
     for (int i = 0; i < rows.size(); i++) {
 
       // we need to make sure the row is the right length and is an Object[]
@@ -1342,8 +1384,8 @@ public class TableImpl implements Table
       // they need that info they should use a row array of the right
       // size/type!
       Object[] row = rows.get(i);
-      if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
-        row = dupeRow(row, _columns.size());
+      if((row.length < numCols) || (row.getClass() != Object[].class)) {
+        row = dupeRow(row, numCols);
         // copy the input rows to a modifiable list so we can update the
         // elements
         if(dupeRows == null) {
@@ -1390,6 +1432,11 @@ public class TableImpl implements Table
       for(IndexData indexData : _indexDatas) {
         indexData.addRow(row, rowId);
       }
+
+      // return rowTd if desired
+      if((row.length > numCols) && (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
+        row[numCols] = rowId;
+      }
     }
 
     writeDataPage(dataPage, pageNumber);
@@ -1403,6 +1450,18 @@ public class TableImpl implements Table
   public Row updateRow(Row row) throws IOException {
     return updateRowFromMap(
         getDefaultCursor().getRowState(), (RowIdImpl)row.getId(), row);
+  }
+
+  /**
+   * Update the row with the given id.  Provided RowId must have previously
+   * been returned from this Table.
+   * @return the given row, updated with the current row values
+   * @throws IllegalStateException if the given row is not valid, or deleted.
+   * @usage _intermediate_method_
+   */
+  public Object[] updateRow(RowId rowId, Object... row) throws IOException {
+    return updateRow(
+        getDefaultCursor().getRowState(), (RowIdImpl)rowId, row);
   }
 
   public <M extends Map<String,Object>> M updateRowFromMap(

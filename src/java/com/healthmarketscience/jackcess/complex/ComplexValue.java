@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess.complex;
 import java.io.IOException;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.RowId;
 
 /**
  * Base interface for a value in a complex column (where there may be multiple
@@ -38,15 +39,19 @@ public interface ComplexValue
    * @return the current id or {@link ComplexColumnInfo#INVALID_ID} for a new,
    *         unsaved value.
    */
-  public int getId();
+  public Id getId();
 
-  public void setId(int newId);
+  /**
+   * Called once when a new ComplexValue is saved to set the new unique
+   * identifier.
+   */
+  public void setId(Id newId);
   
   /**
    * Returns the foreign key identifier for this complex value (this value is
    * the same for all values in the same row of the main table).
    * 
-   * @return the current id or {@link ComplexColumnInfo#INVALID_COMPLEX_VALUE_ID}
+   * @return the current id or {@link ComplexColumnInfo#INVALID_FK}
    *         for a new, unsaved value.
    */
   public ComplexValueForeignKey getComplexValueForeignKey();
@@ -69,4 +74,24 @@ public interface ComplexValue
    */
   public void delete() throws IOException;
 
+
+  /**
+   * Identifier for a ComplexValue.  Only valid for comparing complex values
+   * for the same column.
+   */
+  public abstract class Id extends Number 
+  {
+    private static final long serialVersionUID = 20130318L;    
+
+    /**
+     * Returns the unique identifier of this complex value (this value is unique
+     * among all values in all rows of the main table for the complex column).
+     */
+    public abstract int get();
+    
+    /**
+     * Returns the rowId of this ComplexValue within the secondary table.
+     */
+    public abstract RowId getRowId();
+  }
 }

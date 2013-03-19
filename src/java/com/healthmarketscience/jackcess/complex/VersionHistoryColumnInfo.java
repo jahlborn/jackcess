@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
@@ -96,7 +95,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   }
 
   @Override
-  public int updateValue(Version value) throws IOException {
+  public ComplexValue.Id updateValue(Version value) throws IOException {
     throw new UnsupportedOperationException(
         "This column does not support value updates");
   }
@@ -129,7 +128,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   @Override
   protected VersionImpl toValue(ComplexValueForeignKey complexValueFk,
                                 Row rawValue) {
-    int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
+    ComplexValue.Id id = getValueId(rawValue);
     String value = (String)getValueColumn().getRowValue(rawValue);
     Date modifiedDate = (Date)getModifiedDateColumn().getRowValue(rawValue);
 
@@ -145,7 +144,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
   }
   
   public static Version newVersion(String value, Date modifiedDate) {
-    return newVersion(INVALID_COMPLEX_VALUE_ID, value, modifiedDate);
+    return newVersion(INVALID_FK, value, modifiedDate);
   }
   
   public static Version newVersion(ComplexValueForeignKey complexValueFk,
@@ -159,7 +158,7 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
     private final String _value;
     private final Date _modifiedDate;
 
-    private VersionImpl(int id, ComplexValueForeignKey complexValueFk,
+    private VersionImpl(Id id, ComplexValueForeignKey complexValueFk,
                         String value, Date modifiedDate)
     {
       super(id, complexValueFk);
@@ -187,8 +186,8 @@ public class VersionHistoryColumnInfo extends ComplexColumnInfo<Version>
 
       // use id, then complexValueFk to break ties (although we really
       // shouldn't be comparing across different columns)
-      int id1 = getId();
-      int id2 = o.getId();
+      int id1 = getId().get();
+      int id2 = o.getId().get();
       if(id1 != id2) {
         return ((id1 > id2) ? -1 : 1);
       }

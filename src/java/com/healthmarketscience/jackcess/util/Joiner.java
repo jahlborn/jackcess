@@ -29,8 +29,9 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RuntimeIOException;
+import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
@@ -191,7 +192,7 @@ public class Joiner
    * @param columnNames desired columns in the from table row
    */
   public Iterator<Row> findRows(Map<String,?> fromRow,
-                                               Collection<String> columnNames)
+                                Collection<String> columnNames)
   {
     toEntryValues(fromRow);
     return _toCursor.entryIterator(columnNames, _entryValues);
@@ -207,7 +208,7 @@ public class Joiner
    * @usage _intermediate_method_
    */
   public Iterator<Row> findRows(Object[] fromRow,
-                                               Collection<String> columnNames)
+                                Collection<String> columnNames)
   {
     toEntryValues(fromRow);
     return _toCursor.entryIterator(columnNames, _entryValues);

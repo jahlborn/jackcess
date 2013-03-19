@@ -73,6 +73,15 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   private static final Log LOG = LogFactory.getLog(ColumnImpl.class);
+  
+  /**
+   * Placeholder object for adding rows which indicates that the caller wants
+   * the RowId of the new row.  Must be added as an extra value at the end of
+   * the row values array.
+   * @see TableImpl#asRowWithRowId
+   * @usage _intermediate_field_
+   */
+  public static final Object RETURN_ROW_ID = "<RETURN_ROW_ID>";
 
   /**
    * Access stores numeric dates in days.  Java stores them in milliseconds.

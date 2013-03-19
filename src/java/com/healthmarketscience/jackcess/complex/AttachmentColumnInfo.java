@@ -21,7 +21,6 @@ package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
@@ -133,7 +132,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   @Override
   protected AttachmentImpl toValue(ComplexValueForeignKey complexValueFk,
                                    Row rawValue) {
-    int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
+    ComplexValue.Id id = getValueId(rawValue);
     String url = (String)getFileUrlColumn().getRowValue(rawValue);
     String name = (String)getFileNameColumn().getRowValue(rawValue);
     String type = (String)getFileTypeColumn().getRowValue(rawValue);
@@ -158,7 +157,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   }
 
   public static Attachment newAttachment(byte[] data) {
-    return newAttachment(INVALID_COMPLEX_VALUE_ID, data);
+    return newAttachment(INVALID_FK, data);
   }
   
   public static Attachment newAttachment(ComplexValueForeignKey complexValueFk,
@@ -170,7 +169,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       String url, String name, String type, byte[] data,
       Date timeStamp, Integer flags)
   {
-    return newAttachment(INVALID_COMPLEX_VALUE_ID, url, name, type, data,
+    return newAttachment(INVALID_FK, url, name, type, data,
                          timeStamp, flags);
   }
   
@@ -193,7 +192,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     private Date _timeStamp;
     private Integer _flags;
 
-    private AttachmentImpl(int id, ComplexValueForeignKey complexValueFk,
+    private AttachmentImpl(Id id, ComplexValueForeignKey complexValueFk,
                            String url, String name, String type, byte[] data,
                            Date timeStamp, Integer flags)
     {

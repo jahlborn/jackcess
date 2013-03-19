@@ -27,7 +27,6 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.impl.RowImpl;
 
 /**
  * Complex column info for an unsupported complex type.
@@ -59,7 +58,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
       ComplexValueForeignKey complexValueFk,
       Row rawValue)
   {
-    int id = (Integer)getPrimaryKeyColumn().getRowValue(rawValue);
+    ComplexValue.Id id = getValueId(rawValue);
 
     Map<String,Object> values = new LinkedHashMap<String,Object>();
     for(Column col : getValueColumns()) {
@@ -82,7 +81,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
   }
 
   public static UnsupportedValue newValue(Map<String,?> values) {
-    return newValue(INVALID_COMPLEX_VALUE_ID, values);
+    return newValue(INVALID_FK, values);
   }
 
   public static UnsupportedValue newValue(
@@ -96,7 +95,7 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
   {
     private Map<String,Object> _values;
 
-    private UnsupportedValueImpl(int id, ComplexValueForeignKey complexValueFk,
+    private UnsupportedValueImpl(Id id, ComplexValueForeignKey complexValueFk,
                                  Map<String,Object> values)
     {
       super(id, complexValueFk);
