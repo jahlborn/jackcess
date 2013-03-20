@@ -273,7 +273,8 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
 
   protected ComplexValueIdImpl getValueId(Object[] row) {
     int idVal = (Integer)getPrimaryKeyColumn().getRowValue(row);
-    return new ComplexValueIdImpl(idVal, (RowId)row[row.length - 1]);
+    return new ComplexValueIdImpl(idVal, 
+                                  ((TableImpl)_flatTable).getRowId(row));
   }
 
   protected Object[] asRow(Object[] row, V value) {

@@ -1282,6 +1282,15 @@ public class TableImpl implements Table
   }
 
   /**
+   * @return the generated RowId added to a row of values created via {@link
+   *         #asRowWithRowId}
+   * @usage _intermediate_method_
+   */
+  public RowId getRowId(Object[] row) {
+    return (RowId)row[_columns.size()];
+  }
+
+  /**
    * Converts a map of columnName -> columnValue to an array of row values.
    */
   private Object[] asRow(Map<String,?> rowMap, Object defaultValue, 
