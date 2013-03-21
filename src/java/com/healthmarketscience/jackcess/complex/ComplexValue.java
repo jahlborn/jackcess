@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
+import java.io.ObjectStreamException;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.RowId;
@@ -82,6 +83,60 @@ public interface ComplexValue
   public abstract class Id extends Number 
   {
     private static final long serialVersionUID = 20130318L;    
+
+    @Override
+    public byte byteValue() {
+      return (byte)get();
+    }
+  
+    @Override
+    public short shortValue() {
+      return (short)get();
+    }
+  
+    @Override
+    public int intValue() {
+      return get();
+    }
+  
+    @Override
+    public long longValue() {
+      return get();
+    }
+  
+    @Override
+    public float floatValue() {
+      return get();
+    }
+  
+    @Override
+    public double doubleValue() {
+      return get();
+    }
+    
+    @Override
+    public int hashCode() {
+      return get();
+    }
+  
+    @Override
+    public boolean equals(Object o) {
+      return ((this == o) ||
+              ((o != null) && (getClass() == o.getClass()) &&
+               (get() == ((Id)o).get())));
+    }
+
+    @Override
+    public String toString() {
+      return String.valueOf(get());
+    }  
+
+    protected final Object writeReplace() throws ObjectStreamException {
+      // if we are going to serialize this ComplexValue.Id, convert it back to
+      // a normal Integer (in case it is restored outside of the context of
+      // jackcess)
+      return Integer.valueOf(get());
+    }
 
     /**
      * Returns the unique identifier of this complex value (this value is unique

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 James Ahlborn
+Copyright (c) 2013 James Ahlborn
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -19,101 +19,12 @@ USA
 
 package com.healthmarketscience.jackcess.complex;
 
-import java.io.IOException;
-
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.Row;
-
 /**
- * Complex column info for a column holding multiple values per row.
+ * Complex column info for a column holding multiple simple values per row.
  *
  * @author James Ahlborn
  */
-public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
+public interface MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
 {
-  private final Column _valueCol;
-  
-  public MultiValueColumnInfo(Column column, int complexId,
-                              Table typeObjTable, Table flatTable) 
-    throws IOException
-  {
-    super(column, complexId, typeObjTable, flatTable);
 
-    _valueCol = getTypeColumns().get(0);
-  }
-
-  @Override
-  public ComplexDataType getType()
-  {
-    return ComplexDataType.MULTI_VALUE;
-  }
-
-  public Column getValueColumn() {
-    return _valueCol;
-  }
-
-  @Override
-  protected SingleValueImpl toValue(
-      ComplexValueForeignKey complexValueFk,
-      Row rawValue)
-  {
-    ComplexValue.Id id = getValueId(rawValue);
-    Object value = getValueColumn().getRowValue(rawValue);
-
-    return new SingleValueImpl(id, complexValueFk, value);
-  }
-
-  @Override
-  protected Object[] asRow(Object[] row, SingleValue value) {
-    super.asRow(row, value);
-    getValueColumn().setRowValue(row, value.get());
-    return row;
-  }
-  
-  public static SingleValue newSingleValue(Object value) {
-    return newSingleValue(INVALID_FK, value);
-  }
-
-  public static SingleValue newSingleValue(
-      ComplexValueForeignKey complexValueFk, Object value) {
-    return new SingleValueImpl(INVALID_ID, complexValueFk, value);
-  }
-
-
-  private static class SingleValueImpl extends ComplexValueImpl
-    implements SingleValue
-  {
-    private Object _value;
-
-    private SingleValueImpl(Id id, ComplexValueForeignKey complexValueFk,
-                            Object value)
-    {
-      super(id, complexValueFk);
-      _value = value;
-    }
-    
-    public Object get() {
-      return _value;
-    }
-
-    public void set(Object value) {
-      _value = value;
-    }
-
-    public void update() throws IOException {
-      getComplexValueForeignKey().updateMultiValue(this);
-    }
-    
-    public void delete() throws IOException {
-      getComplexValueForeignKey().deleteMultiValue(this);
-    }
-    
-    @Override
-    public String toString()
-    {
-      return "SingleValue(" + getComplexValueForeignKey() + "," + getId() +
-        ") " + get();
-    } 
-  }
 }

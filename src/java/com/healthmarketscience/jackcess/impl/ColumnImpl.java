@@ -54,6 +54,8 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
 import com.healthmarketscience.jackcess.impl.scsu.Compress;
 import com.healthmarketscience.jackcess.impl.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.impl.scsu.Expand;
@@ -327,7 +329,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   void postTableLoadInit() throws IOException {
     if(_complexInfo != null) {
-      _complexInfo.postTableLoadInit();
+      ((ComplexColumnInfoImpl<? extends ComplexValue>)_complexInfo)
+      .postTableLoadInit();
     }
   }
 
@@ -619,7 +622,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // treat like "binary" data
       return data;
     } else if (_type == DataType.COMPLEX_TYPE) {
-      return new ComplexValueForeignKey(this, buffer.getInt());
+      return new ComplexValueForeignKeyImpl(this, buffer.getInt());
     } else if(_type.isUnsupported()) {
       return rawDataWrapper(data);
     } else {
@@ -2057,7 +2060,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
          getTable().getNextComplexTypeAutoNumber() :
          // same value is shared across all ComplexType values in a row
          ((ComplexValueForeignKey)prevRowValue).get());
-      return new ComplexValueForeignKey(ColumnImpl.this, nextComplexAutoNum);
+      return new ComplexValueForeignKeyImpl(ColumnImpl.this, nextComplexAutoNum);
     }
 
     @Override

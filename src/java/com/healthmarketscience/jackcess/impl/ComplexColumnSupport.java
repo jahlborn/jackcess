@@ -38,6 +38,10 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.MultiValueColumnInfo;
 import com.healthmarketscience.jackcess.complex.UnsupportedColumnInfo;
 import com.healthmarketscience.jackcess.complex.VersionHistoryColumnInfo;
+import com.healthmarketscience.jackcess.impl.complex.AttachmentColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.MultiValueColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.UnsupportedColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.VersionHistoryColumnInfoImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -101,18 +105,18 @@ public class ComplexColumnSupport
     // we inspect the structore of the "type table" to determine what kind of
     // complex info we are dealing with
     if(isMultiValueColumn(typeObjTable)) {
-      return new MultiValueColumnInfo(column, complexTypeId, typeObjTable,
+      return new MultiValueColumnInfoImpl(column, complexTypeId, typeObjTable,
                                       flatTable);
     } else if(isAttachmentColumn(typeObjTable)) {
-      return new AttachmentColumnInfo(column, complexTypeId, typeObjTable,
+      return new AttachmentColumnInfoImpl(column, complexTypeId, typeObjTable,
                                       flatTable);
     } else if(isVersionHistoryColumn(typeObjTable)) {
-      return new VersionHistoryColumnInfo(column, complexTypeId, typeObjTable,
+      return new VersionHistoryColumnInfoImpl(column, complexTypeId, typeObjTable,
                                           flatTable);
     }
     
     LOG.warn("Unsupported complex column type " + typeObjTable.getName());
-    return new UnsupportedColumnInfo(column, complexTypeId, typeObjTable,
+    return new UnsupportedColumnInfoImpl(column, complexTypeId, typeObjTable,
                                      flatTable);
   }
 
