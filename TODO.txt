@@ -31,7 +31,7 @@ Refactor goals:
 * move database open/create options to DBBuilder
 * tweak how import filters work to make them more flexible?
 - tweak lookup apis (specify column vs column name)
-- separate classes into more packages (api,builder,util,impl)
+* separate classes into more packages (api,builder,util,impl)
 * remove debug log blocks
 * add Row interface
 * change savepoint to use table number instead of name?

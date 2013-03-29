@@ -44,6 +44,7 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
@@ -468,6 +469,10 @@ public class TableImpl implements Table
       _defaultCursor = CursorImpl.createCursor(this);
     }
     return _defaultCursor;
+  }
+
+  public CursorBuilder newCursor() {
+    return new CursorBuilder(this);
   }
   
   public void reset() {

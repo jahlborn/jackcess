@@ -142,12 +142,13 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     throws IOException
   {
     if(_complexValIdCursor == null) {
-      _complexValIdCursor = new CursorBuilder(_flatTable)
+      _complexValIdCursor = _flatTable.newCursor()
         .setIndexByColumns(_complexValFkCol)
         .toIndexCursor();
     }
 
-    return _complexValIdCursor.entryIterator(columnNames, complexValueFk);
+    return _complexValIdCursor.newEntryIterable(complexValueFk)
+      .setColumnNames(columnNames).iterator();
   }
   
   public List<Row> getRawValues(int complexValueFk,

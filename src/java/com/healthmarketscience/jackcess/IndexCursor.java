@@ -20,9 +20,8 @@ USA
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+
+import com.healthmarketscience.jackcess.util.EntryIterableBuilder;
 
 /**
  * Cursor backed by an index with extended traversal options.
@@ -68,38 +67,11 @@ public interface IndexCursor extends Cursor
     throws IOException;
 
   /**
-   * Returns a modifiable Iterator which will iterate through all the rows of
-   * this table which match the given index entries.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
+   * Convenience method for constructing a new EntryIterableBuilder for this
+   * cursor.  An EntryIterableBuilder provides a variety of options for more
+   * flexible iteration based on a specific index entry.
+   * 
+   * @param entryValues the column values for the index's columns.
    */
-  public Iterator<Row> entryIterator(Object... entryValues);
-
-  /**
-   * Returns a modifiable Iterator which will iterate through all the rows of
-   * this table which match the given index entries, returning only the given
-   * columns.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> entryIterator(
-      Collection<String> columnNames, Object... entryValues);
-
-  /**
-   * Returns an Iterable whose iterator() method returns the result of a call
-   * to {@link #entryIterator(Object...)}
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> entryIterable(Object... entryValues);
-
-  /**
-   * Returns an Iterable whose iterator() method returns the result of a call
-   * to {@link #entryIterator(Collection,Object...)}
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> entryIterable(
-      Collection<String> columnNames, Object... entryValues);
-
+  public EntryIterableBuilder newEntryIterable(Object... entryValues);
 }

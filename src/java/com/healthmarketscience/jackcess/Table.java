@@ -274,4 +274,9 @@ public interface Table extends Iterable<Row>
    *         use the Cursor directly.
    */
   public Cursor getDefaultCursor();
+
+  /**
+   * Convenience method for constructing a new CursorBuilder for this Table.
+   */
+  public CursorBuilder newCursor();
 }

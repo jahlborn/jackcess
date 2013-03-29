@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.EntryIterableBuilder;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -130,7 +131,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     PositionImpl prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findFirstRowByEntryImpl(toRowValues(entryValues), true);
+      found = findFirstRowByEntryImpl(toRowValues(entryValues), true, 
+                                      _columnMatcher);
       return found;
     } finally {
       if(!found) {
@@ -150,7 +152,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     PositionImpl prevPos = _prevPos;
     boolean found = false;
     try {
-      findFirstRowByEntryImpl(toRowValues(entryValues), false);
+      findFirstRowByEntryImpl(toRowValues(entryValues), false,
+                              _columnMatcher);
       found = true;
     } finally {
       if(!found) {
@@ -166,33 +169,17 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   public boolean currentRowMatchesEntry(Object... entryValues) 
     throws IOException 
   {
-    return currentRowMatchesEntryImpl(toRowValues(entryValues));
+    return currentRowMatchesEntryImpl(toRowValues(entryValues), _columnMatcher);
   }
-  
-  public Iterator<Row> entryIterator(Object... entryValues)
-  {
-    return entryIterator((Collection<String>)null, entryValues);
+
+  public EntryIterableBuilder newEntryIterable(Object... entryValues) {
+    return new EntryIterableBuilder(this, entryValues);
   }
-  
-  public Iterator<Row> entryIterator(
-      Collection<String> columnNames, Object... entryValues)
-  {
-    return new EntryIterator(columnNames, toRowValues(entryValues));
-  }
-  
-  public Iterable<Row> entryIterable(Object... entryValues)
-  {
-    return entryIterable((Collection<String>)null, entryValues);
-  }
-  
-  public Iterable<Row> entryIterable(
-      final Collection<String> columnNames, final Object... entryValues)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return new EntryIterator(columnNames, toRowValues(entryValues));
-      }
-    };
+
+  public Iterator<Row> entryIterator(EntryIterableBuilder iterBuilder) {
+    return new EntryIterator(iterBuilder.getColumnNames(),
+                             toRowValues(iterBuilder.getEntryValues()),
+                             iterBuilder.getColumnMatcher());
   }
   
   @Override
@@ -226,12 +213,15 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   }
 
   @Override
-  protected boolean findNextRowImpl(ColumnImpl columnPattern, Object valuePattern)
+  protected boolean findAnotherRowImpl(
+      ColumnImpl columnPattern, Object valuePattern, boolean moveForward,
+      ColumnMatcher columnMatcher)
     throws IOException
   {
-    if(!isBeforeFirst()) {
+    if(!isAtBeginning(moveForward)) {
       // use the default table scan for finding rows mid-cursor
-      return super.findNextRowImpl(columnPattern, valuePattern);
+      return super.findAnotherRowImpl(columnPattern, valuePattern, moveForward,
+                                      columnMatcher);
     }
 
     // searching for the first match
@@ -240,7 +230,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
 
     if(rowValues == null) {
       // bummer, use the default table scan
-      return super.findNextRowImpl(columnPattern, valuePattern);
+      return super.findAnotherRowImpl(columnPattern, valuePattern, moveForward,
+                                      columnMatcher);
     }
       
     // sweet, we can use our index
@@ -250,7 +241,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
 
     // either we found a row with the given value, or none exist in the
     // table
-    return currentRowMatches(columnPattern, valuePattern);
+    return currentRowMatchesImpl(columnPattern, valuePattern, columnMatcher);
   }
 
   /**
@@ -263,7 +254,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
    *         {@code false} if no row was found
    */
   protected boolean findFirstRowByEntryImpl(Object[] rowValues,
-                                            boolean requireMatch) 
+                                            boolean requireMatch,
+                                            ColumnMatcher columnMatcher) 
     throws IOException 
   {
     if(!findPotentialRow(rowValues, requireMatch)) {
@@ -273,16 +265,18 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       return true;
     }
 
-    return currentRowMatchesEntryImpl(rowValues);
+    return currentRowMatchesEntryImpl(rowValues, columnMatcher);
   }
 
   @Override
-  protected boolean findNextRowImpl(Map<String,?> rowPattern)
+  protected boolean findAnotherRowImpl(Map<String,?> rowPattern, 
+                                       boolean moveForward,
+                                       ColumnMatcher columnMatcher)
     throws IOException
   {
-    if(!isBeforeFirst()) {
+    if(!isAtBeginning(moveForward)) {
       // use the default table scan for finding rows mid-cursor
-      return super.findNextRowImpl(rowPattern);
+      return super.findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
     }
 
     // searching for the first match
@@ -291,7 +285,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
 
     if(rowValues == null) {
       // bummer, use the default table scan
-      return super.findNextRowImpl(rowPattern);
+      return super.findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
     }
 
     // sweet, we can use our index
@@ -321,25 +315,27 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     // longer match
     do {
 
-      if(!currentRowMatches(indexRowPattern)) {
+      if(!currentRowMatchesImpl(indexRowPattern, columnMatcher)) {
         // there are no more rows which could possibly match
         break;
       }
 
       // note, if rowPattern == indexRowPattern, no need to do an extra
       // comparison with the current row
-      if((rowPattern == indexRowPattern) || currentRowMatches(rowPattern)) {
+      if((rowPattern == indexRowPattern) || 
+         currentRowMatchesImpl(rowPattern, columnMatcher)) {
         // found it!
         return true;
       }
 
-    } while(moveToNextRow());
+    } while(moveToAnotherRow(moveForward));
         
     // none of the potential rows matched
     return false;
   }
 
-  private boolean currentRowMatchesEntryImpl(Object[] rowValues)
+  private boolean currentRowMatchesEntryImpl(Object[] rowValues, 
+                                             ColumnMatcher columnMatcher)
     throws IOException
   {
     if(_indexEntryPattern == null) {
@@ -357,8 +353,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       String columnName = col.getName();
       Object patValue = rowValues[col.getColumnIndex()];
       Object rowValue = row.get(columnName);
-      if(!_columnMatcher.matches(getTable(), columnName,
-                                 patValue, rowValue)) {
+      if(!columnMatcher.matches(getTable(), columnName, patValue, rowValue)) {
         return false;
       }
     }
@@ -490,12 +485,13 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   {
     private final Object[] _rowValues;
     
-    private EntryIterator(Collection<String> columnNames, Object[] rowValues)
+    private EntryIterator(Collection<String> columnNames, Object[] rowValues,
+                          ColumnMatcher columnMatcher)
     {
-      super(columnNames);
+      super(columnNames, false, MOVE_FORWARD, columnMatcher);
       _rowValues = rowValues;
       try {
-        _hasNext = findFirstRowByEntryImpl(rowValues, true);
+        _hasNext = findFirstRowByEntryImpl(rowValues, true, _columnMatcher);
         _validRow = _hasNext;
       } catch(IOException e) {
           throw new RuntimeIOException(e);
@@ -504,7 +500,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
 
     @Override
     protected boolean findNext() throws IOException {
-      return (moveToNextRow() && currentRowMatchesEntryImpl(_rowValues));
+      return (moveToNextRow() && 
+              currentRowMatchesEntryImpl(_rowValues, _colMatcher));
     }    
   }
 

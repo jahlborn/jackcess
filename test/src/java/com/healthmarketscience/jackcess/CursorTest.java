@@ -176,7 +176,7 @@ public class CursorTest extends TestCase {
                                                   int type)
     throws Exception
   {
-    return new CursorBuilder(table)
+    return table.newCursor()
       .setIndex(idx)
       .setStartEntry(3 - type)
       .setStartRowInclusive(type == 0)
@@ -394,7 +394,7 @@ public class CursorTest extends TestCase {
 
     List<Map<String, Object>> foundRows =
       new ArrayList<Map<String, Object>>();
-    for(Map<String, Object> row : cursor.reverseIterable()) {
+    for(Map<String, Object> row : cursor.newIterable().reverse()) {
       foundRows.add(row);
     }
     assertEquals(expectedRows, foundRows);    
@@ -766,9 +766,8 @@ public class CursorTest extends TestCase {
   private static void doTestFindAll(Table table, Cursor cursor, Index index)
     throws Exception
   {
-    Column valCol = table.getColumn("value");
     List<? extends Map<String,Object>> rows = RowFilterTest.toList(
-        cursor.columnMatchIterable(valCol, "data2"));
+        cursor.newIterable().setMatchPattern("value", "data2"));
 
     List<? extends Map<String, Object>> expectedRows = null;
 
@@ -801,8 +800,9 @@ public class CursorTest extends TestCase {
     }
     assertEquals(expectedRows, rows);
 
+    Column valCol = table.getColumn("value");
     rows = RowFilterTest.toList(
-        cursor.columnMatchIterable(valCol, "data4"));
+        cursor.newIterable().setMatchPattern(valCol, "data4"));
 
     if(index == null) {
       expectedRows =
@@ -822,12 +822,13 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRows, rows);
 
     rows = RowFilterTest.toList(
-        cursor.columnMatchIterable(valCol, "data9"));
+        cursor.newIterable().setMatchPattern(valCol, "data9"));
 
     assertTrue(rows.isEmpty());
 
     rows = RowFilterTest.toList(
-        cursor.rowMatchIterable(Collections.singletonMap("id", 8)));
+        cursor.newIterable().setMatchPattern(
+            Collections.singletonMap("id", 8)));
     
     expectedRows =
       createExpectedTable(
@@ -848,14 +849,14 @@ public class CursorTest extends TestCase {
       expectedRows = tmpRows;
       assertFalse(expectedRows.isEmpty());
       
-      rows = RowFilterTest.toList(cursor.rowMatchIterable(row));
+      rows = RowFilterTest.toList(cursor.newIterable().setMatchPattern(row));
 
       assertEquals(expectedRows, rows);
     }
 
     rows = RowFilterTest.toList(
-        cursor.rowMatchIterable(createExpectedRow(
-                                    "id", 8, "value", "data13")));    
+        cursor.newIterable().addMatchPattern("id", 8)
+        .addMatchPattern("value", "data13"));
     assertTrue(rows.isEmpty());
   }
 
@@ -997,6 +998,28 @@ public class CursorTest extends TestCase {
                                      "value", "data" + 4),
                    cursor.getCurrentRow());
     }
+
+    assertEquals(Arrays.asList(createExpectedRow("id", 4,
+                                                 "value", "data" + 4)),
+                 RowFilterTest.toList(
+                     cursor.newIterable()
+                     .setMatchPattern("value", "data4")
+                     .setColumnMatcher(SimpleColumnMatcher.INSTANCE)));
+
+    assertEquals(Arrays.asList(createExpectedRow("id", 3,
+                                                 "value", "data" + 3)),
+                 RowFilterTest.toList(
+                     cursor.newIterable()
+                     .setMatchPattern("value", "DaTa3")
+                     .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)));
+
+    assertEquals(Arrays.asList(createExpectedRow("id", 2,
+                                                 "value", "data" + 2)),
+                 RowFilterTest.toList(
+                     cursor.newIterable()
+                     .addMatchPattern("value", "DaTa2")
+                     .addMatchPattern("id", 2)
+                     .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)));
   }
 
   public void testIndexCursor() throws Exception
@@ -1036,15 +1059,16 @@ public class CursorTest extends TestCase {
       IndexCursor cursor = CursorBuilder.createCursor(t1, idx);
 
       List<String> expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.entryIterable(
-              Arrays.asList("data"), 1)) {
+      for(Map<String,Object> row : cursor.newEntryIterable(1)
+            .addColumnNames("data")) {
         expectedData.add((String)row.get("data"));
       }
 
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
       expectedData = new ArrayList<String>();
-      for(Iterator<? extends Map<String,Object>> iter = cursor.entryIterator(1);
+      for(Iterator<? extends Map<String,Object>> iter = 
+            cursor.newEntryIterable(1).iterator();
           iter.hasNext(); ) {
         expectedData.add((String)iter.next().get("data"));
         iter.remove();
@@ -1068,8 +1092,8 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
       
       expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.entryIterable(
-              Arrays.asList("data"), 1)) {
+      for(Map<String,Object> row : cursor.newEntryIterable(1)
+            .addColumnNames("data")) {
         expectedData.add((String)row.get("data"));
       }
 
@@ -1088,7 +1112,7 @@ public class CursorTest extends TestCase {
       Cursor cursor = CursorBuilder.createCursor(t1);
 
       List<String> expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.iterable(
+      for(Map<String,Object> row : cursor.newIterable().setColumnNames(
               Arrays.asList("otherfk1", "data"))) {
         if(row.get("otherfk1").equals(1)) {
           expectedData.add((String)row.get("data"));
@@ -1125,7 +1149,7 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
       
       expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.iterable(
+      for(Map<String,Object> row : cursor.newIterable().setColumnNames(
               Arrays.asList("otherfk1", "data"))) {
         if(row.get("otherfk1").equals(1)) {
           expectedData.add((String)row.get("data"));

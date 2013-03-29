@@ -129,13 +129,13 @@ public class CodecHandlerTest extends TestCase
         t2.addRow(null, "rowdata-" + i + DatabaseTest.createString(100));
       }
 
-      Cursor c1 = new CursorBuilder(t1).setIndex(t1.getPrimaryKeyIndex())
+      Cursor c1 = t1.newCursor().setIndex(t1.getPrimaryKeyIndex())
         .toCursor();
-      Cursor c2 = new CursorBuilder(t2).setIndex(t2.getPrimaryKeyIndex())
+      Cursor c2 = t2.newCursor().setIndex(t2.getPrimaryKeyIndex())
         .toCursor();
 
       Iterator<? extends Map<String,Object>> i1 = c1.iterator();
-      Iterator<? extends Map<String,Object>> i2 = c2.reverseIterable().iterator();
+      Iterator<? extends Map<String,Object>> i2 = c2.newIterable().reverse().iterator();
 
       int t1rows = 0;
       int t2rows = 0;

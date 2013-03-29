@@ -452,7 +452,7 @@ public class IndexTest extends TestCase {
       t.addRow(1, "row1");
       t.addRow(3, "row3");
 
-      Cursor c = new CursorBuilder(t)
+      Cursor c = t.newCursor()
         .setIndexByName(IndexBuilder.PRIMARY_KEY_NAME).toCursor();
 
       for(int i = 1; i <= 3; ++i) {

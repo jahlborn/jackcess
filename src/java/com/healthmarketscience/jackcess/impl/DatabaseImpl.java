@@ -828,7 +828,7 @@ public class DatabaseImpl implements Database
 
     try {
       _tableFinder = new DefaultTableFinder(
-          new CursorBuilder(_systemCatalog)
+          _systemCatalog.newCursor()
             .setIndexByColumnNames(CAT_COL_PARENT_ID, CAT_COL_NAME)
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toIndexCursor());
@@ -837,7 +837,7 @@ public class DatabaseImpl implements Database
                _systemCatalog.getName());
       // use table scan instead
       _tableFinder = new FallbackTableFinder(
-          new CursorBuilder(_systemCatalog)
+          _systemCatalog.newCursor()
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toCursor());
     }
@@ -1072,7 +1072,8 @@ public class DatabaseImpl implements Database
     Map<Integer,List<Query.Row>> queryRowMap = 
       new HashMap<Integer,List<Query.Row>>();
     for(Row row :
-          CursorImpl.createCursor(_systemCatalog).iterable(SYSTEM_CATALOG_COLUMNS))
+          CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
+              SYSTEM_CATALOG_COLUMNS))
     {
       String name = (String) row.get(CAT_COL_NAME);
       if (name != null && TYPE_QUERY.equals(row.get(CAT_COL_TYPE))) {
@@ -1405,7 +1406,7 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     try {
-      return new CursorBuilder(table)
+      return table.newCursor()
         .setIndexByColumns(table.getColumn(colName))
         .setSpecificEntry(colValue)
         .toCursor();
@@ -1814,7 +1815,7 @@ public class DatabaseImpl implements Database
                               boolean systemTables)
       throws IOException
     {
-      for(Row row : getTableNamesCursor().iterable(
+      for(Row row : getTableNamesCursor().newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
         String tableName = (String)row.get(CAT_COL_NAME);
@@ -1867,7 +1868,7 @@ public class DatabaseImpl implements Database
     
     private void initIdCursor() throws IOException {
       if(_systemCatalogIdCursor == null) {
-        _systemCatalogIdCursor = new CursorBuilder(_systemCatalog)
+        _systemCatalogIdCursor = _systemCatalog.newCursor()
           .setIndexByColumnNames(CAT_COL_ID)
           .toIndexCursor();
       }
@@ -1916,7 +1917,7 @@ public class DatabaseImpl implements Database
     
     @Override
     protected Cursor getTableNamesCursor() throws IOException {
-      return new CursorBuilder(_systemCatalog)
+      return _systemCatalog.newCursor()
         .setIndex(_systemCatalogCursor.getIndex())
         .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
         .setEndEntry(_tableParentId, IndexData.MAX_VALUE)
@@ -1972,7 +1973,7 @@ public class DatabaseImpl implements Database
     @Override
     public TableInfo lookupTable(String tableName) throws IOException {
 
-      for(Row row : _systemCatalogCursor.iterable(
+      for(Row row : _systemCatalogCursor.newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
         Short type = (Short)row.get(CAT_COL_TYPE);

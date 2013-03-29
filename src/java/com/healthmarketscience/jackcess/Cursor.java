@@ -24,8 +24,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.IterableBuilder;
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
@@ -126,100 +127,23 @@ public interface Cursor extends Iterable<Row>
   public boolean isCurrentRowDeleted() throws IOException;
 
   /**
-   * Returns an Iterable whose iterator() method calls {@link #afterLast} on
-   * this cursor and returns a modifiable Iterator which will iterate through
-   * all the rows of this table in reverse order.  Use of the Iterator follows
-   * the same restrictions as a call to {@link #getPreviousRow}.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> reverseIterable();
-  
-  /**
-   * Returns an Iterable whose iterator() method calls {@link #afterLast} on
-   * this table and returns a modifiable Iterator which will iterate through
-   * all the rows of this table in reverse order, returning only the given
-   * columns.  Use of the Iterator follows the same restrictions as a call to
-   * {@link #getPreviousRow}.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> reverseIterable(
-      Collection<String> columnNames);
-
-  /**
    * Calls {@link #beforeFirst} on this cursor and returns a modifiable
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
+   * <p/>
+   * For more flexible iteration see {@link #newIterable}.
    * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
   public Iterator<Row> iterator();
 
   /**
-   * Returns an Iterable whose iterator() method calls {@link #beforeFirst} on
-   * this table and returns a modifiable Iterator which will iterate through
-   * all the rows of this table, returning only the given columns.  Use of the
-   * Iterator follows the same restrictions as a call to {@link #getNextRow}.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
+   * Convenience method for constructing a new IterableBuilder for this
+   * cursor.  An IterableBuilder provides a variety of options for more
+   * flexible iteration.
    */
-  public Iterable<Row> iterable(
-      Collection<String> columnNames);
-
-  /**
-   * Returns an Iterable whose iterator() method calls {@link #beforeFirst} on
-   * this cursor and returns a modifiable Iterator which will iterate through
-   * all the rows of this table which match the given column pattern.  Use of
-   * the Iterator follows the same restrictions as a call to {@link
-   * #getNextRow}.  See {@link #findFirstRow(Column,Object)} for details on
-   * #the columnPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> columnMatchIterable(
-      Column columnPattern, Object valuePattern);
-
-  /**
-   * Returns an Iterable whose iterator() method calls {@link #beforeFirst} on
-   * this table and returns a modifiable Iterator which will iterate through
-   * all the rows of this table which match the given column pattern,
-   * returning only the given columns.  Use of the Iterator follows the same
-   * restrictions as a call to {@link #getNextRow}.  See {@link
-   * #findFirstRow(Column,Object)} for details on the columnPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> columnMatchIterable(
-      Collection<String> columnNames,
-      Column columnPattern, Object valuePattern);
-
-  /**
-   * Returns an Iterable whose iterator() method calls {@link #beforeFirst} on
-   * this cursor and returns a modifiable Iterator which will iterate through
-   * all the rows of this table which match the given row pattern.  Use of the
-   * Iterator follows the same restrictions as a call to {@link #getNextRow}.
-   * See {@link #findFirstRow(Map)} for details on the rowPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> rowMatchIterable(
-      Map<String,?> rowPattern);
-
-  /**
-   * Returns an Iterable whose iterator() method calls {@link #beforeFirst} on
-   * this table and returns a modifiable Iterator which will iterate through
-   * all the rows of this table which match the given row pattern, returning
-   * only the given columns.  Use of the Iterator follows the same
-   * restrictions as a call to {@link #getNextRow}.  See {@link
-   * #findFirstRow(Map)} for details on the rowPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> rowMatchIterable(
-      Collection<String> columnNames,
-      Map<String,?> rowPattern);
+  public IterableBuilder newIterable();
 
   /**
    * Delete the current row.

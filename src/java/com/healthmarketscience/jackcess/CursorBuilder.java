@@ -315,7 +315,7 @@ public class CursorBuilder {
    * @param table the table over which this cursor will traverse
    */
   public static Cursor createCursor(Table table) throws IOException {
-    return new CursorBuilder(table).toCursor();
+    return table.newCursor().toCursor();
   }
 
   /**
@@ -332,7 +332,7 @@ public class CursorBuilder {
   public static IndexCursor createCursor(Table table, Index index)
     throws IOException
   {
-    return new CursorBuilder(table).setIndex(index).toIndexCursor();
+    return table.newCursor().setIndex(index).toIndexCursor();
   }
   
   /**
@@ -355,7 +355,7 @@ public class CursorBuilder {
                                          Object[] startRow, Object[] endRow)
     throws IOException
   {
-    return new CursorBuilder(table).setIndex(index)
+    return table.newCursor().setIndex(index)
       .setStartRow(startRow)
       .setEndRow(endRow)
       .toIndexCursor();
@@ -386,7 +386,7 @@ public class CursorBuilder {
                                          boolean endInclusive)
     throws IOException
   {
-    return new CursorBuilder(table).setIndex(index)
+    return table.newCursor().setIndex(index)
       .setStartRow(startRow)
       .setStartRowInclusive(startInclusive)
       .setEndRow(endRow)

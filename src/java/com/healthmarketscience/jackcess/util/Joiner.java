@@ -195,7 +195,8 @@ public class Joiner
                                 Collection<String> columnNames)
   {
     toEntryValues(fromRow);
-    return _toCursor.entryIterator(columnNames, _entryValues);
+    return _toCursor.newEntryIterable(_entryValues)
+      .setColumnNames(columnNames).iterator();
   }
 
   /**
@@ -211,7 +212,8 @@ public class Joiner
                                 Collection<String> columnNames)
   {
     toEntryValues(fromRow);
-    return _toCursor.entryIterator(columnNames, _entryValues);
+    return _toCursor.newEntryIterable(_entryValues)
+      .setColumnNames(columnNames).iterator();
   }
 
   /**

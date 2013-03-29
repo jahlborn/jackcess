@@ -34,17 +34,18 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
-import com.healthmarketscience.jackcess.util.ErrorHandler;
-import com.healthmarketscience.jackcess.util.ColumnMatcher;
-import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
+import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
+import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.IterableBuilder;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
@@ -201,22 +202,21 @@ public abstract class CursorImpl implements Cursor
     reset(MOVE_REVERSE);
   }
 
-  public boolean isBeforeFirst() throws IOException
-  {
-    if(getFirstPosition().equals(_curPos)) {
-      return !recheckPosition(MOVE_REVERSE);
+  public boolean isBeforeFirst() throws IOException {
+    return isAtBeginning(MOVE_FORWARD);
+  }
+  
+  public boolean isAfterLast() throws IOException {
+    return isAtBeginning(MOVE_REVERSE);
+  }
+
+  protected boolean isAtBeginning(boolean moveForward) throws IOException {
+    if(getDirHandler(moveForward).getBeginningPosition().equals(_curPos)) {
+      return !recheckPosition(!moveForward);
     }
     return false;
   }
   
-  public boolean isAfterLast() throws IOException
-  {
-    if(getLastPosition().equals(_curPos)) {
-      return !recheckPosition(MOVE_FORWARD);
-    }
-    return false;
-  }
-
   public boolean isCurrentRowDeleted() throws IOException
   {
     // we need to ensure that the "deleted" flag has been read for this row
@@ -233,176 +233,43 @@ public abstract class CursorImpl implements Cursor
     _prevPos = _curPos;
     _rowState.reset();
   }  
+  
+  public Iterator<Row> iterator() {
+    return new RowIterator(null, true, MOVE_FORWARD);
+  }
 
-  public Iterable<Row> reverseIterable() {
-    return reverseIterable(null);
+  public IterableBuilder newIterable() {
+    return new IterableBuilder(this);
+  }
+
+  public Iterator<Row> iterator(IterableBuilder iterBuilder) {
+
+    switch(iterBuilder.getType()) {
+    case SIMPLE:
+      return new RowIterator(iterBuilder.getColumnNames(),
+                             iterBuilder.isReset(), iterBuilder.isForward());
+    case COLUMN_MATCH: {
+      @SuppressWarnings("unchecked")
+      Map.Entry<Column,Object> matchPattern = (Map.Entry<Column,Object>)
+        iterBuilder.getMatchPattern();
+      return new ColumnMatchIterator(
+          iterBuilder.getColumnNames(), (ColumnImpl)matchPattern.getKey(), 
+          matchPattern.getValue(), iterBuilder.isReset(), 
+          iterBuilder.isForward(), iterBuilder.getColumnMatcher());
+    }
+    case ROW_MATCH: {
+      @SuppressWarnings("unchecked")
+      Map<String,?> matchPattern = (Map<String,?>)
+        iterBuilder.getMatchPattern();
+      return new RowMatchIterator(
+          iterBuilder.getColumnNames(), matchPattern,iterBuilder.isReset(), 
+          iterBuilder.isForward(), iterBuilder.getColumnMatcher());
+    }
+    default:
+      throw new RuntimeException("unknown match type " + iterBuilder.getType());
+    }
   }
   
-  public Iterable<Row> reverseIterable(
-      final Collection<String> columnNames)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return new RowIterator(columnNames, MOVE_REVERSE);
-      }
-    };
-  }
-  
-  public Iterator<Row> iterator()
-  {
-    return iterator(null);
-  }
-  
-  public Iterable<Row> iterable(
-      final Collection<String> columnNames)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return CursorImpl.this.iterator(columnNames);
-      }
-    };
-  }
-  
-  /**
-   * Calls <code>beforeFirst</code> on this table and returns a modifiable
-   * Iterator which will iterate through all the rows of this table, returning
-   * only the given columns.  Use of the Iterator follows the same
-   * restrictions as a call to <code>getNextRow</code>.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> iterator(Collection<String> columnNames)
-  {
-    return new RowIterator(columnNames, MOVE_FORWARD);
-  }
-
-  public Iterable<Row> columnMatchIterable(
-      Column columnPattern, Object valuePattern)
-  {
-    return columnMatchIterable((ColumnImpl)columnPattern, valuePattern);
-  }
-
-  public Iterable<Row> columnMatchIterable(
-      ColumnImpl columnPattern, Object valuePattern)
-  {
-    return columnMatchIterable(null, columnPattern, valuePattern);
-  }
-
-  /**
-   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
-   * Iterator which will iterate through all the rows of this table which
-   * match the given column pattern.  Use of the Iterator follows the same
-   * restrictions as a call to <code>getNextRow</code>.  See
-   * {@link #findFirstRow(Column,Object)} for details on the columnPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> columnMatchIterator(
-      Column columnPattern, Object valuePattern)
-  {
-    return columnMatchIterator((ColumnImpl)columnPattern, valuePattern);
-  } 
- 
-  public Iterator<Row> columnMatchIterator(
-      ColumnImpl columnPattern, Object valuePattern)
-  {
-    return columnMatchIterator(null, columnPattern, valuePattern);
-  }
-
-  public Iterable<Row> columnMatchIterable(
-      Collection<String> columnNames,
-      Column columnPattern, Object valuePattern)
-  {
-    return columnMatchIterable(columnNames, (ColumnImpl)columnPattern, 
-                               valuePattern);
-  } 
- 
-  public Iterable<Row> columnMatchIterable(
-      final Collection<String> columnNames,
-      final ColumnImpl columnPattern, final Object valuePattern)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return CursorImpl.this.columnMatchIterator(
-            columnNames, columnPattern, valuePattern);
-      }
-    };
-  }
-
-  /**
-   * Calls <code>beforeFirst</code> on this table and returns a modifiable
-   * Iterator which will iterate through all the rows of this table which
-   * match the given column pattern, returning only the given columns.  Use of
-   * the Iterator follows the same restrictions as a call to
-   * <code>getNextRow</code>.  See {@link #findFirstRow(Column,Object)} for
-   * details on the columnPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> columnMatchIterator(
-      Collection<String> columnNames, Column columnPattern, 
-      Object valuePattern)
-  {
-    return columnMatchIterator(columnNames, (ColumnImpl)columnPattern, 
-                               valuePattern);
-  } 
- 
-  public Iterator<Row> columnMatchIterator(
-      Collection<String> columnNames, ColumnImpl columnPattern, 
-      Object valuePattern)
-  {
-    return new ColumnMatchIterator(columnNames, columnPattern, valuePattern);
-  }
-
-  public Iterable<Row> rowMatchIterable(
-      Map<String,?> rowPattern)
-  {
-    return rowMatchIterable(null, rowPattern);
-  }
-  
-  /**
-   * Calls <code>beforeFirst</code> on this cursor and returns a modifiable
-   * Iterator which will iterate through all the rows of this table which
-   * match the given row pattern.  Use of the Iterator follows the same
-   * restrictions as a call to <code>getNextRow</code>.  See
-   * {@link #findFirstRow(Map)} for details on the rowPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> rowMatchIterator(
-      Map<String,?> rowPattern)
-  {
-    return rowMatchIterator(null, rowPattern);
-  }
-  
-  public Iterable<Row> rowMatchIterable(
-      final Collection<String> columnNames,
-      final Map<String,?> rowPattern)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return CursorImpl.this.rowMatchIterator(
-            columnNames, rowPattern);
-      }
-    };
-  }
-  
-  /**
-   * Calls <code>beforeFirst</code> on this table and returns a modifiable
-   * Iterator which will iterate through all the rows of this table which
-   * match the given row pattern, returning only the given columns.  Use of
-   * the Iterator follows the same restrictions as a call to
-   * <code>getNextRow</code>.  See {@link #findFirstRow(Map)} for details on
-   * the rowPattern.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterator<Row> rowMatchIterator(
-      Collection<String> columnNames, Map<String,?> rowPattern)
-  {
-    return new RowMatchIterator(columnNames, rowPattern);
-  }
-
   public void deleteCurrentRow() throws IOException {
     _table.deleteRow(_rowState, _curPos.getRowId());
   }
@@ -471,7 +338,7 @@ public abstract class CursorImpl implements Cursor
    * @return {@code true} if another valid row was found in the given
    *         direction, {@code false} otherwise
    */
-  private boolean moveToAnotherRow(boolean moveForward)
+  protected boolean moveToAnotherRow(boolean moveForward)
     throws IOException
   {
     if(_curPos.equals(getDirHandler(moveForward).getEndPosition())) {
@@ -559,22 +426,8 @@ public abstract class CursorImpl implements Cursor
   public boolean findFirstRow(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
-    PositionImpl curPos = _curPos;
-    PositionImpl prevPos = _prevPos;
-    boolean found = false;
-    try {
-      beforeFirst();
-      found = findNextRowImpl(columnPattern, valuePattern);
-      return found;
-    } finally {
-      if(!found) {
-        try {
-          restorePosition(curPos, prevPos);
-        } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
-        }
-      }
-    }
+    return findAnotherRow(columnPattern, valuePattern, true, MOVE_FORWARD,
+                          _columnMatcher);
   }
 
   public boolean findNextRow(Column columnPattern, Object valuePattern)
@@ -586,11 +439,24 @@ public abstract class CursorImpl implements Cursor
   public boolean findNextRow(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
+    return findAnotherRow(columnPattern, valuePattern, false, MOVE_FORWARD,
+                          _columnMatcher);
+  }
+  
+  protected boolean findAnotherRow(ColumnImpl columnPattern, Object valuePattern,
+                                   boolean reset, boolean moveForward,
+                                   ColumnMatcher columnMatcher)
+    throws IOException
+  {
     PositionImpl curPos = _curPos;
     PositionImpl prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findNextRowImpl(columnPattern, valuePattern);
+      if(reset) {
+        reset(moveForward);
+      }
+      found = findAnotherRowImpl(columnPattern, valuePattern, moveForward,
+                                 columnMatcher);
       return found;
     } finally {
       if(!found) {
@@ -605,32 +471,28 @@ public abstract class CursorImpl implements Cursor
   
   public boolean findFirstRow(Map<String,?> rowPattern) throws IOException
   {
-    PositionImpl curPos = _curPos;
-    PositionImpl prevPos = _prevPos;
-    boolean found = false;
-    try {
-      beforeFirst();
-      found = findNextRowImpl(rowPattern);
-      return found;
-    } finally {
-      if(!found) {
-        try {
-          restorePosition(curPos, prevPos);
-        } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
-        }
-      }
-    }
+    return findAnotherRow(rowPattern, true, MOVE_FORWARD, _columnMatcher);
   }
 
   public boolean findNextRow(Map<String,?> rowPattern)
+    throws IOException
+  {
+    return findAnotherRow(rowPattern, false, MOVE_FORWARD, _columnMatcher);
+  }
+
+  protected boolean findAnotherRow(Map<String,?> rowPattern, boolean reset,
+                                   boolean moveForward, 
+                                   ColumnMatcher columnMatcher)
     throws IOException
   {
     PositionImpl curPos = _curPos;
     PositionImpl prevPos = _prevPos;
     boolean found = false;
     try {
-      found = findNextRowImpl(rowPattern);
+      if(reset) {
+        reset(moveForward);
+      }
+      found = findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
       return found;
     } finally {
       if(!found) {
@@ -652,12 +514,27 @@ public abstract class CursorImpl implements Cursor
   public boolean currentRowMatches(ColumnImpl columnPattern, Object valuePattern)
     throws IOException
   {
-    return _columnMatcher.matches(getTable(), columnPattern.getName(),
-                                  valuePattern,
-                                  getCurrentRowValue(columnPattern));
+    return currentRowMatchesImpl(columnPattern, valuePattern, _columnMatcher);
+  }
+  
+  protected boolean currentRowMatchesImpl(ColumnImpl columnPattern, 
+                                          Object valuePattern,
+                                          ColumnMatcher columnMatcher)
+    throws IOException
+  {
+    return columnMatcher.matches(getTable(), columnPattern.getName(),
+                                 valuePattern,
+                                 getCurrentRowValue(columnPattern));
   }
   
   public boolean currentRowMatches(Map<String,?> rowPattern)
+    throws IOException
+  {
+    return currentRowMatchesImpl(rowPattern, _columnMatcher);
+  }
+
+  protected boolean currentRowMatchesImpl(Map<String,?> rowPattern,
+                                          ColumnMatcher columnMatcher)
     throws IOException
   {
     Row row = getCurrentRow(rowPattern.keySet());
@@ -668,8 +545,8 @@ public abstract class CursorImpl implements Cursor
 
     for(Map.Entry<String,Object> e : row.entrySet()) {
       String columnName = e.getKey();
-      if(!_columnMatcher.matches(getTable(), columnName,
-                                 rowPattern.get(columnName), e.getValue())) {
+      if(!columnMatcher.matches(getTable(), columnName,
+                                rowPattern.get(columnName), e.getValue())) {
         return false;
       }
     }
@@ -690,11 +567,13 @@ public abstract class CursorImpl implements Cursor
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
-  protected boolean findNextRowImpl(ColumnImpl columnPattern, Object valuePattern)
+  protected boolean findAnotherRowImpl(
+      ColumnImpl columnPattern, Object valuePattern, boolean moveForward,
+      ColumnMatcher columnMatcher)
     throws IOException
   {
-    while(moveToNextRow()) {
-      if(currentRowMatches(columnPattern, valuePattern)) {
+    while(moveToAnotherRow(moveForward)) {
+      if(currentRowMatchesImpl(columnPattern, valuePattern, columnMatcher)) {
         return true;
       }
     }
@@ -712,11 +591,13 @@ public abstract class CursorImpl implements Cursor
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  protected boolean findNextRowImpl(Map<String,?> rowPattern)
+  protected boolean findAnotherRowImpl(Map<String,?> rowPattern, 
+                                       boolean moveForward, 
+                                       ColumnMatcher columnMatcher)
     throws IOException
   {
-    while(moveToNextRow()) {
-      if(currentRowMatches(rowPattern)) {
+    while(moveToAnotherRow(moveForward)) {
+      if(currentRowMatchesImpl(rowPattern, columnMatcher)) {
         return true;
       }
     }
@@ -821,16 +702,24 @@ public abstract class CursorImpl implements Cursor
   /**
    * Base implementation of iterator for this cursor, modifiable.
    */
-  protected abstract class BaseIterator
-    implements Iterator<Row>
+  protected abstract class BaseIterator implements Iterator<Row>
   {
     protected final Collection<String> _columnNames;
+    protected final boolean _moveForward;
+    protected final ColumnMatcher _colMatcher;
     protected Boolean _hasNext;
     protected boolean _validRow;
     
-    protected BaseIterator(Collection<String> columnNames)
+    protected BaseIterator(Collection<String> columnNames,
+                           boolean reset, boolean moveForward,
+                           ColumnMatcher columnMatcher)
     {
       _columnNames = columnNames;
+      _moveForward = moveForward;
+      _colMatcher = ((columnMatcher != null) ? columnMatcher : _columnMatcher);
+      if(reset) {
+        reset(_moveForward);
+      } 
     }
 
     public boolean hasNext() {
@@ -880,13 +769,10 @@ public abstract class CursorImpl implements Cursor
    */
   private final class RowIterator extends BaseIterator
   {
-    private final boolean _moveForward;
-    
-    private RowIterator(Collection<String> columnNames, boolean moveForward)
+    private RowIterator(Collection<String> columnNames, boolean reset,
+                        boolean moveForward)
     {
-      super(columnNames);
-      _moveForward = moveForward;
-      reset(_moveForward);
+      super(columnNames, reset, moveForward, null);
     }
 
     @Override
@@ -905,17 +791,19 @@ public abstract class CursorImpl implements Cursor
     private final Object _valuePattern;
     
     private ColumnMatchIterator(Collection<String> columnNames,
-                                ColumnImpl columnPattern, Object valuePattern)
+                                ColumnImpl columnPattern, Object valuePattern,
+                                boolean reset, boolean moveForward,
+                                ColumnMatcher columnMatcher)
     {
-      super(columnNames);
+      super(columnNames, reset, moveForward, columnMatcher);
       _columnPattern = columnPattern;
       _valuePattern = valuePattern;
-      beforeFirst();
     }
 
     @Override
     protected boolean findNext() throws IOException {
-      return findNextRow(_columnPattern, _valuePattern);
+      return findAnotherRow(_columnPattern, _valuePattern, false, _moveForward,
+                            _colMatcher);
     }
   }
 
@@ -928,16 +816,17 @@ public abstract class CursorImpl implements Cursor
     private final Map<String,?> _rowPattern;
     
     private RowMatchIterator(Collection<String> columnNames,
-                             Map<String,?> rowPattern)
+                             Map<String,?> rowPattern,
+                             boolean reset, boolean moveForward,
+                             ColumnMatcher columnMatcher)
     {
-      super(columnNames);
+      super(columnNames, reset, moveForward, columnMatcher);
       _rowPattern = rowPattern;
-      beforeFirst();
     }
 
     @Override
     protected boolean findNext() throws IOException {
-      return findNextRow(_rowPattern);
+      return findAnotherRow(_rowPattern, false, _moveForward, _colMatcher);
     }
   }
 
