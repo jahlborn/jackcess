@@ -22,6 +22,7 @@ package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 
+import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;

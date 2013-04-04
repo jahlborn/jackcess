@@ -39,7 +39,7 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 /**
  * An Access database instance.  A new instance can be instantiated by opening
  * an existing database file ({@link DatabaseBuilder#open(File)}) or creating
- * a new database file ({@link DatabaseBuilder#create(FileFormat,File)}) (for
+ * a new database file ({@link DatabaseBuilder#create(Database.FileFormat,File)}) (for
  * more advanced opening/creating use {@link DatabaseBuilder}).  Once a
  * Database has been opened, you can interact with the data via the relevant
  * {@link Table}.  When a Database instance is no longer useful, it should

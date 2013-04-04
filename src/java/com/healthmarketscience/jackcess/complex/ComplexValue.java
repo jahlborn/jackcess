@@ -24,6 +24,7 @@ import java.io.ObjectStreamException;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.RowId;
+import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
 
 /**
  * Base interface for a value in a complex column (where there may be multiple
@@ -37,7 +38,7 @@ public interface ComplexValue
    * Returns the unique identifier of this complex value (this value is unique
    * among all values in all rows of the main table).
    * 
-   * @return the current id or {@link ComplexColumnInfo#INVALID_ID} for a new,
+   * @return the current id or {@link ComplexColumnInfoImpl#INVALID_ID} for a new,
    *         unsaved value.
    */
   public Id getId();
@@ -52,7 +53,7 @@ public interface ComplexValue
    * Returns the foreign key identifier for this complex value (this value is
    * the same for all values in the same row of the main table).
    * 
-   * @return the current id or {@link ComplexColumnInfo#INVALID_FK}
+   * @return the current id or {@link ComplexColumnInfoImpl#INVALID_FK}
    *         for a new, unsaved value.
    */
   public ComplexValueForeignKey getComplexValueForeignKey();

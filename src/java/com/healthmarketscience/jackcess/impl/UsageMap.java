@@ -806,7 +806,7 @@ public class UsageMap
 
     /**
      * @return valid page number if there was another page to read,
-     *         {@link RowId#LAST_PAGE_NUMBER} otherwise
+     *         {@link RowIdImpl#LAST_PAGE_NUMBER} otherwise
      */
     public int getNextPage() {
       return getAnotherPage(CursorImpl.MOVE_FORWARD);
@@ -814,7 +814,7 @@ public class UsageMap
 
     /**
      * @return valid page number if there was another page to read,
-     *         {@link RowId#FIRST_PAGE_NUMBER} otherwise
+     *         {@link RowIdImpl#FIRST_PAGE_NUMBER} otherwise
      */
     public int getPreviousPage() {
       return getAnotherPage(CursorImpl.MOVE_REVERSE);
