@@ -287,6 +287,49 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRow, cursor.getCurrentRow());    
   }
 
+  public void testMoveNoReset() throws Exception {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = createTestTable(fileFormat);
+
+      Table table = db.getTable("test");
+      Cursor cursor = CursorBuilder.createCursor(table);
+      doTestMoveNoReset(cursor);
+
+      db.close();
+    }
+  }
+
+  private static void doTestMoveNoReset(Cursor cursor)
+    throws Exception
+  {
+    List<Map<String, Object>> expectedRows = createTestTableData();
+    List<Map<String, Object>> foundRows = new ArrayList<Map<String, Object>>();
+    
+    Iterator<Row> iter = cursor.newIterable().iterator();
+
+    for(int i = 0; i < 6; ++i) {
+      foundRows.add(iter.next());
+    }    
+
+    iter = cursor.newIterable().reset(false).reverse().iterator();
+    iter.next();
+    Map<String, Object> row = iter.next();
+    assertEquals(expectedRows.get(4), row);
+    
+    iter = cursor.newIterable().reset(false).iterator();
+    iter.next();
+    row = iter.next();
+    assertEquals(expectedRows.get(5), row);
+    iter.next();
+
+    iter = cursor.newIterable().reset(false).iterator();
+    for(int i = 6; i < 10; ++i) {
+      foundRows.add(iter.next());
+    }    
+
+    assertEquals(expectedRows, foundRows);
+  }
+  
   public void testSearch() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);

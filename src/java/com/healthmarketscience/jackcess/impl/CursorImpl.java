@@ -675,6 +675,14 @@ public abstract class CursorImpl implements Cursor
     return _rowState.isUpToDate();
   }
 
+  /**
+   * Returns {@code true} of the current row is valid, {@code false} otherwise.
+   */
+  protected boolean isCurrentRowValid() throws IOException {
+    return(_curPos.getRowId().isValid() && !isCurrentRowDeleted() &&
+           !isBeforeFirst() && !isAfterLast());
+  }
+  
   @Override
   public String toString() {
     return getClass().getSimpleName() + " CurPosition " + _curPos +
@@ -717,9 +725,15 @@ public abstract class CursorImpl implements Cursor
       _columnNames = columnNames;
       _moveForward = moveForward;
       _colMatcher = ((columnMatcher != null) ? columnMatcher : _columnMatcher);
-      if(reset) {
-        reset(_moveForward);
-      } 
+      try {
+        if(reset) {
+          reset(_moveForward);
+        } else if(isCurrentRowValid()) {
+          _hasNext = _validRow = true;
+        }
+      } catch(IOException e) {
+        throw new RuntimeIOException(e);
+      }
     }
 
     public boolean hasNext() {
