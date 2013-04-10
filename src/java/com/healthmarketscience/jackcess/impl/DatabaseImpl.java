@@ -1544,7 +1544,8 @@ public class DatabaseImpl implements Database
   /**
    * Returns the default TimeZone.  This is normally the platform default
    * TimeZone as returned by {@link TimeZone#getDefault}, but can be
-   * overridden using the system property {@value Database#TIMEZONE_PROPERTY}.
+   * overridden using the system property
+   * {@value com.healthmarketscience.jackcess.Database#TIMEZONE_PROPERTY}.
    * @usage _advanced_method_
    */
   public static TimeZone getDefaultTimeZone()
@@ -1565,9 +1566,9 @@ public class DatabaseImpl implements Database
    * Returns the default Charset for the given JetFormat.  This may or may not
    * be platform specific, depending on the format, but can be overridden
    * using a system property composed of the prefix
-   * {@value Database#CHARSET_PROPERTY_PREFIX} followed by the JetFormat version to
-   * which the charset should apply, e.g. {@code
-   * "com.healthmarketscience.jackcess.charset.VERSION_3"}.
+   * {@value com.healthmarketscience.jackcess.Database#CHARSET_PROPERTY_PREFIX}
+   * followed by the JetFormat version to which the charset should apply,
+   * e.g. {@code "com.healthmarketscience.jackcess.charset.VERSION_3"}.
    * @usage _advanced_method_
    */
   public static Charset getDefaultCharset(JetFormat format)
@@ -1587,7 +1588,7 @@ public class DatabaseImpl implements Database
   /**
    * Returns the default Table.ColumnOrder.  This defaults to
    * {@link Database#DEFAULT_COLUMN_ORDER}, but can be overridden using the system
-   * property {@value #COLUMN_ORDER_PROPERTY}.
+   * property {@value com.healthmarketscience.jackcess.Database#COLUMN_ORDER_PROPERTY}.
    * @usage _advanced_method_
    */
   public static Table.ColumnOrder getDefaultColumnOrder()
@@ -1607,7 +1608,7 @@ public class DatabaseImpl implements Database
   /**
    * Returns the default enforce foreign-keys policy.  This defaults to
    * {@code true}, but can be overridden using the system
-   * property {@value Database#FK_ENFORCE_PROPERTY}.
+   * property {@value com.healthmarketscience.jackcess.Database#FK_ENFORCE_PROPERTY}.
    * @usage _advanced_method_
    */
   public static boolean getDefaultEnforceForeignKeys()

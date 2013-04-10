@@ -84,7 +84,8 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /** system property which can be used to set the path from which classpath
    *  resources are loaded (must end with a "/" if non-empty).  Default value
-   *  is {@value DatabaseImpl#DEFAULT_RESOURCE_PATH} if unspecified.
+   *  is {@value com.healthmarketscience.jackcess.impl.DatabaseImpl#DEFAULT_RESOURCE_PATH}
+   *  if unspecified.
    * @usage _general_field_
    */
   public static final String RESOURCE_PATH_PROPERTY = 
