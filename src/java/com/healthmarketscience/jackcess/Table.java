@@ -27,7 +27,11 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 
 /**
- * A single database table
+ * A single database table.  A Table instance is retrieved from a Database
+ * instance.  The Table instance provides access to the table metadata as well
+ * as the table data.  There are basic data operations on the Table interface,
+ * but for advanced search and data manipulation a {@link Cursor} instance
+ * should be used.
  * <p>
  * Is not thread-safe.
  *

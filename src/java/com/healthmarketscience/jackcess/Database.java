@@ -43,8 +43,7 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
  * more advanced opening/creating use {@link DatabaseBuilder}).  Once a
  * Database has been opened, you can interact with the data via the relevant
  * {@link Table}.  When a Database instance is no longer useful, it should
- * <b>always</b> be closed ({@link
- * #close}) to avoid corruption.
+ * <b>always</b> be closed ({@link #close}) to avoid corruption.
  * <p>
  * Note, Database instances (and all the related objects) are <i>not</i>
  * thread-safe.  However, separate Database instances (and their respective
