@@ -204,11 +204,11 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>http://download.oracle.com/javase/1.5.0/docs/api</list>
-            <list>http://download.oracle.com/javaee/5/api</list>
+            <list>http://docs.oracle.com/javase/1.5.0/docs/api/</list>
+            <list>http://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>1.5</source>
-          <excludePackageNames>com.healthmarketscience.jackcess.scsu</excludePackageNames>
+          <excludePackageNames>com.healthmarketscience.jackcess.impl.scsu</excludePackageNames>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>
