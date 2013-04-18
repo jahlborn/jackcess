@@ -189,7 +189,7 @@ public class PropertiesTest extends TestCase
         assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
                    .matches("[0-9]{2}[.][0-9]{2}"));
 
-        for(Map<String,Object> row : db.getSystemCatalog()) {
+        for(Map<String,Object> row : ((DatabaseImpl)db).getSystemCatalog()) {
           int id = (Integer)row.get("Id");
           byte[] propBytes = (byte[])row.get("LvProp");
           PropertyMaps propMaps = ((DatabaseImpl)db).getPropertiesForObject(id);

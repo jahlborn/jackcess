@@ -580,10 +580,18 @@ public class DatabaseImpl implements Database
     return _format;
   }
   
+  /**
+   * @return The system catalog table
+   * @usage _advanced_method_
+   */
   public TableImpl getSystemCatalog() {
     return _systemCatalog;
   }
   
+  /**
+   * @return The system Access Control Entries table (loaded on demand)
+   * @usage _advanced_method_
+   */
   public TableImpl getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
       _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);

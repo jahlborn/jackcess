@@ -46,3 +46,5 @@ Refactor goals:
 * add reason to unsupop throws for indexes
 * remove static methods in CursorImpl/IndexCursorImpl
 * create ComplexValue.Id and keep RowId
+* public api final cleanup:
+  * Database

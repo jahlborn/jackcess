@@ -92,7 +92,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /** (boolean) system property which can be used to indicate that the current
    *  vm has a poor nio implementation (specifically for
-   *  FileChannel.transferFrom)
+   *  {@code FileChannel.transferFrom})
    * @usage _intermediate_field_
    */
   public static final String BROKEN_NIO_PROPERTY = 
@@ -149,7 +149,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public File getFile();
 
   /**
-   * @return The names of all of the user tables (String)
+   * @return The names of all of the user tables
    * @usage _general_method_
    */
   public Set<String> getTableNames() throws IOException;
@@ -174,7 +174,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public Iterator<Table> iterator();
 
   /**
-   * @param name Table name
+   * @param name Table name (case-insensitive)
    * @return The table, or null if it doesn't exist
    * @usage _general_method_
    */
@@ -259,18 +259,6 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _general_method_
    */
   public void close() throws IOException;
-
-  /**
-   * @return The system catalog table
-   * @usage _advanced_method_
-   */
-  public Table getSystemCatalog();
-
-  /**
-   * @return The system Access Control Entries table (loaded on demand)
-   * @usage _advanced_method_
-   */
-  public Table getAccessControlEntries() throws IOException;
 
   /**
    * Gets the currently configured ErrorHandler (always non-{@code null}).
