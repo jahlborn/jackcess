@@ -17,6 +17,9 @@
       <name>Tim McCune</name>
       <id>javajedi</id>
       <email>javajedi@users.sf.net</email>
+      <roles>
+        <role>Original author and project founder</role>
+      </roles>
       <timezone>-5</timezone>
     </developer>
     <developer>
@@ -24,21 +27,62 @@
       <id>jahlborn</id>
       <email>jahlborn@users.sf.net</email>
       <organization>Dell Boomi</organization>
-      <timezone>-5</timezone>
-    </developer>
-    <developer>
-      <name>Rob Di Marco</name>
-      <id>robdimarco</id>
-      <timezone>-5</timezone>
-    </developer>
-    <developer>
-      <name>Dan Rollo</name>
-      <id>bhamail</id>
-      <email>bhamail@users.sf.net</email>
-      <organization>Composite Software, Inc.</organization>
+      <roles>
+        <role>Owner</role>
+      </roles>
       <timezone>-5</timezone>
     </developer>
   </developers>
+  <contributors>
+    <contributor>
+      <name>Rob Di Marco</name>
+      <roles>
+        <role>Added ability to import delimited text into new tables</role>
+      </roles>
+      <timezone>-5</timezone>
+    </contributor>
+    <contributor>
+      <name>Mitchell J. Friedman</name>
+      <roles>
+        <role>Added support for additional JDBC data types</role>
+      </roles>
+    </contributor>
+    <contributor>
+      <name>Jon Iles</name>
+      <roles>
+        <role>Added support for reading table definitions that span multiple
+              pages</role>
+      </roles>
+    </contributor>
+    <contributor>
+      <name>James Schopp</name>
+      <roles>
+        <role>Added support for reading currency columns</role>
+      </roles>
+    </contributor>
+    <contributor>
+      <name>Patricia Donaldson</name>
+      <roles>
+        <role>Contributed RowFilter class</role>
+      </roles>
+    </contributor>
+    <contributor>
+      <name>Dan Rollo</name>
+      <email>bhamail@users.sf.net</email>
+      <organization>Composite Software, Inc.</organization>
+      <roles>
+        <role>Added support for new DB file formats (2003/2007)</role>
+      </roles>
+      <timezone>-5</timezone>
+    </contributor>
+    <contributor>
+      <name>F. Gerbig</name>
+      <roles>
+        <role>added ExportUtil, contributed some of the code for Jet3
+              read-only support</role>
+      </roles>
+    </contributor>
+  </contributors>
   <issueManagement>
     <system>SourceForge2</system>
     <url>http://sourceforge.net/p/jackcess/bugs/</url>
