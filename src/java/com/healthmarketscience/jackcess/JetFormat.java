@@ -235,6 +235,7 @@ public abstract class JetFormat {
   public final int SIZE_LONG_VALUE_DEF;
   public final int MAX_INLINE_LONG_VALUE_SIZE;
   public final int MAX_LONG_VALUE_ROW_SIZE;
+  public final int MAX_COMPRESSED_UNICODE_SIZE;
   public final int SIZE_TDEF_HEADER;
   public final int SIZE_TDEF_TRAILER;
   public final int SIZE_COLUMN_DEF_BLOCK;
@@ -368,6 +369,7 @@ public abstract class JetFormat {
     SIZE_LONG_VALUE_DEF = defineSizeLongValueDef();
     MAX_INLINE_LONG_VALUE_SIZE = defineMaxInlineLongValueSize();
     MAX_LONG_VALUE_ROW_SIZE = defineMaxLongValueRowSize();
+    MAX_COMPRESSED_UNICODE_SIZE = defineMaxCompressedUnicodeSize();
     SIZE_TDEF_HEADER = defineSizeTdefHeader();
     SIZE_TDEF_TRAILER = defineSizeTdefTrailer();
     SIZE_COLUMN_DEF_BLOCK = defineSizeColumnDefBlock();
@@ -469,6 +471,7 @@ public abstract class JetFormat {
   protected abstract int defineSizeLongValueDef();
   protected abstract int defineMaxInlineLongValueSize();
   protected abstract int defineMaxLongValueRowSize();
+  protected abstract int defineMaxCompressedUnicodeSize();
   protected abstract int defineSizeTdefHeader();
   protected abstract int defineSizeTdefTrailer();
   protected abstract int defineSizeColumnDefBlock();
@@ -656,6 +659,8 @@ public abstract class JetFormat {
     protected int defineMaxInlineLongValueSize() { return 64; }
     @Override
     protected int defineMaxLongValueRowSize() { return 2032; }
+    @Override
+    protected int defineMaxCompressedUnicodeSize() { return 1024; }
     @Override
     protected int defineSizeTdefHeader() { return 63; }
     @Override
@@ -874,6 +879,8 @@ public abstract class JetFormat {
     protected int defineMaxInlineLongValueSize() { return 64; }
     @Override
     protected int defineMaxLongValueRowSize() { return 4076; }
+    @Override
+    protected int defineMaxCompressedUnicodeSize() { return 1024; }
     @Override
     protected int defineSizeTdefHeader() { return 63; }
     @Override
