@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.11" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="94">
+        Do not unicode compress strings which are longer than 1024 chars.
+      </action>
+    </release>
     <release version="1.2.10" date="2013-02-18">
       <action dev="jahlborn" type="update">
         Add info to the Column to support MEMO columns which are HYPERLINKS.

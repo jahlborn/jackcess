@@ -1463,7 +1463,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     
     // may only compress if column type allows it
-    if(!forceUncompressed && isCompressedUnicode()) {
+    if(!forceUncompressed && isCompressedUnicode() &&
+       (text.length() <= getFormat().MAX_COMPRESSED_UNICODE_SIZE)) {
 
       // for now, only do very simple compression (only compress text which is
       // all ascii text)
