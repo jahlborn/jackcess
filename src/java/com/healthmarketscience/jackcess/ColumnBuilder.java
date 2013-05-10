@@ -235,11 +235,10 @@ public class ColumnBuilder {
   }
 
   /**
-   * Escapes the new column's name using {@link DatabaseImpl#escapeIdentifier}.
+   * Escapes the new column's name using {@link TableBuilder#escapeIdentifier}.
    */
-  public ColumnBuilder escapeName()
-  {
-    _name = DatabaseImpl.escapeIdentifier(_name);
+  public ColumnBuilder escapeName() {
+    _name = TableBuilder.escapeIdentifier(_name);
     return this;
   }
 

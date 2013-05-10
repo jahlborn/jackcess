@@ -46,9 +46,21 @@ Refactor goals:
 * add reason to unsupop throws for indexes
 * remove static methods in CursorImpl/IndexCursorImpl
 * create ComplexValue.Id and keep RowId
-- remove DatabaseImpl from util classes
+* remove DatabaseImpl from util classes
 - remove unnecessary iterator class from impl classes?
 - merge latest changes from main branch
+- remove iterable methods from impls if unused?
 
 * public api final cleanup:
   * Database
+
+- changes
+  - simple index support gone
+  - foreign key constraints enforced by default
+  - "main" classes became interfaces
+  - advanced functionality still remains in impl classes
+  - all new instance construction via builders
+  - iterable methods went away, iterable builder
+  - util classes moved to util package
+  - Row is now an interface
+  

@@ -201,8 +201,6 @@ public class DatabaseImpl implements Database
   /** read/write channel access mode */
   public static final String RW_CHANNEL_MODE = "rw";
 
-  /** Prefix for column or table names that are reserved words */
-  private static final String ESCAPE_PREFIX = "x";
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
   /** Name of the system object that is the parent of all databases */
@@ -248,47 +246,6 @@ public class DatabaseImpl implements Database
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
   
   
-  /**
-   * All of the reserved words in Access that should be escaped when creating
-   * table or column names
-   */
-  private static final Set<String> RESERVED_WORDS = new HashSet<String>();
-  static {
-    //Yup, there's a lot.
-    RESERVED_WORDS.addAll(Arrays.asList(
-       "add", "all", "alphanumeric", "alter", "and", "any", "application", "as",
-       "asc", "assistant", "autoincrement", "avg", "between", "binary", "bit",
-       "boolean", "by", "byte", "char", "character", "column", "compactdatabase",
-       "constraint", "container", "count", "counter", "create", "createdatabase",
-       "createfield", "creategroup", "createindex", "createobject", "createproperty",
-       "createrelation", "createtabledef", "createuser", "createworkspace",
-       "currency", "currentuser", "database", "date", "datetime", "delete",
-       "desc", "description", "disallow", "distinct", "distinctrow", "document",
-       "double", "drop", "echo", "else", "end", "eqv", "error", "exists", "exit",
-       "false", "field", "fields", "fillcache", "float", "float4", "float8",
-       "foreign", "form", "forms", "from", "full", "function", "general",
-       "getobject", "getoption", "gotopage", "group", "group by", "guid", "having",
-       "idle", "ieeedouble", "ieeesingle", "if", "ignore", "imp", "in", "index",
-       "indexes", "inner", "insert", "inserttext", "int", "integer", "integer1",
-       "integer2", "integer4", "into", "is", "join", "key", "lastmodified", "left",
-       "level", "like", "logical", "logical1", "long", "longbinary", "longtext",
-       "macro", "match", "max", "min", "mod", "memo", "module", "money", "move",
-       "name", "newpassword", "no", "not", "null", "number", "numeric", "object",
-       "oleobject", "off", "on", "openrecordset", "option", "or", "order", "outer",
-       "owneraccess", "parameter", "parameters", "partial", "percent", "pivot",
-       "primary", "procedure", "property", "queries", "query", "quit", "real",
-       "recalc", "recordset", "references", "refresh", "refreshlink",
-       "registerdatabase", "relation", "repaint", "repairdatabase", "report",
-       "reports", "requery", "right", "screen", "section", "select", "set",
-       "setfocus", "setoption", "short", "single", "smallint", "some", "sql",
-       "stdev", "stdevp", "string", "sum", "table", "tabledef", "tabledefs",
-       "tableid", "text", "time", "timestamp", "top", "transform", "true", "type",
-       "union", "unique", "update", "user", "value", "values", "var", "varp",
-       "varbinary", "varchar", "where", "with", "workspace", "xor", "year", "yes",
-       "yesno"
-    ));
-  }
-
   /** the File of the database */
   private final File _file;
   /** Buffer to hold database pages */
@@ -1442,26 +1399,6 @@ public class DatabaseImpl implements Database
     _pageChannel.close();
   }
   
-  /**
-   * @return A table or column name escaped for Access
-   * @usage _general_method_
-   */
-  public static String escapeIdentifier(String s) {
-    if (isReservedWord(s)) {
-      return ESCAPE_PREFIX + s; 
-    }
-    return s;
-  }
-
-  /**
-   * @return {@code true} if the given string is a reserved word,
-   *         {@code false} otherwise
-   * @usage _general_method_
-   */
-  public static boolean isReservedWord(String s) {
-    return RESERVED_WORDS.contains(s.toLowerCase());
-  }
-
   /**
    * Validates an identifier name.
    * @usage _advanced_method_

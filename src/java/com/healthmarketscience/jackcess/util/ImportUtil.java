@@ -45,7 +45,7 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.TableBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -78,7 +78,8 @@ public class ImportUtil
   {
       List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
-        ColumnBuilder column = new ColumnBuilder(md.getColumnName(i)).escapeName();
+        ColumnBuilder column = new ColumnBuilder(md.getColumnName(i))
+          .escapeName();
         int lengthInUnits = md.getColumnDisplaySize(i);
         column.setSQLType(md.getColumnType(i), lengthInUnits);
         DataType type = column.getType();
@@ -168,7 +169,7 @@ public class ImportUtil
   {
     ResultSetMetaData md = source.getMetaData();
 
-    name = DatabaseImpl.escapeIdentifier(name);
+    name = TableBuilder.escapeIdentifier(name);
     Table table = null;
     if(!useExistingTable || ((table = db.getTable(name)) == null)) {
       List<ColumnBuilder> columns = toColumns(md);
@@ -457,7 +458,7 @@ public class ImportUtil
     Pattern delimPat = Pattern.compile(delim);
 
     try {
-      name = DatabaseImpl.escapeIdentifier(name);
+      name = TableBuilder.escapeIdentifier(name);
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
@@ -607,9 +608,9 @@ public class ImportUtil
       name = baseName + (counter++);
     }
     
-    ((DatabaseImpl)db).createTable(name, filter.filterColumns(columns, md));
-
-    return db.getTable(name);
+    return new TableBuilder(name)
+      .addColumns(filter.filterColumns(columns, md))
+      .toTable(db);
   }
 
   /**

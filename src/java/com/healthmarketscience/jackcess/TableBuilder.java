@@ -29,7 +29,11 @@ package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
@@ -39,6 +43,50 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  * @author James Ahlborn
  */
 public class TableBuilder {
+
+  /** Prefix for column or table names that are reserved words */
+  private static final String ESCAPE_PREFIX = "x";
+
+  /* nested class for lazy loading */
+  private static final class ReservedWords {
+    /**
+     * All of the reserved words in Access that should be escaped when creating
+     * table or column names
+     */
+    private static final Set<String> VALUES = 
+      new HashSet<String>(Arrays.asList(
+       "add", "all", "alphanumeric", "alter", "and", "any", "application", "as",
+       "asc", "assistant", "autoincrement", "avg", "between", "binary", "bit",
+       "boolean", "by", "byte", "char", "character", "column", "compactdatabase",
+       "constraint", "container", "count", "counter", "create", "createdatabase",
+       "createfield", "creategroup", "createindex", "createobject", "createproperty",
+       "createrelation", "createtabledef", "createuser", "createworkspace",
+       "currency", "currentuser", "database", "date", "datetime", "delete",
+       "desc", "description", "disallow", "distinct", "distinctrow", "document",
+       "double", "drop", "echo", "else", "end", "eqv", "error", "exists", "exit",
+       "false", "field", "fields", "fillcache", "float", "float4", "float8",
+       "foreign", "form", "forms", "from", "full", "function", "general",
+       "getobject", "getoption", "gotopage", "group", "group by", "guid", "having",
+       "idle", "ieeedouble", "ieeesingle", "if", "ignore", "imp", "in", "index",
+       "indexes", "inner", "insert", "inserttext", "int", "integer", "integer1",
+       "integer2", "integer4", "into", "is", "join", "key", "lastmodified", "left",
+       "level", "like", "logical", "logical1", "long", "longbinary", "longtext",
+       "macro", "match", "max", "min", "mod", "memo", "module", "money", "move",
+       "name", "newpassword", "no", "not", "null", "number", "numeric", "object",
+       "oleobject", "off", "on", "openrecordset", "option", "or", "order", "outer",
+       "owneraccess", "parameter", "parameters", "partial", "percent", "pivot",
+       "primary", "procedure", "property", "queries", "query", "quit", "real",
+       "recalc", "recordset", "references", "refresh", "refreshlink",
+       "registerdatabase", "relation", "repaint", "repairdatabase", "report",
+       "reports", "requery", "right", "screen", "section", "select", "set",
+       "setfocus", "setoption", "short", "single", "smallint", "some", "sql",
+       "stdev", "stdevp", "string", "sum", "table", "tabledef", "tabledefs",
+       "tableid", "text", "time", "timestamp", "top", "transform", "true", "type",
+       "union", "unique", "update", "user", "value", "values", "var", "varp",
+       "varbinary", "varchar", "where", "with", "workspace", "xor", "year", "yes",
+       "yesno"));
+  }
+
 
   /** name of the new table */
   private String _name;
@@ -58,7 +106,7 @@ public class TableBuilder {
     _name = name;
     _escapeIdentifiers = escapeIdentifiers;
     if(_escapeIdentifiers) {
-      _name = DatabaseImpl.escapeIdentifier(_name);
+      _name = escapeIdentifier(_name);
     }
   }
 
@@ -75,13 +123,25 @@ public class TableBuilder {
   }
 
   /**
+   * Adds the Columns to the new table.
+   */
+  public TableBuilder addColumns(Collection<? extends ColumnBuilder> columns) {
+    if(columns != null) {
+      for(ColumnBuilder col : columns) {
+        addColumn(col);
+      }
+    }
+    return this;
+  }
+
+  /**
    * Adds an IndexBuilder to the new table.
    */
   public TableBuilder addIndex(IndexBuilder index) {
     if(_escapeIdentifiers) {
-      index.setName(DatabaseImpl.escapeIdentifier(index.getName()));
+      index.setName(escapeIdentifier(index.getName()));
       for(IndexBuilder.Column col : index.getColumns()) {
-        col.setName(DatabaseImpl.escapeIdentifier(col.getName()));
+        col.setName(escapeIdentifier(col.getName()));
       }
     }
     _indexes.add(index);
@@ -108,11 +168,10 @@ public class TableBuilder {
   }
   
   /**
-   * Escapes the new table's name using {@link DatabaseImpl#escapeIdentifier}.
+   * Escapes the new table's name using {@link TableBuilder#escapeIdentifier}.
    */
-  public TableBuilder escapeName()
-  {
-    _name = DatabaseImpl.escapeIdentifier(_name);
+  public TableBuilder escapeName() {
+    _name = escapeIdentifier(_name);
     return this;
   }
 
@@ -126,5 +185,26 @@ public class TableBuilder {
     ((DatabaseImpl)db).createTable(_name, _columns, _indexes);
     return db.getTable(_name);
   }
+
+  /**
+   * @return A table or column name escaped for Access
+   * @usage _general_method_
+   */
+  public static String escapeIdentifier(String s) {
+    if (isReservedWord(s)) {
+      return ESCAPE_PREFIX + s; 
+    }
+    return s;
+  }
+
+  /**
+   * @return {@code true} if the given string is a reserved word,
+   *         {@code false} otherwise
+   * @usage _general_method_
+   */
+  public static boolean isReservedWord(String s) {
+    return ReservedWords.VALUES.contains(s.toLowerCase());
+  }
+
   
 }
