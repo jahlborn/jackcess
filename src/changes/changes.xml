@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.11" date="2013-05-09">
+    <release version="1.2.12" date="2013-05-09">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="94">
         Do not unicode compress strings which are longer than 1024 chars.
       </action>
