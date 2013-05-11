@@ -47,9 +47,7 @@ Refactor goals:
 * remove static methods in CursorImpl/IndexCursorImpl
 * create ComplexValue.Id and keep RowId
 * remove DatabaseImpl from util classes
-- remove unnecessary iterator class from impl classes?
-- merge latest changes from main branch
-- remove iterable methods from impls if unused?
+- remove unnecessary iterator class from impl classes? (what does this mean?)
 
 * public api final cleanup:
   * Database
