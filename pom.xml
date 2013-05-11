@@ -3,13 +3,13 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>1.0.14</version>
+    <version>1.0.15</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>1.2.11-SNAPSHOT</version>
+  <version>1.2.12-SNAPSHOT</version>
   <url>http://jackcess.sf.net</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
