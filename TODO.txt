@@ -48,6 +48,8 @@ Refactor goals:
 * create ComplexValue.Id and keep RowId
 * remove DatabaseImpl from util classes
 - remove unnecessary iterator class from impl classes? (what does this mean?)
+- change CodecHandler usage to handle not-inline decoding
+- implement page buffering in PageChannel
 
 * public api final cleanup:
   * Database
