@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.13" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Fix partial page updates when using CodecHandlers which can only do
+        full page encoding.
+      </action>
+    </release>
     <release version="1.2.12" date="2013-05-09">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="94">
         Do not unicode compress strings which are longer than 1024 chars.
