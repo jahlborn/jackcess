@@ -236,6 +236,7 @@ public class PageChannel implements Channel, Flushable {
           // reset so we can write the whole page
           page = fullPage;
           pageOffset = 0;
+          writeLen = getFormat().PAGE_SIZE;
 
         } else {
 
