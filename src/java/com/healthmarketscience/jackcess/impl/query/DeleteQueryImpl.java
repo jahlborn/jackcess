@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 James Ahlborn
+Copyright (c) 2008 Health Market Science, Inc.
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -15,19 +15,40 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
+
+You can contact Health Market Science at info@healthmarketscience.com
+or at the following address:
+
+Health Market Science
+2700 Horizon Drive
+Suite 200
+King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess.query;
+package com.healthmarketscience.jackcess.impl.query;
 
+import java.util.List;
+import com.healthmarketscience.jackcess.query.DeleteQuery;
 
 
 /**
- * Query interface which represents a delete query, e.g.:
+ * Concrete Query subclass which represents a delete query, e.g.:
  * {@code DELETE * FROM <table> WHERE <expression>}
  *
  * @author James Ahlborn
  */
-public interface DeleteQuery extends BaseSelectQuery 
+public class DeleteQueryImpl extends BaseSelectQueryImpl implements DeleteQuery
 {
+
+  public DeleteQueryImpl(String name, List<Row> rows, int objectId) {
+    super(name, rows, objectId, Type.DELETE);
+  }
+
+  @Override
+  protected void toSQLString(StringBuilder builder)
+  {
+    builder.append("DELETE ");
+    toSQLSelectString(builder, false);
+  }
 
 }

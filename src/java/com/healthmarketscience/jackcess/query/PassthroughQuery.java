@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008 Health Market Science, Inc.
+Copyright (c) 2013 James Ahlborn
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -15,54 +15,20 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
-
-You can contact Health Market Science at info@healthmarketscience.com
-or at the following address:
-
-Health Market Science
-2700 Horizon Drive
-Suite 200
-King of Prussia, PA 19406
 */
 
 package com.healthmarketscience.jackcess.query;
 
-import java.util.List;
 
 
 /**
- * Concrete Query subclass which represents a query which will be executed via
- * ODBC.
+ * Query interface which represents a query which will be executed via ODBC.
  * 
  * @author James Ahlborn
  */
-public class PassthroughQuery extends Query 
+public interface PassthroughQuery extends Query 
 {
+  public String getConnectionString();
 
-  public PassthroughQuery(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.PASSTHROUGH);
-  }
-
-  public String getConnectionString() {
-    return getTypeRow().name1;
-  }
-
-  public String getPassthroughString() {
-    return getTypeRow().expression;
-  }
-
-  @Override
-  protected boolean supportsStandardClauses() {
-    return false;
-  }
-
-  @Override
-  protected void toSQLString(StringBuilder builder)
-  {
-    String pt = getPassthroughString();
-    if(pt != null) {
-      builder.append(pt);
-    }
-  }
-
+  public String getPassthroughString();
 }

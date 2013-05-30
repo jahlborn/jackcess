@@ -37,12 +37,13 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseTest;
-import com.healthmarketscience.jackcess.query.Query.Row;
+import com.healthmarketscience.jackcess.impl.query.QueryImpl;
+import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
 import junit.framework.TestCase;
 import org.apache.commons.lang.StringUtils;
 
 import static org.apache.commons.lang.SystemUtils.LINE_SEPARATOR;
-import static com.healthmarketscience.jackcess.query.QueryFormat.*;
+import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 
@@ -169,7 +170,7 @@ public class QueryTest extends TestCase
   {
     List<Row> rowList = new ArrayList<Row>();
     rowList.add(newRow(TYPE_ATTRIBUTE, null, -1, null, null));
-    Query query = Query.create(-1, "TestQuery", rowList, 13);
+    QueryImpl query = QueryImpl.create(-1, "TestQuery", rowList, 13);
     try {
       query.toSQLString();
       fail("UnsupportedOperationException should have been thrown");
@@ -187,7 +188,7 @@ public class QueryTest extends TestCase
     }
 
     try {
-      new Query("TestQuery", rowList, 13, Query.Type.UNION) {
+      new QueryImpl("TestQuery", rowList, 13, Query.Type.UNION) {
         @Override protected void toSQLString(StringBuilder builder) {
           throw new UnsupportedOperationException();
         }};
@@ -468,7 +469,7 @@ public class QueryTest extends TestCase
     rowList.add(newRow(TYPE_ATTRIBUTE, typeExpr, type.getValue(),
                        null, typeName1, null));
     rowList.addAll(Arrays.asList(rows));
-    return Query.create(type.getObjectFlag(), "TestQuery", rowList, 13);
+    return QueryImpl.create(type.getObjectFlag(), "TestQuery", rowList, 13);
   }
 
   private static Row newRow(Byte attr, String expr, String name1, String name2)
@@ -498,7 +499,7 @@ public class QueryTest extends TestCase
 
   private static void addRows(Query query, Row... rows)
   {
-    query.getRows().addAll(Arrays.asList(rows));
+    ((QueryImpl)query).getRows().addAll(Arrays.asList(rows));
   }
 
   private static void replaceRows(Query query, Row... rows)
@@ -509,7 +510,7 @@ public class QueryTest extends TestCase
 
   private static void removeRows(Query query, Byte attr)
   {
-    for(Iterator<Row> iter = query.getRows().iterator(); iter.hasNext(); ) {
+    for(Iterator<Row> iter = ((QueryImpl)query).getRows().iterator(); iter.hasNext(); ) {
       if(attr.equals(iter.next().attribute)) {
         iter.remove();
       }
@@ -518,7 +519,7 @@ public class QueryTest extends TestCase
 
   private static void removeLastRows(Query query, int num)
   {
-    List<Row> rows = query.getRows();
+    List<Row> rows = ((QueryImpl)query).getRows();
     int size = rows.size();
     rows.subList(size - num, size).clear();
   }

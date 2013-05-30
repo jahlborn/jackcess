@@ -38,7 +38,7 @@ Refactor goals:
 * don't use columnimpl for creating tables
   * clean up columnimpl/tableimpl constructors
 * add updateCurrentRow(Map), add updateRow(Row)
-- sort out query types
+* sort out query types
 - clean up javadocs
   - enhance public api classes
   - add @usage tags to util classes

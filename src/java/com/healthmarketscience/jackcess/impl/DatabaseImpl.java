@@ -69,6 +69,7 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.query.Query;
+import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
@@ -1033,8 +1034,8 @@ public class DatabaseImpl implements Database
 
     // find all the queries from the system catalog
     List<Row> queryInfo = new ArrayList<Row>();
-    Map<Integer,List<Query.Row>> queryRowMap = 
-      new HashMap<Integer,List<Query.Row>>();
+    Map<Integer,List<QueryImpl.Row>> queryRowMap = 
+      new HashMap<Integer,List<QueryImpl.Row>>();
     for(Row row :
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
               SYSTEM_CATALOG_COLUMNS))
@@ -1043,14 +1044,14 @@ public class DatabaseImpl implements Database
       if (name != null && TYPE_QUERY.equals(row.get(CAT_COL_TYPE))) {
         queryInfo.add(row);
         Integer id = (Integer)row.get(CAT_COL_ID);
-        queryRowMap.put(id, new ArrayList<Query.Row>());
+        queryRowMap.put(id, new ArrayList<QueryImpl.Row>());
       }
     }
 
     // find all the query rows
     for(Row row : CursorImpl.createCursor(_queries)) {
-      Query.Row queryRow = new Query.Row(row);
-      List<Query.Row> queryRows = queryRowMap.get(queryRow.objectId);
+      QueryImpl.Row queryRow = new QueryImpl.Row(row);
+      List<QueryImpl.Row> queryRows = queryRowMap.get(queryRow.objectId);
       if(queryRows == null) {
         LOG.warn("Found rows for query with id " + queryRow.objectId +
                  " missing from system catalog");
@@ -1065,8 +1066,8 @@ public class DatabaseImpl implements Database
       String name = (String) row.get(CAT_COL_NAME);
       Integer id = (Integer)row.get(CAT_COL_ID);
       int flags = (Integer)row.get(CAT_COL_FLAGS);
-      List<Query.Row> queryRows = queryRowMap.get(id);
-      queries.add(Query.create(flags, name, queryRows, id));
+      List<QueryImpl.Row> queryRows = queryRowMap.get(id);
+      queries.add(QueryImpl.create(flags, name, queryRows, id));
     }
 
     return queries;

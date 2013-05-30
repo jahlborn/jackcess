@@ -25,7 +25,7 @@ Suite 200
 King of Prussia, PA 19406
 */
 
-package com.healthmarketscience.jackcess.query;
+package com.healthmarketscience.jackcess.impl.query;
 
 import java.util.HashMap;
 import java.util.Map;
