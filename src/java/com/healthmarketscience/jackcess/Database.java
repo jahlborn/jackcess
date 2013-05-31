@@ -1524,14 +1524,6 @@ public class Database
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
-    // the relationships table does not get loaded until first accessed
-    if(_relationships == null) {
-      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
-      if(_relationships == null) {
-        throw new IOException("Could not find system relationships table");
-      }
-    }
-
     int nameCmp = table1.getName().compareTo(table2.getName());
     if(nameCmp == 0) {
       throw new IllegalArgumentException("Must provide two different tables");
@@ -1544,15 +1536,79 @@ public class Database
       table1 = table2;
       table2 = tmp;
     }
+
+    return getRelationshipsImpl(table1, table2, true);
+  }
       
+  /**
+   * Finds all the relationships in the database for the given table.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getRelationships(Table table)
+    throws IOException
+  {
+    if(table == null) {
+      throw new IllegalArgumentException("Must provide a table");
+    }
+    // since we are getting relationships specific to certain table include
+    // all tables
+    return getRelationshipsImpl(table, null, true);
+  }
+      
+  /**
+   * Finds all the relationships in the database in <i>non-system</i> tables.
+   * </p>
+   * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
+   * database which could cause memory issues.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getRelationships()
+    throws IOException
+  {
+    return getRelationshipsImpl(null, null, false);
+  }
+      
+  /**
+   * Finds <i>all</i> the relationships in the database, <i>including system
+   * tables</i>.
+   * </p>
+   * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
+   * database which could cause memory issues.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getSystemRelationships()
+    throws IOException
+  {
+    return getRelationshipsImpl(null, null, true);
+  }
+      
+  private List<Relationship> getRelationshipsImpl(Table table1, Table table2,
+                                                  boolean includeSystemTables)
+    throws IOException
+  {
+    // the relationships table does not get loaded until first accessed
+    if(_relationships == null) {
+      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
+      if(_relationships == null) {
+        throw new IOException("Could not find system relationships table");
+      }
+    }
 
     List<Relationship> relationships = new ArrayList<Relationship>();
-    Cursor cursor = createCursorWithOptionalIndex(
-        _relationships, REL_COL_FROM_TABLE, table1.getName());
-    collectRelationships(cursor, table1, table2, relationships);
-    cursor = createCursorWithOptionalIndex(
-        _relationships, REL_COL_TO_TABLE, table1.getName());
-    collectRelationships(cursor, table2, table1, relationships);
+
+    if(table1 != null) {
+      Cursor cursor = createCursorWithOptionalIndex(
+          _relationships, REL_COL_FROM_TABLE, table1.getName());
+      collectRelationships(cursor, table1, table2, relationships,
+                           includeSystemTables);
+      cursor = createCursorWithOptionalIndex(
+          _relationships, REL_COL_TO_TABLE, table1.getName());
+      collectRelationships(cursor, table2, table1, relationships,
+                           includeSystemTables);
+    } else {
+      collectRelationships(new CursorBuilder(_relationships).toCursor(),
+                           null, null, relationships, includeSystemTables);
+    }
     
     return relationships;
   }
@@ -1760,17 +1816,22 @@ public class Database
    * Finds the relationships matching the given from and to tables from the
    * given cursor and adds them to the given list.
    */
-  private static void collectRelationships(
+  private void collectRelationships(
       Cursor cursor, Table fromTable, Table toTable,
-      List<Relationship> relationships)
+      List<Relationship> relationships, boolean includeSystemTables)
+    throws IOException
   {
+    String fromTableName = ((fromTable != null) ? fromTable.getName() : null);
+    String toTableName = ((toTable != null) ? toTable.getName() : null);
+
     for(Map<String,Object> row : cursor) {
       String fromName = (String)row.get(REL_COL_FROM_TABLE);
       String toName = (String)row.get(REL_COL_TO_TABLE);
       
-      if(fromTable.getName().equalsIgnoreCase(fromName) &&
-         toTable.getName().equalsIgnoreCase(toName))
-      {
+      if(((fromTableName == null) || 
+          fromTableName.equalsIgnoreCase(fromName)) &&
+         ((toTableName == null) || 
+          toTableName.equalsIgnoreCase(toName))) {
 
         String relName = (String)row.get(REL_COL_NAME);
         
@@ -1784,20 +1845,39 @@ public class Database
           }
         }
 
+        Table relFromTable = fromTable;
+        if(relFromTable == null) {
+          relFromTable = getTable(fromName, includeSystemTables, 
+                                  defaultUseBigIndex());
+          if(relFromTable == null) {
+            // invalid table or ignoring system tables, just ignore
+            continue;
+          }
+        }
+        Table relToTable = toTable;
+        if(relToTable == null) {
+          relToTable = getTable(toName, includeSystemTables, 
+                                defaultUseBigIndex());
+          if(relToTable == null) {
+            // invalid table or ignoring system tables, just ignore
+            continue;
+          }
+        }
+
         if(rel == null) {
           // new relationship
           int numCols = (Integer)row.get(REL_COL_COLUMN_COUNT);
           int flags = (Integer)row.get(REL_COL_FLAGS);
-          rel = new Relationship(relName, fromTable, toTable,
+          rel = new Relationship(relName, relFromTable, relToTable,
                                  flags, numCols);
           relationships.add(rel);
         }
 
         // add column info
         int colIdx = (Integer)row.get(REL_COL_COLUMN_INDEX);
-        Column fromCol = fromTable.getColumn(
+        Column fromCol = relFromTable.getColumn(
             (String)row.get(REL_COL_FROM_COLUMN));
-        Column toCol = toTable.getColumn(
+        Column toCol = relToTable.getColumn(
             (String)row.get(REL_COL_TO_COLUMN));
 
         rel.getFromColumns().set(colIdx, fromCol);

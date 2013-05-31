@@ -9,6 +9,9 @@
         Fix partial page updates when using CodecHandlers which can only do
         full page encoding.
       </action>
+      <action dev="jahlborn" type="update">
+        Add more methods to Database for retrieving Relationships.
+      </action>
     </release>
     <release version="1.2.12" date="2013-05-09">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="94">
