@@ -215,6 +215,24 @@ public class ComplexValueForeignKey extends Number
     return a;
   }
 
+  public Attachment addDecodedAttachment(byte[] decodedData)
+    throws IOException
+  {
+    return addDecodedAttachment(null, null, null, decodedData, null, null);
+  }
+  
+  public Attachment addDecodedAttachment(
+      String url, String name, String type, byte[] decodedData,
+      Date timeStamp, Integer flags)
+    throws IOException
+  {
+    reset();
+    Attachment a = AttachmentColumnInfo.newDecodedAttachment(
+        this, url, name, type, decodedData, timeStamp, flags);
+    getAttachmentInfo().addValue(a);
+    return a;
+  }
+
   public Attachment updateAttachment(Attachment attachment)
     throws IOException
   {

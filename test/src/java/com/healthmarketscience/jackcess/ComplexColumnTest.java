@@ -367,11 +367,12 @@ public class ComplexColumnTest extends TestCase
       assertEquals(fileNames.length, attachments.size());
       for(int i = 0; i < fileNames.length; ++i) {
         String fname = fileNames[i];
-        byte[] dataBytes = getFileBytes(fname);
         Attachment a = attachments.get(i);
         assertEquals(fname, a.getFileName());
         assertEquals("txt", a.getFileType());
-        assertTrue(Arrays.equals(dataBytes, a.getFileData()));
+        assertTrue(Arrays.equals(getFileBytes(fname), a.getFileData()));
+        assertTrue(Arrays.equals(getDecodedFileBytes(fname), 
+                                 a.getDecodedFileData()));
       }
     }
   }
@@ -430,17 +431,41 @@ public class ComplexColumnTest extends TestCase
     throw new RuntimeException("unexpected bytes");
   }
   
+  private static byte[] getDecodedFileBytes(String fname) throws Exception
+  {
+    if("test_data.txt".equals(fname)) {
+      return TEST_DEC_BYTES;
+    }
+    if("test_data2.txt".equals(fname)) {
+      return TEST2_DEC_BYTES;
+    }
+    throw new RuntimeException("unexpected bytes");
+  }
+  
   private static byte b(int i) { return (byte)i; }
+  
+  private static byte[] getAsciiBytes(String str) {
+    try {
+      return str.getBytes("US-ASCII");
+    } catch(Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
   
   private static final byte[] TEST_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3A),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),b(0x25),b(0x89),b(0x0A),b(0x69),b(0xF9),
     b(0x45),b(0x0A),b(0x89),b(0x25),b(0x25),b(0x89),b(0xC9),b(0x19),b(0xB9),b(0xA9),b(0x79),b(0x25),b(0x7A),b(0x00),b(0x52),b(0xA9),b(0x0F),b(0x7A)
   };
+
+  private static final byte[] TEST_DEC_BYTES = getAsciiBytes("this is some test data for attachment.");
   
   private static final byte[] TEST2_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3F),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0xB9),b(0xF9),b(0x45),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),
     b(0x25),b(0x89),b(0x0A),b(0x69),b(0xF9),b(0x45),b(0x0A),b(0x89),b(0x25),b(0x25),b(0x89),b(0xC9),b(0x19),b(0xB9),b(0xA9),b(0x79),b(0x25),b(0x7A),b(0x00),b(0xA5),b(0x0B),b(0x11),b(0x4D)
   };
+
+  private static final byte[] TEST2_DEC_BYTES = getAsciiBytes("this is some more test data for attachment.");
+  
 }

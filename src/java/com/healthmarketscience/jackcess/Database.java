@@ -2409,8 +2409,7 @@ public class Database
     double dateVal = Double.longBitsToDouble(buffer.getLong());
 
     byte[] pwdMask = new byte[4];
-    ByteBuffer.wrap(pwdMask).order(PageChannel.DEFAULT_BYTE_ORDER)
-      .putInt((int)dateVal);
+    PageChannel.wrap(pwdMask).putInt((int)dateVal);
 
     return pwdMask;
   }

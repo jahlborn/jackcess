@@ -19,13 +19,19 @@ USA
 
 package com.healthmarketscience.jackcess.complex;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.InflaterInputStream;
 
 import com.healthmarketscience.jackcess.ByteUtil;
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.PageChannel;
 import com.healthmarketscience.jackcess.Table;
 
 
@@ -38,6 +44,9 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
 {
   private static final String FILE_NAME_COL_NAME = "FileName";
   private static final String FILE_TYPE_COL_NAME = "FileType";
+
+  private static final int DATA_TYPE_RAW = 0;
+  private static final int DATA_TYPE_COMPRESSED = 1;
 
   private final Column _fileUrlCol;
   private final Column _fileNameCol;
@@ -142,7 +151,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     byte[] data = (byte[])getFileDataColumn().getRowValue(rawValue);
     
     return new AttachmentImpl(id, complexValueFk, url, name, type, data,
-                              ts, flags);
+                              ts, flags, null);
   }
 
   @Override
@@ -179,7 +188,33 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       String type, byte[] data, Date timeStamp, Integer flags)
   {
     return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
-                              data, timeStamp, flags);
+                              data, timeStamp, flags, null);
+  }
+
+  public static Attachment newDecodedAttachment(byte[] decodedData) {
+    return newDecodedAttachment(INVALID_COMPLEX_VALUE_ID, decodedData);
+  }
+  
+  public static Attachment newDecodedAttachment(
+      ComplexValueForeignKey complexValueFk, byte[] decodedData) {
+    return newDecodedAttachment(complexValueFk, null, null, null, decodedData,
+                                null, null);
+  }
+
+  public static Attachment newDecodedAttachment(
+      String url, String name, String type, byte[] decodedData,
+      Date timeStamp, Integer flags)
+  {
+    return newDecodedAttachment(INVALID_COMPLEX_VALUE_ID, url, name, type, 
+                                decodedData, timeStamp, flags);
+  }
+  
+  public static Attachment newDecodedAttachment(
+      ComplexValueForeignKey complexValueFk, String url, String name,
+      String type, byte[] decodedData, Date timeStamp, Integer flags)
+  {
+    return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
+                              null, timeStamp, flags, decodedData);
   }
 
   
@@ -235,10 +270,11 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     private byte[] _data;
     private Date _timeStamp;
     private Integer _flags;
+    private byte[] _decodedData;
 
     private AttachmentImpl(int id, ComplexValueForeignKey complexValueFk,
                            String url, String name, String type, byte[] data,
-                           Date timeStamp, Integer flags)
+                           Date timeStamp, Integer flags, byte[] decodedData)
     {
       super(id, complexValueFk);
       _url = url;
@@ -247,14 +283,31 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       _data = data;
       _timeStamp = timeStamp;
       _flags = flags;
+      _decodedData = decodedData;
     }
     
     public byte[] getFileData() {
+      if((_data == null) && (_decodedData != null)) {
+        _data = encodeData();
+      }
       return _data;
     }
 
     public void setFileData(byte[] data) {
       _data = data;
+      _decodedData = null;
+    }
+
+    public byte[] getDecodedFileData() throws IOException {
+      if((_decodedData == null) && (_data != null)) {
+        _decodedData = decodeData();
+      }
+      return _decodedData;
+    }
+
+    public void setDecodedFileData(byte[] data) {
+      _decodedData = data;
+      _data = null;
     }
 
     public String getFileName() {
@@ -313,6 +366,72 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
         + ", " + getFileTimeStamp() + ", " + getFileFlags()  + ", " +
         ByteUtil.toHexString(getFileData());
     } 
+
+    /**
+     * Decodes the raw attachment file data to get the _actual_ content.
+     */
+    private byte[] decodeData() throws IOException {
+
+      if(_data.length < 8) {
+        // nothing we can do
+        throw new IOException("Unknown encoded attachment data format");
+      }
+
+      // read initial header info
+      ByteBuffer bb = PageChannel.wrap(_data);
+      int typeFlag = bb.getInt();
+      int dataLen = bb.getInt();
+
+      DataInputStream contentStream = null;
+      try {
+        InputStream bin = new ByteArrayInputStream(
+            _data, 8, _data.length - 8);
+
+        if(typeFlag == DATA_TYPE_RAW) {
+          // nothing else to do
+        } else if(typeFlag == DATA_TYPE_COMPRESSED) {
+          // actual content is deflate compressed
+          bin = new InflaterInputStream(bin);
+        } else {
+          throw new IOException(
+              "Unknown encoded attachment data type " + typeFlag);
+        }
+
+        contentStream = new DataInputStream(bin);
+
+        // header is the "file extension" of the data.  no clue why we need
+        // that again since it's already a separate field in the attachment
+        // table.  just skip it
+        byte[] tmpBytes = new byte[4];
+        contentStream.readFully(tmpBytes);
+        int headerLen = PageChannel.wrap(tmpBytes).getInt();
+        contentStream.skipBytes(headerLen - 4);
+
+        // calculate actual data length and read it (note, header length
+        // includes the bytes for the length)
+        tmpBytes = new byte[dataLen - headerLen];
+        contentStream.readFully(tmpBytes);
+
+        return tmpBytes;
+
+      } finally {
+        if(contentStream != null) {
+          try {
+            contentStream.close();
+          } catch(IOException e) {
+            // ignored
+          }
+        }
+      }
+    }
+
+    /**
+     * Encodes the actual attachment file data to get the raw, stored format.
+     */
+    private byte[] encodeData() {
+      // FIXME, writeme
+      throw new UnsupportedOperationException();
+    }
   }
-  
+
 }

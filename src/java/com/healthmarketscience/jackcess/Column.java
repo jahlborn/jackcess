@@ -899,8 +899,7 @@ public class Column implements Comparable<Column> {
   private byte[] readLongValue(byte[] lvalDefinition)
     throws IOException
   {
-    ByteBuffer def = ByteBuffer.wrap(lvalDefinition)
-      .order(PageChannel.DEFAULT_BYTE_ORDER);
+    ByteBuffer def = PageChannel.wrap(lvalDefinition);
     int lengthWithFlags = def.getInt();
     int length = lengthWithFlags & (~LONG_VALUE_TYPE_MASK);
 

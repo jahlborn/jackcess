@@ -82,6 +82,12 @@
               read-only support</role>
       </roles>
     </contributor>
+    <contributor>
+      <name>Lorenzo Carrara</name>
+      <roles>
+        <role>Reverse engineered the attachment data encoding.</role>
+      </roles>
+    </contributor>
   </contributors>
   <issueManagement>
     <system>SourceForge2</system>

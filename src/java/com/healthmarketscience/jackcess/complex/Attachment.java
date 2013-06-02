@@ -19,6 +19,7 @@ USA
 
 package com.healthmarketscience.jackcess.complex;
 
+import java.io.IOException;
 import java.util.Date;
 
 /**
@@ -31,6 +32,10 @@ public interface Attachment extends ComplexValue
   public byte[] getFileData();
 
   public void setFileData(byte[] data);
+
+  public byte[] getDecodedFileData() throws IOException;
+
+  public void setDecodedFileData(byte[] data);
 
   public String getFileName();
 

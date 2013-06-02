@@ -380,4 +380,12 @@ public class PageChannel implements Channel, Flushable {
       .position(position)
       .mark();
   }
+
+  /**
+   * Returns a ByteBuffer wrapping the given bytes and configured with the
+   * default byte order.
+   */
+  public static ByteBuffer wrap(byte[] bytes) {
+    return ByteBuffer.wrap(bytes).order(DEFAULT_BYTE_ORDER);
+  }
 }
