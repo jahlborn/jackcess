@@ -73,7 +73,7 @@ public class MultiValueColumnInfo extends ComplexColumnInfo<SingleValue>
   }
 
   @Override
-  protected Object[] asRow(Object[] row, SingleValue value) {
+  protected Object[] asRow(Object[] row, SingleValue value) throws IOException {
     super.asRow(row, value);
     getValueColumn().setRowValue(row, value.get());
     return row;

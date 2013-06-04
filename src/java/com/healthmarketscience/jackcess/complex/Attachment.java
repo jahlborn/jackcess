@@ -29,7 +29,7 @@ import java.util.Date;
  */
 public interface Attachment extends ComplexValue 
 {
-  public byte[] getFileData();
+  public byte[] getFileData() throws IOException;
 
   public void setFileData(byte[] data);
 

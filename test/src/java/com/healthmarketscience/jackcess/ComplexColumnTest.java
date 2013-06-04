@@ -189,6 +189,11 @@ public class ComplexColumnTest extends TestCase
       row8ValFk.addAttachment(null, "test_data.txt", "txt",
                               getFileBytes("test_data.txt"), null, null);
       checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
+      row8ValFk.addDecodedAttachment(null, "test_data2.txt", "txt",
+                                     getDecodedFileBytes("test_data2.txt"), null,
+                                     null);
+      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt", 
+                       "test_data2.txt");
 
       Cursor cursor = Cursor.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));

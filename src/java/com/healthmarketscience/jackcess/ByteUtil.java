@@ -29,6 +29,7 @@ package com.healthmarketscience.jackcess;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -609,7 +610,7 @@ public final class ByteUtil {
    * Utility byte stream similar to ByteArrayOutputStream but with extended
    * accessibility to the bytes.
    */
-  public static class ByteStream
+  public static class ByteStream extends OutputStream
   {
     private byte[] _bytes;
     private int _length;
@@ -641,15 +642,18 @@ public final class ByteUtil {
       }
     }
 
+    @Override
     public void write(int b) {
       ensureNewCapacity(1);
       _bytes[_length++] = (byte)b;
     }
 
+    @Override
     public void write(byte[] b) {
       write(b, 0, b.length);
     }
 
+    @Override
     public void write(byte[] b, int offset, int length) {
       ensureNewCapacity(length);
       System.arraycopy(b, offset, _bytes, _length, length);
@@ -669,6 +673,11 @@ public final class ByteUtil {
       int oldLength = _length;
       _length += length;
       Arrays.fill(_bytes, oldLength, _length, b);
+    }
+
+    public void skip(int n) {
+      ensureNewCapacity(n);
+      _length += n;
     }
 
     public void writeTo(ByteStream out) {

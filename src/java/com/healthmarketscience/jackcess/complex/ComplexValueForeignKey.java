@@ -327,9 +327,7 @@ public class ComplexValueForeignKey extends Number
   }
 
   @Override
-  public String toString()
-  {
+  public String toString() {
     return String.valueOf(_value);
-  }
-  
+  }  
 }

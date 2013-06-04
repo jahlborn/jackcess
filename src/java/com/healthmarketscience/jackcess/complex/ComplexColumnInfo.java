@@ -349,7 +349,9 @@ public abstract class ComplexColumnInfo<V extends ComplexValue>
     _pkCursor.deleteCurrentRow();
   }
   
-  protected Object[] asRow(Object[] row, V value) {
+  protected Object[] asRow(Object[] row, V value)
+    throws IOException
+  {
     int id = value.getId();
     _pkCol.setRowValue(row, ((id != INVALID_ID) ? id : Column.AUTO_NUMBER));
     int cId = value.getComplexValueForeignKey().get();

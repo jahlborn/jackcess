@@ -68,7 +68,9 @@ public class UnsupportedColumnInfo extends ComplexColumnInfo<UnsupportedValue>
   }
 
   @Override
-  protected Object[] asRow(Object[] row, UnsupportedValue value) {
+  protected Object[] asRow(Object[] row, UnsupportedValue value) 
+    throws IOException
+  {
     super.asRow(row, value);
 
     Map<String,Object> values = value.getValues();

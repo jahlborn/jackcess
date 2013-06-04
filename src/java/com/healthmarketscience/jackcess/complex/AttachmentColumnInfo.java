@@ -23,14 +23,21 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 import com.healthmarketscience.jackcess.ByteUtil;
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.JetFormat;
 import com.healthmarketscience.jackcess.PageChannel;
 import com.healthmarketscience.jackcess.Table;
 
@@ -42,11 +49,20 @@ import com.healthmarketscience.jackcess.Table;
  */
 public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
 {
+  /** some file formats which may not be worth re-compressing */
+  private static final Set<String> COMPRESSED_FORMATS = new HashSet<String>(
+      Arrays.asList("jpg", "zip", "gz", "bz2", "z", "7z", "cab", "rar", 
+                    "mp3", "mpg"));
+
   private static final String FILE_NAME_COL_NAME = "FileName";
   private static final String FILE_TYPE_COL_NAME = "FileType";
 
   private static final int DATA_TYPE_RAW = 0;
   private static final int DATA_TYPE_COMPRESSED = 1;
+
+  private static final int UNKNOWN_HEADER_VAL = 1;
+  private static final int WRAPPER_HEADER_SIZE = 8;
+  private static final int CONTENT_HEADER_SIZE = 12;
 
   private final Column _fileUrlCol;
   private final Column _fileNameCol;
@@ -155,7 +171,9 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
   }
 
   @Override
-  protected Object[] asRow(Object[] row, Attachment attachment) {
+  protected Object[] asRow(Object[] row, Attachment attachment) 
+    throws IOException 
+  {
     super.asRow(row, attachment);
     getFileUrlColumn().setRowValue(row, attachment.getFileUrl());
     getFileNameColumn().setRowValue(row, attachment.getFileName());
@@ -286,7 +304,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       _decodedData = decodedData;
     }
     
-    public byte[] getFileData() {
+    public byte[] getFileData() throws IOException {
       if((_data == null) && (_decodedData != null)) {
         _data = encodeData();
       }
@@ -359,12 +377,19 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     }
     
     @Override
-    public String toString()
-    {
+    public String toString() {
+
+      String dataStr = null;
+      try {
+        dataStr = ByteUtil.toHexString(getFileData());
+      } catch(IOException e) {
+        dataStr = e.toString();
+      }
+      
       return "Attachment(" + getComplexValueForeignKey() + "," + getId() +
         ") " + getFileUrl() + ", " + getFileName() + ", " + getFileType()
         + ", " + getFileTimeStamp() + ", " + getFileFlags()  + ", " +
-        ByteUtil.toHexString(getFileData());
+        dataStr;
     } 
 
     /**
@@ -372,7 +397,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
      */
     private byte[] decodeData() throws IOException {
 
-      if(_data.length < 8) {
+      if(_data.length < WRAPPER_HEADER_SIZE) {
         // nothing we can do
         throw new IOException("Unknown encoded attachment data format");
       }
@@ -385,7 +410,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       DataInputStream contentStream = null;
       try {
         InputStream bin = new ByteArrayInputStream(
-            _data, 8, _data.length - 8);
+            _data, WRAPPER_HEADER_SIZE, _data.length - WRAPPER_HEADER_SIZE);
 
         if(typeFlag == DATA_TYPE_RAW) {
           // nothing else to do
@@ -399,9 +424,9 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
 
         contentStream = new DataInputStream(bin);
 
-        // header is the "file extension" of the data.  no clue why we need
-        // that again since it's already a separate field in the attachment
-        // table.  just skip it
+        // header is an unknown flag followed by the "file extension" of the
+        // data (no clue why we need that again since it's already a separate
+        // field in the attachment table).  just skip all of it
         byte[] tmpBytes = new byte[4];
         contentStream.readFully(tmpBytes);
         int headerLen = PageChannel.wrap(tmpBytes).getInt();
@@ -428,9 +453,65 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     /**
      * Encodes the actual attachment file data to get the raw, stored format.
      */
-    private byte[] encodeData() {
-      // FIXME, writeme
-      throw new UnsupportedOperationException();
+    private byte[] encodeData() throws IOException {
+
+      // possibly compress data based on file type
+      String type = ((_type != null) ? _type.toLowerCase() : "");
+      boolean shouldCompress = !COMPRESSED_FORMATS.contains(type);
+
+      // encode extension, which ends w/ a null byte
+      type += '\0';
+      ByteBuffer typeBytes = Column.encodeUncompressedText(
+          type, JetFormat.VERSION_12.CHARSET);
+      int headerLen = typeBytes.remaining() + CONTENT_HEADER_SIZE;
+
+      int dataLen = _decodedData.length;
+      ByteUtil.ByteStream dataStream = new ByteUtil.ByteStream(
+          WRAPPER_HEADER_SIZE + headerLen + dataLen);
+
+      // write the wrapper header info
+      ByteBuffer bb = PageChannel.wrap(dataStream.getBytes());
+      bb.putInt(shouldCompress ? DATA_TYPE_COMPRESSED : DATA_TYPE_RAW);
+      bb.putInt(dataLen + headerLen);
+      dataStream.skip(WRAPPER_HEADER_SIZE);
+
+      OutputStream contentStream = dataStream;
+      Deflater deflater = null;
+      try {
+
+        if(shouldCompress) {
+          contentStream = new DeflaterOutputStream(
+              contentStream, deflater = new Deflater(3));
+        }
+
+        // write the header w/ the file extension
+        byte[] tmpBytes = new byte[CONTENT_HEADER_SIZE];
+        PageChannel.wrap(tmpBytes)
+          .putInt(headerLen)
+          .putInt(UNKNOWN_HEADER_VAL)
+          .putInt(type.length());
+        contentStream.write(tmpBytes);
+        contentStream.write(typeBytes.array(), 0, typeBytes.remaining());
+
+        // write the _actual_ contents
+        contentStream.write(_decodedData);
+        contentStream.close();
+        contentStream = null;
+
+        return dataStream.toByteArray();
+
+      } finally {
+        if(contentStream != null) {
+          try {
+            contentStream.close();
+          } catch(IOException e) {
+            // ignored
+          }
+        }
+        if(deflater != null) {
+            deflater.end();
+        }
+      }
     }
   }
 
