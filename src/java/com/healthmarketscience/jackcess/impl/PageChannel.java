@@ -81,6 +81,7 @@ public class PageChannel implements Channel, Flushable {
   /** temp page buffer used when pages cannot be partially encoded */
   private final TempPageHolder _fullPageEncodeBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
+  private int _writeCount;
   
   /**
    * Only used by unit tests
@@ -132,6 +133,28 @@ public class PageChannel implements Channel, Flushable {
     return _autoSync;
   }
 
+  /**
+   * Begins a "logical" write operation.  See {@link #finishWrite} for more
+   * details.
+   */
+  public void startWrite() {
+    ++_writeCount;
+  }
+
+  /**
+   * Completes a "logical" write operation.  This method should be called in
+   * finally block which wraps a logical write operation (which is preceded by
+   * a {@link #startWrite} call).  Logical write operations may be nested.  If
+   * the database is configured for "auto-sync", the channel will be flushed
+   * when the outermost operation is complete,
+   */
+  public void finishWrite() throws IOException {
+    assertWriting();
+    if((--_writeCount == 0) && _autoSync) {
+      flush();
+    }
+  }
+  
   /**
    * Returns the next page number based on the given file size.
    */
@@ -203,6 +226,7 @@ public class PageChannel implements Channel, Flushable {
   public void writePage(ByteBuffer page, int pageNumber, int pageOffset)
     throws IOException
   {
+    assertWriting();
     validatePageNumber(pageNumber);
     
     page.rewind().position(pageOffset);
@@ -253,9 +277,6 @@ public class PageChannel implements Channel, Flushable {
 
     try {
       _channel.write(encodedPage, (getPageOffset(pageNumber) + pageOffset));
-      if(_autoSync) {
-        flush();
-      }
     } finally {
       if(pageNumber == 0) {
         // de-mask header
@@ -269,6 +290,8 @@ public class PageChannel implements Channel, Flushable {
    * until it is written in a call to {@link #writePage(ByteBuffer,int)}.
    */
   public int allocateNewPage() throws IOException {
+    assertWriting();
+
     // this will force the file to be extended with mostly undefined bytes
     long size = _channel.size();
     if(size >= getFormat().MAX_DATABASE_SIZE) {
@@ -303,6 +326,8 @@ public class PageChannel implements Channel, Flushable {
    * Deallocate a previously used page in the database.
    */
   public void deallocatePage(int pageNumber) throws IOException {
+    assertWriting();
+
     validatePageNumber(pageNumber);
     
     // don't write the whole page, just wipe out the header (which should be
@@ -363,6 +388,15 @@ public class PageChannel implements Channel, Flushable {
       }
   }
 
+  /**
+   * Asserts that a write operation is in progress.
+   */
+  private void assertWriting() {
+    if(_writeCount <= 0) {
+      throw new IllegalStateException("No write operation in progress");
+    }
+  }
+  
   /**
    * @return a duplicate of the current buffer narrowed to the given position
    *         and limit.  mark will be set at the current position.

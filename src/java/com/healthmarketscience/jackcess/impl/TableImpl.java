@@ -505,54 +505,61 @@ public class TableImpl implements Table
   {
     requireValidRowId(rowId);
     
-    // ensure that the relevant row state is up-to-date
-    ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
+    getPageChannel().startWrite();
+    try {
+      
+      // ensure that the relevant row state is up-to-date
+      ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
 
-    if(rowState.isDeleted()) {
-      // don't care about duplicate deletion
-      return;
-    }
-    requireNonDeletedRow(rowState, rowId);
+      if(rowState.isDeleted()) {
+        // don't care about duplicate deletion
+        return;
+      }
+      requireNonDeletedRow(rowState, rowId);
     
-    // delete flag always gets set in the "header" row (even if data is on
-    // overflow row)
-    int pageNumber = rowState.getHeaderRowId().getPageNumber();
-    int rowNumber = rowState.getHeaderRowId().getRowNumber();
+      // delete flag always gets set in the "header" row (even if data is on
+      // overflow row)
+      int pageNumber = rowState.getHeaderRowId().getPageNumber();
+      int rowNumber = rowState.getHeaderRowId().getRowNumber();
 
-    // attempt to fill in index column values
-    Object[] rowValues = null;
-    if(!_indexDatas.isEmpty()) {
+      // attempt to fill in index column values
+      Object[] rowValues = null;
+      if(!_indexDatas.isEmpty()) {
 
-      // move to row data to get index values
-      rowBuffer = positionAtRowData(rowState, rowId);
+        // move to row data to get index values
+        rowBuffer = positionAtRowData(rowState, rowId);
 
-      for(ColumnImpl idxCol : _indexColumns) {
-        getRowColumn(getFormat(), rowBuffer, idxCol, rowState, null);
+        for(ColumnImpl idxCol : _indexColumns) {
+          getRowColumn(getFormat(), rowBuffer, idxCol, rowState, null);
+        }
+
+        // use any read rowValues to help update the indexes
+        rowValues = rowState.getRowValues();
+
+        // check foreign keys before proceeding w/ deletion
+        _fkEnforcer.deleteRow(rowValues);    
+
+        // move back to the header
+        rowBuffer = positionAtRowHeader(rowState, rowId);
       }
 
-      // use any read rowValues to help update the indexes
-      rowValues = rowState.getRowValues();
+      // finally, pull the trigger
+      int rowIndex = getRowStartOffset(rowNumber, getFormat());
+      rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
+                                           | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
+      writeDataPage(rowBuffer, pageNumber);
 
-      // check foreign keys before proceeding w/ deletion
-      _fkEnforcer.deleteRow(rowValues);    
-
-      // move back to the header
-      rowBuffer = positionAtRowHeader(rowState, rowId);
-    }
-
-    // finally, pull the trigger
-    int rowIndex = getRowStartOffset(rowNumber, getFormat());
-    rowBuffer.putShort(rowIndex, (short)(rowBuffer.getShort(rowIndex)
-                                      | DELETED_ROW_MASK | OVERFLOW_ROW_MASK));
-    writeDataPage(rowBuffer, pageNumber);
-
-    // update the indexes
-    for(IndexData indexData : _indexDatas) {
-      indexData.deleteRow(rowValues, rowId);
-    }
+      // update the indexes
+      for(IndexData indexData : _indexDatas) {
+        indexData.deleteRow(rowValues, rowId);
+      }
     
-    // make sure table def gets updated
-    updateTableDefinition(-1);
+      // make sure table def gets updated
+      updateTableDefinition(-1);
+
+    } finally {
+      getPageChannel().finishWrite();
+    }
   }
   
   public Row getNextRow() throws IOException {
@@ -1387,77 +1394,84 @@ public class TableImpl implements Table
       return rows;
     }
 
-    List<Object[]> dupeRows = null;
-    ByteBuffer[] rowData = new ByteBuffer[rows.size()];
-    int numCols = _columns.size();
-    for (int i = 0; i < rows.size(); i++) {
+    getPageChannel().startWrite();
+    try {
+    
+      List<Object[]> dupeRows = null;
+      ByteBuffer[] rowData = new ByteBuffer[rows.size()];
+      int numCols = _columns.size();
+      for (int i = 0; i < rows.size(); i++) {
 
-      // we need to make sure the row is the right length and is an Object[]
-      // (fill with null if too short).  note, if the row is copied the caller
-      // will not be able to access any generated auto-number value, but if
-      // they need that info they should use a row array of the right
-      // size/type!
-      Object[] row = rows.get(i);
-      if((row.length < numCols) || (row.getClass() != Object[].class)) {
-        row = dupeRow(row, numCols);
-        // copy the input rows to a modifiable list so we can update the
-        // elements
-        if(dupeRows == null) {
-          dupeRows = new ArrayList<Object[]>(rows);
-          rows = dupeRows;
+        // we need to make sure the row is the right length and is an Object[]
+        // (fill with null if too short).  note, if the row is copied the caller
+        // will not be able to access any generated auto-number value, but if
+        // they need that info they should use a row array of the right
+        // size/type!
+        Object[] row = rows.get(i);
+        if((row.length < numCols) || (row.getClass() != Object[].class)) {
+          row = dupeRow(row, numCols);
+          // copy the input rows to a modifiable list so we can update the
+          // elements
+          if(dupeRows == null) {
+            dupeRows = new ArrayList<Object[]>(rows);
+            rows = dupeRows;
+          }
+          // we copied the row, so put the copy back into the rows list
+          dupeRows.set(i, row);
         }
-        // we copied the row, so put the copy back into the rows list
-        dupeRows.set(i, row);
-      }
 
-      // fill in autonumbers
-      handleAutoNumbersForAdd(row);
+        // fill in autonumbers
+        handleAutoNumbersForAdd(row);
       
-      // write the row of data to a temporary buffer
-      rowData[i] = createRow(row, 
-                             writeRowBufferH.getPageBuffer(getPageChannel()));
+        // write the row of data to a temporary buffer
+        rowData[i] = createRow(row, 
+                               writeRowBufferH.getPageBuffer(getPageChannel()));
       
-      if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
-        throw new IOException("Row size " + rowData[i].limit() +
-                              " is too large");
+        if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
+          throw new IOException("Row size " + rowData[i].limit() +
+                                " is too large");
+        }
       }
-    }
 
-    ByteBuffer dataPage = null;
-    int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      ByteBuffer dataPage = null;
+      int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
     
-    for (int i = 0; i < rowData.length; i++) {
-      int rowSize = rowData[i].remaining();
-      Object[] row = rows.get(i);
+      for (int i = 0; i < rowData.length; i++) {
+        int rowSize = rowData[i].remaining();
+        Object[] row = rows.get(i);
 
-      // handle foreign keys before adding to table
-      _fkEnforcer.addRow(row);
+        // handle foreign keys before adding to table
+        _fkEnforcer.addRow(row);
 
-      // get page with space
-      dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
-      pageNumber = _addRowBufferH.getPageNumber();
+        // get page with space
+        dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
+        pageNumber = _addRowBufferH.getPageNumber();
 
-      // write out the row data
-      int rowNum = addDataPageRow(dataPage, rowSize, getFormat(), 0);
-      dataPage.put(rowData[i]);
+        // write out the row data
+        int rowNum = addDataPageRow(dataPage, rowSize, getFormat(), 0);
+        dataPage.put(rowData[i]);
 
-      // update the indexes
-      RowIdImpl rowId = new RowIdImpl(pageNumber, rowNum);
-      for(IndexData indexData : _indexDatas) {
-        indexData.addRow(row, rowId);
+        // update the indexes
+        RowIdImpl rowId = new RowIdImpl(pageNumber, rowNum);
+        for(IndexData indexData : _indexDatas) {
+          indexData.addRow(row, rowId);
+        }
+
+        // return rowTd if desired
+        if((row.length > numCols) && (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
+          row[numCols] = rowId;
+        }
       }
 
-      // return rowTd if desired
-      if((row.length > numCols) && (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
-        row[numCols] = rowId;
-      }
-    }
-
-    writeDataPage(dataPage, pageNumber);
+      writeDataPage(dataPage, pageNumber);
     
-    // Update tdef page
-    updateTableDefinition(rows.size());
+      // Update tdef page
+      updateTableDefinition(rows.size());
 
+    } finally {
+      getPageChannel().finishWrite();
+    }
+    
     return rows;
   }
   
@@ -1496,128 +1510,135 @@ public class TableImpl implements Table
   {
     requireValidRowId(rowId);
     
-    // ensure that the relevant row state is up-to-date
-    ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
-    int oldRowSize = rowBuffer.remaining();
-
-    requireNonDeletedRow(rowState, rowId);
-
-    // we need to make sure the row is the right length & type (fill with
-    // null if too short).
-    if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
-      row = dupeRow(row, _columns.size());
-    }
-
-    // hang on to the raw values of var length columns we are "keeping".  this
-    // will allow us to re-use pre-written var length data, which can save
-    // space for things like long value columns.
-    Map<ColumnImpl,byte[]> keepRawVarValues = 
-      (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
-
-    for(ColumnImpl column : _columns) {
-      if(_autoNumColumns.contains(column)) {
-        // fill in any auto-numbers (we don't allow autonumber values to be
-        // modified)
-        column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column, 
-                                             rowState, null));
-      } else if(column.getRowValue(row) == Column.KEEP_VALUE) {
-        // fill in any "keep value" fields
-        column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column,
-                                             rowState, keepRawVarValues));
-      } else if(_indexColumns.contains(column)) {
-        // read row value to help update indexes
-        getRowColumn(getFormat(), rowBuffer, column, rowState, null);
-      }
-    }
-
-    // generate new row bytes
-    ByteBuffer newRowData = createRow(
-        row, _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
-        keepRawVarValues);
-
-    if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
-      throw new IOException("Row size " + newRowData.limit() + 
-                            " is too large");
-    }
-
-    if(!_indexDatas.isEmpty()) {
-
-      Object[] oldRowValues = rowState.getRowValues();
-
-      // check foreign keys before actually updating
-      _fkEnforcer.updateRow(oldRowValues, row);
-
-      // delete old values from indexes
-      for(IndexData indexData : _indexDatas) {
-        indexData.deleteRow(oldRowValues, rowId);
-      }
-    }
+    getPageChannel().startWrite();
+    try {
     
-    // see if we can squeeze the new row data into the existing row
-    rowBuffer.reset();
-    int rowSize = newRowData.remaining();
+      // ensure that the relevant row state is up-to-date
+      ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
+      int oldRowSize = rowBuffer.remaining();
 
-    ByteBuffer dataPage = null;
-    int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      requireNonDeletedRow(rowState, rowId);
 
-    if(oldRowSize >= rowSize) {
-
-      // awesome, slap it in!
-      rowBuffer.put(newRowData);
-
-      // grab the page we just updated
-      dataPage = rowState.getFinalPage();
-      pageNumber = rowState.getFinalRowId().getPageNumber();
-
-    } else {
-
-      // bummer, need to find a new page for the data
-      dataPage = findFreeRowSpace(rowSize, null, 
-                                  PageChannel.INVALID_PAGE_NUMBER);
-      pageNumber = _addRowBufferH.getPageNumber();
-
-      RowIdImpl headerRowId = rowState.getHeaderRowId();      
-      ByteBuffer headerPage = rowState.getHeaderPage();
-      if(pageNumber == headerRowId.getPageNumber()) {
-        // new row is on the same page as header row, share page
-        dataPage = headerPage;
+      // we need to make sure the row is the right length & type (fill with
+      // null if too short).
+      if((row.length < _columns.size()) || (row.getClass() != Object[].class)) {
+        row = dupeRow(row, _columns.size());
       }
 
-      // write out the new row data (set the deleted flag on the new data row
-      // so that it is ignored during normal table traversal)
-      int rowNum = addDataPageRow(dataPage, rowSize, getFormat(),
-                                  DELETED_ROW_MASK);
-      dataPage.put(newRowData);
+      // hang on to the raw values of var length columns we are "keeping".  this
+      // will allow us to re-use pre-written var length data, which can save
+      // space for things like long value columns.
+      Map<ColumnImpl,byte[]> keepRawVarValues = 
+        (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
 
-      // write the overflow info into the header row and clear out the
-      // remaining header data
-      rowBuffer = PageChannel.narrowBuffer(
-          headerPage,
-          findRowStart(headerPage, headerRowId.getRowNumber(), getFormat()),
-          findRowEnd(headerPage, headerRowId.getRowNumber(), getFormat()));
-      rowBuffer.put((byte)rowNum);
-      ByteUtil.put3ByteInt(rowBuffer, pageNumber);
-      ByteUtil.clearRemaining(rowBuffer);
-
-      // set the overflow flag on the header row
-      int headerRowIndex = getRowStartOffset(headerRowId.getRowNumber(),
-                                             getFormat());
-      headerPage.putShort(headerRowIndex,
-                          (short)(headerPage.getShort(headerRowIndex)
-                                  | OVERFLOW_ROW_MASK));
-      if(pageNumber != headerRowId.getPageNumber()) {
-        writeDataPage(headerPage, headerRowId.getPageNumber());
+      for(ColumnImpl column : _columns) {
+        if(_autoNumColumns.contains(column)) {
+          // fill in any auto-numbers (we don't allow autonumber values to be
+          // modified)
+          column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column, 
+                                               rowState, null));
+        } else if(column.getRowValue(row) == Column.KEEP_VALUE) {
+          // fill in any "keep value" fields
+          column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column,
+                                               rowState, keepRawVarValues));
+        } else if(_indexColumns.contains(column)) {
+          // read row value to help update indexes
+          getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+        }
       }
+
+      // generate new row bytes
+      ByteBuffer newRowData = createRow(
+          row, _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
+          keepRawVarValues);
+
+      if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
+        throw new IOException("Row size " + newRowData.limit() + 
+                              " is too large");
+      }
+
+      if(!_indexDatas.isEmpty()) {
+
+        Object[] oldRowValues = rowState.getRowValues();
+
+        // check foreign keys before actually updating
+        _fkEnforcer.updateRow(oldRowValues, row);
+
+        // delete old values from indexes
+        for(IndexData indexData : _indexDatas) {
+          indexData.deleteRow(oldRowValues, rowId);
+        }
+      }
+    
+      // see if we can squeeze the new row data into the existing row
+      rowBuffer.reset();
+      int rowSize = newRowData.remaining();
+
+      ByteBuffer dataPage = null;
+      int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+
+      if(oldRowSize >= rowSize) {
+
+        // awesome, slap it in!
+        rowBuffer.put(newRowData);
+
+        // grab the page we just updated
+        dataPage = rowState.getFinalPage();
+        pageNumber = rowState.getFinalRowId().getPageNumber();
+
+      } else {
+
+        // bummer, need to find a new page for the data
+        dataPage = findFreeRowSpace(rowSize, null, 
+                                    PageChannel.INVALID_PAGE_NUMBER);
+        pageNumber = _addRowBufferH.getPageNumber();
+
+        RowIdImpl headerRowId = rowState.getHeaderRowId();      
+        ByteBuffer headerPage = rowState.getHeaderPage();
+        if(pageNumber == headerRowId.getPageNumber()) {
+          // new row is on the same page as header row, share page
+          dataPage = headerPage;
+        }
+
+        // write out the new row data (set the deleted flag on the new data row
+        // so that it is ignored during normal table traversal)
+        int rowNum = addDataPageRow(dataPage, rowSize, getFormat(),
+                                    DELETED_ROW_MASK);
+        dataPage.put(newRowData);
+
+        // write the overflow info into the header row and clear out the
+        // remaining header data
+        rowBuffer = PageChannel.narrowBuffer(
+            headerPage,
+            findRowStart(headerPage, headerRowId.getRowNumber(), getFormat()),
+            findRowEnd(headerPage, headerRowId.getRowNumber(), getFormat()));
+        rowBuffer.put((byte)rowNum);
+        ByteUtil.put3ByteInt(rowBuffer, pageNumber);
+        ByteUtil.clearRemaining(rowBuffer);
+
+        // set the overflow flag on the header row
+        int headerRowIndex = getRowStartOffset(headerRowId.getRowNumber(),
+                                               getFormat());
+        headerPage.putShort(headerRowIndex,
+                            (short)(headerPage.getShort(headerRowIndex)
+                                    | OVERFLOW_ROW_MASK));
+        if(pageNumber != headerRowId.getPageNumber()) {
+          writeDataPage(headerPage, headerRowId.getPageNumber());
+        }
+      }
+
+      // update the indexes
+      for(IndexData indexData : _indexDatas) {
+        indexData.addRow(row, rowId);
+      }
+
+      writeDataPage(dataPage, pageNumber);
+
+      updateTableDefinition(0);
+
+    } finally {
+      getPageChannel().finishWrite();
     }
-
-    // update the indexes
-    for(IndexData indexData : _indexDatas) {
-      indexData.addRow(row, rowId);
-    }
-
-    writeDataPage(dataPage, pageNumber);
-
-    updateTableDefinition(0);
 
     return row;
   }

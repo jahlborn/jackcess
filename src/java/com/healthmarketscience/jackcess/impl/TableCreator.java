@@ -129,15 +129,22 @@ class TableCreator
       }
     }
 
-    // reserve some pages
-    _tdefPageNumber = reservePageNumber();
-    _umapPageNumber = reservePageNumber();
+    getPageChannel().startWrite();
+    try {
+      
+      // reserve some pages
+      _tdefPageNumber = reservePageNumber();
+      _umapPageNumber = reservePageNumber();
     
-    //Write the tdef page to disk.
-    TableImpl.writeTableDefinition(this);
+      //Write the tdef page to disk.
+      TableImpl.writeTableDefinition(this);
 
-    // update the database with the new table info
-    _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
+      // update the database with the new table info
+      _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
+
+    } finally {
+      getPageChannel().finishWrite();
+    }
   }
 
   /**

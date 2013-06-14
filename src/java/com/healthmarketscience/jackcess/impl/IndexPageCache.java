@@ -575,7 +575,7 @@ public class IndexPageCache
    * @throws IllegalStateException if the entry type does not match the page
    *         type
    */
-  private void validateEntryForPage(DataPageMain dpMain, Entry entry) {
+  private static void validateEntryForPage(DataPageMain dpMain, Entry entry) {
     if(dpMain._leaf != entry.isLeafEntry()) {
       throw new IllegalStateException(
           "Trying to update page with wrong entry type; pageLeaf " +
@@ -978,7 +978,7 @@ public class IndexPageCache
    *
    * @param dpExtra the entries to validate
    */
-  private void validateEntries(DataPageExtra dpExtra) throws IOException {
+  private static void validateEntries(DataPageExtra dpExtra) throws IOException {
     int entrySize = 0;
     Entry prevEntry = IndexData.FIRST_ENTRY;
     for(Entry e : dpExtra._entries) {
@@ -1019,7 +1019,7 @@ public class IndexPageCache
       DataPageMain childMain = _dataPages.get(subPageNumber);
       if(childMain != null) {
         if(childMain._parentPageNumber != null) {
-          if((int)childMain._parentPageNumber != dpMain._pageNumber) {
+          if(childMain._parentPageNumber != dpMain._pageNumber) {
             throw new IllegalStateException("Child's parent is incorrect " +
                                             childMain);
           }
@@ -1069,7 +1069,7 @@ public class IndexPageCache
    * @param dpMain the index page
    * @param peerMain the peer index page
    */
-  private void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
+  private static void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
     throws IOException
   {
     if(dpMain._leaf != peerMain._leaf) {
@@ -1289,7 +1289,7 @@ public class IndexPageCache
   /**
    * IndexPageCache implementation of an Index {@link DataPage}.
    */
-  public static final class CacheDataPage
+  private static final class CacheDataPage
     extends IndexData.DataPage
   {
     public final DataPageMain _main;
@@ -1459,10 +1459,6 @@ public class IndexPageCache
       Entry old = _childTailEntry;
       _childTailEntry = newEntry;
       return old;
-    }
-
-    public Entry getChildTailEntry() {
-      return _childTailEntry;
     }
     
     private boolean hasChildTail() {

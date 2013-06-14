@@ -956,10 +956,17 @@ public class DatabaseImpl implements Database
     validateIdentifierName(linkedTableName, getFormat().MAX_TABLE_NAME_LENGTH, 
                            "linked table");
 
-    int linkedTableId = _tableFinder.getNextFreeSyntheticId();
+    getPageChannel().startWrite();
+    try {
+      
+      int linkedTableId = _tableFinder.getNextFreeSyntheticId();
 
-    addNewTable(name, linkedTableId, TYPE_LINKED_TABLE, linkedDbName, 
-                linkedTableName);
+      addNewTable(name, linkedTableId, TYPE_LINKED_TABLE, linkedDbName, 
+                  linkedTableName);
+
+    } finally {
+      getPageChannel().finishWrite();
+    }
   }
 
   /**

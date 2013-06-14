@@ -85,12 +85,13 @@ public class DatabaseBuilder
 
   /**
    * Sets whether or not to enable auto-syncing on write.  if {@code true},
-   * writes will be immediately flushed to disk.  This leaves the database in
-   * a (fairly) consistent state on each write, but can be very inefficient
-   * for many updates.  if {@code false}, flushing to disk happens at the
-   * jvm's leisure, which can be much faster, but may leave the database in an
-   * inconsistent state if failures are encountered during writing.  Writes
-   * may be flushed at any time using {@link Database#flush}.
+   * write operations will be immediately flushed to disk upon completion.
+   * This leaves the database in a (fairly) consistent state on each write,
+   * but can be very inefficient for many updates.  if {@code false}, flushing
+   * to disk happens at the jvm's leisure, which can be much faster, but may
+   * leave the database in an inconsistent state if failures are encountered
+   * during writing.  Writes may be flushed at any time using {@link
+   * Database#flush}.
    * @usage _intermediate_method_
    */
   public DatabaseBuilder setAutoSync(boolean autoSync) {
