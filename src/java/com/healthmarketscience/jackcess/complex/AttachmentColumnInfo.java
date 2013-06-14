@@ -166,8 +166,8 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     Date ts = (Date)getFileTimeStampColumn().getRowValue(rawValue);
     byte[] data = (byte[])getFileDataColumn().getRowValue(rawValue);
     
-    return new AttachmentImpl(id, complexValueFk, url, name, type, data,
-                              ts, flags, null);
+    return new AttachmentImpl(id, complexValueFk, url, name, type, null,
+                              ts, flags, data);
   }
 
   @Override
@@ -180,7 +180,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     getFileTypeColumn().setRowValue(row, attachment.getFileType());
     getFileFlagsColumn().setRowValue(row, attachment.getFileFlags());
     getFileTimeStampColumn().setRowValue(row, attachment.getFileTimeStamp());
-    getFileDataColumn().setRowValue(row, attachment.getFileData());
+    getFileDataColumn().setRowValue(row, attachment.getEncodedFileData());
     return row;
   }
 
@@ -209,30 +209,30 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
                               data, timeStamp, flags, null);
   }
 
-  public static Attachment newDecodedAttachment(byte[] decodedData) {
-    return newDecodedAttachment(INVALID_COMPLEX_VALUE_ID, decodedData);
+  public static Attachment newEncodedAttachment(byte[] encodedData) {
+    return newEncodedAttachment(INVALID_COMPLEX_VALUE_ID, encodedData);
   }
   
-  public static Attachment newDecodedAttachment(
-      ComplexValueForeignKey complexValueFk, byte[] decodedData) {
-    return newDecodedAttachment(complexValueFk, null, null, null, decodedData,
+  public static Attachment newEncodedAttachment(
+      ComplexValueForeignKey complexValueFk, byte[] encodedData) {
+    return newEncodedAttachment(complexValueFk, null, null, null, encodedData,
                                 null, null);
   }
 
-  public static Attachment newDecodedAttachment(
-      String url, String name, String type, byte[] decodedData,
+  public static Attachment newEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
       Date timeStamp, Integer flags)
   {
-    return newDecodedAttachment(INVALID_COMPLEX_VALUE_ID, url, name, type, 
-                                decodedData, timeStamp, flags);
+    return newEncodedAttachment(INVALID_COMPLEX_VALUE_ID, url, name, type, 
+                                encodedData, timeStamp, flags);
   }
   
-  public static Attachment newDecodedAttachment(
+  public static Attachment newEncodedAttachment(
       ComplexValueForeignKey complexValueFk, String url, String name,
-      String type, byte[] decodedData, Date timeStamp, Integer flags)
+      String type, byte[] encodedData, Date timeStamp, Integer flags)
   {
     return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
-                              null, timeStamp, flags, decodedData);
+                              null, timeStamp, flags, encodedData);
   }
 
   
@@ -288,11 +288,11 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
     private byte[] _data;
     private Date _timeStamp;
     private Integer _flags;
-    private byte[] _decodedData;
+    private byte[] _encodedData;
 
     private AttachmentImpl(int id, ComplexValueForeignKey complexValueFk,
                            String url, String name, String type, byte[] data,
-                           Date timeStamp, Integer flags, byte[] decodedData)
+                           Date timeStamp, Integer flags, byte[] encodedData)
     {
       super(id, complexValueFk);
       _url = url;
@@ -301,30 +301,30 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
       _data = data;
       _timeStamp = timeStamp;
       _flags = flags;
-      _decodedData = decodedData;
+      _encodedData = encodedData;
     }
     
     public byte[] getFileData() throws IOException {
-      if((_data == null) && (_decodedData != null)) {
-        _data = encodeData();
+      if((_data == null) && (_encodedData != null)) {
+        _data = decodeData();
       }
       return _data;
     }
 
     public void setFileData(byte[] data) {
       _data = data;
-      _decodedData = null;
+      _encodedData = null;
     }
 
-    public byte[] getDecodedFileData() throws IOException {
-      if((_decodedData == null) && (_data != null)) {
-        _decodedData = decodeData();
+    public byte[] getEncodedFileData() throws IOException {
+      if((_encodedData == null) && (_data != null)) {
+        _encodedData = encodeData();
       }
-      return _decodedData;
+      return _encodedData;
     }
 
-    public void setDecodedFileData(byte[] data) {
-      _decodedData = data;
+    public void setEncodedFileData(byte[] data) {
+      _encodedData = data;
       _data = null;
     }
 
@@ -397,20 +397,21 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
      */
     private byte[] decodeData() throws IOException {
 
-      if(_data.length < WRAPPER_HEADER_SIZE) {
+      if(_encodedData.length < WRAPPER_HEADER_SIZE) {
         // nothing we can do
         throw new IOException("Unknown encoded attachment data format");
       }
 
       // read initial header info
-      ByteBuffer bb = PageChannel.wrap(_data);
+      ByteBuffer bb = PageChannel.wrap(_encodedData);
       int typeFlag = bb.getInt();
       int dataLen = bb.getInt();
 
       DataInputStream contentStream = null;
       try {
         InputStream bin = new ByteArrayInputStream(
-            _data, WRAPPER_HEADER_SIZE, _data.length - WRAPPER_HEADER_SIZE);
+            _encodedData, WRAPPER_HEADER_SIZE,
+            _encodedData.length - WRAPPER_HEADER_SIZE);
 
         if(typeFlag == DATA_TYPE_RAW) {
           // nothing else to do
@@ -465,7 +466,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
           type, JetFormat.VERSION_12.CHARSET);
       int headerLen = typeBytes.remaining() + CONTENT_HEADER_SIZE;
 
-      int dataLen = _decodedData.length;
+      int dataLen = _data.length;
       ByteUtil.ByteStream dataStream = new ByteUtil.ByteStream(
           WRAPPER_HEADER_SIZE + headerLen + dataLen);
 
@@ -494,7 +495,7 @@ public class AttachmentColumnInfo extends ComplexColumnInfo<Attachment>
         contentStream.write(typeBytes.array(), 0, typeBytes.remaining());
 
         // write the _actual_ contents
-        contentStream.write(_decodedData);
+        contentStream.write(_data);
         contentStream.close();
         contentStream = null;
 

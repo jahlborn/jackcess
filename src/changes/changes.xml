@@ -13,8 +13,7 @@
         Add more methods to Database for retrieving Relationships.
       </action>
       <action dev="jahlborn" type="update">
-        Add methods to get the actual attachment content, thanks to Lorenzo
-        Carrara.
+        Implement attachment decoding, thanks to Lorenzo Carrara.
       </action>
     </release>
     <release version="1.2.12" date="2013-05-09">

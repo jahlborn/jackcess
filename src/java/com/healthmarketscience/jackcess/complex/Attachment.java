@@ -33,9 +33,9 @@ public interface Attachment extends ComplexValue
 
   public void setFileData(byte[] data);
 
-  public byte[] getDecodedFileData() throws IOException;
+  public byte[] getEncodedFileData() throws IOException;
 
-  public void setDecodedFileData(byte[] data);
+  public void setEncodedFileData(byte[] data);
 
   public String getFileName();
 
