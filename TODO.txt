@@ -49,9 +49,11 @@ Refactor goals:
 * remove DatabaseImpl from util classes
 - remove unnecessary iterator class from impl classes? (what does this mean?)
 - change CodecHandler usage to handle not-inline decoding
+  - pass filename to CodecHandler, enable pwd callbacks CallbackHandler
+* rework attachment data handling
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
-- limit size of IndexPageCache?
+* limit size of IndexPageCache?
 
 * public api final cleanup:
   * Database
