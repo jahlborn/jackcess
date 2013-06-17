@@ -154,6 +154,23 @@ public class PageChannel implements Channel, Flushable {
       flush();
     }
   }
+
+  /**
+   * Returns {@code true} if a logical write operation is in progress, {@code
+   * false} otherwise.
+   */
+  public boolean isWriting() {
+    return(_writeCount > 0);
+  }
+
+  /**
+   * Asserts that a write operation is in progress.
+   */
+  private void assertWriting() {
+    if(!isWriting()) {
+      throw new IllegalStateException("No write operation in progress");
+    }
+  }
   
   /**
    * Returns the next page number based on the given file size.
@@ -386,15 +403,6 @@ public class PageChannel implements Channel, Flushable {
         byte b = (byte)(buffer.get(pos) ^ headerMask[idx]);
         buffer.put(pos, b);
       }
-  }
-
-  /**
-   * Asserts that a write operation is in progress.
-   */
-  private void assertWriting() {
-    if(_writeCount <= 0) {
-      throw new IllegalStateException("No write operation in progress");
-    }
   }
   
   /**

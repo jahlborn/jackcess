@@ -44,8 +44,6 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
  */
 public class BigIndexTest extends TestCase {
 
-  private String _oldBigIndexValue = null;
-  
   public BigIndexTest(String name) {
     super(name);
   }
@@ -116,6 +114,9 @@ public class BigIndexTest extends TestCase {
         index.getIndexData().validate();
 
         db.flush();
+        t = null;
+        System.gc();
+        
         t = (TableImpl)db.getTable("Table1");
         index = t.getIndex("col1");
 

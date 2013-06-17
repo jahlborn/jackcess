@@ -33,12 +33,11 @@ import java.lang.ref.SoftReference;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
-
 
 import static com.healthmarketscience.jackcess.impl.IndexData.*;
 
@@ -52,13 +51,29 @@ public class IndexPageCache
     ADD, REMOVE, REPLACE;
   }
 
+  /** max number of pages to cache (unless a write operation is in
+      progress) */
+  private static final int MAX_CACHE_SIZE = 25;
+  
   /** the index whose pages this cache is managing */
   private final IndexData _indexData;
   /** the root page for the index */
   private DataPageMain _rootPage;
   /** the currently loaded pages for this index, pageNumber -> page */
   private final Map<Integer, DataPageMain> _dataPages =
-    new HashMap<Integer, DataPageMain>();
+    new LinkedHashMap<Integer, DataPageMain>(16, 0.75f, true) {
+    private static final long serialVersionUID = 0L;
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<Integer, DataPageMain> e) {
+      // only purge when the size is too big and a logical write operation is
+      // not in progress (while an update is happening, the pages can be in
+      // flux and removing pages from the cache can cause problems)
+      if((size() > MAX_CACHE_SIZE) && !getPageChannel().isWriting()) {
+        purgeOldPages();
+      }
+      return false;
+    }
+  };
   /** the currently modified index pages */
   private final List<CacheDataPage> _modifiedPages =
     new ArrayList<CacheDataPage>();
@@ -74,7 +89,7 @@ public class IndexPageCache
   public PageChannel getPageChannel() {
     return getIndexData().getPageChannel();
   }
-
+  
   /**
    * Sets the root page for this index, must be called before normal usage.
    *
@@ -98,6 +113,10 @@ public class IndexPageCache
     preparePagesForWriting();
     // finally, write all the modified pages (which are not being deleted)
     writeDataPages();
+    // after we write everything, we can purge our cache if necessary
+    if(_dataPages.size() > MAX_CACHE_SIZE) {
+      purgeOldPages();
+    }
   }
 
   /**
@@ -645,7 +664,7 @@ public class IndexPageCache
 
     // insert this new page between the old page and any previous page
     addToPeersBefore(newDataPage, origDataPage);
-
+    
     if(!newMain._leaf) {
       // reparent the children pages of the new page
       reparentChildren(newDataPage);
@@ -965,7 +984,8 @@ public class IndexPageCache
    * Used by unit tests to validate the internal status of the index.
    */
   void validate() throws IOException {
-    for(DataPageMain dpMain : _dataPages.values()) {
+    // copy the values as the validation methods might trigger map updates
+    for(DataPageMain dpMain : new ArrayList<DataPageMain>(_dataPages.values())) {
       DataPageExtra dpExtra = dpMain.getExtra();
       validateEntries(dpExtra);
       validateChildren(dpMain, dpExtra);
@@ -1107,6 +1127,24 @@ public class IndexPageCache
       rtn.append("Page[" + dpMain._pageNumber + "]: " + e);
     }
   }
+
+  /**
+   * Trims the size of the _dataPages cache appropriately (assuming caller has
+   * already verified that the cache needs trimming).
+   */
+  private void purgeOldPages() {
+    Iterator<DataPageMain> iter = _dataPages.values().iterator();
+    while(iter.hasNext()) {
+      DataPageMain dpMain = iter.next();
+      // note, we never purge the root page
+      if(dpMain != _rootPage) {
+        iter.remove();
+        if(_dataPages.size() <= MAX_CACHE_SIZE) {
+          break;
+        } 
+      }
+    }
+  }
   
   @Override
   public String toString() {
@@ -1224,7 +1262,7 @@ public class IndexPageCache
       
       return extra;
     }
-
+    
     public void setExtra(DataPageExtra extra) throws IOException
     {
       extra.setEntryView(this);
