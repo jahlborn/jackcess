@@ -71,6 +71,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return _value;
   }
 
+  @Override
   public Column getColumn() {
     return _column;
   }
@@ -100,6 +101,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return (UnsupportedColumnInfo)getComplexInfo();
   }
     
+  @Override
   public int countValues() throws IOException {
     return getComplexInfo().countValues(get());
   }
@@ -108,6 +110,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return getComplexInfo().getRawValues(get());
   }  
   
+  @Override
   public List<? extends ComplexValue> getValues() throws IOException {
     if(_values == null) {
       _values = getComplexInfo().getValues(this);
@@ -115,6 +118,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return _values;
   }  
 
+  @Override
   @SuppressWarnings("unchecked")
   public List<Version> getVersions() throws IOException {
     if(getComplexType() != ComplexDataType.VERSION_HISTORY) {
@@ -123,6 +127,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return (List<Version>)getValues();
   }
   
+  @Override
   @SuppressWarnings("unchecked")
   public List<Attachment> getAttachments() throws IOException {
     if(getComplexType() != ComplexDataType.ATTACHMENT) {
@@ -131,6 +136,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return (List<Attachment>)getValues();
   }
   
+  @Override
   @SuppressWarnings("unchecked")
   public List<SingleValue> getMultiValues() throws IOException {
     if(getComplexType() != ComplexDataType.MULTI_VALUE) {
@@ -139,6 +145,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return (List<SingleValue>)getValues();
   }
   
+  @Override
   @SuppressWarnings("unchecked")
   public List<UnsupportedValue> getUnsupportedValues() throws IOException {
     if(getComplexType() != ComplexDataType.UNSUPPORTED) {
@@ -147,15 +154,18 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return (List<UnsupportedValue>)getValues();
   }
   
+  @Override
   public void reset() {
     // discard any cached values
     _values = null;
   }
   
+  @Override
   public Version addVersion(String value) throws IOException {
     return addVersion(value, new Date());
   }
   
+  @Override
   public Version addVersion(String value, Date modifiedDate) throws IOException {
     reset();
     Version v = VersionHistoryColumnInfoImpl.newVersion(this, value, modifiedDate);
@@ -163,10 +173,12 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return v;
   }
 
+  @Override
   public Attachment addAttachment(byte[] data) throws IOException {
     return addAttachment(null, null, null, data, null, null);
   }
   
+  @Override
   public Attachment addAttachment(
       String url, String name, String type, byte[] data,
       Date timeStamp, Integer flags)
@@ -179,18 +191,41 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return a;
   }
 
+  @Override
+  public Attachment addEncodedAttachment(byte[] encodedData)
+    throws IOException
+  {
+    return addEncodedAttachment(null, null, null, encodedData, null, null);
+  }
+   
+  @Override
+  public Attachment addEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
+      Date timeStamp, Integer flags)
+    throws IOException
+  {
+    reset();
+    Attachment a = AttachmentColumnInfoImpl.newEncodedAttachment(
+        this, url, name, type, encodedData, timeStamp, flags);
+    getAttachmentInfo().addValue(a);
+    return a;
+  }
+ 
+  @Override
   public Attachment updateAttachment(Attachment attachment) throws IOException {
     reset();
     getAttachmentInfo().updateValue(attachment);
     return attachment;
   }
   
+  @Override
   public Attachment deleteAttachment(Attachment attachment) throws IOException {
     reset();
     getAttachmentInfo().deleteValue(attachment);
     return attachment;
   }
   
+  @Override
   public SingleValue addMultiValue(Object value) throws IOException {
     reset();
     SingleValue v = MultiValueColumnInfoImpl.newSingleValue(this, value);
@@ -198,18 +233,21 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return v;
   }
   
+  @Override
   public SingleValue updateMultiValue(SingleValue value) throws IOException {
     reset();
     getMultiValueInfo().updateValue(value);
     return value;
   }
   
+  @Override
   public SingleValue deleteMultiValue(SingleValue value) throws IOException {
     reset();
     getMultiValueInfo().deleteValue(value);
     return value;
   }
   
+  @Override
   public UnsupportedValue addUnsupportedValue(Map<String,?> values)
     throws IOException
   {
@@ -219,6 +257,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return v;
   }
   
+  @Override
   public UnsupportedValue updateUnsupportedValue(UnsupportedValue value)
     throws IOException
   {
@@ -227,6 +266,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return value;
   }
   
+  @Override
   public UnsupportedValue deleteUnsupportedValue(UnsupportedValue value)
     throws IOException
   {
@@ -235,6 +275,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     return value;
   }
   
+  @Override
   public void deleteAllValues() throws IOException {
     reset();
     getComplexInfo().deleteAllValues(this);

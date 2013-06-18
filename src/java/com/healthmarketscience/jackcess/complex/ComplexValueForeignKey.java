@@ -95,11 +95,9 @@ public abstract class ComplexValueForeignKey extends Number
   }
 
   @Override
-  public String toString()
-  {
+  public String toString() {
     return String.valueOf(get());
-  }
-  
+  }  
 
   public abstract int get();
 
@@ -135,6 +133,14 @@ public abstract class ComplexValueForeignKey extends Number
 
   public abstract Attachment addAttachment(
       String url, String name, String type, byte[] data,
+      Date timeStamp, Integer flags)
+    throws IOException;
+
+  public abstract Attachment addEncodedAttachment(byte[] encodedData)
+    throws IOException;
+
+  public abstract Attachment addEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
       Date timeStamp, Integer flags)
     throws IOException;
 

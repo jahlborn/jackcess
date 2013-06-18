@@ -142,7 +142,7 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   }
 
   @Override
-  protected Object[] asRow(Object[] row, Version version) {
+  protected Object[] asRow(Object[] row, Version version) throws IOException {
     super.asRow(row, version);
     getValueColumn().setRowValue(row, version.getValue());
     getModifiedDateColumn().setRowValue(row, version.getModifiedDate());

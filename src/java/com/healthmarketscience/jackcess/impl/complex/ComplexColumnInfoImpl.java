@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
@@ -283,8 +282,10 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
                                   ((TableImpl)_flatTable).getRowId(row));
   }
 
-  protected Object[] asRow(Object[] row, V value) {
-    ComplexValue.Id id = value.getId();
+  protected Object[] asRow(Object[] row, V value) 
+    throws IOException
+  {
+  ComplexValue.Id id = value.getId();
     _pkCol.setRowValue(
         row, ((id != INVALID_ID) ? id : Column.AUTO_NUMBER));
     ComplexValueForeignKey cFk = value.getComplexValueForeignKey();

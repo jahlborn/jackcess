@@ -188,6 +188,32 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     throws IOException;
 
   /**
+   * Finds all the relationships in the database for the given table.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getRelationships(Table table) throws IOException;
+
+  /**
+   * Finds all the relationships in the database in <i>non-system</i> tables.
+   * </p>
+   * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
+   * database which could cause memory issues.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getRelationships() throws IOException;
+
+  /**
+   * Finds <i>all</i> the relationships in the database, <i>including system
+   * tables</i>.
+   * </p>
+   * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
+   * database which could cause memory issues.
+   * @usage _intermediate_method_
+   */
+  public List<Relationship> getSystemRelationships()
+    throws IOException;
+
+  /**
    * Finds all the queries in the database.
    * @usage _intermediate_method_
    */

@@ -59,6 +59,7 @@ import java.util.TreeSet;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
+import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexBuilder;
@@ -68,8 +69,8 @@ import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
+import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
@@ -996,14 +997,6 @@ public class DatabaseImpl implements Database
       TableImpl table1, TableImpl table2)
     throws IOException
   {
-    // the relationships table does not get loaded until first accessed
-    if(_relationships == null) {
-      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
-      if(_relationships == null) {
-        throw new IOException("Could not find system relationships table");
-      }
-    }
-
     int nameCmp = table1.getName().compareTo(table2.getName());
     if(nameCmp == 0) {
       throw new IllegalArgumentException("Must provide two different tables");
@@ -1017,14 +1010,59 @@ public class DatabaseImpl implements Database
       table2 = tmp;
     }
       
+    return getRelationshipsImpl(table1, table2, true);
+  }
+
+  public List<Relationship> getRelationships(Table table)
+    throws IOException
+  {
+    if(table == null) {
+      throw new IllegalArgumentException("Must provide a table");
+    }
+    // since we are getting relationships specific to certain table include
+    // all tables
+    return getRelationshipsImpl((TableImpl)table, null, true);
+  }
+      
+  public List<Relationship> getRelationships()
+    throws IOException
+  {
+    return getRelationshipsImpl(null, null, false);
+  }
+      
+  public List<Relationship> getSystemRelationships()
+    throws IOException
+  {
+    return getRelationshipsImpl(null, null, true);
+  }
+      
+  private List<Relationship> getRelationshipsImpl(
+      TableImpl table1, TableImpl table2, boolean includeSystemTables)
+    throws IOException
+  {
+    // the relationships table does not get loaded until first accessed
+    if(_relationships == null) {
+      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
+      if(_relationships == null) {
+        throw new IOException("Could not find system relationships table");
+      }
+    }
 
     List<Relationship> relationships = new ArrayList<Relationship>();
+
+    if(table1 != null) {
     Cursor cursor = createCursorWithOptionalIndex(
         _relationships, REL_COL_FROM_TABLE, table1.getName());
-    collectRelationships(cursor, table1, table2, relationships);
+      collectRelationships(cursor, table1, table2, relationships,
+                           includeSystemTables);
     cursor = createCursorWithOptionalIndex(
         _relationships, REL_COL_TO_TABLE, table1.getName());
-    collectRelationships(cursor, table2, table1, relationships);
+      collectRelationships(cursor, table2, table1, relationships,
+                           includeSystemTables);
+    } else {
+      collectRelationships(new CursorBuilder(_relationships).toCursor(),
+                           null, null, relationships, includeSystemTables);
+    }
     
     return relationships;
   }
@@ -1198,17 +1236,22 @@ public class DatabaseImpl implements Database
    * Finds the relationships matching the given from and to tables from the
    * given cursor and adds them to the given list.
    */
-  private static void collectRelationships(
+  private void collectRelationships(
       Cursor cursor, TableImpl fromTable, TableImpl toTable,
-      List<Relationship> relationships)
+      List<Relationship> relationships, boolean includeSystemTables)
+    throws IOException
   {
+    String fromTableName = ((fromTable != null) ? fromTable.getName() : null);
+    String toTableName = ((toTable != null) ? toTable.getName() : null);
+
     for(Row row : cursor) {
       String fromName = (String)row.get(REL_COL_FROM_TABLE);
       String toName = (String)row.get(REL_COL_TO_TABLE);
       
-      if(fromTable.getName().equalsIgnoreCase(fromName) &&
-         toTable.getName().equalsIgnoreCase(toName))
-      {
+      if(((fromTableName == null) || 
+          fromTableName.equalsIgnoreCase(fromName)) &&
+         ((toTableName == null) || 
+          toTableName.equalsIgnoreCase(toName))) {
 
         String relName = (String)row.get(REL_COL_NAME);
         
@@ -1222,20 +1265,37 @@ public class DatabaseImpl implements Database
           }
         }
 
+        TableImpl relFromTable = fromTable;
+        if(relFromTable == null) {
+          relFromTable = getTable(fromName, includeSystemTables);
+          if(relFromTable == null) {
+            // invalid table or ignoring system tables, just ignore
+            continue;
+          }
+        }
+        TableImpl relToTable = toTable;
+        if(relToTable == null) {
+          relToTable = getTable(toName, includeSystemTables);
+          if(relToTable == null) {
+            // invalid table or ignoring system tables, just ignore
+            continue;
+          }
+        }
+
         if(rel == null) {
           // new relationship
           int numCols = (Integer)row.get(REL_COL_COLUMN_COUNT);
           int flags = (Integer)row.get(REL_COL_FLAGS);
-          rel = new RelationshipImpl(relName, fromTable, toTable,
+          rel = new RelationshipImpl(relName, relFromTable, relToTable,
                                      flags, numCols);
           relationships.add(rel);
         }
 
         // add column info
         int colIdx = (Integer)row.get(REL_COL_COLUMN_INDEX);
-        ColumnImpl fromCol = fromTable.getColumn(
+        ColumnImpl fromCol = relFromTable.getColumn(
             (String)row.get(REL_COL_FROM_COLUMN));
-        ColumnImpl toCol = toTable.getColumn(
+        ColumnImpl toCol = relToTable.getColumn(
             (String)row.get(REL_COL_TO_COLUMN));
 
         rel.getFromColumns().set(colIdx, fromCol);
@@ -1612,8 +1672,7 @@ public class DatabaseImpl implements Database
     double dateVal = Double.longBitsToDouble(buffer.getLong());
 
     byte[] pwdMask = new byte[4];
-    ByteBuffer.wrap(pwdMask).order(PageChannel.DEFAULT_BYTE_ORDER)
-      .putInt((int)dateVal);
+    PageChannel.wrap(pwdMask).putInt((int)dateVal);
 
     return pwdMask;
   }
@@ -1749,7 +1808,7 @@ public class DatabaseImpl implements Database
     }
 
     public Row getObjectRow(Integer parentId, String name,
-                                           Collection<String> columns) 
+                            Collection<String> columns) 
       throws IOException 
     {
       Cursor cur = findRow(parentId, name);

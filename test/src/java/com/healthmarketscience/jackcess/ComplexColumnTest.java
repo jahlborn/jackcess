@@ -19,21 +19,24 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.complex.SingleValue;
 import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
-import junit.framework.TestCase;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.PageChannel;
+import junit.framework.TestCase;
 
 
 /**
@@ -190,6 +193,11 @@ public class ComplexColumnTest extends TestCase
       row8ValFk.addAttachment(null, "test_data.txt", "txt",
                               getFileBytes("test_data.txt"), null, null);
       checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
+      row8ValFk.addEncodedAttachment(null, "test_data2.txt", "txt",
+                                     getEncodedFileBytes("test_data2.txt"), null,
+                                     null);
+      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt", 
+                       "test_data2.txt");
 
       Cursor cursor = CursorBuilder.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));
@@ -200,17 +208,22 @@ public class ComplexColumnTest extends TestCase
                                              null);
       checkAttachments(4, row4ValFk, "test_data2.txt", "test_data.txt");
 
-      a.setFileType("xml");
-      a.setFileName("some_data.xml");
-      byte[] newBytes = "this is not xml".getBytes("US-ASCII");
+      a.setFileType("zip");
+      a.setFileName("some_data.zip");
+      byte[] newBytes = "this is not a zip file".getBytes("US-ASCII");
       a.setFileData(newBytes);
       a.update();
 
       Attachment updated = row4ValFk.getAttachments().get(1);
       assertNotSame(updated, a);
-      assertEquals("xml", updated.getFileType());
-      assertEquals("some_data.xml", updated.getFileName());
+      assertEquals("zip", updated.getFileType());
+      assertEquals("some_data.zip", updated.getFileName());
       assertTrue(Arrays.equals(newBytes, updated.getFileData()));
+      byte[] encBytes = updated.getEncodedFileData();
+      assertEquals(newBytes.length + 28, encBytes.length);
+      ByteBuffer bb = PageChannel.wrap(encBytes);
+      assertEquals(0, bb.getInt());
+      assertTrue(ByteUtil.matchesRange(bb, 28, newBytes));
 
       updated.delete();
       checkAttachments(4, row4ValFk, "test_data2.txt");
@@ -368,11 +381,12 @@ public class ComplexColumnTest extends TestCase
       assertEquals(fileNames.length, attachments.size());
       for(int i = 0; i < fileNames.length; ++i) {
         String fname = fileNames[i];
-        byte[] dataBytes = getFileBytes(fname);
         Attachment a = attachments.get(i);
         assertEquals(fname, a.getFileName());
         assertEquals("txt", a.getFileType());
-        assertTrue(Arrays.equals(dataBytes, a.getFileData()));
+        assertTrue(Arrays.equals(getFileBytes(fname), a.getFileData()));
+        assertTrue(Arrays.equals(getEncodedFileBytes(fname), 
+                                 a.getEncodedFileData()));
       }
     }
   }
@@ -431,17 +445,41 @@ public class ComplexColumnTest extends TestCase
     throw new RuntimeException("unexpected bytes");
   }
   
+  private static byte[] getEncodedFileBytes(String fname) throws Exception
+  {
+    if("test_data.txt".equals(fname)) {
+      return TEST_ENC_BYTES;
+    }
+    if("test_data2.txt".equals(fname)) {
+      return TEST2_ENC_BYTES;
+    }
+    throw new RuntimeException("unexpected bytes");
+  }
+  
   private static byte b(int i) { return (byte)i; }
   
-  private static final byte[] TEST_BYTES = new byte[] {
+  private static byte[] getAsciiBytes(String str) {
+    try {
+      return str.getBytes("US-ASCII");
+    } catch(Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
+  private static final byte[] TEST_ENC_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3A),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),b(0x25),b(0x89),b(0x0A),b(0x69),b(0xF9),
     b(0x45),b(0x0A),b(0x89),b(0x25),b(0x25),b(0x89),b(0xC9),b(0x19),b(0xB9),b(0xA9),b(0x79),b(0x25),b(0x7A),b(0x00),b(0x52),b(0xA9),b(0x0F),b(0x7A)
   };
+
+  private static final byte[] TEST_BYTES = getAsciiBytes("this is some test data for attachment.");
   
-  private static final byte[] TEST2_BYTES = new byte[] {
+  private static final byte[] TEST2_ENC_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3F),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0xB9),b(0xF9),b(0x45),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),
     b(0x25),b(0x89),b(0x0A),b(0x69),b(0xF9),b(0x45),b(0x0A),b(0x89),b(0x25),b(0x25),b(0x89),b(0xC9),b(0x19),b(0xB9),b(0xA9),b(0x79),b(0x25),b(0x7A),b(0x00),b(0xA5),b(0x0B),b(0x11),b(0x4D)
   };
+
+  private static final byte[] TEST2_BYTES = getAsciiBytes("this is some more test data for attachment.");
+  
 }
