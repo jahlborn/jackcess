@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.13" date="TBD">
+    <release version="1.2.13" date="2013-06-18">
       <action dev="jahlborn" type="fix">
         Fix partial page updates when using CodecHandlers which can only do
         full page encoding.
