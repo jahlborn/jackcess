@@ -217,6 +217,8 @@ public class Column implements Comparable<Column> {
   private ComplexColumnInfo<? extends ComplexValue> _complexInfo;
   /** properties for this column, if any */
   private PropertyMap _props;  
+  /** Holds additional info for writing long values */
+  private LongValueBufferHolder _lvalBufferH;
   
   /**
    * @usage _general_method_
@@ -315,9 +317,19 @@ public class Column implements Comparable<Column> {
   }
 
   /**
+   * Sets the usage maps for this column.
+   */
+  void setUsageMaps(UsageMap ownedPages, UsageMap freeSpacePages) {
+    _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
+  }
+
+  /**
    * Secondary column initialization after the table is fully loaded.
    */
   void postTableLoadInit() throws IOException {
+    if(getType().isLongValue() && (_lvalBufferH == null)) {
+      _lvalBufferH = new LegacyLongValueBufferHolder();
+    }
     if(_complexInfo != null) {
       _complexInfo.postTableLoadInit();
     }
@@ -606,6 +618,14 @@ public class Column implements Comparable<Column> {
 
   Calendar getCalendar() {
     return getDatabase().getCalendar();
+  }
+
+  /**
+   * Returns the number of database pages owned by this column.
+   * @usage _intermediate_method_
+   */
+  public int getOwnedPageCount() {
+    return ((_lvalBufferH == null) ? 0 : _lvalBufferH.getOwnedPageCount());
   }
 
   /**
@@ -1313,7 +1333,6 @@ public class Column implements Comparable<Column> {
       def.put(value);
     } else {
       
-      TempPageHolder lvalBufferH = getTable().getLongValueBuffer();
       ByteBuffer lvalPage = null;
       int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
       byte firstLvalRow = 0;
@@ -1321,8 +1340,8 @@ public class Column implements Comparable<Column> {
       // write other page(s)
       switch(type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        lvalPage = getLongValuePage(value.length, lvalBufferH);
-        firstLvalPageNum = lvalBufferH.getPageNumber();
+        lvalPage = _lvalBufferH.getLongValuePage(value.length);
+        firstLvalPageNum = _lvalBufferH.getPageNumber();
         firstLvalRow = (byte)Table.addDataPageRow(lvalPage, value.length,
                                                   getFormat(), 0);
         lvalPage.put(value);
@@ -1334,12 +1353,13 @@ public class Column implements Comparable<Column> {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         int remainingLen = buffer.remaining();
         buffer.limit(0);
-        lvalPage = getLongValuePage(getFormat().MAX_LONG_VALUE_ROW_SIZE,
-                                    lvalBufferH);
-        firstLvalPageNum = lvalBufferH.getPageNumber();
+        lvalPage = _lvalBufferH.getLongValuePage(remainingLen);
+        firstLvalPageNum = _lvalBufferH.getPageNumber();
+        firstLvalRow = (byte)Table.getRowsOnDataPage(lvalPage, getFormat());
         int lvalPageNum = firstLvalPageNum;
         ByteBuffer nextLvalPage = null;
         int nextLvalPageNum = 0;
+        int nextLvalRowNum = 0;
         while(remainingLen > 0) {
           lvalPage.clear();
 
@@ -1350,23 +1370,25 @@ public class Column implements Comparable<Column> {
 
           // figure out if we will need another page, and if so, allocate it
           if(chunkLength < remainingLen) {
-            // force a new page to be allocated
-            lvalBufferH.clear();
-            nextLvalPage = getLongValuePage(
-                getFormat().MAX_LONG_VALUE_ROW_SIZE, lvalBufferH);
-            nextLvalPageNum = lvalBufferH.getPageNumber();
+            // force a new page to be allocated for the chunk after this
+            _lvalBufferH.clear();
+            nextLvalPage = _lvalBufferH.getLongValuePage(
+                (remainingLen - chunkLength) + 4);
+            nextLvalPageNum = _lvalBufferH.getPageNumber();
+            nextLvalRowNum = Table.getRowsOnDataPage(nextLvalPage, 
+                                                     getFormat());
           } else {
             nextLvalPage = null;
             nextLvalPageNum = 0;
+            nextLvalRowNum = 0;
           }
 
           // add row to this page
           byte lvalRow = (byte)Table.addDataPageRow(lvalPage, chunkLength + 4,
                                                     getFormat(), 0);
           
-          // write next page info (we'll always be writing into row 0 for
-          // newly created pages)
-          lvalPage.put((byte)0); // row number
+          // write next page info
+          lvalPage.put((byte)nextLvalRowNum); // row number
           ByteUtil.put3ByteInt(lvalPage, nextLvalPageNum); // page number
 
           // write this page's chunk of data
@@ -1376,17 +1398,6 @@ public class Column implements Comparable<Column> {
 
           // write new page to database
           getPageChannel().writePage(lvalPage, lvalPageNum);
-
-          if(lvalPageNum == firstLvalPageNum) {
-            // save initial row info
-            firstLvalRow = lvalRow;
-          } else {
-            // check assertion that we wrote to row 0 for all subsequent pages
-            if(lvalRow != (byte)0) {
-              throw new IllegalStateException("Expected row 0, but was " +
-                                              lvalRow);
-            }
-          }
           
           // move to next page
           lvalPage = nextLvalPage;
@@ -1425,28 +1436,6 @@ public class Column implements Comparable<Column> {
     lvalPage.putShort((short)0); // num rows in page
   }
 
-  /**
-   * Returns a long value data page with space for data of the given length.
-   */
-  private ByteBuffer getLongValuePage(int dataLength,
-                                      TempPageHolder lvalBufferH)
-    throws IOException
-  {
-    ByteBuffer lvalPage = null;
-    if(lvalBufferH.getPageNumber() != PageChannel.INVALID_PAGE_NUMBER) {
-      lvalPage = lvalBufferH.getPage(getPageChannel());
-      if(Table.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
-        // the current page has space
-        return lvalPage;
-      }
-    }
-
-    // need new page
-    lvalPage = lvalBufferH.setNewPage(getPageChannel());
-    writeLongValueHeader(lvalPage);
-    return lvalPage;
-  }
-  
   /**
    * Serialize an Object into a raw byte value for this column in little
    * endian order
@@ -2052,7 +2041,6 @@ public class Column implements Comparable<Column> {
     throws IOException
   {
     List<Column> columns = creator.getColumns();
-    short columnNumber = (short) 0;
     short fixedOffset = (short) 0;
     short variableOffset = (short) 0;
     // we specifically put the "long variable" values after the normal
@@ -2060,13 +2048,11 @@ public class Column implements Comparable<Column> {
     // all (because "long variable" values can go in separate pages)
     short longVariableOffset = countNonLongVariableLength(columns);
     for (Column col : columns) {
-      // record this for later use when writing indexes
-      col.setColumnNumber(columnNumber);
 
       int position = buffer.position();
       buffer.put(col.getType().getValue());
       buffer.putInt(Table.MAGIC_TABLE_NUMBER);  //constant magic number
-      buffer.putShort(columnNumber);  //Column Number
+      buffer.putShort(col.getColumnNumber());  //Column Number
       if (col.isVariableLength()) {
         if(!col.getType().isLongValue()) {
           buffer.putShort(variableOffset++);
@@ -2076,7 +2062,7 @@ public class Column implements Comparable<Column> {
       } else {
         buffer.putShort((short) 0);
       }
-      buffer.putShort(columnNumber); //Column Number again
+      buffer.putShort(col.getColumnNumber()); //Column Number again
       if(col.getType().isTextual()) {
         // this will write 4 bytes (note we don't support writing dbs which
         // use the text code page)
@@ -2110,7 +2096,6 @@ public class Column implements Comparable<Column> {
       } else {
         buffer.putShort((short)0x0000); // unused
       }
-      columnNumber++;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Creating new column def block\n" + ByteUtil.toHexString(
                   buffer, position, creator.getFormat().SIZE_COLUMN_DEF_BLOCK));
@@ -2440,5 +2425,133 @@ public class Column implements Comparable<Column> {
     /** whether or not this is a hyperlink column (only possible for columns
         of type MEMO) */
     private boolean _hyperlink;
+  }
+
+  /**
+   * Manages secondary page buffers for long value writing.
+   */
+  private abstract class LongValueBufferHolder
+  {
+    /**
+     * Returns a long value data page with space for data of the given length.
+     */
+    public ByteBuffer getLongValuePage(int dataLength) throws IOException {
+
+      TempPageHolder lvalBufferH = getBufferHolder();
+      dataLength = Math.min(dataLength, getFormat().MAX_LONG_VALUE_ROW_SIZE);
+
+      ByteBuffer lvalPage = null;
+      if(lvalBufferH.getPageNumber() != PageChannel.INVALID_PAGE_NUMBER) {
+        lvalPage = lvalBufferH.getPage(getPageChannel());
+        if(Table.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
+          // the current page has space
+          return lvalPage;
+        }
+      }
+
+      // need new page
+      return findNewPage(dataLength);
+    }
+
+    protected ByteBuffer findNewPage(int dataLength) throws IOException {
+      ByteBuffer lvalPage = getBufferHolder().setNewPage(getPageChannel());
+      writeLongValueHeader(lvalPage);
+      return lvalPage;
+    }
+
+    public int getOwnedPageCount() {
+      return 0;
+    }
+
+    /**
+     * Returns the page number of the current long value data page.
+     */
+    public int getPageNumber() {
+      return getBufferHolder().getPageNumber();
+    }
+
+    /**
+     * Discards the current the current long value data page.
+     */
+    public void clear() throws IOException {
+      getBufferHolder().clear();
+    }
+
+    protected abstract TempPageHolder getBufferHolder();
+  }
+
+  /**
+   * Manages a common, shared extra page for long values.  This is legacy
+   * behavior from before it was understood that there were additional usage
+   * maps for each columns.
+   */
+  private final class LegacyLongValueBufferHolder extends LongValueBufferHolder
+  {
+    @Override
+    protected TempPageHolder getBufferHolder() {
+      return getTable().getLongValueBuffer();
+    }
+  }
+
+  /**
+   * Manages the column usage maps for long values.
+   */
+  private final class UmapLongValueBufferHolder extends LongValueBufferHolder
+  {
+    /** Usage map of pages that this column owns */
+    private final UsageMap _ownedPages;
+    /** Usage map of pages that this column owns with free space on them */
+    private final UsageMap _freeSpacePages;
+    /** page buffer used to write "long value" data */
+    private final TempPageHolder _longValueBufferH =
+      TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
+
+    private UmapLongValueBufferHolder(UsageMap ownedPages,
+                                      UsageMap freeSpacePages) {
+      _ownedPages = ownedPages;
+      _freeSpacePages = freeSpacePages;
+    }
+
+    @Override
+    protected TempPageHolder getBufferHolder() {
+      return _longValueBufferH;
+    }
+
+    @Override
+    public int getOwnedPageCount() {
+      return _ownedPages.getPageCount();
+    }
+
+    @Override
+    protected ByteBuffer findNewPage(int dataLength) throws IOException {
+
+      // grab last owned page and check for free space.  
+      ByteBuffer newPage = Table.findFreeRowSpace(      
+          _ownedPages, _freeSpacePages, _longValueBufferH);
+      
+      if(newPage != null) {
+        if(Table.rowFitsOnDataPage(dataLength, newPage, getFormat())) {
+          return newPage;
+        }
+        // discard this page and allocate a new one
+        clear();
+      }
+
+      // nothing found on current pages, need new page
+      newPage = super.findNewPage(dataLength);
+      int pageNumber = getPageNumber();
+      _ownedPages.addPageNumber(pageNumber);
+      _freeSpacePages.addPageNumber(pageNumber);
+      return newPage;
+    }
+
+    @Override
+    public void clear() throws IOException {
+      int pageNumber = getPageNumber();
+      if(pageNumber != PageChannel.INVALID_PAGE_NUMBER) {
+        _freeSpacePages.removePageNumber(pageNumber, true);
+      }
+      super.clear();
+    }
   }
 }

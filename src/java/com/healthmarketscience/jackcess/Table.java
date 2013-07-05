@@ -172,7 +172,7 @@ public class Table
       every call) */
   private final TempBufferHolder _multiRowBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.NONE, true);
-  /** page buffer used to write out-of-line "long value" data */
+  /** page buffer used to write out-of-row "long value" data */
   private final TempPageHolder _longValueBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
   /** "big index support" is optional */
@@ -333,14 +333,21 @@ public class Table
    * @usage _intermediate_method_
    */
   public int getApproximateOwnedPageCount() {
+
     // add a page for the table def (although that might actually be more than
     // one page)
     int count = _ownedPages.getPageCount() + 1;
+
+    for(Column col : _columns) {
+      count += col.getOwnedPageCount();
+    }
+
     // note, we count owned pages from _physical_ indexes, not logical indexes
     // (otherwise we could double count pages)
     for(IndexData indexData : _indexDatas) {
       count += indexData.getOwnedPageCount();
     }
+
     return count;
   }
   
@@ -971,9 +978,10 @@ public class Table
                       (format.SIZE_INDEX_DEFINITION + 
                        format.SIZE_INDEX_COLUMN_BLOCK)) + 
       (creator.getLogicalIndexCount() * format.SIZE_INDEX_INFO_BLOCK);
+    int colUmapLen = creator.getLongValueColumns().size() * 10;
     int totalTableDefSize = format.SIZE_TDEF_HEADER +
       (format.SIZE_COLUMN_DEF_BLOCK * creator.getColumns().size()) + 
-      idxDataLen + format.SIZE_TDEF_TRAILER;
+      idxDataLen + colUmapLen + format.SIZE_TDEF_TRAILER;
 
     // total up the amount of space used by the column and index names (2
     // bytes per char + 2 bytes for the length)
@@ -1008,6 +1016,20 @@ public class Table
       // index and index data definitions
       IndexData.writeDefinitions(creator, buffer);
       Index.writeDefinitions(creator, buffer);
+    }
+
+    // write long value column usage map references
+    for(Column lvalCol : creator.getLongValueColumns()) {
+      buffer.putShort(lvalCol.getColumnNumber());
+      TableCreator.ColumnState colState = 
+        creator.getColumnState(lvalCol);
+      
+      // owned pages umap (both are on same page)
+      buffer.put(colState.getUmapOwnedRowNumber());
+      ByteUtil.put3ByteInt(buffer, colState.getUmapPageNumber());
+      // free space pages umap
+      buffer.put(colState.getUmapFreeRowNumber());
+      ByteUtil.put3ByteInt(buffer, colState.getUmapPageNumber());
     }
 
     //End of tabledef
@@ -1141,53 +1163,70 @@ public class Table
   private static void createUsageMapDefinitionBuffer(TableCreator creator)
     throws IOException
   {
-    // 2 table usage maps plus 1 for each index
-    int umapNum = 2 + creator.getIndexCount();
+    List<Column> lvalCols = creator.getLongValueColumns();
+
+    // 2 table usage maps plus 1 for each index and 2 for each lval col
+    int indexUmapEnd = 2 + creator.getIndexCount();
+    int umapNum = indexUmapEnd + (lvalCols.size() * 2);
 
     JetFormat format = creator.getFormat();
-    int usageMapRowLength = format.OFFSET_USAGE_MAP_START +
+    int umapRowLength = format.OFFSET_USAGE_MAP_START +
       format.USAGE_MAP_TABLE_BYTE_LENGTH;
-    int freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE
-      - (umapNum * getRowSpaceUsage(usageMapRowLength, format));
-    
-    // for now, don't handle writing that many indexes
-    if(freeSpace < 0) {
-      throw new IOException("FIXME attempting to write too many indexes");
-    }
-
-    int umapPageNumber = creator.getUmapPageNumber();
-
+    int umapSpaceUsage = getRowSpaceUsage(umapRowLength, format);
     PageChannel pageChannel = creator.getPageChannel();
-    ByteBuffer rtn = pageChannel.createPageBuffer();
-    rtn.put(PageTypes.DATA);
-    rtn.put((byte) 0x1);  //Unknown
-    rtn.putShort((short)freeSpace);  //Free space in page
-    rtn.putInt(0); //Table definition
-    rtn.putInt(0); //Unknown
-    rtn.putShort((short) umapNum); //Number of records on this page
+    int umapPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+    ByteBuffer umapBuf = null;
+    int freeSpace = 0;
+    int rowStart = 0;
+    int umapRowNum = 0;
 
-    // write two rows of usage map definitions for the table
-    int rowStart = findRowEnd(rtn, 0, format) - usageMapRowLength;
-    for(int i = 0; i < 2; ++i) {
-      rtn.putShort(getRowStartOffset(i, format), (short)rowStart);
-      if(i == 0) {
-        // initial "usage pages" map definition
-        rtn.put(rowStart, UsageMap.MAP_TYPE_REFERENCE);
-      } else {
-        // initial "pages with free space" map definition
-        rtn.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+    for(int i = 0; i < umapNum; ++i) {
+
+      if(umapBuf == null) {
+
+        // need new page for usage maps
+        if(umapPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+          // first umap page has already been reserved
+          umapPageNumber = creator.getUmapPageNumber();
+        } else {
+          // need another umap page
+          umapPageNumber = creator.reservePageNumber();
+        } 
+
+        freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
+
+        umapBuf = pageChannel.createPageBuffer();
+        umapBuf.put(PageTypes.DATA);
+        umapBuf.put((byte) 0x1);  //Unknown
+        umapBuf.putShort((short)freeSpace);  //Free space in page
+        umapBuf.putInt(0); //Table definition
+        umapBuf.putInt(0); //Unknown
+        umapBuf.putShort((short)0); //Number of records on this page
+
+        rowStart = findRowEnd(umapBuf, 0, format) - umapRowLength;
+        umapRowNum = 0;
       }
-      rowStart -= usageMapRowLength;
-    }
 
-    if(creator.hasIndexes()) {
-      
-      for(int i = 0; i < creator.getIndexes().size(); ++i) {
-        IndexBuilder idx = creator.getIndexes().get(i);
+      umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
 
+      if(i == 0) {
+
+        // table "owned pages" map definition
+        umapBuf.put(rowStart, UsageMap.MAP_TYPE_REFERENCE);
+
+      } else if(i == 1) {
+
+        // table "free space pages" map definition
+        umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+
+      } else if(i < indexUmapEnd) {
+
+        // index umap
+        int indexIdx = i - 2;
+        IndexBuilder idx = creator.getIndexes().get(indexIdx);
+        
         // allocate root page for the index
         int rootPageNumber = pageChannel.allocateNewPage();
-        int umapRowNum = i + 2;
 
         // stash info for later use
         TableCreator.IndexState idxState = creator.getIndexState(idx);
@@ -1196,16 +1235,54 @@ public class Table
         idxState.setUmapPageNumber(umapPageNumber);
 
         // index map definition, including initial root page
-        rtn.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
-        rtn.put(rowStart, UsageMap.MAP_TYPE_INLINE);
-        rtn.putInt(rowStart + 1, rootPageNumber);
-        rtn.put(rowStart + 5, (byte)1);
+        umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+        umapBuf.putInt(rowStart + 1, rootPageNumber);
+        umapBuf.put(rowStart + 5, (byte)1);
 
-        rowStart -= usageMapRowLength;
+      } else {
+
+        // long value column umaps
+        int lvalColIdx = i - indexUmapEnd;
+        int umapType = lvalColIdx % 2;
+        lvalColIdx /= 2;
+
+        Column lvalCol = lvalCols.get(lvalColIdx);
+        TableCreator.ColumnState colState = 
+          creator.getColumnState(lvalCol);
+
+        umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+
+        if((umapType == 1) && 
+           (umapPageNumber != colState.getUmapPageNumber())) {
+          // we want to force both usage maps for a column to be on the same
+          // data page, so just discard the previous one we wrote
+          --i;
+          umapType = 0;
+        }
+        
+        if(umapType == 0) {
+          // lval column "owned pages" usage map
+          colState.setUmapOwnedRowNumber((byte)umapRowNum);
+          colState.setUmapPageNumber(umapPageNumber);
+        } else {
+          // lval column "free space pages" usage map (always on same page)
+          colState.setUmapFreeRowNumber((byte)umapRowNum);
+        } 
+      }
+
+      rowStart -= umapRowLength;
+      freeSpace -= umapSpaceUsage;
+      ++umapRowNum;
+
+      if((freeSpace <= umapSpaceUsage) || (i == (umapNum - 1))) {
+        // finish current page
+        umapBuf.putShort(format.OFFSET_FREE_SPACE, (short)freeSpace);
+        umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE, 
+                         (short)umapRowNum);
+        pageChannel.writePage(umapBuf, umapPageNumber);
+        umapBuf = null;
       }
     }
-
-    pageChannel.writePage(rtn, umapPageNumber);
   }
 
   /**
@@ -1256,14 +1333,10 @@ public class Table
     _logicalIndexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEX_SLOTS);
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
 
-    int rowNum = ByteUtil.getUnsignedByte(
-        tableBuffer, getFormat().OFFSET_OWNED_PAGES);
-    int pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_OWNED_PAGES + 1);
-    _ownedPages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
-    rowNum = ByteUtil.getUnsignedByte(
-        tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES);
-    pageNum = ByteUtil.get3ByteInt(tableBuffer, getFormat().OFFSET_FREE_SPACE_PAGES + 1);
-    _freeSpacePages = UsageMap.read(getDatabase(), pageNum, rowNum, false);
+    tableBuffer.position(getFormat().OFFSET_OWNED_PAGES);
+    _ownedPages = UsageMap.read(getDatabase(), tableBuffer, false);
+    tableBuffer.position(getFormat().OFFSET_FREE_SPACE_PAGES);
+    _freeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
     
     for (int i = 0; i < _indexCount; i++) {
       _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
@@ -1322,6 +1395,27 @@ public class Table
     }
     
     Collections.sort(_indexes);
+
+    // read column usage map info
+    while(tableBuffer.remaining() >= 2) {
+
+      short umapColNum = tableBuffer.getShort();
+      if(umapColNum == IndexData.COLUMN_UNUSED) {
+        break;
+      }
+      
+      UsageMap colOwnedPages = UsageMap.read(
+          getDatabase(), tableBuffer, false);
+      UsageMap colFreeSpacePages = UsageMap.read(
+          getDatabase(), tableBuffer, false);
+    
+      for(Column col : _columns) {
+        if(col.getColumnNumber() == umapColNum) {
+          col.setUsageMaps(colOwnedPages, colFreeSpacePages);
+          break;
+        }
+      }
+    }
 
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
@@ -1683,45 +1777,66 @@ public class Table
                                       int pageNumber)
     throws IOException
   {
+    // assume incoming page is modified
+    boolean modifiedPage = true;
+
     if(dataPage == null) {
 
-      // find last data page (Not bothering to check other pages for free
-      // space.)
-      UsageMap.PageCursor revPageCursor = _ownedPages.cursor();
-      revPageCursor.afterLast();
-      while(true) {
-        int tmpPageNumber = revPageCursor.getPreviousPage();
-        if(tmpPageNumber < 0) {
-          break;
-        }
-        dataPage = _addRowBufferH.setPage(getPageChannel(), tmpPageNumber);
-        if(dataPage.get() == PageTypes.DATA) {
-          // found last data page, only use if actually listed in free space
-          // pages
-          if(_freeSpacePages.containsPageNumber(tmpPageNumber)) {
-            pageNumber = tmpPageNumber;
-          }
-          break;
-        }
-      }
+      // find owned page w/ free space
+      dataPage = findFreeRowSpace(_ownedPages, _freeSpacePages, 
+                                  _addRowBufferH);
 
-      if(pageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+      if(dataPage == null) {
         // No data pages exist (with free space).  Create a new one.
         return newDataPage();
       }
-    
+
+      // found a page, see if it will work
+      pageNumber = _addRowBufferH.getPageNumber();
+      // since we just loaded this page, it is not yet modified
+      modifiedPage = false;
     }
 
     if(!rowFitsOnDataPage(rowSize, dataPage, getFormat())) {
 
-      // Last data page is full.  Create a new one.
-      writeDataPage(dataPage, pageNumber);
-      _freeSpacePages.removePageNumber(pageNumber);
+      // Last data page is full.  Write old one and create a new one.
+      if(modifiedPage) {
+        writeDataPage(dataPage, pageNumber);
+      }
+      _freeSpacePages.removePageNumber(pageNumber, true);
 
       dataPage = newDataPage();
     }
 
     return dataPage;
+  }
+
+  static ByteBuffer findFreeRowSpace(
+      UsageMap ownedPages, UsageMap freeSpacePages,
+      TempPageHolder rowBufferH)
+    throws IOException
+  {
+    // find last data page (Not bothering to check other pages for free
+    // space.)
+    UsageMap.PageCursor revPageCursor = ownedPages.cursor();
+    revPageCursor.afterLast();
+    while(true) {
+      int tmpPageNumber = revPageCursor.getPreviousPage();
+      if(tmpPageNumber < 0) {
+        break;
+      }
+      ByteBuffer dataPage = rowBufferH.setPage(ownedPages.getPageChannel(),
+                                               tmpPageNumber);
+      if(dataPage.get() == PageTypes.DATA) {
+        // found last data page, only use if actually listed in free space
+        // pages
+        if(freeSpacePages.containsPageNumber(tmpPageNumber)) {
+          return dataPage;
+        }
+      }
+    }
+
+    return null;
   }
  
   /**
@@ -2120,7 +2235,7 @@ public class Table
    * Returns the row count for the current page.  If the page is invalid
    * ({@code null}) or the page is not a DATA page, 0 is returned.
    */
-  private static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
+  static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
     throws IOException
   {
     int rowsOnPage = 0;

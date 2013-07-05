@@ -78,7 +78,7 @@ public abstract class IndexData {
   
   protected static final byte[] EMPTY_PREFIX = new byte[0];
 
-  private static final short COLUMN_UNUSED = -1;
+  static final short COLUMN_UNUSED = -1;
 
   static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
 
@@ -332,6 +332,7 @@ public abstract class IndexData {
 
   /**
    * Returns the number of database pages owned by this index data.
+   * @usage _intermediate_method_
    */
   public int getOwnedPageCount() {
     return _ownedPages.getPageCount();
@@ -420,10 +421,7 @@ public abstract class IndexData {
       }
     }
 
-    int umapRowNum = tableBuffer.get();
-    int umapPageNum = ByteUtil.get3ByteInt(tableBuffer);
-    _ownedPages = UsageMap.read(getTable().getDatabase(), umapPageNum,
-                                umapRowNum, false);
+    _ownedPages = UsageMap.read(getTable().getDatabase(), tableBuffer, false);
     
     _rootPageNumber = tableBuffer.getInt();
 

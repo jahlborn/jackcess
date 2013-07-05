@@ -109,6 +109,21 @@ public class UsageMap
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
+
+  /**
+   * @param database database that contains this usage map
+   * @param buf buffer which contains the usage map row info
+   * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
+   *         which type of map is found
+   */
+  public static UsageMap read(Database database, ByteBuffer buf,
+                              boolean assumeOutOfRangeBitsOn)
+    throws IOException
+  {
+    int umapRowNum = buf.get();
+    int umapPageNum = ByteUtil.get3ByteInt(buf);
+    return read(database, umapPageNum, umapRowNum, false);
+  }
   
   /**
    * @param database database that contains this usage map
