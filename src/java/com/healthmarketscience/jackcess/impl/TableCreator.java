@@ -24,15 +24,15 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.IndexBuilder;
 
 /**
  * Helper class used to maintain state during table creation.
@@ -47,7 +47,10 @@ class TableCreator
   private final List<ColumnBuilder> _columns;
   private final List<IndexBuilder> _indexes;
   private final Map<IndexBuilder,IndexState> _indexStates = 
-    new HashMap<IndexBuilder,IndexState>();
+    new IdentityHashMap<IndexBuilder,IndexState>();
+  private final Map<ColumnBuilder,ColumnState> _columnStates = 
+    new IdentityHashMap<ColumnBuilder,ColumnState>();
+  private final List<ColumnBuilder> _lvalCols = new ArrayList<ColumnBuilder>();
   private int _tdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
   private int _umapPageNumber = PageChannel.INVALID_PAGE_NUMBER;
   private int _indexCount;
@@ -110,6 +113,14 @@ class TableCreator
     return getPageChannel().allocateNewPage();
   }
 
+  public ColumnState getColumnState(ColumnBuilder col) {
+    return _columnStates.get(col);
+  }
+
+  public List<ColumnBuilder> getLongValueColumns() {
+    return _lvalCols;
+  }
+
   /**
    * Creates the table in the database.
    * @usage _advanced_method_
@@ -117,6 +128,17 @@ class TableCreator
   public void createTable() throws IOException {
 
     validate();
+
+    // assign column numbers and do some assorted column bookkeeping
+    short columnNumber = (short) 0;
+    for(ColumnBuilder col : _columns) {
+      col.setColumnNumber(columnNumber++);
+      if(col.getType().isLongValue()) {
+        _lvalCols.add(col);
+        // only lval columns need extra state
+        _columnStates.put(col, new ColumnState());
+      }
+    }
 
     if(hasIndexes()) {
       // sort out index numbers.  for now, these values will always match
@@ -291,6 +313,41 @@ class TableCreator
     public void setRootPageNumber(int newRootPageNumber) {
       _rootPageNumber = newRootPageNumber;
     }
+  }
     
+  /**
+   * Maintains additional state used during column creation.
+   * @usage _advanced_class_
+   */
+  static final class ColumnState
+  {
+    private byte _umapOwnedRowNumber;
+    private byte _umapFreeRowNumber;
+    // we always put both usage maps on the same page
+    private int _umapPageNumber;
+
+    public byte getUmapOwnedRowNumber() {
+      return _umapOwnedRowNumber;
+  }
+
+    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
+      _umapOwnedRowNumber = newUmapOwnedRowNumber;
+}
+
+    public byte getUmapFreeRowNumber() {
+      return _umapFreeRowNumber;
+    }
+
+    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
+      _umapFreeRowNumber = newUmapFreeRowNumber;
+    }
+
+    public int getUmapPageNumber() {
+      return _umapPageNumber;
+    }
+
+    public void setUmapPageNumber(int newUmapPageNumber) {
+      _umapPageNumber = newUmapPageNumber;
+    }
   }
 }

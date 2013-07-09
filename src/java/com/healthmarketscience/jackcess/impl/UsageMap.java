@@ -109,6 +109,21 @@ public class UsageMap
   
   /**
    * @param database database that contains this usage map
+   * @param buf buffer which contains the usage map row info
+   * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
+   *         which type of map is found
+   */
+  public static UsageMap read(DatabaseImpl database, ByteBuffer buf,
+                              boolean assumeOutOfRangeBitsOn)
+    throws IOException
+  {
+    int umapRowNum = buf.get();
+    int umapPageNum = ByteUtil.get3ByteInt(buf);
+    return read(database, umapPageNum, umapRowNum, false);
+  }
+  
+  /**
+   * @param database database that contains this usage map
    * @param pageNum Page number that this usage map is contained in
    * @param rowNum Number of the row on the page that contains this usage map
    * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on

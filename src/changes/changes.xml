@@ -4,7 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.13" date="TBD">
+    <release version="1.2.14" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="95">
+        Implement handling of usagemaps for long value (MEMO/OLE) columns.
+      </action>
+    </release>
+    <release version="1.2.13" date="2013-06-18">
       <action dev="jahlborn" type="fix">
         Fix partial page updates when using CodecHandlers which can only do
         full page encoding.
