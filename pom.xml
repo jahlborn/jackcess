@@ -164,7 +164,7 @@
         <configuration>
           <instrumentation>
             <excludes>
-              <exclude>com/healthmarketscience/jackcess/scsu/**</exclude>
+              <exclude>com/healthmarketscience/jackcess/impl/scsu/**</exclude>
             </excludes>
           </instrumentation>
         </configuration>
