@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="1.2.14" date="TBD">
+    <release version="1.2.14" date="2013-07-23">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="95">
         Implement handling of usagemaps for long value (MEMO/OLE) columns.
       </action>
