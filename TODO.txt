@@ -54,6 +54,8 @@ Refactor goals:
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
 * limit size of IndexPageCache?
+- make non-thread-safeness more explicit
+- refactor free-space handlers Table/Column?
 
 * public api final cleanup:
   * Database
