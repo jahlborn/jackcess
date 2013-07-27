@@ -79,8 +79,8 @@ public class PageChannel implements Channel, Flushable {
   /** handler for the current database encoding type */
   private CodecHandler _codecHandler = DefaultCodecProvider.DUMMY_HANDLER;
   /** temp page buffer used when pages cannot be partially encoded */
-  private final TempPageHolder _fullPageEncodeBufferH =
-    TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
+  private TempPageHolder _fullPageEncodeBufferH;
+  private TempBufferHolder _tempDecodeBufferH;
   private int _writeCount;
   
   /**
@@ -118,6 +118,14 @@ public class PageChannel implements Channel, Flushable {
   {
     // initialize page en/decoding support
     _codecHandler = codecProvider.createHandler(this, database.getCharset());
+    if(!_codecHandler.canEncodePartialPage()) {
+      _fullPageEncodeBufferH =
+        TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
+    }
+    if(!_codecHandler.canDecodeInline()) {
+      _tempDecodeBufferH = TempBufferHolder.newHolder(
+          TempBufferHolder.Type.SOFT, true);
+    }
 
     // note the global usage map is a special map where any page outside of
     // the current range is assumed to be "on"
@@ -206,10 +214,18 @@ public class PageChannel implements Channel, Flushable {
     throws IOException
   {
     validatePageNumber(pageNumber);
-    buffer.clear();
+
+    ByteBuffer inPage = buffer;
+    ByteBuffer outPage = buffer;
+    if((pageNumber != 0) && !_codecHandler.canDecodeInline()) {
+      inPage = _tempDecodeBufferH.getPageBuffer(this);
+      outPage.clear();
+    }
+
+    inPage.clear();
     int bytesRead = _channel.read(
-        buffer, (long) pageNumber * (long) getFormat().PAGE_SIZE);
-    buffer.flip();
+        inPage, (long) pageNumber * (long) getFormat().PAGE_SIZE);
+    inPage.flip();
     if(bytesRead != getFormat().PAGE_SIZE) {
       throw new IOException("Failed attempting to read " +
                             getFormat().PAGE_SIZE + " bytes from page " +
@@ -220,7 +236,7 @@ public class PageChannel implements Channel, Flushable {
       // de-mask header (note, page 0 never has additional encoding)
       applyHeaderMask(buffer);
     } else {
-      _codecHandler.decodePage(buffer, pageNumber);
+      _codecHandler.decodePage(inPage, outPage, pageNumber);
     }
   }
   

@@ -87,7 +87,14 @@ public class DefaultCodecProvider implements CodecProvider
       return true;
     }
 
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
+    public boolean canDecodeInline() {
+      return true;
+    }
+
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
+                           int pageNumber) 
+      throws IOException 
+    {
       // does nothing
     }
 
@@ -111,7 +118,14 @@ public class DefaultCodecProvider implements CodecProvider
       return true;
     }
 
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
+    public boolean canDecodeInline() {
+      return true;
+    }
+
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage, 
+                           int pageNumber) 
+      throws IOException 
+    {
       throw new UnsupportedCodecException("Decoding not supported.  Please choose a CodecProvider which supports reading the current database encoding.");
     }
 

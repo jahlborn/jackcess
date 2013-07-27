@@ -236,9 +236,16 @@ public class CodecHandlerTest extends TestCase
     public boolean canEncodePartialPage() {
       return true;
     }
+
+    public boolean canDecodeInline() {
+      return true;
+    }
     
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
-      byte[] arr = page.array();
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
+                           int pageNumber) 
+      throws IOException 
+    {
+      byte[] arr = inPage.array();
       simpleDecode(arr, arr, pageNumber);
     }
 
@@ -267,9 +274,16 @@ public class CodecHandlerTest extends TestCase
     public boolean canEncodePartialPage() {
       return false;
     }
+
+    public boolean canDecodeInline() {
+      return true;
+    }
     
-    public void decodePage(ByteBuffer page, int pageNumber) throws IOException {
-      byte[] arr = page.array();
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage, 
+                           int pageNumber) 
+      throws IOException 
+    {
+      byte[] arr = inPage.array();
       fullDecode(arr, arr, pageNumber);
     }
 

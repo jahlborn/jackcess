@@ -39,14 +39,24 @@ public interface CodecHandler
   public boolean canEncodePartialPage();
 
   /**
-   * Decodes the given page buffer inline.
+   * Returns {@code true} if this handler can decode a page inline,
+   * {@code false} otherwise.  If this method returns {@code false}, the
+   * {@link #decodePage} method will always be called with separate buffers.
+   */
+  public boolean canDecodeInline();
+
+  /**
+   * Decodes the given page buffer.
    *
-   * @param page the page to be decoded
+   * @param inPage the page to be decoded
+   * @param outPage the decoded page.  if {@link #canDecodeInline} is {@code
+   *                true}, this will be the same buffer as inPage.
    * @param pageNumber the page number of the given page
    * 
    * @throws IOException if an exception occurs during decoding
    */
-  public void decodePage(ByteBuffer page, int pageNumber) throws IOException;
+  public void decodePage(ByteBuffer inPage, ByteBuffer outPage, int pageNumber) 
+    throws IOException;
 
   /**
    * Encodes the given page buffer into a new page buffer and returns it.  The
