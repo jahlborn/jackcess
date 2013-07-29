@@ -48,8 +48,12 @@ Refactor goals:
 * create ComplexValue.Id and keep RowId
 * remove DatabaseImpl from util classes
 - remove unnecessary iterator class from impl classes? (what does this mean?)
-- change CodecHandler usage to handle not-inline decoding
+* change CodecHandler usage to handle not-inline decoding
   - pass filename to CodecHandler, enable pwd callbacks CallbackHandler
+  - pass custom context to CodecHandler?
+  - rework CryptCodecProvider to have custom
+    javax.security.auth.callback.CallbackHandler which is only invoked if
+    password is definitely required.
 * rework attachment data handling
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
@@ -64,7 +68,7 @@ Refactor goals:
   - simple index support gone
   - foreign key constraints enforced by default
   - "main" classes became interfaces
-  - advanced functionality still remains in impl classes
+  - advanced API functionality still remains in impl classes
   - all new instance construction via builders
   - iterable methods went away, iterable builder
   - util classes moved to util package
