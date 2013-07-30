@@ -60,6 +60,7 @@ Refactor goals:
 * limit size of IndexPageCache?
 - make non-thread-safeness more explicit
 - refactor free-space handlers Table/Column?
+- update index/cookbook for new api
 
 * public api final cleanup:
   * Database

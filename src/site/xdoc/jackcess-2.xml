@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Upgrading from Jackcess 1.x to 2.x</title>
+  </properties>
+  <body>
+
+    <section name="I'm Scared!">
+      Step back from the keyboard and take a moment to catch your breath.  I
+      know the idea of upgrading to a new major version of a software project
+      can be a bit daunting.  A completely re-written library means a whole
+      new set of bugs to work through!  Rest assured, however, <u>the changes
+      from Jackcess 1.x to 2.x are largely cosmetic!</u>  The core code is
+      functionally unchanged, just shuffled around and tweaked.  So, once an
+      existing project has been updated for the new API, things should work
+      pretty much the same as they did before (for better or worse!).  That
+      begs the question, of course, why mess everything up in the first place?
+    </section>
+
+    <section name="Why rock the boat?">
+      <p>
+        The Jackcess project is over 8 years old at this point, and as any
+        developer knows, projects tend to accumulate cruft over the years.
+        The available functionality has grown dramatically from the initial
+        release while still retaining binary compatibility across most
+        releases.  This has been quite an effort and, unfortunately, has
+        caused the API to become a bit unwieldy.  The 2.x release is an
+        attempt to rework the API to make it both more approachable for new
+        users as well as more convenient for power users.
+      </p>
+      <p>
+        While an initial compile of existing code against the new 2.x API may
+        generate a fair bit of compile warnings, many of the changes are
+        fairly superficial (e.g. classes moving to new packages).  All of the
+        changes that were made were made in an attempt to make the API more
+        useable and to follow API design best practices.  Change for the sake
+        of change was avoided (e.g. just "prettying" up existing method
+        names).
+      </p>
+    </section>
+
+    <section name="So what changed?">
+      <p>
+        Functionally speaking, Jackcess is largely unchanged.  The core
+        codebase is largely the same, just re-arranged.  The only major
+        changes regarding functionality are:
+        <ul>
+          <li><b>"Simple" index support has been removed.</b></li>
+          <ul>
+            <li>In older releases, Jackcess did not fully understand how
+            indexes worked.  When that functionality was fully grasped,
+            "big" index support was added, but the "simple" support was left
+            as the default for backwards compatibility.  In later releases,
+            after the "big" index support was stabilized, it became the
+            default.  Now, there really isn't any reason to keep the old,
+            broken support.</li>
+          </ul>
+          <li><b>Foreign Key constraints are now enforced by default.</b></li>
+          <ul>
+            <li>Similarly, foreign key constraints were only recently
+            understood by jackess.  For backwards compatibility, enforcement
+            was not made the default.  This tends to confuse new users, as the
+            general expectation of a database is that it will enforce
+            constraints (unless told otherwise).  Unlike "simple" index
+            support (which was removed completely), foreign key constraint
+            enforcement can still be disabled.</li>
+          </ul>
+        </ul>
+      </p>
+      <p>
+        The remaining changes are largely cosmetic or just slightly different
+        (hopefully better) ways to do the same things.  Among these changes,
+        the major ones are:
+        <ul>
+          <li><b>The public API classes are now primarily interfaces.</b></li>
+          <ul>
+            <li>Making the primary API classes interfaces allows more
+            flexibility in the implementation without affecting the API.  It
+            also makes a more clear distinction between methods that are
+            intended to be used externally and those that are intended for
+            internal use.  This makes the API much more approachable for new
+            users.</li>
+            <li>Note that there are some "advanced" methods which may be
+            useful to the occassional power user which are no longer available
+            from the public API.  These methods, however, <i>are still
+            available</i> on the implementation classes.</li>
+          </ul>
+          <li><b>Most instance construction is now handled via builder classes.</b></li>
+          <ul>
+            <li>Since the public API is now primarily interfaces, some sort of
+            factory type class is necessary to construct the relevant
+            implementations.  These new factory classes follow the builder
+            pattern which is a very convenient programming style which has the
+            secondary benefit of removing the need for complex constructors
+            with many parameters.</li>
+          </ul>
+          <li><b>The various (and confusing) methods for constructing Iterables
+          have been replaced by an Iterable builder.</b></li>
+          <ul>
+            <li>There were a variety of methods on the Cursors for
+            constructing different Iterable/Iterator instances with different
+            options.  These have all been combined into a single Iterable
+            builder class which is both easier and more convenient to work
+            with.</li>
+          </ul>
+          <li><b>Many secondary "utility" classes were moved to the "util"
+              package.</b></li>
+          <ul>
+            <li>As part of making the API more approachable to new users, many
+            of the secondary classes were moved to the "util" package.  This
+            makes the primary API more obvious.</li>
+          </ul>
+          <li><b>A row is now a Row.</b></li>
+          <ul>
+            <li>A row of data, previously typed as a
+            <code>Map&lt;String,Object&gt;</code>, is now explicitly typed as
+            a Row.  This makes code much more readable as well as allows for
+            additional functionality beyond the basic Map.  Since the Row
+            interface extends <code>Map&lt;String,Object&gt;</code>, old code
+            can remain largely untouched.</li>
+          </ul>
+        </ul>
+      </p>
+    </section>
+
+    <section name="What does this mean for 1.x?">
+      <p>
+        Moving forward, all new feature development will be in Jackcess 2.x.
+        The Jackcess 1.x code has been branched at version 1.2.14 and some
+        bugfixes may be backported to that branch on a case by case basis.
+        However, no new feature development will be done on the 1.x branch.
+      </p>
+    </section>
+
+    <section name="What did we miss?">
+      <p>
+        This upgrade guide attempts to hit all the high-points for upgrading
+        from Jackcess 1.x to 2.x.  If you feel that it is incorrect or missing
+        a key bit of information, please, <a href="https://sourceforge.net/p/jackcess/discussion/456474/">drop us a line</a>!
+      </p>
+    </section>
+  </body>
+</document>
