@@ -24,6 +24,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.impl.IndexData;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+
 /**
  * Builder style class for constructing an Index.
  *
@@ -61,7 +64,7 @@ public class IndexBuilder
   }
 
   public boolean isPrimaryKey() {
-    return (getType() == Index.PRIMARY_KEY_INDEX_TYPE);
+    return (getType() == IndexImpl.PRIMARY_KEY_INDEX_TYPE);
   }
 
   public boolean isUnique() {
@@ -108,7 +111,7 @@ public class IndexBuilder
    * unique).
    */
   public IndexBuilder setPrimaryKey() {
-    _type = Index.PRIMARY_KEY_INDEX_TYPE;
+    _type = IndexImpl.PRIMARY_KEY_INDEX_TYPE;
     return setUnique();
   }
 

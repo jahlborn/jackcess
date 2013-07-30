@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
-
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
+import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * @author James Ahlborn
@@ -49,12 +52,12 @@ public class PropertiesTest extends TestCase
     assertFalse(maps.iterator().hasNext());
     assertEquals(10, maps.getObjectId());
 
-    PropertyMap defMap = maps.getDefault();
+    PropertyMapImpl defMap = maps.getDefault();
     assertTrue(defMap.isEmpty());
     assertEquals(0, defMap.getSize());
     assertFalse(defMap.iterator().hasNext());
 
-    PropertyMap colMap = maps.get("testcol");
+    PropertyMapImpl colMap = maps.get("testcol");
     assertTrue(colMap.isEmpty());
     assertEquals(0, colMap.getSize());
     assertFalse(colMap.iterator().hasNext());
@@ -105,7 +108,7 @@ public class PropertiesTest extends TestCase
     for(TestDB testDb : SUPPORTED_DBS_TEST_FOR_READ) {
       Database db = open(testDb);
 
-      Table t = db.getTable("Table1");
+      TableImpl t = (TableImpl)db.getTable("Table1");
       assertEquals(t.getTableDefPageNumber(), 
                    t.getPropertyMaps().getObjectId());
       PropertyMap tProps = t.getProperties();
@@ -186,10 +189,10 @@ public class PropertiesTest extends TestCase
         assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
                    .matches("[0-9]{2}[.][0-9]{2}"));
 
-        for(Map<String,Object> row : db.getSystemCatalog()) {
+        for(Map<String,Object> row : ((DatabaseImpl)db).getSystemCatalog()) {
           int id = (Integer)row.get("Id");
           byte[] propBytes = (byte[])row.get("LvProp");
-          PropertyMaps propMaps = db.getPropertiesForObject(id);
+          PropertyMaps propMaps = ((DatabaseImpl)db).getPropertiesForObject(id);
           int byteLen = ((propBytes != null) ? propBytes.length : 0);
           if(byteLen == 0) {
             assertTrue(propMaps.isEmpty());

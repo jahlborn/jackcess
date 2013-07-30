@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008 Health Market Science, Inc.
+Copyright (c) 2013 James Ahlborn
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -15,38 +15,18 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
 USA
-
-You can contact Health Market Science at info@healthmarketscience.com
-or at the following address:
-
-Health Market Science
-2700 Horizon Drive
-Suite 200
-King of Prussia, PA 19406
 */
 
 package com.healthmarketscience.jackcess.query;
 
-import java.util.List;
 
 
 /**
- * Concrete Query subclass which represents a select query, e.g.:
+ * Query interface which represents a select query, e.g.:
  * {@code SELECT <columns> FROM <tables> WHERE <expression>}
  * 
  * @author James Ahlborn
  */
-public class SelectQuery extends BaseSelectQuery 
+public interface SelectQuery extends BaseSelectQuery 
 {
-
-  public SelectQuery(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.SELECT);
-  }
-
-  @Override
-  protected void toSQLString(StringBuilder builder)
-  {
-    toSQLSelectString(builder, true);
-  }  
-
 }

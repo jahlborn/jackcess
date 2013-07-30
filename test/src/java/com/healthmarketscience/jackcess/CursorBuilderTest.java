@@ -29,7 +29,8 @@ package com.healthmarketscience.jackcess;
 
 import junit.framework.TestCase;
 
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
  * @author James Ahlborn
@@ -59,20 +60,20 @@ public class CursorBuilderTest extends TestCase {
       Database db = CursorTest.createTestIndexTable(indexCursorDB);
 
       Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
+      IndexImpl idx = (IndexImpl)table.getIndexes().get(0);
 
-      Cursor expected = Cursor.createCursor(table);
+      Cursor expected = CursorBuilder.createCursor(table);
 
       Cursor found = new CursorBuilder(table).toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createIndexCursor(table, idx);
+      expected = CursorBuilder.createCursor(table, idx);
       found = new CursorBuilder(table)
         .setIndex(idx)
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createIndexCursor(table, idx);
+      expected = CursorBuilder.createCursor(table, idx);
       found = new CursorBuilder(table)
         .setIndexByName("id")
         .toCursor();
@@ -86,7 +87,7 @@ public class CursorBuilderTest extends TestCase {
         // success
       }
 
-      expected = Cursor.createIndexCursor(table, idx);
+      expected = CursorBuilder.createCursor(table, idx);
       found = new CursorBuilder(table)
         .setIndexByColumns(table.getColumn("id"))
         .toCursor();
@@ -108,21 +109,21 @@ public class CursorBuilderTest extends TestCase {
         // success
       }
 
-      expected = Cursor.createCursor(table);
+      expected = CursorBuilder.createCursor(table);
       expected.beforeFirst();
       found = new CursorBuilder(table)
         .beforeFirst()
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createCursor(table);
+      expected = CursorBuilder.createCursor(table);
       expected.afterLast();
       found = new CursorBuilder(table)
         .afterLast()
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createCursor(table);
+      expected = CursorBuilder.createCursor(table);
       expected.moveNextRows(2);
       Cursor.Savepoint sp = expected.getSavepoint();
       found = new CursorBuilder(table)
@@ -131,7 +132,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createIndexCursor(table, idx);
+      expected = CursorBuilder.createCursor(table, idx);
       expected.moveNextRows(2);
       sp = expected.getSavepoint();
       found = new CursorBuilder(table)
@@ -141,7 +142,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createIndexCursor(table, idx,
+      expected = CursorBuilder.createCursor(table, idx,
                                           idx.constructIndexRowFromEntry(3),
                                           null);
       found = new CursorBuilder(table)
@@ -150,7 +151,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = Cursor.createIndexCursor(table, idx,
+      expected = CursorBuilder.createCursor(table, idx,
                                           idx.constructIndexRowFromEntry(3),
                                           false,
                                           idx.constructIndexRowFromEntry(7),

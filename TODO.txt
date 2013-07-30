@@ -20,3 +20,57 @@ Missing pieces:
   * EASY
 - figure out how msaccess manages page/row locks
   * MEDIUM
+
+Refactor goals:
+- simplify public API (separate "internal" and "external" api)
+* separate table creation objects from existing metadata objects
+* remove "simple" index support?
+* remove "table traversal methods" from Table?
+* enable integrity by default?
+* remove import/export methods from Database?
+* move database open/create options to DBBuilder
+* tweak how import filters work to make them more flexible?
+- tweak lookup apis (specify column vs column name)
+* separate classes into more packages (api,builder,util,impl)
+* remove debug log blocks
+* add Row interface
+* change savepoint to use table number instead of name?
+* don't use columnimpl for creating tables
+  * clean up columnimpl/tableimpl constructors
+* add updateCurrentRow(Map), add updateRow(Row)
+* sort out query types
+- clean up javadocs
+  - enhance public api classes
+  - add @usage tags to util classes
+* add unit tests for Row update/delete methods, add/update *FromMap methods
+* add reason to unsupop throws for indexes
+* remove static methods in CursorImpl/IndexCursorImpl
+* create ComplexValue.Id and keep RowId
+* remove DatabaseImpl from util classes
+- remove unnecessary iterator class from impl classes? (what does this mean?)
+* change CodecHandler usage to handle not-inline decoding
+  - pass filename to CodecHandler, enable pwd callbacks CallbackHandler
+  - pass custom context to CodecHandler?
+  - rework CryptCodecProvider to have custom
+    javax.security.auth.callback.CallbackHandler which is only invoked if
+    password is definitely required.
+* rework attachment data handling
+- implement page buffering in PageChannel
+  * need to implement logical flushing in update code (startUpdate/finishUpdate)
+* limit size of IndexPageCache?
+- make non-thread-safeness more explicit
+- refactor free-space handlers Table/Column?
+
+* public api final cleanup:
+  * Database
+
+- changes
+  - simple index support gone
+  - foreign key constraints enforced by default
+  - "main" classes became interfaces
+  - advanced API functionality still remains in impl classes
+  - all new instance construction via builders
+  - iterable methods went away, iterable builder
+  - util classes moved to util package
+  - Row is now an interface
+  

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 James Ahlborn
+Copyright (c) 2013 James Ahlborn
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -19,16 +19,12 @@ USA
 
 package com.healthmarketscience.jackcess;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
- * Map of properties for a given database object.
+ * Map of properties for a database object.
  *
  * @author James Ahlborn
  */
-public class PropertyMap implements Iterable<PropertyMap.Property>
+public interface PropertyMap extends Iterable<PropertyMap.Property>
 {
   public static final String ACCESS_VERSION_PROP = "AccessVersion";
   public static final String TITLE_PROP = "Title";
@@ -47,124 +43,40 @@ public class PropertyMap implements Iterable<PropertyMap.Property>
   public static final String GUID_PROP = "GUID";
   public static final String DESCRIPTION_PROP = "Description";
 
-  private final String _mapName;
-  private final short _mapType;
-  private final Map<String,Property> _props = 
-    new LinkedHashMap<String,Property>();
 
-  PropertyMap(String name, short type) {
-    _mapName = name;
-    _mapType = type;
-  }
+  public String getName();
 
-  public String getName() {
-    return _mapName;
-  }
+  public int getSize();
 
-  public short getType() {
-    return _mapType;
-  }
-
-  public int getSize() {
-    return _props.size();
-  }
-
-  public boolean isEmpty() {
-    return _props.isEmpty();
-  }
+  public boolean isEmpty();
 
   /**
    * @return the property with the given name, if any
    */
-  public Property get(String name) {
-    return _props.get(Database.toLookupName(name));
-  }
+  public Property get(String name);
 
   /**
    * @return the value of the property with the given name, if any
    */
-  public Object getValue(String name) {
-    return getValue(name, null);
-  }
+  public Object getValue(String name);
 
   /**
    * @return the value of the property with the given name, if any, otherwise
    *         the given defaultValue
    */
-  public Object getValue(String name, Object defaultValue) {
-    Property prop = get(name);
-    Object value = defaultValue;
-    if((prop != null) && (prop.getValue() != null)) {
-      value = prop.getValue();
-    }
-    return value;
-  }
-
-  /**
-   * Puts a property into this map with the given information.
-   */
-  public void put(String name, DataType type, byte flag, Object value) {
-    _props.put(Database.toLookupName(name), 
-               new Property(name, type, flag, value));
-  }
-
-  public Iterator<Property> iterator() {
-    return _props.values().iterator();
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(PropertyMaps.DEFAULT_NAME.equals(getName()) ?
-              "<DEFAULT>" : getName())
-      .append(" {");
-    for(Iterator<Property> iter = iterator(); iter.hasNext(); ) {
-      sb.append(iter.next());
-      if(iter.hasNext()) {
-        sb.append(",");
-      }
-    }
-    sb.append("}");
-    return sb.toString();
-  }      
+  public Object getValue(String name, Object defaultValue);
 
   /**
    * Info about a property defined in a PropertyMap.
    */ 
-  public static final class Property
+  public interface Property 
   {
-    private final String _name;
-    private final DataType _type;
-    private final byte _flag;
-    private final Object _value;
 
-    private Property(String name, DataType type, byte flag, Object value) {
-      _name = name;
-      _type = type;
-      _flag = flag;
-      _value = value;
-    }
+    public String getName();
 
-    public String getName() {
-      return _name;
-    }
+    public DataType getType();
 
-    public DataType getType() {
-      return _type;
-    }
-
-    public Object getValue() {
-      return _value;
-    }
-
-    @Override
-    public String toString() {
-      Object val = getValue();
-      if(val instanceof byte[]) {
-        val = ByteUtil.toHexString((byte[])val);
-      }
-      return getName() + "[" + getType() + ":" + _flag + "]=" + val;
-    }
+    public Object getValue();
+    
   }
-
 }

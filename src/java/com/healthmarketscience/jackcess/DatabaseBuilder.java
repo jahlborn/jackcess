@@ -25,6 +25,10 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.TimeZone;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.CodecProvider;
+import com.healthmarketscience.jackcess.util.MemFileChannel;
+
 /**
  * Builder style class for opening/creating a Database.
  *
@@ -81,12 +85,13 @@ public class DatabaseBuilder
 
   /**
    * Sets whether or not to enable auto-syncing on write.  if {@code true},
-   * writes will be immediately flushed to disk.  This leaves the database in
-   * a (fairly) consistent state on each write, but can be very inefficient
-   * for many updates.  if {@code false}, flushing to disk happens at the
-   * jvm's leisure, which can be much faster, but may leave the database in an
-   * inconsistent state if failures are encountered during writing.  Writes
-   * may be flushed at any time using {@link Database#flush}.
+   * write operations will be immediately flushed to disk upon completion.
+   * This leaves the database in a (fairly) consistent state on each write,
+   * but can be very inefficient for many updates.  if {@code false}, flushing
+   * to disk happens at the jvm's leisure, which can be much faster, but may
+   * leave the database in an inconsistent state if failures are encountered
+   * during writing.  Writes may be flushed at any time using {@link
+   * Database#flush}.
    * @usage _intermediate_method_
    */
   public DatabaseBuilder setAutoSync(boolean autoSync) {
@@ -149,15 +154,47 @@ public class DatabaseBuilder
    * Opens an existingnew Database using the configured information.
    */
   public Database open() throws IOException {
-    return Database.open(_mdbFile, _readOnly, _channel, _autoSync, _charset,
-                         _timeZone, _codecProvider);
+    return DatabaseImpl.open(_mdbFile, _readOnly, _channel, _autoSync, _charset,
+                             _timeZone, _codecProvider);
   }
 
   /**
    * Creates a new Database using the configured information.
    */
   public Database create() throws IOException {
-    return Database.create(_fileFormat, _mdbFile, _channel, _autoSync, _charset,
-                           _timeZone);
+    return DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
+                               _charset, _timeZone);
   }
+
+  /**
+   * Open an existing Database.  If the existing file is not writeable, the
+   * file will be opened read-only.  Auto-syncing is enabled for the returned
+   * Database.
+   * 
+   * @param mdbFile File containing the database
+   * 
+   * @see DatabaseBuilder for more flexible Database opening
+   * @usage _general_method_
+   */
+  public static Database open(File mdbFile) throws IOException {
+    return new DatabaseBuilder(mdbFile).open();
+  }
+  
+  /**
+   * Create a new Database for the given fileFormat
+   * 
+   * @param fileFormat version of new database.
+   * @param mdbFile Location to write the new database to.  <b>If this file
+   *    already exists, it will be overwritten.</b>
+   *
+   * @see DatabaseBuilder for more flexible Database creation
+   * @usage _general_method_
+   */
+  public static Database create(Database.FileFormat fileFormat, File mdbFile) 
+    throws IOException 
+  {
+    return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
+  }
+  
+
 }

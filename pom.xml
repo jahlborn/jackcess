@@ -9,7 +9,7 @@
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>1.2.15-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
   <url>http://jackcess.sf.net</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
@@ -118,8 +118,11 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.15</version>
           <configuration>
             <forkMode>once</forkMode>
+            <parallel>classes</parallel>
+            <threadCount>1</threadCount>
             <argLine>-Xmx256M -server</argLine>
             <systemProperties>
               <property>
@@ -164,7 +167,7 @@
         <configuration>
           <instrumentation>
             <excludes>
-              <exclude>com/healthmarketscience/jackcess/scsu/**</exclude>
+              <exclude>com/healthmarketscience/jackcess/impl/scsu/**</exclude>
             </excludes>
           </instrumentation>
         </configuration>
@@ -231,7 +234,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.0</version>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>    
   </dependencies>
@@ -254,11 +257,11 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>http://download.oracle.com/javase/1.5.0/docs/api</list>
-            <list>http://download.oracle.com/javaee/5/api</list>
+            <list>http://docs.oracle.com/javase/1.5.0/docs/api/</list>
+            <list>http://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>1.5</source>
-          <excludePackageNames>com.healthmarketscience.jackcess.scsu</excludePackageNames>
+          <excludePackageNames>com.healthmarketscience.jackcess.impl.scsu</excludePackageNames>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>

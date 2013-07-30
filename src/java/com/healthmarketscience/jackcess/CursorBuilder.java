@@ -33,6 +33,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.impl.CursorImpl;
+import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
+import com.healthmarketscience.jackcess.util.ColumnMatcher;
 
 
 /**
@@ -44,9 +51,9 @@ import java.util.List;
  */
 public class CursorBuilder {
   /** the table which the cursor will traverse */
-  private final Table _table;
+  private final TableImpl _table;
   /** optional index to use in traversal */
-  private Index _index;
+  private IndexImpl _index;
   /** optional start row for an index cursor */
   private Object[] _startRow;
   /** whether or not start row for an index cursor is inclusive */
@@ -63,7 +70,7 @@ public class CursorBuilder {
   private ColumnMatcher _columnMatcher;
 
   public CursorBuilder(Table table) {
-    _table = table;
+    _table = (TableImpl)table;
   }
 
   /**
@@ -96,7 +103,7 @@ public class CursorBuilder {
    * Sets an index to use for the cursor.
    */
   public CursorBuilder setIndex(Index index) {
-    _index = index;
+    _index = (IndexImpl)index;
     return this;
   }
 
@@ -139,14 +146,14 @@ public class CursorBuilder {
    */
   private CursorBuilder setIndexByColumns(List<String> searchColumns) {
     boolean found = false;
-    for(Index index : _table.getIndexes()) {
+    for(IndexImpl index : _table.getIndexes()) {
       
-      Collection<IndexData.ColumnDescriptor> indexColumns = index.getColumns();
+      Collection<? extends Index.Column> indexColumns = index.getColumns();
       if(indexColumns.size() != searchColumns.size()) {
         continue;
       }
       Iterator<String> sIter = searchColumns.iterator();
-      Iterator<IndexData.ColumnDescriptor> iIter = indexColumns.iterator();
+      Iterator<? extends Index.Column> iIter = indexColumns.iterator();
       boolean matches = true;
       while(sIter.hasNext()) {
         String sColName = sIter.next();
@@ -177,7 +184,7 @@ public class CursorBuilder {
    * <p>
    * A valid index must be specified before calling this method.
    */
-  public CursorBuilder setSpecificRow(Object[] specificRow) {
+  public CursorBuilder setSpecificRow(Object... specificRow) {
     setStartRow(specificRow);
     setEndRow(specificRow);
     return this;
@@ -202,7 +209,7 @@ public class CursorBuilder {
    * <p>
    * A valid index must be specified before calling this method.
    */
-  public CursorBuilder setStartRow(Object[] startRow) {
+  public CursorBuilder setStartRow(Object... startRow) {
     _startRow = startRow;
     return this;
   }
@@ -234,7 +241,7 @@ public class CursorBuilder {
    * <p>
    * A valid index must be specified before calling this method.
    */
-  public CursorBuilder setEndRow(Object[] endRow) {
+  public CursorBuilder setEndRow(Object... endRow) {
     _endRow = endRow;
     return this;
   }
@@ -273,16 +280,15 @@ public class CursorBuilder {
    * Returns a new cursor for the table, constructed to the given
    * specifications.
    */
-  public Cursor toCursor()
-    throws IOException
+  public Cursor toCursor() throws IOException
   {
-    Cursor cursor = null;
+    CursorImpl cursor = null;
     if(_index == null) {
-      cursor = Cursor.createCursor(_table);
+      cursor = CursorImpl.createCursor(_table);
     } else {
-      cursor = Cursor.createIndexCursor(_table, _index,
-                                        _startRow, _startRowInclusive,
-                                        _endRow, _endRowInclusive);
+      cursor = IndexCursorImpl.createCursor(_table, _index,
+                                            _startRow, _startRowInclusive,
+                                            _endRow, _endRowInclusive);
     }
     cursor.setColumnMatcher(_columnMatcher);
     if(_savepoint == null) {
@@ -299,10 +305,194 @@ public class CursorBuilder {
    * Returns a new index cursor for the table, constructed to the given
    * specifications.
    */
-  public IndexCursor toIndexCursor()
-    throws IOException
+  public IndexCursor toIndexCursor() throws IOException
   {
-    return (IndexCursor)toCursor();
+    return (IndexCursorImpl)toCursor();
   }
 
+  /**
+   * Creates a normal, un-indexed cursor for the given table.
+   * @param table the table over which this cursor will traverse
+   */
+  public static Cursor createCursor(Table table) throws IOException {
+    return table.newCursor().toCursor();
+  }
+
+  /**
+   * Creates an indexed cursor for the given table.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   */
+  public static IndexCursor createCursor(Table table, Index index)
+    throws IOException
+  {
+    return table.newCursor().setIndex(index).toIndexCursor();
+  }
+  
+  /**
+   * Creates an indexed cursor for the given table, narrowed to the given
+   * range.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   * @param startRow the first row of data for the cursor (inclusive), or
+   *                 {@code null} for the first entry
+   * @param endRow the last row of data for the cursor (inclusive), or
+   *               {@code null} for the last entry
+   */
+  public static IndexCursor createCursor(Table table, Index index,
+                                         Object[] startRow, Object[] endRow)
+    throws IOException
+  {
+    return table.newCursor().setIndex(index)
+      .setStartRow(startRow)
+      .setEndRow(endRow)
+      .toIndexCursor();
+  }
+  
+  /**
+   * Creates an indexed cursor for the given table, narrowed to the given
+   * range.
+   * <p>
+   * Note, index based table traversal may not include all rows, as certain
+   * types of indexes do not include all entries (namely, some indexes ignore
+   * null entries, see {@link Index#shouldIgnoreNulls}).
+   * 
+   * @param table the table over which this cursor will traverse
+   * @param index index for the table which will define traversal order as
+   *              well as enhance certain lookups
+   * @param startRow the first row of data for the cursor, or {@code null} for
+   *                 the first entry
+   * @param startInclusive whether or not startRow is inclusive or exclusive
+   * @param endRow the last row of data for the cursor, or {@code null} for
+   *               the last entry
+   * @param endInclusive whether or not endRow is inclusive or exclusive
+   */
+  public static IndexCursor createCursor(Table table, Index index,
+                                         Object[] startRow,
+                                         boolean startInclusive,
+                                         Object[] endRow,
+                                         boolean endInclusive)
+    throws IOException
+  {
+    return table.newCursor().setIndex(index)
+      .setStartRow(startRow)
+      .setStartRowInclusive(startInclusive)
+      .setEndRow(endRow)
+      .setEndRowInclusive(endInclusive)
+      .toIndexCursor();
+  }
+
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern".  See {@link Cursor#findFirstRow(Map)} for details on
+   * the rowPattern.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
+   * 
+   * @param table the table to search
+   * @param rowPattern pattern to be used to find the row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Row findRow(Table table, Map<String,?> rowPattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table);
+    if(cursor.findFirstRow(rowPattern)) {
+      return cursor.getCurrentRow();
+    }
+    return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern".  See {@link Cursor#findFirstRow(Column,Object)} for
+   * details on the pattern.
+   * <p>
+   * Note, a {@code null} result value is ambiguous in that it could imply no
+   * match or a matching row with {@code null} for the desired value.  If
+   * distinguishing this situation is important, you will need to use a Cursor
+   * directly instead of this convenience method.
+   * 
+   * @param table the table to search
+   * @param column column whose value should be returned
+   * @param columnPattern column being matched by the valuePattern
+   * @param valuePattern value from the columnPattern which will match the
+   *                     desired row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Object findValue(Table table, Column column,
+                                 Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table);
+    if(cursor.findFirstRow(columnPattern, valuePattern)) {
+      return cursor.getCurrentRowValue(column);
+    }
+    return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row in an indexed table which
+   * matches a given row "pattern".  See {@link Cursor#findFirstRow(Map)} for
+   * details on the rowPattern.
+   * <p>
+   * Warning, this method <i>always</i> starts searching from the beginning of
+   * the Table (you cannot use it to find successive matches).
+   * 
+   * @param table the table to search
+   * @param index index to assist the search
+   * @param rowPattern pattern to be used to find the row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Row findRow(Table table, Index index, Map<String,?> rowPattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table, index);
+    if(cursor.findFirstRow(rowPattern)) {
+      return cursor.getCurrentRow();
+    }
+    return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row in a table which matches a
+   * given row "pattern".  See {@link Cursor#findFirstRow(Column,Object)} for
+   * details on the pattern.
+   * <p>
+   * Note, a {@code null} result value is ambiguous in that it could imply no
+   * match or a matching row with {@code null} for the desired value.  If
+   * distinguishing this situation is important, you will need to use a Cursor
+   * directly instead of this convenience method.
+   * 
+   * @param table the table to search
+   * @param index index to assist the search
+   * @param column column whose value should be returned
+   * @param columnPattern column being matched by the valuePattern
+   * @param valuePattern value from the columnPattern which will match the
+   *                     desired row
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Object findValue(Table table, Index index, Column column,
+                                 Column columnPattern, Object valuePattern)
+    throws IOException
+  {
+    Cursor cursor = createCursor(table, index);
+    if(cursor.findFirstRow(columnPattern, valuePattern)) {
+      return cursor.getCurrentRowValue(column);
+    }
+    return null;
+  }
 }

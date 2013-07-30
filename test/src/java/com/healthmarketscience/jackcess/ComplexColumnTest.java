@@ -26,13 +26,16 @@ import java.util.List;
 import java.util.Map;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.complex.SingleValue;
 import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.PageChannel;
 import junit.framework.TestCase;
 
 
@@ -97,7 +100,7 @@ public class ComplexColumnTest extends TestCase
       checkVersions(row8ValFk.get(), row8ValFk, "row8-memo",
                     "row8-memo", upTime);    
 
-      Cursor cursor = Cursor.createCursor(t1);
+      Cursor cursor = CursorBuilder.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
       ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(verCol);
@@ -196,7 +199,7 @@ public class ComplexColumnTest extends TestCase
       checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt", 
                        "test_data2.txt");
 
-      Cursor cursor = Cursor.createCursor(t1);
+      Cursor cursor = CursorBuilder.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));
       ComplexValueForeignKey row4ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
@@ -277,7 +280,7 @@ public class ComplexColumnTest extends TestCase
       row8ValFk.addMultiValue("value2");
       checkMultiValues(row8ValFk.get(), row8ValFk, "value1", "value2");
 
-      Cursor cursor = Cursor.createCursor(t1);
+      Cursor cursor = CursorBuilder.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
       ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
@@ -425,7 +428,7 @@ public class ComplexColumnTest extends TestCase
         UnsupportedValue v = values.get(i);
         assertEquals(1, v.getValues().size());
         Object rv = v.get("Value");
-        assertTrue(Column.isRawData(rv));
+        assertTrue(ColumnImpl.isRawData(rv));
         assertEquals(value, rv.toString());
       }
     }    

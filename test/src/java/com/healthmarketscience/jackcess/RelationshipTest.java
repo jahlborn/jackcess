@@ -34,7 +34,8 @@ import java.util.Comparator;
 import java.util.List;
 
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.RelationshipImpl;
 import junit.framework.TestCase;
 
 /**
@@ -47,7 +48,7 @@ public class RelationshipTest extends TestCase {
       return String.CASE_INSENSITIVE_ORDER.compare(r1.getName(), r2.getName());
     }
   };
-
+ 
   public RelationshipTest(String name) throws Exception {
     super(name);
   }
@@ -70,7 +71,7 @@ public class RelationshipTest extends TestCase {
       assertEquals(Arrays.asList(t1.getColumn("otherfk1")),
                    rel.getToColumns());
       assertTrue(rel.hasReferentialIntegrity());
-      assertEquals(4096, rel.getFlags());
+      assertEquals(4096, ((RelationshipImpl)rel).getFlags());
       assertTrue(rel.cascadeDeletes());
       assertSameRelationships(rels, db.getRelationships(t2, t1), true);
 
@@ -89,7 +90,7 @@ public class RelationshipTest extends TestCase {
       assertEquals(Arrays.asList(t1.getColumn("otherfk2")),
                    rel.getToColumns());
       assertTrue(rel.hasReferentialIntegrity());
-      assertEquals(256, rel.getFlags());
+      assertEquals(256, ((RelationshipImpl)rel).getFlags());
       assertTrue(rel.cascadeUpdates());
       assertSameRelationships(rels, db.getRelationships(t3, t1), true);
 
