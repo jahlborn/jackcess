@@ -73,7 +73,7 @@ external database) into a new table:
       Some other jackcess related projects:
       <ul>
         <li>
-          <a href="http://mdbtools.sf.net">mdbtools</a> - Open Source project
+          <a href="https://github.com/brianb/mdbtools">mdbtools</a> - Open Source project
           for reading Access files, written in C.
         </li>
         <li>
