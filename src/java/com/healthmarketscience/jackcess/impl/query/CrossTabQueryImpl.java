@@ -43,8 +43,9 @@ public class CrossTabQueryImpl extends BaseSelectQueryImpl
   implements CrossTabQuery
 {
 
-  public CrossTabQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.CROSS_TAB);
+  public CrossTabQueryImpl(String name, List<Row> rows, int objectId, 
+                           int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.CROSS_TAB);
   }
 
   protected Row getTransformRow() {

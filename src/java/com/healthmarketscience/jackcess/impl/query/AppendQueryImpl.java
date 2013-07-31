@@ -42,8 +42,9 @@ import com.healthmarketscience.jackcess.query.AppendQuery;
 public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
 {
 
-  public AppendQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.APPEND);
+  public AppendQueryImpl(String name, List<Row> rows, int objectId, 
+                         int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.APPEND);
   }
 
   public String getTargetTable() {

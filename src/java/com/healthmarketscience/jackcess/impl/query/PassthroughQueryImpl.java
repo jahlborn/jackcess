@@ -40,8 +40,9 @@ import com.healthmarketscience.jackcess.query.PassthroughQuery;
 public class PassthroughQueryImpl extends QueryImpl implements PassthroughQuery
 {
 
-  public PassthroughQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.PASSTHROUGH);
+  public PassthroughQueryImpl(String name, List<Row> rows, int objectId, 
+                              int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.PASSTHROUGH);
   }
 
   public String getConnectionString() {

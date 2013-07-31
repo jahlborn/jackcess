@@ -41,8 +41,9 @@ import com.healthmarketscience.jackcess.query.UnionQuery;
  */
 public class UnionQueryImpl extends QueryImpl implements UnionQuery
 {
-  public UnionQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.UNION);
+  public UnionQueryImpl(String name, List<Row> rows, int objectId, 
+                        int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.UNION);
   }
 
   public String getUnionType() {

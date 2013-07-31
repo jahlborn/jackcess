@@ -41,8 +41,9 @@ public class MakeTableQueryImpl extends BaseSelectQueryImpl
   implements MakeTableQuery
 {
 
-  public MakeTableQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.MAKE_TABLE);
+  public MakeTableQueryImpl(String name, List<Row> rows, int objectId, 
+                            int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.MAKE_TABLE);
   }
 
   public String getTargetTable() {

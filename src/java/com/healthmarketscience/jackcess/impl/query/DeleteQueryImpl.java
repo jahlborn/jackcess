@@ -40,8 +40,9 @@ import com.healthmarketscience.jackcess.query.DeleteQuery;
 public class DeleteQueryImpl extends BaseSelectQueryImpl implements DeleteQuery
 {
 
-  public DeleteQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.DELETE);
+  public DeleteQueryImpl(String name, List<Row> rows, int objectId, 
+                         int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.DELETE);
   }
 
   @Override

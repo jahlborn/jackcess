@@ -42,8 +42,9 @@ import com.healthmarketscience.jackcess.query.UpdateQuery;
 public class UpdateQueryImpl extends QueryImpl implements UpdateQuery
 {
 
-  public UpdateQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.UPDATE);
+  public UpdateQueryImpl(String name, List<Row> rows, int objectId, 
+                         int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.UPDATE);
   }
 
   public List<String> getTargetTables() 

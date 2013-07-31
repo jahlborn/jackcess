@@ -193,7 +193,7 @@ public class DatabaseImpl implements Database
   /** this object is another type of "system" object */
   static final int ALT_SYSTEM_OBJECT_FLAG = 0x02;
   /** this object is hidden */
-  static final int HIDDEN_OBJECT_FLAG = 0x08;
+  public static final int HIDDEN_OBJECT_FLAG = 0x08;
   /** all flags which seem to indicate some type of system object */
   static final int SYSTEM_OBJECT_FLAGS = 
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;

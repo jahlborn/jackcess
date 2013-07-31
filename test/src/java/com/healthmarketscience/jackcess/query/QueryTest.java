@@ -188,7 +188,8 @@ public class QueryTest extends TestCase
     }
 
     try {
-      new QueryImpl("TestQuery", rowList, 13, Query.Type.UNION) {
+      new QueryImpl("TestQuery", rowList, 13, Query.Type.UNION.getObjectFlag(),
+                    Query.Type.UNION) {
         @Override protected void toSQLString(StringBuilder builder) {
           throw new UnsupportedOperationException();
         }};

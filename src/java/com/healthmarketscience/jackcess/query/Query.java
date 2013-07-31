@@ -75,6 +75,12 @@ public interface Query
   public Type getType();
 
   /**
+   * Whether or not this query has been marked as hidden.
+   * @usage _general_method_
+   */
+  public boolean isHidden();
+
+  /**
    * Returns the unique object id of the query.
    */
   public int getObjectId();

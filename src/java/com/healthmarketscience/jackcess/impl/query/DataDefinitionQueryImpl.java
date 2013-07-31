@@ -40,8 +40,9 @@ public class DataDefinitionQueryImpl extends QueryImpl
   implements DataDefinitionQuery
 {
 
-  public DataDefinitionQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.DATA_DEFINITION);
+  public DataDefinitionQueryImpl(String name, List<Row> rows, int objectId, 
+                                 int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.DATA_DEFINITION);
   }
 
   public String getDDLString() {

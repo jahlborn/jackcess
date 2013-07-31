@@ -40,8 +40,9 @@ import com.healthmarketscience.jackcess.query.SelectQuery;
 public class SelectQueryImpl extends BaseSelectQueryImpl implements SelectQuery
 {
 
-  public SelectQueryImpl(String name, List<Row> rows, int objectId) {
-    super(name, rows, objectId, Type.SELECT);
+  public SelectQueryImpl(String name, List<Row> rows, int objectId, 
+                         int objectFlag) {
+    super(name, rows, objectId, objectFlag, Type.SELECT);
   }
 
   @Override

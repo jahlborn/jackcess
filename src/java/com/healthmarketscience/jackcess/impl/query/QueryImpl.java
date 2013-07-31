@@ -36,10 +36,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.query.Query;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
+import com.healthmarketscience.jackcess.query.Query;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,12 +63,16 @@ public abstract class QueryImpl implements Query
   private final List<Row> _rows;
   private final int _objectId;
   private final Type _type;
+  private final int _objectFlag;
 
-  protected QueryImpl(String name, List<Row> rows, int objectId, Type type) {
+  protected QueryImpl(String name, List<Row> rows, int objectId, int objectFlag, 
+                      Type type) 
+  {
     _name = name;
     _rows = rows;
     _objectId = objectId;
     _type = type;
+    _objectFlag = objectFlag;
 
     if(type != Type.UNKNOWN) {
       short foundType = getShortValue(getQueryType(rows),
@@ -92,6 +97,10 @@ public abstract class QueryImpl implements Query
     return _type;
   }
 
+  public boolean isHidden() {
+    return((_objectFlag & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
+  }
+
   /**
    * Returns the unique object id of the query.
    */
@@ -100,7 +109,7 @@ public abstract class QueryImpl implements Query
   }
 
   public int getObjectFlag() {
-    return getType().getObjectFlag();
+    return _objectFlag;
   }
 
   /**
@@ -389,23 +398,23 @@ public abstract class QueryImpl implements Query
     try {
       switch(typeFlag) {
       case SELECT_QUERY_OBJECT_FLAG:
-        return new SelectQueryImpl(name, rows, objectId);
+        return new SelectQueryImpl(name, rows, objectId, objectFlag);
       case MAKE_TABLE_QUERY_OBJECT_FLAG:
-        return new MakeTableQueryImpl(name, rows, objectId);
+        return new MakeTableQueryImpl(name, rows, objectId, objectFlag);
       case APPEND_QUERY_OBJECT_FLAG:
-        return new AppendQueryImpl(name, rows, objectId);
+        return new AppendQueryImpl(name, rows, objectId, objectFlag);
       case UPDATE_QUERY_OBJECT_FLAG:
-        return new UpdateQueryImpl(name, rows, objectId);
+        return new UpdateQueryImpl(name, rows, objectId, objectFlag);
       case DELETE_QUERY_OBJECT_FLAG:
-        return new DeleteQueryImpl(name, rows, objectId);
+        return new DeleteQueryImpl(name, rows, objectId, objectFlag);
       case CROSS_TAB_QUERY_OBJECT_FLAG:
-        return new CrossTabQueryImpl(name, rows, objectId);
+        return new CrossTabQueryImpl(name, rows, objectId, objectFlag);
       case DATA_DEF_QUERY_OBJECT_FLAG:
-        return new DataDefinitionQueryImpl(name, rows, objectId);
+        return new DataDefinitionQueryImpl(name, rows, objectId, objectFlag);
       case PASSTHROUGH_QUERY_OBJECT_FLAG:
-        return new PassthroughQueryImpl(name, rows, objectId);
+        return new PassthroughQueryImpl(name, rows, objectId, objectFlag);
       case UNION_QUERY_OBJECT_FLAG:
-        return new UnionQueryImpl(name, rows, objectId);
+        return new UnionQueryImpl(name, rows, objectId, objectFlag);
       default:
         // unknown querytype
         throw new IllegalStateException(
@@ -531,18 +540,10 @@ public abstract class QueryImpl implements Query
 
   private static final class UnknownQueryImpl extends QueryImpl
   {
-    private final int _objectFlag;
-
     private UnknownQueryImpl(String name, List<Row> rows, int objectId, 
                              int objectFlag) 
     {
-      super(name, rows, objectId, Type.UNKNOWN);
-      _objectFlag = objectFlag;
-    }
-
-    @Override
-    public int getObjectFlag() {
-      return _objectFlag;
+      super(name, rows, objectId, objectFlag, Type.UNKNOWN);
     }
 
     @Override

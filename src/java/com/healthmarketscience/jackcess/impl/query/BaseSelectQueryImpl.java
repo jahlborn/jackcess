@@ -42,9 +42,9 @@ public abstract class BaseSelectQueryImpl extends QueryImpl
   implements BaseSelectQuery
 {
 
-  protected BaseSelectQueryImpl(String name, List<Row> rows, int objectId,
-                            Type type) {
-    super(name, rows, objectId, type);
+  protected BaseSelectQueryImpl(String name, List<Row> rows, int objectId, 
+                                int objectFlag, Type type) {
+    super(name, rows, objectId, objectFlag, type);
   }
 
   protected void toSQLSelectString(StringBuilder builder,
