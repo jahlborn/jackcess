@@ -58,6 +58,9 @@ public class QueryFormat
   // dbQProcedure = 224
   // dbQAction = 240
 
+  // mask which removes superfluous flags from object flags
+  static final int OBJECT_FLAG_MASK = 0XF0;
+
   public static final String COL_ATTRIBUTE = "Attribute";
   public static final String COL_EXPRESSION = "Expression";
   public static final String COL_FLAG = "Flag";

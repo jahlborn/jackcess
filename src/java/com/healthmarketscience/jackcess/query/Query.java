@@ -413,8 +413,10 @@ public abstract class Query
   public static Query create(int objectFlag, String name, List<Row> rows, 
                              int objectId)
   {
+    // remove other object flags before testing for query type
+    int typeFlag = objectFlag & OBJECT_FLAG_MASK;
     try {
-      switch(objectFlag) {
+      switch(typeFlag) {
       case SELECT_QUERY_OBJECT_FLAG:
         return new SelectQuery(name, rows, objectId);
       case MAKE_TABLE_QUERY_OBJECT_FLAG:
@@ -436,7 +438,7 @@ public abstract class Query
       default:
         // unknown querytype
         throw new IllegalStateException(
-            "unknown query object flag " + objectFlag);
+            "unknown query object flag " + typeFlag);
       }
     } catch(IllegalStateException e) {
       LOG.warn("Failed parsing query", e);
