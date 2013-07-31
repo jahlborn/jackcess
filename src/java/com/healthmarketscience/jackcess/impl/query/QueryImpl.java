@@ -384,8 +384,10 @@ public abstract class QueryImpl implements Query
   public static QueryImpl create(int objectFlag, String name, List<Row> rows, 
                                  int objectId)
   {
+    // remove other object flags before testing for query type
+    int typeFlag = objectFlag & OBJECT_FLAG_MASK;
     try {
-      switch(objectFlag) {
+      switch(typeFlag) {
       case SELECT_QUERY_OBJECT_FLAG:
         return new SelectQueryImpl(name, rows, objectId);
       case MAKE_TABLE_QUERY_OBJECT_FLAG:
@@ -407,7 +409,7 @@ public abstract class QueryImpl implements Query
       default:
         // unknown querytype
         throw new IllegalStateException(
-            "unknown query object flag " + objectFlag);
+            "unknown query object flag " + typeFlag);
       }
     } catch(IllegalStateException e) {
       LOG.warn("Failed parsing query", e);
