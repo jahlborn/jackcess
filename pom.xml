@@ -239,6 +239,11 @@
     <plugins>
       <plugin>
         <artifactId>maven-changes-plugin</artifactId>
+        <configuration>
+          <issueLinkTemplatePerSystem>
+            <SourceForge2Features>http://sourceforge.net/p/jackcess/feature-requests/%ISSUE%</SourceForge2Features>
+          </issueLinkTemplatePerSystem>
+        </configuration>
         <reportSets>
           <reportSet>
             <reports>
