@@ -27,7 +27,9 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -53,6 +55,7 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.ExportUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -2119,38 +2122,9 @@ public class TableImpl implements Table
    */
   public String display(long limit) throws IOException {
     reset();
-    StringBuilder rtn = new StringBuilder();
-    for(Iterator<ColumnImpl> iter = _columns.iterator(); iter.hasNext(); ) {
-      ColumnImpl col = iter.next();
-      rtn.append(col.getName());
-      if (iter.hasNext()) {
-        rtn.append("\t");
-      }
-    }
-    rtn.append("\n");
-    Row row;
-    int rowCount = 0;
-    while ((rowCount++ < limit) && (row = getNextRow()) != null) {
-      for(Iterator<Object> iter = row.values().iterator(); iter.hasNext(); ) {
-        Object obj = iter.next();
-        if (obj instanceof byte[]) {
-          byte[] b = (byte[]) obj;
-          rtn.append(ByteUtil.toHexString(b));
-          //This block can be used to easily dump a binary column to a file
-          /*java.io.File f = java.io.File.createTempFile("ole", ".bin");
-            java.io.FileOutputStream out = new java.io.FileOutputStream(f);
-            out.write(b);
-            out.flush();
-            out.close();*/
-        } else {
-          rtn.append(String.valueOf(obj));
-        }
-        if (iter.hasNext()) {
-          rtn.append("\t");
-        }
-      }
-      rtn.append("\n");
-    }
+    StringWriter rtn = new StringWriter();
+    new ExportUtil.Builder(getDefaultCursor()).setDelimiter("\t").setHeader(true)
+      .exportWriter(new BufferedWriter(rtn));
     return rtn.toString();
   }
 
