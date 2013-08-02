@@ -9,11 +9,11 @@
     <section name="Introduction">
       <p>
         This cookbook will attempt to familiarize the reader with the various
-        nooks and crannies of the Jackcess API.  The API is large due to the
-        large feature-set that an Access Database provides, so this cookbook
-        will by no means be exhaustive.  However, this will hopefully give the
-        reader enough useful building blocks such that the rest of the API can
-        be discovered and utilized as necessary.
+        nooks and crannies of the Jackcess 2.x API.  The API is large due to
+        the large feature-set that an Access Database provides, so this
+        cookbook will by no means be exhaustive.  However, this will hopefully
+        give the reader enough useful building blocks such that the rest of
+        the API can be discovered and utilized as necessary.
       </p>
       <p>
         This cookbook is a cross between a tutorial and a reference, so the
@@ -48,7 +48,7 @@
           <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database</a> class.
         </p>
         <source>
-  Database db = Database.open(new File("mydb.mdb"));
+  Database db = DatabaseBuilder.open(new File("mydb.mdb"));
 </source>
         <p>
           That's it, now you have a Database instance (maybe this isn't that
@@ -76,11 +76,12 @@
           is the best way to interact with the data in a Table, for the sake
           of simplicity when just getting started, we will use the simplified
           iteration provided by the Table class itself.  When reading row
-          data, it is generally provided as a <code>Map&lt;String,Object&gt;</code> where the keys are the column
+          data, it is generally provided as a <a
+          href="apidocs/com/healthmarketscience/jackcess/Row.html">Row</a> where the keys are the column
           names and the values are the strongly typed column values.
         </p>
         <source>
-  for(Map&lt;String,Object&gt; row : table) {
+  for(Row row : table) {
     System.out.prinln("Look ma, a row: " + row);
   }
 </source>
@@ -112,7 +113,7 @@
           their values like so:
         </p>
 <source>
-  Map&lt;String,Object&gt; row = ...;
+  Row row = ...;
   for(Column column : table.getColumns()) {
     String columnName = column.getName();
     Object value = row.get(columnName);
@@ -191,7 +192,7 @@
           is possible may be out of date).
         </p>
         <p>
-          As of version 1.2.10, Jackcess supports:
+          As of version 2.0.0, Jackcess supports:
         </p>
         <ul>
           <li>Creating databases for Access all versions 2000-2010</li>

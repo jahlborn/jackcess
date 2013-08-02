@@ -6,10 +6,11 @@
     <title>Java Library for MS Access</title>
   </properties>
   <body>
+
     <section name="Jackcess">
       <p>
         Jackcess is a pure Java library for reading from and writing to MS
-        Access databases (currently supporting versions 2000-2007).  It is part of the <a href="http://openhms.sourceforge.net/">OpenHMS</a> project from <a href="http://www.healthmarketscience.com/">Health Market Science, Inc.</a>.  It is not an application.  There is no GUI.  It's a
+        Access databases (currently supporting versions 2000-2010).  It is part of the <a href="http://openhms.sourceforge.net/">OpenHMS</a> project from <a href="http://www.healthmarketscience.com/">Health Market Science, Inc.</a>.  It is not an application.  There is no GUI.  It's a
         library, intended for other developers to use to build Java
         applications.  Jackcess is licensed under the
 
@@ -19,6 +20,7 @@
         for more info.
       </p>
     </section>
+
     <section name="Sample code">
         <p>
           Here are a few snippets of code to whet your appetite.  For more
@@ -26,19 +28,15 @@
           unit tested, you can find even more example code in the <a href="xref-test/index.html">unit tests</a>.
         </p>
         <ul>
-          <li>Displaying the contents of a table:
-            <source>System.out.println(Database.open(new File("my.mdb")).getTable("MyTable").display());
-</source>
-          </li>
           <li>Iterating through the rows of a table:
-            <source>Table table = Database.open(new File("my.mdb")).getTable("MyTable");
-for(Map&lt;String, Object&gt; row : table) {
+            <source>Table table = DatabaseBuilder.open(new File("my.mdb")).getTable("MyTable");
+for(Row row : table) {
   System.out.println("Column 'a' has value: " + row.get("a"));
 }
 </source>
           </li>
           <li>Searching for a row with a specific column value:
-            <source>Map&lt;String, Object&gt; row = Cursor.findRow(table, Collections.singletonMap("a", "foo"));
+            <source>Row row = CursorBuilder.findRow(table, Collections.singletonMap("a", "foo"));
 if(row != null) {
   System.out.println("Found row where 'a' == 'foo': " + row);
 } else {
@@ -47,14 +45,12 @@ if(row != null) {
 </source>
           </li>
           <li>Creating a new table and writing data into it:
-            <source>Database db = Database.create(new File("new.mdb"));
+            <source>Database db = DatabaseBuilder.create(Database.FileFormat.V2000, new File("new.mdb"));
 Table newTable = new TableBuilder("NewTable")
   .addColumn(new ColumnBuilder("a")
-             .setSQLType(Types.INTEGER)
-             .toColumn())
+             .setSQLType(Types.INTEGER))
   .addColumn(new ColumnBuilder("b")
-             .setSQLType(Types.VARCHAR)
-             .toColumn())
+             .setSQLType(Types.VARCHAR))
   .toTable(db);
 newTable.addRow(1, "foo");
 </source>
@@ -62,13 +58,18 @@ newTable.addRow(1, "foo");
 
           <li>Copying the contents of a JDBC ResultSet (e.g. from an
 external database) into a new table:
-            <source>Database.open(new File("my.mdb")).copyTable("Imported", resultSet);</source>
+            <source>Database db = DatabaseBuilder.open(new File("my.mdb"));
+new ImportUtil.Builder(db, "Imported").importResultSet(resultSet);
+db.close();</source>
           </li>
           <li>Copying the contents of a CSV file into a new table:
-            <source>Database.open(new File("my.mdb")).importFile("Imported2", new File("my.csv"), ",");</source>
+            <source>Database db = DatabaseBuilder.open(new File("my.mdb"));
+new ImportUtil.Builder(db, "Imported2").setDelimiter(",").importFile(new File("my.csv"));
+db.close();</source>
           </li>
         </ul>
     </section>
+
     <section name="Other Resources">
       Some other jackcess related projects:
       <ul>
