@@ -36,7 +36,8 @@ import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
- * Builder style class for constructing a Column.
+ * Builder style class for constructing a {@link Column}.  See {@link
+ * TableBuilder} for example usage.
  *
  * @author James Ahlborn
  */

@@ -22,7 +22,8 @@ package com.healthmarketscience.jackcess;
 import java.util.Map;
 
 /**
- * A row of data as column->value pairs.
+ * A row of data as column name->value pairs.  Values are strongly typed, and
+ * column names are case sensitive.
  *
  * @author James Ahlborn
  */

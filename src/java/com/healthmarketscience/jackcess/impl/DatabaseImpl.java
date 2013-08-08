@@ -1929,8 +1929,7 @@ public class DatabaseImpl implements Database
     
     @Override
     protected Cursor getTableNamesCursor() throws IOException {
-      return _systemCatalog.newCursor()
-        .setIndex(_systemCatalogCursor.getIndex())
+      return _systemCatalogCursor.getIndex().newCursor()
         .setStartEntry(_tableParentId, IndexData.MIN_VALUE)
         .setEndEntry(_tableParentId, IndexData.MAX_VALUE)
         .toIndexCursor();

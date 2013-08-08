@@ -68,6 +68,11 @@ public interface Index
   public boolean isUnique();
 
   /**
+   * Convenience method for constructing a new CursorBuilder for this Index.
+   */
+  public CursorBuilder newCursor();
+
+  /**
    * Information about a Column in an Index
    */
   public interface Column {

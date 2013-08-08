@@ -27,7 +27,11 @@ import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 
 /**
- * Access database column definition
+ * Access database column definition.  A {@link Table} has a list of Column
+ * instances describing the table schema.
+ * <p>
+ * A Column instance is not thread-safe (see {@link Database} for more
+ * thread-safety details).
  *
  * @author James Ahlborn
  */

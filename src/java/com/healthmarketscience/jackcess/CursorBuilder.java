@@ -43,9 +43,21 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
 
 
 /**
- * Builder style class for constructing a Cursor.  By default, a cursor is
- * created at the beginning of the table, and any start/end rows are
+ * Builder style class for constructing a {@link Cursor}.  By default, a
+ * cursor is created at the beginning of the table, and any start/end rows are
  * inclusive.
+ * <p/>
+ * Simple example traversal:
+ * <pre>
+ *   for(Row row : table.newCursor().toCursor()) {
+ *     // ... process each row ...
+ *   }
+ * </pre>
+ * <p/>
+ * Simple example search:
+ * <pre>
+ *   Row row = CursorBuilder.findRow(table, Collections.singletonMap(col, "foo"));
+ * </pre>
  *
  * @author James Ahlborn
  */
@@ -325,14 +337,13 @@ public class CursorBuilder {
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
    * 
-   * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
-  public static IndexCursor createCursor(Table table, Index index)
+  public static IndexCursor createCursor(Index index)
     throws IOException
   {
-    return table.newCursor().setIndex(index).toIndexCursor();
+    return index.getTable().newCursor().setIndex(index).toIndexCursor();
   }
   
   /**
@@ -343,7 +354,6 @@ public class CursorBuilder {
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
    * 
-   * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    * @param startRow the first row of data for the cursor (inclusive), or
@@ -351,11 +361,11 @@ public class CursorBuilder {
    * @param endRow the last row of data for the cursor (inclusive), or
    *               {@code null} for the last entry
    */
-  public static IndexCursor createCursor(Table table, Index index,
+  public static IndexCursor createCursor(Index index,
                                          Object[] startRow, Object[] endRow)
     throws IOException
   {
-    return table.newCursor().setIndex(index)
+    return index.getTable().newCursor().setIndex(index)
       .setStartRow(startRow)
       .setEndRow(endRow)
       .toIndexCursor();
@@ -369,7 +379,6 @@ public class CursorBuilder {
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
    * 
-   * @param table the table over which this cursor will traverse
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    * @param startRow the first row of data for the cursor, or {@code null} for
@@ -379,14 +388,14 @@ public class CursorBuilder {
    *               the last entry
    * @param endInclusive whether or not endRow is inclusive or exclusive
    */
-  public static IndexCursor createCursor(Table table, Index index,
+  public static IndexCursor createCursor(Index index,
                                          Object[] startRow,
                                          boolean startInclusive,
                                          Object[] endRow,
                                          boolean endInclusive)
     throws IOException
   {
-    return table.newCursor().setIndex(index)
+    return index.getTable().newCursor().setIndex(index)
       .setStartRow(startRow)
       .setStartRowInclusive(startInclusive)
       .setEndRow(endRow)
@@ -452,15 +461,14 @@ public class CursorBuilder {
    * Warning, this method <i>always</i> starts searching from the beginning of
    * the Table (you cannot use it to find successive matches).
    * 
-   * @param table the table to search
    * @param index index to assist the search
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Row findRow(Table table, Index index, Map<String,?> rowPattern)
+  public static Row findRow(Index index, Map<String,?> rowPattern)
     throws IOException
   {
-    Cursor cursor = createCursor(table, index);
+    Cursor cursor = createCursor(index);
     if(cursor.findFirstRow(rowPattern)) {
       return cursor.getCurrentRow();
     }
@@ -477,7 +485,6 @@ public class CursorBuilder {
    * distinguishing this situation is important, you will need to use a Cursor
    * directly instead of this convenience method.
    * 
-   * @param table the table to search
    * @param index index to assist the search
    * @param column column whose value should be returned
    * @param columnPattern column being matched by the valuePattern
@@ -485,11 +492,11 @@ public class CursorBuilder {
    *                     desired row
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public static Object findValue(Table table, Index index, Column column,
+  public static Object findValue(Index index, Column column,
                                  Column columnPattern, Object valuePattern)
     throws IOException
   {
-    Cursor cursor = createCursor(table, index);
+    Cursor cursor = createCursor(index);
     if(cursor.findFirstRow(columnPattern, valuePattern)) {
       return cursor.getCurrentRowValue(column);
     }

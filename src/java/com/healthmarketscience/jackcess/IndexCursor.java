@@ -24,7 +24,9 @@ import java.io.IOException;
 import com.healthmarketscience.jackcess.util.EntryIterableBuilder;
 
 /**
- * Cursor backed by an index with extended traversal options.
+ * Cursor backed by an {@link Index} with extended traversal options.  Table
+ * traversal will be in the order defined by the backing index.  Lookups which
+ * utilize the columns of the index will be fast.
  *
  * @author James Ahlborn
  */

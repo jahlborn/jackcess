@@ -29,17 +29,23 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.IterableBuilder;
 
 /**
- * Manages iteration for a Table.  Different cursors provide different methods
- * of traversing a table.  Cursors should be fairly robust in the face of
- * table modification during traversal (although depending on how the table is
- * traversed, row updates may or may not be seen).  Multiple cursors may
+ * Manages iteration for a {@link Table}.  Different cursors provide different
+ * methods of traversing a table.  Cursors should be fairly robust in the face
+ * of table modification during traversal (although depending on how the table
+ * is traversed, row updates may or may not be seen).  Multiple cursors may
  * traverse the same table simultaneously.
+ * <p/>
+ * Basic cursors will generally iterate table data in the order it appears in
+ * the database and searches will require scanning the entire table.
+ * Additional features are available when utilizing an {@link Index} backed
+ * {@link IndexCursor}.
  * <p>
  * The {@link CursorBuilder} provides a variety of static utility methods to
  * construct cursors with given characteristics or easily search for specific
  * values as well as friendly and flexible construction options.
  * <p>
- * Is not thread-safe.
+ * A Cursor instance is not thread-safe (see {@link Database} for more
+ * thread-safety details).
  *
  * @author James Ahlborn
  */

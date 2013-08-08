@@ -27,13 +27,16 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 
 /**
- * A single database table.  A Table instance is retrieved from a Database
- * instance.  The Table instance provides access to the table metadata as well
- * as the table data.  There are basic data operations on the Table interface,
- * but for advanced search and data manipulation a {@link Cursor} instance
- * should be used.
- * <p>
- * Is not thread-safe.
+ * A single database table.  A Table instance is retrieved from a {@link
+ * Database} instance.  The Table instance provides access to the table
+ * metadata as well as the table data.  There are basic data operations on the
+ * Table interface (i.e. {@link #iterator} {@link #addRow}, {@link #updateRow}
+ * and {@link #deleteRow}), but for advanced search and data manipulation a
+ * {@link Cursor} instance should be used.  New Tables can be created using a
+ * {@link TableBuilder}.
+ * <p/>
+ * A Table instance is not thread-safe (see {@link Database} for more
+ * thread-safety details).
  *
  * @author James Ahlborn
  * @usage _general_class_

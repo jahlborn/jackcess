@@ -22,7 +22,8 @@ package com.healthmarketscience.jackcess;
 import java.util.List;
 
 /**
- * Information about a relationship between two tables in the database.
+ * Information about a relationship between two tables in the {@link
+ * Database}.
  *
  * @author James Ahlborn
  */

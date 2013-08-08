@@ -44,10 +44,15 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
  * Database has been opened, you can interact with the data via the relevant
  * {@link Table}.  When a Database instance is no longer useful, it should
  * <b>always</b> be closed ({@link #close}) to avoid corruption.
- * <p>
- * Note, Database instances (and all the related objects) are <i>not</i>
+ * <p/>
+ * Database instances (and all the related objects) are <i>not</i>
  * thread-safe.  However, separate Database instances (and their respective
  * objects) can be used by separate threads without a problem.
+ * <p/>
+ * Database instances do not implement any "transactional" support, and
+ * therefore concurrent editing of the same database file by multiple Database
+ * instances (or with outside programs such as MS Access) <i>will generally
+ * result in database file corruption</i>.
  *
  * @author James Ahlborn
  * @usage _general_class_

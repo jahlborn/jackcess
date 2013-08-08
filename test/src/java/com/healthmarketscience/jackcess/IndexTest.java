@@ -260,8 +260,8 @@ public class IndexTest extends TestCase {
     assertEquals(origI.getIndexData().getEntryCount(), 
                  tempI.getIndexData().getEntryCount());
 
-    Cursor origC = CursorBuilder.createCursor(orig, origI);
-    Cursor tempC = CursorBuilder.createCursor(temp, tempI);
+    Cursor origC = origI.newCursor().toCursor();
+    Cursor tempC = tempI.newCursor().toCursor();
 
     while(true) {
       boolean origHasNext = origC.moveToNextRow();

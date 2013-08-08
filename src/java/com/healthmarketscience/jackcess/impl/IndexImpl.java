@@ -33,11 +33,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.healthmarketscience.jackcess.CursorBuilder;
+import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.RowId;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.IndexBuilder;
 
 /**
  * Access table (logical) index.  Logical indexes are backed for IndexData,
@@ -220,6 +221,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return getIndexData().getColumns();
   }
 
+  public CursorBuilder newCursor() {
+    return getTable().newCursor().setIndex(this);
+  }
+  
   /**
    * Whether or not the complete index state has been read.
    */

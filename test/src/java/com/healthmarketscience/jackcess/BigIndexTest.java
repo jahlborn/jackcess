@@ -125,7 +125,7 @@ public class BigIndexTest extends TestCase {
         String prevValue = firstValue;
         int rowCount = 0;
         List<String> firstTwo = new ArrayList<String>();
-        for(Map<String,Object> row : CursorBuilder.createCursor(t, index)) {
+        for(Map<String,Object> row : CursorBuilder.createCursor(index)) {
           String origVal = (String)row.get("col1");
           String val = origVal;
           if(val == null) {
@@ -145,7 +145,7 @@ public class BigIndexTest extends TestCase {
         index.getIndexData().validate();
 
         // delete an entry in the middle
-        Cursor cursor = CursorBuilder.createCursor(t, index);
+        Cursor cursor = CursorBuilder.createCursor(index);
         for(int i = 0; i < (rowCount / 2); ++i) {
           assertTrue(cursor.moveToNextRow());
         }
@@ -162,7 +162,7 @@ public class BigIndexTest extends TestCase {
         index.getIndexData().validate();
 
         List<String> found = new ArrayList<String>();
-        for(Map<String,Object> row : CursorBuilder.createCursor(t, index)) {
+        for(Map<String,Object> row : CursorBuilder.createCursor(index)) {
           found.add((String)row.get("col1"));
         }
 
@@ -193,7 +193,7 @@ public class BigIndexTest extends TestCase {
 
         index.getIndexData().validate();
 
-        cursor = CursorBuilder.createCursor(t, index);
+        cursor = CursorBuilder.createCursor(index);
         while(cursor.moveToNextRow()) {
           cursor.deleteCurrentRow();
         }

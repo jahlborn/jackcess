@@ -92,7 +92,7 @@ public class IndexCodesTest extends TestCase {
 //         index.initialize();
 //         System.out.println("Ind " + index);
 
-    Cursor cursor = CursorBuilder.createCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(index);
     while(cursor.moveToNextRow()) {
 
       Map<String,Object> row = cursor.getCurrentRow();
@@ -118,7 +118,7 @@ public class IndexCodesTest extends TestCase {
     throws Exception
   {
     Object[] idxRow = ((IndexImpl)index).constructIndexRow(expectedRow);
-    Cursor cursor = CursorBuilder.createCursor(t, index, idxRow, idxRow);
+    Cursor cursor = CursorBuilder.createCursor(index, idxRow, idxRow);
 
     Cursor.Position startPos = cursor.getSavepoint().getCurrentPosition();
     
@@ -268,7 +268,7 @@ public class IndexCodesTest extends TestCase {
     
     System.out.println("Ind " + ind);
 
-    Cursor cursor = CursorBuilder.createCursor(t, ind);
+    Cursor cursor = CursorBuilder.createCursor(ind);
     while(cursor.moveToNextRow()) {
       System.out.println("=======");
       String entryStr = 
@@ -320,7 +320,7 @@ public class IndexCodesTest extends TestCase {
     ((IndexImpl)index).initialize();
     System.out.println("Ind " + index);
 
-    Cursor cursor = CursorBuilder.createCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(index);
     while(cursor.moveToNextRow()) {
       System.out.println("=======");
       System.out.println("Savepoint: " + cursor.getSavepoint());
@@ -355,7 +355,7 @@ public class IndexCodesTest extends TestCase {
     Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
     
     
-    Cursor cursor = CursorBuilder.createCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(index);
     while(cursor.moveToNextRow()) {
 //       System.out.println("=======");
 //       System.out.println("Savepoint: " + cursor.getSavepoint());
@@ -534,7 +534,7 @@ public class IndexCodesTest extends TestCase {
     Map<Character,String[]> inat2CrazyCodes = new TreeMap<Character,String[]>();
     
     
-    Cursor cursor = CursorBuilder.createCursor(t, index);
+    Cursor cursor = CursorBuilder.createCursor(index);
     while(cursor.moveToNextRow()) {
 //       System.out.println("=======");
 //       System.out.println("Savepoint: " + cursor.getSavepoint());

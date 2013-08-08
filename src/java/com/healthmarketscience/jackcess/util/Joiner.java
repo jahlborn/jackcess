@@ -81,8 +81,7 @@ public class Joiner
     throws IOException
   {
     Index toIndex = fromIndex.getReferencedIndex();
-    IndexCursor toCursor = CursorBuilder.createCursor(
-        toIndex.getTable(), toIndex);
+    IndexCursor toCursor = CursorBuilder.createCursor(toIndex);
     // text lookups are always case-insensitive
     toCursor.setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE);
     return new Joiner(fromIndex, toCursor);

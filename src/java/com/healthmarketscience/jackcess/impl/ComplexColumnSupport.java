@@ -77,7 +77,7 @@ public class ComplexColumnSupport
     DatabaseImpl db = column.getDatabase();
     TableImpl complexColumns = db.getSystemComplexColumns();
     IndexCursor cursor = CursorBuilder.createCursor(
-        complexColumns, complexColumns.getPrimaryKeyIndex());
+        complexColumns.getPrimaryKeyIndex());
     if(!cursor.findFirstRowByEntry(complexTypeId)) {
       throw new IOException(
           "Could not find complex column info for complex column with id " +

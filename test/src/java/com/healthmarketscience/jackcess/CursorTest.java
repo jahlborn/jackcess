@@ -397,19 +397,19 @@ public class CursorTest extends TestCase {
                                 createExpectedRow("id", 5)));
     if(index != null) {
       assertEquals("data" + 5,
-                   CursorBuilder.findValue(table, index,
+                   CursorBuilder.findValue(index,
                                     table.getColumn("value"),
                                     table.getColumn("id"), 5));
       assertEquals(createExpectedRow("id", 5,
                                      "value", "data" + 5),
-                   CursorBuilder.findRow(table, index,
+                   CursorBuilder.findRow(index,
                                   createExpectedRow("id", 5)));
 
-      assertNull(CursorBuilder.findValue(table, index,
+      assertNull(CursorBuilder.findValue(index,
                                   table.getColumn("value"),
                                   table.getColumn("id"),
                                   -17));
-      assertNull(CursorBuilder.findRow(table, index,
+      assertNull(CursorBuilder.findRow(index,
                                 createExpectedRow("id", 13)));
     }
   }
@@ -586,7 +586,7 @@ public class CursorTest extends TestCase {
 
       assertTable(createUnorderedTestTableData(), table);
 
-      Cursor cursor = CursorBuilder.createCursor(table, idx);
+      Cursor cursor = CursorBuilder.createCursor(idx);
       doTestSimple(cursor, null);
 
       db.close();
@@ -599,7 +599,7 @@ public class CursorTest extends TestCase {
 
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(table, idx);
+      Cursor cursor = CursorBuilder.createCursor(idx);
       doTestMove(cursor, null);
 
       db.close();
@@ -612,7 +612,7 @@ public class CursorTest extends TestCase {
 
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(table, idx);
+      Cursor cursor = CursorBuilder.createCursor(idx);
       doTestReverse(cursor, null);
 
       db.close();
@@ -625,7 +625,7 @@ public class CursorTest extends TestCase {
 
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(table, idx);
+      Cursor cursor = CursorBuilder.createCursor(idx);
       doTestSearch(table, cursor, idx, 42, -13);
 
       db.close();
@@ -639,8 +639,8 @@ public class CursorTest extends TestCase {
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
 
-      Cursor cursor1 = CursorBuilder.createCursor(table, idx);
-      Cursor cursor2 = CursorBuilder.createCursor(table, idx);
+      Cursor cursor1 = CursorBuilder.createCursor(idx);
+      Cursor cursor2 = CursorBuilder.createCursor(idx);
       doTestLiveAddition(table, cursor1, cursor2, 11);
 
       db.close();
@@ -654,10 +654,10 @@ public class CursorTest extends TestCase {
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
 
-      Cursor cursor1 = CursorBuilder.createCursor(table, idx);
-      Cursor cursor2 = CursorBuilder.createCursor(table, idx);
-      Cursor cursor3 = CursorBuilder.createCursor(table, idx);
-      Cursor cursor4 = CursorBuilder.createCursor(table, idx);
+      Cursor cursor1 = CursorBuilder.createCursor(idx);
+      Cursor cursor2 = CursorBuilder.createCursor(idx);
+      Cursor cursor3 = CursorBuilder.createCursor(idx);
+      Cursor cursor4 = CursorBuilder.createCursor(idx);
       doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 1);
 
       db.close();
@@ -798,7 +798,7 @@ public class CursorTest extends TestCase {
 
       Table table = db.getTable("test");
       Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(table, idx);
+      Cursor cursor = CursorBuilder.createCursor(idx);
 
       doTestFindAll(table, cursor, idx);
 
@@ -912,7 +912,7 @@ public class CursorTest extends TestCase {
       Index idx = table.getIndexes().get(0);
 
       Cursor tCursor = CursorBuilder.createCursor(table);
-      Cursor iCursor = CursorBuilder.createCursor(table, idx);
+      Cursor iCursor = CursorBuilder.createCursor(idx);
 
       Cursor.Savepoint tSave = tCursor.getSavepoint();
       Cursor.Savepoint iSave = iCursor.getSavepoint();
@@ -935,7 +935,7 @@ public class CursorTest extends TestCase {
       }
 
       Cursor tCursor2 = CursorBuilder.createCursor(table);
-      Cursor iCursor2 = CursorBuilder.createCursor(table, idx);
+      Cursor iCursor2 = CursorBuilder.createCursor(idx);
 
       tCursor2.restoreSavepoint(tSave);
       iCursor2.restoreSavepoint(iSave);
@@ -1072,7 +1072,7 @@ public class CursorTest extends TestCase {
       Database db = open(testDB);
       Table t1 = db.getTable("Table1");
       Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
-      IndexCursor cursor = CursorBuilder.createCursor(t1, idx);
+      IndexCursor cursor = CursorBuilder.createCursor(idx);
 
       assertFalse(cursor.findFirstRowByEntry(-1));
       cursor.findClosestRowByEntry(-1);
@@ -1099,7 +1099,7 @@ public class CursorTest extends TestCase {
       Database db = openCopy(testDB);
       Table t1 = db.getTable("Table1");
       Index idx = t1.getIndex("Table2Table1");
-      IndexCursor cursor = CursorBuilder.createCursor(t1, idx);
+      IndexCursor cursor = CursorBuilder.createCursor(idx);
 
       List<String> expectedData = new ArrayList<String>();
       for(Map<String,Object> row : cursor.newEntryIterable(1)

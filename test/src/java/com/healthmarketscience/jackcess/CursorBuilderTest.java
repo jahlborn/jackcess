@@ -67,13 +67,13 @@ public class CursorBuilderTest extends TestCase {
       Cursor found = new CursorBuilder(table).toCursor();
       assertCursor(expected, found);
 
-      expected = CursorBuilder.createCursor(table, idx);
+      expected = CursorBuilder.createCursor(idx);
       found = new CursorBuilder(table)
         .setIndex(idx)
         .toCursor();
       assertCursor(expected, found);
 
-      expected = CursorBuilder.createCursor(table, idx);
+      expected = CursorBuilder.createCursor(idx);
       found = new CursorBuilder(table)
         .setIndexByName("id")
         .toCursor();
@@ -87,7 +87,7 @@ public class CursorBuilderTest extends TestCase {
         // success
       }
 
-      expected = CursorBuilder.createCursor(table, idx);
+      expected = CursorBuilder.createCursor(idx);
       found = new CursorBuilder(table)
         .setIndexByColumns(table.getColumn("id"))
         .toCursor();
@@ -132,7 +132,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = CursorBuilder.createCursor(table, idx);
+      expected = CursorBuilder.createCursor(idx);
       expected.moveNextRows(2);
       sp = expected.getSavepoint();
       found = new CursorBuilder(table)
@@ -142,7 +142,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = CursorBuilder.createCursor(table, idx,
+      expected = CursorBuilder.createCursor(idx,
                                           idx.constructIndexRowFromEntry(3),
                                           null);
       found = new CursorBuilder(table)
@@ -151,7 +151,7 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      expected = CursorBuilder.createCursor(table, idx,
+      expected = CursorBuilder.createCursor(idx,
                                           idx.constructIndexRowFromEntry(3),
                                           false,
                                           idx.constructIndexRowFromEntry(7),

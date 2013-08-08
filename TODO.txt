@@ -58,10 +58,10 @@ Refactor goals:
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
 * limit size of IndexPageCache?
-- make non-thread-safeness more explicit
+* make non-thread-safeness more explicit
 - refactor free-space handlers Table/Column?
-- update index/cookbook for new api
-- add basic walk-through in class javadocs to guide users to correct classes
+* update index/cookbook for new api
+* add basic walk-through in class javadocs to guide users to correct classes
   and basic getting started stuff.
 
 * public api final cleanup:

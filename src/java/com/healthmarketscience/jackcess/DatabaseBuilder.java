@@ -30,7 +30,19 @@ import com.healthmarketscience.jackcess.impl.CodecProvider;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 
 /**
- * Builder style class for opening/creating a Database.
+ * Builder style class for opening/creating a {@link Database}.
+ * <p/>
+ * Simple example usage:
+ * <pre>
+ *   Database db = DatabaseBuilder.open(new File("test.mdb"));
+ * </pre>
+ * <p/>
+ * Advanced example usage:
+ * <pre>
+ *   Database db = new DatabaseBuilder(new File("test.mdb"))
+ *     .setReadOnly(true)
+ *     .open();
+ * </pre>
  *
  * @author James Ahlborn
  */

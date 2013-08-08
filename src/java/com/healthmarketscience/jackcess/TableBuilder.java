@@ -38,7 +38,18 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
- * Builder style class for constructing a Column.
+ * Builder style class for constructing a {@link Table}.
+ * <p/>
+ * Example:
+ * <pre>
+ *   Table table = new TableBuilder("Test")
+ *     .addColumn(new ColumnBuilder("ID", DataType.LONG)
+ *                .setAutoNumber(true))
+ *     .addColumn(new ColumnBuilder("Name", DataType.TEXT))
+ *     .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+ *               .addColumns("ID").setPrimaryKey())
+ *     .toTable(db);
+ * </pre>
  *
  * @author James Ahlborn
  */

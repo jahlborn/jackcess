@@ -39,7 +39,8 @@ import java.math.BigInteger;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 
 /**
- * Access data type
+ * Supported access data types.
+ * 
  * @author Tim McCune
  */
 public enum DataType {

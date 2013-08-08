@@ -28,7 +28,8 @@ import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
- * Builder style class for constructing an Index.
+ * Builder style class for constructing an {@link Index}.  See {@link
+ * TableBuilder} for example usage.
  *
  * @author James Ahlborn
  */
