@@ -208,6 +208,13 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <!-- Don't deploy site for Jackcess 1.x releases -->
+          <goals>deploy nexus-staging:release</goals>
+        </configuration>
+      </plugin>       
     </plugins>
   </build>
   <dependencies>
