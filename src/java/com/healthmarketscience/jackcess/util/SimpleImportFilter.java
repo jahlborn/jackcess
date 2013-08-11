@@ -39,6 +39,7 @@ import com.healthmarketscience.jackcess.util.ImportFilter;
  * values.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class SimpleImportFilter implements ImportFilter {
 

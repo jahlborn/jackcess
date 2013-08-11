@@ -32,6 +32,7 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
  * TableBuilder} for example usage.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class IndexBuilder 
 {

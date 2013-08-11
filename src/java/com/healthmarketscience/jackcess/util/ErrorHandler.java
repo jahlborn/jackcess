@@ -40,6 +40,7 @@ import com.healthmarketscience.jackcess.Table;
  * encountered.
  * 
  * @author James Ahlborn
+ * @usage _intermediate_class_
  */
 public interface ErrorHandler 
 {

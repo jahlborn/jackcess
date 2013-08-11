@@ -26,6 +26,7 @@ import java.util.Map;
  * column names are case sensitive.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface Row extends Map<String,Object>
 {

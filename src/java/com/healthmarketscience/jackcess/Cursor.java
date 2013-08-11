@@ -48,6 +48,7 @@ import com.healthmarketscience.jackcess.util.IterableBuilder;
  * thread-safety details).
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface Cursor extends Iterable<Row>
 {

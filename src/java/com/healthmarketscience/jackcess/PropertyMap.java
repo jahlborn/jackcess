@@ -23,6 +23,7 @@ package com.healthmarketscience.jackcess;
  * Map of properties for a database object.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface PropertyMap extends Iterable<PropertyMap.Property>
 {

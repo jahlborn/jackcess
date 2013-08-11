@@ -41,6 +41,7 @@ import com.healthmarketscience.jackcess.Row;
  * table which returns only rows matching some criteria.
  * 
  * @author Patricia Donaldson, Xerox Corporation
+ * @usage _general_class_
  */
 public abstract class RowFilter
 {

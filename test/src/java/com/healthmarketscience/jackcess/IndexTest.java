@@ -188,8 +188,6 @@ public class IndexTest extends TestCase {
       t = (TableImpl)db.getTable("Table1");
       index = t.getIndexes().get(0);
 
-      System.out.println("IndexTest: Index type: " + 
-                         index.getIndexData().getClass());
       t.addRow(99, "abc", "def");
     }
   }

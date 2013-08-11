@@ -60,6 +60,7 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
  * </pre>
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class CursorBuilder {
   /** the table which the cursor will traverse */

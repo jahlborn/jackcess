@@ -42,6 +42,7 @@ import com.healthmarketscience.jackcess.impl.JetFormat;
  * Supported access data types.
  * 
  * @author Tim McCune
+ * @usage _general_class_
  */
 public enum DataType {
 

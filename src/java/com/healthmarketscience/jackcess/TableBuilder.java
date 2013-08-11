@@ -52,6 +52,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  * </pre>
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class TableBuilder {
 

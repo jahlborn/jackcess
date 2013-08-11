@@ -33,7 +33,9 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
  * Table interface (i.e. {@link #iterator} {@link #addRow}, {@link #updateRow}
  * and {@link #deleteRow}), but for advanced search and data manipulation a
  * {@link Cursor} instance should be used.  New Tables can be created using a
- * {@link TableBuilder}.
+ * {@link TableBuilder}.  The {@link com.healthmarketscience.jackcess.util.Joiner} utility can be used to traverse
+ * table relationships (e.g. find rows in another table based on a foreign-key
+ * relationship).
  * <p/>
  * A Table instance is not thread-safe (see {@link Database} for more
  * thread-safety details).

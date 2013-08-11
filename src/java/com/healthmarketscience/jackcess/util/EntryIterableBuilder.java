@@ -29,10 +29,11 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
 
 /**
- * Builder style class for constructing an IndexCursor entry
+ * Builder style class for constructing an {@link IndexCursor} entry
  * Iterable/Iterator.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class EntryIterableBuilder implements Iterable<Row>
 {

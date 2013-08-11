@@ -28,7 +28,6 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
-import javax.xml.stream.Location;
 import com.healthmarketscience.jackcess.Column;
 
 /**
@@ -36,6 +35,7 @@ import com.healthmarketscience.jackcess.Column;
  * configured object.
  * 
  * @author James Ahlborn
+ * @usage _intermediate_class_
  */
 public class ReplacementErrorHandler implements ErrorHandler
 {

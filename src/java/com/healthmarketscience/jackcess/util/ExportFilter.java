@@ -33,9 +33,10 @@ import com.healthmarketscience.jackcess.Column;
 
 /**
  * Interface which allows customization of the behavior of the
- * <code>Database</code> export methods.
+ * {@link ExportUtil} export methods.
  * 
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface ExportFilter {
 

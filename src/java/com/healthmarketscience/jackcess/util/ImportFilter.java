@@ -35,9 +35,10 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 
 /**
  * Interface which allows customization of the behavior of the
- * <code>Database</code> import/copy methods.
+ * {@link ImportUtil} import methods.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface ImportFilter {
 

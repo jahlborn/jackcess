@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
  * Resolver for linked databases.
  *
  * @author James Ahlborn
+ * @usage _intermediate_class_
  */
 public interface LinkResolver 
 {

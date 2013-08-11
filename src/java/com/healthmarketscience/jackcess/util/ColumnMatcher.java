@@ -26,6 +26,7 @@ import com.healthmarketscience.jackcess.Table;
  * Interface for handling comparisons between column values.
  *
  * @author James Ahlborn
+ * @usage _intermediate_class_
  */
 public interface ColumnMatcher 
 {

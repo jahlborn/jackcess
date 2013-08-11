@@ -26,6 +26,7 @@ import java.util.List;
  * Database}.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface Relationship 
 {

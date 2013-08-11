@@ -28,6 +28,7 @@ import org.apache.commons.lang.ObjectUtils;
  * Simple concrete implementation of ColumnMatcher which test for equality.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class SimpleColumnMatcher implements ColumnMatcher {
 

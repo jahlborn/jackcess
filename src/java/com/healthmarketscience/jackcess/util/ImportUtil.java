@@ -50,8 +50,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
+ * Utility class for importing tables to an Access database from other
+ * sources.  See the {@link Builder} for convenient configuration of the
+ * import functionality.  Note that most scenarios for customizing input data
+ * can be handled by implementing a custom {@link ImportFilter}.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class ImportUtil 
 {

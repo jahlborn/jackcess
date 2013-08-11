@@ -45,6 +45,7 @@ import com.healthmarketscience.jackcess.util.MemFileChannel;
  * </pre>
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class DatabaseBuilder 
 {

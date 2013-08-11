@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.util.EntryIterableBuilder;
  * utilize the columns of the index will be fast.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface IndexCursor extends Cursor
 {

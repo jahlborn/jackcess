@@ -36,6 +36,7 @@ import com.healthmarketscience.jackcess.Column;
  * values.
  * 
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class SimpleExportFilter implements ExportFilter {
 

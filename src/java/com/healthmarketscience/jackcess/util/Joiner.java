@@ -30,7 +30,6 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 
@@ -39,6 +38,7 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
  * relationships.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class Joiner 
 {
@@ -163,8 +163,7 @@ public class Joiner
    *                columns for this join relationship)
    * @param columnNames desired columns in the from table row
    */
-  public Row findFirstRow(Map<String,?> fromRow,
-                                         Collection<String> columnNames)
+  public Row findFirstRow(Map<String,?> fromRow, Collection<String> columnNames)
     throws IOException
   {
     return (hasRows(fromRow) ? _toCursor.getCurrentRow(columnNames) : null);
@@ -177,9 +176,10 @@ public class Joiner
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    */
-  public Iterator<Row> findRows(Map<String,?> fromRow)
+  public EntryIterableBuilder findRows(Map<String,?> fromRow)
   {
-    return findRows(fromRow, null);
+    toEntryValues(fromRow);
+    return _toCursor.newEntryIterable(_entryValues);
   }
   
   /**
@@ -188,65 +188,11 @@ public class Joiner
    *
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
-   * @param columnNames desired columns in the from table row
    */
-  public Iterator<Row> findRows(Map<String,?> fromRow,
-                                Collection<String> columnNames)
+  public EntryIterableBuilder findRows(Object[] fromRow)
   {
     toEntryValues(fromRow);
-    return _toCursor.newEntryIterable(_entryValues)
-      .setColumnNames(columnNames).iterator();
-  }
-
-  /**
-   * Returns an Iterator with the selected columns over all the rows in the
-   * "to" table based on the given columns in the "from" table.
-   *
-   * @param fromRow row from the "from" table (which must include the relevant
-   *                columns for this join relationship)
-   * @param columnNames desired columns in the from table row
-   * @usage _intermediate_method_
-   */
-  public Iterator<Row> findRows(Object[] fromRow,
-                                Collection<String> columnNames)
-  {
-    toEntryValues(fromRow);
-    return _toCursor.newEntryIterable(_entryValues)
-      .setColumnNames(columnNames).iterator();
-  }
-
-  /**
-   * Returns an Iterable whose iterator() method returns the result of a call
-   * to {@link #findRows(Map)}
-   * 
-   * @param fromRow row from the "from" table (which must include the relevant
-   *                columns for this join relationship)
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> findRowsIterable(Map<String,?> fromRow)
-  {
-    return findRowsIterable(fromRow, null);
-  }
-  
-  /**
-   * Returns an Iterable whose iterator() method returns the result of a call
-   * to {@link #findRows(Map,Collection)}
-   * 
-   * @param fromRow row from the "from" table (which must include the relevant
-   *                columns for this join relationship)
-   * @param columnNames desired columns in the from table row
-   * @throws RuntimeIOException if an IOException is thrown by one of the
-   *         operations, the actual exception will be contained within
-   */
-  public Iterable<Row> findRowsIterable(
-      final Map<String,?> fromRow, final Collection<String> columnNames)
-  {
-    return new Iterable<Row>() {
-      public Iterator<Row> iterator() {
-        return findRows(fromRow, columnNames);
-      }
-    };
+    return _toCursor.newEntryIterable(_entryValues);
   }
 
   /**
@@ -259,7 +205,9 @@ public class Joiner
    *         otherwise
    */
   public boolean deleteRows(Map<String,?> fromRow) throws IOException {
-    return deleteRowsImpl(findRows(fromRow, Collections.<String>emptySet()));
+    return deleteRowsImpl(findRows(fromRow)
+                          .setColumnNames(Collections.<String>emptySet())
+                          .iterator());
   }
 
   /**
@@ -273,7 +221,9 @@ public class Joiner
    * @usage _intermediate_method_
    */
   public boolean deleteRows(Object[] fromRow) throws IOException {
-    return deleteRowsImpl(findRows(fromRow, Collections.<String>emptySet()));
+    return deleteRowsImpl(findRows(fromRow)
+                          .setColumnNames(Collections.<String>emptySet())
+                          .iterator());
   }
 
   /**

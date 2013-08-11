@@ -28,11 +28,9 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
-import javax.xml.stream.Location;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.util.ReplacementErrorHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -43,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
  * value, see {@link ReplacementErrorHandler}.
  * 
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class DebugErrorHandler extends ReplacementErrorHandler
 {

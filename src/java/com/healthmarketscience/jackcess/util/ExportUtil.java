@@ -48,8 +48,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
+ * Utility class for exporting tables from an Access database to other
+ * formats.  See the {@link Builder} for convenient configuration of the
+ * export functionality.  Note that most scenarios for customizing output data
+ * can be handled by implementing a custom {@link ExportFilter}.
  * 
  * @author Frank Gerbig
+ * @usage _general_class_
  */
 public class ExportUtil {
 

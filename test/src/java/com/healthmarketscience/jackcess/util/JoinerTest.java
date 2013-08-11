@@ -97,7 +97,7 @@ public class JoinerTest extends TestCase {
 
       List<Row> joinedRows =
         new ArrayList<Row>();
-      for(Row t1Row : join.findRowsIterable(row)) {
+      for(Row t1Row : join.findRows(row)) {
         joinedRows.add(t1Row);
       }
 
@@ -122,7 +122,7 @@ public class JoinerTest extends TestCase {
       }
       
       joinedRows = new ArrayList<Row>();
-      for(Row t1Row : join.findRowsIterable(row, colNames)) {
+      for(Row t1Row : join.findRows(row).setColumnNames(colNames)) {
         joinedRows.add(t1Row);
       }
 

@@ -40,6 +40,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  * TableBuilder} for example usage.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class ColumnBuilder {
 

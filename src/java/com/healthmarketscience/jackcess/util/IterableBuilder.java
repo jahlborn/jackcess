@@ -32,9 +32,10 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.CursorImpl;
 
 /**
- * Builder style class for constructing a Cursor Iterable/Iterator.
+ * Builder style class for constructing a {@link Cursor} Iterable/Iterator.
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class IterableBuilder implements Iterable<Row>
 {

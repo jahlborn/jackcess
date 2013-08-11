@@ -249,8 +249,9 @@ final class FKEnforcer
     List<? extends Index.Column> toCols = joiner.getToIndex().getColumns();
     Object[] toRow = new Object[joiner.getToTable().getColumnCount()];
 
-    for(Iterator<Row> iter = joiner.findRows(
-            oldFromRow, Collections.<String>emptySet()); iter.hasNext(); ) {
+    for(Iterator<Row> iter = joiner.findRows(oldFromRow)
+          .setColumnNames(Collections.<String>emptySet())
+          .iterator(); iter.hasNext(); ) {
       iter.next();
 
       // create update row for "to" table

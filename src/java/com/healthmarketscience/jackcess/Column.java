@@ -34,6 +34,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
  * thread-safety details).
  *
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public interface Column 
 {

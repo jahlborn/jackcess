@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  * all other columns using simple equality.
  * 
  * @author James Ahlborn
+ * @usage _general_class_
  */
 public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
 
