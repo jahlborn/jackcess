@@ -6,46 +6,51 @@
     <title>Upgrading from Jackcess 1.x to 2.x</title>
   </properties>
   <body>
+    
+    <section name="Jackcess 2.0">
+      <subsection name="I'm Scared!">
+        <p>
+          Step back from the keyboard and take a moment to catch your breath.  I
+          know the idea of upgrading to a new major version of a software
+          project can be a bit daunting.  A completely re-written library means
+          a whole new set of bugs to work through!  Rest assured, however,
+          <u>the changes from Jackcess 1.x to 2.x are largely cosmetic!</u> The
+          core code is functionally unchanged, just shuffled around and tweaked.
+          So, once an existing project has been updated for the new API, things
+          should work pretty much the same as they did before (for better or
+          worse!).  That begs the question, of course, why mess everything up in
+          the first place?
+        </p>
+      </subsection>
 
-    <section name="I'm Scared!">
-      Step back from the keyboard and take a moment to catch your breath.  I
-      know the idea of upgrading to a new major version of a software project
-      can be a bit daunting.  A completely re-written library means a whole
-      new set of bugs to work through!  Rest assured, however, <u>the changes
-      from Jackcess 1.x to 2.x are largely cosmetic!</u>  The core code is
-      functionally unchanged, just shuffled around and tweaked.  So, once an
-      existing project has been updated for the new API, things should work
-      pretty much the same as they did before (for better or worse!).  That
-      begs the question, of course, why mess everything up in the first place?
-    </section>
+      <subsection name="Why rock the boat?">
+        <p>
+          The Jackcess project is over 8 years old at this point, and as any
+          developer knows, projects tend to accumulate cruft over the years.
+          The available functionality has grown dramatically from the initial
+          release while still retaining binary compatibility across most
+          releases.  This has been quite an effort and, unfortunately, has
+          caused the API to become a bit unwieldy.  The 2.x release is an
+          attempt to rework the API to make it both more approachable for new
+          users as well as more convenient for power users.
+        </p>
+        <p>
+          While an initial compile of existing code against the new 2.x API may
+          generate a fair bit of compile warnings, many of the changes are
+          fairly superficial (e.g. classes moving to new packages).  All of the
+          changes that were made were made in an attempt to make the API more
+          useable and to follow API design best practices.  Change for the sake
+          of change was avoided (e.g. just "prettying" up existing method
+          names).
+        </p>
+      </subsection>
 
-    <section name="Why rock the boat?">
-      <p>
-        The Jackcess project is over 8 years old at this point, and as any
-        developer knows, projects tend to accumulate cruft over the years.
-        The available functionality has grown dramatically from the initial
-        release while still retaining binary compatibility across most
-        releases.  This has been quite an effort and, unfortunately, has
-        caused the API to become a bit unwieldy.  The 2.x release is an
-        attempt to rework the API to make it both more approachable for new
-        users as well as more convenient for power users.
-      </p>
-      <p>
-        While an initial compile of existing code against the new 2.x API may
-        generate a fair bit of compile warnings, many of the changes are
-        fairly superficial (e.g. classes moving to new packages).  All of the
-        changes that were made were made in an attempt to make the API more
-        useable and to follow API design best practices.  Change for the sake
-        of change was avoided (e.g. just "prettying" up existing method
-        names).
-      </p>
-    </section>
-
-    <section name="So what changed?">
-      <p>
-        Functionally speaking, Jackcess is largely unchanged.  The core
-        codebase is largely the same, just re-arranged.  The only major
-        changes regarding functionality are:
+      <subsection name="So what changed?">
+        <p>
+          Functionally speaking, Jackcess is largely unchanged.  The core
+          codebase is largely the same, just re-arranged.  The only major
+          changes regarding functionality are:
+        </p>
         <ul>
           <li><b>"Simple" index support has been removed.</b></li>
           <ul>
@@ -68,11 +73,11 @@
             enforcement can still be disabled.</li>
           </ul>
         </ul>
-      </p>
-      <p>
-        The remaining changes are largely cosmetic or just slightly different
-        (hopefully better) ways to do the same things.  Among these changes,
-        the major ones are:
+        <p>
+          The remaining changes are largely cosmetic or just slightly different
+          (hopefully better) ways to do the same things.  Among these changes,
+          the major ones are:
+        </p>
         <ul>
           <li><b>The public API classes are now primarily interfaces.</b></li>
           <ul>
@@ -106,7 +111,7 @@
             with.</li>
           </ul>
           <li><b>Many secondary "utility" classes were moved to the "util"
-              package.</b></li>
+          package.</b></li>
           <ul>
             <li>As part of making the API more approachable to new users, many
             of the secondary classes were moved to the "util" package.  This
@@ -122,35 +127,35 @@
             can remain largely untouched.</li>
           </ul>
         </ul>
-      </p>
-      <subsection name="Working with Jackcess Encrypt">
+
+        <h4>Working with Jackcess Encrypt</h4>
         <p>
           If you are using the <a href="http://jackcessencrypt.sourceforge.net/">Jackcess Encrypt</a> project, then you will need to
           use a version compatible with the relevant Jackess API.
           Fortunately, the major versions match, so it's pretty simple:
-          <ul>
-            <li>Jackcess 2.x -&gt; Jackcess Encrypt 2.y</li>
-            <li>Jackcess 1.x -&gt; Jackcess Encrypt 1.y</li>
-          </ul>
+        </p>
+        <ul>
+          <li>Jackcess 2.x -&gt; Jackcess Encrypt 2.y</li>
+          <li>Jackcess 1.x -&gt; Jackcess Encrypt 1.y</li>
+        </ul>
+      </subsection>
+
+      <subsection name="What does this mean for 1.x?">
+        <p>
+          Moving forward, all new feature development will be in Jackcess 2.x.
+          The Jackcess 1.x code has been branched at version 1.2.14 and some
+          bugfixes may be backported to that branch on a case by case basis.
+          However, no new feature development will be done on the 1.x branch.
         </p>
       </subsection>
-    </section>
 
-    <section name="What does this mean for 1.x?">
-      <p>
-        Moving forward, all new feature development will be in Jackcess 2.x.
-        The Jackcess 1.x code has been branched at version 1.2.14 and some
-        bugfixes may be backported to that branch on a case by case basis.
-        However, no new feature development will be done on the 1.x branch.
-      </p>
-    </section>
-
-    <section name="What did we miss?">
-      <p>
-        This upgrade guide attempts to hit all the high-points for upgrading
-        from Jackcess 1.x to 2.x.  If you feel that it is incorrect or missing
-        a key bit of information, please, <a href="https://sourceforge.net/p/jackcess/discussion/456474/">drop us a line</a>!
-      </p>
+      <subsection name="What did we miss?">
+        <p>
+          This upgrade guide attempts to hit all the high-points for upgrading
+          from Jackcess 1.x to 2.x.  If you feel that it is incorrect or missing
+          a key bit of information, please, <a href="https://sourceforge.net/p/jackcess/discussion/456474/">drop us a line</a>!
+        </p>
+      </subsection>
     </section>
   </body>
 </document>

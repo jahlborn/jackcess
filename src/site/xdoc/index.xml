@@ -19,10 +19,11 @@
         at our <a href="faq.html">Frequently Asked Questions</a>
         for more info.
       </p>
-    </section>
 
-    <section name="Jackcess 2.0">
-      <subsection name="New crunchy outside, same yummy filling!">
+      <subsection name="All New: Jackcess 2.0">
+        <p>
+          <b>New crunchy outside, same yummy filling!</b>
+        </p>
         <p>
           The Jackcess project has gotten a facelift.  A long-overdue overhaul
           of the public API has been completed, and the major version number
@@ -32,6 +33,7 @@
           <a href="jackcess-2.html">Upgrade Guide</a> for full details.
         </p>
       </subsection>
+
     </section>
 
     <section name="Sample code">
@@ -84,7 +86,9 @@ db.close();</source>
     </section>
 
     <section name="Other Resources">
-      Some other jackcess related projects:
+      <p>
+        Some other jackcess related projects:
+      </p>
       <ul>
         <li>
           <a href="https://github.com/brianb/mdbtools">mdbtools</a> - Open Source project
