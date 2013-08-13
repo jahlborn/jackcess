@@ -123,6 +123,17 @@
           </ul>
         </ul>
       </p>
+      <subsection name="Working with Jackcess Encrypt">
+        <p>
+          If you are using the <a href="http://jackcessencrypt.sourceforge.net/">Jackcess Encrypt</a> project, then you will need to
+          use a version compatible with the relevant Jackess API.
+          Fortunately, the major versions match, so it's pretty simple:
+          <ul>
+            <li>Jackcess 2.x -&gt; Jackcess Encrypt 2.y</li>
+            <li>Jackcess 1.x -&gt; Jackcess Encrypt 1.y</li>
+          </ul>
+        </p>
+      </subsection>
     </section>
 
     <section name="What does this mean for 1.x?">
