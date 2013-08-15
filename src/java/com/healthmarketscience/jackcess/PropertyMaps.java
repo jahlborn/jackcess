@@ -98,7 +98,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
    * Adds the given PropertyMap to this group.
    */
   public void put(PropertyMap map) {
-    _maps.put(Database.toLookupName(map.getName()), map);
+    String mapName = Database.toLookupName(map.getName());
+    _maps.put(mapName, map.merge(_maps.get(mapName)));
   }
 
   public Iterator<PropertyMap> iterator() {
@@ -176,11 +177,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
 
         if(type == PROPERTY_NAME_LIST) {
           propNames = readPropertyNames(bbBlock);
-        } else if((type == DEFAULT_PROPERTY_VALUE_LIST) ||
-                  (type == COLUMN_PROPERTY_VALUE_LIST)) {
-          maps.put(readPropertyValues(bbBlock, propNames, type));
         } else {
-          throw new IOException("Unknown property block type " + type);
+          maps.put(readPropertyValues(bbBlock, propNames, type));
         }
 
         bb.position(endPos);

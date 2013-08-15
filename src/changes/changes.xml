@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="1.2.14.2" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="96">
+        Fix reading of Properties with multiple value blocks.
+      </action>
+    </release>
     <release version="1.2.14.1" date="2013-08-11">
       <action dev="jahlborn" type="fix" system="SourceForge2Features"
               issue="25">
