@@ -88,6 +88,25 @@ public class PropertyMapImpl implements PropertyMap
     return _props.values().iterator();
   }
 
+  public PropertyMapImpl merge(PropertyMapImpl opm) {
+    if(opm == null) {
+      return this;          
+    }
+
+    // merge into least map type
+    PropertyMapImpl dest = opm;
+    PropertyMapImpl src = this;
+    if(dest._mapType < src._mapType) {
+      dest = this;
+      src = opm;
+    }
+
+    dest._props.putAll(src._props);
+
+    return dest;
+  }
+
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
