@@ -66,7 +66,7 @@ public class ImportTest extends TestCase
       Database db = create(fileFormat);
       String tableName = new ImportUtil.Builder(db, "test")
         .setDelimiter("\\t")
-        .importFile(new File("test/data/sample-input.tab"));
+        .importFile(new File("src/test/data/sample-input.tab"));
       Table t = db.getTable(tableName);
 
       List<String> colNames = new ArrayList<String>();
@@ -111,7 +111,7 @@ public class ImportTest extends TestCase
         .setDelimiter("\\t")
         .setUseExistingTable(true)
         .setHeader(false)
-        .importFile(new File("test/data/sample-input.tab"));
+        .importFile(new File("src/test/data/sample-input.tab"));
 
       expectedRows =
         createExpectedTable(
@@ -158,7 +158,7 @@ public class ImportTest extends TestCase
       tableName = new ImportUtil.Builder(db, "test3")
         .setDelimiter("\\t")
         .setFilter(oddFilter)
-        .importFile(new File("test/data/sample-input.tab"));
+        .importFile(new File("src/test/data/sample-input.tab"));
       t = db.getTable(tableName);
 
       colNames = new ArrayList<String>();
@@ -194,7 +194,7 @@ public class ImportTest extends TestCase
       Database db = create(fileFormat);
       String tableName = new ImportUtil.Builder(db, "test")
         .setDelimiter("\\t")
-        .importFile(new File("test/data/sample-input-only-headers.tab"));
+        .importFile(new File("src/test/data/sample-input-only-headers.tab"));
 
       Table t = db.getTable(tableName);
 

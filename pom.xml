@@ -101,18 +101,6 @@
   </scm>
   <build>
     <defaultGoal>install</defaultGoal>
-    <sourceDirectory>src/java</sourceDirectory>
-    <testSourceDirectory>test/src/java</testSourceDirectory>
-    <resources>
-      <resource>
-        <directory>src/resources</directory>
-      </resource>
-    </resources>
-    <testResources>
-      <testResource>
-        <directory>test/src/resources</directory>
-      </testResource>
-    </testResources>
     <pluginManagement>
       <plugins>
         <plugin>

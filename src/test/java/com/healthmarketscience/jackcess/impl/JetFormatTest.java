@@ -22,7 +22,7 @@ import junit.framework.TestCase;
  */
 public class JetFormatTest extends TestCase {
 
-  public static final File DIR_TEST_DATA = new File("test/data");
+  public static final File DIR_TEST_DATA = new File("src/test/data");
 
   /**
    * Defines known valid db test file base names.

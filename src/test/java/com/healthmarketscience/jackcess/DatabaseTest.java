@@ -517,7 +517,7 @@ public class DatabaseTest extends TestCase {
       assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
       byte[] foundBinaryData = (byte[])row.get("RESERVED_BINARY_DATA");
       byte[] expectedBinaryData =
-        toByteArray(new File("test/data/test2BinData.dat"));
+        toByteArray(new File("src/test/data/test2BinData.dat"));
       assertTrue(Arrays.equals(expectedBinaryData, foundBinaryData));
 
       db.close();
@@ -538,7 +538,7 @@ public class DatabaseTest extends TestCase {
 
       String testStr = "This is a test";
       String longMemo = createString(2030);
-      byte[] oleValue = toByteArray(new File("test/data/test2BinData.dat"));
+      byte[] oleValue = toByteArray(new File("src/test/data/test2BinData.dat"));
 
 
       table.addRow(testStr, testStr, null);
@@ -1358,7 +1358,7 @@ public class DatabaseTest extends TestCase {
       assertTrue(db.getLinkedDatabases().isEmpty());
 
       final String linkeeDbName = "Z:\\jackcess_test\\linkeeTest.accdb";
-      final File linkeeFile = new File("test/data/linkeeTest.accdb");
+      final File linkeeFile = new File("src/test/data/linkeeTest.accdb");
       db.setLinkResolver(new LinkResolver() {
         public Database resolveLinkedDatabase(Database linkerdb, String dbName)
           throws IOException {

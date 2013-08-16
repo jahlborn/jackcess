@@ -45,7 +45,7 @@ public class MemFileChannelTest extends TestCase
 
   public void testReadOnlyChannel() throws Exception
   {
-    File testFile = new File("test/data/V1997/compIndexTestV1997.mdb");
+    File testFile = new File("src/test/data/V1997/compIndexTestV1997.mdb");
     MemFileChannel ch = MemFileChannel.newChannel(testFile, "r");
     assertEquals(testFile.length(), ch.size());
     assertEquals(0L, ch.position());
@@ -92,7 +92,7 @@ public class MemFileChannelTest extends TestCase
 
     assertFalse(ch.isOpen());
 
-    File testFile = new File("test/data/V1997/compIndexTestV1997.mdb");
+    File testFile = new File("src/test/data/V1997/compIndexTestV1997.mdb");
     ch = MemFileChannel.newChannel(testFile, "r");
     assertEquals(testFile.length(), ch.size());
     assertEquals(0L, ch.position());
