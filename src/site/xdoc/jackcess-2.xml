@@ -126,6 +126,18 @@
             interface extends <code>Map&lt;String,Object&gt;</code>, old code
             can remain largely untouched.</li>
           </ul>
+          <li><b><code>Attachment.getFileData</code> now returns the "real"
+              data.</b></li>
+          <ul>
+            <li>Previously, this method returned the internal representation
+            of the attachment data, which included a wrapper and the data in a
+            possibly compressed form.  Now that the internal format has been
+            deciphered, this method has been changed to return the actual
+            attachment content (which is most likely what people would desire
+            from that method in the first place).  The internal representation
+            can be retrieved from <code>Attachment.getEncodedFileData</code>
+            if necessary.</li>
+          </ul>
         </ul>
 
         <h4>Working with Jackcess Encrypt</h4>
