@@ -63,6 +63,8 @@ Refactor goals:
 * update index/cookbook for new api
 * add basic walk-through in class javadocs to guide users to correct classes
   and basic getting started stuff.
+- implement "lazy" usage maps (load on first usage)?
+- implement some OLE support
 
 * public api final cleanup:
   * Database
