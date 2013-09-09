@@ -37,7 +37,7 @@ public class CustomToStringStyle extends StandardToStringStyle
 {
   private static final long serialVersionUID = 0L;
 
-  private static final String FIELD_SEP = SystemUtils.LINE_SEPARATOR + "  ";
+  private static final String ML_FIELD_SEP = SystemUtils.LINE_SEPARATOR + "  ";
   private static final String IMPL_SUFFIX = "Impl";
   private static final int MAX_BYTE_DETAIL_LEN = 20;
   
@@ -45,9 +45,10 @@ public class CustomToStringStyle extends StandardToStringStyle
     private static final long serialVersionUID = 0L;
     {
       setContentStart("[");
-      setFieldSeparator(FIELD_SEP);
+      setFieldSeparator(ML_FIELD_SEP);
       setFieldSeparatorAtStart(true);
       setFieldNameValueSeparator(": ");
+      setArraySeparator("," + ML_FIELD_SEP);
       setContentEnd(SystemUtils.LINE_SEPARATOR + "]");
       setUseShortClassName(true);
     }
@@ -121,8 +122,7 @@ public class CustomToStringStyle extends StandardToStringStyle
       appendInternal(sb, fieldName, iter.next(), true);
     }
     while(iter.hasNext()) {
-      sb.append(",");
-      appendFieldSeparator(sb);
+      sb.append(getArraySeparator());
       appendInternal(sb, fieldName, iter.next(), true);
     }
 
@@ -154,19 +154,18 @@ public class CustomToStringStyle extends StandardToStringStyle
       appendInternal(sb, fieldName, e.getValue(), true);
     }
     while(iter.hasNext()) {
-      sb.append(",");
-      appendFieldSeparator(sb);
+      sb.append(getArraySeparator());
       Map.Entry<?,?> e = iter.next();
       sb.append(e.getKey()).append("=");
       appendInternal(sb, fieldName, e.getValue(), true);
-    }
-    if(isFieldSeparatorAtStart()) {
-      appendFieldSeparator(sb);
     }
 
     // indent entire map contents another level
     buffer.append(indent(sb));
 
+    if(isFieldSeparatorAtStart()) {
+      appendFieldSeparator(buffer);
+    }
     buffer.append("}");
   }
 
@@ -179,16 +178,15 @@ public class CustomToStringStyle extends StandardToStringStyle
   private static void appendDetail(StringBuffer buffer, ByteBuffer bb) {
     int len = bb.remaining();
     buffer.append("(").append(len).append(") ");
+    buffer.append(ByteUtil.toHexString(bb, bb.position(), 
+                                       Math.min(len, MAX_BYTE_DETAIL_LEN)));
     if(len > MAX_BYTE_DETAIL_LEN) {
-      buffer.append(ByteUtil.toHexString(bb, len, MAX_BYTE_DETAIL_LEN))
-        .append(" ...");
-    } else {
-      buffer.append(ByteUtil.toHexString(bb, len));
+      buffer.append(" ...");
     }      
   }
 
   private static String indent(Object obj) {
     return ((obj != null) ? obj.toString().replaceAll(
-                SystemUtils.LINE_SEPARATOR, FIELD_SEP) : null);
+                SystemUtils.LINE_SEPARATOR, ML_FIELD_SEP) : null);
   }
 }

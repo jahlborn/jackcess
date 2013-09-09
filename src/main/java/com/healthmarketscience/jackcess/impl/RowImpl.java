@@ -60,6 +60,8 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   @Override
   public String toString() {
-    return "Row[" + _id + "] " + super.toString();
+    return CustomToStringStyle.valueBuilder("Row[" + _id + "]")
+      .append(null, this)
+      .toString();
   }
 }
