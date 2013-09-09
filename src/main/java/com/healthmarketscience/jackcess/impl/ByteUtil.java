@@ -451,6 +451,7 @@ public final class ByteUtil {
     StringBuilder rtn = new StringBuilder();
     int position = buffer.position();
     buffer.position(offset);
+    size = Math.min(size, buffer.remaining());
 
     for (int i = 0; i < size; i++) {
       byte b = buffer.get();

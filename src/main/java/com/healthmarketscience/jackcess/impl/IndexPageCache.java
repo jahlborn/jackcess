@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.RandomAccess;
 
 import static com.healthmarketscience.jackcess.impl.IndexData.*;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 /**
  * Manager of the index pages for a IndexData.
@@ -1108,24 +1109,25 @@ public class IndexPageCache
   }
   
   /**
-   * Dumps the given index page to a StringBuilder
+   * Collects all the cache pages in the cache.
    *
-   * @param rtn the StringBuilder to update
-   * @param dpMain the index page to dump
+   * @param paages the List to update
+   * @param dpMain the index page to collect
    */
-  private void dumpPage(StringBuilder rtn, DataPageMain dpMain) {
+  private List<Object> collectPages(List<Object> pages, DataPageMain dpMain) {
     try {
       CacheDataPage cacheDataPage = new CacheDataPage(dpMain);
-      rtn.append(cacheDataPage).append("\n");
+      pages.add(cacheDataPage);
       if(!dpMain._leaf) {
         for(Entry e : cacheDataPage._extra._entryView) {
           DataPageMain childMain = dpMain.getChildPage(e);
-          dumpPage(rtn, childMain);
+          collectPages(pages, childMain);
         }
       }
     } catch(IOException e) {
-      rtn.append("Page[" + dpMain._pageNumber + "]: " + e);
+      pages.add("DataPage[" + dpMain._pageNumber + "]: " + e);
     }
+    return pages;
   }
 
   /**
@@ -1148,13 +1150,13 @@ public class IndexPageCache
   
   @Override
   public String toString() {
+    ToStringBuilder sb = CustomToStringStyle.builder(this);
     if(_rootPage == null) {
-      return "Cache: (uninitialized)";
+      sb.append("pages", "(uninitialized)");
+    } else {    
+      sb.append("pages", collectPages(new ArrayList<Object>(), _rootPage));
     }
-    
-    StringBuilder rtn = new StringBuilder("Cache: \n");
-    dumpPage(rtn, _rootPage);
-    return rtn.toString();
+    return sb.toString();
   }
 
   /**
@@ -1320,8 +1322,10 @@ public class IndexPageCache
     
     @Override
     public String toString() {
-      return "DPExtra: " + _entryView;
-    }    
+      return CustomToStringStyle.builder("DPExtra")
+        .append(null, _entryView)
+        .toString();
+    }
   }
 
   /**

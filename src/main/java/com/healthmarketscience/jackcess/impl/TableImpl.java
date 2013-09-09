@@ -2085,24 +2085,18 @@ public class TableImpl implements Table
   
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("Type: " + _tableType + 
-               ((_tableType == TYPE_USER) ? " (USER)" : " (SYSTEM)"));
-    rtn.append("\nName: " + _name);
-    rtn.append("\nRow count: " + _rowCount);
-    rtn.append("\nColumn count: " + _columns.size());
-    rtn.append("\nIndex (data) count: " + _indexCount);
-    rtn.append("\nLogical Index count: " + _logicalIndexCount);
-    rtn.append("\nColumns:\n");
-    for(ColumnImpl col : _columns) {
-      rtn.append(col);
-    }
-    rtn.append("\nIndexes:\n");
-    for(Index index : _indexes) {
-      rtn.append(index);
-    }
-    rtn.append("\nOwned pages: " + _ownedPages + "\n");
-    return rtn.toString();
+    return CustomToStringStyle.builder(this)
+      .append("type", (_tableType + 
+                       ((_tableType == TYPE_USER) ? " (USER)" : " (SYSTEM)")))
+      .append("name", _name)
+      .append("rowCount", _rowCount)
+      .append("columnCount", _columns.size())
+      .append("indexCount(data)", _indexCount)
+      .append("logicalIndexCount", _logicalIndexCount)
+      .append("columns", _columns)
+      .append("indexes", _indexes)
+      .append("ownedPages", _ownedPages)
+      .toString();
   }
   
   /**
@@ -2553,10 +2547,11 @@ public class TableImpl implements Table
     }  
 
     @Override
-    public String toString()
-    {
-      return "RowState: headerRowId = " + _headerRowId + ", finalRowId = " +
-        _finalRowId;
+    public String toString() {
+      return CustomToStringStyle.valueBuilder(this)
+        .append("headerRowId", _headerRowId)
+        .append("finalRowId", _finalRowId)
+        .toString();
     }
   }
   

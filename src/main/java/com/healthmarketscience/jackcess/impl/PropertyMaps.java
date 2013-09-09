@@ -111,14 +111,9 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    for(Iterator<PropertyMapImpl> iter = iterator(); iter.hasNext(); ) {
-      sb.append(iter.next());
-      if(iter.hasNext()) {
-        sb.append("\n");
-      }
-    }
-    return sb.toString();
+    return CustomToStringStyle.builder(this)
+      .append(null, _maps.values())
+      .toString();
   }
 
   /**

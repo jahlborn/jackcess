@@ -138,15 +138,14 @@ public class RelationshipImpl implements Relationship
 
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: " + _name);
-    rtn.append("\n\tFromTable: " + _fromTable.getName());
-    rtn.append("\n\tFromColumns: " + _fromColumns);
-    rtn.append("\n\tToTable: " + _toTable.getName());
-    rtn.append("\n\tToColumns: " + _toColumns);
-    rtn.append("\n\tFlags: " + Integer.toHexString(_flags));
-    rtn.append("\n\n");
-    return rtn.toString();
+    return CustomToStringStyle.builder(this)
+      .append("name", _name)
+      .append("fromTable", _fromTable.getName())
+      .append("fromColumns", _fromColumns)
+      .append("toTable", _toTable.getName())
+      .append("toColumns", _toColumns)
+      .append("flags", Integer.toHexString(_flags))
+      .toString();
   }
   
 }

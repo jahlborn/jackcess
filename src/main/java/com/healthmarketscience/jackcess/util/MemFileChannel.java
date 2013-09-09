@@ -286,7 +286,7 @@ public class MemFileChannel extends FileChannel
     int chunkIndex = getChunkIndex(position);
     int chunkOffset = getChunkOffset(position);
 
-    long numBytes = 0;
+    long numBytes = 0L;
     while(count > 0L) {
 
       int chunkBytes = (int)Math.min(count, CHUNK_SIZE - chunkOffset);

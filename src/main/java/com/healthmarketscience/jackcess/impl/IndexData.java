@@ -42,6 +42,7 @@ import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -850,23 +851,23 @@ public class IndexData {
 
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("\n\tData number: ").append(_number);
-    rtn.append("\n\tPage number: ").append(_rootPageNumber);
-    rtn.append("\n\tIs Backing Primary Key: ").append(isBackingPrimaryKey());
-    rtn.append("\n\tIs Unique: ").append(isUnique());
-    rtn.append("\n\tIgnore Nulls: ").append(shouldIgnoreNulls());
-    rtn.append("\n\tColumns: ").append(_columns);
-    rtn.append("\n\tInitialized: ").append(_initialized);
+    ToStringBuilder sb = CustomToStringStyle.builder(this)
+      .append("dataNumber", _number)
+      .append("pageNumber", _rootPageNumber)
+      .append("isBackingPrimaryKey", isBackingPrimaryKey())
+      .append("isUnique", isUnique())
+      .append("ignoreNulls", shouldIgnoreNulls())
+      .append("columns", _columns)
+      .append("initialized", _initialized);
     if(_initialized) {
       try {
-        rtn.append("\n\tEntryCount: ").append(getEntryCount());
+        sb.append("entryCount", getEntryCount());
       } catch(IOException e) {
         throw new RuntimeException(e);
       }
     }
-    rtn.append("\n").append(_pageCache.toString());
-    return rtn.toString();
+    sb.append("pageCache", _pageCache);
+    return sb.toString();
   }
   
   /**
@@ -1328,7 +1329,10 @@ public class IndexData {
     
     @Override
     public String toString() {
-      return "ColumnDescriptor " + getColumn() + "\nflags: " + getFlags();
+      return CustomToStringStyle.builder(this)
+        .append("column", getColumn())
+        .append("flags", getFlags())
+        .toString();
     }
   }
 
@@ -1770,15 +1774,20 @@ public class IndexData {
       buffer.put((byte)getRowId().getRowNumber());
     }
 
-    protected final String entryBytesToString() {
-      return (isValid() ? ", Bytes = " + ByteUtil.toHexString(
-                  ByteBuffer.wrap(_entryBytes), _entryBytes.length) :
-              "");
+    protected final ToStringBuilder entryBytesToStringBuilder(
+        ToStringBuilder sb) {
+      if(isValid()) {
+        sb.append("bytes", _entryBytes);
+      }
+      return sb;
     }
     
     @Override
     public String toString() {
-      return "RowId = " + _rowId + entryBytesToString() + "\n";
+      return entryBytesToStringBuilder(
+          CustomToStringStyle.valueBuilder(this)
+          .append("rowId", _rowId))
+        .toString();
     }
 
     @Override
@@ -1904,10 +1913,12 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return ("Node RowId = " + getRowId() +
-              ", SubPage = " + _subPageNumber + entryBytesToString() + "\n");
-    }
-        
+      return entryBytesToStringBuilder(
+          CustomToStringStyle.valueBuilder(this)
+          .append("rowId", getRowId())
+          .append("subPage", _subPageNumber))
+        .toString();
+    }        
   }
 
   /**
@@ -2140,8 +2151,10 @@ public class IndexData {
         
     @Override
     public String toString() {
-      return getClass().getSimpleName() + " CurPosition " + _curPos +
-        ", PrevPosition " + _prevPos;
+      return CustomToStringStyle.valueBuilder(this)
+        .append("curPosition", _curPos)
+        .append("prevPosition", _prevPos)
+        .toString();
     }
     
     /**
@@ -2300,8 +2313,12 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return "Page = " + _dataPage.getPageNumber() + ", Idx = " + _idx +
-        ", Entry = " + _entry + ", Between = " + _between;
+      return CustomToStringStyle.valueBuilder(this)
+        .append("page", _dataPage.getPageNumber())
+        .append("idx", _idx)
+        .append("entry", _entry)
+        .append("between", _between)
+        .toString();
     }
   }
 
@@ -2366,13 +2383,20 @@ public class IndexData {
     @Override
     public final String toString() {
       List<Entry> entries = getEntries();
-      return (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
+
+      String objName = 
+        (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
-        getChildTailPageNumber() + "), " +
-        ((isLeaf() && !entries.isEmpty()) ?
-         ("[" + entries.get(0) + ", " +
-          entries.get(entries.size() - 1) + "]") :
-         entries);
+        getChildTailPageNumber() + ")";
+      ToStringBuilder sb = CustomToStringStyle.valueBuilder(objName);
+
+      if((isLeaf() && !entries.isEmpty())) {
+        sb.append("entryRange", "[" + entries.get(0) + ", " +
+                  entries.get(entries.size() - 1) + "]");
+      } else {
+        sb.append("entries", entries);
+      }
+      return sb.toString();
     }
   }
 

@@ -65,6 +65,7 @@ import com.healthmarketscience.jackcess.impl.scsu.Compress;
 import com.healthmarketscience.jackcess.impl.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.impl.scsu.Expand;
 import com.healthmarketscience.jackcess.impl.scsu.IllegalInputException;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -1524,38 +1525,37 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: (" + _table.getName() + ") " + _name);
+    ToStringBuilder sb = CustomToStringStyle.builder(this)
+      .append("name", "(" + _table.getName() + ") " + _name);
     byte typeValue = _type.getValue();
     if(_type.isUnsupported()) {
       typeValue = getUnknownDataType();
     }
-    rtn.append("\n\tType: 0x" + Integer.toHexString(typeValue) +
-               " (" + _type + ")");
-    rtn.append("\n\tNumber: " + _columnNumber);
-    rtn.append("\n\tLength: " + _columnLength);
-    rtn.append("\n\tVariable length: " + _variableLength);
+    sb.append("type", "0x" + Integer.toHexString(typeValue) +
+              " (" + _type + ")")
+      .append("number", _columnNumber)
+      .append("length", _columnLength)
+      .append("variableLength", _variableLength);
     if(_type.isTextual()) {
-      rtn.append("\n\tCompressed Unicode: " + _textInfo._compressedUnicode);
-      rtn.append("\n\tText Sort order: " + _textInfo._sortOrder);
+      sb.append("compressedUnicode", _textInfo._compressedUnicode)
+        .append("textSortOrder", _textInfo._sortOrder);
       if(_textInfo._codePage > 0) {
-        rtn.append("\n\tText Code Page: " + _textInfo._codePage);
+        sb.append("textCodePage", _textInfo._codePage);
       }
       if(isAppendOnly()) {
-        rtn.append("\n\tAppend only: " + isAppendOnly());
+        sb.append("appendOnly", isAppendOnly());
       } 
       if(isHyperlink()) {
-        rtn.append("\n\tHyperlink: " + isHyperlink());
+        sb.append("hyperlink", isHyperlink());
       } 
     }      
     if(_autoNumber) {
-      rtn.append("\n\tLast AutoNumber: " + _autoNumberGenerator.getLast());
+      sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
     if(_complexInfo != null) {
-      rtn.append("\n\tComplexInfo: " + _complexInfo);
+      sb.append("complexInfo", _complexInfo);
     }
-    rtn.append("\n\n");
-    return rtn.toString();
+    return sb.toString();
   }
   
   /**
@@ -1943,7 +1943,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     @Override
     public String toString() {
-      return "RawData: " + ByteUtil.toHexString(getBytes());
+      return CustomToStringStyle.valueBuilder(this)
+        .append(null, getBytes())
+        .toString();
     }
 
     private Object writeReplace() throws ObjectStreamException {
@@ -2116,7 +2118,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     @Override
     public String toString() {
-      return _value + "(" + _version + ")";
+      return CustomToStringStyle.valueBuilder(this)
+        .append(null, _value + "(" + _version + ")")
+        .toString();
     }
   }
 

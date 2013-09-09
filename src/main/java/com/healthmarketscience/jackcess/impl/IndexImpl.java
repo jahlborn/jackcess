@@ -36,7 +36,7 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.RowId;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -348,18 +348,16 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("\tName: (").append(getTable().getName()).append(") ")
-      .append(_name);
-    rtn.append("\n\tNumber: ").append(_indexNumber);
-    rtn.append("\n\tIs Primary Key: ").append(isPrimaryKey());
-    rtn.append("\n\tIs Foreign Key: ").append(isForeignKey());
+    ToStringBuilder sb = CustomToStringStyle.builder(this)
+      .append("name", "(" + getTable().getName() + ") " + _name)
+      .append("number", _indexNumber)
+      .append("isPrimaryKey", isPrimaryKey())
+      .append("isForeignKey", isForeignKey());
     if(_reference != null) {
-      rtn.append("\n\tForeignKeyReference: ").append(_reference);
+      sb.append("foreignKeyReference", _reference);
     }
-    rtn.append(_data.toString());
-    rtn.append("\n\n");
-    return rtn.toString();
+    sb.append("data", _data);
+    return sb.toString();
   }
   
   public int compareTo(IndexImpl other) {
@@ -451,12 +449,12 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
     @Override
     public String toString() {
-      return new StringBuilder()
-        .append("\n\t\tOther Index Number: ").append(_otherIndexNumber)
-        .append("\n\t\tOther Table Page Num: ").append(_otherTablePageNumber)
-        .append("\n\t\tIs Primary Table: ").append(isPrimaryTable())
-        .append("\n\t\tIs Cascade Updates: ").append(isCascadeUpdates())
-        .append("\n\t\tIs Cascade Deletes: ").append(isCascadeDeletes())
+      return CustomToStringStyle.builder(this)
+        .append("otherIndexNumber", _otherIndexNumber)
+        .append("otherTablePageNum", _otherTablePageNumber)
+        .append("isPrimaryTable", isPrimaryTable())
+        .append("isCascadeUpdates", isCascadeUpdates())
+        .append("isCascadeDeletes", isCascadeDeletes())
         .toString();
     }
   }

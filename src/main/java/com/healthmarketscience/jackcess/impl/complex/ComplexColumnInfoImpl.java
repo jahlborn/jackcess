@@ -40,6 +40,7 @@ import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 
 /**
@@ -302,10 +303,10 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   
   @Override
   public String toString() {
-    StringBuilder rtn = new StringBuilder();
-    rtn.append("\n\t\tComplexType: " + getType());
-    rtn.append("\n\t\tComplexTypeId: " + _complexTypeId);
-    return rtn.toString();
+    return CustomToStringStyle.valueBuilder(this)
+      .append("complexType", getType())
+      .append("complexTypeId", _complexTypeId)
+      .toString();
   }
 
   protected static void diffFlatColumns(Table typeObjTable, 

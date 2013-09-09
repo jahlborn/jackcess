@@ -29,11 +29,12 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.RowId;
 
 /**
  * Describes which database pages a particular table uses
@@ -413,10 +414,8 @@ public class UsageMap
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder(
-        "(" + _handler.getClass().getSimpleName() +
-        ") page numbers (range " + _startPage + " " + _endPage + "): [");
 
+    List<String> ranges = new ArrayList<String>();
     PageCursor pCursor = cursor();
     int curRangeStart = Integer.MIN_VALUE;
     int prevPage = Integer.MIN_VALUE;
@@ -428,28 +427,31 @@ public class UsageMap
 
       if(nextPage != (prevPage + 1)) {
         if(prevPage >= 0) {
-          rangeToString(builder, curRangeStart, prevPage);
+          rangeToString(ranges, curRangeStart, prevPage);
         }
         curRangeStart = nextPage;
       }
       prevPage = nextPage;
     }
     if(prevPage >= 0) {
-      rangeToString(builder, curRangeStart, prevPage);
+      rangeToString(ranges, curRangeStart, prevPage);
     }
 
-    builder.append("]");
-    return builder.toString();
+    return CustomToStringStyle.valueBuilder(
+        _handler.getClass().getSimpleName())
+      .append("range", "(" + _startPage + "-" + _endPage + ")")
+      .append("pageNumbers", ranges)
+      .toString();
   }
 
-  private static void rangeToString(StringBuilder builder, int rangeStart,
+  private static void rangeToString(List<String> ranges, int rangeStart,
                                     int rangeEnd)
   {
-    builder.append(rangeStart);
     if(rangeEnd > rangeStart) {
-      builder.append("-").append(rangeEnd);
+      ranges.add(rangeStart + "-" + rangeEnd);
+    } else {
+      ranges.add(String.valueOf(rangeStart));
     }
-    builder.append(", ");
   }
   
   private abstract class Handler
