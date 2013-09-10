@@ -220,13 +220,7 @@ public class ExportUtil {
       exportWriter(db, tableName, out, header, delim, quote, filter);
       out.close();
     } finally {
-      if (out != null) {
-        try {
-          out.close();
-        } catch (Exception ex) {
-          LOG.warn("Could not close file " + f.getAbsolutePath(), ex);
-        }
-      }
+      ByteUtil.closeQuietly(out);
     }
   }
 

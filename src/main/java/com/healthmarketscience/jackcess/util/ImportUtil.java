@@ -46,6 +46,7 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -315,13 +316,7 @@ public class ImportUtil
       return importReader(in, db, name, delim, quote, filter, 
                           useExistingTable, header);
     } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException ex) {
-          LOG.warn("Could not close file " + f.getAbsolutePath(), ex);
-        }
-      }
+      ByteUtil.closeQuietly(in);
     }
   }
 

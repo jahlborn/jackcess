@@ -27,6 +27,7 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -605,6 +606,17 @@ public final class ByteUtil {
     int srcLen = arr.length - offset;
     System.arraycopy(arr, offset, newArr, 0, Math.min(srcLen, newLength));
     return newArr;
+  }
+
+  /**
+   * Closes the given Closeable if non-null, swallows any IOExceptions.
+   */
+  public static void closeQuietly(Closeable c) {
+    if(c != null) {
+      try {
+        c.close();
+      } catch(IOException ignored) {}
+    }
   }
 
   /**

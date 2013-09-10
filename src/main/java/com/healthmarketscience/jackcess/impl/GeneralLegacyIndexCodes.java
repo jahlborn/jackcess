@@ -347,13 +347,7 @@ public class GeneralLegacyIndexCodes {
       throw new RuntimeException("failed loading index codes file " +
                                  codesFilePath, e);
     } finally {
-      if (reader != null) {
-        try {
-          reader.close();
-        } catch (IOException ex) {
-          // ignored
-        }
-      }
+      ByteUtil.closeQuietly(reader);
     }
 
     return values;

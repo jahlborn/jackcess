@@ -391,11 +391,7 @@ public class DatabaseImpl implements Database
     } finally {
       if(!success && closeChannel) {
         // something blew up, shutdown the channel (quietly)
-        try {
-          channel.close();
-        } catch(Exception ignored) {
-          // we don't care
-        }
+        ByteUtil.closeQuietly(channel);
       }
     }
   }
@@ -449,11 +445,7 @@ public class DatabaseImpl implements Database
     } finally {
       if(!success && closeChannel) {
         // something blew up, shutdown the channel (quietly)
-        try {
-          channel.close();
-        } catch(Exception ignored) {
-          // we don't care
-        }
+        ByteUtil.closeQuietly(channel);
       }
     }
   }

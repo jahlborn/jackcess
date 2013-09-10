@@ -404,13 +404,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         return tmpBytes;
 
       } finally {
-        if(contentStream != null) {
-          try {
-            contentStream.close();
-          } catch(IOException e) {
-            // ignored
-          }
-        }
+        ByteUtil.closeQuietly(contentStream);
       }
     }
 
@@ -465,15 +459,9 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         return dataStream.toByteArray();
 
       } finally {
-        if(contentStream != null) {
-          try {
-            contentStream.close();
-          } catch(IOException e) {
-            // ignored
-          }
-        }
+        ByteUtil.closeQuietly(contentStream);
         if(deflater != null) {
-            deflater.end();
+          deflater.end();
         }
       }
     }
