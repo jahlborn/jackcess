@@ -35,6 +35,7 @@ import java.nio.channels.WritableByteChannel;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
@@ -116,13 +117,7 @@ public class MemFileChannel extends FileChannel
                             file, DatabaseImpl.RO_CHANNEL_MODE).getChannel(),
                         mode);
     } finally {
-      if(in != null) {
-        try {
-          in.close();
-        } catch(IOException e) {
-          // ignore close failure
-        }
-      }
+      ByteUtil.closeQuietly(in);
     }
   }
 
@@ -183,15 +178,20 @@ public class MemFileChannel extends FileChannel
   @Override
   public int read(ByteBuffer dst, long position) throws IOException {
     if(position >= _size) {
-      return  -1;
+      return -1;
     }
 
-    // we assume reads will always be within a single chunk (due to how mdb
-    // files work)
-    byte[] chunk = _data[getChunkIndex(position)];
-    int chunkOffset = getChunkOffset(position);
-    int numBytes = dst.remaining();
-    dst.put(chunk, chunkOffset, numBytes);
+    int numBytes = (int)Math.min(dst.remaining(), _size - position);
+    int rem = numBytes;
+
+    while(rem > 0) {
+      byte[] chunk = _data[getChunkIndex(position)];
+      int chunkOffset = getChunkOffset(position);
+      int bytesRead = Math.min(rem, CHUNK_SIZE - chunkOffset);
+      dst.put(chunk, chunkOffset, bytesRead);
+      rem -= bytesRead;
+      position += bytesRead;
+    }
 
     return numBytes;
   }
@@ -209,11 +209,16 @@ public class MemFileChannel extends FileChannel
     long newSize = position + numBytes;
     ensureCapacity(newSize);
 
-    // we assume writes will always be within a single chunk (due to how mdb
-    // files work)
-    byte[] chunk = _data[getChunkIndex(position)];
-    int chunkOffset = getChunkOffset(position);
-    src.get(chunk, chunkOffset, numBytes);
+    int rem = numBytes;
+    while(rem > 0) {
+      byte[] chunk = _data[getChunkIndex(position)];
+      int chunkOffset = getChunkOffset(position);
+      int bytesWritten = Math.min(rem, CHUNK_SIZE - chunkOffset);
+      src.get(chunk, chunkOffset, bytesWritten);
+      rem -= bytesWritten;
+      position += bytesWritten;
+    }
+
     if(newSize > _size) {
       _size = newSize;
     }
@@ -421,14 +426,25 @@ public class MemFileChannel extends FileChannel
   public long write(ByteBuffer[] srcs, int offset, int length)
     throws IOException
   {
-    throw new UnsupportedOperationException();
+    long numBytes = 0L;
+    for(int i = offset; i < offset + length; ++i) {
+      numBytes += write(srcs[i]);
+    }
+    return numBytes;
   }
 
   @Override
   public long read(ByteBuffer[] dsts, int offset, int length)
     throws IOException
-  {
-    throw new UnsupportedOperationException();
+  {    
+    long numBytes = 0L;
+    for(int i = offset; i < offset + length; ++i) {
+      if(_position >= _size) {
+        return ((numBytes > 0L) ? numBytes : -1L);
+      }
+      numBytes += read(dsts[i]);
+    }
+    return numBytes;
   }
 
   @Override

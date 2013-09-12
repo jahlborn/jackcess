@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.1" date="TBD">
+      <action dev="jahlborn" type="add">
+        Add initial support for creating/parsing ole content.
+      </action>
+    </release>
     <release version="2.0.0" date="2013-08-26">
       <action dev="jahlborn" type="update">
         Brand new API!  This release is not backwards compatible with 1.x

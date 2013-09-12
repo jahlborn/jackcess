@@ -1125,7 +1125,7 @@ public class IndexPageCache
         }
       }
     } catch(IOException e) {
-      pages.add("DataPage[" + dpMain._pageNumber + "]: " + e);
+      pages.add("DataPage[" + dpMain._pageNumber + "]: <" + e + ">");
     }
     return pages;
   }

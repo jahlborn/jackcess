@@ -1709,6 +1709,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return null;
     } else if(value instanceof byte[]) {
       return (byte[])value;
+    } else if(value instanceof OleUtil.OleBlobImpl) {
+      return ((OleUtil.OleBlobImpl)value).getBytes();
     } else if(value instanceof Blob) {
       try {
         Blob b = (Blob)value;
