@@ -925,7 +925,7 @@ public class DatabaseTest extends TestCase {
       Table t = db.getTable("jobDB1");
 
       assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
-                 .startsWith("(InlineHandler)"));
+                 .startsWith("InlineHandler"));
 
       String lval = createNonAsciiString(255); // "--255 chars long text--";
 
@@ -940,7 +940,7 @@ public class DatabaseTest extends TestCase {
       assertEquals(1000, ids.size());
 
       assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
-                 .startsWith("(ReferenceHandler)"));
+                 .startsWith("ReferenceHandler"));
 
       db.close();
     }
