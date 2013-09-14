@@ -1404,10 +1404,20 @@ public class Table
         break;
       }
       
-      UsageMap colOwnedPages = UsageMap.read(
-          getDatabase(), tableBuffer, false);
-      UsageMap colFreeSpacePages = UsageMap.read(
-          getDatabase(), tableBuffer, false);
+      int pos = tableBuffer.position();
+      UsageMap colOwnedPages = null;
+      UsageMap colFreeSpacePages = null;
+      try {
+        colOwnedPages = UsageMap.read(getDatabase(), tableBuffer, false);
+        colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
+      } catch(IllegalStateException e) {
+        // ignore invalid usage map info
+        colOwnedPages = null;
+        colFreeSpacePages = null;
+        tableBuffer.position(pos + 8);
+        LOG.warn("Table " + _name + " invalid column " + umapColNum +
+                 " usage map definition: " + e);
+      }
     
       for(Column col : _columns) {
         if(col.getColumnNumber() == umapColNum) {

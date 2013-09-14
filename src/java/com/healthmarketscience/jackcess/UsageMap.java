@@ -136,6 +136,11 @@ public class UsageMap
                               int rowNum, boolean assumeOutOfRangeBitsOn)
     throws IOException
   {
+    if(pageNum <= 0) {
+      // usage maps will never appear on page 0 (or less)
+      throw new IllegalStateException("Invalid usage map page number " + pageNum);
+    }
+
     JetFormat format = database.getFormat();
     PageChannel pageChannel = database.getPageChannel();
     ByteBuffer tableBuffer = pageChannel.createPageBuffer();
