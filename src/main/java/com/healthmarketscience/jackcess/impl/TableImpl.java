@@ -48,7 +48,6 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
@@ -270,11 +269,21 @@ public class TableImpl implements Table
         break;
       }
       
-      UsageMap colOwnedPages = UsageMap.read(
-          getDatabase(), tableBuffer, false);
-      UsageMap colFreeSpacePages = UsageMap.read(
-          getDatabase(), tableBuffer, false);
-    
+      int pos = tableBuffer.position();
+      UsageMap colOwnedPages = null;
+      UsageMap colFreeSpacePages = null;
+      try {
+        colOwnedPages = UsageMap.read(getDatabase(), tableBuffer, false);
+        colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
+      } catch(IllegalStateException e) {
+        // ignore invalid usage map info
+        colOwnedPages = null;
+        colFreeSpacePages = null;
+        tableBuffer.position(pos + 8);
+        LOG.warn("Table " + _name + " invalid column " + umapColNum + 
+                 " usage map definition: " + e);
+      }
+      
       for(ColumnImpl col : _columns) {
         if(col.getColumnNumber() == umapColNum) {
           col.setUsageMaps(colOwnedPages, colFreeSpacePages);
