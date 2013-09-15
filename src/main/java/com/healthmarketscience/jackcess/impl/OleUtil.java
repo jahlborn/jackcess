@@ -30,8 +30,10 @@ import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.text.Normalizer;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.util.OleBlob;
@@ -77,6 +79,10 @@ public class OleUtil
     0x01, 0x05, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x01, (byte)0xAD, 0x05, (byte)0xFE
   };
+
+  // regex pattern which matches all the crazy extra stuff in unicode
+  private static final Pattern UNICODE_ACCENT_PATTERN = 
+    Pattern.compile("[\\p{InCombiningDiacriticalMarks}\\p{IsLm}\\p{IsSk}]+");
 
   private static final CompoundPackageFactory COMPOUND_FACTORY;
 
@@ -433,6 +439,17 @@ public class OleUtil
   }
 
   private static byte[] getZeroTermStrBytes(String str) {
+    // since we are converting to ascii, try to make "nicer" versions of crazy
+    // chars (e.g. convert "u with an umlaut" to just "u").  this may not
+    // ultimately help anything but it is what ms access does.
+
+    // decompose complex chars into combos of char and accent
+    str = Normalizer.normalize(str, Normalizer.Form.NFD);
+    // strip the accents
+    str = UNICODE_ACCENT_PATTERN.matcher(str).replaceAll("");
+    // (re)normalize what is left
+    str = Normalizer.normalize(str, Normalizer.Form.NFC);
+
     return (str + '\0').getBytes(OLE_CHARSET);
   }
 
