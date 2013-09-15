@@ -55,6 +55,12 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
   private static final String ENTRY_SEPARATOR = "/";
   private static final String CONTENTS_ENTRY = "CONTENTS";
 
+  static {
+    // force a poi class to be loaded to ensure that when this class is
+    // loaded, we know that the poi classes are available
+    NPOIFSFileSystem.class.getName();
+  }
+
   public CompoundOleUtil() 
   {
   }

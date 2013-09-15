@@ -92,7 +92,7 @@ public class OleUtil
       compoundFactory = (CompoundPackageFactory)
         Class.forName("com.healthmarketscience.jackcess.impl.CompoundOleUtil")
         .newInstance();
-    } catch(Exception e) {
+    } catch(Throwable t) {
       // must not have poi, will load compound ole data as "other"
     }
     COMPOUND_FACTORY = compoundFactory;
