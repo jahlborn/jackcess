@@ -329,9 +329,9 @@ public class ComplexColumnTest extends TestCase
 
         if(rowId.equals(1)) {
           checkUnsupportedValues(1, complexValueFk, 
-                                 "RawData: FF FE 62 61  7A");
+                                 "RawData[(5) FF FE 62 61  7A]");
         } else if(rowId.equals(2)) {
-          checkUnsupportedValues(2, complexValueFk, "RawData: FF FE 66 6F  6F", "RawData: FF FE 62 61  7A");
+          checkUnsupportedValues(2, complexValueFk, "RawData[(5) FF FE 66 6F  6F]", "RawData[(5) FF FE 62 61  7A]");
         } else if(rowId.equals(3)) {
           checkUnsupportedValues(3, complexValueFk);
         } else {

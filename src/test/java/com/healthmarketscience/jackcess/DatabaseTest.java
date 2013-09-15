@@ -1327,12 +1327,12 @@ public class DatabaseTest extends TestCase {
       assertEquals(DataType.UNSUPPORTED_FIXEDLEN, fixCol.getType());
 
       List<String> varVals = Arrays.asList(
-          "RawData: FF FE 73 6F  6D 65 64 61  74 61",
-          "RawData: FF FE 6F 74  68 65 72 20  64 61 74 61",
+          "RawData[(10) FF FE 73 6F  6D 65 64 61  74 61]",
+          "RawData[(12) FF FE 6F 74  68 65 72 20  64 61 74 61]",
           null);
-      List<String> fixVals = Arrays.asList("RawData: 37 00 00 00",
-                                           "RawData: F3 FF FF FF", 
-                                           "RawData: 02 00 00 00");
+      List<String> fixVals = Arrays.asList("RawData[(4) 37 00 00 00]",
+                                           "RawData[(4) F3 FF FF FF]", 
+                                           "RawData[(4) 02 00 00 00]");
 
       int idx = 0;
       for(Map<String,Object> row : t) {
