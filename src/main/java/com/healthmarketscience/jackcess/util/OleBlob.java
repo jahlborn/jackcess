@@ -32,8 +32,71 @@ import java.util.List;
 import com.healthmarketscience.jackcess.impl.OleUtil;
 
 /**
- *
- * Note, implementation is read-only. 
+ * Extentions of the Blob interface with additional functionality for working
+ * with the OLE content from an access database.  The ole data type in access
+ * has a wide range of functionality (including wrappers with nested wrappers
+ * with nested filesystems!), and jackcess only supports a small portion of
+ * it.  That said, jackcess should support the bulk of the common
+ * functionality.
+ * <p/>
+ * The main Blob methods will interact with the <i>entire</i> OLE field data
+ * which, in most cases, contains additional wrapper information.  In order to
+ * access the ultimate "content" contained within the OLE data, the {@link
+ * #getContent} method should be used.  The type of this content may be a
+ * variety of formats, so additional sub-interfaces are available to interact
+ * with it.  The most specific sub-interface can be determined by the {@link
+ * ContentType} of the Content.
+ * <p/>
+ * Once an OleBlob is no longer useful, <i>it should be closed</i> using
+ * {@link #free} or {@link #close} methods (after which, the instance will no
+ * longer be functional).
+ * <p/>
+ * Note, the OleBlob implementation is read-only (through the interface).  In
+ * order to modify blob contents, create a new OleBlob instance using {@link
+ * OleBlob.Builder} and write it to the access database.
+ * <p/>
+ * <b>Example for interpreting an existing OLE field:</b>
+ * <pre>
+ *   byte[] oleBytes = (byte[])row.get("MyOleColumn");
+ *   OleBlob oleBlob = null;
+ *   try {
+ *     oleBlob = OleBlob.Builder.fromInternalData(oleBlob);
+ *     Content content = oleBlob.getContent()
+ *     if(content.getType() == OleBlob.ContentType.SIMPLE_PACKAGE) {
+ *       FileOutputStream out = ...;
+ *       ((SimplePackageContent)content).writeTo(out);
+ *       out.closee();
+ *     }
+ *   } finally {
+ *     if(oleBlob != null) { oleBlob.close(); }
+ *   }     
+ * </pre>
+ * <p/>
+ * <b>Example for creating new, embedded ole data:</b>
+ * <pre>
+ *   OleBlob oleBlob = null;
+ *   try {
+ *     oleBlob = new OleBlob.Builder()
+ *       .setSimplePackage(new File("some_data.txt"))
+ *       .toBlob();
+ *     db.addRow(1, oleBlob);
+ *   } finally {
+ *     if(oleBlob != null) { oleBlob.close(); }
+ *   }     
+ * </pre>
+ * <p/>
+ * <b>Example for creating new, linked ole data:</b>
+ * <pre>
+ *   OleBlob oleBlob = null;
+ *   try {
+ *     oleBlob = new OleBlob.Builder()
+ *       .setLink(new File("some_data.txt"))
+ *       .toBlob();
+ *     db.addRow(1, oleBlob);
+ *   } finally {
+ *     if(oleBlob != null) { oleBlob.close(); }
+ *   }     
+ * </pre>
  *
  * @author James Ahlborn
  */
@@ -43,7 +106,7 @@ public interface OleBlob extends Blob, Closeable
       supported/understood */
   public enum ContentType {
     /** the blob contents are a link (file path) to some external content.
-        Content will be an instance LinkContent */
+        Content will be an instance of LinkContent */
     LINK, 
     /** the blob contents are a simple wrapper around some embedded content
         and related file names/paths.  Content will be an instance
@@ -51,8 +114,8 @@ public interface OleBlob extends Blob, Closeable
     SIMPLE_PACKAGE, 
     /** the blob contents are a complex embedded data known as compound
         storage (aka OLE2).  Working with compound storage requires the
-        optional POI library Content will be an instance CompoundContent.  If
-        the POI library is not available on the classpath, then compound
+        optional POI library.  Content will be an instance of CompoundContent.
+        If the POI library is not available on the classpath, then compound
         storage data will instead be returned as type {@link #OTHER}. */
     COMPOUND_STORAGE,
     /** the top-level blob wrapper is understood, but the nested blob contents
@@ -92,6 +155,9 @@ public interface OleBlob extends Blob, Closeable
     public OleBlob getBlob();
   }
 
+  /**
+   * Intermediate sub-interface for Content which has a nested package.
+   */
   public interface PackageContent extends Content
   {    
     public String getPrettyName() throws IOException;
@@ -101,6 +167,9 @@ public interface OleBlob extends Blob, Closeable
     public String getTypeName() throws IOException;
   }
 
+  /**
+   * Intermediate sub-interface for Content which has embedded content.
+   */
   public interface EmbeddedContent extends Content
   {
     public long length();
@@ -110,6 +179,11 @@ public interface OleBlob extends Blob, Closeable
     public void writeTo(OutputStream out) throws IOException;    
   }
 
+  /**
+   * Sub-interface for Content which has the {@link ContentType#LINK} type.
+   * The actual content is external to the access database and can be found at
+   * {@link #getLinkPath}.
+   */
   public interface LinkContent extends PackageContent
   {
     public String getFileName();
@@ -121,6 +195,12 @@ public interface OleBlob extends Blob, Closeable
     public InputStream getLinkStream() throws IOException;
   }
 
+  /**
+   * Sub-interface for Content which has the {@link
+   * ContentType#SIMPLE_PACKAGE} type.  The actual content is embedded within
+   * the access database (but the original file source path can also be found
+   * at {@link #getFilePath}).
+   */
   public interface SimplePackageContent 
     extends PackageContent, EmbeddedContent
   {
@@ -131,6 +211,19 @@ public interface OleBlob extends Blob, Closeable
     public String getLocalFilePath();
   }
 
+  /**
+   * Sub-interface for Content which has the {@link
+   * ContentType#COMPOUND_STORAGE} type.  Compound storage is a complex
+   * embedding format also known as OLE2.  In some situations (mostly
+   * non-microsoft office file formats) the actual content is available from
+   * the {@link #getContentsEntryStream} method (if {@link #hasContentsEntry}
+   * returns {@code true}).  In other situations (e.g. microsoft office file
+   * formats), the actual content is most or all of the compound content (but
+   * retrieving the final file may be a complex operation, beyond the scope of
+   * jackcess).  Note that the CompoundContent type will only be available if
+   * the POI library is in the classpath, otherwise compound content will be
+   * returned as OtherContent.
+   */
   public interface CompoundContent extends PackageContent, EmbeddedContent
   {
     public List<String> getEntries() throws IOException;
@@ -142,20 +235,18 @@ public interface OleBlob extends Blob, Closeable
     public InputStream getContentsEntryStream() throws IOException;
   }  
 
+  /**
+   * Sub-interface for Content which has the {@link ContentType#OTHER} type.
+   * This may be a simple embedded file or some other, currently not
+   * understood complex type.
+   */
   public interface OtherContent extends PackageContent, EmbeddedContent
   {
   }
 
   /**
-   * Builder style class for constructing an OleBlob. The {@link
-   * #fromInternalData} method can be used for interpreting existing ole data.
-   * <p/>
-   * Example for creating new ole data:
-   * <pre>
-   *   OleBlob oleBlob = new OleBlob.Builder()
-   *     .setSimplePackageFile(contentFile)
-   *     .toBlob();
-   * </pre>
+   * Builder style class for constructing an OleBlob. See {@link OleBlob} for
+   * example usage.
    */
   public class Builder
   {

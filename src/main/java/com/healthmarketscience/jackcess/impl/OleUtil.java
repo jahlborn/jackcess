@@ -51,7 +51,7 @@ public class OleUtil
    * Interface used to allow optional inclusion of the poi library for working
    * with compound ole data.
    */
-  public interface CompoundPackageFactory
+  interface CompoundPackageFactory
   {
     public ContentImpl createCompoundPackageContent(
         OleBlobImpl blob, String prettyName, String className, String typeName,
@@ -98,10 +98,17 @@ public class OleUtil
     COMPOUND_FACTORY = compoundFactory;
   }
 
+  /**
+   * Parses an access database blob structure and returns an appropriate
+   * OleBlob instance.
+   */
   public static OleBlob parseBlob(byte[] bytes) {
     return new OleBlobImpl(bytes);
   }
 
+  /**
+   * Creates a new OlBlob instance using the given information.
+   */
   public static OleBlob createBlob(OleBlob.Builder oleBuilder)
     throws IOException
   {
@@ -258,7 +265,7 @@ public class OleUtil
     
     return headerBytes;
   }
-  
+
   private static byte[] writePackageStreamFooter(OleBlob.Builder oleBuilder) {
 
     // note, these are _not_ zero terminated
@@ -280,7 +287,10 @@ public class OleUtil
     return footerBytes;
   }
   
-  private static ContentImpl createContent(OleBlobImpl blob) 
+  /**
+   * creates the appropriate ContentImpl for the given blob.
+   */
+  private static ContentImpl parseContent(OleBlobImpl blob) 
     throws IOException 
   {
     ByteBuffer bb = PageChannel.wrap(blob.getBytes());
@@ -453,6 +463,7 @@ public class OleUtil
     return (str + '\0').getBytes(OLE_CHARSET);
   }
 
+
   static final class OleBlobImpl implements OleBlob
   {
     private byte[] _bytes;
@@ -468,7 +479,7 @@ public class OleUtil
 
     public Content getContent() throws IOException {
       if(_content == null) {
-        _content = createContent(this);
+        _content = parseContent(this);
       }
       return _content;
     }
