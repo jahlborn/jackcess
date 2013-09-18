@@ -19,7 +19,20 @@ USA
 
 package com.healthmarketscience.jackcess.util;
 
+import java.io.File;
+import java.util.Arrays;
+
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import junit.framework.TestCase;
 
 /**
  *
@@ -35,11 +48,11 @@ public class OleBlobTest extends TestCase
   public void testCreateBlob() throws Exception
   {
     File sampleFile = new File("src/test/data/sample-input.tab");
-    String sampleFilePath = sampleFileStr.getAbsolutePath();
+    String sampleFilePath = sampleFile.getAbsolutePath();
     String sampleFileName = sampleFile.getName();
     byte[] sampleFileBytes = toByteArray(sampleFile);
 
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+    for(FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
       Table t = new TableBuilder("TestOle")
@@ -79,54 +92,57 @@ public class OleBlobTest extends TestCase
       }
 
       for(Row row : t) {
-        OleBlob blob = null;
         try {
           blob = OleBlob.Builder.fromInternalData(
               (byte[])row.get("ole"));
-          Content content = blob.getContent();
+          OleBlob.Content content = blob.getContent();
           assertSame(blob, content.getBlob());
           assertSame(content, blob.getContent());
 
           switch((Integer)row.get("id")) {
           case 1:
             assertEquals(OleBlob.ContentType.SIMPLE_PACKAGE, content.getType());
-            assertEquals(sampleFilePath, content.getFilePath());
-            assertEquals(sampleFilePath, content.getLocalFilePath());
-            assertEquals(sampleFileName, content.getFileName());
+            OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
+            assertEquals(sampleFilePath, spc.getFilePath());
+            assertEquals(sampleFilePath, spc.getLocalFilePath());
+            assertEquals(sampleFileName, spc.getFileName());
             assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, 
-                         content.getPrettyName());
+                         spc.getPrettyName());
             assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
-                         content.getTypeName());
+                         spc.getTypeName());
             assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
-                         content.getClassName());
-            assertEquals(sampleFileBytes.length, content.length());
-            assertEquals(sampleFileBytes, toByteArray(content.getStream()));
+                         spc.getClassName());
+            assertEquals(sampleFileBytes.length, spc.length());
+            assertTrue(Arrays.equals(sampleFileBytes, 
+                                     toByteArray(spc.getStream(), spc.length())));
             break;
+
           case 2:
-            assertEquals(OleBlob.ContentType.LINK, content.getType());
-            assertEquals(sampleFilePath, content.getLinkPath());
-            assertEquals(sampleFilePath, content.getFilePath());
-            assertEquals(sampleFileName, content.getFileName());
-            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, 
-                         content.getPrettyName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
-                         content.getTypeName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
-                         content.getClassName());
+            OleBlob.LinkContent lc = (OleBlob.LinkContent)content;
+            assertEquals(OleBlob.ContentType.LINK, lc.getType());
+            assertEquals(sampleFilePath, lc.getLinkPath());
+            assertEquals(sampleFilePath, lc.getFilePath());
+            assertEquals(sampleFileName, lc.getFileName());
+            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, lc.getPrettyName());
+            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getTypeName());
+            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getClassName());
             break;
+            
           case 3:
-            assertEquals(OleBlob.ContentType.OTHER, content.getType());
-            assertEquals("Text File", content.getPrettyName());
-            assertEquals("Text.File", content.getClassName());
-            assertEquals("TextFile", content.getTypeName());
-            assertEquals(sampleFileBytes.length, content.length());
-            assertEquals(sampleFileBytes, toByteArray(content.getStream()));
+            OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
+            assertEquals(OleBlob.ContentType.OTHER, oc.getType());
+            assertEquals("Text File", oc.getPrettyName());
+            assertEquals("Text.File", oc.getClassName());
+            assertEquals("TextFile", oc.getTypeName());
+            assertEquals(sampleFileBytes.length, oc.length());
+            assertTrue(Arrays.equals(sampleFileBytes, 
+                                     toByteArray(oc.getStream(), oc.length())));
             break;
           default:
             throw new RuntimeException("unexpected id " + row);
           }
         } finally {
-          ByteUtil.closeQuietly(oleBlob);
+          ByteUtil.closeQuietly(blob);
         }
       }
 

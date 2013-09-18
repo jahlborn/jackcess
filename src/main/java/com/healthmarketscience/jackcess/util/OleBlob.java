@@ -380,7 +380,7 @@ public interface OleBlob extends Blob, Closeable
       return this;
     }
 
-    public Builder setOther(File f) {
+    public Builder setOther(File f) throws FileNotFoundException {
       return setOtherStream(new FileInputStream(f), f.length());
     }
 
