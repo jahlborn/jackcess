@@ -331,7 +331,7 @@ public interface OleBlob extends Blob, Closeable
 
     public Builder setSimplePackage(File f) throws FileNotFoundException {
       _fileName = f.getName();
-      _filePath = f.getPath();
+      _filePath = f.getAbsolutePath();
       return setSimplePackageStream(new FileInputStream(f), f.length());
     }
 
@@ -351,7 +351,7 @@ public interface OleBlob extends Blob, Closeable
 
     public Builder setLink(File f) {
       _fileName = f.getName();
-      _filePath = f.getPath();
+      _filePath = f.getAbsolutePath();
       setDefaultPackageType();
       _type = ContentType.LINK;
       return this;
@@ -378,6 +378,10 @@ public interface OleBlob extends Blob, Closeable
       _contentLen = length;
       _type = ContentType.OTHER;
       return this;
+    }
+
+    public Builder setOther(File f) {
+      return setOtherStream(new FileInputStream(f), f.length());
     }
 
     public Builder setPackagePrettyName(String prettyName) {

@@ -77,7 +77,8 @@ import junit.framework.TestCase;
 /**
  * @author Tim McCune
  */
-public class DatabaseTest extends TestCase {
+public class DatabaseTest extends TestCase 
+{
 
   public static final TimeZone TEST_TZ =
     TimeZone.getTimeZone("America/New_York");
@@ -1671,15 +1672,21 @@ public class DatabaseTest extends TestCase {
   public static byte[] toByteArray(File file)
     throws IOException
   {
+    return toByteArray(new FileInputStream(file), file.length());
+  }
+
+  public static byte[] toByteArray(InputStream in, long length)
+    throws IOException
+  {
     // FIXME should really be using commons io IOUtils here, but don't want
     // to add dep for one simple test method
-    FileInputStream istream = new FileInputStream(file);
     try {
-      byte[] bytes = new byte[(int)file.length()];
-      istream.read(bytes);
+      DataInputStream din = new DataInputStream(in);
+      byte[] bytes = new byte[(int)length];
+      din.readFully(bytes);
       return bytes;
     } finally {
-      istream.close();
+      in.close();
     }
   }
 
