@@ -363,7 +363,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       if(_encodedData.length < WRAPPER_HEADER_SIZE) {
         // nothing we can do
         throw new IOException("Unknown encoded attachment data format");
-  }
+      }
   
       // read initial header info
       ByteBuffer bb = PageChannel.wrap(_encodedData);
@@ -384,7 +384,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         } else {
           throw new IOException(
               "Unknown encoded attachment data type " + typeFlag);
-}
+        }
 
         contentStream = new DataInputStream(bin);
 
