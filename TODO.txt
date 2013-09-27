@@ -25,7 +25,7 @@ Refactor goals:
 - tweak lookup apis (specify column vs column name)
 - clean up javadocs
   - enhance public api classes
-  - add @usage tags to util classes
+  * add @usage tags to util classes
 * change CodecHandler usage to handle not-inline decoding
   - pass filename to CodecHandler, enable pwd callbacks CallbackHandler
   - pass custom context to CodecHandler?
