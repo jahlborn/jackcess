@@ -1724,12 +1724,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
 
     if(value instanceof InputStream) {
-      byte[] buf = new byte[8 * 1024];
-      InputStream in = (InputStream)value;
-      int read = 0;
-      while((read = in.read(buf)) != -1) {
-        bout.write(buf, 0, read);
-      }
+      ByteUtil.copy((InputStream)value, bout);
     } else {
       // if all else fails, serialize it
       ObjectOutputStream oos = new ObjectOutputStream(bout);

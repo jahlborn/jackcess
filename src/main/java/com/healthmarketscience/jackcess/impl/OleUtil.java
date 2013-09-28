@@ -44,6 +44,7 @@ import org.apache.commons.lang.builder.ToStringBuilder;
  * Utility code for working with OLE data.
  *
  * @author James Ahlborn
+ * @usage _advanced_class_
  */
 public class OleUtil 
 {

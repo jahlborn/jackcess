@@ -46,7 +46,8 @@ public class JetFormatTest extends TestCase {
     PROMOTION("testPromotion"),
     COMPLEX("complexDataTest"),
     UNSUPPORTED("unsupportedFieldsTest"),
-    LINKED("linkerTest");
+    LINKED("linkerTest"),
+    BLOB("testOle");
 
     private final String _basename;
 

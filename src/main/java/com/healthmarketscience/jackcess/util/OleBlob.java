@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Blob;
-import java.util.List;
 
 import com.healthmarketscience.jackcess.impl.OleUtil;
 
@@ -216,23 +215,35 @@ public interface OleBlob extends Blob, Closeable
    * ContentType#COMPOUND_STORAGE} type.  Compound storage is a complex
    * embedding format also known as OLE2.  In some situations (mostly
    * non-microsoft office file formats) the actual content is available from
-   * the {@link #getContentsEntryStream} method (if {@link #hasContentsEntry}
+   * the {@link #getContentsEntry} method (if {@link #hasContentsEntry}
    * returns {@code true}).  In other situations (e.g. microsoft office file
    * formats), the actual content is most or all of the compound content (but
-   * retrieving the final file may be a complex operation, beyond the scope of
+   * retrieving the final file may be a complex operation beyond the scope of
    * jackcess).  Note that the CompoundContent type will only be available if
    * the POI library is in the classpath, otherwise compound content will be
    * returned as OtherContent.
    */
-  public interface CompoundContent extends PackageContent, EmbeddedContent
+  public interface CompoundContent extends PackageContent, EmbeddedContent,
+                                           Iterable<CompoundContent.Entry>
   {
-    public List<String> getEntries() throws IOException;
-
-    public InputStream getEntryStream(String entryName) throws IOException;
+    public Entry getEntry(String entryName) throws IOException;
 
     public boolean hasContentsEntry() throws IOException;
 
-    public InputStream getContentsEntryStream() throws IOException;
+    public Entry getContentsEntry() throws IOException;
+
+    /**
+     * A document entry in the compound storage.
+     */
+    public interface Entry extends EmbeddedContent
+    {
+      public String getName();
+
+      /**
+       * Returns the CompoundContent which owns this entry.
+       */
+      public CompoundContent getParent();
+    }
   }  
 
   /**

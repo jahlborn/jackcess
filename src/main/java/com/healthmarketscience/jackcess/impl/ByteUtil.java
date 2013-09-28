@@ -30,6 +30,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
@@ -606,6 +607,17 @@ public final class ByteUtil {
     int srcLen = arr.length - offset;
     System.arraycopy(arr, offset, newArr, 0, Math.min(srcLen, newLength));
     return newArr;
+  }
+
+  /**
+   * Copies the given InputStream to the given OutputStream.
+   */
+  public static void copy(InputStream in, OutputStream out) throws IOException {
+    byte[] buf = new byte[8 * 1024];
+    int read = 0;
+    while((read = in.read(buf)) > -1) {
+      out.write(buf, 0, read);
+    }
   }
 
   /**
