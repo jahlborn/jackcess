@@ -330,13 +330,6 @@ public class UsageMap
   /**
    * Remove a page number from this usage map
    */
-  public void removePageNumber(int pageNumber) throws IOException {
-    removePageNumber(pageNumber, false);
-  }
-
-  /**
-   * Remove a page number from this usage map
-   */
   protected void removePageNumber(int pageNumber, boolean force) 
     throws IOException 
   {
@@ -681,7 +674,7 @@ public class UsageMap
       }
 
       // lastly, remove the new page
-      removePageNumber(newPageNumber);
+      removePageNumber(newPageNumber, false);
     }
   }
 

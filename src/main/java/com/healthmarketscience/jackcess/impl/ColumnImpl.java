@@ -2170,7 +2170,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         if(TableImpl.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
           // the current page has space
           return lvalPage;
-}
+        }
       }
 
       // need new page

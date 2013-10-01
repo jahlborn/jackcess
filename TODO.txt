@@ -6,8 +6,6 @@ Missing pieces:
   * MEDIUM
 - implement table creation w/ complex columns
   * MEDIUM
-- implement (optional) foreign key enforcement
-  * MEDIUM
 - implement write support for properties
   * EASY
 - implement table, column, index renaming
@@ -26,15 +24,7 @@ Refactor goals:
 - clean up javadocs
   - enhance public api classes
   * add @usage tags to util classes
-* change CodecHandler usage to handle not-inline decoding
-  - pass filename to CodecHandler, enable pwd callbacks CallbackHandler
-  - pass custom context to CodecHandler?
-  - rework CryptCodecProvider to have custom
-    javax.security.auth.callback.CallbackHandler which is only invoked if
-    password is definitely required.
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
-- refactor free-space handlers Table/Column?
 - implement "lazy" usage maps (load on first usage)?
-- implement some OLE support
 - add typed getter methods to Row

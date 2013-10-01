@@ -1792,28 +1792,29 @@ public class TableImpl implements Table
       TempPageHolder rowBufferH)
     throws IOException
   {
-      // find last data page (Not bothering to check other pages for free
-      // space.)
+    // find last data page (Not bothering to check other pages for free
+    // space.)
     UsageMap.PageCursor revPageCursor = ownedPages.cursor();
-      revPageCursor.afterLast();
-      while(true) {
-        int tmpPageNumber = revPageCursor.getPreviousPage();
-        if(tmpPageNumber < 0) {
-          break;
-        }
+    revPageCursor.afterLast();
+    while(true) {
+      int tmpPageNumber = revPageCursor.getPreviousPage();
+      if(tmpPageNumber < 0) {
+        break;
+      }
+      // only use if actually listed in free space pages
+      if(!freeSpacePages.containsPageNumber(tmpPageNumber)) {
+        continue;
+      }
       ByteBuffer dataPage = rowBufferH.setPage(ownedPages.getPageChannel(),
                                                tmpPageNumber);
-        if(dataPage.get() == PageTypes.DATA) {
-          // found last data page, only use if actually listed in free space
-          // pages
-        if(freeSpacePages.containsPageNumber(tmpPageNumber)) {
-          return dataPage;
-          }
-        }
+      if(dataPage.get() == PageTypes.DATA) {
+        // found last data page with free space
+        return dataPage;
       }
+    }
 
     return null;
-      }
+  }
     
   /**
    * Updates the table definition after rows are modified.
