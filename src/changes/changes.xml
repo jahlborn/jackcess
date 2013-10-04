@@ -8,6 +8,9 @@
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="97">
         Ignore invalid column usage map definitions.
       </action>
+      <action dev="jahlborn" type="fix">
+        Make reading long value columns more lenient (MEMO/OLE).
+      </action>
     </release>
     <release version="1.2.14.2" date="2013-08-25">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="96">
