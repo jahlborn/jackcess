@@ -671,6 +671,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // inline long value
       def.getInt();  //Skip over lval_dp
       def.getInt();  //Skip over unknown
+
+      int rowLen = def.remaining();
+      if(rowLen < length) {
+        // warn the caller, but return whatever we can
+        LOG.warn(getName() + " value may be truncated: expected length " + 
+                 length + " found " + rowLen);
+        rtn = new byte[rowLen];
+      }
+
       def.get(rtn);
 
     } else {
@@ -694,8 +703,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
           short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
           short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
 
-          if((rowEnd - rowStart) != length) {
-            throw new IOException("Unexpected lval row length");
+          int rowLen = rowEnd - rowStart;
+          if(rowLen < length) {
+            // warn the caller, but return whatever we can
+            LOG.warn(getName() + " value may be truncated: expected length " + 
+                     length + " found " + rowLen);
+            rtn = new byte[rowLen];
           }
         
           lvalPage.position(rowStart);
