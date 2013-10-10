@@ -284,6 +284,8 @@ public class PropertyMaps implements Iterable<PropertyMap>
         if(col.isVariableLength()) {
           col.setLength((short)colType.getMaxSize());
         }
+
+        _columns.put(dataType, col);
       }
 
       return col;
