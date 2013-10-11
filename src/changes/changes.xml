@@ -14,6 +14,9 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
+      <action dev="jahlborn" type="add">
+        Add support for modifying properties.
+      </action>
     </release>
     <release version="2.0.0" date="2013-08-26">
       <action dev="jahlborn" type="update">

@@ -22,17 +22,19 @@ package com.healthmarketscience.jackcess;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
-import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
-import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
+import com.healthmarketscience.jackcess.impl.PropertyMaps;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import junit.framework.TestCase;
 
 /**
  * @author James Ahlborn
@@ -46,7 +48,7 @@ public class PropertiesTest extends TestCase
 
   public void testPropertyMaps() throws Exception
   {
-    PropertyMaps maps = new PropertyMaps(10);
+    PropertyMaps maps = new PropertyMaps(10, null);
     assertTrue(maps.isEmpty());
     assertEquals(0, maps.getSize());
     assertFalse(maps.iterator().hasNext());
@@ -206,6 +208,54 @@ public class PropertiesTest extends TestCase
         db.close();
       }
     }
+  }
+
+  public void testWriteProperties() throws Exception
+  {
+    for(TestDB testDb : SUPPORTED_DBS_TEST) {
+      Database db = open(testDb);
+
+      TableImpl t = (TableImpl)db.getTable("Table1");
+
+      PropertyMap tProps = t.getProperties();
+
+      PropertyMaps maps = ((PropertyMapImpl)tProps).getOwner();
+
+      byte[] mapsBytes = maps.write();
+
+      PropertyMaps maps2 = ((DatabaseImpl)db).readProperties(
+          mapsBytes, maps.getObjectId());
+
+      Iterator<PropertyMapImpl> iter = maps.iterator();
+      Iterator<PropertyMapImpl> iter2 = maps2.iterator();
+
+      while(iter.hasNext() && iter2.hasNext()) {
+        PropertyMapImpl propMap = iter.next();
+        PropertyMapImpl propMap2 = iter2.next();
+
+        assertEquals(propMap.getSize(), propMap2.getSize());
+        for(PropertyMap.Property prop : propMap) {
+          PropertyMap.Property prop2 = propMap2.get(prop.getName());
+
+          assertEquals(prop.getName(), prop2.getName());
+          assertEquals(prop.getType(), prop2.getType());
+
+          Object v1 = prop.getValue();
+          Object v2 = prop2.getValue();
+
+          if(v1 instanceof byte[]) {
+            assertTrue(Arrays.equals((byte[])v1, (byte[])v2));
+          } else {
+            assertEquals(v1, v2);
+          }
+        }
+      }
+      
+      assertFalse(iter.hasNext());
+      assertFalse(iter2.hasNext());
+
+      db.close();
+    }    
   }
 
 }

@@ -1016,34 +1016,40 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     throws IOException
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
-    if(m.matches()) {
-      ByteBuffer origBuffer = null;
-      byte[] tmpBuf = null;
-      if(order != ByteOrder.BIG_ENDIAN) {
-        // write to a temp buf so we can do some swapping below
-        origBuffer = buffer;
-        tmpBuf = new byte[16];
-        buffer = ByteBuffer.wrap(tmpBuf);
-      }
-
-      ByteUtil.writeHexString(buffer, m.group(1));
-      ByteUtil.writeHexString(buffer, m.group(2));
-      ByteUtil.writeHexString(buffer, m.group(3));
-      ByteUtil.writeHexString(buffer, m.group(4));
-      ByteUtil.writeHexString(buffer, m.group(5));
-      
-      if(tmpBuf != null) {
-        // the first 3 guid components are integer components which need to
-        // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int
-        ByteUtil.swap4Bytes(tmpBuf, 0);
-        ByteUtil.swap2Bytes(tmpBuf, 4);
-        ByteUtil.swap2Bytes(tmpBuf, 6);
-        origBuffer.put(tmpBuf);
-      }
-
-    } else {
+    if(!m.matches()) {
       throw new IOException("Invalid GUID: " + value);
     }
+
+    ByteBuffer origBuffer = null;
+    byte[] tmpBuf = null;
+    if(order != ByteOrder.BIG_ENDIAN) {
+      // write to a temp buf so we can do some swapping below
+      origBuffer = buffer;
+      tmpBuf = new byte[16];
+      buffer = ByteBuffer.wrap(tmpBuf);
+    }
+
+    ByteUtil.writeHexString(buffer, m.group(1));
+    ByteUtil.writeHexString(buffer, m.group(2));
+    ByteUtil.writeHexString(buffer, m.group(3));
+    ByteUtil.writeHexString(buffer, m.group(4));
+    ByteUtil.writeHexString(buffer, m.group(5));
+      
+    if(tmpBuf != null) {
+      // the first 3 guid components are integer components which need to
+      // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int
+      ByteUtil.swap4Bytes(tmpBuf, 0);
+      ByteUtil.swap2Bytes(tmpBuf, 4);
+      ByteUtil.swap2Bytes(tmpBuf, 6);
+      origBuffer.put(tmpBuf);
+    }
+  }
+
+  /**
+   * Returns {@code true} if the given value is a "guid" value.
+   */
+  static boolean isGUIDValue(Object value) throws IOException {
+    return GUID_PATTERN.matcher(toCharSequence(value)).matches();
   }
   
   /**

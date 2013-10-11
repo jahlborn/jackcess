@@ -37,10 +37,12 @@ public class PropertyMapImpl implements PropertyMap
   private final short _mapType;
   private final Map<String,Property> _props = 
     new LinkedHashMap<String,Property>();
+  private final PropertyMaps _owner;
 
-  public PropertyMapImpl(String name, short type) {
+  public PropertyMapImpl(String name, short type, PropertyMaps owner) {
     _mapName = name;
     _mapType = type;
+    _owner = owner;
   }
 
   public String getName() {
@@ -49,6 +51,10 @@ public class PropertyMapImpl implements PropertyMap
 
   public short getType() {
     return _mapType;
+  }
+
+  public PropertyMaps getOwner() {
+    return _owner;
   }
 
   public int getSize() {
@@ -88,24 +94,6 @@ public class PropertyMapImpl implements PropertyMap
     return _props.values().iterator();
   }
 
-  public PropertyMapImpl merge(PropertyMapImpl opm) {
-    if(opm == null) {
-      return this;          
-    }
-
-    // merge into least map type
-    PropertyMapImpl dest = opm;
-    PropertyMapImpl src = this;
-    if(dest._mapType < src._mapType) {
-      dest = this;
-      src = opm;
-    }
-
-    dest._props.putAll(src._props);
-
-    return dest;
-  }
-
 
   @Override
   public String toString() {
@@ -126,7 +114,7 @@ public class PropertyMapImpl implements PropertyMap
   /**
    * Info about a property defined in a PropertyMap.
    */ 
-  private static final class PropertyImpl implements PropertyMap.Property
+  static final class PropertyImpl implements PropertyMap.Property
   {
     private final String _name;
     private final DataType _type;
@@ -150,6 +138,10 @@ public class PropertyMapImpl implements PropertyMap
 
     public Object getValue() {
       return _value;
+    }
+
+    public byte getFlag() {
+      return _flag;
     }
 
     @Override

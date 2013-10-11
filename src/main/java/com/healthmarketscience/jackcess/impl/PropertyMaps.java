@@ -25,11 +25,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.PropertyMap;
 
 /**
  * Collection of PropertyMap instances read from a single property data block.
@@ -50,9 +52,11 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   private final Map<String,PropertyMapImpl> _maps = 
     new LinkedHashMap<String,PropertyMapImpl>();
   private final int _objectId;
+  private final Handler _handler;
 
-  public PropertyMaps(int objectId) {
+  public PropertyMaps(int objectId, Handler handler) {
     _objectId = objectId;
+    _handler = handler;
   }
 
   public int getObjectId() {
@@ -91,22 +95,18 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     String lookupName = DatabaseImpl.toLookupName(name);
     PropertyMapImpl map = _maps.get(lookupName);
     if(map == null) {
-      map = new PropertyMapImpl(name, type);
+      map = new PropertyMapImpl(name, type, this);
       _maps.put(lookupName, map);
     }
     return map;
   }
 
-  /**
-   * Adds the given PropertyMap to this group.
-   */
-  public void put(PropertyMapImpl map) {
-    String mapName = DatabaseImpl.toLookupName(map.getName());
-    _maps.put(mapName, map.merge(_maps.get(mapName)));
-  }
-
   public Iterator<PropertyMapImpl> iterator() {
     return _maps.values().iterator();
+  }
+
+  public byte[] write() throws IOException {
+    return _handler.write(this);
   }
 
   @Override
@@ -138,14 +138,12 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     public PropertyMaps read(byte[] propBytes, int objectId) 
       throws IOException 
     {
-
-      PropertyMaps maps = new PropertyMaps(objectId);
+      PropertyMaps maps = new PropertyMaps(objectId, this);
       if((propBytes == null) || (propBytes.length == 0)) {
         return maps;
       }
 
-      ByteBuffer bb = ByteBuffer.wrap(propBytes)
-        .order(PageChannel.DEFAULT_BYTE_ORDER);
+      ByteBuffer bb = PageChannel.wrap(propBytes);
 
       // check for known header
       boolean knownType = false;
@@ -176,7 +174,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         if(type == PROPERTY_NAME_LIST) {
           propNames = readPropertyNames(bbBlock);
         } else {
-          maps.put(readPropertyValues(bbBlock, propNames, type));
+          readPropertyValues(bbBlock, propNames, type, maps);
         }
 
         bb.position(endPos);
@@ -185,6 +183,58 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       return maps;
     }
 
+    /**
+     * @return a byte[] encoded from the given PropertyMaps instance
+     */
+    public byte[] write(PropertyMaps maps)
+      throws IOException
+    {
+      if(maps == null) {
+        return null;
+      }
+
+      ByteArrayBuilder bab = new ByteArrayBuilder();
+
+      bab.put(_database.getFormat().PROPERTY_MAP_TYPE);
+
+      // grab the property names from all the maps
+      Set<String> propNames = new LinkedHashSet<String>();
+      for(PropertyMapImpl propMap : maps) {
+        for(PropertyMap.Property prop : propMap) {
+          propNames.add(prop.getName());
+        }
+      }
+
+      // write the full set of property names
+      writeBlock(null, propNames, PROPERTY_NAME_LIST, bab);
+
+      // write all the map values
+      for(PropertyMapImpl propMap : maps) {
+        writeBlock(propMap, propNames, propMap.getType(), bab);
+      }
+      
+      return bab.toArray();
+    }
+
+    private void writeBlock(
+        PropertyMapImpl propMap, Set<String> propNames,
+        short blockType, ByteArrayBuilder bab)
+      throws IOException
+    {
+      int blockStartPos = bab.position();
+      bab.reserveInt()
+        .putShort(blockType);
+
+      if(blockType == PROPERTY_NAME_LIST) {
+        writePropertyNames(propNames, bab);
+      } else {
+        writePropertyValues(propMap, propNames, bab);
+      }      
+
+      int len = bab.position() - blockStartPos;
+      bab.putInt(blockStartPos, len);
+    }
+    
     /**
      * @return the property names parsed from the given data chunk
      */
@@ -196,12 +246,20 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       return names;
     }
 
+    private void writePropertyNames(Set<String> propNames,
+                                    ByteArrayBuilder bab) {
+      for(String propName : propNames) {
+        writePropName(propName, bab);
+      }      
+    }
+
     /**
      * @return the PropertyMap created from the values parsed from the given
      *         data chunk combined with the given property names
      */
     private PropertyMapImpl readPropertyValues(
-        ByteBuffer bbBlock, List<String> propNames, short blockType) 
+        ByteBuffer bbBlock, List<String> propNames, short blockType,
+        PropertyMaps maps) 
       throws IOException
     {
       String mapName = DEFAULT_NAME;
@@ -217,12 +275,12 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         bbBlock.position(endPos);
       }
       
-      PropertyMapImpl map = new PropertyMapImpl(mapName, blockType);
+      PropertyMapImpl map = maps.get(mapName, blockType);
 
       // read the values
       while(bbBlock.hasRemaining()) {
 
-        int valLen = bbBlock.getShort();
+        int valLen = bbBlock.getShort();        
         int endPos = bbBlock.position() + valLen - 2;
         byte flag = bbBlock.get();
         DataType dataType = DataType.fromByte(bbBlock.get());
@@ -230,7 +288,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         int dataSize = bbBlock.getShort();
 
         String propName = propNames.get(nameIdx);
-        PropColumn col = getColumn(dataType, propName, dataSize);
+        PropColumn col = getColumn(dataType, propName, dataSize, null);
 
         byte[] data = ByteUtil.getBytes(bbBlock, dataSize);
         Object value = col.read(data);
@@ -243,6 +301,54 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       return map;
     }
 
+    private void writePropertyValues(
+        PropertyMapImpl propMap, Set<String> propNames, ByteArrayBuilder bab) 
+      throws IOException
+    {      
+      // write the map name, if any
+      String mapName = propMap.getName();
+      int blockStartPos = bab.position();
+      bab.reserveInt();
+      writePropName(mapName, bab);
+      int len = bab.position() - blockStartPos;
+      bab.putInt(blockStartPos, len);
+
+      // write the map values
+      int nameIdx = 0;
+      for(String propName : propNames) {
+
+        PropertyMapImpl.PropertyImpl prop = (PropertyMapImpl.PropertyImpl)
+          propMap.get(propName);
+
+        if(prop != null) {
+
+          Object value = prop.getValue();
+          if(value != null) {
+
+            int valStartPos = bab.position();
+            bab.reserveShort();
+
+            bab.put(prop.getFlag());
+            bab.put(prop.getType().getValue());
+            bab.putShort((short)nameIdx);
+
+            PropColumn col = getColumn(prop.getType(), propName, -1, value);
+
+            ByteBuffer data = col.write(
+                value, _database.getFormat().MAX_ROW_SIZE);
+
+            bab.putShort((short)data.remaining());
+            bab.put(data);
+
+            len = bab.position() - valStartPos;
+            bab.putShort(valStartPos, (short)len);
+          }
+        }
+
+        ++nameIdx;
+      }
+    }
+
     /**
      * Reads a property name from the given data block
      */
@@ -253,13 +359,25 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     }
 
     /**
+     * Writes a property name to the given data block
+     */
+    private void writePropName(String propName, ByteArrayBuilder bab) {
+      ByteBuffer textBuf = ColumnImpl.encodeUncompressedText(
+          propName, _database.getCharset());
+      bab.putShort((short)textBuf.remaining());
+      bab.put(textBuf);
+    }
+
+    /**
      * Gets a PropColumn capable of reading/writing a property of the given
      * DataType
      */
     private PropColumn getColumn(DataType dataType, String propName, 
-                                 int dataSize) {
+                                 int dataSize, Object value) 
+      throws IOException
+    {
 
-      if(isPseudoGuidColumn(dataType, propName, dataSize)) {
+      if(isPseudoGuidColumn(dataType, propName, dataSize, value)) {
         dataType = DataType.GUID;
       }
 
@@ -278,16 +396,21 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         // create column with ability to read/write the given data type
         col = ((colType == DataType.BOOLEAN) ? 
                new BooleanPropColumn() : new PropColumn(colType));
+
+        _columns.put(dataType, col);
       }
 
       return col;
     }
 
     private static boolean isPseudoGuidColumn(
-        DataType dataType, String propName, int dataSize) {
+        DataType dataType, String propName, int dataSize, Object value) 
+      throws IOException
+    {
       // guids seem to be marked as "binary" fields
       return((dataType == DataType.BINARY) && 
-             (dataSize == DataType.GUID.getFixedSize()) &&
+             ((dataSize == DataType.GUID.getFixedSize()) ||
+              ((dataSize == -1) && ColumnImpl.isGUIDValue(value))) &&
              PropertyMap.GUID_PROP.equalsIgnoreCase(propName));
     }
 

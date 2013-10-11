@@ -263,6 +263,7 @@ public abstract class JetFormat {
   
   public final Charset CHARSET;
   public final ColumnImpl.SortOrder DEFAULT_SORT_ORDER;
+  public final byte[] PROPERTY_MAP_TYPE;
   
   /**
    * @param channel the database file.
@@ -397,6 +398,7 @@ public abstract class JetFormat {
     
     CHARSET = defineCharset();
     DEFAULT_SORT_ORDER = defineDefaultSortOrder();
+    PROPERTY_MAP_TYPE = definePropMapType();
   }
   
   protected abstract boolean defineReadOnly();
@@ -497,6 +499,7 @@ public abstract class JetFormat {
   
   protected abstract Charset defineCharset();
   protected abstract ColumnImpl.SortOrder defineDefaultSortOrder();
+  protected abstract byte[] definePropMapType();
 
   protected abstract boolean defineLegacyNumericIndexes();
 
@@ -715,6 +718,11 @@ public abstract class JetFormat {
       return ColumnImpl.GENERAL_LEGACY_SORT_ORDER;
     }
 
+    @Override
+    protected byte[] definePropMapType() {
+      return PROPERTY_MAP_TYPES[1];
+    }
+    
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
@@ -936,6 +944,11 @@ public abstract class JetFormat {
     }
 
     @Override
+    protected byte[] definePropMapType() {
+      return PROPERTY_MAP_TYPES[0];
+    }
+
+    @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats()
     {
       return PossibleFileFormats.POSSIBLE_VERSION_4;
@@ -1007,6 +1020,11 @@ public abstract class JetFormat {
     @Override
     protected ColumnImpl.SortOrder defineDefaultSortOrder() {
       return ColumnImpl.GENERAL_SORT_ORDER;
+    }
+
+    @Override
+    protected byte[] definePropMapType() {
+      return PROPERTY_MAP_TYPES[0];
     }
 
     @Override
