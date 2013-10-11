@@ -1598,6 +1598,22 @@ public class TableImpl implements Table
         getDefaultCursor().getRowState(), (RowIdImpl)rowId, row);
   }
 
+  /**
+   * Update the given column's value for the given row id.  Provided RowId
+   * must have previously been returned from this Table.
+   * @throws IllegalStateException if the given row is not valid, or deleted.
+   * @usage _intermediate_method_
+   */
+  public void updateValue(Column column, RowId rowId, Object value) 
+    throws IOException 
+  {
+    Object[] row = new Object[_columns.size()];
+    Arrays.fill(row, Column.KEEP_VALUE);
+    column.setRowValue(row, value);
+
+    updateRow(rowId, row);
+  }
+
   public <M extends Map<String,Object>> M updateRowFromMap(
       RowState rowState, RowIdImpl rowId, M row) 
      throws IOException 

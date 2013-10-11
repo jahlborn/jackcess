@@ -52,10 +52,12 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   private final Map<String,PropertyMapImpl> _maps = 
     new LinkedHashMap<String,PropertyMapImpl>();
   private final int _objectId;
+  private final RowIdImpl _rowId;
   private final Handler _handler;
 
-  public PropertyMaps(int objectId, Handler handler) {
+  public PropertyMaps(int objectId, RowIdImpl rowId, Handler handler) {
     _objectId = objectId;
+    _rowId = rowId;
     _handler = handler;
   }
 
@@ -109,6 +111,10 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     return _handler.write(this);
   }
 
+  public void save() throws IOException {
+    _handler.save(this);
+  }
+
   @Override
   public String toString() {
     return CustomToStringStyle.builder(this)
@@ -123,22 +129,27 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   {
     /** the current database */
     private final DatabaseImpl _database;
+    /** the system table "property" column */
+    private final ColumnImpl _propCol;
     /** cache of PropColumns used to read/write property values */
     private final Map<DataType,PropColumn> _columns = 
       new HashMap<DataType,PropColumn>();
 
     Handler(DatabaseImpl database) {
       _database = database;
+      _propCol = _database.getSystemCatalog().getColumn(
+          DatabaseImpl.CAT_COL_PROPS);
     }
 
     /**
      * @return a PropertyMaps instance decoded from the given bytes (always
      *         returns non-{@code null} result).
      */
-    public PropertyMaps read(byte[] propBytes, int objectId) 
+    public PropertyMaps read(byte[] propBytes, int objectId, 
+                             RowIdImpl rowId) 
       throws IOException 
     {
-      PropertyMaps maps = new PropertyMaps(objectId, this);
+      PropertyMaps maps = new PropertyMaps(objectId, rowId, this);
       if((propBytes == null) || (propBytes.length == 0)) {
         return maps;
       }
@@ -214,6 +225,23 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       }
       
       return bab.toArray();
+    }
+
+    /**
+     * Saves PropertyMaps instance to the db.
+     */
+    public void save(PropertyMaps maps) throws IOException
+    {
+      RowIdImpl rowId = maps._rowId;
+      if(rowId == null) {
+        throw new IllegalStateException(
+            "PropertyMaps cannot be saved without a row id");
+      }
+
+      byte[] mapsBytes = write(maps);
+
+      // for now assume all properties come from system catalog table
+      _propCol.getTable().updateValue(_propCol, rowId, mapsBytes);
     }
 
     private void writeBlock(

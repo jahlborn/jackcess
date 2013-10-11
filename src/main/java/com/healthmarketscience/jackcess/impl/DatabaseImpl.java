@@ -176,7 +176,7 @@ public class DatabaseImpl implements Database
   /** System catalog column name of the flags column */
   private static final String CAT_COL_FLAGS = "Flags";
   /** System catalog column name of the properties column */
-  private static final String CAT_COL_PROPS = "LvProp";
+  static final String CAT_COL_PROPS = "LvProp";
   /** System catalog column name of the remote database */
   private static final String CAT_COL_DATABASE = "Database";
   /** System catalog column name of the remote table name */
@@ -771,10 +771,11 @@ public class DatabaseImpl implements Database
    *         returns non-{@code null} result).
    * @usage _intermediate_method_
    */
-  public PropertyMaps readProperties(byte[] propsBytes, int objectId)
+  public PropertyMaps readProperties(byte[] propsBytes, int objectId,
+                                     RowIdImpl rowId)
     throws IOException 
   {
-    return getPropsHandler().read(propsBytes, objectId);
+    return getPropsHandler().read(propsBytes, objectId, rowId);
   }
   
   /**
@@ -1146,10 +1147,12 @@ public class DatabaseImpl implements Database
     Row objectRow = _tableFinder.getObjectRow(
         objectId, SYSTEM_CATALOG_PROPS_COLUMNS);
     byte[] propsBytes = null;
+    RowIdImpl rowId = null;
     if(objectRow != null) {
       propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
+      rowId = (RowIdImpl)objectRow.getId();
     }
-    return readProperties(propsBytes, objectId);
+    return readProperties(propsBytes, objectId, rowId);
   }
 
   /**
@@ -1171,11 +1174,13 @@ public class DatabaseImpl implements Database
         _dbParentId, dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
     byte[] propsBytes = null;
     int objectId = -1;
+    RowIdImpl rowId = null;
     if(objectRow != null) {
       propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
       objectId = (Integer)objectRow.get(CAT_COL_ID);
+      rowId = (RowIdImpl)objectRow.getId();
     }
-    return readProperties(propsBytes, objectId);
+    return readProperties(propsBytes, objectId, rowId);
   }
 
   public String getDatabasePassword() throws IOException

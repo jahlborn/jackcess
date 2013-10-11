@@ -19,6 +19,8 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
+
 /**
  * Map of properties for a database object.
  *
@@ -68,16 +70,44 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public Object getValue(String name, Object defaultValue);
 
   /**
+   * Creates a new (or updates an existing) property in the map.
+   * <p/>
+   * Note, this change will not be persisted until the {@link #save} method
+   * has been called.
+   *
+   * @return the newly created (or updated) property
+   */
+  public Property put(String name, DataType type, Object value);
+
+  /**
+   * Removes the property with the given name
+   *
+   * @return the removed property, or {@code null} if none found
+   */
+  public Property remove(String name);
+
+  /**
+   * Saves the current state of this map.
+   */
+  public void save() throws IOException;
+
+  /**
    * Info about a property defined in a PropertyMap.
    */ 
   public interface Property 
   {
-
     public String getName();
 
     public DataType getType();
 
     public Object getValue();
-    
+
+    /**
+     * Sets the new value for this property.
+     * <p/>
+     * Note, this change will not be persisted until the {@link
+     * PropertyMap#save} method has been called.
+     */
+    public void setValue(Object newValue);
   }
 }

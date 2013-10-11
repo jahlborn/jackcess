@@ -19,6 +19,7 @@ USA
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -82,18 +83,30 @@ public class PropertyMapImpl implements PropertyMap
     return value;
   }
 
+  public PropertyImpl put(String name, DataType type, Object value) {
+    return put(name, type, (byte)0, value);
+  }
+
   /**
    * Puts a property into this map with the given information.
    */
-  public void put(String name, DataType type, byte flag, Object value) {
-    _props.put(DatabaseImpl.toLookupName(name), 
-               new PropertyImpl(name, type, flag, value));
+  public PropertyImpl put(String name, DataType type, byte flag, Object value) {
+    PropertyImpl prop = new PropertyImpl(name, type, flag, value);
+    _props.put(DatabaseImpl.toLookupName(name), prop);
+    return prop;
+  }
+
+  public PropertyImpl remove(String name) {
+    return (PropertyImpl)_props.remove(DatabaseImpl.toLookupName(name));
   }
 
   public Iterator<Property> iterator() {
     return _props.values().iterator();
   }
 
+  public void save() throws IOException {
+    getOwner().save();
+  }
 
   @Override
   public String toString() {
@@ -119,7 +132,7 @@ public class PropertyMapImpl implements PropertyMap
     private final String _name;
     private final DataType _type;
     private final byte _flag;
-    private final Object _value;
+    private Object _value;
 
     private PropertyImpl(String name, DataType type, byte flag, Object value) {
       _name = name;
@@ -138,6 +151,10 @@ public class PropertyMapImpl implements PropertyMap
 
     public Object getValue() {
       return _value;
+    }
+
+    public void setValue(Object newValue) {
+      _value = newValue;
     }
 
     public byte getFlag() {
