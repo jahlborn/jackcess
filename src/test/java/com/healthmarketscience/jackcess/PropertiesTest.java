@@ -233,22 +233,7 @@ public class PropertiesTest extends TestCase
         PropertyMapImpl propMap = iter.next();
         PropertyMapImpl propMap2 = iter2.next();
 
-        assertEquals(propMap.getSize(), propMap2.getSize());
-        for(PropertyMap.Property prop : propMap) {
-          PropertyMap.Property prop2 = propMap2.get(prop.getName());
-
-          assertEquals(prop.getName(), prop2.getName());
-          assertEquals(prop.getType(), prop2.getType());
-
-          Object v1 = prop.getValue();
-          Object v2 = prop2.getValue();
-
-          if(v1 instanceof byte[]) {
-            assertTrue(Arrays.equals((byte[])v1, (byte[])v2));
-          } else {
-            assertEquals(v1, v2);
-          }
-        }
+        checkProperties(propMap, propMap2);
       }
       
       assertFalse(iter.hasNext());
@@ -256,6 +241,115 @@ public class PropertiesTest extends TestCase
 
       db.close();
     }    
+  }
+
+  public void testModifyProperties() throws Exception
+  {
+    for(TestDB testDb : SUPPORTED_DBS_TEST) {
+      Database db = openCopy(testDb);
+      File dbFile = db.getFile();
+
+      Table t = db.getTable("Table1");
+
+      // grab originals
+      PropertyMap origCProps = t.getColumn("C").getProperties();
+      PropertyMap origFProps = t.getColumn("F").getProperties();
+      PropertyMap origDProps = t.getColumn("D").getProperties();
+
+      db.close();
+
+
+      // modify but do not save
+      db = new DatabaseBuilder(dbFile).open();
+
+      t = db.getTable("Table1");
+
+      PropertyMap cProps = t.getColumn("C").getProperties();
+      PropertyMap fProps = t.getColumn("F").getProperties();
+      PropertyMap dProps = t.getColumn("D").getProperties();
+
+      assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+      assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+      assertEquals((short)109, dProps.getValue("DisplayControl"));
+
+      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
+      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
+      dProps.remove("DisplayControl");
+
+      db.close();
+
+
+      // modify and save
+      db = new DatabaseBuilder(dbFile).open();
+
+      t = db.getTable("Table1");
+
+      cProps = t.getColumn("C").getProperties();
+      fProps = t.getColumn("F").getProperties();
+      dProps = t.getColumn("D").getProperties();
+
+      assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+      assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+      assertEquals((short)109, dProps.getValue("DisplayControl"));
+
+      checkProperties(origCProps, cProps);
+      checkProperties(origFProps, fProps);
+      checkProperties(origDProps, dProps);
+
+      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
+      cProps.save();
+      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
+      fProps.save();
+      dProps.remove("DisplayControl");
+      dProps.save();
+
+      db.close();
+
+
+      // reload saved props
+      db = new DatabaseBuilder(dbFile).open();
+
+      t = db.getTable("Table1");
+
+      cProps = t.getColumn("C").getProperties();
+      fProps = t.getColumn("F").getProperties();
+      dProps = t.getColumn("D").getProperties();
+
+      assertTrue((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+      assertEquals("42", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+      assertNull(dProps.getValue("DisplayControl"));      
+
+      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, false);
+      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("0");
+      dProps.put("DisplayControl", DataType.INT, (short)109);
+
+      checkProperties(origCProps, cProps);
+      checkProperties(origFProps, fProps);
+      checkProperties(origDProps, dProps);
+
+      db.close();
+    }
+  }
+
+  private static void checkProperties(PropertyMap propMap1, 
+                                      PropertyMap propMap2)
+  {
+    assertEquals(propMap1.getSize(), propMap2.getSize());
+    for(PropertyMap.Property prop : propMap1) {
+      PropertyMap.Property prop2 = propMap2.get(prop.getName());
+
+      assertEquals(prop.getName(), prop2.getName());
+      assertEquals(prop.getType(), prop2.getType());
+
+      Object v1 = prop.getValue();
+      Object v2 = prop2.getValue();
+
+      if(v1 instanceof byte[]) {
+        assertTrue(Arrays.equals((byte[])v1, (byte[])v2));
+      } else {
+        assertEquals(v1, v2);
+      }
+    }
   }
 
 }
