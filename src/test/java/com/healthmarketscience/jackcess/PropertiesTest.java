@@ -48,7 +48,7 @@ public class PropertiesTest extends TestCase
 
   public void testPropertyMaps() throws Exception
   {
-    PropertyMaps maps = new PropertyMaps(10, null);
+    PropertyMaps maps = new PropertyMaps(10, null, null);
     assertTrue(maps.isEmpty());
     assertEquals(0, maps.getSize());
     assertFalse(maps.iterator().hasNext());
@@ -224,7 +224,7 @@ public class PropertiesTest extends TestCase
       byte[] mapsBytes = maps.write();
 
       PropertyMaps maps2 = ((DatabaseImpl)db).readProperties(
-          mapsBytes, maps.getObjectId());
+          mapsBytes, maps.getObjectId(), null);
 
       Iterator<PropertyMapImpl> iter = maps.iterator();
       Iterator<PropertyMapImpl> iter2 = maps2.iterator();
