@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.0.1" date="TBD">
+    <release version="2.0.1" date="2013-10-13">
       <action dev="jahlborn" type="add">
         Add initial support for creating/parsing ole content.
       </action>
