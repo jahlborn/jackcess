@@ -25,7 +25,7 @@
         for more details.
       </action>
     </release>
-    <release version="1.2.14.3" date="TBD">
+    <release version="1.2.14.3" date="2013-10-13">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="97">
         Ignore invalid column usage map definitions.
       </action>
