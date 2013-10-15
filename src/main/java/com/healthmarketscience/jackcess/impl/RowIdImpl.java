@@ -27,8 +27,10 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess.impl;
 
-import org.apache.commons.lang.builder.CompareToBuilder;
+import java.io.Serializable;
+
 import com.healthmarketscience.jackcess.RowId;
+import org.apache.commons.lang.builder.CompareToBuilder;
 
 
 /**
@@ -36,8 +38,10 @@ import com.healthmarketscience.jackcess.RowId;
  *
  * @author James Ahlborn
  */
-public class RowIdImpl implements RowId
+public class RowIdImpl implements RowId, Serializable
 {
+  private static final long serialVersionUID = 20131014L;  
+
   /** special page number which will sort before any other valid page
       number */
   public static final int FIRST_PAGE_NUMBER = -1;

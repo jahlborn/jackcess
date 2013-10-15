@@ -37,19 +37,16 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   private final RowIdImpl _id;
 
-  public RowImpl(RowIdImpl id) 
-  {
+  public RowImpl(RowIdImpl id) {
     _id = id;
   }
 
-  public RowImpl(RowIdImpl id, int expectedSize) 
-  {
+  public RowImpl(RowIdImpl id, int expectedSize) {
     super(expectedSize);
     _id = id;
   }
 
-  public RowImpl(Row row) 
-  {
+  public RowImpl(Row row) {
     super(row);
     _id = (RowIdImpl)row.getId();
   }
