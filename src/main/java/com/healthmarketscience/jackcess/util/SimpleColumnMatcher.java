@@ -20,7 +20,6 @@ USA
 
 package com.healthmarketscience.jackcess.util;
 
-import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.Table;
 import org.apache.commons.lang.ObjectUtils;
 

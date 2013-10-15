@@ -32,7 +32,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.util.ImportFilter;
 
 /**
  * Simple concrete implementation of ImportFilter which just returns the given

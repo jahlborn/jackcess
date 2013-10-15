@@ -19,7 +19,6 @@ USA
 
 package com.healthmarketscience.jackcess.query;
 
-import java.util.List;
 
 
 /**
