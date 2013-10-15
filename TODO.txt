@@ -6,8 +6,6 @@ Missing pieces:
   * MEDIUM
 - implement table creation w/ complex columns
   * MEDIUM
-- implement write support for properties
-  * EASY
 - implement table, column, index renaming
   * EASY
 - implement table, column, index deletion
@@ -27,4 +25,4 @@ Refactor goals:
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
 - implement "lazy" usage maps (load on first usage)?
-- add typed getter methods to Row
+- add typed getter methods to Row, PropertyMap
