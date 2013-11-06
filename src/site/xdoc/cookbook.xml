@@ -266,6 +266,25 @@
     </section>
 
     <section name="Finding Stuff">
+      <subsection name="Cursors, what are they good for?">
+        <p>
+          Actually, a lot!  Now that we've covered the basics, let's move into
+          some intermediate level topics.  The first and foremost is the use
+          of the <a
+          href="apidocs/com/healthmarketscience/jackcess/Cursor.html">Cursor</a>.
+          As mentioned earlier, Cursors are the best way to interact with the
+          data in a Table (beyond trivial data entry).  If you are familiar
+          with databases in general, then cursors should be a familiar idea.
+          A Cursor is, in essence, the combination of a Table and a "bookmark"
+          pointing to a Row of data in the Table.  The various Cursor
+          operations either move the bookmark around within the Table or
+          provide read/write operations on the current Row.  While caching and
+          re-using Cursor instances will provide benefits with respect to both
+          speed and memory, they are "lightweight" enough to be used in an
+          on-demand capacity.
+        </p>
+      </subsection>
+
       <p>
         FIXME, writeme
       </p>
