@@ -332,7 +332,7 @@ public class IndexTest extends TestCase {
 
       IOException failure = null;
       try {
-        ((IndexImpl)index).addRow(row, new RowIdImpl(400 + i, 0));
+        ((IndexImpl)index).getIndexData().addRow(row, new RowIdImpl(400 + i, 0));
       } catch(IOException e) {
         failure = e;
       }

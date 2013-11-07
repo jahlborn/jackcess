@@ -240,43 +240,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public void initialize() throws IOException {
     getIndexData().initialize();
   }
-
-  /**
-   * Writes the current index state to the database.
-   * <p>
-   * Forces index initialization.
-   */
-  public void update() throws IOException {
-    getIndexData().update();
-  }
-
-  /**
-   * Adds a row to this index
-   * <p>
-   * Forces index initialization.
-   * 
-   * @param row Row to add
-   * @param rowId rowId of the row to be added
-   */
-  public void addRow(Object[] row, RowIdImpl rowId)
-    throws IOException
-  {
-    getIndexData().addRow(row, rowId);
-  }
-  
-  /**
-   * Removes a row from this index
-   * <p>
-   * Forces index initialization.
-   * 
-   * @param row Row to remove
-   * @param rowId rowId of the row to be removed
-   */
-  public void deleteRow(Object[] row, RowIdImpl rowId)
-    throws IOException
-  {
-    getIndexData().deleteRow(row, rowId);
-  }
       
   /**
    * Gets a new cursor for this index.
