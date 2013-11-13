@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
@@ -223,8 +224,9 @@ final class FKEnforcer
     // ensure that the relevant rows exist in the primary tables for which
     // this table is a secondary table.
     if(!joiner.hasRows(row)) {
-      throw new IOException("Adding new row " + Arrays.asList(row) + 
-                            " violates constraint " + joiner.toFKString());
+      throw new ConstraintViolationException(
+          "Adding new row " + Arrays.asList(row) + " violates constraint " +
+          joiner.toFKString());
     }
   }
 
@@ -234,8 +236,9 @@ final class FKEnforcer
     // ensure that no rows exist in the secondary table for which this table is
     // the primary table.
     if(joiner.hasRows(row)) {
-      throw new IOException("Removing old row " + Arrays.asList(row) + 
-                            " violates constraint " + joiner.toFKString());
+      throw new ConstraintViolationException(
+          "Removing old row " + Arrays.asList(row) + " violates constraint " +
+          joiner.toFKString());
     }
   }
 

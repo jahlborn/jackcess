@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.2" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add ConstraintViolationException to distinguish exceptions due to
+        violating database constraints from other random errors.
+      </action>
+    </release>
     <release version="2.0.1" date="2013-10-13">
       <action dev="jahlborn" type="add">
         Add initial support for creating/parsing ole content.

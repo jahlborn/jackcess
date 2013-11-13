@@ -38,8 +38,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -537,8 +539,9 @@ public class IndexData {
       return;
     }
     if(isBackingPrimaryKey() && (nullCount > 0)) {
-      throw new IOException("Null value found in row " + Arrays.asList(row)
-                            + " for primary key index " + this);
+      throw new ConstraintViolationException(
+          "Null value found in row " + Arrays.asList(row) +
+          " for primary key index " + this);
     }
     
     // make sure we've parsed the entries
@@ -578,7 +581,7 @@ public class IndexData {
           ((prevPos != null) &&
            newEntry.equalsEntryBytes(prevPos.getEntry())));
       if(isUnique() && !isNullEntry && isDupeEntry) {
-        throw new IOException(
+        throw new ConstraintViolationException(
             "New row " + Arrays.asList(row) +
             " violates uniqueness constraint for index " + this);
       }
@@ -863,7 +866,7 @@ public class IndexData {
       try {
         sb.append("entryCount", getEntryCount());
       } catch(IOException e) {
-        throw new RuntimeException(e);
+        throw new RuntimeIOException(e);
       }
     }
     sb.append("pageCache", _pageCache);
