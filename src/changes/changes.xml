@@ -20,7 +20,8 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
-      <action dev="jahlborn" type="add">
+      <action dev="jahlborn" type="add" system="SourceForge2Features" 
+              issue="16">
         Add support for modifying PropertyMaps.
       </action>
     </release>
