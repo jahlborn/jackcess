@@ -44,11 +44,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.BatchUpdateException;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
@@ -162,13 +165,9 @@ public class TableImpl implements Table
   /** page buffer used to update the table def page */
   private final TempPageHolder _tableDefBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
-  /** buffer used to writing single rows of data */
-  private final TempBufferHolder _singleRowBufferH =
+  /** buffer used to writing rows of data */
+  private final TempBufferHolder _writeRowBufferH =
     TempBufferHolder.newHolder(TempBufferHolder.Type.SOFT, true);
-  /** "buffer" used to writing multi rows of data (will create new buffer on
-      every call) */
-  private final TempBufferHolder _multiRowBufferH =
-    TempBufferHolder.newHolder(TempBufferHolder.Type.NONE, true);
   /** page buffer used to write out-of-row "long value" data */
   private final TempPageHolder _longValueBufferH =
     TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
@@ -1437,7 +1436,7 @@ public class TableImpl implements Table
   }
   
   public Object[] addRow(Object... row) throws IOException {
-    return addRows(Collections.singletonList(row), _singleRowBufferH).get(0);
+    return addRows(Collections.singletonList(row), false).get(0);
   }
 
   public <M extends Map<String,Object>> M addRowFromMap(M row) 
@@ -1454,7 +1453,7 @@ public class TableImpl implements Table
   public List<? extends Object[]> addRows(List<? extends Object[]> rows) 
     throws IOException 
   {
-    return addRows(rows, _multiRowBufferH);
+    return addRows(rows, true);
   }
   
   public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows) 
@@ -1489,11 +1488,9 @@ public class TableImpl implements Table
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.
    * @param inRows List of Object[] row values
-   * @param writeRowBufferH TempBufferHolder used to generate buffers for
-   *                        writing the row data
    */
   private List<? extends Object[]> addRows(List<? extends Object[]> rows,
-                                           TempBufferHolder writeRowBufferH)
+                                           final boolean isBatchWrite)
     throws IOException
   {
     if(rows.isEmpty()) {
@@ -1503,82 +1500,154 @@ public class TableImpl implements Table
     getPageChannel().startWrite();
     try {
     
-      List<Object[]> dupeRows = null;
-      ByteBuffer[] rowData = new ByteBuffer[rows.size()];
-      int numCols = _columns.size();
-      for (int i = 0; i < rows.size(); i++) {
-
-        // we need to make sure the row is the right length and is an Object[]
-        // (fill with null if too short).  note, if the row is copied the caller
-        // will not be able to access any generated auto-number value, but if
-        // they need that info they should use a row array of the right
-        // size/type!
-        Object[] row = rows.get(i);
-        if((row.length < numCols) || (row.getClass() != Object[].class)) {
-          row = dupeRow(row, numCols);
-          // copy the input rows to a modifiable list so we can update the
-          // elements
-          if(dupeRows == null) {
-            dupeRows = new ArrayList<Object[]>(rows);
-            rows = dupeRows;
-          }
-          // we copied the row, so put the copy back into the rows list
-          dupeRows.set(i, row);
-        }
-
-        // fill in autonumbers
-        handleAutoNumbersForAdd(row);
-      
-        // write the row of data to a temporary buffer
-        rowData[i] = createRow(row, 
-                               writeRowBufferH.getPageBuffer(getPageChannel()));
-      
-        if (rowData[i].limit() > getFormat().MAX_ROW_SIZE) {
-          throw new IOException("Row size " + rowData[i].limit() +
-                                " is too large");
-        }
-      }
-
       ByteBuffer dataPage = null;
       int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
+      int updateCount = 0;
+      try {
+
+        List<Object[]> dupeRows = null;
+        final int numCols = _columns.size();
+        for (int i = 0; i < rows.size(); i++) {
+
+          // we need to make sure the row is the right length and is an
+          // Object[] (fill with null if too short).  note, if the row is
+          // copied the caller will not be able to access any generated
+          // auto-number value, but if they need that info they should use a
+          // row array of the right size/type!
+          Object[] row = rows.get(i);
+          if((row.length < numCols) || (row.getClass() != Object[].class)) {
+            row = dupeRow(row, numCols);
+            // copy the input rows to a modifiable list so we can update the
+            // elements
+            if(dupeRows == null) {
+              dupeRows = new ArrayList<Object[]>(rows);
+              rows = dupeRows;
+            }
+            // we copied the row, so put the copy back into the rows list
+            dupeRows.set(i, row);
+          }
+
+          // fill in autonumbers
+          handleAutoNumbersForAdd(row);
+      
+          // write the row of data to a temporary buffer
+          ByteBuffer rowData = createRow(
+              row, _writeRowBufferH.getPageBuffer(getPageChannel()));
+      
+          int rowSize = rowData.remaining();
+          if (rowSize > getFormat().MAX_ROW_SIZE) {
+            throw new IOException("Row size " + rowSize + " is too large");
+          }
+
+          // get page with space
+          dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
+          pageNumber = _addRowBufferH.getPageNumber();
+
+          // determine where this row will end up on the page
+          int rowNum = getRowsOnDataPage(dataPage, getFormat());
+
+          RowIdImpl rowId = new RowIdImpl(pageNumber, rowNum);
+
+          // before we actually write the row data, we verify all the database
+          // constraints.
+          if(!_indexDatas.isEmpty()) {
+
+            IndexData.PendingChange idxChange = null;
+            try {
+
+              // handle foreign keys before adding to table
+              _fkEnforcer.addRow(row);
+
+              // prepare index updates
+              for(IndexData indexData : _indexDatas) {
+                idxChange = indexData.prepareAddRow(row, rowId, idxChange);
+              }
+
+              // complete index updates
+              IndexData.commitAll(idxChange);
+
+            } catch(ConstraintViolationException ce) {
+              IndexData.rollbackAll(idxChange);
+              throw ce;
+            }
+          }
+
+          // we have satisfied all the constraints, write the row
+          addDataPageRow(dataPage, rowSize, getFormat(), 0);
+          dataPage.put(rowData);
+
+          // return rowTd if desired
+          if((row.length > numCols) && 
+             (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
+            row[numCols] = rowId;
+          }
+
+          ++updateCount;
+        }
+
+        writeDataPage(dataPage, pageNumber);
     
-      for (int i = 0; i < rowData.length; i++) {
-        int rowSize = rowData[i].remaining();
-        Object[] row = rows.get(i);
+        // Update tdef page
+        updateTableDefinition(rows.size());
 
-        // handle foreign keys before adding to table
-        _fkEnforcer.addRow(row);
+      } catch(Exception rowWriteFailure) {
 
-        // get page with space
-        dataPage = findFreeRowSpace(rowSize, dataPage, pageNumber);
-        pageNumber = _addRowBufferH.getPageNumber();
-
-        // write out the row data
-        int rowNum = addDataPageRow(dataPage, rowSize, getFormat(), 0);
-        dataPage.put(rowData[i]);
-
-        // update the indexes
-        RowIdImpl rowId = new RowIdImpl(pageNumber, rowNum);
-        for(IndexData indexData : _indexDatas) {
-          indexData.addRow(row, rowId);
+        if(!isBatchWrite) {
+          // just re-throw the original exception
+          if(rowWriteFailure instanceof IOException) {
+            throw (IOException)rowWriteFailure;
+          } 
+          throw (RuntimeException)rowWriteFailure;
         }
 
-        // return rowTd if desired
-        if((row.length > numCols) && (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
-          row[numCols] = rowId;
+        // attempt to resolve a partial batch write
+        if(isWriteFailure(rowWriteFailure)) {
+
+          // we don't really know the status of any of the rows, so clear the
+          // update count
+          updateCount = 0;
+
+        } else if(updateCount > 0) {
+          
+          // attempt to flush the rows already written to disk
+          try {
+
+            writeDataPage(dataPage, pageNumber);
+    
+            // Update tdef page
+            updateTableDefinition(updateCount);
+
+          } catch(Exception flushFailure) {
+            // the flush failure is "worse" as it implies possible database
+            // corruption (failed write vs. a row failure which was not a
+            // write failure).  we don't know the status of any rows at this
+            // point (and the original failure is probably irrelevant)
+            LOG.warn("Secondary row failure which preceded the write failure", 
+                     rowWriteFailure);
+            updateCount = 0;
+            rowWriteFailure = flushFailure;
+          }
         }
+
+        throw new BatchUpdateException(updateCount, rowWriteFailure);
       }
-
-      writeDataPage(dataPage, pageNumber);
-    
-      // Update tdef page
-      updateTableDefinition(rows.size());
 
     } finally {
       getPageChannel().finishWrite();
     }
     
     return rows;
+  }
+
+  private static boolean isWriteFailure(Throwable t) {
+    while(t != null) {
+      if((t instanceof IOException) && !(t instanceof JackcessException)) {
+        return true;
+      }
+      t = t.getCause();
+    } 
+    // some other sort of exception which is not a write failure
+    return false;
   }
   
   public Row updateRow(Row row) throws IOException {
@@ -1671,7 +1740,7 @@ public class TableImpl implements Table
 
       // generate new row bytes
       ByteBuffer newRowData = createRow(
-          row, _singleRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
+          row, _writeRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
           keepRawVarValues);
 
       if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
@@ -1681,14 +1750,26 @@ public class TableImpl implements Table
 
       if(!_indexDatas.isEmpty()) {
 
-        Object[] oldRowValues = rowState.getRowValues();
+        IndexData.PendingChange idxChange = null;
+        try {
 
-        // check foreign keys before actually updating
-        _fkEnforcer.updateRow(oldRowValues, row);
+          Object[] oldRowValues = rowState.getRowValues();
 
-        // delete old values from indexes
-        for(IndexData indexData : _indexDatas) {
-          indexData.deleteRow(oldRowValues, rowId);
+          // check foreign keys before actually updating
+          _fkEnforcer.updateRow(oldRowValues, row);
+
+          // prepare index updates
+          for(IndexData indexData : _indexDatas) {
+            idxChange = indexData.prepareUpdateRow(oldRowValues, rowId, row, 
+                                                   idxChange);
+          }
+
+          // complete index updates
+          IndexData.commitAll(idxChange);
+
+        } catch(ConstraintViolationException ce) {
+          IndexData.rollbackAll(idxChange);
+          throw ce;
         }
       }
     
@@ -1747,11 +1828,6 @@ public class TableImpl implements Table
         if(pageNumber != headerRowId.getPageNumber()) {
           writeDataPage(headerPage, headerRowId.getPageNumber());
         }
-      }
-
-      // update the indexes
-      for(IndexData indexData : _indexDatas) {
-        indexData.addRow(row, rowId);
       }
 
       writeDataPage(dataPage, pageNumber);

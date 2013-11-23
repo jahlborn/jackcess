@@ -289,10 +289,10 @@ public class IndexPageCache
    * @param cacheDataPage the page from which to remove the entry
    * @param entryIdx the index of the entry to remove
    */
-  private void removeEntry(CacheDataPage cacheDataPage, int entryIdx)
+  private Entry removeEntry(CacheDataPage cacheDataPage, int entryIdx)
     throws IOException
   {
-    updateEntry(cacheDataPage, entryIdx, null, UpdateType.REMOVE);
+    return updateEntry(cacheDataPage, entryIdx, null, UpdateType.REMOVE);
   }
 
   /**
@@ -318,10 +318,10 @@ public class IndexPageCache
    * @param newEntry the entry to add/replace
    * @param upType the type of update to make
    */
-  private void updateEntry(CacheDataPage cacheDataPage,
-                           int entryIdx,
-                           Entry newEntry,
-                           UpdateType upType)
+  private Entry updateEntry(CacheDataPage cacheDataPage,
+                            int entryIdx,
+                            Entry newEntry,
+                            UpdateType upType)
     throws IOException
   {
     DataPageMain dpMain = cacheDataPage._main;
@@ -375,17 +375,18 @@ public class IndexPageCache
     if(dpExtra._entryView.isEmpty()) {
       // this page is dead
       removeDataPage(parentDataPage, cacheDataPage, oldLastEntry);
-      return;
+      return oldEntry;
     }
 
     // determine if we need to update our parent page 
     if(!updateLast || dpMain.isRoot()) {
       // no parent
-      return;
+      return oldEntry;
     }
 
     // the update to the last entry needs to be propagated to our parent
     replaceParentEntry(parentDataPage, cacheDataPage, oldLastEntry);
+    return oldEntry;
   }
 
   /**
@@ -1430,8 +1431,8 @@ public class IndexPageCache
     }
     
     @Override
-    public void removeEntry(int idx) throws IOException {
-      _main.getCache().removeEntry(this, idx);
+    public Entry removeEntry(int idx) throws IOException {
+      return _main.getCache().removeEntry(this, idx);
     }
     
   }

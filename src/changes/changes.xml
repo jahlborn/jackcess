@@ -5,6 +5,10 @@
   </properties>
   <body>
     <release version="2.0.2" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="99">
+        Rework row add/update so that constraint violations do not leave
+        behind partially written rows.
+      </action>
       <action dev="jahlborn" type="update">
         Add ConstraintViolationException to distinguish exceptions due to
         violating database constraints from other random errors.

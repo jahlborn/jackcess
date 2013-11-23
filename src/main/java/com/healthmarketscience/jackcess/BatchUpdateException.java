@@ -20,17 +20,24 @@ USA
 package com.healthmarketscience.jackcess;
 
 /**
- * JackcessException which indicates that the failure was caused by a database
- * constraint violation.
+ * JackcessException which is thrown from multi-add-row {@link Table} methods
+ * which indicates how many rows were successfully written before the
+ * underlying failure was encountered.
  *
  * @author James Ahlborn
  */
-public class ConstraintViolationException extends JackcessException 
+public class BatchUpdateException extends JackcessException 
 {
-  private static final long serialVersionUID = 20131123L;  
-  
-  public ConstraintViolationException(String msg) {
-    super(msg);
+  private static final long serialVersionUID = 20131123L;
+
+  private final int _updateCount;
+
+  public BatchUpdateException(int updateCount, Throwable cause) {
+    super(cause);
+    _updateCount = updateCount;
+  }
+
+  public int getUpdateCount() {
+    return _updateCount;
   }
 }
-

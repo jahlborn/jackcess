@@ -19,18 +19,26 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
+
 /**
- * JackcessException which indicates that the failure was caused by a database
- * constraint violation.
+ * Base class for specific exceptions thrown by Jackcess.
  *
  * @author James Ahlborn
  */
-public class ConstraintViolationException extends JackcessException 
+public class JackcessException extends IOException 
 {
   private static final long serialVersionUID = 20131123L;  
-  
-  public ConstraintViolationException(String msg) {
-    super(msg);
+
+  public JackcessException(String message) {
+    super(message);
+  }
+
+  public JackcessException(Throwable cause) {
+    super(cause);
+  }
+
+  public JackcessException(String message, Throwable cause) {
+    super(message, cause);
   }
 }
-

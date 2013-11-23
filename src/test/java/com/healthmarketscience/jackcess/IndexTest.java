@@ -332,7 +332,8 @@ public class IndexTest extends TestCase {
 
       IOException failure = null;
       try {
-        ((IndexImpl)index).getIndexData().addRow(row, new RowIdImpl(400 + i, 0));
+        ((IndexImpl)index).getIndexData().prepareAddRow(
+            row, new RowIdImpl(400 + i, 0), null).commit();
       } catch(IOException e) {
         failure = e;
       }
@@ -492,6 +493,103 @@ public class IndexTest extends TestCase {
       assertNotNull(t1pk);
       assertNull(((IndexImpl)t1pk).getReference());
       assertNull(t1pk.getReferencedIndex());
+    }    
+  }
+
+  public void testConstraintViolation() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      Table t = new TableBuilder("TestTable")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data", DataType.TEXT))
+        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+                  .addColumns("id").setPrimaryKey())
+        .addIndex(new IndexBuilder("data_ind")
+                  .addColumns("data").setUnique())
+        .toTable(db);
+
+      for(int i = 0; i < 5; ++i) {
+        t.addRow(i, "row" + i);
+      }
+
+      try {
+        t.addRow(3, "badrow");
+        fail("ConstraintViolationException should have been thrown");
+      } catch(ConstraintViolationException ce) {
+        // success
+      }
+
+      assertEquals(5, t.getRowCount());
+
+      List<Row> expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 0, "data", "row0"),
+            createExpectedRow(
+                "id", 1, "data", "row1"),
+            createExpectedRow(
+                "id", 2, "data", "row2"),
+            createExpectedRow(
+                "id", 3, "data", "row3"),
+            createExpectedRow(
+                "id", 4, "data", "row4"));
+
+      assertTable(expectedRows, t);
+
+      IndexCursor pkCursor = CursorBuilder.createCursor(t.getPrimaryKeyIndex());
+      assertCursor(expectedRows, pkCursor);
+
+      assertCursor(expectedRows, 
+                   CursorBuilder.createCursor(t.getIndex("data_ind")));
+
+      List<Object[]> batch = new ArrayList<Object[]>();
+      batch.add(new Object[]{5, "row5"});
+      batch.add(new Object[]{6, "row6"});
+      batch.add(new Object[]{7, "row2"});
+      batch.add(new Object[]{8, "row8"});
+
+      try {
+        t.addRows(batch);
+        fail("BatchUpdateException should have been thrown");
+      } catch(BatchUpdateException be) {
+        // success
+        assertTrue(be.getCause() instanceof ConstraintViolationException);
+        assertEquals(2, be.getUpdateCount());
+      }
+
+      expectedRows = new ArrayList<Row>(expectedRows);
+      expectedRows.add(createExpectedRow("id", 5, "data", "row5"));
+      expectedRows.add(createExpectedRow("id", 6, "data", "row6"));
+
+      assertTable(expectedRows, t);
+      
+      assertCursor(expectedRows, pkCursor);
+
+      assertCursor(expectedRows, 
+                   CursorBuilder.createCursor(t.getIndex("data_ind")));
+
+      pkCursor.findFirstRowByEntry(4);
+      Row row4 = pkCursor.getCurrentRow();
+
+      row4.put("id", 3);
+
+      try {
+        t.updateRow(row4);
+        fail("ConstraintViolationException should have been thrown");
+      } catch(ConstraintViolationException ce) {
+        // success
+      }
+      
+      assertTable(expectedRows, t);
+      
+      assertCursor(expectedRows, pkCursor);
+
+      assertCursor(expectedRows, 
+                   CursorBuilder.createCursor(t.getIndex("data_ind")));
+
+      db.close();
     }    
   }
 

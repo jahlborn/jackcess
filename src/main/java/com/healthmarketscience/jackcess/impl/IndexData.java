@@ -522,21 +522,32 @@ public class IndexData {
   }
 
   /**
-   * Adds a row to this index
+   * Prepares to add a row to this index.  All constraints are checked before
+   * this method returns.
    * <p>
    * Forces index initialization.
    * 
    * @param row Row to add
    * @param rowId rowId of the row to be added
+   *
+   * @return a PendingChange which can complete the addition or roll it back
    */
-  public void addRow(Object[] row, RowIdImpl rowId)
+  public PendingChange prepareAddRow(Object[] row, RowIdImpl rowId,
+                                     PendingChange nextChange)
+    throws IOException
+  {
+    return prepareAddRow(row, rowId, new AddRowPendingChange(nextChange));
+  }
+  
+  private PendingChange prepareAddRow(Object[] row, RowIdImpl rowId,
+                                      AddRowPendingChange change)
     throws IOException
   {
     int nullCount = countNullValues(row);
     boolean isNullEntry = (nullCount == _columns.size());
     if(shouldIgnoreNulls() && isNullEntry) {
       // nothing to do
-      return;
+      return change;
     }
     if(isBackingPrimaryKey() && (nullCount > 0)) {
       throw new ConstraintViolationException(
@@ -547,24 +558,21 @@ public class IndexData {
     // make sure we've parsed the entries
     initialize();
 
-    Entry newEntry = new Entry(createEntryBytes(row), rowId);
-    if(addEntry(newEntry, isNullEntry, row)) {
-      ++_modCount;
-    } else {
-      LOG.warn("Added duplicate index entry " + newEntry + " for row: " +
-               Arrays.asList(row));
-    }
+    return prepareAddEntry(new Entry(createEntryBytes(row), rowId), isNullEntry,
+                           row, change);
   }
 
   /**
    * Adds an entry to the correct index dataPage, maintaining the order.
    */
-  private boolean addEntry(Entry newEntry, boolean isNullEntry, Object[] row)
+  private PendingChange prepareAddEntry(Entry newEntry, boolean isNullEntry,
+                                        Object[] row, AddRowPendingChange change)
     throws IOException
   {
     DataPage dataPage = findDataPage(newEntry);
     int idx = dataPage.findEntry(newEntry);
     if(idx < 0) {
+      
       // this is a new entry
       idx = missingIndexToInsertionPoint(idx);
 
@@ -586,14 +594,57 @@ public class IndexData {
             " violates uniqueness constraint for index " + this);
       }
 
+      change.setAddRow(newEntry, dataPage, idx, isDupeEntry);
+    }
+    return change;
+  }
+
+  /**
+   * Completes a prepared row addition.
+   */
+  private void commitAddRow(Entry newEntry, DataPage dataPage, int idx,
+                            boolean isDupeEntry)
+    throws IOException
+  {
+    if(newEntry != null) {
+      dataPage.addEntry(idx, newEntry);
       if(!isDupeEntry) {
         ++_uniqueEntryCount;
       }
-
-      dataPage.addEntry(idx, newEntry);
-      return true;
+      ++_modCount;
+    } else {
+      LOG.warn("Added duplicate index entry " + newEntry);
     }
-    return false;
+  }
+
+  /**
+   * Prepares to update a row in this index.  All constraints are checked
+   * before this method returns.
+   * <p>
+   * Forces index initialization.
+   * 
+   * @param oldRow Row to be removed
+   * @param newRow Row to be added
+   * @param rowId rowId of the row to be updated
+   *
+   * @return a PendingChange which can complete the update or roll it back
+   */
+  public PendingChange prepareUpdateRow(Object[] oldRow, RowIdImpl rowId,
+                                        Object[] newRow, 
+                                        PendingChange nextChange)
+    throws IOException
+  {
+    UpdateRowPendingChange change = new UpdateRowPendingChange(nextChange);
+    change.setDeletedRow(deleteRowImpl(oldRow, rowId));
+
+    try {
+      prepareAddRow(newRow, rowId, change);
+      return change;
+    } catch(ConstraintViolationException e) {
+      // need to undo the deletion before bailing
+      change.rollback();
+      throw e;
+    }
   }
   
   /**
@@ -607,30 +658,58 @@ public class IndexData {
   public void deleteRow(Object[] row, RowIdImpl rowId)
     throws IOException
   {
+    deleteRowImpl(row, rowId);
+  }
+  
+  private Entry deleteRowImpl(Object[] row, RowIdImpl rowId)
+    throws IOException
+  {
     int nullCount = countNullValues(row);
     if(shouldIgnoreNulls() && (nullCount == _columns.size())) {
       // nothing to do
-      return;
+      return null;
     }
     
     // make sure we've parsed the entries
     initialize();
 
     Entry oldEntry = new Entry(createEntryBytes(row), rowId);
-    if(removeEntry(oldEntry)) {
+    Entry removedEntry = removeEntry(oldEntry);
+    if(removedEntry != null) {
       ++_modCount;
     } else {
       LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
                Arrays.asList(row));
     }
+    return removedEntry;
   }
 
+  /**
+   * Undoes a previous row deletion.
+   */
+  private void rollbackDeletedRow(Entry removedEntry)
+    throws IOException
+  {
+    if(removedEntry == null) {
+      // no change was made
+      return;
+    }
+
+    // unfortunately, stuff might have shuffled around when we first removed
+    // the row, so in order to re-insert it, we need to re-find and insert it.
+    DataPage dataPage = findDataPage(removedEntry);
+    int idx = dataPage.findEntry(removedEntry);
+    if(idx < 0) {
+      dataPage.addEntry(missingIndexToInsertionPoint(idx), removedEntry);
+    }
+  }
+  
   /**
    * Removes an entry from the relevant index dataPage, maintaining the order.
    * Will search by RowId if entry is not found (in case a partial entry was
    * provided).
    */
-  private boolean removeEntry(Entry oldEntry)
+  private Entry removeEntry(Entry oldEntry)
     throws IOException
   {
     DataPage dataPage = findDataPage(oldEntry);
@@ -656,12 +735,27 @@ public class IndexData {
       doRemove = true;
     }
 
+    Entry removedEntry = null;
     if(doRemove) {
       // found it!
-      dataPage.removeEntry(idx);
+      removedEntry = dataPage.removeEntry(idx);
     }
     
-    return doRemove;
+    return removedEntry;
+  }
+      
+  public static void commitAll(PendingChange change) throws IOException {
+    while(change != null) {
+      change.commit();
+      change = change.getNext();
+    }
+  }
+
+  public static void rollbackAll(PendingChange change) throws IOException {
+    while(change != null) {
+      change.rollback();
+      change = change.getNext();
+    }
   }
       
   /**
@@ -2352,7 +2446,7 @@ public class IndexData {
 
     public abstract void addEntry(int idx, Entry entry)
       throws IOException;
-    public abstract void removeEntry(int idx)
+    public abstract Entry removeEntry(int idx)
       throws IOException;
 
     public final boolean isEmpty() {
@@ -2448,7 +2542,96 @@ public class IndexData {
     @Override
     public void addEntry(int idx, Entry entry) { }
     @Override
-    public void removeEntry(int idx) { }
+    public Entry removeEntry(int idx) { return null; }
+  }
+
+  /**
+   * Utility class which maintains information about a pending index update.
+   * An instance of this class can be used to complete the change (by calling
+   * {@link #commit}) or undo the change (by calling {@link #rollback}).
+   */
+  public static abstract class PendingChange
+  {
+    private final PendingChange _next;
+
+    private PendingChange(PendingChange next) {
+      _next = next;
+    }
+
+    /**
+     * Returns the next pending change, if any
+     */
+    public PendingChange getNext() {
+      return _next;
+    }
+    
+    /**
+     * Completes the pending change.
+     */
+    public abstract void commit() throws IOException;
+
+    /**
+     * Undoes the pending change.
+     */
+    public abstract void rollback() throws IOException;
+  }
+
+  /**
+   * PendingChange for a row addition.
+   */
+  private class AddRowPendingChange extends PendingChange
+  {
+    private Entry _addEntry;
+    private DataPage _addDataPage;
+    private int _addIdx;
+    private boolean _isDupe;
+
+    private AddRowPendingChange(PendingChange next) {
+      super(next);
+    }
+
+    public void setAddRow(Entry addEntry, DataPage dataPage, int idx, 
+                          boolean isDupe) {
+      _addEntry = addEntry;
+      _addDataPage = dataPage;
+      _addIdx = idx;
+      _isDupe = isDupe;
+    }
+
+    @Override
+    public void commit() throws IOException {
+      commitAddRow(_addEntry, _addDataPage, _addIdx, _isDupe);
+    }
+    
+    @Override
+    public void rollback() throws IOException {
+      _addEntry = null;
+      _addDataPage = null;
+      _addIdx = -1;
+    }
+  }
+
+  /**
+   * PendingChange for a row update (which is essentially a deletion followed
+   * by an addition).
+   */
+  private class UpdateRowPendingChange extends AddRowPendingChange
+  {
+    private Entry _removedEntry;
+
+    private UpdateRowPendingChange(PendingChange next) {
+      super(next);
+    }
+
+    public void setDeletedRow(Entry removedEntry) {
+      _removedEntry = removedEntry;
+    }
+
+    @Override
+    public void rollback() throws IOException {
+      super.rollback();
+      rollbackDeletedRow(_removedEntry);
+    }
   }
 
 }

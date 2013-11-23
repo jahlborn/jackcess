@@ -203,6 +203,10 @@ public interface Table extends Iterable<Row>
    * Note, if this table has an auto-number column, the values written will be
    * put back into the given row arrays (assuming the given row array is at
    * least as long as the number of Columns in this Table).
+   * <p>
+   * Most exceptions thrown from this method will be wrapped with a {@link
+   * BatchUpdateException} which gives useful information in the case of a
+   * partially successful write.
    *
    * @see #addRow(Object...) for more details on row arrays
    * 
@@ -224,6 +228,11 @@ public interface Table extends Iterable<Row>
    * <p/>
    * Note, if this table has an auto-number column, the values generated will
    * be put back into the appropriate row maps.
+   * <p>
+   * Most exceptions thrown from this method will be wrapped with a {@link
+   * BatchUpdateException} which gives useful information in the case of a
+   * partially successful write.
+   * 
    * @return the given row map list, where the row maps will contain any
    *         autonumbers generated
    * @usage _general_method_
