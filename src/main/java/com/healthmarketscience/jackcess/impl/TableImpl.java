@@ -1503,6 +1503,7 @@ public class TableImpl implements Table
       ByteBuffer dataPage = null;
       int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
       int updateCount = 0;
+      int autoNumAssignCount = 0;
       try {
 
         List<Object[]> dupeRows = null;
@@ -1529,6 +1530,7 @@ public class TableImpl implements Table
 
           // fill in autonumbers
           handleAutoNumbersForAdd(row);
+          ++autoNumAssignCount;
       
           // write the row of data to a temporary buffer
           ByteBuffer rowData = createRow(
@@ -1592,6 +1594,14 @@ public class TableImpl implements Table
 
       } catch(Exception rowWriteFailure) {
 
+        boolean isWriteFailure = isWriteFailure(rowWriteFailure);
+
+        if(!isWriteFailure && (autoNumAssignCount > updateCount)) {
+          // we assigned some autonumbers which won't get written.  attempt to
+          // recover them so we don't get ugly "holes"
+          restoreAutoNumbersFromAdd(rows.get(autoNumAssignCount - 1));
+        }
+        
         if(!isBatchWrite) {
           // just re-throw the original exception
           if(rowWriteFailure instanceof IOException) {
@@ -1601,7 +1611,7 @@ public class TableImpl implements Table
         }
 
         // attempt to resolve a partial batch write
-        if(isWriteFailure(rowWriteFailure)) {
+        if(isWriteFailure) {
 
           // we don't really know the status of any of the rows, so clear the
           // update count
@@ -2149,6 +2159,22 @@ public class TableImpl implements Table
     }
   }
 
+  /**
+   * Restores all autonumber column values from a failed add row.
+   */
+  private void restoreAutoNumbersFromAdd(Object[] row)
+    throws IOException
+  {
+    if(_autoNumColumns.isEmpty()) {
+      return;
+    }
+
+    for(ColumnImpl col : _autoNumColumns) {
+      // restore the last value from the row
+      col.getAutoNumberGenerator().restoreLast(col.getRowValue(row));
+    }
+  }
+
   private static void padRowBuffer(ByteBuffer buffer, int minRowSize,
                                    int trailerSize)
   {
@@ -2174,6 +2200,11 @@ public class TableImpl implements Table
     // gets the last used auto number (does not modify)
     return _lastLongAutoNumber;
   }
+
+  void restoreLastLongAutoNumber(int lastLongAutoNumber) {
+    // restores the last used auto number
+    _lastLongAutoNumber = lastLongAutoNumber - 1;
+  }
   
   int getNextComplexTypeAutoNumber() {
     // note, the saved value is the last one handed out, so pre-increment
@@ -2183,6 +2214,11 @@ public class TableImpl implements Table
   int getLastComplexTypeAutoNumber() {
     // gets the last used auto number (does not modify)
     return _lastComplexTypeAutoNumber;
+  }
+
+  void restoreLastComplexTypeAutoNumber(int lastComplexTypeAutoNumber) {
+    // restores the last used auto number
+    _lastComplexTypeAutoNumber = lastComplexTypeAutoNumber - 1;
   }
   
   @Override

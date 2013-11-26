@@ -593,6 +593,81 @@ public class IndexTest extends TestCase {
     }    
   }
 
+  public void testAutoNumberRecover() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      Table t = new TableBuilder("TestTable")
+        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(new ColumnBuilder("data", DataType.TEXT))
+        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+                  .addColumns("id").setPrimaryKey())
+        .addIndex(new IndexBuilder("data_ind")
+                  .addColumns("data").setUnique())
+        .toTable(db);
+
+      for(int i = 1; i < 3; ++i) {
+        t.addRow(null, "row" + i);
+      }
+
+      try {
+        t.addRow(null, "row1");
+        fail("ConstraintViolationException should have been thrown");
+      } catch(ConstraintViolationException ce) {
+        // success
+      }
+      
+      t.addRow(null, "row3");
+
+      assertEquals(3, t.getRowCount());
+
+      List<Row> expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 1, "data", "row1"),
+            createExpectedRow(
+                "id", 2, "data", "row2"),
+            createExpectedRow(
+                "id", 3, "data", "row3"));
+
+      assertTable(expectedRows, t);
+
+      IndexCursor pkCursor = CursorBuilder.createCursor(t.getPrimaryKeyIndex());
+      assertCursor(expectedRows, pkCursor);
+
+      assertCursor(expectedRows, 
+                   CursorBuilder.createCursor(t.getIndex("data_ind")));
+
+      List<Object[]> batch = new ArrayList<Object[]>();
+      batch.add(new Object[]{null, "row4"});
+      batch.add(new Object[]{null, "row5"});
+      batch.add(new Object[]{null, "row3"});
+
+      try {
+        t.addRows(batch);
+        fail("BatchUpdateException should have been thrown");
+      } catch(BatchUpdateException be) {
+        // success
+        assertTrue(be.getCause() instanceof ConstraintViolationException);
+        assertEquals(2, be.getUpdateCount());
+      }
+
+      expectedRows = new ArrayList<Row>(expectedRows);
+      expectedRows.add(createExpectedRow("id", 4, "data", "row4"));
+      expectedRows.add(createExpectedRow("id", 5, "data", "row5"));
+
+      assertTable(expectedRows, t);
+      
+      assertCursor(expectedRows, pkCursor);
+
+      assertCursor(expectedRows, 
+                   CursorBuilder.createCursor(t.getIndex("data_ind")));
+
+      db.close();
+    }
+  }
+  
   private void doCheckForeignKeyIndex(Table ta, Index ia, Table tb)
     throws Exception
   {
