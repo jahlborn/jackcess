@@ -251,12 +251,12 @@
         key and enable speedier lookups on the "Name" column.
       </p>
 <source>
-  // new TableBuilder(...
+  // ... new TableBuilder( ...
     .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
               .addColumns("ID").setPrimaryKey())
     .addIndex(new IndexBuilder("NameIndex")
               .addColumns("Name"))
-  // .toTable(...
+  // ... .toTable( ...
 </source>
       <p>
         Don't forget to close the Database when you are finished building it
