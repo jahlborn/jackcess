@@ -119,11 +119,11 @@ public class CustomToStringStyle extends StandardToStringStyle
       if(isFieldSeparatorAtStart()) {
         appendFieldSeparator(sb);
       }
-      appendInternal(sb, fieldName, iter.next(), true);
+      appendValueDetail(sb, fieldName, iter.next());
     }
     while(iter.hasNext()) {
       sb.append(getArraySeparator());
-      appendInternal(sb, fieldName, iter.next(), true);
+      appendValueDetail(sb, fieldName, iter.next());
     }
 
     // indent entire list contents another level
@@ -151,13 +151,13 @@ public class CustomToStringStyle extends StandardToStringStyle
       }
       Map.Entry<?,?> e = iter.next();
       sb.append(e.getKey()).append("=");
-      appendInternal(sb, fieldName, e.getValue(), true);
+      appendValueDetail(sb, fieldName, e.getValue());
     }
     while(iter.hasNext()) {
       sb.append(getArraySeparator());
       Map.Entry<?,?> e = iter.next();
       sb.append(e.getKey()).append("=");
-      appendInternal(sb, fieldName, e.getValue(), true);
+      appendValueDetail(sb, fieldName, e.getValue());
     }
 
     // indent entire map contents another level
@@ -173,6 +173,15 @@ public class CustomToStringStyle extends StandardToStringStyle
   protected void appendDetail(StringBuffer buffer, String fieldName, 
                               byte[] array) {
     appendDetail(buffer, PageChannel.wrap(array));
+  }
+
+  private void appendValueDetail(StringBuffer buffer, String fieldName, 
+                                 Object value) {
+    if (value == null) {
+      appendNullText(buffer, fieldName);
+    } else {
+      appendInternal(buffer, fieldName, value, true);
+    }    
   }
 
   private static void appendDetail(StringBuffer buffer, ByteBuffer bb) {

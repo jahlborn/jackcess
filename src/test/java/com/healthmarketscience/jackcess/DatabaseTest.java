@@ -1440,6 +1440,14 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  public void testToString()
+  {
+    RowImpl row = new RowImpl(new RowIdImpl(1, 1));
+    row.put("id", 37);
+    row.put("data", null);
+    assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
+  }
+
   private void checkRawValue(String expected, Object val)
   {
     if(expected != null) {

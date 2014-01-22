@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.3" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Fix NullPointerException in RowImpl.toString() when value is null.
+      </action>
+    </release>
     <release version="2.0.2" date="2013-11-30">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="99">
         Rework row add/update so that constraint violations do not leave
