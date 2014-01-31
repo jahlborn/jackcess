@@ -4,8 +4,8 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.0.3" date="TBD">
-      <action dev="jahlborn" type="fix">
+    <release version="2.0.3" date="2014-01-30">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="100">
         Fix NullPointerException in RowImpl.toString() when value is null.
       </action>
     </release>
