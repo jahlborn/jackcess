@@ -72,8 +72,10 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
+import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
+import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -303,6 +305,8 @@ public class DatabaseImpl implements Database
   private Table.ColumnOrder _columnOrder;
   /** whether or not enforcement of foreign-keys is enabled */
   private boolean _enforceForeignKeys;
+  /** factory for ColumnValidators */
+  private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables */
   private final TableCache _tableCache = new TableCache();
   /** handler for reading/writing properteies */
@@ -638,6 +642,17 @@ public class DatabaseImpl implements Database
     _enforceForeignKeys = newEnforceForeignKeys;
   }
 
+  public ColumnValidatorFactory getColumnValidatorFactory() {
+    return _validatorFactory;
+  }
+
+  public void setColumnValidatorFactory(ColumnValidatorFactory newFactory) {
+    if(newFactory == null) {
+      newFactory = SimpleColumnValidatorFactory.INSTANCE;
+    }
+    _validatorFactory = newFactory;
+  }
+  
   /**
    * @usage _advanced_method_
    */

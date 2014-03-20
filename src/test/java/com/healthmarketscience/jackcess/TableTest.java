@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-import java.util.TimeZone;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
@@ -49,7 +48,7 @@ public class TableTest extends TestCase {
 
   private final PageChannel _pageChannel = new PageChannel(true) {};
   private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
-  private TableImpl _testTable;
+  private TestTable _testTable;
   private int _varLenIdx;
   private int _fixedOffset;
   
@@ -126,8 +125,7 @@ public class TableTest extends TestCase {
   private ByteBuffer createRow(Object... row) 
     throws IOException
   {
-    return _testTable.createRow(
-        row, _testTable.getPageChannel().createPageBuffer());
+    return _testTable.createRow(row);
   }
 
   private ByteBuffer[] encodeColumns(Object... row)
@@ -162,16 +160,7 @@ public class TableTest extends TestCase {
   private TableImpl newTestTable() 
     throws Exception
   {
-    _testTable = new TableImpl(true, _columns) {
-        @Override
-        public PageChannel getPageChannel() {
-          return _pageChannel;
-        }
-        @Override
-        public JetFormat getFormat() {
-          return JetFormat.VERSION_4;
-        }
-      };
+    _testTable = new TestTable();
     return _testTable;
   }
 
@@ -217,5 +206,21 @@ public class TableTest extends TestCase {
 
     _columns.add(col);
   }
-  
+
+  private class TestTable extends TableImpl {
+    private TestTable() throws IOException {
+      super(true, _columns);
+    }
+    public ByteBuffer createRow(Object... row) throws IOException {
+      return super.createRow(row, getPageChannel().createPageBuffer());
+    }
+    @Override
+    public PageChannel getPageChannel() {
+      return _pageChannel;
+    }
+    @Override
+    public JetFormat getFormat() {
+      return JetFormat.VERSION_4;
+    }
+  }
 }

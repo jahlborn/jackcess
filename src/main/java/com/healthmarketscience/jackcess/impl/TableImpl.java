@@ -303,6 +303,11 @@ public class TableImpl implements Table
     }
 
     _fkEnforcer = new FKEnforcer(this);
+
+    // after fully constructed, allow column validator to be configured
+    for(ColumnImpl col : _columns) {
+      col.setColumnValidator(null);
+    }
   }
 
   public String getName() {
@@ -311,6 +316,10 @@ public class TableImpl implements Table
 
   public boolean isHidden() {
     return((_flags & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
+  }
+
+  public boolean isSystem() {
+    return(_tableType != TYPE_USER);
   }
 
   /**
@@ -1528,8 +1537,35 @@ public class TableImpl implements Table
             dupeRows.set(i, row);
           }
 
-          // fill in autonumbers
-          handleAutoNumbersForAdd(row);
+          // handle various value massaging activities
+          Object complexAutoNumber = null;
+          for(ColumnImpl column : _columns) {
+
+            Object rowValue = null;
+            if(column.isAutoNumber()) {
+              
+              // fill in autonumbers, ignore given row value, use next
+              // autonumber
+              ColumnImpl.AutoNumberGenerator autoNumGen =
+                column.getAutoNumberGenerator();
+              if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
+                rowValue = autoNumGen.getNext(null);
+              } else {
+                // complex type auto numbers are shared across all complex
+                // columns in the row
+                complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
+                rowValue = complexAutoNumber;
+              }
+              
+            } else {
+              
+              // pass input value through column validator
+              rowValue = column.validate(column.getRowValue(row));
+            }
+
+            column.setRowValue(row, rowValue);
+          }
+          
           ++autoNumAssignCount;
       
           // write the row of data to a temporary buffer
@@ -1732,20 +1768,38 @@ public class TableImpl implements Table
       Map<ColumnImpl,byte[]> keepRawVarValues = 
         (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
 
+      // handle various value massaging activities
       for(ColumnImpl column : _columns) {
-        if(_autoNumColumns.contains(column)) {
+        
+        Object rowValue = null;
+        if(column.isAutoNumber()) {
+          
           // fill in any auto-numbers (we don't allow autonumber values to be
           // modified)
-          column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column, 
-                                               rowState, null));
-        } else if(column.getRowValue(row) == Column.KEEP_VALUE) {
-          // fill in any "keep value" fields
-          column.setRowValue(row, getRowColumn(getFormat(), rowBuffer, column,
-                                               rowState, keepRawVarValues));
-        } else if(_indexColumns.contains(column)) {
-          // read row value to help update indexes
-          getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+          rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+          
+        } else {
+          
+          rowValue = column.getRowValue(row);
+          if(rowValue == Column.KEEP_VALUE) {
+            
+            // fill in any "keep value" fields (restore old value)
+            rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState,
+                                    keepRawVarValues);
+            
+          } else {
+            
+            if(_indexColumns.contains(column)) {
+              // read (old) row value to help update indexes
+              getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+            }
+            
+            // pass input value through column validator
+            rowValue = column.validate(rowValue);
+          }
         }
+
+        column.setRowValue(row, rowValue);
       }
 
       // generate new row bytes
@@ -1969,10 +2023,7 @@ public class TableImpl implements Table
     return dataPage;
   }
   
-  /**
-   * @usage _advanced_method_
-   */
-  public ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
+  protected ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
     throws IOException
   {
     return createRow(rowArray, buffer, 0,
@@ -2133,33 +2184,6 @@ public class TableImpl implements Table
   }
 
   /**
-   * Fill in all autonumber column values.
-   */
-  private void handleAutoNumbersForAdd(Object[] row)
-    throws IOException
-  {
-    if(_autoNumColumns.isEmpty()) {
-      return;
-    }
-
-    Object complexAutoNumber = null;
-    for(ColumnImpl col : _autoNumColumns) {
-      // ignore given row value, use next autonumber
-      ColumnImpl.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
-      Object rowValue = null;
-      if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
-        rowValue = autoNumGen.getNext(null);
-      } else {
-        // complex type auto numbers are shared across all complex columns
-        // in the row
-        complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
-        rowValue = complexAutoNumber;
-      }
-      col.setRowValue(row, rowValue);
-    }
-  }
-
-  /**
    * Restores all autonumber column values from a failed add row.
    */
   private void restoreAutoNumbersFromAdd(Object[] row)
@@ -2224,8 +2248,7 @@ public class TableImpl implements Table
   @Override
   public String toString() {
     return CustomToStringStyle.builder(this)
-      .append("type", (_tableType + 
-                       ((_tableType == TYPE_USER) ? " (USER)" : " (SYSTEM)")))
+      .append("type", (_tableType + (!isSystem() ? " (USER)" : " (SYSTEM)")))
       .append("name", _name)
       .append("rowCount", _rowCount)
       .append("columnCount", _columns.size())

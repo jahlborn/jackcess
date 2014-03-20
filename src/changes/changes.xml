@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.4" date="TBD">
+      <action dev="jahlborn" type="add">
+        Add ColumnValidator interface which allows column values to be easily
+        manipulated/validated as they are written into the database.
+      </action>
+    </release>
     <release version="2.0.3" date="2014-01-30">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="100">
         Fix NullPointerException in RowImpl.toString() when value is null.

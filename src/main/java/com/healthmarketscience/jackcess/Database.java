@@ -33,6 +33,7 @@ import java.util.TimeZone;
 
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
 
@@ -366,7 +367,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public void setColumnOrder(Table.ColumnOrder newColumnOrder);
 
   /**
-   * Gets currently foreign-key enforcement policy.
+   * Gets current foreign-key enforcement policy.
    * @usage _intermediate_method_
    */
   public boolean isEnforceForeignKeys();
@@ -378,6 +379,19 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys);
 
+  /**
+   * Gets currently configured ColumnValidatorFactory (always non-{@code null}).
+   * @usage _intermediate_method_
+   */
+  public ColumnValidatorFactory getColumnValidatorFactory();
+
+  /**
+   * Sets a new ColumnValidatorFactory.  If {@code null}, resets to the
+   * default value.
+   * @usage _intermediate_method_
+   */
+  public void setColumnValidatorFactory(ColumnValidatorFactory newFactory);
+  
   /**
    * Returns the FileFormat of this database (which may involve inspecting the
    * database itself).

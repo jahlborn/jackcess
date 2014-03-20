@@ -71,6 +71,12 @@ public interface Table extends Iterable<Row>
   public boolean isHidden();
 
   /**
+   * Whether or not this table is a system (internal) table.
+   * @usage _general_method_
+   */
+  public boolean isSystem();
+
+  /**
    * @usage _general_method_
    */
   public int getColumnCount();

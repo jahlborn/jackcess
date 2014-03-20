@@ -65,6 +65,8 @@ import com.healthmarketscience.jackcess.impl.scsu.Compress;
 import com.healthmarketscience.jackcess.impl.scsu.EndOfInputException;
 import com.healthmarketscience.jackcess.impl.scsu.Expand;
 import com.healthmarketscience.jackcess.impl.scsu.IllegalInputException;
+import com.healthmarketscience.jackcess.util.ColumnValidator;
+import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -221,6 +223,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private PropertyMap _props;  
   /** Holds additional info for writing long values */
   private LongValueBufferHolder _lvalBufferH;
+  /** Validator for writing new values */
+  private ColumnValidator _validator = SimpleColumnValidator.INSTANCE;
   
   /**
    * @usage _advanced_method_
@@ -508,6 +512,18 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return _complexInfo;
+  }
+
+  public ColumnValidator getColumnValidator() {
+    return _validator;
+  }
+  
+  public void setColumnValidator(ColumnValidator newValidator) {
+    if(newValidator == null) {
+      newValidator = getDatabase().getColumnValidatorFactory()
+        .createValidator(this);
+    }
+    _validator = newValidator;
   }
   
   private void setUnknownDataType(byte type) {
@@ -1197,6 +1213,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     lvalPage.putShort((short)0); // num rows in page
   }
 
+  /**
+   * Passes the given obj through the currently configured validator for this
+   * column and returns the result.
+   */
+  public Object validate(Object obj) throws IOException {
+    return _validator.validate(this, obj);
+  }
+  
   /**
    * Serialize an Object into a raw byte value for this column in little
    * endian order
