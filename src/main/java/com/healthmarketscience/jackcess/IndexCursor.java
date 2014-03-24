@@ -37,6 +37,17 @@ public interface IndexCursor extends Cursor
   public Index getIndex();
 
   /**
+   * Finds the first row (as defined by the cursor) where the index entries
+   * match the given values.  If a match is not found (or an exception is
+   * thrown), the cursor is restored to its previous state.
+   *
+   * @param entryValues the column values for the index's columns.
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public Row findRowByEntry(Object... entryValues) 
+    throws IOException;
+  
+  /**
    * Moves to the first row (as defined by the cursor) where the index entries
    * match the given values.  If a match is not found (or an exception is
    * thrown), the cursor is restored to its previous state.

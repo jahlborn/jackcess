@@ -346,6 +346,16 @@ public class CursorBuilder {
   {
     return index.getTable().newCursor().setIndex(index).toIndexCursor();
   }
+
+  /**
+   * Creates an indexed cursor for the primary key cursor of the given table.
+   * @param table the table over which this cursor will traverse
+   */
+  public static IndexCursor createPrimaryKeyCursor(Table table)
+    throws IOException
+  {
+    return createCursor(table.getPrimaryKeyIndex());
+  }
   
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
@@ -424,6 +434,36 @@ public class CursorBuilder {
       return cursor.getCurrentRow();
     }
     return null;
+  }
+  
+  /**
+   * Convenience method for finding a specific row (as defined by the cursor)
+   * where the index entries match the given values.  See {@link
+   * IndexCursor#findRowByEntry(Object...)} for details on the entryValues.
+   * 
+   * @param index the index to search
+   * @param entryValues the column values for the index's columns.
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Row findRowByEntry(Index index, Object... entryValues)
+    throws IOException
+  {
+    return createCursor(index).findRowByEntry(entryValues);
+  }
+  
+  /**
+   * Convenience method for finding a specific row by the primary key of the
+   * table.  See {@link IndexCursor#findRowByEntry(Object...)} for details on
+   * the entryValues.
+   * 
+   * @param table the table to search
+   * @param entryValues the column values for the table's primary key columns.
+   * @return the matching row or {@code null} if a match could not be found.
+   */
+  public static Row findRowByPrimaryKey(Table table, Object... entryValues)
+    throws IOException
+  {
+    return findRowByEntry(table.getPrimaryKeyIndex(), entryValues);
   }
   
   /**

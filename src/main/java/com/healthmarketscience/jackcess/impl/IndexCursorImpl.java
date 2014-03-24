@@ -125,6 +125,15 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     return _index;
   }
 
+  public Row findRowByEntry(Object... entryValues) 
+    throws IOException
+  {
+    if(findFirstRowByEntry(entryValues)) {
+      return getCurrentRow();
+    }
+    return null;
+  }
+  
   public boolean findFirstRowByEntry(Object... entryValues) 
     throws IOException 
   {

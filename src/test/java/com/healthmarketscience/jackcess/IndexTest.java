@@ -538,7 +538,7 @@ public class IndexTest extends TestCase {
 
       assertTable(expectedRows, t);
 
-      IndexCursor pkCursor = CursorBuilder.createCursor(t.getPrimaryKeyIndex());
+      IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(t);
       assertCursor(expectedRows, pkCursor);
 
       assertCursor(expectedRows, 
@@ -633,7 +633,7 @@ public class IndexTest extends TestCase {
 
       assertTable(expectedRows, t);
 
-      IndexCursor pkCursor = CursorBuilder.createCursor(t.getPrimaryKeyIndex());
+      IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(t);
       assertCursor(expectedRows, pkCursor);
 
       assertCursor(expectedRows, 
