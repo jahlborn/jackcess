@@ -304,9 +304,12 @@ public class TableImpl implements Table
 
     _fkEnforcer = new FKEnforcer(this);
 
-    // after fully constructed, allow column validator to be configured
-    for(ColumnImpl col : _columns) {
-      col.setColumnValidator(null);
+    if(!isSystem()) {
+      // after fully constructed, allow column validator to be configured (but
+      // only for user tables)
+      for(ColumnImpl col : _columns) {
+        col.setColumnValidator(null);
+      }
     }
   }
 
@@ -578,7 +581,7 @@ public class TableImpl implements Table
         }
 
         // use any read rowValues to help update the indexes
-        rowValues = rowState.getRowValues();
+        rowValues = rowState.getRowCacheValues();
 
         // check foreign keys before proceeding w/ deletion
         _fkEnforcer.deleteRow(rowValues);    
@@ -692,13 +695,19 @@ public class TableImpl implements Table
       if(column.getType() == DataType.BOOLEAN) {
           // Boolean values are stored in the null mask.  see note about
           // caching below
-        return rowState.setRowValue(column.getColumnIndex(),
-                                    Boolean.valueOf(!isNull));
+        return rowState.setRowCacheValue(column.getColumnIndex(),
+                                         Boolean.valueOf(!isNull));
       } else if(isNull) {
         // well, that's easy! (no need to update cache w/ null)
         return null;
       }
 
+      Object cachedValue = rowState.getRowCacheValue(column.getColumnIndex());
+      if(cachedValue != null) {
+        // we already have it, use it
+        return cachedValue;
+      }
+      
       // reset position to row start
       rowBuffer.reset();
     
@@ -754,14 +763,14 @@ public class TableImpl implements Table
       // to update the index on row deletion.  note, most of the returned
       // values are immutable, except for binary data (returned as byte[]),
       // but binary data shouldn't be indexed anyway.
-      return rowState.setRowValue(column.getColumnIndex(), 
-                                  column.read(columnData));
+      return rowState.setRowCacheValue(column.getColumnIndex(), 
+                                       column.read(columnData));
 
     } catch(Exception e) {
 
       // cache "raw" row value.  see note about caching above
-      rowState.setRowValue(column.getColumnIndex(), 
-                           ColumnImpl.rawDataWrapper(columnData));
+      rowState.setRowCacheValue(column.getColumnIndex(), 
+                                ColumnImpl.rawDataWrapper(columnData));
 
       return rowState.handleRowError(column, columnData, e);
     }
@@ -1538,34 +1547,15 @@ public class TableImpl implements Table
           }
 
           // handle various value massaging activities
-          Object complexAutoNumber = null;
           for(ColumnImpl column : _columns) {
-
-            Object rowValue = null;
-            if(column.isAutoNumber()) {
-              
-              // fill in autonumbers, ignore given row value, use next
-              // autonumber
-              ColumnImpl.AutoNumberGenerator autoNumGen =
-                column.getAutoNumberGenerator();
-              if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
-                rowValue = autoNumGen.getNext(null);
-              } else {
-                // complex type auto numbers are shared across all complex
-                // columns in the row
-                complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
-                rowValue = complexAutoNumber;
-              }
-              
-            } else {
-              
+            if(!column.isAutoNumber()) {              
               // pass input value through column validator
-              rowValue = column.validate(column.getRowValue(row));
+              column.setRowValue(row, column.validate(column.getRowValue(row)));
             }
-
-            column.setRowValue(row, rowValue);
           }
-          
+
+          // fill in autonumbers
+          handleAutoNumbersForAdd(row);
           ++autoNumAssignCount;
       
           // write the row of data to a temporary buffer
@@ -1779,7 +1769,7 @@ public class TableImpl implements Table
           rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState, null);
           
         } else {
-          
+
           rowValue = column.getRowValue(row);
           if(rowValue == Column.KEEP_VALUE) {
             
@@ -1788,14 +1778,21 @@ public class TableImpl implements Table
                                     keepRawVarValues);
             
           } else {
-            
+
+            // set oldValue to something that could not possibly be a real value
+            Object oldValue = Column.KEEP_VALUE;
             if(_indexColumns.contains(column)) {
               // read (old) row value to help update indexes
-              getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+              oldValue = getRowColumn(getFormat(), rowBuffer, column, rowState, null);
+            } else {
+              oldValue = rowState.getRowCacheValue(column.getColumnIndex());
             }
-            
-            // pass input value through column validator
-            rowValue = column.validate(rowValue);
+
+            // if the old value was passed back in, we don't need to validate
+            if(oldValue != rowValue) {
+              // pass input value through column validator
+              rowValue = column.validate(rowValue);
+            } 
           }
         }
 
@@ -1817,7 +1814,7 @@ public class TableImpl implements Table
         IndexData.PendingChange idxChange = null;
         try {
 
-          Object[] oldRowValues = rowState.getRowValues();
+          Object[] oldRowValues = rowState.getRowCacheValues();
 
           // check foreign keys before actually updating
           _fkEnforcer.updateRow(oldRowValues, row);
@@ -2183,6 +2180,33 @@ public class TableImpl implements Table
     return buffer;
   }
 
+  /**
+   * Fill in all autonumber column values.
+   */
+  private void handleAutoNumbersForAdd(Object[] row)
+    throws IOException
+  {
+    if(_autoNumColumns.isEmpty()) {
+      return;
+    }
+ 
+    Object complexAutoNumber = null;
+    for(ColumnImpl col : _autoNumColumns) {
+      // ignore given row value, use next autonumber
+      ColumnImpl.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
+      Object rowValue = null;
+      if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
+        rowValue = autoNumGen.getNext(null);
+      } else {
+        // complex type auto numbers are shared across all complex columns
+        // in the row
+        complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
+        rowValue = complexAutoNumber;
+      }
+      col.setRowValue(row, rowValue);
+    }
+  }
+  
   /**
    * Restores all autonumber column values from a failed add row.
    */
@@ -2607,13 +2631,20 @@ public class TableImpl implements Table
       return(_status.ordinal() >= RowStateStatus.AT_FINAL.ordinal());
     }
 
-    private Object setRowValue(int idx, Object value) {
+    private Object setRowCacheValue(int idx, Object value) {
       _haveRowValues = true;
       _rowValues[idx] = value;
       return value;
     }
+
+    private Object getRowCacheValue(int idx) {
+      Object value = _rowValues[idx];
+      // only return immutable values.  mutable values could have been
+      // modified externally and therefore could return an incorrect value
+      return(ColumnImpl.isImmutableValue(value) ? value : null);
+    }
     
-    public Object[] getRowValues() {
+    public Object[] getRowCacheValues() {
       return dupeRow(_rowValues, _rowValues.length);
     }
 

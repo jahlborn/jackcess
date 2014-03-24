@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
+import com.healthmarketscience.jackcess.util.ColumnValidator;
 
 /**
  * Access database column definition.  A {@link Table} has a list of Column
@@ -151,6 +152,23 @@ public interface Column
    */
   public Column getVersionHistoryColumn();
 
+  /**
+   * Gets currently configured ColumnValidator (always non-{@code null}).
+   * @usage _intermediate_method_
+   */
+  public ColumnValidator getColumnValidator();
+  
+  /**
+   * Sets a new ColumnValidator.  If {@code null}, resets to the value
+   * returned from the Database's ColumnValidatorFactory (if the factory
+   * returns {@code null}, then the default is used).  Autonumber columns
+   * cannot have a validator instance other than the default.
+   * @throws IllegalArgumentException if an attempt is made to set a
+   *         non-{@code null} ColumnValidator instance on an autonumber column
+   * @usage _intermediate_method_
+   */
+  public void setColumnValidator(ColumnValidator newValidator);
+  
   public Object setRowValue(Object[] rowArray, Object value);
   
   public Object setRowValue(Map<String,Object> rowMap, Object value);

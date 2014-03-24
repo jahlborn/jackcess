@@ -519,9 +519,24 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
   
   public void setColumnValidator(ColumnValidator newValidator) {
+    
+    if(isAutoNumber()) {
+      // cannot set autonumber validator (autonumber values are controlled
+      // internally)
+      if(newValidator != null) {
+        throw new IllegalArgumentException(
+            "Cannot set ColumnValidator for autonumber columns");
+      }
+      // just leave default validator instance alone
+      return;
+    }
+    
     if(newValidator == null) {
       newValidator = getDatabase().getColumnValidatorFactory()
         .createValidator(this);
+      if(newValidator == null) {
+        newValidator = SimpleColumnValidator.INSTANCE;
+      }
     }
     _validator = newValidator;
   }
@@ -1937,6 +1952,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
   }
 
+  /**
+   * Returns {@code true} if the value is immutable, {@code false} otherwise.
+   * This only handles values that are returned from the {@link #read} method.
+   */
+  static boolean isImmutableValue(Object value) {
+    // for now, the only mutable value this class returns is byte[]
+    return !(value instanceof byte[]);
+  }
+  
   /**
    * Date subclass which stashes the original date bits, in case we attempt to
    * re-write the value (will not lose precision).

@@ -387,7 +387,9 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Sets a new ColumnValidatorFactory.  If {@code null}, resets to the
-   * default value.
+   * default value.  The configured ColumnValidatorFactory will be used to
+   * create ColumnValidator instances on any <i>user</i> tables loaded from
+   * this point onward (this will not be used for system tables).
    * @usage _intermediate_method_
    */
   public void setColumnValidatorFactory(ColumnValidatorFactory newFactory);

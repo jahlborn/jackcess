@@ -31,8 +31,8 @@ import com.healthmarketscience.jackcess.Column;
 public interface ColumnValidatorFactory 
 {
   /**
-   * Returns a ColumnValidator instance for the given column, must be
-   * non-{@code null}.
+   * Returns a ColumnValidator instance for the given column, or {@code null}
+   * if the default should be used.
    */
   public ColumnValidator createValidator(Column col);
 }
