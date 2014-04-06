@@ -595,6 +595,10 @@ public class IndexData {
       }
 
       change.setAddRow(newEntry, dataPage, idx, isDupeEntry);
+
+    } else {
+
+      change.setOldRow(newEntry);
     }
     return change;
   }
@@ -603,7 +607,7 @@ public class IndexData {
    * Completes a prepared row addition.
    */
   private void commitAddRow(Entry newEntry, DataPage dataPage, int idx,
-                            boolean isDupeEntry)
+                            boolean isDupeEntry, Entry oldEntry)
     throws IOException
   {
     if(newEntry != null) {
@@ -613,7 +617,7 @@ public class IndexData {
       }
       ++_modCount;
     } else {
-      LOG.warn("Added duplicate index entry " + newEntry);
+      LOG.warn("Added duplicate index entry " + oldEntry);
     }
   }
 
@@ -635,7 +639,7 @@ public class IndexData {
     throws IOException
   {
     UpdateRowPendingChange change = new UpdateRowPendingChange(nextChange);
-    change.setDeletedRow(deleteRowImpl(oldRow, rowId));
+    change.setOldRow(deleteRowImpl(oldRow, rowId));
 
     try {
       prepareAddRow(newRow, rowId, change);
@@ -2581,10 +2585,11 @@ public class IndexData {
    */
   private class AddRowPendingChange extends PendingChange
   {
-    private Entry _addEntry;
-    private DataPage _addDataPage;
-    private int _addIdx;
-    private boolean _isDupe;
+    protected Entry _addEntry;
+    protected DataPage _addDataPage;
+    protected int _addIdx;
+    protected boolean _isDupe;
+    protected Entry _oldEntry;
 
     private AddRowPendingChange(PendingChange next) {
       super(next);
@@ -2598,9 +2603,13 @@ public class IndexData {
       _isDupe = isDupe;
     }
 
+    public void setOldRow(Entry oldEntry) {
+      _oldEntry = oldEntry;
+    }
+
     @Override
     public void commit() throws IOException {
-      commitAddRow(_addEntry, _addDataPage, _addIdx, _isDupe);
+      commitAddRow(_addEntry, _addDataPage, _addIdx, _isDupe, _oldEntry);
     }
     
     @Override
@@ -2617,20 +2626,14 @@ public class IndexData {
    */
   private class UpdateRowPendingChange extends AddRowPendingChange
   {
-    private Entry _removedEntry;
-
     private UpdateRowPendingChange(PendingChange next) {
       super(next);
-    }
-
-    public void setDeletedRow(Entry removedEntry) {
-      _removedEntry = removedEntry;
     }
 
     @Override
     public void rollback() throws IOException {
       super.rollback();
-      rollbackDeletedRow(_removedEntry);
+      rollbackDeletedRow(_oldEntry);
     }
   }
 
