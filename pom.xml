@@ -88,6 +88,12 @@
         <role>Reverse engineered the attachment data encoding.</role>
       </roles>
     </contributor>
+    <contributor>
+      <name>Gordon Thompson</name>
+      <roles>
+        <role>Contributed to cookbook.</role>
+      </roles>
+    </contributor>
   </contributors>
   <issueManagement>
     <system>SourceForge2</system>

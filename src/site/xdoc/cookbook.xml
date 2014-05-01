@@ -283,6 +283,85 @@
           speed and memory, they are "lightweight" enough to be used in an
           on-demand capacity.
         </p>
+        <p>
+          The simplest case involves a normal, un-indexed cursor for a given
+          table. The cursor will traverse the table in no particular row order
+          but it can still be used to find rows where column(s) match
+          specified values. For example...
+        </p>
+<source>
+  Table table = db.getTable("Test");
+  Cursor cursor = CursorBuilder.createCursor(table);
+  boolean found = cursor.findFirstRow(Collections.singletonMap("ID", 1));
+  if (found) {
+      System.out.println(String.format("Row found: Name = '%s'.",
+                                     cursor.getCurrentRowValue(table.getColumn("Name"))));
+  } else {
+      System.out.println("No matching row was found.");
+  }
+</source>
+        <p>
+          ...will search for the row where <code>"ID" == 1</code>. Since the
+          cursor does not use an index it will perform the equivalent of a
+          "table scan" while searching.
+        </p>
+        <p>
+          Cursors can also use an existing index on the table to (1) control
+          the order in which they traverse the table, and (2) find rows
+          faster. Since we defined the "ID" column as our Primary Key we can
+          also perform the above search like this...
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  IndexCursor cursor = CursorBuilder.createCursor(table.getPrimaryKeyIndex());
+  boolean found = cursor.findFirstRow(Collections.singletonMap("ID", 1));
+  // ... proceed as in previous example ...
+</source>
+        <p>
+            ...or by using the <code>CursorBuilder.findRowByPrimaryKey</code>
+            "convenience method" like this:
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  Row row = CursorBuilder.findRowByPrimaryKey(table, 1);
+  if (row != null) {
+      System.out.println(String.format("Row found: Name = '%s'.",
+                                     row.get("Name")));
+  } else {
+      System.out.println("No matching row was found.");
+  }
+</source>
+        <p>
+          Either of the two previous approaches will use the Primary Key index
+          to locate the row where <code>"ID" == 1</code>, potentially making
+          it much faster to execute.
+        </p>
+        <p>  
+          As mentioned above, an index-backed cursor will also retrieve rows
+          in index order, so if we wanted to retrieve all of the rows in
+          alphabetical order by <code>"Name"</code> we could use the
+          "NameIndex" index to create a cursor and then iterate through the
+          rows like this:
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  IndexCursor cursor = CursorBuilder.createCursor(table.getIndex("NameIndex"));
+  for(Row row : cursor) {
+    System.out.println(String.format("ID=%d, Name='%s'.",
+                                     row.get("ID"), row.get("Name")));
+  }
+</source>
+        <p>     
+          Or, if you wanted to iterate through all of the rows where
+          <code>"Name" == 'bob'</code> you could do:
+        </p>
+<source>     
+  Table table = db.getTable("Test");                                                                        
+  IndexCursor cursor = CursorBuilder.createCursor(table.getIndex("NameIndex"));                             
+  for(Row row : cursor.newEntryIterable("bob")) {
+    System.out.println(String.format("ID=%d, Name='%s'.", row.get("ID"), row.get("Name")));
+  }
+</source>
       </subsection>
 
       <p>
