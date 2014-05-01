@@ -24,7 +24,7 @@ import com.healthmarketscience.jackcess.Column;
 
 /**
  * Simple concrete implementation of ColumnValidatorFactory which returns
- * {@link SimpleColumnValidator.INSTANCE} for all columns.
+ * {@link SimpleColumnValidator#INSTANCE} for all columns.
  *
  * @author James Ahlborn
  */
