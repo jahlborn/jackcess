@@ -107,8 +107,8 @@ public class FKEnforcerTest extends TestCase
 
       Cursor c = CursorBuilder.createCursor(t3);
       Column col = t3.getColumn("id");
-      for(Map<String,Object> row : c) {
-        int id = (Integer)row.get("id");
+      for(Row row : c) {
+        int id = row.getInt("id");
         id += 20;
         c.setCurrentRowValue(col, id);
       }

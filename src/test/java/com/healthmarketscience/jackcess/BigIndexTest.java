@@ -125,8 +125,8 @@ public class BigIndexTest extends TestCase {
         String prevValue = firstValue;
         int rowCount = 0;
         List<String> firstTwo = new ArrayList<String>();
-        for(Map<String,Object> row : CursorBuilder.createCursor(index)) {
-          String origVal = (String)row.get("col1");
+        for(Row row : CursorBuilder.createCursor(index)) {
+          String origVal = row.getString("col1");
           String val = origVal;
           if(val == null) {
             val = firstValue;
@@ -162,8 +162,8 @@ public class BigIndexTest extends TestCase {
         index.getIndexData().validate();
 
         List<String> found = new ArrayList<String>();
-        for(Map<String,Object> row : CursorBuilder.createCursor(index)) {
-          found.add((String)row.get("col1"));
+        for(Row row : CursorBuilder.createCursor(index)) {
+          found.add(row.getString("col1"));
         }
 
         assertEquals(firstTwo, found);

@@ -45,6 +45,7 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -134,8 +135,8 @@ public class CodecHandlerTest extends TestCase
       Cursor c2 = t2.newCursor().setIndex(t2.getPrimaryKeyIndex())
         .toCursor();
 
-      Iterator<? extends Map<String,Object>> i1 = c1.iterator();
-      Iterator<? extends Map<String,Object>> i2 = c2.newIterable().reverse().iterator();
+      Iterator<? extends Row> i1 = c1.iterator();
+      Iterator<? extends Row> i2 = c2.newIterable().reverse().iterator();
 
       int t1rows = 0;
       int t2rows = 0;
@@ -156,10 +157,10 @@ public class CodecHandlerTest extends TestCase
       assertEquals(100, t2rows);
   }
 
-  private static void checkRow(Map<String,Object> row)
+  private static void checkRow(Row row)
   {
-    int id = (Integer)row.get("id");
-    String value = (String)row.get("data");
+    int id = row.getInt("id");
+    String value = row.getString("data");
     String valuePrefix = "rowdata-" + id;
     assertTrue(value.startsWith(valuePrefix));
     assertEquals(valuePrefix.length() + 100, value.length());

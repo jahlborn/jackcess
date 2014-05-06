@@ -44,6 +44,7 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -95,7 +96,7 @@ public class IndexCodesTest extends TestCase {
     Cursor cursor = CursorBuilder.createCursor(index);
     while(cursor.moveToNextRow()) {
 
-      Map<String,Object> row = cursor.getCurrentRow();
+      Row row = cursor.getCurrentRow();
       Cursor.Position curPos = cursor.getSavepoint().getCurrentPosition();
       boolean success = false;
       try {
@@ -113,7 +114,7 @@ public class IndexCodesTest extends TestCase {
   }
   
   private static void findRow(final TestDB testDB, Table t, Index index,
-                              Map<String,Object> expectedRow,
+                              Row expectedRow,
                               Cursor.Position expectedPos)
     throws Exception
   {
@@ -124,7 +125,7 @@ public class IndexCodesTest extends TestCase {
     
     cursor.beforeFirst();
     while(cursor.moveToNextRow()) {
-      Map<String,Object> row = cursor.getCurrentRow();
+      Row row = cursor.getCurrentRow();
       if(expectedRow.equals(row)) {
         // verify that the entries are indeed equal
         Cursor.Position curPos = cursor.getSavepoint().getCurrentPosition();
@@ -136,7 +137,7 @@ public class IndexCodesTest extends TestCase {
     // TODO long rows not handled completely yet in V2010
     // seems to truncate entry at 508 bytes with some trailing 2 byte seq
     if(testDB.getExpectedFileFormat() == Database.FileFormat.V2010) {
-      String rowId = (String)expectedRow.get("name");
+      String rowId = expectedRow.getString("name");
       String tName = t.getName();
       if(("Table11".equals(tName) || "Table11_desc".equals(tName)) &&
          ("row10".equals(rowId) || "row11".equals(rowId) || 
@@ -363,9 +364,9 @@ public class IndexCodesTest extends TestCase {
       Cursor.Savepoint savepoint = cursor.getSavepoint();
       String entryStr = entryToString(savepoint.getCurrentPosition());
 
-      Map<String,Object> row = cursor.getCurrentRow();
-      String value = (String)row.get("data");
-      String key = (String)row.get("key");
+      Row row = cursor.getCurrentRow();
+      String value = row.getString("data");
+      String key = row.getString("key");
       char c = value.charAt(2);
 
       System.out.println("=======");
@@ -542,9 +543,9 @@ public class IndexCodesTest extends TestCase {
       Cursor.Savepoint savepoint = cursor.getSavepoint();
       String entryStr = entryToString(savepoint.getCurrentPosition());
 
-      Map<String,Object> row = cursor.getCurrentRow();
-      String value = (String)row.get("data");
-      String key = (String)row.get("key");
+      Row row = cursor.getCurrentRow();
+      String value = row.getString("data");
+      String key = row.getString("key");
       char c = value.charAt(2);
       System.out.println("=======");
       System.out.println("RowId: " +

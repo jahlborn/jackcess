@@ -387,7 +387,7 @@ public class IndexTest extends TestCase {
       Cursor c = CursorBuilder.createCursor(table);
       assertTrue(c.moveToNextRow());
 
-      final Map<String,Object> row = c.getCurrentRow();
+      final Row row = c.getCurrentRow();
       // Row order is arbitrary, so v2007 row order difference is valid
       if (testDB.getExpectedFileFormat().ordinal() >= 
           Database.FileFormat.V2007.ordinal()) {

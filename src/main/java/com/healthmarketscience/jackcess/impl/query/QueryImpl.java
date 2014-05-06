@@ -582,14 +582,14 @@ public abstract class QueryImpl implements Query
 
     public Row(com.healthmarketscience.jackcess.Row tableRow) {
       this(tableRow.getId(),
-           (Byte)tableRow.get(COL_ATTRIBUTE),
-           (String)tableRow.get(COL_EXPRESSION),
-           (Short)tableRow.get(COL_FLAG),
-           (Integer)tableRow.get(COL_EXTRA),
-           (String)tableRow.get(COL_NAME1),
-           (String)tableRow.get(COL_NAME2),
-           (Integer)tableRow.get(COL_OBJECTID),
-           (byte[])tableRow.get(COL_ORDER));
+           tableRow.getByte(COL_ATTRIBUTE),
+           tableRow.getString(COL_EXPRESSION),
+           tableRow.getShort(COL_FLAG),
+           tableRow.getInt(COL_EXTRA),
+           tableRow.getString(COL_NAME1),
+           tableRow.getString(COL_NAME2),
+           tableRow.getInt(COL_OBJECTID),
+           tableRow.getBytes(COL_ORDER));
     }
 
     public Row(RowId id, Byte attribute, String expression, Short flag,

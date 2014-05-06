@@ -93,7 +93,7 @@ public class JoinerTest extends TestCase {
 
     Joiner revJoin = join.createReverse();
     for(Row row : join.getFromTable()) {
-      Integer id = (Integer)row.get("id");
+      Integer id = row.getInt("id");
 
       List<Row> joinedRows =
         new ArrayList<Row>();

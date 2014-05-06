@@ -19,7 +19,12 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.util.Date;
 import java.util.Map;
+import java.math.BigDecimal;
+
+import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+
 
 /**
  * A row of data as column name->value pairs.  Values are strongly typed, and
@@ -34,4 +39,70 @@ public interface Row extends Map<String,Object>
    * @return the id of this row 
    */
   public RowId getId();
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a String.
+   */
+  public String getString(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Boolean.
+   */
+  public Boolean getBoolean(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Byte.
+   */
+  public Byte getByte(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Short.
+   */
+  public Short getShort(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Integer.
+   */
+  public Integer getInt(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a BigDecimal.
+   */
+  public BigDecimal getBigDecimal(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Float.
+   */
+  public Float getFloat(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Double.
+   */
+  public Double getDouble(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a Date.
+   */
+  public Date getDate(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a byte[].
+   */
+  public byte[] getBytes(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a ComplexValueForeignKey.
+   */
+  public ComplexValueForeignKey getForeignKey(String name);
 }

@@ -874,8 +874,8 @@ public class DatabaseImpl implements Database
       return null;
     }
 
-    String name = (String)objectRow.get(CAT_COL_NAME);
-    int flags = (Integer)objectRow.get(CAT_COL_FLAGS);
+    String name = objectRow.getString(CAT_COL_NAME);
+    int flags = objectRow.getInt(CAT_COL_FLAGS);
 
     return readTable(name, tableDefPageNumber, flags);
   }
@@ -1093,10 +1093,10 @@ public class DatabaseImpl implements Database
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
               SYSTEM_CATALOG_COLUMNS))
     {
-      String name = (String) row.get(CAT_COL_NAME);
+      String name = row.getString(CAT_COL_NAME);
       if (name != null && TYPE_QUERY.equals(row.get(CAT_COL_TYPE))) {
         queryInfo.add(row);
-        Integer id = (Integer)row.get(CAT_COL_ID);
+        Integer id = row.getInt(CAT_COL_ID);
         queryRowMap.put(id, new ArrayList<QueryImpl.Row>());
       }
     }
@@ -1116,9 +1116,9 @@ public class DatabaseImpl implements Database
     // lastly, generate all the queries
     List<Query> queries = new ArrayList<Query>();
     for(Row row : queryInfo) {
-      String name = (String) row.get(CAT_COL_NAME);
-      Integer id = (Integer)row.get(CAT_COL_ID);
-      int flags = (Integer)row.get(CAT_COL_FLAGS);
+      String name = row.getString(CAT_COL_NAME);
+      Integer id = row.getInt(CAT_COL_ID);
+      int flags = row.getInt(CAT_COL_FLAGS);
       List<QueryImpl.Row> queryRows = queryRowMap.get(id);
       queries.add(QueryImpl.create(flags, name, queryRows, id));
     }
@@ -1164,7 +1164,7 @@ public class DatabaseImpl implements Database
     byte[] propsBytes = null;
     RowIdImpl rowId = null;
     if(objectRow != null) {
-      propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
+      propsBytes = objectRow.getBytes(CAT_COL_PROPS);
       rowId = (RowIdImpl)objectRow.getId();
     }
     return readProperties(propsBytes, objectId, rowId);
@@ -1191,8 +1191,8 @@ public class DatabaseImpl implements Database
     int objectId = -1;
     RowIdImpl rowId = null;
     if(objectRow != null) {
-      propsBytes = (byte[])objectRow.get(CAT_COL_PROPS);
-      objectId = (Integer)objectRow.get(CAT_COL_ID);
+      propsBytes = objectRow.getBytes(CAT_COL_PROPS);
+      objectId = objectRow.getInt(CAT_COL_ID);
       rowId = (RowIdImpl)objectRow.getId();
     }
     return readProperties(propsBytes, objectId, rowId);
@@ -1257,15 +1257,15 @@ public class DatabaseImpl implements Database
     String toTableName = ((toTable != null) ? toTable.getName() : null);
 
     for(Row row : cursor) {
-      String fromName = (String)row.get(REL_COL_FROM_TABLE);
-      String toName = (String)row.get(REL_COL_TO_TABLE);
+      String fromName = row.getString(REL_COL_FROM_TABLE);
+      String toName = row.getString(REL_COL_TO_TABLE);
       
       if(((fromTableName == null) || 
           fromTableName.equalsIgnoreCase(fromName)) &&
          ((toTableName == null) || 
           toTableName.equalsIgnoreCase(toName))) {
 
-        String relName = (String)row.get(REL_COL_NAME);
+        String relName = row.getString(REL_COL_NAME);
         
         // found more info for a relationship.  see if we already have some
         // info for this relationship
@@ -1296,19 +1296,19 @@ public class DatabaseImpl implements Database
 
         if(rel == null) {
           // new relationship
-          int numCols = (Integer)row.get(REL_COL_COLUMN_COUNT);
-          int flags = (Integer)row.get(REL_COL_FLAGS);
+          int numCols = row.getInt(REL_COL_COLUMN_COUNT);
+          int flags = row.getInt(REL_COL_FLAGS);
           rel = new RelationshipImpl(relName, relFromTable, relToTable,
                                      flags, numCols);
           relationships.add(rel);
         }
 
         // add column info
-        int colIdx = (Integer)row.get(REL_COL_COLUMN_INDEX);
+        int colIdx = row.getInt(REL_COL_COLUMN_INDEX);
         ColumnImpl fromCol = relFromTable.getColumn(
-            (String)row.get(REL_COL_FROM_COLUMN));
+            row.getString(REL_COL_FROM_COLUMN));
         ColumnImpl toCol = relToTable.getColumn(
-            (String)row.get(REL_COL_TO_COLUMN));
+            row.getString(REL_COL_TO_COLUMN));
 
         rel.getFromColumns().set(colIdx, fromCol);
         rel.getToColumns().set(colIdx, toCol);
@@ -1400,9 +1400,9 @@ public class DatabaseImpl implements Database
         getAccessControlEntries(), ACE_COL_OBJECT_ID, _tableParentId);
     
     for(Row row : cursor) {
-      Integer objId = (Integer)row.get(ACE_COL_OBJECT_ID);
+      Integer objId = row.getInt(ACE_COL_OBJECT_ID);
       if(_tableParentId.equals(objId)) {
-        _newTableSIDs.add((byte[])row.get(ACE_COL_SID));
+        _newTableSIDs.add(row.getBytes(ACE_COL_SID));
       }
     }
 
@@ -1842,10 +1842,10 @@ public class DatabaseImpl implements Database
       for(Row row : getTableNamesCursor().newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
-        String tableName = (String)row.get(CAT_COL_NAME);
-        int flags = (Integer)row.get(CAT_COL_FLAGS);
-        Short type = (Short)row.get(CAT_COL_TYPE);
-        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
+        String tableName = row.getString(CAT_COL_NAME);
+        int flags = row.getInt(CAT_COL_FLAGS);
+        Short type = row.getShort(CAT_COL_TYPE);
+        int parentId = row.getInt(CAT_COL_PARENT_ID);
 
         if((parentId == _tableParentId) && isTableType(type) && 
            (isSystemObject(flags) == systemTables)) {
@@ -1923,17 +1923,17 @@ public class DatabaseImpl implements Database
 
       Row row = _systemCatalogCursor.getCurrentRow(
           SYSTEM_CATALOG_COLUMNS);
-      Integer pageNumber = (Integer)row.get(CAT_COL_ID);
-      String realName = (String)row.get(CAT_COL_NAME);
-      int flags = (Integer)row.get(CAT_COL_FLAGS);
-      Short type = (Short)row.get(CAT_COL_TYPE);
+      Integer pageNumber = row.getInt(CAT_COL_ID);
+      String realName = row.getString(CAT_COL_NAME);
+      int flags = row.getInt(CAT_COL_FLAGS);
+      Short type = row.getShort(CAT_COL_TYPE);
 
       if(!isTableType(type)) {
         return null;
       }
 
-      String linkedDbName = (String)row.get(CAT_COL_DATABASE);
-      String linkedTableName = (String)row.get(CAT_COL_FOREIGN_NAME);
+      String linkedDbName = row.getString(CAT_COL_DATABASE);
+      String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
 
       return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
                              linkedTableName);
@@ -1999,25 +1999,25 @@ public class DatabaseImpl implements Database
       for(Row row : _systemCatalogCursor.newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
 
-        Short type = (Short)row.get(CAT_COL_TYPE);
+        Short type = row.getShort(CAT_COL_TYPE);
         if(!isTableType(type)) {
           continue;
         }
 
-        int parentId = (Integer)row.get(CAT_COL_PARENT_ID);
+        int parentId = row.getInt(CAT_COL_PARENT_ID);
         if(parentId != _tableParentId) {
           continue;
         }
 
-        String realName = (String)row.get(CAT_COL_NAME);
+        String realName = row.getString(CAT_COL_NAME);
         if(!tableName.equalsIgnoreCase(realName)) {
           continue;
         }
 
-        Integer pageNumber = (Integer)row.get(CAT_COL_ID);
-        int flags = (Integer)row.get(CAT_COL_FLAGS);
-        String linkedDbName = (String)row.get(CAT_COL_DATABASE);
-        String linkedTableName = (String)row.get(CAT_COL_FOREIGN_NAME);
+        Integer pageNumber = row.getInt(CAT_COL_ID);
+        int flags = row.getInt(CAT_COL_FLAGS);
+        String linkedDbName = row.getString(CAT_COL_DATABASE);
+        String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
 
         return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
                                linkedTableName);

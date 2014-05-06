@@ -64,8 +64,8 @@ public class ComplexColumnTest extends TestCase
       assertEquals(ComplexDataType.VERSION_HISTORY,
                    verCol.getComplexInfo().getType());
 
-      for(Map<String,Object> row : t1) {
-        String rowId = (String)row.get("id");
+      for(Row row : t1) {
+        String rowId = row.getString("id");
         ComplexValueForeignKey complexValueFk =
           (ComplexValueForeignKey)verCol.getRowValue(row);
 
@@ -166,8 +166,8 @@ public class ComplexColumnTest extends TestCase
       assertEquals(ComplexDataType.ATTACHMENT,
                    col.getComplexInfo().getType());
 
-      for(Map<String,Object> row : t1) {
-        String rowId = (String)row.get("id");
+      for(Row row : t1) {
+        String rowId = row.getString("id");
         ComplexValueForeignKey complexValueFk =
           (ComplexValueForeignKey)col.getRowValue(row);
 
@@ -251,8 +251,8 @@ public class ComplexColumnTest extends TestCase
       assertEquals(ComplexDataType.MULTI_VALUE,
                    col.getComplexInfo().getType());
 
-      for(Map<String,Object> row : t1) {
-        String rowId = (String)row.get("id");
+      for(Row row : t1) {
+        String rowId = row.getString("id");
         ComplexValueForeignKey complexValueFk =
           (ComplexValueForeignKey)col.getRowValue(row);
 
@@ -322,8 +322,8 @@ public class ComplexColumnTest extends TestCase
       assertEquals(ComplexDataType.UNSUPPORTED,
                    col.getComplexInfo().getType());
 
-      for(Map<String,Object> row : t1) {
-        Integer rowId = (Integer)row.get("ID");
+      for(Row row : t1) {
+        Integer rowId = row.getInt("ID");
         ComplexValueForeignKey complexValueFk =
           (ComplexValueForeignKey)col.getRowValue(row);
 

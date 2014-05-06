@@ -278,11 +278,11 @@ public class DatabaseTest extends TestCase
       assertEquals(4, db.getTableNames().size());
       final Table table = db.getTable("Table1");
 
-      Map<String, Object> row1 = table.getNextRow();
-      Map<String, Object> row2 = table.getNextRow();
+      Row row1 = table.getNextRow();
+      Row row2 = table.getNextRow();
 
       if(!"abcdefg".equals(row1.get("A"))) {
-        Map<String, Object> tmpRow = row1;
+        Row tmpRow = row1;
         row1 = row2;
         row2 = tmpRow;
       }
@@ -294,7 +294,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
-  static void checkTestDBTable1RowABCDEFG(final TestDB testDB, final Table table, final Map<String, Object> row)
+  static void checkTestDBTable1RowABCDEFG(final TestDB testDB, final Table table, final Row row)
           throws IOException {
     assertEquals("testDB: " + testDB + "; table: " + table, "abcdefg", row.get("A"));
     assertEquals("hijklmnop", row.get("B"));
@@ -303,7 +303,7 @@ public class DatabaseTest extends TestCase
     assertEquals(new Integer(333333333), row.get("E"));
     assertEquals(new Double(444.555d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
-    cal.setTime((Date) row.get("G"));
+    cal.setTime(row.getDate("G"));
     assertEquals(Calendar.SEPTEMBER, cal.get(Calendar.MONTH));
     assertEquals(21, cal.get(Calendar.DAY_OF_MONTH));
     assertEquals(1974, cal.get(Calendar.YEAR));
@@ -314,7 +314,7 @@ public class DatabaseTest extends TestCase
     assertEquals(Boolean.TRUE, row.get("I"));
   }
 
-  static void checkTestDBTable1RowA(final TestDB testDB, final Table table, final Map<String, Object> row)
+  static void checkTestDBTable1RowA(final TestDB testDB, final Table table, final Row row)
           throws IOException {
     assertEquals("testDB: " + testDB + "; table: " + table, "a", row.get("A"));
     assertEquals("b", row.get("B"));
@@ -323,7 +323,7 @@ public class DatabaseTest extends TestCase
     assertEquals(new Integer(0), row.get("E"));
     assertEquals(new Double(0d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
-    cal.setTime((Date) row.get("G"));
+    cal.setTime(row.getDate("G"));
     assertEquals(Calendar.DECEMBER, cal.get(Calendar.MONTH));
     assertEquals(12, cal.get(Calendar.DAY_OF_MONTH));
     assertEquals(1981, cal.get(Calendar.YEAR));
@@ -513,12 +513,12 @@ public class DatabaseTest extends TestCase
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2, true)) {
       Database db = open(testDB);
       Table table = db.getTable("MSP_PROJECTS");
-      Map<String, Object> row = table.getNextRow();
+      Row row = table.getNextRow();
       assertEquals("Jon Iles this is a a vawesrasoih aksdkl fas dlkjflkasjd flkjaslkdjflkajlksj dfl lkasjdf lkjaskldfj lkas dlk lkjsjdfkl; aslkdf lkasjkldjf lka skldf lka sdkjfl;kasjd falksjdfljaslkdjf laskjdfk jalskjd flkj aslkdjflkjkjasljdflkjas jf;lkasjd fjkas dasdf asd fasdf asdf asdmhf lksaiyudfoi jasodfj902384jsdf9 aw90se fisajldkfj lkasj dlkfslkd jflksjadf as", row.get("PROJ_PROP_AUTHOR"));
       assertEquals("T", row.get("PROJ_PROP_COMPANY"));
       assertEquals("Standard", row.get("PROJ_INFO_CAL_NAME"));
       assertEquals("Project1", row.get("PROJ_PROP_TITLE"));
-      byte[] foundBinaryData = (byte[])row.get("RESERVED_BINARY_DATA");
+      byte[] foundBinaryData = row.getBytes("RESERVED_BINARY_DATA");
       byte[] expectedBinaryData =
         toByteArray(new File("src/test/data/test2BinData.dat"));
       assertTrue(Arrays.equals(expectedBinaryData, foundBinaryData));
@@ -549,7 +549,7 @@ public class DatabaseTest extends TestCase
 
       table.reset();
 
-      Map<String, Object> row = table.getNextRow();
+      Row row = table.getNextRow();
 
       assertEquals(testStr, row.get("A"));
       assertEquals(testStr, row.get("B"));
@@ -559,7 +559,7 @@ public class DatabaseTest extends TestCase
 
       assertEquals(testStr, row.get("A"));
       assertEquals(longMemo, row.get("B"));
-      assertTrue(Arrays.equals(oleValue, (byte[])row.get("C")));
+      assertTrue(Arrays.equals(oleValue, row.getBytes("C")));
 
       db.close();
     }    
@@ -937,8 +937,8 @@ public class DatabaseTest extends TestCase
       }
 
       Set<Integer> ids = new HashSet<Integer>();
-      for(Map<String,Object> row : t) {
-        ids.add((Integer)row.get("ID"));
+      for(Row row : t) {
+        ids.add(row.getInt("ID"));
       }
       assertEquals(1000, ids.size());
 
@@ -1103,8 +1103,8 @@ public class DatabaseTest extends TestCase
       }
 
       List<Date> foundDates = new ArrayList<Date>();
-      for(Map<String,Object> row : table) {
-        foundDates.add((Date)row.get("date"));
+      for(Row row : table) {
+        foundDates.add(row.getDate("date"));
       }
 
       assertEquals(dates.size(), foundDates.size());

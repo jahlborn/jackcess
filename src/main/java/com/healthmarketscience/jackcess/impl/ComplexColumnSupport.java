@@ -79,14 +79,14 @@ public class ComplexColumnSupport
           complexTypeId);
     }
     Row cColRow = cursor.getCurrentRow();
-    int tableId = (Integer)cColRow.get(COL_TABLE_ID);
+    int tableId = cColRow.getInt(COL_TABLE_ID);
     if(tableId != column.getTable().getTableDefPageNumber()) {
       throw new IOException(
           "Found complex column for table " + tableId + " but expected table " +
           column.getTable().getTableDefPageNumber());
     }
-    int flatTableId = (Integer)cColRow.get(COL_FLAT_TABLE_ID);
-    int typeObjId = (Integer)cColRow.get(COL_COMPLEX_TYPE_OBJECT_ID);
+    int flatTableId = cColRow.getInt(COL_FLAT_TABLE_ID);
+    int typeObjId = cColRow.getInt(COL_COMPLEX_TYPE_OBJECT_ID);
 
     TableImpl typeObjTable = db.getTable(typeObjId);
     TableImpl flatTable = db.getTable(flatTableId);

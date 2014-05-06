@@ -20,8 +20,12 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.util.LinkedHashMap;
+import java.util.Date;
+import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+
 
 /**
  * A row of data as column->value pairs.
@@ -53,6 +57,50 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   public RowIdImpl getId() {
     return _id;
+  }
+
+  public String getString(String name) {
+    return (String)get(name);
+  }
+
+  public Boolean getBoolean(String name) {
+    return (Boolean)get(name);
+  }
+
+  public Byte getByte(String name) {
+    return (Byte)get(name);
+  }
+
+  public Short getShort(String name) {
+    return (Short)get(name);
+  }
+
+  public Integer getInt(String name) {
+    return (Integer)get(name);
+  }
+
+  public BigDecimal getBigDecimal(String name) {
+    return (BigDecimal)get(name);
+  }
+
+  public Float getFloat(String name) {
+    return (Float)get(name);
+  }
+
+  public Double getDouble(String name) {
+    return (Double)get(name);
+  }
+
+  public Date getDate(String name) {
+    return (Date)get(name);
+  }
+
+  public byte[] getBytes(String name) {
+    return (byte[])get(name);
+  }
+
+  public ComplexValueForeignKey getForeignKey(String name) {
+    return (ComplexValueForeignKey)get(name);
   }
 
   @Override

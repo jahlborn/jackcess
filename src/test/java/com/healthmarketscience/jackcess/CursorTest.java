@@ -1102,18 +1102,18 @@ public class CursorTest extends TestCase {
       IndexCursor cursor = CursorBuilder.createCursor(idx);
 
       List<String> expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.newEntryIterable(1)
+      for(Row row : cursor.newEntryIterable(1)
             .addColumnNames("data")) {
-        expectedData.add((String)row.get("data"));
+        expectedData.add(row.getString("data"));
       }
 
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
       expectedData = new ArrayList<String>();
-      for(Iterator<? extends Map<String,Object>> iter = 
+      for(Iterator<? extends Row> iter = 
             cursor.newEntryIterable(1).iterator();
           iter.hasNext(); ) {
-        expectedData.add((String)iter.next().get("data"));
+        expectedData.add(iter.next().getString("data"));
         iter.remove();
         try {
           iter.remove();
@@ -1135,9 +1135,9 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
       
       expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.newEntryIterable(1)
+      for(Row row : cursor.newEntryIterable(1)
             .addColumnNames("data")) {
-        expectedData.add((String)row.get("data"));
+        expectedData.add(row.getString("data"));
       }
 
       assertTrue(expectedData.isEmpty());
@@ -1155,21 +1155,21 @@ public class CursorTest extends TestCase {
       Cursor cursor = CursorBuilder.createCursor(t1);
 
       List<String> expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.newIterable().setColumnNames(
+      for(Row row : cursor.newIterable().setColumnNames(
               Arrays.asList("otherfk1", "data"))) {
         if(row.get("otherfk1").equals(1)) {
-          expectedData.add((String)row.get("data"));
+          expectedData.add(row.getString("data"));
         }
       }
 
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
       expectedData = new ArrayList<String>();
-      for(Iterator<? extends Map<String,Object>> iter = cursor.iterator();
+      for(Iterator<? extends Row> iter = cursor.iterator();
           iter.hasNext(); ) {
-        Map<String,Object> row = iter.next();
+        Row row = iter.next();
         if(row.get("otherfk1").equals(1)) {
-          expectedData.add((String)row.get("data"));
+          expectedData.add(row.getString("data"));
           iter.remove();
           try {
             iter.remove();
@@ -1192,10 +1192,10 @@ public class CursorTest extends TestCase {
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
       
       expectedData = new ArrayList<String>();
-      for(Map<String,Object> row : cursor.newIterable().setColumnNames(
+      for(Row row : cursor.newIterable().setColumnNames(
               Arrays.asList("otherfk1", "data"))) {
         if(row.get("otherfk1").equals(1)) {
-          expectedData.add((String)row.get("data"));
+          expectedData.add(row.getString("data"));
         }
       }
 

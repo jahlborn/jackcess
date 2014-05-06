@@ -56,7 +56,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  * <p/>
  * <b>Example for interpreting an existing OLE field:</b>
  * <pre>
- *   byte[] oleBytes = (byte[])row.get("MyOleColumn");
+ *   byte[] oleBytes = row.getBytes("MyOleColumn");
  *   OleBlob oleBlob = null;
  *   try {
  *     oleBlob = OleBlob.Builder.fromInternalData(oleBlob);

@@ -102,12 +102,12 @@ public class OleBlobTest extends TestCase
       for(Row row : t) {
         try {
           blob = OleBlob.Builder.fromInternalData(
-              (byte[])row.get("ole"));
+              row.getBytes("ole"));
           OleBlob.Content content = blob.getContent();
           assertSame(blob, content.getBlob());
           assertSame(content, blob.getContent());
 
-          switch((Integer)row.get("id")) {
+          switch(row.getInt("id")) {
           case 1:
             assertEquals(OleBlob.ContentType.SIMPLE_PACKAGE, content.getType());
             OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
@@ -170,13 +170,12 @@ public class OleBlobTest extends TestCase
         OleBlob oleBlob = null;
         try {
 
-          String name = (String)row.get("name");
-          oleBlob = OleBlob.Builder.fromInternalData((byte[])row.get("ole_data"));
+          String name = row.getString("name");
+          oleBlob = OleBlob.Builder.fromInternalData(row.getBytes("ole_data"));
           OleBlob.Content content = oleBlob.getContent();
           Attachment attach = null;
           if(content.getType() != OleBlob.ContentType.LINK) {
-            attach = ((ComplexValueForeignKey)row.get("attach_data"))
-              .getAttachments().get(0);
+            attach = row.getForeignKey("attach_data").getAttachments().get(0);
           }
 
           switch(content.getType()) {
