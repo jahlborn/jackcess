@@ -42,67 +42,67 @@ public interface Row extends Map<String,Object>
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a String.
+   * casting it to a String (DataTypes TEXT, MEMO, GUID).
    */
   public String getString(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Boolean.
+   * casting it to a Boolean (DataType BOOLEAN).
    */
   public Boolean getBoolean(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Byte.
+   * casting it to a Byte (DataType BYTE).
    */
   public Byte getByte(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Short.
+   * casting it to a Short (DataType INT).
    */
   public Short getShort(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Integer.
+   * casting it to a Integer (DataType LONG).
    */
   public Integer getInt(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a BigDecimal.
+   * casting it to a BigDecimal (DataTypes MONEY, NUMERIC).
    */
   public BigDecimal getBigDecimal(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Float.
+   * casting it to a Float (DataType FLOAT).
    */
   public Float getFloat(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Double.
+   * casting it to a Double (DataType DOUBLE).
    */
   public Double getDouble(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a Date.
+   * casting it to a Date (DataType SHORT_DATE_TIME).
    */
   public Date getDate(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a byte[].
+   * casting it to a byte[] (DataTypes BINARY, OLE).
    */
   public byte[] getBytes(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a ComplexValueForeignKey.
+   * casting it to a ComplexValueForeignKey (DataType COMPLEX_TYPE).
    */
   public ComplexValueForeignKey getForeignKey(String name);
 }
