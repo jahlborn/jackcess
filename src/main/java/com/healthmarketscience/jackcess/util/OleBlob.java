@@ -31,7 +31,7 @@ import java.sql.Blob;
 import com.healthmarketscience.jackcess.impl.OleUtil;
 
 /**
- * Extentions of the Blob interface with additional functionality for working
+ * Extensions of the Blob interface with additional functionality for working
  * with the OLE content from an access database.  The ole data type in access
  * has a wide range of functionality (including wrappers with nested wrappers
  * with nested filesystems!), and jackcess only supports a small portion of
@@ -56,10 +56,9 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  * <p/>
  * <b>Example for interpreting an existing OLE field:</b>
  * <pre>
- *   byte[] oleBytes = row.getBytes("MyOleColumn");
  *   OleBlob oleBlob = null;
  *   try {
- *     oleBlob = OleBlob.Builder.fromInternalData(oleBlob);
+ *     oleBlob = row.getBlob("MyOleColumn");
  *     Content content = oleBlob.getContent()
  *     if(content.getType() == OleBlob.ContentType.SIMPLE_PACKAGE) {
  *       FileOutputStream out = ...;

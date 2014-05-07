@@ -101,8 +101,7 @@ public class OleBlobTest extends TestCase
 
       for(Row row : t) {
         try {
-          blob = OleBlob.Builder.fromInternalData(
-              row.getBytes("ole"));
+          blob = row.getBlob("ole");
           OleBlob.Content content = blob.getContent();
           assertSame(blob, content.getBlob());
           assertSame(content, blob.getContent());
@@ -171,7 +170,7 @@ public class OleBlobTest extends TestCase
         try {
 
           String name = row.getString("name");
-          oleBlob = OleBlob.Builder.fromInternalData(row.getBytes("ole_data"));
+          oleBlob = row.getBlob("ole_data");
           OleBlob.Content content = oleBlob.getContent();
           Attachment attach = null;
           if(content.getType() != OleBlob.ContentType.LINK) {

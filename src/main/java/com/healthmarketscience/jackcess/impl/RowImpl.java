@@ -19,12 +19,14 @@ USA
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Date;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+import com.healthmarketscience.jackcess.util.OleBlob;
 
 
 /**
@@ -101,6 +103,11 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   public ComplexValueForeignKey getForeignKey(String name) {
     return (ComplexValueForeignKey)get(name);
+  }
+
+  public OleBlob getBlob(String name) throws IOException {
+    byte[] bytes = getBytes(name);
+    return ((bytes != null) ? OleBlob.Builder.fromInternalData(bytes) : null);
   }
 
   @Override

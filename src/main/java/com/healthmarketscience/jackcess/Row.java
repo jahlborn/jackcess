@@ -19,11 +19,13 @@ USA
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+import com.healthmarketscience.jackcess.util.OleBlob;
 
 
 /**
@@ -102,7 +104,15 @@ public interface Row extends Map<String,Object>
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a ComplexValueForeignKey (DataType COMPLEX_TYPE).
+   * casting it to a {@link ComplexValueForeignKey} (DataType COMPLEX_TYPE).
    */
   public ComplexValueForeignKey getForeignKey(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * converting it to an {@link OleBlob} (DataTypes OLE).
+   * </p>
+   * Note, <i>the OleBlob should be closed after use</i>.
+   */
+  public OleBlob getBlob(String name) throws IOException;
 }
