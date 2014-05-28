@@ -167,6 +167,9 @@
           from Jackcess 1.x to 2.x.  If you feel that it is incorrect or missing
           a key bit of information, please, <a href="https://sourceforge.net/p/jackcess/discussion/456474/">drop us a line</a>!
         </p>
+        <p>
+          Some <a href="https://sourceforge.net/p/jackcess/discussion/456474/thread/8b76f73b/">additional notes</a> from a migration effort.
+        </p>
       </subsection>
     </section>
   </body>
