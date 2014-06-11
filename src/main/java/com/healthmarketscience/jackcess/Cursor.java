@@ -224,6 +224,15 @@ public interface Cursor extends Iterable<Row>
    *         otherwise
    */
   public boolean moveToPreviousRow() throws IOException;
+  
+  /**
+   * Moves to the row with the given rowId.  If the row is not found (or an
+   * exception is thrown), the cursor is restored to its previous state.
+   * 
+   * @return {@code true} if a valid row was found with the given id,
+   *         {@code false} if no row was found
+   */
+  public boolean findRow(RowId rowId) throws IOException;
 
   /**
    * Moves to the first row (as defined by the cursor) where the given column

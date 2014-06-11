@@ -121,6 +121,18 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     return cursor;
   }  
 
+  private Set<String> getIndexEntryPattern()
+  {
+    if(_indexEntryPattern == null) {
+      // init our set of index column names
+      _indexEntryPattern = new HashSet<String>();
+      for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
+        _indexEntryPattern.add(col.getName());
+      }
+    }
+    return _indexEntryPattern;
+  }
+
   public IndexImpl getIndex() {
     return _index;
   }
@@ -220,6 +232,15 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     _entryCursor.restorePosition(((IndexPosition)curPos).getEntry(),
                                  ((IndexPosition)prevPos).getEntry());
     super.restorePositionImpl(curPos, prevPos);
+  }
+
+  @Override
+  protected PositionImpl getRowPosition(RowIdImpl rowId) throws IOException
+  {
+    // we need to get the index entry which corresponds with this row
+    Row row = getTable().getRow(getRowState(), rowId, getIndexEntryPattern());
+    _entryCursor.beforeEntry(getTable().asRow(row));
+    return new IndexPosition(_entryCursor.getNextEntry());
   }
 
   @Override
@@ -348,16 +369,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
                                              ColumnMatcher columnMatcher)
     throws IOException
   {
-    if(_indexEntryPattern == null) {
-      // init our set of index column names
-      _indexEntryPattern = new HashSet<String>();
-      for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
-        _indexEntryPattern.add(col.getName());
-      }
-    }
-
     // check the next row to see if it actually matches
-    Row row = getCurrentRow(_indexEntryPattern);
+    Row row = getCurrentRow(getIndexEntryPattern());
 
     for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
       String columnName = col.getName();

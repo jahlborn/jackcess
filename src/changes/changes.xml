@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.5" date="TBD">
+      <action dev="jahlborn" type="add">
+        Add Cursor.findRow(RowId) for moving to a specific Table row using
+        only the RowId.
+      </action>
+    </release>
     <release version="2.0.4" date="2014-04-05">
       <action dev="jahlborn" type="add">
         Add ColumnValidator interface which allows column values to be easily

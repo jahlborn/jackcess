@@ -38,6 +38,7 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
@@ -417,6 +418,34 @@ public abstract class CursorImpl implements Cursor
     return(!_curPos.equals(getDirHandler(moveForward).getEndPosition()));
   }
 
+  public boolean findRow(RowId rowId) throws IOException
+  {
+    RowIdImpl rowIdImpl = (RowIdImpl)rowId;
+    PositionImpl curPos = _curPos;
+    PositionImpl prevPos = _prevPos;
+    boolean found = false;
+    try {
+      reset(MOVE_FORWARD);
+      if(TableImpl.positionAtRowHeader(_rowState, rowIdImpl) == null) {
+        return false;
+      }
+      restorePosition(getRowPosition(rowIdImpl));
+      if(!isCurrentRowValid()) {
+        return false;
+      }
+      found = true;
+      return true;
+    } finally {
+      if(!found) {
+        try {
+          restorePosition(curPos, prevPos);
+        } catch(IOException e) {
+          LOG.error("Failed restoring position", e);
+        }
+      }
+    }
+  }
+
   public boolean findFirstRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -688,6 +717,13 @@ public abstract class CursorImpl implements Cursor
     return getClass().getSimpleName() + " CurPosition " + _curPos +
       ", PrevPosition " + _prevPos;
   }
+
+  /**
+   * Returns the appropriate position information for the given row (which is
+   * the current row and is valid).
+   */
+  protected abstract PositionImpl getRowPosition(RowIdImpl rowId) 
+    throws IOException;
     
   /**
    * Finds the next non-deleted row after the given row (as defined by this

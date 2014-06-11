@@ -1205,5 +1205,75 @@ public class CursorTest extends TestCase {
     }    
   }
   
+  public void testFindByRowId() throws Exception {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      Database db = createTestTable(fileFormat);
+
+      Table table = db.getTable("test");
+      Cursor cursor = CursorBuilder.createCursor(table);
+      doTestFindByRowId(cursor);
+      db.close();
+    }
+  }
+
+  public void testFindByRowIdIndex() throws Exception {
+    for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
+      Database db = createTestIndexTable(indexCursorDB);
+
+      Table table = db.getTable("test");
+      Index idx = table.getIndexes().get(0);
+
+      assertTable(createUnorderedTestTableData(), table);
+
+      Cursor cursor = CursorBuilder.createCursor(idx);
+      doTestFindByRowId(cursor);
+
+      db.close();
+    }
+  }
+
+  private static void doTestFindByRowId(Cursor cursor) 
+    throws Exception
+  {
+    for(int i = 0; i < 3; ++i) {
+      cursor.moveToNextRow();
+    } 
+
+    Row r1 = cursor.getCurrentRow();
+
+    for(int i = 0; i < 3; ++i) {
+      cursor.moveToNextRow();
+    } 
+
+    Row r2 = cursor.getCurrentRow();
+
+    doTestFindByRowId(cursor, r1, 2);
+
+    doTestFindByRowId(cursor, r2, 5);
+  } 
+
+  private static void doTestFindByRowId(Cursor cursor, Row row, int id)
+    throws Exception
+  {
+    cursor.reset();
+    assertTrue(cursor.findRow(row.getId()));
+    Row rFound = cursor.getCurrentRow();
+    assertEquals(id, rFound.get("id"));
+    assertEquals(row, rFound);
+    Cursor.Savepoint save = cursor.getSavepoint();
+
+    assertTrue(cursor.moveToNextRow());
+    assertEquals(id + 1, cursor.getCurrentRow().get("id"));
+
+    cursor.restoreSavepoint(save);
+
+    assertTrue(cursor.moveToPreviousRow());
+    assertEquals(id - 1, cursor.getCurrentRow().get("id"));
+
+    assertFalse(cursor.findRow(RowIdImpl.FIRST_ROW_ID));
+
+    assertEquals(id - 1, cursor.getCurrentRow().get("id"));    
+  }
+
 }
   
