@@ -1269,7 +1269,7 @@ public class TableImpl implements Table
                          (short)umapRowNum);
         pageChannel.writePage(umapBuf, umapPageNumber);
         umapBuf = null;
-  }
+      }
     }
   }
 
@@ -1305,7 +1305,7 @@ public class TableImpl implements Table
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
     int dispIndex = 0;
     for (int i = 0; i < columnCount; i++) {
-      ColumnImpl column = new ColumnImpl(this, tableBuffer,
+      ColumnImpl column = ColumnImpl.create(this, tableBuffer,
           colOffset + (i * getFormat().SIZE_COLUMN_HEADER), dispIndex++);
       _columns.add(column);
       if(column.isVariableLength()) {

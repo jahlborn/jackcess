@@ -59,7 +59,6 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
-import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
 import com.healthmarketscience.jackcess.impl.scsu.Compress;
 import com.healthmarketscience.jackcess.impl.scsu.EndOfInputException;
@@ -182,12 +181,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private static final byte[] TEXT_COMPRESSION_HEADER = 
   { (byte)0xFF, (byte)0XFE };
 
-  /** placeholder for column which is not numeric */
-  private static final NumericInfo DEFAULT_NUMERIC_INFO = new NumericInfo();
-
-  /** placeholder for column which is not textual */
-  private static final TextInfo DEFAULT_TEXT_INFO = new TextInfo();
-
   
   /** owning table */
   private final TableImpl _table;
@@ -211,18 +204,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private final int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
   private final int _varLenTableIndex;
-  /** information specific to numeric columns */
-  private NumericInfo _numericInfo = DEFAULT_NUMERIC_INFO;
-  /** information specific to text columns */
-  private TextInfo _textInfo = DEFAULT_TEXT_INFO;
   /** the auto number generator for this column (if autonumber column) */
   private final AutoNumberGenerator _autoNumberGenerator;
-  /** additional information specific to complex columns */
-  private final ComplexColumnInfo<? extends ComplexValue> _complexInfo;
   /** properties for this column, if any */
   private PropertyMap _props;  
-  /** Holds additional info for writing long values */
-  private LongValueBufferHolder _lvalBufferH;
   /** Validator for writing new values */
   private ColumnValidator _validator = SimpleColumnValidator.INSTANCE;
   
@@ -240,11 +225,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       _columnLength = (short)type.getMaxSize();
     }
     _variableLength = type.isVariableLength();
-    if(type.getHasScalePrecision()) {
-      modifyNumericInfo();
-      _numericInfo._scale = (byte)type.getDefaultScale();
-      _numericInfo._precision =(byte)type.getDefaultPrecision();
-    }
     _autoNumber = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
@@ -252,7 +232,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _displayIndex = colNumber;
     _fixedDataOffset = fixedOffset;
     _varLenTableIndex = varLenIndex;
-    _complexInfo = null;
   }
     
   /**
@@ -262,57 +241,20 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
-  public ColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
-                    int displayIndex)
+  ColumnImpl(TableImpl table, ByteBuffer buffer, int offset, int displayIndex,
+             DataType type, byte flags)
     throws IOException
   {
     _table = table;
     _displayIndex = displayIndex;
+    _type = type;
     
-    byte colType = buffer.get(offset + getFormat().OFFSET_COLUMN_TYPE);
     _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
     _columnLength = buffer.getShort(offset + getFormat().OFFSET_COLUMN_LENGTH);
     
-    byte flags = buffer.get(offset + getFormat().OFFSET_COLUMN_FLAGS);
     _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
     _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK))
                    != 0);
-
-    DataType type = null;
-    try {
-      type = DataType.fromByte(colType);
-    } catch(IOException e) {
-      LOG.warn("Unsupported column type " + colType);
-      type = (_variableLength ? DataType.UNSUPPORTED_VARLEN :
-              DataType.UNSUPPORTED_FIXEDLEN);
-      setUnknownDataType(colType);
-    }
-    _type = type;
-    
-    if (_type.getHasScalePrecision()) {
-      modifyNumericInfo();
-      _numericInfo._precision = buffer.get(offset +
-                                           getFormat().OFFSET_COLUMN_PRECISION);
-      _numericInfo._scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
-    } else if(_type.isTextual()) {
-      modifyTextInfo();
-
-      // co-located w/ precision/scale
-      _textInfo._sortOrder = readSortOrder(
-          buffer, offset + getFormat().OFFSET_COLUMN_SORT_ORDER, getFormat());
-      int cpOffset = getFormat().OFFSET_COLUMN_CODE_PAGE;
-      if(cpOffset >= 0) {
-        _textInfo._codePage = buffer.getShort(offset + cpOffset);
-      }
-
-      _textInfo._compressedUnicode = ((buffer.get(offset +
-        getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
-
-      if(_type == DataType.MEMO) {
-        // only memo fields can be hyperlinks
-        _textInfo._hyperlink = ((flags & HYPERLINK_FLAG_MASK) != 0);
-      }
-    }
     
     _autoNumberGenerator = createAutoNumberGenerator();
     
@@ -323,33 +265,73 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       _fixedDataOffset = buffer.getShort(offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
       _varLenTableIndex = 0;
     }
+  }
 
-    // load complex info
-    if(_type == DataType.COMPLEX_TYPE) {
-      _complexInfo = ComplexColumnSupport.create(this, buffer, offset);
-    } else {
-      _complexInfo = null;
-    } 
+  /**
+   * Creates the appropriate ColumnImpl class and reads a column definition in
+   * from a buffer
+   * @param table owning table
+   * @param buffer Buffer containing column definition
+   * @param offset Offset in the buffer at which the column definition starts
+   * @usage _advanced_method_
+   */
+  public static ColumnImpl create(TableImpl table, ByteBuffer buffer, int offset,
+                                  int displayIndex)
+    throws IOException
+  {
+    byte colType = buffer.get(offset + table.getFormat().OFFSET_COLUMN_TYPE);
+    byte flags = buffer.get(offset + table.getFormat().OFFSET_COLUMN_FLAGS);
+
+    DataType type = null;
+    try {
+      type = DataType.fromByte(colType);
+    } catch(IOException e) {
+      LOG.warn("Unsupported column type " + colType);
+      boolean variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
+      type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
+              DataType.UNSUPPORTED_FIXEDLEN);
+      return new UnsupportedColumnImpl(table, buffer, offset, displayIndex, type,
+                                       flags, colType);
+    }
+
+    switch(type) {
+    case TEXT:
+      return new TextColumnImpl(table, buffer, offset, displayIndex, type,
+                                flags);
+    case MEMO:
+      return new MemoColumnImpl(table, buffer, offset, displayIndex, type,
+                                flags);
+    case COMPLEX_TYPE:
+      return new ComplexColumnImpl(table, buffer, offset, displayIndex, type,
+                                   flags);
+    default:
+      // fall through
+    }
+
+    if(type.getHasScalePrecision()) {
+      return new NumericColumnImpl(table, buffer, offset, displayIndex, type,
+                                   flags);
+    }
+    if(type.isLongValue()) {
+      return new LongValueColumnImpl(table, buffer, offset, displayIndex, type,
+                                     flags);
+    }
+    
+    return new ColumnImpl(table, buffer, offset, displayIndex, type, flags);
   }
 
    /**
    * Sets the usage maps for this column.
    */
   void setUsageMaps(UsageMap ownedPages, UsageMap freeSpacePages) {
-    _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
+    // base does nothing
   }
 
   /**
    * Secondary column initialization after the table is fully loaded.
    */
   void postTableLoadInit() throws IOException {
-    if(getType().isLongValue() && (_lvalBufferH == null)) {
-      _lvalBufferH = new LegacyLongValueBufferHolder();
-    }
-    if(_complexInfo != null) {
-      ((ComplexColumnInfoImpl<? extends ComplexValue>)_complexInfo)
-      .postTableLoadInit();
-    }
+    // base does nothing
   }
 
   public TableImpl getTable() {
@@ -427,29 +409,29 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
   
   public boolean isCompressedUnicode() {
-    return _textInfo._compressedUnicode;
+    return false;
   }
 
   public byte getPrecision() {
-    return _numericInfo._precision;
+    return (byte)getType().getDefaultPrecision();
   }
   
   public byte getScale() {
-    return _numericInfo._scale;
+    return (byte)getType().getDefaultScale();
   }
 
   /**
    * @usage _intermediate_method_
    */
   public SortOrder getTextSortOrder() {
-    return _textInfo._sortOrder;
+    return null;
   }
 
   /**
    * @usage _intermediate_method_
    */
   public short getTextCodePage() {
-    return _textInfo._codePage;
+    return 0;
   }
 
   public short getLength() {
@@ -487,31 +469,30 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
   
   public ColumnImpl getVersionHistoryColumn() {
-    return _textInfo._versionHistoryCol;
+    return null;
   }
 
-   /**
+  /**
    * Returns the number of database pages owned by this column.
    * @usage _intermediate_method_
    */
   public int getOwnedPageCount() {
-    return ((_lvalBufferH == null) ? 0 : _lvalBufferH.getOwnedPageCount());
+    return 0;
   }
 
   /**
    * @usage _advanced_method_
    */
   public void setVersionHistoryColumn(ColumnImpl versionHistoryCol) {
-    modifyTextInfo();
-    _textInfo._versionHistoryCol = versionHistoryCol;
+    throw new UnsupportedOperationException();
   }
 
   public boolean isHyperlink() {
-    return _textInfo._hyperlink;
+    return false;
   }
   
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
-    return _complexInfo;
+    return null;
   }
 
   public ColumnValidator getColumnValidator() {
@@ -541,15 +522,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _validator = newValidator;
   }
   
-  private void setUnknownDataType(byte type) {
-    // slight hack, stash the original type in the _scale
-    modifyNumericInfo();
-    _numericInfo._scale = type;
+  byte getOriginalDataType() {
+    return _type.getValue();
   }
 
-  private byte getUnknownDataType() {
-    // slight hack, we stashed the real type in the _scale
-    return _numericInfo._scale;
+  LongValueBufferHolder getLongValueBufferHolder() {
+    return null;
   }
   
   private AutoNumberGenerator createAutoNumberGenerator() {
@@ -584,18 +562,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       _props = getTable().getPropertyMaps().get(getName());
     }
     return _props;
-  }
-
-  private void modifyNumericInfo() {
-    if(_numericInfo == DEFAULT_NUMERIC_INFO) {
-      _numericInfo = new NumericInfo();
-    }
-  }
-  
-  private void modifyTextInfo() {
-    if(_textInfo == DEFAULT_TEXT_INFO) {
-      _textInfo = new TextInfo();
-    }
   }
   
   public Object setRowValue(Object[] rowArray, Object value) {
@@ -1128,12 +1094,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       ByteBuffer lvalPage = null;
       int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
       byte firstLvalRow = 0;
-
+      LongValueBufferHolder lvalBufferH = getLongValueBufferHolder();
+      
       // write other page(s)
       switch(type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
-        lvalPage = _lvalBufferH.getLongValuePage(value.length);
-        firstLvalPageNum = _lvalBufferH.getPageNumber();
+        lvalPage = lvalBufferH.getLongValuePage(value.length);
+        firstLvalPageNum = lvalBufferH.getPageNumber();
         firstLvalRow = (byte)TableImpl.addDataPageRow(lvalPage, value.length,
                                                   getFormat(), 0);
         lvalPage.put(value);
@@ -1145,8 +1112,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         ByteBuffer buffer = ByteBuffer.wrap(value);
         int remainingLen = buffer.remaining();
         buffer.limit(0);
-        lvalPage = _lvalBufferH.getLongValuePage(remainingLen);
-        firstLvalPageNum = _lvalBufferH.getPageNumber();
+        lvalPage = lvalBufferH.getLongValuePage(remainingLen);
+        firstLvalPageNum = lvalBufferH.getPageNumber();
         firstLvalRow = (byte)TableImpl.getRowsOnDataPage(lvalPage, getFormat());
         int lvalPageNum = firstLvalPageNum;
         ByteBuffer nextLvalPage = null;
@@ -1163,10 +1130,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
           // figure out if we will need another page, and if so, allocate it
           if(chunkLength < remainingLen) {
             // force a new page to be allocated for the chunk after this
-            _lvalBufferH.clear();
-            nextLvalPage = _lvalBufferH.getLongValuePage(
+            lvalBufferH.clear();
+            nextLvalPage = lvalBufferH.getLongValuePage(
                 (remainingLen - chunkLength) + 4);
-            nextLvalPageNum = _lvalBufferH.getPageNumber();
+            nextLvalPageNum = lvalBufferH.getPageNumber();
             nextLvalRowNum = TableImpl.getRowsOnDataPage(nextLvalPage, 
                                                          getFormat());
           } else {
@@ -1176,8 +1143,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
           }
 
           // add row to this page
-          byte lvalRow = (byte)TableImpl.addDataPageRow(lvalPage, chunkLength + 4,
-                                                        getFormat(), 0);
+          TableImpl.addDataPageRow(lvalPage, chunkLength + 4, getFormat(), 0);
           
           // write next page info
           lvalPage.put((byte)nextLvalRowNum); // row number
@@ -1585,20 +1551,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public String toString() {
     ToStringBuilder sb = CustomToStringStyle.builder(this)
       .append("name", "(" + _table.getName() + ") " + _name);
-    byte typeValue = _type.getValue();
-    if(_type.isUnsupported()) {
-      typeValue = getUnknownDataType();
-    }
+    byte typeValue = getOriginalDataType();
     sb.append("type", "0x" + Integer.toHexString(typeValue) +
               " (" + _type + ")")
       .append("number", _columnNumber)
       .append("length", _columnLength)
       .append("variableLength", _variableLength);
     if(_type.isTextual()) {
-      sb.append("compressedUnicode", _textInfo._compressedUnicode)
-        .append("textSortOrder", _textInfo._sortOrder);
-      if(_textInfo._codePage > 0) {
-        sb.append("textCodePage", _textInfo._codePage);
+      sb.append("compressedUnicode", isCompressedUnicode())
+        .append("textSortOrder", getTextSortOrder());
+      if(getTextCodePage() > 0) {
+        sb.append("textCodePage", getTextCodePage());
       }
       if(isAppendOnly()) {
         sb.append("appendOnly", isAppendOnly());
@@ -1610,8 +1573,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(_autoNumber) {
       sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
-    if(_complexInfo != null) {
-      sb.append("complexInfo", _complexInfo);
+    if(getComplexInfo() != null) {
+      sb.append("complexInfo", getComplexInfo());
     }
     return sb.toString();
   }
@@ -1938,6 +1901,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
+   * Reads the column cade page info from the given buffer, if supported for
+   * this db.
+   */
+  static short readCodePage(ByteBuffer buffer, int offset, JetFormat format)
+  {
+      int cpOffset = format.OFFSET_COLUMN_CODE_PAGE;
+      return ((cpOffset >= 0) ? buffer.getShort(offset + cpOffset) : 0);
+  }
+  
+  /**
    * Writes the sort order info to the given buffer at the current position.
    */
   private static void writeSortOrder(ByteBuffer buffer, SortOrder sortOrder,
@@ -2219,39 +2192,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
-   * Information specific to numeric types.
-   */
-  private static final class NumericInfo
-  {
-    /** Numeric precision */
-    private byte _precision;
-    /** Numeric scale */
-    private byte _scale;
-  }
-
-  /**
-   * Information specific to textual types.
-   */
-  private static final class TextInfo
-  {
-    /** whether or not they are compressed */ 
-    private boolean _compressedUnicode;
-    /** the collating sort order for a text field */
-    private SortOrder _sortOrder;
-    /** the code page for a text field (for certain db versions) */
-    private short _codePage;
-    /** complex column which tracks the version history for this "append only"
-        column */
-    private ColumnImpl _versionHistoryCol;
-    /** whether or not this is a hyperlink column (only possible for columns
-        of type MEMO) */
-    private boolean _hyperlink;
-  }
-
-  /**
    * Manages secondary page buffers for long value writing.
    */
-  private abstract class LongValueBufferHolder
+  abstract class LongValueBufferHolder
   {
     /**
      * Returns a long value data page with space for data of the given length.
@@ -2299,80 +2242,5 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
 
     protected abstract TempPageHolder getBufferHolder();
-  }
-
-  /**
-   * Manages a common, shared extra page for long values.  This is legacy
-   * behavior from before it was understood that there were additional usage
-   * maps for each columns.
-   */
-  private final class LegacyLongValueBufferHolder extends LongValueBufferHolder
-  {
-    @Override
-    protected TempPageHolder getBufferHolder() {
-      return getTable().getLongValueBuffer();
-    }
-  }
-
-  /**
-   * Manages the column usage maps for long values.
-   */
-  private final class UmapLongValueBufferHolder extends LongValueBufferHolder
-  {
-    /** Usage map of pages that this column owns */
-    private final UsageMap _ownedPages;
-    /** Usage map of pages that this column owns with free space on them */
-    private final UsageMap _freeSpacePages;
-    /** page buffer used to write "long value" data */
-    private final TempPageHolder _longValueBufferH =
-      TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
-
-    private UmapLongValueBufferHolder(UsageMap ownedPages,
-                                      UsageMap freeSpacePages) {
-      _ownedPages = ownedPages;
-      _freeSpacePages = freeSpacePages;
-    }
-
-    @Override
-    protected TempPageHolder getBufferHolder() {
-      return _longValueBufferH;
-    }
-
-    @Override
-    public int getOwnedPageCount() {
-      return _ownedPages.getPageCount();
-    }
-
-    @Override
-    protected ByteBuffer findNewPage(int dataLength) throws IOException {
-
-      // grab last owned page and check for free space.  
-      ByteBuffer newPage = TableImpl.findFreeRowSpace(      
-          _ownedPages, _freeSpacePages, _longValueBufferH);
-      
-      if(newPage != null) {
-        if(TableImpl.rowFitsOnDataPage(dataLength, newPage, getFormat())) {
-          return newPage;
-        }
-        // discard this page and allocate a new one
-        clear();
-      }
-
-      // nothing found on current pages, need new page
-      newPage = super.findNewPage(dataLength);
-      int pageNumber = getPageNumber();
-      _ownedPages.addPageNumber(pageNumber);
-      _freeSpacePages.addPageNumber(pageNumber);
-      return newPage;
-    }
-
-    @Override
-    public void clear() throws IOException {
-      int pageNumber = getPageNumber();
-      if(pageNumber != PageChannel.INVALID_PAGE_NUMBER) {
-        _freeSpacePages.removePageNumber(pageNumber, true);
-      }
-      super.clear();
-    }
   }
 }

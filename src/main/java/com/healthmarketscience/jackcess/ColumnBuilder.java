@@ -119,8 +119,7 @@ public class ColumnBuilder {
   }
 
   public byte getPrecision() {
-    return ((_precision != null) ? _precision :
-            (byte)(_type.getHasScalePrecision() ? _type.getDefaultPrecision() : 0));
+    return ((_precision != null) ? _precision : (byte)_type.getDefaultPrecision());
   }
 
   /**
@@ -132,8 +131,7 @@ public class ColumnBuilder {
   }
 
   public byte getScale() {
-    return ((_scale != null) ? _scale :
-            (byte)(_type.getHasScalePrecision() ? _type.getDefaultScale() : 0));
+    return ((_scale != null) ? _scale : (byte)_type.getDefaultScale());
   }
 
   /**
@@ -147,7 +145,7 @@ public class ColumnBuilder {
   public short getLength() {
     return ((_length != null) ? _length :
             (short)(!_type.isVariableLength() ? _type.getFixedSize() :
-                    (!_type.isLongValue() ? _type.getDefaultSize() : 0)));
+                    _type.getDefaultSize()));
   }
 
   /**

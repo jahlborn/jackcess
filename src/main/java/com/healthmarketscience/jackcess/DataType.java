@@ -114,13 +114,13 @@ public enum DataType {
    */
   TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
        50 * JetFormat.TEXT_FIELD_UNIT_SIZE,
-       (int)JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_UNIT_SIZE),
+       JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
    * Corresponds to a java {@code byte[]} of max length 16777215 bytes.
    * Accepts a {@code byte[]}, or {@code null}.  Equivalent to SQL
    * {@link Types#LONGVARBINARY}, {@link Types#BLOB}.
    */
-  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, null, 0x3FFFFFFF,
+  OLE((byte) 0x0B, Types.LONGVARBINARY, null, true, true, 0, 0, 0x3FFFFFFF,
       1),
   /**
    * Corresponds to a java {@link String} of max length 8388607 chars.
@@ -128,7 +128,7 @@ public enum DataType {
    * {@code null}.  Equivalent to SQL {@link Types#LONGVARCHAR}, {@link
    * Types#CLOB}.
    */
-  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, null, 0x3FFFFFFF,
+  MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, 0, 0x3FFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
    * Unknown data.  Handled like {@link #BINARY}.
@@ -170,13 +170,15 @@ public enum DataType {
    * Placeholder type for a variable length type which is not currently
    * supported.  Handled like {@link #BINARY}.
    */
-  UNSUPPORTED_VARLEN((byte) 0xFF, null, null, true, false, 0, null, 0x3FFFFFFF,
+  UNSUPPORTED_VARLEN((byte) 0xFF, null, null, true, false, 0, 0, 0x3FFFFFFF,
       1);
 
   /** Map of SQL types to Access data types */
-  private static Map<Integer, DataType> SQL_TYPES = new HashMap<Integer, DataType>();
+  private static final Map<Integer, DataType> SQL_TYPES =
+    new HashMap<Integer, DataType>();
   /** Alternate map of SQL types to Access data types */
-  private static Map<Integer, DataType> ALT_SQL_TYPES = new HashMap<Integer, DataType>();
+  private static final Map<Integer, DataType> ALT_SQL_TYPES =
+    new HashMap<Integer, DataType>();
   static {
     for (DataType type : DataType.values()) {
       if (type._sqlType != null) {
@@ -210,71 +212,71 @@ public enum DataType {
   }
 
   /** is this a variable length field */
-  private boolean _variableLength;
+  private final boolean _variableLength;
   /** is this a long value field */
-  private boolean _longValue;
+  private final boolean _longValue;
   /** does this field have scale/precision */
-  private boolean _hasScalePrecision;
+  private final boolean _hasScalePrecision;
   /** Internal Access value */
-  private byte _value;
+  private final byte _value;
   /** Size in bytes of fixed length columns */
-  private Integer _fixedSize;
+  private final Integer _fixedSize;
   /** min in bytes size for var length columns */
-  private Integer _minSize;
+  private final int _minSize;
   /** default size in bytes for var length columns */
-  private Integer _defaultSize;
+  private final int _defaultSize;
   /** Max size in bytes for var length columns */
-  private Integer _maxSize;
+  private final int _maxSize;
   /** SQL type equivalent, or null if none defined */
-  private Integer _sqlType;
+  private final Integer _sqlType;
   /** min scale value */
-  private Integer _minScale;
+  private final int _minScale;
   /** the default scale value */
-  private Integer _defaultScale;
+  private final int _defaultScale;
   /** max scale value */
-  private Integer _maxScale;
+  private final int _maxScale;
   /** min precision value */
-  private Integer _minPrecision;
+  private final int _minPrecision;
   /** the default precision value */
-  private Integer _defaultPrecision;
+  private final int _defaultPrecision;
   /** max precision value */
-  private Integer _maxPrecision;
+  private final int _maxPrecision;
   /** the number of bytes per "unit" for this data type */
-  private int _unitSize;
+  private final int _unitSize;
   
   private DataType(byte value) {
     this(value, null, null);
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize) {
-    this(value, sqlType, fixedSize, false, false, null, null, null, 1);
+    this(value, sqlType, fixedSize, false, false, 0, 0, 0, 1);
   }
 
   private DataType(byte value, Integer sqlType, Integer fixedSize,
                    boolean variableLength,
                    boolean longValue,
-                   Integer minSize,
-                   Integer defaultSize,
-                   Integer maxSize,
+                   int minSize,
+                   int defaultSize,
+                   int maxSize,
                    int unitSize) {
     this(value, sqlType, fixedSize, variableLength, longValue,
          minSize, defaultSize, maxSize,
-         false, null, null, null, null, null, null, unitSize);
+         false, 0, 0, 0, 0, 0, 0, unitSize);
   }
   
   private DataType(byte value, Integer sqlType, Integer fixedSize,
                    boolean variableLength,
                    boolean longValue,
-                   Integer minSize,
-                   Integer defaultSize,
-                   Integer maxSize,
+                   int minSize,
+                   int defaultSize,
+                   int maxSize,
                    boolean hasScalePrecision,
-                   Integer minScale,
-                   Integer defaultScale,
-                   Integer maxScale,
-                   Integer minPrecision,
-                   Integer defaultPrecision,
-                   Integer maxPrecision,
+                   int minScale,
+                   int defaultScale,
+                   int maxScale,
+                   int minPrecision,
+                   int defaultPrecision,
+                   int maxPrecision,
                    int unitSize) {
     _value = value;
     _sqlType = sqlType;
