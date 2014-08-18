@@ -364,8 +364,13 @@ public class DatabaseTest extends TestCase
       row[3] = null;
       Table table = db.getTable("Test");
       int count = 1000;
-      for (int i = 0; i < count; i++) {
-        table.addRow(row);
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        for (int i = 0; i < count; i++) {
+          table.addRow(row);
+        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
       for (int i = 0; i < count; i++) {
         Map<String, Object> readRow = table.getNextRow();
@@ -932,8 +937,13 @@ public class DatabaseTest extends TestCase
 
       String lval = createNonAsciiString(255); // "--255 chars long text--";
 
-      for(int i = 0; i < 1000; ++i) {
-        t.addRow(i, 13, 57, lval, lval, lval, lval, lval, lval, 47.0d);
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        for(int i = 0; i < 1000; ++i) {
+          t.addRow(i, 13, 57, lval, lval, lval, lval, lval, lval, 47.0d);
+        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
 
       Set<Integer> ids = new HashSet<Integer>();
@@ -1098,8 +1108,13 @@ public class DatabaseTest extends TestCase
         }
       }
 
-      for(Date d : dates) {
-        table.addRow("row " + d, d);
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        for(Date d : dates) {
+          table.addRow("row " + d, d);
+        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
 
       List<Date> foundDates = new ArrayList<Date>();
