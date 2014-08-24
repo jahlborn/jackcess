@@ -56,6 +56,16 @@ public class IndexTest extends TestCase {
     super(name);
   }
 
+  @Override
+  protected void setUp() {
+    DatabaseTest.setTestAutoSync(false);
+  }
+
+  @Override
+  protected void tearDown() {
+    DatabaseTest.clearTestAutoSync();
+  }
+
   public void testByteOrder() throws Exception {
     byte b1 = (byte)0x00;
     byte b2 = (byte)0x01;

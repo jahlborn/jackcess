@@ -85,11 +85,25 @@ public class DatabaseTest extends TestCase
   public static final TimeZone TEST_TZ =
     TimeZone.getTimeZone("America/New_York");
   
-  static boolean _autoSync = Database.DEFAULT_AUTO_SYNC;
+  private static final ThreadLocal<Boolean> _autoSync =         
+    new ThreadLocal<Boolean>();
 
 
   public DatabaseTest(String name) throws Exception {
     super(name);
+  }
+
+  static void setTestAutoSync(boolean autoSync) {
+    _autoSync.set(autoSync);
+  }
+
+  static void clearTestAutoSync() {
+    _autoSync.remove();
+  }
+
+  static boolean getTestAutoSync() {
+    Boolean autoSync = _autoSync.get();
+    return ((autoSync != null) ? autoSync : Database.DEFAULT_AUTO_SYNC);
   }
 
   public static Database open(FileFormat fileFormat, File file) 
@@ -105,7 +119,7 @@ public class DatabaseTest extends TestCase
     FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "r") 
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
-      .setAutoSync(_autoSync).setChannel(channel).open();
+      .setAutoSync(getTestAutoSync()).setChannel(channel).open();
     assertEquals("Wrong JetFormat.", 
                  DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(), 
                  ((DatabaseImpl)db).getFormat());
@@ -141,7 +155,7 @@ public class DatabaseTest extends TestCase
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
     return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
-      .setAutoSync(_autoSync).setChannel(channel).create();
+      .setAutoSync(getTestAutoSync()).setChannel(channel).create();
   }
 
 
@@ -167,7 +181,7 @@ public class DatabaseTest extends TestCase
   {
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
-    Database db = new DatabaseBuilder(tmp).setAutoSync(_autoSync).open();
+    Database db = new DatabaseBuilder(tmp).setAutoSync(getTestAutoSync()).open();
     assertEquals("Wrong JetFormat.", 
                  DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
                  ((DatabaseImpl)db).getFormat());
@@ -644,7 +658,7 @@ public class DatabaseTest extends TestCase
     assertTrue(!bogusFile.exists());
     try {
       new DatabaseBuilder(bogusFile).setReadOnly(true).
-        setAutoSync(_autoSync).open();
+        setAutoSync(getTestAutoSync()).open();
       fail("FileNotFoundException should have been thrown");
     } catch(FileNotFoundException e) {
     }

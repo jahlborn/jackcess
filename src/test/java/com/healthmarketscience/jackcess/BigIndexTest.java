@@ -74,7 +74,7 @@ public class BigIndexTest extends TestCase {
       assertEquals(0, index.getIndexData().getEntryCount());
       db.close();
 
-      DatabaseTest._autoSync = false;
+      DatabaseTest.setTestAutoSync(false);
       try {
 
         String extraText = " some random text to fill out the index and make it fill up pages with lots of extra bytes so i will keep typing until i think that i probably have enough text in the index entry so that i do not need to add as many entries in order";
@@ -203,7 +203,7 @@ public class BigIndexTest extends TestCase {
         db.close();
 
       } finally {
-        DatabaseTest._autoSync = Database.DEFAULT_AUTO_SYNC;
+        DatabaseTest.clearTestAutoSync();
       }
     }
   }

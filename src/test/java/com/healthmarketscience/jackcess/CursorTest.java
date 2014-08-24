@@ -60,6 +60,16 @@ public class CursorTest extends TestCase {
     super(name);
   }
 
+  @Override
+  protected void setUp() {
+    DatabaseTest.setTestAutoSync(false);
+  }
+
+  @Override
+  protected void tearDown() {
+    DatabaseTest.clearTestAutoSync();
+  }
+
   private static List<Map<String,Object>> createTestTableData()
     throws Exception
   {

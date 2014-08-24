@@ -34,15 +34,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.Iterator;
-import java.util.Map;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.Row;
@@ -125,10 +122,16 @@ public class CodecHandlerTest extends TestCase
   private static void writeData(Table t1, Table t2, int start, int end)
     throws Exception
   {
+    Database db = t1.getDatabase();
+    ((DatabaseImpl)db).getPageChannel().startWrite();
+    try {
       for(int i = start; i < end; ++i) {
         t1.addRow(null, "rowdata-" + i + DatabaseTest.createString(100));
         t2.addRow(null, "rowdata-" + i + DatabaseTest.createString(100));
       }
+    } finally {
+      ((DatabaseImpl)db).getPageChannel().finishWrite();
+    }
 
       Cursor c1 = t1.newCursor().setIndex(t1.getPrimaryKeyIndex())
         .toCursor();
@@ -140,17 +143,22 @@ public class CodecHandlerTest extends TestCase
 
       int t1rows = 0;
       int t2rows = 0;
-      while(i1.hasNext() || i2.hasNext()) {
-        if(i1.hasNext()) {
-          checkRow(i1.next());
-          i1.remove();
-          ++t1rows;
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        while(i1.hasNext() || i2.hasNext()) {
+          if(i1.hasNext()) {
+            checkRow(i1.next());
+            i1.remove();
+            ++t1rows;
+          }
+          if(i2.hasNext()) {
+            checkRow(i2.next());
+            i2.remove();
+            ++t2rows;
+          }
         }
-        if(i2.hasNext()) {
-          checkRow(i2.next());
-          i2.remove();
-          ++t2rows;
-        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
 
       assertEquals(100, t1rows);
