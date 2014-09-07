@@ -65,8 +65,7 @@ public class RowFilterTest extends TestCase
 
     List<Row> rows = Arrays.asList(row0, row1, row2, row3, row4, row5);
 
-    ColumnImpl testCol = new ColumnImpl(null, DataType.TEXT, 0, 0, 0) {};
-    testCol.setName(COL1);
+    ColumnImpl testCol = new ColumnImpl(null, COL1, DataType.TEXT, 0, 0, 0) {};
     assertEquals(Arrays.asList(row0, row2, row4), 
                  toList(RowFilter.matchPattern(testCol,
                             "foo").apply(rows)));

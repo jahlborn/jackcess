@@ -1443,7 +1443,7 @@ public class DatabaseTest extends TestCase
 
   private static void doTestTimeZone(final TimeZone tz) throws Exception
   {
-    ColumnImpl col = new ColumnImpl(null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
+    ColumnImpl col = new ColumnImpl(null, null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
       @Override
       protected Calendar getCalendar() { return Calendar.getInstance(tz); }
     };

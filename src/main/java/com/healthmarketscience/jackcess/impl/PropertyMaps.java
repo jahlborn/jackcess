@@ -448,7 +448,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     private class PropColumn extends ColumnImpl
     {
       private PropColumn(DataType type) {
-        super(null, type, 0, 0, 0);
+        super(null, null, type, 0, 0, 0);
       }
       
       @Override

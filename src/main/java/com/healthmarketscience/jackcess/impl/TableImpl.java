@@ -692,11 +692,11 @@ public class TableImpl implements Table
 
       NullMask nullMask = rowState.getNullMask(rowBuffer);
       boolean isNull = nullMask.isNull(column);
-      if(column.getType() == DataType.BOOLEAN) {
+      if(column.storeInNullMask()) {
           // Boolean values are stored in the null mask.  see note about
           // caching below
         return rowState.setRowCacheValue(column.getColumnIndex(),
-                                         Boolean.valueOf(!isNull));
+                                         column.readFromNullMask(isNull));
       } else if(isNull) {
         // well, that's easy! (no need to update cache w/ null)
         return null;
@@ -995,8 +995,8 @@ public class TableImpl implements Table
 
     // now, create the table definition
     PageChannel pageChannel = creator.getPageChannel();
-    ByteBuffer buffer = pageChannel .createBuffer(Math.max(totalTableDefSize,
-                                                           format.PAGE_SIZE));
+    ByteBuffer buffer = pageChannel.createBuffer(Math.max(totalTableDefSize,
+                                                          format.PAGE_SIZE));
     writeTableDefinitionHeader(creator, buffer, totalTableDefSize);
 
     if(creator.hasIndexes()) {
@@ -1303,10 +1303,19 @@ public class TableImpl implements Table
   {
     int colOffset = getFormat().OFFSET_INDEX_DEF_BLOCK +
         _indexCount * getFormat().SIZE_INDEX_DEFINITION;
+
+    tableBuffer.position(colOffset +
+                         (columnCount * getFormat().SIZE_COLUMN_HEADER));
+    List<String> colNames = new ArrayList<String>(columnCount);
+    for (int i = 0; i < columnCount; i++) {
+      colNames.add(readName(tableBuffer));
+    }    
+    
     int dispIndex = 0;
     for (int i = 0; i < columnCount; i++) {
       ColumnImpl column = ColumnImpl.create(this, tableBuffer,
-          colOffset + (i * getFormat().SIZE_COLUMN_HEADER), dispIndex++);
+          colOffset + (i * getFormat().SIZE_COLUMN_HEADER), colNames.get(i),
+          dispIndex++);
       _columns.add(column);
       if(column.isVariableLength()) {
         // also shove it in the variable columns list, which is ordered
@@ -1314,12 +1323,7 @@ public class TableImpl implements Table
         _varColumns.add(column);
       }
     }
-    tableBuffer.position(colOffset +
-                         (columnCount * getFormat().SIZE_COLUMN_HEADER));
-    for (int i = 0; i < columnCount; i++) {
-      ColumnImpl column = _columns.get(i);
-      column.setName(readName(tableBuffer));
-    }    
+
     Collections.sort(_columns);
     getAutoNumberColumns();
 
@@ -2056,10 +2060,9 @@ public class TableImpl implements Table
         
       Object rowValue = col.getRowValue(rowArray);
 
-      if (col.getType() == DataType.BOOLEAN) {
+      if (col.storeInNullMask()) {
         
-        if(ColumnImpl.toBooleanValue(rowValue)) {
-          //Booleans are stored in the null mask
+        if(col.writeToNullMask(rowValue)) {
           nullMask.markNotNull(col);
         }
         rowValue = null;

@@ -87,7 +87,7 @@ public class TableTest extends TestCase {
   public void testUnicodeCompression() throws Exception {
     reset();
     newTestColumn(DataType.TEXT, false);
-    newTestColumn(DataType.MEMO, false);
+    newTestColumn(DataType.TEXT, false);
     newTestTable();
 
     String small = "this is a string";
@@ -100,7 +100,7 @@ public class TableTest extends TestCase {
 
     reset();
     newTestColumn(DataType.TEXT, true);
-    newTestColumn(DataType.MEMO, true);
+    newTestColumn(DataType.TEXT, true);
     newTestTable();
     
     ByteBuffer[] bufCmp1 = encodeColumns(small, large);
@@ -177,7 +177,8 @@ public class TableTest extends TestCase {
       _fixedOffset += type.getFixedSize();
     }
 
-    ColumnImpl col = new ColumnImpl(null, type, nextColIdx, nextFixedOff, nextVarLenIdx) {
+    ColumnImpl col = new ColumnImpl(null, null, type, nextColIdx, nextFixedOff,
+                                    nextVarLenIdx) {
         @Override
         public TableImpl getTable() {
           return _testTable;

@@ -20,9 +20,8 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-import com.healthmarketscience.jackcess.DataType;
 
 /**
  * ColumnImpl subclass which is used for unknown/unsupported data types.
@@ -34,18 +33,19 @@ class UnsupportedColumnImpl extends ColumnImpl
 {
   private final byte _originalType;
   
-  UnsupportedColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
-                        int displayIndex, DataType type, byte flags,
-                        byte originalType)
-    throws IOException
+  UnsupportedColumnImpl(InitArgs args) throws IOException
   {
-    super(table, buffer, offset, displayIndex, type, flags);
-    _originalType = originalType;
+    super(args);
+    _originalType = args.colType;
   }
 
   @Override
   byte getOriginalDataType() {
     return _originalType;
   }
-  
+
+  @Override
+  public Object read(byte[] data, ByteOrder order) throws IOException {
+    return rawDataWrapper(data);
+  }
 }

@@ -512,7 +512,7 @@ public final class ByteUtil {
     }
     for(int i = 0; i < hexChars.length; i += 2) {
       String tmpStr = new String(hexChars, i, 2);
-      buffer.put((byte)Long.parseLong(tmpStr, 16));
+      buffer.put((byte)Integer.parseInt(tmpStr, 16));
     }
   }
 
@@ -549,6 +549,20 @@ public final class ByteUtil {
   }
 
   /**
+   * Swaps the 8 bytes (changes endianness) of the bytes at the given offset.
+   *
+   * @param bytes buffer containing bytes to swap
+   * @param offset offset of the first byte of the bytes to swap
+   */
+  public static void swap8Bytes(byte[] bytes, int offset)
+  {
+    swapBytesAt(bytes, offset + 0, offset + 7);
+    swapBytesAt(bytes, offset + 1, offset + 6);
+    swapBytesAt(bytes, offset + 2, offset + 5);
+    swapBytesAt(bytes, offset + 3, offset + 4);
+  }
+
+  /**
    * Swaps the 4 bytes (changes endianness) of the bytes at the given offset.
    *
    * @param bytes buffer containing bytes to swap
@@ -556,12 +570,8 @@ public final class ByteUtil {
    */
   public static void swap4Bytes(byte[] bytes, int offset)
   {
-    byte b = bytes[offset + 0];
-    bytes[offset + 0] = bytes[offset + 3];
-    bytes[offset + 3] = b;
-    b = bytes[offset + 1];
-    bytes[offset + 1] = bytes[offset + 2];
-    bytes[offset + 2] = b;
+    swapBytesAt(bytes, offset + 0, offset + 3);
+    swapBytesAt(bytes, offset + 1, offset + 2);
   }
 
   /**
@@ -572,9 +582,17 @@ public final class ByteUtil {
    */
   public static void swap2Bytes(byte[] bytes, int offset)
   {
-    byte b = bytes[offset + 0];
-    bytes[offset + 0] = bytes[offset + 1];
-    bytes[offset + 1] = b;
+    swapBytesAt(bytes, offset + 0, offset + 1);
+  }
+
+  /**
+   * Swaps the bytes at the given positions.
+   */
+  private static void swapBytesAt(byte[] bytes, int p1, int p2)
+  {
+    byte b = bytes[p1];
+    bytes[p1] = bytes[p2];
+    bytes[p2] = b;
   }
 
   /**
@@ -594,7 +612,7 @@ public final class ByteUtil {
    */
   public static byte[] copyOf(byte[] arr, int newLength)
   {
-    return copyOf(arr, 0, newLength);
+    return copyOf(arr, 0, newLength, 0);
   }
 
   /**
@@ -603,9 +621,20 @@ public final class ByteUtil {
    */
   public static byte[] copyOf(byte[] arr, int offset, int newLength)
   {
+    return copyOf(arr, offset, newLength, 0);
+  }
+
+  /**
+   * Returns a copy of the given array of the given length starting at the
+   * given position.
+   */
+  public static byte[] copyOf(byte[] arr, int offset, int newLength, 
+                              int dstOffset)
+  {
     byte[] newArr = new byte[newLength];
     int srcLen = arr.length - offset;
-    System.arraycopy(arr, offset, newArr, 0, Math.min(srcLen, newLength));
+    int dstLen = newLength - dstOffset;
+    System.arraycopy(arr, offset, newArr, dstOffset, Math.min(srcLen, dstLen));
     return newArr;
   }
 

@@ -20,9 +20,7 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
-import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
@@ -38,12 +36,10 @@ class ComplexColumnImpl extends ColumnImpl
   /** additional information specific to complex columns */
   private final ComplexColumnInfo<? extends ComplexValue> _complexInfo;
 
-  ComplexColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
-                    int displayIndex, DataType type, byte flags)
-    throws IOException
+  ComplexColumnImpl(InitArgs args) throws IOException
   {
-    super(table, buffer, offset, displayIndex, type, flags);
-    _complexInfo = ComplexColumnSupport.create(this, buffer, offset);
+    super(args);
+    _complexInfo = ComplexColumnSupport.create(this, args.buffer, args.offset);
   }
 
   @Override

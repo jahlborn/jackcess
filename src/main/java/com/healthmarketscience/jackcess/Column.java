@@ -134,6 +134,14 @@ public interface Column
   public boolean isHyperlink();
 
   /**
+   * Returns whether or not this is a calculated column.  Note that jackess
+   * <b>won't interpret the calculation expression</b> (but the field can be
+   * written directly).
+   * @usage _general_method_
+   */
+  public boolean isCalculated();
+
+  /**
    * Returns extended functionality for "complex" columns.
    * @usage _general_method_
    */

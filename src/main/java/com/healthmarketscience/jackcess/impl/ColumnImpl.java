@@ -77,7 +77,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
-  private static final Log LOG = LogFactory.getLog(ColumnImpl.class);
+  protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
   
   /**
    * Placeholder object for adding rows which indicates that the caller wants
@@ -101,27 +101,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
     25569L * (long)MILLISECONDS_PER_DAY;
   
-  /**
-   * Long value (LVAL) type that indicates that the value is stored on the
-   * same page
-   */
-  private static final byte LONG_VALUE_TYPE_THIS_PAGE = (byte) 0x80;
-  /**
-   * Long value (LVAL) type that indicates that the value is stored on another
-   * page
-   */
-  private static final byte LONG_VALUE_TYPE_OTHER_PAGE = (byte) 0x40;
-  /**
-   * Long value (LVAL) type that indicates that the value is stored on
-   * multiple other pages
-   */
-  private static final byte LONG_VALUE_TYPE_OTHER_PAGES = (byte) 0x00;
-  /**
-   * Mask to apply the long length in order to get the flag bits (only the
-   * first 2 bits are type flags).
-   */
-  private static final int LONG_VALUE_TYPE_MASK = 0xC0000000;
-
   /**
    * mask for the fixed len bit
    * @usage _advanced_field_
@@ -154,7 +133,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   // some other flags?
   // 0x10: replication related field (or hidden?)
-  // 0x80: hyperlink (some memo based thing)
+
+  protected static final byte COMPRESSED_UNICODE_EXT_FLAG_MASK = (byte)0x01;
+  private static final byte CALCULATED_EXT_FLAG_MASK = (byte)0xC0;
 
   /** the value for the "general" sort order */
   private static final short GENERAL_SORT_ORDER_VALUE = 1033;
@@ -188,6 +169,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private final boolean _variableLength;
   /** Whether or not the column is an autonumber column */
   private final boolean _autoNumber;
+  /** Whether or not the column is a calculated column */
+  private final boolean _calculated;
   /** Data type */
   private final DataType _type;
   /** Maximum column length */
@@ -199,7 +182,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /** display index of the data for this column */
   private final int _displayIndex;
   /** Column name */
-  private String _name;
+  private final String _name;
   /** the offset of the fixed data in the row */
   private final int _fixedDataOffset;
   /** the index of the variable length data in the var len offset table */
@@ -214,9 +197,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * @usage _advanced_method_
    */
-  protected ColumnImpl(TableImpl table, DataType type, int colNumber,
-                       int fixedOffset, int varLenIndex) {
+  protected ColumnImpl(TableImpl table, String name, DataType type,
+                       int colNumber, int fixedOffset, int varLenIndex) {
     _table = table;
+    _name = name;
     _type = type;
 
     if(!_type.isVariableLength()) {
@@ -226,6 +210,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     _variableLength = type.isVariableLength();
     _autoNumber = false;
+    _calculated = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
     _columnIndex = colNumber;
@@ -241,32 +226,37 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
-  ColumnImpl(TableImpl table, ByteBuffer buffer, int offset, int displayIndex,
-             DataType type, byte flags)
+  ColumnImpl(InitArgs args)
     throws IOException
   {
-    _table = table;
-    _displayIndex = displayIndex;
-    _type = type;
+    _table = args.table;
+    _name = args.name;
+    _displayIndex = args.displayIndex;
+    _type = args.type;
     
-    _columnNumber = buffer.getShort(offset + getFormat().OFFSET_COLUMN_NUMBER);
-    _columnLength = buffer.getShort(offset + getFormat().OFFSET_COLUMN_LENGTH);
+    _columnNumber = args.buffer.getShort(
+        args.offset + getFormat().OFFSET_COLUMN_NUMBER);
+    _columnLength = args.buffer.getShort(
+        args.offset + getFormat().OFFSET_COLUMN_LENGTH);
     
-    _variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
-    _autoNumber = ((flags & (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK))
-                   != 0);
+    _variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
+    _autoNumber = ((args.flags & 
+                    (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
+    _calculated = ((args.extFlags & CALCULATED_EXT_FLAG_MASK) != 0);
     
     _autoNumberGenerator = createAutoNumberGenerator();
     
     if(_variableLength) {
-      _varLenTableIndex = buffer.getShort(offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
+      _varLenTableIndex = args.buffer.getShort(
+          args.offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
       _fixedDataOffset = 0;
     } else {
-      _fixedDataOffset = buffer.getShort(offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
+      _fixedDataOffset = args.buffer.getShort(
+          args.offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
       _varLenTableIndex = 0;
     }
   }
-
+  
   /**
    * Creates the appropriate ColumnImpl class and reads a column definition in
    * from a buffer
@@ -275,49 +265,56 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
-  public static ColumnImpl create(TableImpl table, ByteBuffer buffer, int offset,
-                                  int displayIndex)
+  public static ColumnImpl create(TableImpl table, ByteBuffer buffer,
+                                  int offset, String name, int displayIndex)
     throws IOException
   {
-    byte colType = buffer.get(offset + table.getFormat().OFFSET_COLUMN_TYPE);
-    byte flags = buffer.get(offset + table.getFormat().OFFSET_COLUMN_FLAGS);
+    InitArgs args = new InitArgs(table, buffer, offset, name, displayIndex);
 
-    DataType type = null;
+    boolean calculated = ((args.extFlags & CALCULATED_EXT_FLAG_MASK) != 0);
+    byte colType = args.colType;
+    if(calculated) {
+      // "real" data type is in the "result type" property
+      PropertyMap colProps = table.getPropertyMaps().get(name);
+      Byte resultType = (Byte)colProps.getValue(PropertyMap.RESULT_TYPE_PROP);
+      if(resultType != null) {
+        colType = resultType;
+      }
+    }
+    
     try {
-      type = DataType.fromByte(colType);
+      args.type = DataType.fromByte(colType);
     } catch(IOException e) {
       LOG.warn("Unsupported column type " + colType);
-      boolean variableLength = ((flags & FIXED_LEN_FLAG_MASK) == 0);
-      type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
-              DataType.UNSUPPORTED_FIXEDLEN);
-      return new UnsupportedColumnImpl(table, buffer, offset, displayIndex, type,
-                                       flags, colType);
+      boolean variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
+      args.type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
+                   DataType.UNSUPPORTED_FIXEDLEN);
+      return new UnsupportedColumnImpl(args);
     }
 
-    switch(type) {
+    if(calculated) {
+      return CalculatedColumnUtil.create(args);
+    }
+    
+    switch(args.type) {
     case TEXT:
-      return new TextColumnImpl(table, buffer, offset, displayIndex, type,
-                                flags);
+      return new TextColumnImpl(args);
     case MEMO:
-      return new MemoColumnImpl(table, buffer, offset, displayIndex, type,
-                                flags);
+      return new MemoColumnImpl(args);
     case COMPLEX_TYPE:
-      return new ComplexColumnImpl(table, buffer, offset, displayIndex, type,
-                                   flags);
+      return new ComplexColumnImpl(args);
     default:
       // fall through
     }
 
-    if(type.getHasScalePrecision()) {
-      return new NumericColumnImpl(table, buffer, offset, displayIndex, type,
-                                   flags);
+    if(args.type.getHasScalePrecision()) {
+      return new NumericColumnImpl(args);
     }
-    if(type.isLongValue()) {
-      return new LongValueColumnImpl(table, buffer, offset, displayIndex, type,
-                                     flags);
+    if(args.type.isLongValue()) {
+      return new LongValueColumnImpl(args);
     }
     
-    return new ColumnImpl(table, buffer, offset, displayIndex, type, flags);
+    return new ColumnImpl(args);
   }
 
    /**
@@ -358,13 +355,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   
   public String getName() {
     return _name;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  public void setName(String name) {
-    _name = name;
   }
   
   public boolean isVariableLength() {
@@ -440,6 +430,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   public short getLengthInUnits() {
     return (short)getType().toUnitSize(getLength());
+  }
+
+  public boolean isCalculated() {
+    return _calculated;
   }
   
   /**
@@ -525,10 +519,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   byte getOriginalDataType() {
     return _type.getValue();
   }
-
-  LongValueBufferHolder getLongValueBufferHolder() {
-    return null;
-  }
   
   private AutoNumberGenerator createAutoNumberGenerator() {
     if(!_autoNumber || (_type == null)) {
@@ -581,7 +571,19 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }
+
+  public boolean storeInNullMask() {
+    return (getType() == DataType.BOOLEAN);
+  }
   
+  public boolean writeToNullMask(Object value) {
+    return toBooleanValue(value);
+  }
+
+  public Object readFromNullMask(boolean isNull) {
+    return Boolean.valueOf(!isNull);
+  }
+
   /**
    * Deserialize a raw byte value for this column into an Object
    * @param data The raw byte value
@@ -600,169 +602,42 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @usage _advanced_method_
    */  
   public Object read(byte[] data, ByteOrder order) throws IOException {
-    ByteBuffer buffer = ByteBuffer.wrap(data);
-    buffer.order(order);
-    if (_type == DataType.BOOLEAN) {
+    ByteBuffer buffer = ByteBuffer.wrap(data).order(order);
+
+    switch(getType()) {
+    case BOOLEAN:
       throw new IOException("Tried to read a boolean from data instead of null mask.");
-    } else if (_type == DataType.BYTE) {
+    case BYTE:
       return Byte.valueOf(buffer.get());
-    } else if (_type == DataType.INT) {
+    case INT:
       return Short.valueOf(buffer.getShort());
-    } else if (_type == DataType.LONG) {
+    case LONG:
       return Integer.valueOf(buffer.getInt());
-    } else if (_type == DataType.DOUBLE) {
+    case DOUBLE:
       return Double.valueOf(buffer.getDouble());
-    } else if (_type == DataType.FLOAT) {
+    case FLOAT:
       return Float.valueOf(buffer.getFloat());
-    } else if (_type == DataType.SHORT_DATE_TIME) {
+    case SHORT_DATE_TIME:
       return readDateValue(buffer);
-    } else if (_type == DataType.BINARY) {
+    case BINARY:
       return data;
-    } else if (_type == DataType.TEXT) {
+    case TEXT:
       return decodeTextValue(data);
-    } else if (_type == DataType.MONEY) {
+    case MONEY:
       return readCurrencyValue(buffer);
-    } else if (_type == DataType.OLE) {
-      if (data.length > 0) {
-        return readLongValue(data);
-      }
-      return null;
-    } else if (_type == DataType.MEMO) {
-      if (data.length > 0) {
-        return readLongStringValue(data);
-      }
-      return null;
-    } else if (_type == DataType.NUMERIC) {
+    case NUMERIC:
       return readNumericValue(buffer);
-    } else if (_type == DataType.GUID) {
+    case GUID:
       return readGUIDValue(buffer, order);
-    } else if ((_type == DataType.UNKNOWN_0D) || 
-               (_type == DataType.UNKNOWN_11)) {
+    case UNKNOWN_0D:
+    case UNKNOWN_11:
       // treat like "binary" data
       return data;
-    } else if (_type == DataType.COMPLEX_TYPE) {
+    case COMPLEX_TYPE:
       return new ComplexValueForeignKeyImpl(this, buffer.getInt());
-    } else if(_type.isUnsupported()) {
-      return rawDataWrapper(data);
-    } else {
+    default:
       throw new IOException("Unrecognized data type: " + _type);
     }
-  }
-
-  /**
-   * @param lvalDefinition Column value that points to an LVAL record
-   * @return The LVAL data
-   */
-  private byte[] readLongValue(byte[] lvalDefinition)
-    throws IOException
-  {
-    ByteBuffer def = PageChannel.wrap(lvalDefinition);
-    int lengthWithFlags = def.getInt();
-    int length = lengthWithFlags & (~LONG_VALUE_TYPE_MASK);
-
-    byte[] rtn = new byte[length];
-    byte type = (byte)((lengthWithFlags & LONG_VALUE_TYPE_MASK) >>> 24);
-
-    if(type == LONG_VALUE_TYPE_THIS_PAGE) {
-
-      // inline long value
-      def.getInt();  //Skip over lval_dp
-      def.getInt();  //Skip over unknown
-
-      int rowLen = def.remaining();
-      if(rowLen < length) {
-        // warn the caller, but return whatever we can
-        LOG.warn(getName() + " value may be truncated: expected length " + 
-                 length + " found " + rowLen);
-        rtn = new byte[rowLen];
-      }
-
-      def.get(rtn);
-
-    } else {
-
-      // long value on other page(s)
-      if (lvalDefinition.length != getFormat().SIZE_LONG_VALUE_DEF) {
-        throw new IOException("Expected " + getFormat().SIZE_LONG_VALUE_DEF +
-                              " bytes in long value definition, but found " +
-                              lvalDefinition.length);
-      }
-
-      int rowNum = ByteUtil.getUnsignedByte(def);
-      int pageNum = ByteUtil.get3ByteInt(def, def.position());
-      ByteBuffer lvalPage = getPageChannel().createPageBuffer();
-      
-      switch (type) {
-      case LONG_VALUE_TYPE_OTHER_PAGE:
-        {
-          getPageChannel().readPage(lvalPage, pageNum);
-
-          short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
-          short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
-
-          int rowLen = rowEnd - rowStart;
-          if(rowLen < length) {
-            // warn the caller, but return whatever we can
-            LOG.warn(getName() + " value may be truncated: expected length " + 
-                     length + " found " + rowLen);
-            rtn = new byte[rowLen];
-          }
-        
-          lvalPage.position(rowStart);
-          lvalPage.get(rtn);
-        }
-        break;
-        
-      case LONG_VALUE_TYPE_OTHER_PAGES:
-
-        ByteBuffer rtnBuf = ByteBuffer.wrap(rtn);
-        int remainingLen = length;
-        while(remainingLen > 0) {
-          lvalPage.clear();
-          getPageChannel().readPage(lvalPage, pageNum);
-
-          short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
-          short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
-          
-          // read next page information
-          lvalPage.position(rowStart);
-          rowNum = ByteUtil.getUnsignedByte(lvalPage);
-          pageNum = ByteUtil.get3ByteInt(lvalPage);
-
-          // update rowEnd and remainingLen based on chunkLength
-          int chunkLength = (rowEnd - rowStart) - 4;
-          if(chunkLength > remainingLen) {
-            rowEnd = (short)(rowEnd - (chunkLength - remainingLen));
-            chunkLength = remainingLen;
-          }
-          remainingLen -= chunkLength;
-          
-          lvalPage.limit(rowEnd);
-          rtnBuf.put(lvalPage);
-        }
-        
-        break;
-        
-      default:
-        throw new IOException("Unrecognized long value type: " + type);
-      }
-    }
-    
-    return rtn;
-  }
-  
-  /**
-   * @param lvalDefinition Column value that points to an LVAL record
-   * @return The LVAL data
-   */
-  private String readLongStringValue(byte[] lvalDefinition)
-    throws IOException
-  {
-    byte[] binData = readLongValue(lvalDefinition);
-    if(binData == null) {
-      return null;
-    }
-    return decodeTextValue(binData);
   }
 
   /**
@@ -820,11 +695,22 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       fixNumericByteOrder(tmpArr);
     }
 
-    BigInteger intVal = new BigInteger(tmpArr);
+    return toBigDecimal(tmpArr, negate, getScale());
+  }
+
+  static BigDecimal toBigDecimal(byte[] bytes, boolean negate, int scale)
+  {
+    if((bytes[0] & 0x80) != 0) {
+      // the data is effectively unsigned, but the BigInteger handles it as
+      // signed twos complement.  we need to add an extra byte to the input so
+      // that it will be treated as unsigned
+      bytes = ByteUtil.copyOf(bytes, 0, bytes.length + 1, 1);
+    }
+    BigInteger intVal = new BigInteger(bytes);
     if(negate) {
       intVal = intVal.negate();
     }
-    return new BigDecimal(intVal, getScale());
+    return new BigDecimal(intVal, scale);
   }
 
   /**
@@ -838,13 +724,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       BigDecimal decVal = toBigDecimal(value);
       inValue = decVal;
 
-      boolean negative = (decVal.compareTo(BigDecimal.ZERO) < 0);
-      if(negative) {
+      int signum = decVal.signum();
+      if(signum < 0) {
         decVal = decVal.negate();
       }
 
       // write sign byte
-      buffer.put(negative ? (byte)0x80 : (byte)0);
+      buffer.put(signum < 0 ? (byte)0x80 : (byte)0);
 
       // adjust scale according to this column type (will cause the an
       // ArithmeticException if number has too many decimal places)
@@ -858,18 +744,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
     
       // convert to unscaled BigInteger, big-endian bytes
-      byte[] intValBytes = decVal.unscaledValue().toByteArray();
-      int maxByteLen = getType().getFixedSize() - 1;
-      if(intValBytes.length > maxByteLen) {
-        throw new IOException("Too many bytes for valid BigInteger?");
-      }
-      if(intValBytes.length < maxByteLen) {
-        byte[] tmpBytes = new byte[maxByteLen];
-        System.arraycopy(intValBytes, 0, tmpBytes,
-                         (maxByteLen - intValBytes.length),
-                         intValBytes.length);
-        intValBytes = tmpBytes;
-      }
+      byte[] intValBytes = toUnscaledByteArray(
+          decVal, getType().getFixedSize() - 1);
       if(buffer.order() != ByteOrder.BIG_ENDIAN) {
         fixNumericByteOrder(intValBytes);
       }
@@ -879,6 +755,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         new IOException("Numeric value '" + inValue + "' out of range")
         .initCause(e);
     }
+  }
+
+  static byte[] toUnscaledByteArray(BigDecimal decVal, int maxByteLen)
+    throws IOException
+  {
+    // convert to unscaled BigInteger, big-endian bytes
+    byte[] intValBytes = decVal.unscaledValue().toByteArray();
+    if(intValBytes.length > maxByteLen) {
+      if((intValBytes[0] == 0) && ((intValBytes.length - 1) == maxByteLen)) {
+        // in order to not return a negative two's complement value,
+        // toByteArray() may return an extra leading 0 byte.  we are working
+        // with unsigned values, so we can drop the extra leading 0
+        intValBytes = ByteUtil.copyOf(intValBytes, 1, maxByteLen);
+      } else {
+        throw new IOException("Too many bytes for valid BigInteger?");
+      }
+    } else if(intValBytes.length < maxByteLen) {
+      intValBytes = ByteUtil.copyOf(intValBytes, 0, maxByteLen, 
+                                    (maxByteLen - intValBytes.length));
+    }
+    return intValBytes;
   }
 
   /**
@@ -1008,8 +905,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Writes a GUID value.
    */
-  private static void writeGUIDValue(ByteBuffer buffer, Object value, 
-                                     ByteOrder order)
+  private static void writeGUIDValue(ByteBuffer buffer, Object value)
     throws IOException
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
@@ -1019,7 +915,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     ByteBuffer origBuffer = null;
     byte[] tmpBuf = null;
-    if(order != ByteOrder.BIG_ENDIAN) {
+    if(buffer.order() != ByteOrder.BIG_ENDIAN) {
       // write to a temp buf so we can do some swapping below
       origBuffer = buffer;
       tmpBuf = new byte[16];
@@ -1047,151 +943,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   static boolean isGUIDValue(Object value) throws IOException {
     return GUID_PATTERN.matcher(toCharSequence(value)).matches();
-  }
-  
-  /**
-   * Write an LVAL column into a ByteBuffer inline if it fits, otherwise in
-   * other data page(s).
-   * @param value Value of the LVAL column
-   * @return A buffer containing the LVAL definition and (possibly) the column
-   *         value (unless written to other pages)
-   * @usage _advanced_method_
-   */
-  public ByteBuffer writeLongValue(byte[] value,
-                                   int remainingRowLength) throws IOException
-  {
-    if(value.length > getType().getMaxSize()) {
-      throw new IOException("value too big for column, max " +
-                            getType().getMaxSize() + ", got " +
-                            value.length);
-    }
-
-    // determine which type to write
-    byte type = 0;
-    int lvalDefLen = getFormat().SIZE_LONG_VALUE_DEF;
-    if(((getFormat().SIZE_LONG_VALUE_DEF + value.length) <= remainingRowLength)
-       && (value.length <= getFormat().MAX_INLINE_LONG_VALUE_SIZE)) {
-      type = LONG_VALUE_TYPE_THIS_PAGE;
-      lvalDefLen += value.length;
-    } else if(value.length <= getFormat().MAX_LONG_VALUE_ROW_SIZE) {
-      type = LONG_VALUE_TYPE_OTHER_PAGE;
-    } else {
-      type = LONG_VALUE_TYPE_OTHER_PAGES;
-    }
-
-    ByteBuffer def = getPageChannel().createBuffer(lvalDefLen);
-    // take length and apply type to first byte
-    int lengthWithFlags = value.length | (type << 24);
-    def.putInt(lengthWithFlags);
-
-    if(type == LONG_VALUE_TYPE_THIS_PAGE) {
-      // write long value inline
-      def.putInt(0);
-      def.putInt(0);  //Unknown
-      def.put(value);
-    } else {
-      
-      ByteBuffer lvalPage = null;
-      int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
-      byte firstLvalRow = 0;
-      LongValueBufferHolder lvalBufferH = getLongValueBufferHolder();
-      
-      // write other page(s)
-      switch(type) {
-      case LONG_VALUE_TYPE_OTHER_PAGE:
-        lvalPage = lvalBufferH.getLongValuePage(value.length);
-        firstLvalPageNum = lvalBufferH.getPageNumber();
-        firstLvalRow = (byte)TableImpl.addDataPageRow(lvalPage, value.length,
-                                                  getFormat(), 0);
-        lvalPage.put(value);
-        getPageChannel().writePage(lvalPage, firstLvalPageNum);
-        break;
-
-      case LONG_VALUE_TYPE_OTHER_PAGES:
-
-        ByteBuffer buffer = ByteBuffer.wrap(value);
-        int remainingLen = buffer.remaining();
-        buffer.limit(0);
-        lvalPage = lvalBufferH.getLongValuePage(remainingLen);
-        firstLvalPageNum = lvalBufferH.getPageNumber();
-        firstLvalRow = (byte)TableImpl.getRowsOnDataPage(lvalPage, getFormat());
-        int lvalPageNum = firstLvalPageNum;
-        ByteBuffer nextLvalPage = null;
-        int nextLvalPageNum = 0;
-        int nextLvalRowNum = 0;
-        while(remainingLen > 0) {
-          lvalPage.clear();
-
-          // figure out how much we will put in this page (we need 4 bytes for
-          // the next page pointer)
-          int chunkLength = Math.min(getFormat().MAX_LONG_VALUE_ROW_SIZE - 4,
-                                     remainingLen);
-
-          // figure out if we will need another page, and if so, allocate it
-          if(chunkLength < remainingLen) {
-            // force a new page to be allocated for the chunk after this
-            lvalBufferH.clear();
-            nextLvalPage = lvalBufferH.getLongValuePage(
-                (remainingLen - chunkLength) + 4);
-            nextLvalPageNum = lvalBufferH.getPageNumber();
-            nextLvalRowNum = TableImpl.getRowsOnDataPage(nextLvalPage, 
-                                                         getFormat());
-          } else {
-            nextLvalPage = null;
-            nextLvalPageNum = 0;
-            nextLvalRowNum = 0;
-          }
-
-          // add row to this page
-          TableImpl.addDataPageRow(lvalPage, chunkLength + 4, getFormat(), 0);
-          
-          // write next page info
-          lvalPage.put((byte)nextLvalRowNum); // row number
-          ByteUtil.put3ByteInt(lvalPage, nextLvalPageNum); // page number
-
-          // write this page's chunk of data
-          buffer.limit(buffer.limit() + chunkLength);
-          lvalPage.put(buffer);
-          remainingLen -= chunkLength;
-
-          // write new page to database
-          getPageChannel().writePage(lvalPage, lvalPageNum);
-
-          // move to next page
-          lvalPage = nextLvalPage;
-          lvalPageNum = nextLvalPageNum;
-        }
-        break;
-
-      default:
-        throw new IOException("Unrecognized long value type: " + type);
-      }
-
-      // update def
-      def.put(firstLvalRow);
-      ByteUtil.put3ByteInt(def, firstLvalPageNum);
-      def.putInt(0);  //Unknown
-      
-    }
-      
-    def.flip();
-    return def;
-  }
-
-  /**
-   * Writes the header info for a long value page.
-   */
-  private void writeLongValueHeader(ByteBuffer lvalPage)
-  {
-    lvalPage.put(PageTypes.DATA); //Page type
-    lvalPage.put((byte) 1); //Unknown
-    lvalPage.putShort((short)getFormat().DATA_PAGE_INITIAL_FREE_SPACE); //Free space
-    lvalPage.put((byte) 'L');
-    lvalPage.put((byte) 'V');
-    lvalPage.put((byte) 'A');
-    lvalPage.put((byte) 'L');
-    lvalPage.putInt(0); //unknown
-    lvalPage.putShort((short)0); // num rows in page
   }
 
   /**
@@ -1230,60 +981,43 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ByteBuffer.wrap(((RawData)obj).getBytes());
     }
 
+    return writeRealData(obj, remainingRowLength, order);
+  }
+
+  protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+                                     ByteOrder order)
+    throws IOException
+  {
     if(!isVariableLength() || !getType().isVariableLength()) {
       return writeFixedLengthField(obj, order);
     }
       
-    // var length column
-    if(!getType().isLongValue()) {
-
-      // this is an "inline" var length field
-      switch(getType()) {
-      case NUMERIC:
-        // don't ask me why numerics are "var length" columns...
-        ByteBuffer buffer = getPageChannel().createBuffer(
-            getType().getFixedSize(), order);
-        writeNumericValue(buffer, obj);
-        buffer.flip();
-        return buffer;
-
-      case TEXT:
-        byte[] encodedData = encodeTextValue(
-            obj, 0, getLengthInUnits(), false).array();
-        obj = encodedData;
-        break;
-        
-      case BINARY:
-      case UNKNOWN_0D:
-      case UNSUPPORTED_VARLEN:
-        // should already be "encoded"
-        break;
-      default:
-        throw new RuntimeException("unexpected inline var length type: " +
-                                   getType());
-      }
-
-      ByteBuffer buffer = ByteBuffer.wrap(toByteArray(obj));
-      buffer.order(order);
-      return buffer;
-    }
-
-    // var length, long value column
+    // this is an "inline" var length field
     switch(getType()) {
-    case OLE:
+    case NUMERIC:
+      // don't ask me why numerics are "var length" columns...
+      ByteBuffer buffer = getPageChannel().createBuffer(
+          getType().getFixedSize(), order);
+      writeNumericValue(buffer, obj);
+      buffer.flip();
+      return buffer;
+
+    case TEXT:
+      return encodeTextValue(
+          obj, 0, getLengthInUnits(), false).order(order);
+        
+    case BINARY:
+    case UNKNOWN_0D:
+    case UNSUPPORTED_VARLEN:
       // should already be "encoded"
       break;
-    case MEMO:
-      int maxMemoChars = DataType.MEMO.toUnitSize(DataType.MEMO.getMaxSize());
-      obj = encodeTextValue(obj, 0, maxMemoChars, false).array();
-      break;
     default:
-      throw new RuntimeException("unexpected var length, long value type: " +
+      throw new RuntimeException("unexpected inline var length type: " +
                                  getType());
-    }    
+    }
 
-    // create long value buffer
-    return writeLongValue(toByteArray(obj), remainingRowLength);
+    ByteBuffer buffer = ByteBuffer.wrap(toByteArray(obj)).order(order);
+    return buffer;
   }
 
   /**
@@ -1293,14 +1027,18 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @return A buffer containing the bytes
    * @usage _advanced_method_
    */
-  public ByteBuffer writeFixedLengthField(Object obj, ByteOrder order)
+  protected ByteBuffer writeFixedLengthField(Object obj, ByteOrder order)
     throws IOException
   {
     int size = getType().getFixedSize(_columnLength);
 
-    // create buffer for data
-    ByteBuffer buffer = getPageChannel().createBuffer(size, order);
+    return writeFixedLengthField(
+        obj, getPageChannel().createBuffer(size, order));
+  }
 
+  protected ByteBuffer writeFixedLengthField(Object obj, ByteBuffer buffer)
+    throws IOException
+  {
     // since booleans are not written by this method, it's safe to convert any
     // incoming boolean into an integer.
     obj = booleanToInteger(obj);
@@ -1338,7 +1076,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.put(encodeTextValue(obj, numChars, numChars, true));
       break;
     case GUID:
-      writeGUIDValue(buffer, obj, order);
+      writeGUIDValue(buffer, obj);
       break;
     case NUMERIC:
       // yes, that's right, occasionally numeric values are written as fixed
@@ -1369,7 +1107,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Decodes a compressed or uncompressed text value.
    */
-  private String decodeTextValue(byte[] data)
+  String decodeTextValue(byte[] data)
     throws IOException
   {
     try {
@@ -1464,8 +1202,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Encodes a text value, possibly compressing.
    */
-  private ByteBuffer encodeTextValue(Object obj, int minChars, int maxChars,
-                                     boolean forceUncompressed)
+  ByteBuffer encodeTextValue(Object obj, int minChars, int maxChars,
+                             boolean forceUncompressed)
     throws IOException
   {
     CharSequence text = toCharSequence(obj);
@@ -1556,7 +1294,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
               " (" + _type + ")")
       .append("number", _columnNumber)
       .append("length", _columnLength)
-      .append("variableLength", _variableLength);
+      .append("variableLength", _variableLength);       
+    if(_calculated) {
+      sb.append("calculated", _calculated);
+    }
     if(_type.isTextual()) {
       sb.append("compressedUnicode", isCompressedUnicode())
         .append("textSortOrder", getTextSortOrder());
@@ -1569,7 +1310,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       if(isHyperlink()) {
         sb.append("hyperlink", isHyperlink());
       } 
-    }      
+    }
+    if(_type.getHasScalePrecision()) {
+      sb.append("precision", getPrecision())
+        .append("scale", getScale());
+    }
     if(_autoNumber) {
       sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
@@ -1657,7 +1402,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    *         <code>null</code> is returned as 0 and Numbers are converted
    *         using their double representation.
    */
-  private static BigDecimal toBigDecimal(Object value)
+  static BigDecimal toBigDecimal(Object value)
   {
     if(value == null) {
       return BigDecimal.ZERO;
@@ -1770,8 +1515,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private static void fixNumericByteOrder(byte[] bytes)
   {
     // fix endianness of each 4 byte segment
-    for(int i = 0; i < 4; ++i) {
-      ByteUtil.swap4Bytes(bytes, i * 4);
+    for(int i = 0; i < bytes.length; i+=4) {
+      ByteUtil.swap4Bytes(bytes, i);
     }
   }
 
@@ -1909,6 +1654,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       int cpOffset = format.OFFSET_COLUMN_CODE_PAGE;
       return ((cpOffset >= 0) ? buffer.getShort(offset + cpOffset) : 0);
   }
+
+  /**
+   * Read the extra flags field for a column definition.
+   */
+  static byte readExtraFlags(ByteBuffer buffer, int offset, JetFormat format)
+  {
+    int extFlagsOffset = format.OFFSET_COLUMN_EXT_FLAGS;
+    return ((extFlagsOffset >= 0) ? buffer.get(offset + extFlagsOffset) : 0);
+  }
   
   /**
    * Writes the sort order info to the given buffer at the current position.
@@ -1933,7 +1687,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // for now, the only mutable value this class returns is byte[]
     return !(value instanceof byte[]);
   }
-  
+
   /**
    * Date subclass which stashes the original date bits, in case we attempt to
    * re-write the value (will not lose precision).
@@ -2192,55 +1946,31 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
-   * Manages secondary page buffers for long value writing.
+   * Utility struct for passing params through ColumnImpl constructors.
    */
-  abstract class LongValueBufferHolder
+  static final class InitArgs
   {
-    /**
-     * Returns a long value data page with space for data of the given length.
-     */
-    public ByteBuffer getLongValuePage(int dataLength) throws IOException {
+    public final TableImpl table;
+    public final ByteBuffer buffer;
+    public final int offset;
+    public final String name;
+    public final int displayIndex;
+    public final byte colType;
+    public final byte flags;
+    public final byte extFlags;
+    public DataType type;
 
-      TempPageHolder lvalBufferH = getBufferHolder();
-      dataLength = Math.min(dataLength, getFormat().MAX_LONG_VALUE_ROW_SIZE);
-
-      ByteBuffer lvalPage = null;
-      if(lvalBufferH.getPageNumber() != PageChannel.INVALID_PAGE_NUMBER) {
-        lvalPage = lvalBufferH.getPage(getPageChannel());
-        if(TableImpl.rowFitsOnDataPage(dataLength, lvalPage, getFormat())) {
-          // the current page has space
-          return lvalPage;
-        }
-      }
-
-      // need new page
-      return findNewPage(dataLength);
+    InitArgs(TableImpl table, ByteBuffer buffer, int offset, String name,
+             int displayIndex) {
+      this.table = table;
+      this.buffer = buffer;
+      this.offset = offset;
+      this.name = name;
+      this.displayIndex = displayIndex;
+      
+      this.colType = buffer.get(offset + table.getFormat().OFFSET_COLUMN_TYPE);
+      this.flags = buffer.get(offset + table.getFormat().OFFSET_COLUMN_FLAGS);
+      this.extFlags = readExtraFlags(buffer, offset, table.getFormat());
     }
-
-    protected ByteBuffer findNewPage(int dataLength) throws IOException {
-      ByteBuffer lvalPage = getBufferHolder().setNewPage(getPageChannel());
-      writeLongValueHeader(lvalPage);
-      return lvalPage;
-    }
-
-    public int getOwnedPageCount() {
-      return 0;
-    }
-
-    /**
-     * Returns the page number of the current long value data page.
-     */
-    public int getPageNumber() {
-      return getBufferHolder().getPageNumber();
-    }
-
-    /**
-     * Discards the current the current long value data page.
-     */
-    public void clear() throws IOException {
-      getBufferHolder().clear();
-    }
-
-    protected abstract TempPageHolder getBufferHolder();
   }
 }

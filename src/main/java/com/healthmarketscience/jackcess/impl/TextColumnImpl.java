@@ -20,8 +20,6 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import com.healthmarketscience.jackcess.DataType;
-import java.nio.ByteBuffer;
 
 /**
  * ColumnImpl subclass which is used for Text data types.
@@ -38,19 +36,18 @@ class TextColumnImpl extends ColumnImpl
   /** the code page for a text field (for certain db versions) */
   private final short _codePage;
 
-  TextColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
-                 int displayIndex, DataType type, byte flags)
-    throws IOException
+  TextColumnImpl(InitArgs args) throws IOException
   {
-    super(table, buffer, offset, displayIndex, type, flags);
+    super(args);
 
       // co-located w/ precision/scale
       _sortOrder = readSortOrder(
-          buffer, offset + getFormat().OFFSET_COLUMN_SORT_ORDER, getFormat());
-      _codePage = readCodePage(buffer, offset, getFormat());
+          args.buffer, args.offset + getFormat().OFFSET_COLUMN_SORT_ORDER,
+          getFormat());
+      _codePage = readCodePage(args.buffer, args.offset, getFormat());
 
-      _compressedUnicode = ((buffer.get(offset +
-        getFormat().OFFSET_COLUMN_COMPRESSED_UNICODE) & 1) == 1);
+      _compressedUnicode = 
+        ((args.extFlags & COMPRESSED_UNICODE_EXT_FLAG_MASK) != 0);
   }
 
   @Override

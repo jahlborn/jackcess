@@ -45,6 +45,8 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public static final String VALIDATION_TEXT_PROP = "ValidationText";
   public static final String GUID_PROP = "GUID";
   public static final String DESCRIPTION_PROP = "Description";
+  public static final String RESULT_TYPE_PROP = "ResultType";
+  public static final String EXPRESSION_PROP = "Expression";
 
 
   public String getName();

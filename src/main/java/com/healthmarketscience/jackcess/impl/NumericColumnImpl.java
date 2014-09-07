@@ -20,8 +20,6 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import com.healthmarketscience.jackcess.DataType;
-import java.nio.ByteBuffer;
 
 /**
  * ColumnImpl subclass which is used for numeric data types.
@@ -36,14 +34,13 @@ class NumericColumnImpl extends ColumnImpl
   /** Numeric scale */
   private final byte _scale;
 
-  NumericColumnImpl(TableImpl table, ByteBuffer buffer, int offset, 
-                    int displayIndex, DataType type, byte flags)
-    throws IOException
+  NumericColumnImpl(InitArgs args) throws IOException
   {
-    super(table, buffer, offset, displayIndex, type, flags);
+    super(args);
 
-    _precision = buffer.get(offset + getFormat().OFFSET_COLUMN_PRECISION);
-    _scale = buffer.get(offset + getFormat().OFFSET_COLUMN_SCALE);
+    _precision = args.buffer.get(
+        args.offset + getFormat().OFFSET_COLUMN_PRECISION);
+    _scale = args.buffer.get(args.offset + getFormat().OFFSET_COLUMN_SCALE);
   }
 
   @Override

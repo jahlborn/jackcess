@@ -160,8 +160,7 @@ public class ErrorHandlerTest extends TestCase
     List<Column> cols = (List<Column>)colsField.get(t);
 
     Column srcCol = null;
-    ColumnImpl destCol = new BogusColumn(t);
-    destCol.setName(colName);
+    ColumnImpl destCol = new BogusColumn(t, colName);
     for(int i = 0; i < cols.size(); ++i) {
       srcCol = cols.get(i);
       if(srcCol.getName().equals(colName)) {
@@ -182,8 +181,8 @@ public class ErrorHandlerTest extends TestCase
 
   private static class BogusColumn extends ColumnImpl
   {
-    private BogusColumn(Table table) {
-      super((TableImpl)table, DataType.LONG, 1, 0, 0);
+    private BogusColumn(Table table, String name) {
+      super((TableImpl)table, name, DataType.LONG, 1, 0, 0);
     }
     
     @Override
