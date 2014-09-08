@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import com.healthmarketscience.jackcess.DataType;
 
 /**
  * ColumnImpl subclass which is used for long value data types.
@@ -81,6 +80,10 @@ class LongValueColumnImpl extends ColumnImpl
     super.postTableLoadInit();
   }
 
+  protected int getMaxLengthInUnits() {
+    return getType().toUnitSize(getType().getMaxSize());
+  }
+
   @Override
   public Object read(byte[] data, ByteOrder order) throws IOException {
     switch(getType()) {
@@ -110,8 +113,7 @@ class LongValueColumnImpl extends ColumnImpl
       // should already be "encoded"
       break;
     case MEMO:
-      int maxMemoChars = DataType.MEMO.toUnitSize(DataType.MEMO.getMaxSize());
-      obj = encodeTextValue(obj, 0, maxMemoChars, false).array();
+      obj = encodeTextValue(obj, 0, getMaxLengthInUnits(), false).array();
       break;
     default:
       throw new RuntimeException("unexpected var length, long value type: " +
@@ -268,7 +270,7 @@ class LongValueColumnImpl extends ColumnImpl
       type = LONG_VALUE_TYPE_OTHER_PAGES;
     }
 
-    ByteBuffer def = getPageChannel().createBuffer(lvalDefLen);
+    ByteBuffer def = PageChannel.createBuffer(lvalDefLen);
     // take length and apply type to first byte
     int lengthWithFlags = value.length | (type << 24);
     def.putInt(lengthWithFlags);

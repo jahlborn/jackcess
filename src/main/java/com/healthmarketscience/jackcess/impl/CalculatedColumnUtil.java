@@ -35,12 +35,17 @@ import java.nio.ByteOrder;
  */
 class CalculatedColumnUtil 
 {
+  // offset to the int which specifies the length of the actual data
   private static final int CALC_DATA_LEN_OFFSET = 16;
+  // offset to the actual data
   private static final int CALC_DATA_OFFSET = CALC_DATA_LEN_OFFSET + 4;
+  // total amount of extra bytes added for calculated values
   private static final int CALC_EXTRA_DATA_LEN = 23;
 
+  // fully encode calculated BOOLEAN "true" value
   private static final byte[] CALC_BOOL_TRUE = wrapCalculatedValue(
       new byte[]{(byte)0xFF});
+  // fully encode calculated BOOLEAN "false" value
   private static final byte[] CALC_BOOL_FALSE = wrapCalculatedValue(
       new byte[]{0});
 
@@ -73,6 +78,9 @@ class CalculatedColumnUtil
     return new CalcColImpl(args);
   }
 
+  /**
+   * Grabs the real data bytes from a calculated value.
+   */
   private static byte[] unwrapCalculatedValue(byte[] data) {
     if(data.length < CALC_DATA_OFFSET) {
       return data;
@@ -86,15 +94,22 @@ class CalculatedColumnUtil
     return newData;
   }
 
+  /**
+   * Wraps the given data bytes with the extra calculated value data and
+   * returns a new ByteBuffer containing the final data.
+   */
   private static ByteBuffer wrapCalculatedValue(ByteBuffer buffer) {
-    int dataLen = buffer.remaining();
-    byte[] data = new byte[dataLen + CALC_EXTRA_DATA_LEN];
-    buffer.get(data, CALC_DATA_OFFSET, dataLen);
-    buffer = PageChannel.wrap(data);
-    buffer.putInt(CALC_DATA_LEN_OFFSET, dataLen);
-    return buffer;
+    ByteBuffer newBuf = prepareWrappedCalcValue(
+        buffer.remaining(), buffer.order());
+    newBuf.put(buffer);
+    newBuf.rewind();
+    return newBuf;
   }
 
+  /**
+   * Wraps the given data bytes with the extra calculated value data and
+   * returns a new byte[] containing the final data.
+   */
   private static byte[] wrapCalculatedValue(byte[] data) {
     int dataLen = data.length;
     data = ByteUtil.copyOf(data, 0, dataLen + CALC_EXTRA_DATA_LEN, 
@@ -102,7 +117,10 @@ class CalculatedColumnUtil
     PageChannel.wrap(data).putInt(CALC_DATA_LEN_OFFSET, dataLen);
     return data;
   }
-  
+
+  /**
+   * Prepares a calculated value buffer for data of the given length.
+   */
   private static ByteBuffer prepareWrappedCalcValue(int dataLen, ByteOrder order)
   {
     ByteBuffer buffer = ByteBuffer.allocate(
@@ -113,6 +131,9 @@ class CalculatedColumnUtil
   }
   
 
+  /**
+   * General calculated column implementation.
+   */
   private static class CalcColImpl extends ColumnImpl
   {
     CalcColImpl(InitArgs args) throws IOException {
@@ -130,11 +151,16 @@ class CalculatedColumnUtil
       throws IOException
     {
       // we should only be working with fixed length types
-      return writeFixedLengthField(
+      ByteBuffer buffer = writeFixedLengthField(
           obj, prepareWrappedCalcValue(getType().getFixedSize(), order));
+      buffer.rewind();
+      return buffer;
     }
   }
 
+  /**
+   * Calculated BOOLEAN column implementation.
+   */
   private static class CalcBooleanColImpl extends ColumnImpl
   {
     CalcBooleanColImpl(InitArgs args) throws IOException {
@@ -163,10 +189,20 @@ class CalculatedColumnUtil
     }
   }
 
+  /**
+   * Calculated TEXT column implementation.
+   */
   private static class CalcTextColImpl extends TextColumnImpl
   {
     CalcTextColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    public short getLengthInUnits() {
+      // the byte "length" includes the calculated field overhead.  remove
+      // that to get the _actual_ data length (in units)
+      return (short)getType().toUnitSize(getLength() - CALC_EXTRA_DATA_LEN);
     }
 
     @Override
@@ -179,15 +215,25 @@ class CalculatedColumnUtil
                                        ByteOrder order)
       throws IOException
     {
-      int maxChars = getType().toUnitSize(getLength() - CALC_EXTRA_DATA_LEN);
-      return wrapCalculatedValue(encodeTextValue(obj, 0, maxChars, false));
+      return wrapCalculatedValue(super.writeRealData(
+                                     obj, remainingRowLength, order));
     }
   }
 
+  /**
+   * Calculated MEMO column implementation.
+   */
   private static class CalcMemoColImpl extends MemoColumnImpl
   {
     CalcMemoColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected int getMaxLengthInUnits() {
+      // the byte "length" includes the calculated field overhead.  remove
+      // that to get the _actual_ data length (in units)
+      return getType().toUnitSize(getType().getMaxSize() - CALC_EXTRA_DATA_LEN);
     }
 
     @Override
@@ -201,10 +247,14 @@ class CalculatedColumnUtil
     protected ByteBuffer writeLongValue(byte[] value, int remainingRowLength) 
       throws IOException
     {
-      return super.writeLongValue(wrapCalculatedValue(value), remainingRowLength);
+      return super.writeLongValue(
+          wrapCalculatedValue(value), remainingRowLength);
     }    
   }
 
+  /**
+   * Calculated NUMERIC column implementation.
+   */
   private static class CalcNumericColImpl extends NumericColumnImpl
   {
     CalcNumericColImpl(InitArgs args) throws IOException {
@@ -233,8 +283,7 @@ class CalculatedColumnUtil
 
       writeCalcNumericValue(buffer, obj, dataLen);
 
-      buffer.flip();
-
+      buffer.rewind();
       return buffer;
     }
 
@@ -245,6 +294,7 @@ class CalculatedColumnUtil
       // most 16 bytes
       int numByteLen = ((totalLen > 0) ? totalLen : buffer.remaining()) - 2;
       numByteLen = Math.min((numByteLen / 4) * 4, 16);
+
       byte scale = buffer.get();
       boolean negate = (buffer.get() != 0);
       byte[] tmpArr = ByteUtil.getBytes(buffer, numByteLen);
@@ -295,7 +345,7 @@ class CalculatedColumnUtil
         buffer.putShort((short)(dataLen - 2));
         buffer.put((byte)scale);
         // write sign byte
-        buffer.put(signum < 0 ? (byte)0x80 : (byte)0);
+        buffer.put((signum < 0) ? NUMERIC_NEGATIVE_BYTE : 0);
         buffer.put(intValBytes);
 
       } catch(ArithmeticException e) {
@@ -308,7 +358,7 @@ class CalculatedColumnUtil
     private static void fixNumericByteOrder(byte[] bytes) {
 
       // this is a little weird.  it looks like they decided to truncate
-      // leading 0 bytes and _then_ swapp endian, which ends up kind of odd.
+      // leading 0 bytes and _then_ swap endian, which ends up kind of odd.
       int pos = 0;
       if((bytes.length % 8) != 0) {
         // leading 4 bytes are swapped
@@ -321,7 +371,6 @@ class CalculatedColumnUtil
         ByteUtil.swap8Bytes(bytes, pos);
       }
     }
-
   }
 
 }

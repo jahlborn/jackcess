@@ -995,7 +995,7 @@ public class TableImpl implements Table
 
     // now, create the table definition
     PageChannel pageChannel = creator.getPageChannel();
-    ByteBuffer buffer = pageChannel.createBuffer(Math.max(totalTableDefSize,
+    ByteBuffer buffer = PageChannel.createBuffer(Math.max(totalTableDefSize,
                                                           format.PAGE_SIZE));
     writeTableDefinitionHeader(creator, buffer, totalTableDefSize);
 
@@ -1288,7 +1288,7 @@ public class TableImpl implements Table
       }
       getPageChannel().readPage(nextPageBuffer, nextPage);
       nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
-      ByteBuffer newBuffer = getPageChannel().createBuffer(
+      ByteBuffer newBuffer = PageChannel.createBuffer(
           tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
       newBuffer.put(tableBuffer);
       newBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);

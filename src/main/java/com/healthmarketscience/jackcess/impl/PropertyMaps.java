@@ -476,7 +476,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       public ByteBuffer write(Object obj, int remainingRowLength)
         throws IOException
       {
-        ByteBuffer buffer = getPageChannel().createBuffer(1);
+        ByteBuffer buffer = PageChannel.createBuffer(1);
         buffer.put(((Number)booleanToInteger(obj)).byteValue());
         buffer.flip();
         return buffer;

@@ -9,6 +9,11 @@
         Add Cursor.findRow(RowId) for moving to a specific Table row using
         only the RowId.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="105">
+        Add support for reading and writing calculated column values.
+        Jackcess will not evaluate the actual expressions, but the column
+        values can be written directly.
+      </action>
     </release>
     <release version="2.0.4" date="2014-04-05">
       <action dev="jahlborn" type="add">

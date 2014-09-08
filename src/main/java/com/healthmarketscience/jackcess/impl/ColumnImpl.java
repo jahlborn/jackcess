@@ -137,6 +137,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   protected static final byte COMPRESSED_UNICODE_EXT_FLAG_MASK = (byte)0x01;
   private static final byte CALCULATED_EXT_FLAG_MASK = (byte)0xC0;
 
+  static final byte NUMERIC_NEGATIVE_BYTE = (byte)0x80;
+
   /** the value for the "general" sort order */
   private static final short GENERAL_SORT_ORDER_VALUE = 1033;
 
@@ -730,7 +732,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
 
       // write sign byte
-      buffer.put(signum < 0 ? (byte)0x80 : (byte)0);
+      buffer.put((signum < 0) ? NUMERIC_NEGATIVE_BYTE : 0);
 
       // adjust scale according to this column type (will cause the an
       // ArithmeticException if number has too many decimal places)
@@ -996,7 +998,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     switch(getType()) {
     case NUMERIC:
       // don't ask me why numerics are "var length" columns...
-      ByteBuffer buffer = getPageChannel().createBuffer(
+      ByteBuffer buffer = PageChannel.createBuffer(
           getType().getFixedSize(), order);
       writeNumericValue(buffer, obj);
       buffer.flip();
@@ -1032,8 +1034,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     int size = getType().getFixedSize(_columnLength);
 
-    return writeFixedLengthField(
-        obj, getPageChannel().createBuffer(size, order));
+    ByteBuffer buffer = writeFixedLengthField(
+        obj, PageChannel.createBuffer(size, order));
+    buffer.flip();
+    return buffer;
   }
 
   protected ByteBuffer writeFixedLengthField(Object obj, ByteBuffer buffer)
@@ -1100,7 +1104,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     default:
       throw new IOException("Unsupported data type: " + getType());
     }
-    buffer.flip();
     return buffer;
   }
   

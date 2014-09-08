@@ -125,7 +125,7 @@ public abstract class TempBufferHolder {
   public final ByteBuffer getBuffer(PageChannel pageChannel, int size) {
     ByteBuffer buffer = getExistingBuffer();
     if((buffer == null) || (buffer.capacity() < size)) {
-      buffer = pageChannel.createBuffer(size, _order);
+      buffer = PageChannel.createBuffer(size, _order);
       ++_modCount;
       setNewBuffer(buffer);
     } else {

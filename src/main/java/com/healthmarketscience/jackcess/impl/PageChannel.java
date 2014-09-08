@@ -382,14 +382,14 @@ public class PageChannel implements Channel, Flushable {
    * @return A newly-allocated buffer of the given size and DEFAULT_BYTE_ORDER
    *         byte order
    */
-  public ByteBuffer createBuffer(int size) {
+  public static ByteBuffer createBuffer(int size) {
     return createBuffer(size, DEFAULT_BYTE_ORDER);
   }
   
   /**
    * @return A newly-allocated buffer of the given size and byte order
    */
-  public ByteBuffer createBuffer(int size, ByteOrder order) {
+  public static ByteBuffer createBuffer(int size, ByteOrder order) {
     return ByteBuffer.allocate(size).order(order);
   }
   
@@ -442,5 +442,5 @@ public class PageChannel implements Channel, Flushable {
    */
   public static ByteBuffer wrap(byte[] bytes) {
     return ByteBuffer.wrap(bytes).order(DEFAULT_BYTE_ORDER);
-}
+  }
 }
