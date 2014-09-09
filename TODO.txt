@@ -27,8 +27,11 @@ Missing pieces:
   - numeric data has embedded precision/scale, something else?  only last 8
     bytes is data?  implicit precision of 18 for "pure" numeric?  implicit
     precision of 15 for double-ish numeric?
+  - ***add unit tests
+  - ***ability to create calculated columns!
 
 - add properties on table/column creation
+  - add unit tests
 
 - calculated fields in queries? (2003+), w/ aliases?
 

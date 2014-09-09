@@ -176,10 +176,11 @@ public class PropertyMapImpl implements PropertyMap
                                         Object value) {
     if(type == null) {
       
-      // attempt to figure out the type
-      type = DEFAULT_TYPES.get(type);
+      // attempt to get the default type for this property
+      type = DEFAULT_TYPES.get(name);
 
       if(type == null) {
+        // choose the type based on the value
         if(value instanceof String) {
           type = DataType.TEXT;
         } else if(value instanceof Boolean) {

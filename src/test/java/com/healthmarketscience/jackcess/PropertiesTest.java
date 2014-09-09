@@ -103,6 +103,24 @@ public class PropertiesTest extends TestCase
                                colMap.get("buzz")), props);
   }
 
+  public void testInferTypes() throws Exception
+  {
+    PropertyMaps maps = new PropertyMaps(10, null, null);
+    PropertyMap defMap = maps.getDefault();
+
+    assertEquals(DataType.TEXT, 
+                 defMap.put(PropertyMap.FORMAT_PROP, null).getType());
+    assertEquals(DataType.BOOLEAN, 
+                 defMap.put(PropertyMap.REQUIRED_PROP, null).getType());
+
+    assertEquals(DataType.TEXT, 
+                 defMap.put("strprop", "this is a string").getType());
+    assertEquals(DataType.BOOLEAN, 
+                 defMap.put("boolprop", true).getType());
+    assertEquals(DataType.LONG, 
+                 defMap.put("intprop", 37).getType());
+  }
+
   public void testReadProperties() throws Exception
   {
     byte[] nameMapBytes = null;
