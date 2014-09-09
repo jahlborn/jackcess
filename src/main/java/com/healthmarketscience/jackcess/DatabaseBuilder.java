@@ -23,10 +23,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.CodecProvider;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 
 /**
@@ -66,7 +69,14 @@ public class DatabaseBuilder
   /** optional pre-opened FileChannel, will _not_ be closed by Database
       close */
   private FileChannel _channel;
+  /** database properties (if any) */
+  private Map<String,PropertyMap.Property> _dbProps;
+  /** database summary properties (if any) */
+  private Map<String,PropertyMap.Property> _summaryProps;
+  /** database user-defined (if any) */
+  private Map<String,PropertyMap.Property> _userProps;
 
+  
   public DatabaseBuilder() {
     this(null);
   }
@@ -164,6 +174,77 @@ public class DatabaseBuilder
   }
 
   /**
+   * Sets the database property with the given name to the given value.
+   * Attempts to determine the type of the property (see
+   * {@link PropertyMap#put(String,Object)} for details on determining the
+   * property type).
+   */
+  public DatabaseBuilder putDatabaseProperty(String name, Object value) {
+    return putDatabaseProperty(name, null, value);
+  }
+  
+  /**
+   * Sets the database property with the given name and type to the given
+   * value.
+   */
+  public DatabaseBuilder putDatabaseProperty(String name, DataType type,
+                                             Object value) {
+    _dbProps = putProperty(_dbProps, name, type, value);
+    return this;
+  }
+  
+  /**
+   * Sets the summary database property with the given name to the given
+   * value.  Attempts to determine the type of the property (see
+   * {@link PropertyMap#put(String,Object)} for details on determining the
+   * property type).
+   */
+  public DatabaseBuilder putSummaryProperty(String name, Object value) {
+    return putSummaryProperty(name, null, value);
+  }
+  
+  /**
+   * Sets the summary database property with the given name and type to
+   * the given value.
+   */
+  public DatabaseBuilder putSummaryProperty(String name, DataType type,
+                                            Object value) {
+    _summaryProps = putProperty(_summaryProps, name, type, value);
+    return this;
+  }
+
+  /**
+   * Sets the user-defined database property with the given name to the given
+   * value.  Attempts to determine the type of the property (see
+   * {@link PropertyMap#put(String,Object)} for details on determining the
+   * property type).
+   */
+  public DatabaseBuilder putUserDefinedProperty(String name, Object value) {
+    return putUserDefinedProperty(name, null, value);
+  }
+  
+  /**
+   * Sets the user-defined database property with the given name and type to
+   * the given value.
+   */
+  public DatabaseBuilder putUserDefinedProperty(String name, DataType type,
+                                                Object value) {
+    _userProps = putProperty(_userProps, name, type, value);
+    return this;
+  }
+
+  private static Map<String,PropertyMap.Property> putProperty(
+      Map<String,PropertyMap.Property> props, String name, DataType type,
+      Object value)
+  {
+    if(props == null) {
+      props = new HashMap<String,PropertyMap.Property>();
+    }
+    props.put(name, PropertyMapImpl.createProperty(name, type, value));
+    return props;
+  }
+
+  /**
    * Opens an existingnew Database using the configured information.
    */
   public Database open() throws IOException {
@@ -175,8 +256,24 @@ public class DatabaseBuilder
    * Creates a new Database using the configured information.
    */
   public Database create() throws IOException {
-    return DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
-                               _charset, _timeZone);
+    Database db = DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
+                                      _charset, _timeZone);
+    if(_dbProps != null) {
+      PropertyMap props = db.getDatabaseProperties();
+      props.putAll(_dbProps.values());
+      props.save();
+    }
+    if(_summaryProps != null) {
+      PropertyMap props = db.getSummaryProperties();
+      props.putAll(_summaryProps.values());
+      props.save();
+    }
+    if(_userProps != null) {
+      PropertyMap props = db.getUserDefinedProperties();
+      props.putAll(_userProps.values());
+      props.save();
+    }
+    return db;
   }
 
   /**
@@ -208,6 +305,4 @@ public class DatabaseBuilder
   {
     return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
   }
-  
-
 }

@@ -14,6 +14,10 @@
         Jackcess will not evaluate the actual expressions, but the column
         values can be written directly.
       </action>
+      <action dev="jahlborn" type="add">
+        Add the ability to set properties in DatabaseBuilder, TableBuilder,
+        and ColumnBuilder.
+      </action>
     </release>
     <release version="2.0.4" date="2014-04-05">
       <action dev="jahlborn" type="add">

@@ -28,12 +28,15 @@ King of Prussia, PA 19406
 package com.healthmarketscience.jackcess;
 
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.JetFormat;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
@@ -66,6 +69,8 @@ public class ColumnBuilder {
   private short _columnNumber;
   /** the collating sort order for a text field */
   private ColumnImpl.SortOrder _sortOrder;
+  /** table properties (if any) */
+  private Map<String,PropertyMap.Property> _props;
 
 
   public ColumnBuilder(String name) {
@@ -198,6 +203,31 @@ public class ColumnBuilder {
     return _hyperlink;
   }
 
+  /**
+   * Sets the column property with the given name to the given value.  Attempts
+   * to determine the type of the property (see
+   * {@link PropertyMap#put(String,Object)} for details on determining the
+   * property type).
+   */
+  public ColumnBuilder putProperty(String name, Object value) {
+    return putProperty(name, null, value);
+  }
+
+  /**
+   * Sets the column property with the given name and type to the given value.
+   */
+  public ColumnBuilder putProperty(String name, DataType type, Object value) {
+    if(_props == null) {
+      _props = new HashMap<String,PropertyMap.Property>();
+    }
+    _props.put(name, PropertyMapImpl.createProperty(name, type, value));
+    return this;
+  }
+
+  public Map<String,PropertyMap.Property> getProperties() {
+    return _props;
+  }
+  
   /**
    * Sets all attributes except name from the given Column template.
    */

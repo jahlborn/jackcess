@@ -20,6 +20,8 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,6 +36,30 @@ import com.healthmarketscience.jackcess.PropertyMap;
  */
 public class PropertyMapImpl implements PropertyMap
 {
+  private static final Map<String,DataType> DEFAULT_TYPES =
+    new HashMap<String,DataType>();
+
+  static {
+    DEFAULT_TYPES.put(ACCESS_VERSION_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(TITLE_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(AUTHOR_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(COMPANY_PROP, DataType.TEXT);
+
+    DEFAULT_TYPES.put(DEFAULT_VALUE_PROP, DataType.MEMO);
+    DEFAULT_TYPES.put(REQUIRED_PROP, DataType.BOOLEAN);
+    DEFAULT_TYPES.put(ALLOW_ZERO_LEN_PROP, DataType.MEMO);
+    DEFAULT_TYPES.put(DECIMAL_PLACES_PROP, DataType.BYTE);
+    DEFAULT_TYPES.put(FORMAT_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(INPUT_MASK_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(CAPTION_PROP, DataType.MEMO);
+    DEFAULT_TYPES.put(VALIDATION_RULE_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(VALIDATION_TEXT_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(GUID_PROP, DataType.BINARY);
+    DEFAULT_TYPES.put(DESCRIPTION_PROP, DataType.MEMO);
+    DEFAULT_TYPES.put(RESULT_TYPE_PROP, DataType.BYTE);
+    DEFAULT_TYPES.put(EXPRESSION_PROP, DataType.MEMO);
+  }
+
   private final String _mapName;
   private final short _mapType;
   private final Map<String,Property> _props = 
@@ -83,15 +109,33 @@ public class PropertyMapImpl implements PropertyMap
     return value;
   }
 
+  public PropertyImpl put(String name, Object value) {
+    return put(name, null, (byte)0, value);
+  }
+
   public PropertyImpl put(String name, DataType type, Object value) {
     return put(name, type, (byte)0, value);
   }
 
+  public void putAll(Iterable<? extends Property> props) {
+    if(props == null) {
+      return;
+    }
+
+    for(Property prop : props) {
+      byte flag = 0;
+      if(prop instanceof PropertyImpl) {
+        flag = ((PropertyImpl)prop).getFlag();
+      }
+      put(prop.getName(), prop.getType(), flag, prop.getValue());
+    }
+  }  
+  
   /**
    * Puts a property into this map with the given information.
    */
   public PropertyImpl put(String name, DataType type, byte flag, Object value) {
-    PropertyImpl prop = new PropertyImpl(name, type, flag, value);
+    PropertyImpl prop = (PropertyImpl)createProperty(name, type, flag, value);
     _props.put(DatabaseImpl.toLookupName(name), prop);
     return prop;
   }
@@ -124,6 +168,47 @@ public class PropertyMapImpl implements PropertyMap
     return sb.toString();
   }      
 
+  public static Property createProperty(String name, DataType type, Object value) {
+    return createProperty(name, type, (byte)0, value);
+  }
+  
+  public static Property createProperty(String name, DataType type, byte flag,
+                                        Object value) {
+    if(type == null) {
+      
+      // attempt to figure out the type
+      type = DEFAULT_TYPES.get(type);
+
+      if(type == null) {
+        if(value instanceof String) {
+          type = DataType.TEXT;
+        } else if(value instanceof Boolean) {
+          type = DataType.BOOLEAN;
+        } else if(value instanceof Byte) {
+          type = DataType.BYTE;
+        } else if(value instanceof Short) {
+          type = DataType.INT;
+        } else if(value instanceof Integer) {
+          type = DataType.LONG;
+        } else if(value instanceof Float) {
+          type = DataType.FLOAT;
+        } else if(value instanceof Double) {
+          type = DataType.DOUBLE;
+        } else if(value instanceof Date) {
+          type = DataType.SHORT_DATE_TIME;
+        } else if(value instanceof byte[]) {
+          type = DataType.OLE;
+        } else {
+          throw new IllegalArgumentException(
+              "Could not determine type for property " + name +
+              " with value " + value);
+        }
+      }
+    }
+    
+    return new PropertyImpl(name, type, flag, value);
+  }
+  
   /**
    * Info about a property defined in a PropertyMap.
    */ 

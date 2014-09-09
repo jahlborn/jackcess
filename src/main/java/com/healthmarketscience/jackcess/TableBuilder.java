@@ -31,11 +31,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 
 /**
  * Builder style class for constructing a {@link Table}.
@@ -108,8 +111,10 @@ public class TableBuilder {
   private List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
   /** whether or not table/column/index names are automatically escaped */
   private boolean _escapeIdentifiers;
-  
+  /** table properties (if any) */
+  private Map<String,PropertyMap.Property> _props;
 
+  
   public TableBuilder(String name) {
     this(name, false);
   }
@@ -188,6 +193,27 @@ public class TableBuilder {
   }
 
   /**
+   * Sets the table property with the given name to the given value.  Attempts
+   * to determine the type of the property (see
+   * {@link PropertyMap#put(String,Object)} for details on determining the
+   * property type).
+   */
+  public TableBuilder putProperty(String name, Object value) {
+    return putProperty(name, null, value);
+  }
+  
+  /**
+   * Sets the table property with the given name and type to the given value.
+   */
+  public TableBuilder putProperty(String name, DataType type, Object value) {
+    if(_props == null) {
+      _props = new HashMap<String,PropertyMap.Property>();
+    }
+    _props.put(name, PropertyMapImpl.createProperty(name, type, value));
+    return this;
+  }
+  
+  /**
    * Creates a new Table in the given Database with the currently configured
    * attributes.
    */
@@ -195,7 +221,27 @@ public class TableBuilder {
     throws IOException
   {
     ((DatabaseImpl)db).createTable(_name, _columns, _indexes);
-    return db.getTable(_name);
+    Table table = db.getTable(_name);
+
+    boolean addedProps = false;
+    if(_props != null) {
+      table.getProperties().putAll(_props.values());
+      addedProps = true;
+    }
+    for(ColumnBuilder cb : _columns) {
+      Map<String,PropertyMap.Property> colProps = cb.getProperties();
+      if(colProps != null) {
+        table.getColumn(cb.getName()).getProperties().putAll(colProps.values());
+        addedProps = true;
+      }
+    }
+
+    // all table and column props are saved together
+    if(addedProps) {
+      table.getProperties().save();
+    }
+    
+    return table;
   }
 
   /**
@@ -218,5 +264,4 @@ public class TableBuilder {
     return ReservedWords.VALUES.contains(s.toLowerCase());
   }
 
-  
 }

@@ -72,6 +72,21 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public Object getValue(String name, Object defaultValue);
 
   /**
+   * Creates a new (or updates an existing) property in the map.  Attempts to
+   * determine the type of the property based on the name and value (the
+   * property names listed above have their types builtin, otherwise the type
+   * of the value is used).
+   * <p/>
+   * Note, this change will not be persisted until the {@link #save} method
+   * has been called.
+   *
+   * @return the newly created (or updated) property
+   * @throws IllegalArgumentException if the type of the property could not be
+   *                                  determined automatically
+   */
+  public Property put(String name, Object value);
+
+  /**
    * Creates a new (or updates an existing) property in the map.
    * <p/>
    * Note, this change will not be persisted until the {@link #save} method
@@ -81,6 +96,14 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
    */
   public Property put(String name, DataType type, Object value);
 
+  /**
+   * Puts all the given properties into this map.
+   *
+   * @props the properties to put into this map ({@code null} is tolerated and
+   *        ignored).
+   */
+  public void putAll(Iterable<? extends Property> props);
+  
   /**
    * Removes the property with the given name
    *
