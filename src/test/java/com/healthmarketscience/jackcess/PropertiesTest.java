@@ -24,11 +24,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
-import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
@@ -346,6 +345,56 @@ public class PropertiesTest extends TestCase
       checkProperties(origDProps, dProps);
 
       db.close();
+    }
+  }
+
+  public void testCreateDbProperties() throws Exception
+  {
+    for(FileFormat ff : SUPPORTED_FILEFORMATS) {
+      File file = DatabaseTest.createTempFile(false);
+      Database db = new DatabaseBuilder(file)
+        .setFileFormat(ff)
+        .putUserDefinedProperty("testing", "123")
+        .create();
+
+      UUID u1 = UUID.randomUUID();
+      UUID u2 = UUID.randomUUID();
+      Table t = new TableBuilder("Test")
+        .putProperty("awesome_table", true)
+        .addColumn(new ColumnBuilder("id", DataType.LONG)
+                   .setAutoNumber(true)
+                   .putProperty(PropertyMap.REQUIRED_PROP, true)
+                   .putProperty(PropertyMap.GUID_PROP, u1))
+        .addColumn(new ColumnBuilder("data", DataType.TEXT)
+                   .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false)
+                   .putProperty(PropertyMap.GUID_PROP, u2))
+        .toTable(db);
+
+      t.addRow(Column.AUTO_NUMBER, "value");
+
+      db.close();
+
+      db = new DatabaseBuilder(file).open();
+      
+      assertEquals("123", db.getUserDefinedProperties().getValue("testing"));
+
+      t = db.getTable("Test");
+
+      assertEquals(Boolean.TRUE, 
+                   t.getProperties().getValue("awesome_table"));
+
+      Column c = t.getColumn("id");
+      assertEquals(Boolean.TRUE, 
+                   c.getProperties().getValue(PropertyMap.REQUIRED_PROP));
+      assertEquals("{" + u1.toString().toUpperCase() + "}",
+                   c.getProperties().getValue(PropertyMap.GUID_PROP));
+
+      c = t.getColumn("data");
+      assertEquals(Boolean.FALSE,
+                   c.getProperties().getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
+      assertEquals("{" + u2.toString().toUpperCase() + "}", 
+                   c.getProperties().getValue(PropertyMap.GUID_PROP));
+
     }
   }
 
