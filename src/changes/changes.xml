@@ -18,6 +18,9 @@
         Add the ability to set properties in DatabaseBuilder, TableBuilder,
         and ColumnBuilder.
       </action>
+      <action dev="jahlborn" type="add">
+        Add the ability to create tables with calculated fields.
+      </action>
     </release>
     <release version="2.0.4" date="2014-04-05">
       <action dev="jahlborn" type="add">

@@ -63,6 +63,8 @@ public class ColumnBuilder {
   private boolean _autoNumber;
   /** whether or not the column allows compressed unicode */
   private boolean _compressedUnicode;
+  /** whether or not the column is calculated */
+  private boolean _calculated;
   /** whether or not the column is a hyperlink (memo only) */
   private boolean _hyperlink;
   /** 0-based column number */
@@ -192,6 +194,28 @@ public class ColumnBuilder {
   }
 
   /**
+   * Sets whether of not the new column is a calculated column.
+   */
+  public ColumnBuilder setCalculated(boolean calculated) {
+    _calculated = calculated;
+    return this;
+  }
+
+  public boolean isCalculated() {
+    return _calculated;
+  }
+
+  /**
+   * Convenience method to set the various info for a calculated type (flag,
+   * result type property and expression)
+   */
+  public ColumnBuilder setCalculatedInfo(String expression) {
+    setCalculated(true);
+    putProperty(PropertyMap.EXPRESSION_PROP, expression);
+    return putProperty(PropertyMap.RESULT_TYPE_PROP, getType().getValue());
+  }
+
+  /**
    * Sets whether of not the new column allows unicode compression.
    */
   public ColumnBuilder setHyperlink(boolean hyperlink) {
@@ -226,6 +250,10 @@ public class ColumnBuilder {
 
   public Map<String,PropertyMap.Property> getProperties() {
     return _props;
+  }
+
+  private PropertyMap.Property getProperty(String name) {
+    return ((_props != null) ? _props.get(name) : null);
   }
   
   /**
@@ -368,6 +396,25 @@ public class ColumnBuilder {
       if(getType() != DataType.MEMO) {
         throw new IllegalArgumentException(
             "Only memo columns can be hyperlinks");
+      }
+    }
+
+    if(isCalculated()) {
+      if(!format.isSupportedCalculatedDataType(getType())) {
+        throw new IllegalArgumentException(
+            "Database format " + format + " does not support calculated type " +
+            getType());
+      }
+
+      // must have an expression
+      if(getProperty(PropertyMap.EXPRESSION_PROP) == null) {
+        throw new IllegalArgumentException(
+            "No expression provided for calculated type " + getType());
+      }
+
+      // must have result type (just fill in if missing)
+      if(getProperty(PropertyMap.RESULT_TYPE_PROP) == null) {
+        putProperty(PropertyMap.RESULT_TYPE_PROP, getType().getValue());
       }
     }
   }

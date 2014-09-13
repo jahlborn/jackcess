@@ -212,7 +212,7 @@ public class TableBuilder {
     _props.put(name, PropertyMapImpl.createProperty(name, type, value));
     return this;
   }
-  
+
   /**
    * Creates a new Table in the given Database with the currently configured
    * attributes.

@@ -32,11 +32,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
 
 /**
  * Encapsulates constants describing a specific version of the Access Jet format
@@ -138,6 +140,13 @@ public abstract class JetFormat {
       POSSIBLE_VERSION_4.put(ACCESS_VERSION_2003, Database.FileFormat.V2003);
     }
   }
+
+  /** calculated types supported in version 14 */
+  private static final Set<DataType> V14_CALC_TYPES = 
+    EnumSet.of(DataType.BOOLEAN, DataType.BYTE, DataType.INT, DataType.LONG,
+               DataType.FLOAT, DataType.DOUBLE, DataType.GUID, 
+               DataType.SHORT_DATE_TIME, DataType.MONEY, DataType.NUMERIC, 
+               DataType.TEXT, DataType.MEMO);
 
   /** the JetFormat constants for the Jet database version "3" */
   public static final JetFormat VERSION_3 = new Jet3Format();
@@ -507,6 +516,8 @@ public abstract class JetFormat {
 
   public abstract boolean isSupportedDataType(DataType type);
 
+  public abstract boolean isSupportedCalculatedDataType(DataType type);
+
   @Override
   public String toString() {
     return _name;
@@ -733,6 +744,11 @@ public abstract class JetFormat {
     public boolean isSupportedDataType(DataType type) {
       return (type != DataType.COMPLEX_TYPE);
     }
+
+    @Override
+    public boolean isSupportedCalculatedDataType(DataType type) {
+      return false;
+    }
   }
   
   private static class Jet4Format extends JetFormat {
@@ -958,6 +974,11 @@ public abstract class JetFormat {
     public boolean isSupportedDataType(DataType type) {
       return (type != DataType.COMPLEX_TYPE);
     }
+
+    @Override
+    public boolean isSupportedCalculatedDataType(DataType type) {
+      return false;
+    }
   }
   
   private static final class MSISAMFormat extends Jet4Format {
@@ -1010,6 +1031,11 @@ public abstract class JetFormat {
     public boolean isSupportedDataType(DataType type) {
       return true;
     }
+
+    @Override
+    public boolean isSupportedCalculatedDataType(DataType type) {
+      return false;
+    }
   }
 
   private static final class Jet14Format extends Jet12Format {
@@ -1030,6 +1056,11 @@ public abstract class JetFormat {
     @Override
     protected Map<String,Database.FileFormat> getPossibleFileFormats() {
       return PossibleFileFormats.POSSIBLE_VERSION_14;
+    }
+
+    @Override
+    public boolean isSupportedCalculatedDataType(DataType type) {
+      return V14_CALC_TYPES.contains(type);
     }
   }
 

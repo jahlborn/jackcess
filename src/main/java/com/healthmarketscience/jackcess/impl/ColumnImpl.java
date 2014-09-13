@@ -1571,6 +1571,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.put(col.getType().getValue());
       buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
       buffer.putShort(col.getColumnNumber());  //Column Number
+
       if (col.getType().isVariableLength()) {
         if(!col.getType().isLongValue()) {
           buffer.putShort(variableOffset++);
@@ -1580,13 +1581,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       } else {
         buffer.putShort((short) 0);
       }
+
       buffer.putShort(col.getColumnNumber()); //Column Number again
+
       if(col.getType().isTextual()) {
         // this will write 4 bytes (note we don't support writing dbs which
         // use the text code page)
         writeSortOrder(buffer, col.getTextSortOrder(), creator.getFormat());
       } else {
-        if(col.getType().getHasScalePrecision()) {
+        // note scale/precision not stored for calculated numeric fields
+        if(col.getType().getHasScalePrecision() && !col.isCalculated()) {
           buffer.put(col.getPrecision());  // numeric precision
           buffer.put(col.getScale());  // numeric scale
         } else {
@@ -1595,13 +1599,20 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         }
         buffer.putShort((short) 0); //Unknown
       }
+
       buffer.put(getColumnBitFlags(col)); // misc col flags
-      if (col.isCompressedUnicode()) {  //Compressed
-        buffer.put((byte) 1);
+
+      // note access doesn't seem to allow unicode compression for calced fields
+      if(col.isCalculated()) {
+        buffer.put(CALCULATED_EXT_FLAG_MASK);
+      } else if (col.isCompressedUnicode()) {  //Compressed
+        buffer.put(COMPRESSED_UNICODE_EXT_FLAG_MASK);
       } else {
-        buffer.put((byte) 0);
+        buffer.put((byte)0);
       }
+
       buffer.putInt(0); //Unknown, but always 0.
+
       //Offset for fixed length columns
       if (col.getType().isVariableLength()) {
         buffer.putShort((short) 0);
@@ -1609,11 +1620,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         buffer.putShort(fixedOffset);
         fixedOffset += col.getType().getFixedSize(col.getLength());
       }
+
       if(!col.getType().isLongValue()) {
         buffer.putShort(col.getLength()); //Column length
       } else {
         buffer.putShort((short)0x0000); // unused
       }
+
     }
     for (ColumnBuilder col : columns) {
       TableImpl.writeName(buffer, col.getName(), creator.getCharset());
