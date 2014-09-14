@@ -47,7 +47,8 @@ public class JetFormatTest extends TestCase {
     COMPLEX("complexDataTest"),
     UNSUPPORTED("unsupportedFieldsTest"),
     LINKED("linkerTest"),
-    BLOB("testOle");
+    BLOB("testOle"),
+    CALC_FIELD("calcFieldTest");
 
     private final String _basename;
 
