@@ -16,24 +16,6 @@ Missing pieces:
   * EASY
 - figure out how msaccess manages page/row locks
   * MEDIUM
-  
-- calculated fields
-  - v2010+
-  - no indexes
-  - no unicode compression
-  - double/int/longint/single/repid/decimal/text/date/memo/currency/bool, no ole/hyperlink
-  - read/write, create column
-  - only uses in-table columns (need to force update on every row update?)
-  - numeric data has embedded precision/scale, something else?  only last 8
-    bytes is data?  implicit precision of 18 for "pure" numeric?  implicit
-    precision of 15 for double-ish numeric?
-  - ***add unit tests
-  - ***ability to create calculated columns!
-
-- add properties on table/column creation
-  - add unit tests
-
-- calculated fields in queries? (2003+), w/ aliases?
 
 Refactor goals:
 - tweak lookup apis (specify column vs column name)
