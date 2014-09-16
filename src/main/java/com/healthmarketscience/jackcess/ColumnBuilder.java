@@ -215,6 +215,11 @@ public class ColumnBuilder {
     return putProperty(PropertyMap.RESULT_TYPE_PROP, getType().getValue());
   }
 
+  public boolean isVariableLength() {
+    // calculated columns are written as var len
+    return(getType().isVariableLength() || isCalculated());
+  }
+
   /**
    * Sets whether of not the new column allows unicode compression.
    */

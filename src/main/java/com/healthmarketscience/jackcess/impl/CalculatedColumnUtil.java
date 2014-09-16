@@ -40,7 +40,9 @@ class CalculatedColumnUtil
   // offset to the actual data
   private static final int CALC_DATA_OFFSET = CALC_DATA_LEN_OFFSET + 4;
   // total amount of extra bytes added for calculated values
-  private static final int CALC_EXTRA_DATA_LEN = 23;
+  static final int CALC_EXTRA_DATA_LEN = 23;
+  // ms access seems to define all fixed-len calc fields as this length
+  static final short CALC_FIXED_FIELD_LEN = 39;
 
   // fully encode calculated BOOLEAN "true" value
   private static final byte[] CALC_BOOL_TRUE = wrapCalculatedValue(
@@ -278,7 +280,8 @@ class CalculatedColumnUtil
       throws IOException
     {
       int totalDataLen = Math.min(CALC_EXTRA_DATA_LEN + 16 + 4, getLength());
-      int dataLen = totalDataLen - CALC_EXTRA_DATA_LEN;
+      // data length must be multiple of 4
+      int dataLen = toMul4(totalDataLen - CALC_EXTRA_DATA_LEN);
       ByteBuffer buffer = prepareWrappedCalcValue(dataLen, order);
 
       writeCalcNumericValue(buffer, obj, dataLen);
@@ -293,7 +296,7 @@ class CalculatedColumnUtil
       // numeric bytes need to be a multiple of 4 and we currently handle at
       // most 16 bytes
       int numByteLen = ((totalLen > 0) ? totalLen : buffer.remaining()) - 2;
-      numByteLen = Math.min((numByteLen / 4) * 4, 16);
+      numByteLen = Math.min(toMul4(numByteLen), 16);
 
       byte scale = buffer.get();
       boolean negate = (buffer.get() != 0);
@@ -370,6 +373,10 @@ class CalculatedColumnUtil
       for(; pos < bytes.length; pos+=8) {
         ByteUtil.swap8Bytes(bytes, pos);
       }
+    }
+
+    private static int toMul4(int val) {
+      return ((val / 4) * 4);
     }
   }
 

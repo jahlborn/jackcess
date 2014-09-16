@@ -1264,7 +1264,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   private static byte getColumnBitFlags(ColumnBuilder col) {
     byte flags = UNKNOWN_FLAG_MASK;
-    if(!col.getType().isVariableLength()) {
+    if(!col.isVariableLength()) {
       flags |= FIXED_LEN_FLAG_MASK;
     }
     if(col.isAutoNumber()) {
@@ -1377,7 +1377,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public static short countVariableLength(List<ColumnBuilder> columns) {
     short rtn = 0;
     for (ColumnBuilder col : columns) {
-      if (col.getType().isVariableLength()) {
+      if (col.isVariableLength()) {
         rtn++;
       }
     }
@@ -1390,10 +1390,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    *         found in the list
    * @usage _advanced_method_
    */
-  public static short countNonLongVariableLength(List<ColumnBuilder> columns) {
+  private static short countNonLongVariableLength(List<ColumnBuilder> columns) {
     short rtn = 0;
     for (ColumnBuilder col : columns) {
-      if (col.getType().isVariableLength() && !col.getType().isLongValue()) {
+      if (col.isVariableLength() && !col.getType().isLongValue()) {
         rtn++;
       }
     }
@@ -1572,7 +1572,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
       buffer.putShort(col.getColumnNumber());  //Column Number
 
-      if (col.getType().isVariableLength()) {
+      if(col.isVariableLength()) {
         if(!col.getType().isLongValue()) {
           buffer.putShort(variableOffset++);
         } else {
@@ -1614,7 +1614,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.putInt(0); //Unknown, but always 0.
 
       //Offset for fixed length columns
-      if (col.getType().isVariableLength()) {
+      if(col.isVariableLength()) {
         buffer.putShort((short) 0);
       } else {
         buffer.putShort(fixedOffset);
@@ -1622,7 +1622,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
 
       if(!col.getType().isLongValue()) {
-        buffer.putShort(col.getLength()); //Column length
+        short length = col.getLength();
+        if(col.isCalculated()) {
+          // calced columns have additional value overhead
+          if(!col.getType().isVariableLength() || 
+             col.getType().getHasScalePrecision()) {
+            length = CalculatedColumnUtil.CALC_FIXED_FIELD_LEN; 
+          } else {
+            length += CalculatedColumnUtil.CALC_EXTRA_DATA_LEN;
+          }
+        }
+        buffer.putShort(length); //Column length
       } else {
         buffer.putShort((short)0x0000); // unused
       }

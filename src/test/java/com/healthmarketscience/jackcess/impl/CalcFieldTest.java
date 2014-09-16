@@ -20,6 +20,7 @@ USA
 package com.healthmarketscience.jackcess.impl;
 
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -75,11 +76,19 @@ public class CalcFieldTest extends TestCase
         .addColumn(new ColumnBuilder("id", DataType.LONG)
                    .setAutoNumber(true))
         .addColumn(new ColumnBuilder("data", DataType.TEXT))
-        .addColumn(new ColumnBuilder("calc_data", DataType.TEXT)
+        .addColumn(new ColumnBuilder("calc_text", DataType.TEXT)
                    .setCalculatedInfo("[id] & \"_\" & [data]"))
+        .addColumn(new ColumnBuilder("calc_memo", DataType.MEMO)
+                   .setCalculatedInfo("[id] & \"_\" & [data]"))
+        .addColumn(new ColumnBuilder("calc_bool", DataType.BOOLEAN)
+                   .setCalculatedInfo("[id] > 0"))
+        .addColumn(new ColumnBuilder("calc_long", DataType.LONG)
+                   .setCalculatedInfo("[id] + 1"))
+        .addColumn(new ColumnBuilder("calc_numeric", DataType.NUMERIC)
+                   .setCalculatedInfo("[id] / 0.03"))
         .toTable(db);
 
-      Column col = t.getColumn("calc_data");
+      Column col = t.getColumn("calc_text");
       assertTrue(col.isCalculated());
       assertEquals("[id] & \"_\" & [data]", col.getProperties().getValue(
                        PropertyMap.EXPRESSION_PROP));
@@ -87,14 +96,31 @@ public class CalcFieldTest extends TestCase
                    col.getProperties().getValue(
                        PropertyMap.RESULT_TYPE_PROP));
 
-      t.addRow(Column.AUTO_NUMBER, "foo", "1_foo");
+      String longStr = createString(1000);
+      BigDecimal bd1 = new BigDecimal("-1234.5678");
+      BigDecimal bd2 = new BigDecimal("0.0234");
+
+      t.addRow(Column.AUTO_NUMBER, "foo", "1_foo", longStr, true, 2, bd1);
+      t.addRow(Column.AUTO_NUMBER, "bar", "2_bar", longStr, false, -37, bd2);
 
       List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
             createExpectedRow(
                 "id", 1,
                 "data", "foo",
-                "calc_data", "1_foo"));
+                "calc_text", "1_foo",
+                "calc_memo", longStr,
+                "calc_bool", true,
+                "calc_long", 2,
+                "calc_numeric", bd1),
+            createExpectedRow(
+                "id", 2,
+                "data", "bar",
+                "calc_text", "2_bar",
+                "calc_memo", longStr,
+                "calc_bool", false,
+                "calc_long", -37,
+                "calc_numeric", bd2));
 
       assertTable(expectedRows, t);
 
