@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.0.5" date="TBD">
+    <release version="2.0.5" date="2014-09-17">
       <action dev="jahlborn" type="add">
         Add Cursor.findRow(RowId) for moving to a specific Table row using
         only the RowId.
