@@ -246,23 +246,18 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   @Override
   protected boolean findAnotherRowImpl(
       ColumnImpl columnPattern, Object valuePattern, boolean moveForward,
-      ColumnMatcher columnMatcher)
+      ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
-    if(!isAtBeginning(moveForward)) {
-      // use the default table scan for finding rows mid-cursor
-      return super.findAnotherRowImpl(columnPattern, valuePattern, moveForward,
-                                      columnMatcher);
-    }
-
     // searching for the first match
     Object[] rowValues = _entryCursor.getIndexData().constructIndexRow(
         columnPattern.getName(), valuePattern);
 
-    if(rowValues == null) {
-      // bummer, use the default table scan
+    if((rowValues == null) || !isAtBeginning(moveForward)) {
+      // use the default table scan if we don't have index data or we are
+      // mid-cursor
       return super.findAnotherRowImpl(columnPattern, valuePattern, moveForward,
-                                      columnMatcher);
+                                      columnMatcher, rowValues);
     }
       
     // sweet, we can use our index
@@ -300,23 +295,20 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   }
 
   @Override
-  protected boolean findAnotherRowImpl(Map<String,?> rowPattern, 
-                                       boolean moveForward,
-                                       ColumnMatcher columnMatcher)
+  protected boolean findAnotherRowImpl(
+      Map<String,?> rowPattern, boolean moveForward,
+      ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
-    if(!isAtBeginning(moveForward)) {
-      // use the default table scan for finding rows mid-cursor
-      return super.findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
-    }
-
     // searching for the first match
     IndexData indexData = _entryCursor.getIndexData();
     Object[] rowValues = indexData.constructIndexRow(rowPattern);
 
-    if(rowValues == null) {
-      // bummer, use the default table scan
-      return super.findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
+    if((rowValues == null) || !isAtBeginning(moveForward)) {
+      // use the default table scan if we don't have index data or we are
+      // mid-cursor
+      return super.findAnotherRowImpl(rowPattern, moveForward, columnMatcher,
+                                      rowValues);
     }
 
     // sweet, we can use our index
@@ -395,6 +387,17 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
     // move to position and check it out
     restorePosition(new IndexPosition(startEntry));
+    return true;
+  }
+
+  @Override
+  protected boolean keepSearching(ColumnMatcher columnMatcher, 
+                                  Object searchInfo) 
+    throws IOException
+  {
+    if(searchInfo instanceof Object[]) {
+      return currentRowMatchesEntryImpl((Object[])searchInfo, columnMatcher);
+    }
     return true;
   }
 

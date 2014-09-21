@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.6" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="109">
+        IndexCursor can early exit when searching based on indexed values.
+      </action>
+    </release>
     <release version="2.0.5" date="2014-09-17">
       <action dev="jahlborn" type="add">
         Add Cursor.findRow(RowId) for moving to a specific Table row using

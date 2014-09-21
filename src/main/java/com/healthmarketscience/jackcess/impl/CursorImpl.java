@@ -315,7 +315,7 @@ public abstract class CursorImpl implements Cursor
    *         {@code null} if there is not another row in the given direction.
    */
   private Row getAnotherRow(Collection<String> columnNames,
-                                            boolean moveForward) 
+                            boolean moveForward) 
     throws IOException
   {
     if(moveToAnotherRow(moveForward)) {
@@ -485,7 +485,7 @@ public abstract class CursorImpl implements Cursor
         reset(moveForward);
       }
       found = findAnotherRowImpl(columnPattern, valuePattern, moveForward,
-                                 columnMatcher);
+                                 columnMatcher, null);
       return found;
     } finally {
       if(!found) {
@@ -521,7 +521,7 @@ public abstract class CursorImpl implements Cursor
       if(reset) {
         reset(moveForward);
       }
-      found = findAnotherRowImpl(rowPattern, moveForward, columnMatcher);
+      found = findAnotherRowImpl(rowPattern, moveForward, columnMatcher, null);
       return found;
     } finally {
       if(!found) {
@@ -598,12 +598,15 @@ public abstract class CursorImpl implements Cursor
    */
   protected boolean findAnotherRowImpl(
       ColumnImpl columnPattern, Object valuePattern, boolean moveForward,
-      ColumnMatcher columnMatcher)
+      ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
     while(moveToAnotherRow(moveForward)) {
       if(currentRowMatchesImpl(columnPattern, valuePattern, columnMatcher)) {
         return true;
+      }
+      if(!keepSearching(columnMatcher, searchInfo)) {
+        break;
       }
     }
     return false;
@@ -622,16 +625,31 @@ public abstract class CursorImpl implements Cursor
    */
   protected boolean findAnotherRowImpl(Map<String,?> rowPattern, 
                                        boolean moveForward, 
-                                       ColumnMatcher columnMatcher)
+                                       ColumnMatcher columnMatcher,
+                                       Object searchInfo)
     throws IOException
   {
     while(moveToAnotherRow(moveForward)) {
       if(currentRowMatchesImpl(rowPattern, columnMatcher)) {
         return true;
       }
+      if(!keepSearching(columnMatcher, searchInfo)) {
+        break;
+      }
     }
     return false;
   }  
+
+  /**
+   * Called by findAnotherRowImpl to determine if the search should continue
+   * after finding a row which does not match the current pattern.
+   */
+  protected boolean keepSearching(ColumnMatcher columnMatcher, 
+                                  Object searchInfo) 
+    throws IOException
+  {
+    return true;
+  }
 
   public int moveNextRows(int numRows) throws IOException
   {
