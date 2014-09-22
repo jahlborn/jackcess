@@ -38,6 +38,7 @@ import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseTest.*;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
@@ -1283,6 +1284,63 @@ public class CursorTest extends TestCase {
     assertFalse(cursor.findRow(RowIdImpl.FIRST_ROW_ID));
 
     assertEquals(id - 1, cursor.getCurrentRow().get("id"));    
+  }
+
+  public void testIterationEarlyExit() throws Exception {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+
+      Database db = create(fileFormat);
+
+      Table table = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("value", DataType.TEXT))
+        .addColumn(new ColumnBuilder("memo", DataType.MEMO))
+        .addIndex(new IndexBuilder("value_idx")
+                  .addColumns("value"))
+        .toTable(db);
+
+      for(int i = 0; i < 20; ++i) {
+        Object memo = "memo-" + i;
+        table.addRow(i, "val-" + (i/2), memo);
+      }
+
+      // generate an "invalid" memo
+      byte[] b = new byte[12];
+      b[3] = (byte)0xC0;
+      table.addRow(20, "val-9", ColumnImpl.rawDataWrapper(b));
+
+      IndexCursor cursor = CursorBuilder.createCursor(
+          table.getIndex("value_idx"));
+      
+      try {
+        cursor.newIterable()
+          .addMatchPattern("value", "val-9")
+          .addMatchPattern("memo", "anything")
+          .iterator().hasNext();
+        fail("RuntimeIOException should have been thrown");
+      } catch(RuntimeIOException ignored) {
+        // success
+      }
+
+      List<Row> rows = new ArrayList<Row>();
+      for (Row row : cursor.newIterable()
+             .addMatchPattern("value", "val-5")
+             .addMatchPattern("memo", "memo-11")) {
+        rows.add(row);
+      }
+
+      assertEquals(rows, createExpectedTable(
+                       createExpectedRow("id", 11,
+                                         "value", "val-5",
+                                         "memo", "memo-11")));
+
+      assertFalse(cursor.newIterable()
+                  .addMatchPattern("value", "val-31")
+                  .addMatchPattern("memo", "anything")
+                  .iterator().hasNext());
+
+      db.close();
+    }
   }
 
 }

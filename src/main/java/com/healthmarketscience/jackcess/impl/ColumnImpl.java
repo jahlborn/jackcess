@@ -223,9 +223,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     
   /**
    * Read a column definition in from a buffer
-   * @param table owning table
-   * @param buffer Buffer containing column definition
-   * @param offset Offset in the buffer at which the column definition starts
    * @usage _advanced_method_
    */
   ColumnImpl(InitArgs args)
@@ -1538,12 +1535,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * understanding the data.  Useful for wrapping unparseable data for
    * re-writing.
    */
-  static RawData rawDataWrapper(byte[] bytes) {
+  public static RawData rawDataWrapper(byte[] bytes) {
     return new RawData(bytes);
   }
 
   /**
-   * Returs {@code true} if the given value is "raw" column data,
+   * Returns {@code true} if the given value is "raw" column data,
    * {@code false} otherwise.
    * @usage _advanced_method_
    */
@@ -1554,7 +1551,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Writes the column definitions into a table definition buffer.
    * @param buffer Buffer to write to
-   * @param columns List of Columns to write definitions for
    */
   protected static void writeDefinitions(TableCreator creator, ByteBuffer buffer)
     throws IOException
