@@ -249,9 +249,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
-    // searching for the first match
-    Object[] rowValues = _entryCursor.getIndexData().constructIndexRow(
-        columnPattern.getName(), valuePattern);
+    Object[] rowValues = (Object[])searchInfo;
 
     if((rowValues == null) || !isAtBeginning(moveForward)) {
       // use the default table scan if we don't have index data or we are
@@ -300,9 +298,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
-    // searching for the first match
-    IndexData indexData = _entryCursor.getIndexData();
-    Object[] rowValues = indexData.constructIndexRow(rowPattern);
+    Object[] rowValues = (Object[])searchInfo;
 
     if((rowValues == null) || !isAtBeginning(moveForward)) {
       // use the default table scan if we don't have index data or we are
@@ -318,6 +314,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
 
     // find actual matching row
+    IndexData indexData = _entryCursor.getIndexData();
     Map<String,?> indexRowPattern = null;
     if(rowPattern.size() == indexData.getColumns().size()) {
       // the rowPattern matches our index columns exactly, so we can
@@ -391,13 +388,33 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   }
 
   @Override
+  protected Object prepareSearchInfo(ColumnImpl columnPattern, Object valuePattern)
+  {
+    // attempt to generate a lookup row for this index
+    return _entryCursor.getIndexData().constructIndexRow(
+        columnPattern.getName(), valuePattern);
+  }
+
+  @Override
+  protected Object prepareSearchInfo(Map<String,?> rowPattern)
+  {
+    // attempt to generate a lookup row for this index
+    return _entryCursor.getIndexData().constructIndexRow(rowPattern);
+  }
+
+  @Override
   protected boolean keepSearching(ColumnMatcher columnMatcher, 
                                   Object searchInfo) 
     throws IOException
   {
     if(searchInfo instanceof Object[]) {
+      // if we have a lookup row for this index, then we only need to continue
+      // searching while we are looking at rows which match the index lookup
+      // value(s).  once we move past those rows, no other rows could possibly
+      // match.
       return currentRowMatchesEntryImpl((Object[])searchInfo, columnMatcher);
     }
+    // we are doing a full table scan
     return true;
   }
 

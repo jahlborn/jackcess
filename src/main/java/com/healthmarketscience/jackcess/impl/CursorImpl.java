@@ -456,7 +456,8 @@ public abstract class CursorImpl implements Cursor
     throws IOException
   {
     return findAnotherRow(columnPattern, valuePattern, true, MOVE_FORWARD,
-                          _columnMatcher);
+                          _columnMatcher, 
+                          prepareSearchInfo(columnPattern, valuePattern));
   }
 
   public boolean findNextRow(Column columnPattern, Object valuePattern)
@@ -469,12 +470,13 @@ public abstract class CursorImpl implements Cursor
     throws IOException
   {
     return findAnotherRow(columnPattern, valuePattern, false, MOVE_FORWARD,
-                          _columnMatcher);
+                          _columnMatcher, 
+                          prepareSearchInfo(columnPattern, valuePattern));
   }
   
   protected boolean findAnotherRow(ColumnImpl columnPattern, Object valuePattern,
                                    boolean reset, boolean moveForward,
-                                   ColumnMatcher columnMatcher)
+                                   ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
     PositionImpl curPos = _curPos;
@@ -485,7 +487,7 @@ public abstract class CursorImpl implements Cursor
         reset(moveForward);
       }
       found = findAnotherRowImpl(columnPattern, valuePattern, moveForward,
-                                 columnMatcher, null);
+                                 columnMatcher, searchInfo);
       return found;
     } finally {
       if(!found) {
@@ -500,18 +502,20 @@ public abstract class CursorImpl implements Cursor
   
   public boolean findFirstRow(Map<String,?> rowPattern) throws IOException
   {
-    return findAnotherRow(rowPattern, true, MOVE_FORWARD, _columnMatcher);
+    return findAnotherRow(rowPattern, true, MOVE_FORWARD, _columnMatcher,
+                          prepareSearchInfo(rowPattern));
   }
 
   public boolean findNextRow(Map<String,?> rowPattern)
     throws IOException
   {
-    return findAnotherRow(rowPattern, false, MOVE_FORWARD, _columnMatcher);
+    return findAnotherRow(rowPattern, false, MOVE_FORWARD, _columnMatcher,
+                          prepareSearchInfo(rowPattern));
   }
 
   protected boolean findAnotherRow(Map<String,?> rowPattern, boolean reset,
                                    boolean moveForward, 
-                                   ColumnMatcher columnMatcher)
+                                   ColumnMatcher columnMatcher, Object searchInfo)
     throws IOException
   {
     PositionImpl curPos = _curPos;
@@ -521,7 +525,8 @@ public abstract class CursorImpl implements Cursor
       if(reset) {
         reset(moveForward);
       }
-      found = findAnotherRowImpl(rowPattern, moveForward, columnMatcher, null);
+      found = findAnotherRowImpl(rowPattern, moveForward, columnMatcher,        
+                                 searchInfo);
       return found;
     } finally {
       if(!found) {
@@ -639,6 +644,24 @@ public abstract class CursorImpl implements Cursor
     }
     return false;
   }  
+
+  /**
+   * Called before a search commences to allow for search specific data to be
+   * generated (which is cached for re-use by the iterators).
+   */
+  protected Object prepareSearchInfo(ColumnImpl columnPattern, Object valuePattern)
+  {
+    return null;
+  }
+
+  /**
+   * Called before a search commences to allow for search specific data to be
+   * generated (which is cached for re-use by the iterators).
+   */
+  protected Object prepareSearchInfo(Map<String,?> rowPattern)
+  {
+    return null;
+  }
 
   /**
    * Called by findAnotherRowImpl to determine if the search should continue
@@ -857,6 +880,7 @@ public abstract class CursorImpl implements Cursor
   {
     private final ColumnImpl _columnPattern;
     private final Object _valuePattern;
+    private final Object _searchInfo;
     
     private ColumnMatchIterator(Collection<String> columnNames,
                                 ColumnImpl columnPattern, Object valuePattern,
@@ -866,12 +890,13 @@ public abstract class CursorImpl implements Cursor
       super(columnNames, reset, moveForward, columnMatcher);
       _columnPattern = columnPattern;
       _valuePattern = valuePattern;
+      _searchInfo = prepareSearchInfo(columnPattern, valuePattern);
     }
 
     @Override
     protected boolean findNext() throws IOException {
       return findAnotherRow(_columnPattern, _valuePattern, false, _moveForward,
-                            _colMatcher);
+                            _colMatcher, _searchInfo);
     }
   }
 
@@ -882,6 +907,7 @@ public abstract class CursorImpl implements Cursor
   private final class RowMatchIterator extends BaseIterator
   {
     private final Map<String,?> _rowPattern;
+    private final Object _searchInfo;
     
     private RowMatchIterator(Collection<String> columnNames,
                              Map<String,?> rowPattern,
@@ -890,11 +916,13 @@ public abstract class CursorImpl implements Cursor
     {
       super(columnNames, reset, moveForward, columnMatcher);
       _rowPattern = rowPattern;
+      _searchInfo = prepareSearchInfo(rowPattern);
     }
 
     @Override
     protected boolean findNext() throws IOException {
-      return findAnotherRow(_rowPattern, false, _moveForward, _colMatcher);
+      return findAnotherRow(_rowPattern, false, _moveForward, _colMatcher,
+                            _searchInfo);
     }
   }
 
