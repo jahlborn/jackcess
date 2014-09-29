@@ -8,6 +8,9 @@
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="109">
         IndexCursor can early exit when searching based on indexed values.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="110">
+        Fix regression where empty memo values are returned as null.
+      </action>
     </release>
     <release version="2.0.5" date="2014-09-17">
       <action dev="jahlborn" type="add">

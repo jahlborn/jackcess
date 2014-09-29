@@ -565,6 +565,8 @@ public class DatabaseTest extends TestCase
 
       table.addRow(testStr, testStr, null);
       table.addRow(testStr, longMemo, oleValue);
+      table.addRow("", "", new byte[0]);
+      table.addRow(null, null, null);
 
       table.reset();
 
@@ -579,6 +581,18 @@ public class DatabaseTest extends TestCase
       assertEquals(testStr, row.get("A"));
       assertEquals(longMemo, row.get("B"));
       assertTrue(Arrays.equals(oleValue, row.getBytes("C")));
+
+      row = table.getNextRow();
+
+      assertEquals("", row.get("A"));
+      assertEquals("", row.get("B"));
+      assertTrue(Arrays.equals(new byte[0], row.getBytes("C")));
+
+      row = table.getNextRow();
+
+      assertNull(row.get("A"));
+      assertNull(row.get("B"));
+      assertNull(row.getBytes("C"));
 
       db.close();
     }    
@@ -1565,7 +1579,10 @@ public class DatabaseTest extends TestCase
     for(Map<String, Object> row : cursor) {
       foundTable.add(row);
     }
-    assertEquals(expectedTable, foundTable);
+    assertEquals(expectedTable.size(), foundTable.size());
+    for(int i = 0; i < expectedTable.size(); ++i) {
+      assertEquals(expectedTable.get(i), foundTable.get(i));
+    } 
   }
   
   public static RowImpl createExpectedRow(Object... rowElements) {

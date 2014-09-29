@@ -102,6 +102,8 @@ public class CalcFieldTest extends TestCase
 
       t.addRow(Column.AUTO_NUMBER, "foo", "1_foo", longStr, true, 2, bd1);
       t.addRow(Column.AUTO_NUMBER, "bar", "2_bar", longStr, false, -37, bd2);
+      t.addRow(Column.AUTO_NUMBER, "", "", "", false, 0, BigDecimal.ZERO);
+      t.addRow(Column.AUTO_NUMBER, null, null, null, null, null, null);
 
       List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
@@ -120,7 +122,23 @@ public class CalcFieldTest extends TestCase
                 "calc_memo", longStr,
                 "calc_bool", false,
                 "calc_long", -37,
-                "calc_numeric", bd2));
+                "calc_numeric", bd2),
+            createExpectedRow(
+                "id", 3,
+                "data", "",
+                "calc_text", "",
+                "calc_memo", "",
+                "calc_bool", false,
+                "calc_long", 0,
+                "calc_numeric", BigDecimal.ZERO),
+            createExpectedRow(
+                "id", 4,
+                "data", null,
+                "calc_text", null,
+                "calc_memo", null,
+                "calc_bool", null,
+                "calc_long", null,
+                "calc_numeric", null));
 
       assertTable(expectedRows, t);
 

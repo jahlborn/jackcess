@@ -234,8 +234,11 @@ class LongValueColumnImpl extends ColumnImpl
     throws IOException
   {
     byte[] binData = readLongValue(lvalDefinition);
-    if((binData == null) || (binData.length == 0)) {
+    if(binData == null) {
       return null;
+    }
+    if(binData.length == 0) {
+      return "";
     }
     return decodeTextValue(binData);
   }
