@@ -223,7 +223,7 @@
   File file = new File("test.mdb");
   Database db = new DatabaseBuilder(file)
     .setFileFormat(Database.FileFormat.V2000)
-    .open();
+    .create();
 </source>
       </subsection>
       <subsection name="Creating a Table">
