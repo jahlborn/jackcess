@@ -792,8 +792,7 @@ public class IndexCodesTest extends TestCase {
     byte[] entryBytes = (byte[])ebField.get(entry);
 
     return ByteUtil.toHexString(ByteBuffer.wrap(entryBytes),
-                                entryBytes.length)
-      .trim().replaceAll("\\p{Space}+", " ");
+                                0, entryBytes.length, false);
   }
   
 }

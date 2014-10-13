@@ -450,7 +450,12 @@ public final class ByteUtil {
   public static String toHexString(ByteBuffer buffer,
                                    int offset, int size, boolean formatted) {
     
-    StringBuilder rtn = new StringBuilder();
+    int bufLen = size * 2;
+    if(formatted) {
+      bufLen += size + 
+        (7 * ((size + NUM_BYTES_PER_LINE - 1) / NUM_BYTES_PER_LINE));
+    }
+    StringBuilder rtn = new StringBuilder(bufLen);
     int position = buffer.position();
     buffer.position(offset);
     size = Math.min(size, buffer.remaining());
