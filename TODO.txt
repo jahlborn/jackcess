@@ -24,5 +24,4 @@ Refactor goals:
   * add @usage tags to util classes
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
-- implement "lazy" usage maps (load on first usage)?
-- add typed getter methods to Row, PropertyMap
+- add typed getter methods to PropertyMap
