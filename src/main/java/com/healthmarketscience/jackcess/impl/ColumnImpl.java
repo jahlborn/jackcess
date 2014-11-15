@@ -60,10 +60,6 @@ import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
-import com.healthmarketscience.jackcess.impl.scsu.Compress;
-import com.healthmarketscience.jackcess.impl.scsu.EndOfInputException;
-import com.healthmarketscience.jackcess.impl.scsu.Expand;
-import com.healthmarketscience.jackcess.impl.scsu.IllegalInputException;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -163,6 +159,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /** header used to indicate unicode text compression */
   private static final byte[] TEXT_COMPRESSION_HEADER = 
   { (byte)0xFF, (byte)0XFE };
+  private static final char MIN_COMPRESS_CHAR = 1;
+  private static final char MAX_COMPRESS_CHAR = 0xFF;
 
   
   /** owning table */
@@ -1110,57 +1108,44 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   String decodeTextValue(byte[] data)
     throws IOException
   {
-    try {
+    // see if data is compressed.  the 0xFF, 0xFE sequence indicates that
+    // compression is used (sort of, see algorithm below)
+    boolean isCompressed = ((data.length > 1) &&
+                            (data[0] == TEXT_COMPRESSION_HEADER[0]) &&
+                            (data[1] == TEXT_COMPRESSION_HEADER[1]));
 
-      // see if data is compressed.  the 0xFF, 0xFE sequence indicates that
-      // compression is used (sort of, see algorithm below)
-      boolean isCompressed = ((data.length > 1) &&
-                              (data[0] == TEXT_COMPRESSION_HEADER[0]) &&
-                              (data[1] == TEXT_COMPRESSION_HEADER[1]));
-
-      if(isCompressed) {
-
-        Expand expander = new Expand();
+    if(isCompressed) {
         
-        // this is a whacky compression combo that switches back and forth
-        // between compressed/uncompressed using a 0x00 byte (starting in
-        // compressed mode)
-        StringBuilder textBuf = new StringBuilder(data.length);
-        // start after two bytes indicating compression use
-        int dataStart = TEXT_COMPRESSION_HEADER.length;
-        int dataEnd = dataStart;
-        boolean inCompressedMode = true;
-        while(dataEnd < data.length) {
-          if(data[dataEnd] == (byte)0x00) {
+      // this is a whacky compression combo that switches back and forth
+      // between compressed/uncompressed using a 0x00 byte (starting in
+      // compressed mode)
+      StringBuilder textBuf = new StringBuilder(data.length);
+      // start after two bytes indicating compression use
+      int dataStart = TEXT_COMPRESSION_HEADER.length;
+      int dataEnd = dataStart;
+      boolean inCompressedMode = true;
+      while(dataEnd < data.length) {
+        if(data[dataEnd] == (byte)0x00) {
 
-            // handle current segment
-            decodeTextSegment(data, dataStart, dataEnd, inCompressedMode,
-                              expander, textBuf);
-            inCompressedMode = !inCompressedMode;
-            ++dataEnd;
-            dataStart = dataEnd;
+          // handle current segment
+          decodeTextSegment(data, dataStart, dataEnd, inCompressedMode,
+                            textBuf);
+          inCompressedMode = !inCompressedMode;
+          ++dataEnd;
+          dataStart = dataEnd;
             
-          } else {
-            ++dataEnd;
-          }
+        } else {
+          ++dataEnd;
         }
-        // handle last segment
-        decodeTextSegment(data, dataStart, dataEnd, inCompressedMode,
-                          expander, textBuf);
-
-        return textBuf.toString();
-        
       }
-      
-      return decodeUncompressedText(data, getCharset());
-      
-    } catch (IllegalInputException e) {
-      throw (IOException)
-        new IOException("Can't expand text column").initCause(e);
-    } catch (EndOfInputException e) {
-      throw (IOException)
-        new IOException("Can't expand text column").initCause(e);
+      // handle last segment
+      decodeTextSegment(data, dataStart, dataEnd, inCompressedMode, textBuf);
+
+      return textBuf.toString();
+        
     }
+      
+    return decodeUncompressedText(data, getCharset());
   }
 
   /**
@@ -1168,25 +1153,29 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * given status of the segment (compressed/uncompressed).
    */
   private void decodeTextSegment(byte[] data, int dataStart, int dataEnd,
-                                 boolean inCompressedMode, Expand expander,
+                                 boolean inCompressedMode, 
                                  StringBuilder textBuf)
-    throws IllegalInputException, EndOfInputException
   {
     if(dataEnd <= dataStart) {
       // no data
       return;
     }
     int dataLength = dataEnd - dataStart;
+
     if(inCompressedMode) {
-      // handle compressed data
-      byte[] tmpData = ByteUtil.copyOf(data, dataStart, dataLength);
-      expander.reset();
-      textBuf.append(expander.expand(tmpData));
-    } else {
-      // handle uncompressed data
-      textBuf.append(decodeUncompressedText(data, dataStart, dataLength,
-                                            getCharset()));
+      byte[] tmpData = new byte[dataLength * 2];
+      int tmpIdx = 0;
+      for(int i = dataStart; i < dataEnd; ++i) {
+        tmpData[tmpIdx] = data[i];
+        tmpIdx += 2;
+      } 
+      data = tmpData;
+      dataStart = 0;
+      dataLength = data.length;
     }
+
+    textBuf.append(decodeUncompressedText(data, dataStart, dataLength,
+                                          getCharset()));
   }
 
   /**
@@ -1215,41 +1204,37 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     
     // may only compress if column type allows it
     if(!forceUncompressed && isCompressedUnicode() &&
-       (text.length() <= getFormat().MAX_COMPRESSED_UNICODE_SIZE)) {
+       (text.length() <= getFormat().MAX_COMPRESSED_UNICODE_SIZE) &&
+       isUnicodeCompressible(text)) {
 
-      // for now, only do very simple compression (only compress text which is
-      // all ascii text)
-      if(isAsciiCompressible(text)) {
-
-        byte[] encodedChars = new byte[TEXT_COMPRESSION_HEADER.length + 
-                                       text.length()];
-        encodedChars[0] = TEXT_COMPRESSION_HEADER[0];
-        encodedChars[1] = TEXT_COMPRESSION_HEADER[1];
-        for(int i = 0; i < text.length(); ++i) {
-          encodedChars[i + TEXT_COMPRESSION_HEADER.length] = 
-            (byte)text.charAt(i);
-        }
-        return ByteBuffer.wrap(encodedChars);
+      byte[] encodedChars = new byte[TEXT_COMPRESSION_HEADER.length + 
+                                     text.length()];
+      encodedChars[0] = TEXT_COMPRESSION_HEADER[0];
+      encodedChars[1] = TEXT_COMPRESSION_HEADER[1];
+      for(int i = 0; i < text.length(); ++i) {
+        encodedChars[i + TEXT_COMPRESSION_HEADER.length] = 
+          (byte)text.charAt(i);
       }
+      return ByteBuffer.wrap(encodedChars);
     }
 
     return encodeUncompressedText(text, getCharset());
   }
 
   /**
-   * Returns {@code true} if the given text can be compressed using simple
-   * ASCII encoding, {@code false} otherwise.
+   * Returns {@code true} if the given text can be compressed using compressed
+   * unicode, {@code false} otherwise.
    */
-  private static boolean isAsciiCompressible(CharSequence text) {
+  private static boolean isUnicodeCompressible(CharSequence text) {
     // only attempt to compress > 2 chars (compressing less than 3 chars would
     // not result in a space savings due to the 2 byte compression header)
     if(text.length() <= TEXT_COMPRESSION_HEADER.length) {
       return false;
     }
-    // now, see if it is all printable ASCII
+    // now, see if it is all compressible characters
     for(int i = 0; i < text.length(); ++i) {
       char c = text.charAt(i);
-      if(!Compress.isAsciiCrLfOrTab(c)) {
+      if((c < MIN_COMPRESS_CHAR) || (c > MAX_COMPRESS_CHAR)) {
         return false;
       }
     }

@@ -160,9 +160,6 @@
         <artifactId>cobertura-maven-plugin</artifactId>
         <configuration>
           <instrumentation>
-            <excludes>
-              <exclude>com/healthmarketscience/jackcess/impl/scsu/**</exclude>
-            </excludes>
           </instrumentation>
         </configuration>
         <executions>
@@ -269,7 +266,6 @@
             <list>http://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>1.5</source>
-          <excludePackageNames>com.healthmarketscience.jackcess.impl.scsu</excludePackageNames>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>

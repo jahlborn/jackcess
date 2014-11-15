@@ -1492,6 +1492,35 @@ public class DatabaseTest extends TestCase
     assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
   }
 
+  public void testUnicodeCompression() throws Exception
+  {
+    File dbFile = new File("src/test/data/V2003/testUnicodeCompV2003.mdb");
+    Database db = open(Database.FileFormat.V2003, new File("src/test/data/V2003/testUnicodeCompV2003.mdb"));
+
+    StringBuilder sb = new StringBuilder(127);
+    for(int i = 1; i <= 0xFF; ++i) {
+      sb.append((char)i);
+    }
+
+    String[] expectedStrs = {
+      "only ascii chars",
+      "\u00E4\u00E4kk\u00F6si\u00E4",
+      "\u041C\u0438\u0440",
+      "\u03F0\u03B1\u1F76 \u03C4\u1F79\u03C4' \u1F10\u03B3\u1F7C \u039A\u1F7B\u03F0\u03BB\u03C9\u03C0\u03B1",
+      "\u6F22\u5B57\u4EEE\u540D\u4EA4\u3058\u308A\u6587",
+      "3L9\u001D52\u0002_AB(\u00A5\u0005!!V",
+      "\u00FCmlaut",
+      sb.toString()};
+
+    for(Row row : db.getTable("Table")) {
+      int id = (Integer)row.get("ID");
+      String str = (String)row.get("Unicode");
+      assertEquals(expectedStrs[id-1], str);
+    }
+
+    db.close();
+  }
+
   private void checkRawValue(String expected, Object val)
   {
     if(expected != null) {
@@ -1536,7 +1565,7 @@ public class DatabaseTest extends TestCase
   }
 
   static String createNonAsciiString(int len) {
-    return createString(len, '\u00C0');
+    return createString(len, '\u0CC0');
   }
     
   private static String createString(int len, char firstChar) {

@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.7" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="111">
+        Unicode compression support was not correct for all possibly
+        compressed characters.
+      </action>
+    </release>
     <release version="2.0.6" date="2014-10-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="109">
         IndexCursor can early exit when searching based on indexed values.
