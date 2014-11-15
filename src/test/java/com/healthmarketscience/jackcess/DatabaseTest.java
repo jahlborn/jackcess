@@ -1501,6 +1501,7 @@ public class DatabaseTest extends TestCase
     for(int i = 1; i <= 0xFF; ++i) {
       sb.append((char)i);
     }
+    String longStr = sb.toString();
 
     String[] expectedStrs = {
       "only ascii chars",
@@ -1510,13 +1511,38 @@ public class DatabaseTest extends TestCase
       "\u6F22\u5B57\u4EEE\u540D\u4EA4\u3058\u308A\u6587",
       "3L9\u001D52\u0002_AB(\u00A5\u0005!!V",
       "\u00FCmlaut",
-      sb.toString()};
+      longStr
+    };
 
-    for(Row row : db.getTable("Table")) {
+    Table t = db.getTable("Table");
+    for(Row row : t) {
       int id = (Integer)row.get("ID");
       String str = (String)row.get("Unicode");
       assertEquals(expectedStrs[id-1], str);
     }
+
+
+    ColumnImpl col = (ColumnImpl)t.getColumn("Unicode");
+
+    ByteBuffer bb = col.write(longStr, 1000);
+
+    assertEquals(longStr.length() + 2, bb.remaining());
+
+    byte[] bytes = new byte[bb.remaining()];
+    bb.get(bytes);
+    assertEquals(longStr, col.read(bytes));
+
+
+    longStr = longStr.replace('a', '\u0440');
+
+    bb = col.write(longStr, 1000);
+
+    assertEquals(longStr.length() * 2, bb.remaining());
+
+    bytes = new byte[bb.remaining()];
+    bb.get(bytes);
+    assertEquals(longStr, col.read(bytes));
+    
 
     db.close();
   }
