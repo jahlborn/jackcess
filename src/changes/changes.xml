@@ -9,6 +9,9 @@
         Unicode compression support was not correct for all possibly
         compressed characters.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="112">
+        Currency columns will now return an accurate scale and precision.
+      </action>
     </release>
     <release version="2.0.6" date="2014-10-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="109">

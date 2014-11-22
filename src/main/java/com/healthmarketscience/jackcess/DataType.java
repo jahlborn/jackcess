@@ -80,7 +80,8 @@ public enum DataType {
    * 0, any Object converted to a String and parsed as BigDecimal, or {@code
    * null}.  Equivalent to SQL {@link Types#DECIMAL}.
    */
-  MONEY((byte) 0x05, Types.DECIMAL, 8),
+  MONEY((byte) 0x05, Types.DECIMAL, 8, false, false, 0, 0, 0, false, 4, 4, 4,
+        19, 19, 19, 1),
   /**
    * Corresponds to a java {@link Float}.  Accepts any {@link Number} (using
    * {@link Number#floatValue}), Boolean as 1 or 0, any Object converted to a
