@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.8" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">
+        Add newer sql type to access type mappings if the jvm supports them.
+      </action>
+    </release>
     <release version="2.0.7" date="2014-11-22">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="111">
         Unicode compression support was not correct for all possibly

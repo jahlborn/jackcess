@@ -200,6 +200,14 @@ public enum DataType {
     ALT_SQL_TYPES.put(Types.VARCHAR, MEMO);
     ALT_SQL_TYPES.put(Types.VARBINARY, OLE);
     ALT_SQL_TYPES.put(Types.BINARY, OLE);
+
+    // add newer sql types if available in this jvm
+    addNewSqlType("NCHAR", TEXT, null);
+    addNewSqlType("NVARCHAR", TEXT, MEMO);
+    addNewSqlType("LONGNVARCHAR", MEMO, null);
+    addNewSqlType("NCLOB", MEMO, null);
+    addNewSqlType("TIME_WITH_TIMEZONE", SHORT_DATE_TIME, null);
+    addNewSqlType("TIMESTAMP_WITH_TIMEZONE", SHORT_DATE_TIME, null);
   }
   
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
@@ -479,6 +487,25 @@ public enum DataType {
     }
       
     return rtn;
+  }
+
+  /**
+   * Adds mappings for a sql type which was added after jdk 1.5 (using
+   * reflection).
+   */
+  private static void addNewSqlType(String typeName, DataType type, 
+                                    DataType altType)
+  {
+    try {
+      java.lang.reflect.Field sqlTypeField = Types.class.getField(typeName);
+      Integer value = (Integer)sqlTypeField.get(null);
+      SQL_TYPES.put(value, type);
+      if(altType != null) {
+        ALT_SQL_TYPES.put(value, altType);
+      }
+    } catch(Exception ignored) {
+      // must not be available
+    }
   }
 
 }
