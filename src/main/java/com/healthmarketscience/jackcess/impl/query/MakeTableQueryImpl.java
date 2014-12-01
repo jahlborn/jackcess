@@ -61,7 +61,8 @@ public class MakeTableQueryImpl extends BaseSelectQueryImpl
   @Override
   protected void toSelectInto(StringBuilder builder) 
   {
-    builder.append(" INTO ").append(getTargetTable());
+    builder.append(" INTO ");
+    toOptionalQuotedExpr(builder, getTargetTable(), true);
     toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
   }
 

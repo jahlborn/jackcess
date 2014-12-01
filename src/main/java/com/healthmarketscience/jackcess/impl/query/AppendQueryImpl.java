@@ -79,7 +79,8 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
   @Override
   protected void toSQLString(StringBuilder builder)
   {
-    builder.append("INSERT INTO ").append(getTargetTable());
+    builder.append("INSERT INTO ");
+    toOptionalQuotedExpr(builder, getTargetTable(), true);
     toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
     builder.append(NEWLINE);
     List<String> values = getValues();

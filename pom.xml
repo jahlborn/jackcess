@@ -245,6 +245,7 @@
         <configuration>
           <issueLinkTemplatePerSystem>
             <SourceForge2Features>http://sourceforge.net/p/jackcess/feature-requests/%ISSUE%</SourceForge2Features>
+            <SourceForge2Patches>http://sourceforge.net/p/jackcess/patches/%ISSUE%</SourceForge2Patches>
           </issueLinkTemplatePerSystem>
         </configuration>
         <reportSets>
