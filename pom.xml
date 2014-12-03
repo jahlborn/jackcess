@@ -94,6 +94,12 @@
         <role>Contributed to cookbook.</role>
       </roles>
     </contributor>
+    <contributor>
+      <name>Gabriele Favalessa</name>
+      <roles>
+        <role>Fixed various query generation issues.</role>
+      </roles>
+    </contributor>
   </contributors>
   <issueManagement>
     <system>SourceForge2</system>

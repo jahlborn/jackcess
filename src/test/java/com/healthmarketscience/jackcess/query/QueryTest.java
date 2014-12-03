@@ -224,7 +224,7 @@ public class QueryTest extends TestCase
           "UpdateQuery",multiline(
               "PARAMETERS User Name Text;",
               "UPDATE Table1",
-              "SET Table1.col1 = \"foo\", Table1.col2 = [Table2].[col3], [[Table2]].[[col1]] = [User Name]",
+              "SET Table1.col1 = \"foo\", Table1.col2 = [Table2].[col3], [Table2].[col1] = [User Name]",
               "WHERE ((([Table2].[col1]) Is Not Null));"));
       expectedQueries.put(
           "MakeTableQuery",multiline(

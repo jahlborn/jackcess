@@ -510,7 +510,14 @@ public abstract class QueryImpl implements Query
   protected static StringBuilder toQuotedExpr(StringBuilder builder, 
                                               String expr)
   {
-    return builder.append('[').append(expr).append(']');
+    return (!isQuoted(expr) ? 
+            builder.append('[').append(expr).append(']') :
+            builder.append(expr));
+  }
+
+  protected static boolean isQuoted(String expr) {
+    return ((expr.length() >= 2) && 
+            (expr.charAt(0) == '[') && (expr.charAt(expr.length() - 1) == ']'));
   }
 
   protected static StringBuilder toRemoteDb(StringBuilder builder,

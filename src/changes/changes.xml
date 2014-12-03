@@ -11,6 +11,9 @@
       <action dev="jahlborn" type="fix" system="SourceForge2Patches" issue="17">
         Fix table name quoting for append and make table queries.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2Patches" issue="18">
+        Don't double quote already quoted identifiers.
+      </action>
     </release>
     <release version="2.0.7" date="2014-11-22">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="111">
