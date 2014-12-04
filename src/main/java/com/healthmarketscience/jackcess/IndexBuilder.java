@@ -24,8 +24,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
 
 /**
  * Builder style class for constructing an {@link Index}.  See {@link
@@ -133,7 +135,11 @@ public class IndexBuilder
     return this;
   }    
 
-  public void validate(Set<String> tableColNames) {
+  public void validate(Set<String> tableColNames, JetFormat format) {
+
+    DatabaseImpl.validateIdentifierName(
+        getName(), format.MAX_INDEX_NAME_LENGTH, "index");
+
     if(getColumns().isEmpty()) {
       throw new IllegalArgumentException("index " + getName() +
                                          " has no columns");

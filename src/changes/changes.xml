@@ -14,6 +14,10 @@
       <action dev="jahlborn" type="fix" system="SourceForge2Patches" issue="18">
         Don't double quote already quoted identifiers.
       </action>
+      <action dev="jahlborn" type="update">
+        Better validation of identifier names (disallow invalid characters
+        according to Access naming rules).
+      </action>
     </release>
     <release version="2.0.7" date="2014-11-22">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="111">

@@ -264,6 +264,7 @@ public abstract class JetFormat {
   public final int USAGE_MAP_TABLE_BYTE_LENGTH;
 
   public final int MAX_COLUMNS_PER_TABLE;
+  public final int MAX_INDEXES_PER_TABLE;
   public final int MAX_TABLE_NAME_LENGTH;
   public final int MAX_COLUMN_NAME_LENGTH;
   public final int MAX_INDEX_NAME_LENGTH;
@@ -399,6 +400,7 @@ public abstract class JetFormat {
     USAGE_MAP_TABLE_BYTE_LENGTH = defineUsageMapTableByteLength();
 
     MAX_COLUMNS_PER_TABLE = defineMaxColumnsPerTable();
+    MAX_INDEXES_PER_TABLE = defineMaxIndexesPerTable();
     MAX_TABLE_NAME_LENGTH = defineMaxTableNameLength();
     MAX_COLUMN_NAME_LENGTH = defineMaxColumnNameLength();
     MAX_INDEX_NAME_LENGTH = defineMaxIndexNameLength();
@@ -502,6 +504,7 @@ public abstract class JetFormat {
   protected abstract int defineUsageMapTableByteLength();
 
   protected abstract int defineMaxColumnsPerTable();
+  protected abstract int defineMaxIndexesPerTable();
   protected abstract int defineMaxTableNameLength();
   protected abstract int defineMaxColumnNameLength();
   protected abstract int defineMaxIndexNameLength();
@@ -708,6 +711,9 @@ public abstract class JetFormat {
 	      
     @Override
     protected int defineMaxColumnsPerTable() { return 255; }
+	      
+    @Override
+    protected int defineMaxIndexesPerTable() { return 32; }
 	      
     @Override
     protected int defineMaxTableNameLength() { return 64; }
@@ -938,6 +944,9 @@ public abstract class JetFormat {
       
     @Override
     protected int defineMaxColumnsPerTable() { return 255; }
+	      
+    @Override
+    protected int defineMaxIndexesPerTable() { return 32; }
       
     @Override
     protected int defineMaxTableNameLength() { return 64; }

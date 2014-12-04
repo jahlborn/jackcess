@@ -56,6 +56,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
@@ -248,7 +249,10 @@ public class DatabaseImpl implements Database
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
-  
+
+  /** regex matching characters which are invalid in identifier names */
+  private static final Pattern INVALID_IDENTIFIER_CHARS = 
+    Pattern.compile("[\\p{Cntrl}.!`\\]\\[]");
   
   /** the File of the database */
   private final File _file;
@@ -960,8 +964,8 @@ public class DatabaseImpl implements Database
     }
 
     validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
-    validateIdentifierName(linkedDbName, DataType.MEMO.getMaxSize(), 
-                           "linked database");
+    validateName(linkedDbName, DataType.MEMO.getMaxSize(), 
+                 "linked database");
     validateIdentifierName(linkedTableName, getFormat().MAX_TABLE_NAME_LENGTH, 
                            "linked table");
 
@@ -1481,21 +1485,60 @@ public class DatabaseImpl implements Database
   
   /**
    * Validates an identifier name.
+   *
+   * Names of fields, controls, and objects in Microsoft Access:
+   * <ul>
+   * <li>Can include any combination of letters, numbers, spaces, and special
+   *     characters except a period (.), an exclamation point (!), an accent
+   *     grave (`), and brackets ([ ]).</li>
+   * <li>Can't begin with leading spaces.</li>
+   * <li>Can't include control characters (ASCII values 0 through 31).</li>
+   * </ul>
+   * 
    * @usage _advanced_method_
    */
   public static void validateIdentifierName(String name,
                                             int maxLength,
                                             String identifierType)
   {
-    if((name == null) || (name.trim().length() == 0)) {
+    // basic name validation
+    validateName(name, maxLength, identifierType);
+
+    // additional identifier validation
+    if(INVALID_IDENTIFIER_CHARS.matcher(name).find()) {
       throw new IllegalArgumentException(
-          identifierType + " must have non-empty name");
+          identifierType + " name contains invalid characters");
+    }
+
+    // cannot start with spaces
+    if(name.charAt(0) == ' ') {
+      throw new IllegalArgumentException(
+          identifierType + " name cannot start with a space character");
+    }
+  }
+
+  /**
+   * Validates a name.
+   */
+  private static void validateName(String name, int maxLength, String nameType)
+  {
+    if(isBlank(name)) {
+      throw new IllegalArgumentException(
+          nameType + " must have non-blank name");
     }
     if(name.length() > maxLength) {
       throw new IllegalArgumentException(
-          identifierType + " name is longer than max length of " + maxLength +
+          nameType + " name is longer than max length of " + maxLength +
           ": " + name);
     }
+  }
+
+  /**
+   * Returns {@code true} if the given string is {@code null} or all blank
+   * space, {@code false} otherwise.
+   */
+  public static boolean isBlank(String name) {
+    return((name == null) || (name.trim().length() == 0));
   }
   
   @Override

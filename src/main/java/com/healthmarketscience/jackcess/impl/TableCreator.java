@@ -231,11 +231,18 @@ class TableCreator
     }
 
     if(hasIndexes()) {
+
+      if(_indexes.size() > getFormat().MAX_INDEXES_PER_TABLE) {
+        throw new IllegalArgumentException(
+            "Cannot create table with more than " +
+            getFormat().MAX_INDEXES_PER_TABLE + " indexes");
+      }
+
       // now, validate the indexes
       Set<String> idxNames = new HashSet<String>();
       boolean foundPk = false;
       for(IndexBuilder index : _indexes) {
-        index.validate(colNames);
+        index.validate(colNames, getFormat());
         if(!idxNames.add(index.getName().toUpperCase())) {
           throw new IllegalArgumentException("duplicate index name: " +
                                              index.getName());

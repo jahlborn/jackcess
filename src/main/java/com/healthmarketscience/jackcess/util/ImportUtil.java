@@ -47,6 +47,7 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -451,7 +452,7 @@ public class ImportUtil
     throws IOException
   {
     String line = in.readLine();
-    if (line == null || line.trim().length() == 0) {
+    if(DatabaseImpl.isBlank(line)) {
       return null;
     }
 
