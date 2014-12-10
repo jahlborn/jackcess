@@ -16,8 +16,8 @@
     <faq id="formats">
       <question>What Access formats does it support?</question>
       <answer>
-        <p>As of the 1.2.4 release, Jackcess supports Access database versions
-           2000-2010 read/write and Access 97 read-only.</p>
+        <p>Jackcess supports Access database versions 2000-2013 read/write and
+           Access 97 read-only.</p>
       </answer>
     </faq>
 
@@ -28,6 +28,8 @@
            software enforced, and Jackcess does not do any password checking
            at this point.  So, a password protected database can be used the
            same as any other.</p>
+        <p>If a database is actually encrypted, then you will need need an
+           <a href="#encoding">encoder</a>.</p>
       </answer>
     </faq>
 
@@ -57,12 +59,11 @@
           <tr>
             <td>"Enforce Referential Integrity" (aka foreign key
                 constraints)</td>
-            <td>Off by default, optional support available in 1.2.10
-                release.</td>
+            <td>On by default, can be selectively disabled.</td>
           </tr>
           <tr>
             <td>Field/Table Properties (Validation rules, Input masks, etc)</td>
-            <td>No</td>
+            <td>No (but Jackcess does provide access to the Properties)</td>
           </tr>
         </table>
       </answer>
@@ -93,11 +94,10 @@
           started work on Jackcess.
         </p>
         <p>
-          mdbtools supports Access 97 databases, which Jackcess does not.
-          The Java port of mdbtools also includes an implementation of
-          a small subset of the JDBC APIs.  Jackcess does not currently,
-          but a pure Java JDBC driver for Access could certainly be written
-          on top of Jackcess.
+          The Java port of mdbtools includes an implementation of a small
+          subset of the JDBC APIs.  Jackcess does not currently, but a pure
+          Java JDBC driver for Access could certainly be written on top of
+          Jackcess.
         </p>
       </answer>
     </faq>
@@ -238,21 +238,6 @@
           <li>For indexes on user created tables, populate the table without
               indexes in jackcess, then add the index using Access.</li>
         </ul>
-      </answer>
-    </faq>
-
-    <faq id="bigindex">
-      <question>Why am I getting an UnsupportedOperationException (or
-                IOException) when updating an indexed table?</question>
-      <answer>
-        Previously index update support only handled tables with small numbers
-        of rows.  When the index size limit was reached an
-        UnsupportedOperationException (or possibly an IOException) was thrown.
-        As of the 1.1.14 release, experimental, optional large index support
-        has been added.  As of the 1.2.0 release, large index support is
-        enabled by default.  This support is enabled/disabled via a few
-        different means.  Please see the <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database
-        javadocs</a> for details on enabling/disabling large index support.
       </answer>
     </faq>
 
