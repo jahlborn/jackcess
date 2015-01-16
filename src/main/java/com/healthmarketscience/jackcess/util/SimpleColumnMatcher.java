@@ -20,11 +20,17 @@ USA
 
 package com.healthmarketscience.jackcess.util;
 
+import java.io.IOException;
+
+import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import org.apache.commons.lang.ObjectUtils;
 
 /**
- * Simple concrete implementation of ColumnMatcher which test for equality.
+ * Simple concrete implementation of ColumnMatcher which tests for equality.
+ * If initial comparison fails, attempts to coerce the values to a common type
+ * for comparison.
  *
  * @author James Ahlborn
  * @usage _general_class_
@@ -39,6 +45,26 @@ public class SimpleColumnMatcher implements ColumnMatcher {
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {
-    return ObjectUtils.equals(value1, value2);
+    if(ObjectUtils.equals(value1, value2)) {
+      return true;
+    }
+
+    if((value1 != null) && (value2 != null) && 
+       (value1.getClass() != value2.getClass())) {
+
+      // the values aren't the same type, try coercing them to "internal"
+      // values and try again
+      DataType dataType = table.getColumn(columnName).getType();
+      try {
+        Object internalV1 = ColumnImpl.toInternalValue(dataType, value1);
+        Object internalV2 = ColumnImpl.toInternalValue(dataType, value2);
+        
+        return ObjectUtils.equals(internalV1, internalV2);
+      } catch(IOException e) {
+        // ignored, just go with the original result
+      }
+    }
+    return false;
   }
+
 }

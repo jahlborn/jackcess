@@ -825,16 +825,24 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public double toDateDouble(Object value)
   {
-      // seems access stores dates in the local timezone.  guess you just
-      // hope you read it in the same timezone in which it was written!
-      long time = ((value instanceof Date) ?
-                   ((Date)value).getTime() :
-                   ((value instanceof Calendar) ?
-                    ((Calendar)value).getTimeInMillis() :
-                    ((Number)value).longValue()));
-      time += getToLocalTimeZoneOffset(time);
-      time += MILLIS_BETWEEN_EPOCH_AND_1900;
-      return time / MILLISECONDS_PER_DAY;
+    // seems access stores dates in the local timezone.  guess you just
+    // hope you read it in the same timezone in which it was written!
+    long time = toDateLong(value);
+    time += getToLocalTimeZoneOffset(time);
+    time += MILLIS_BETWEEN_EPOCH_AND_1900;
+    return time / MILLISECONDS_PER_DAY;
+  }
+
+  /**
+   * @return an appropriate Date long value for the given object
+   */
+  private static long toDateLong(Object value) 
+  {
+    return ((value instanceof Date) ?
+            ((Date)value).getTime() :
+            ((value instanceof Calendar) ?
+             ((Calendar)value).getTimeInMillis() :
+             ((Number)value).longValue()));
   }
 
   /**
@@ -1470,6 +1478,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       } catch(SQLException e) {
         throw (IOException)(new IOException(e.getMessage())).initCause(e);
       }
+    } else if(value instanceof RawData) {
+      return ((RawData)value).getBytes();
     }
 
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -1693,6 +1703,55 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   static boolean isImmutableValue(Object value) {
     // for now, the only mutable value this class returns is byte[]
     return !(value instanceof byte[]);
+  }
+
+  /**
+   * Converts the given value to the "internal" representation for the given
+   * data type.
+   */
+  public static Object toInternalValue(DataType dataType, Object value)
+    throws IOException
+  {
+    if(value != null) {
+      switch(dataType) {
+      case BOOLEAN:
+        return ((value instanceof Boolean) ? value : toBooleanValue(value));
+      case BYTE:
+        return ((value instanceof Byte) ? value : toNumber(value).byteValue());
+      case INT:
+        return ((value instanceof Short) ? value : 
+                toNumber(value).shortValue());
+      case LONG:
+        return ((value instanceof Integer) ? value : 
+                toNumber(value).intValue());
+      case MONEY:
+        return toBigDecimal(value);
+      case FLOAT:
+        return ((value instanceof Float) ? value : 
+                toNumber(value).floatValue());
+      case DOUBLE:
+        return ((value instanceof Double) ? value : 
+                toNumber(value).doubleValue());
+      case SHORT_DATE_TIME:
+        return ((value instanceof DateExt) ? value :
+                new Date(toDateLong(value)));
+      case TEXT:
+      case MEMO:
+      case GUID:
+        return ((value instanceof String) ? value : 
+                toCharSequence(value).toString());
+      case NUMERIC:
+        return toBigDecimal(value);
+      case COMPLEX_TYPE:
+        // leave alone for now?
+        break;
+      default:
+        // some variation of binary data
+        return toByteArray(value);
+      }
+    }
+
+    return value;
   }
 
   /**
