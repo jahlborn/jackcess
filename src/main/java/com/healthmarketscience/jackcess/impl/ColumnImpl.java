@@ -1712,46 +1712,46 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public static Object toInternalValue(DataType dataType, Object value)
     throws IOException
   {
-    if(value != null) {
-      switch(dataType) {
-      case BOOLEAN:
-        return ((value instanceof Boolean) ? value : toBooleanValue(value));
-      case BYTE:
-        return ((value instanceof Byte) ? value : toNumber(value).byteValue());
-      case INT:
-        return ((value instanceof Short) ? value : 
-                toNumber(value).shortValue());
-      case LONG:
-        return ((value instanceof Integer) ? value : 
-                toNumber(value).intValue());
-      case MONEY:
-        return toBigDecimal(value);
-      case FLOAT:
-        return ((value instanceof Float) ? value : 
-                toNumber(value).floatValue());
-      case DOUBLE:
-        return ((value instanceof Double) ? value : 
-                toNumber(value).doubleValue());
-      case SHORT_DATE_TIME:
-        return ((value instanceof DateExt) ? value :
-                new Date(toDateLong(value)));
-      case TEXT:
-      case MEMO:
-      case GUID:
-        return ((value instanceof String) ? value : 
-                toCharSequence(value).toString());
-      case NUMERIC:
-        return toBigDecimal(value);
-      case COMPLEX_TYPE:
-        // leave alone for now?
-        break;
-      default:
-        // some variation of binary data
-        return toByteArray(value);
-      }
+    if(value == null) {
+      return null;
     }
 
-    return value;
+    switch(dataType) {
+    case BOOLEAN:
+      return ((value instanceof Boolean) ? value : toBooleanValue(value));
+    case BYTE:
+      return ((value instanceof Byte) ? value : toNumber(value).byteValue());
+    case INT:
+      return ((value instanceof Short) ? value : 
+              toNumber(value).shortValue());
+    case LONG:
+      return ((value instanceof Integer) ? value : 
+              toNumber(value).intValue());
+    case MONEY:
+      return toBigDecimal(value);
+    case FLOAT:
+      return ((value instanceof Float) ? value : 
+              toNumber(value).floatValue());
+    case DOUBLE:
+      return ((value instanceof Double) ? value : 
+              toNumber(value).doubleValue());
+    case SHORT_DATE_TIME:
+      return ((value instanceof DateExt) ? value :
+              new Date(toDateLong(value)));
+    case TEXT:
+    case MEMO:
+    case GUID:
+      return ((value instanceof String) ? value : 
+              toCharSequence(value).toString());
+    case NUMERIC:
+      return toBigDecimal(value);
+    case COMPLEX_TYPE:
+      // leave alone for now?
+      return value;
+    default:
+      // some variation of binary data
+      return toByteArray(value);
+    }
   }
 
   /**
