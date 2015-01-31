@@ -1418,7 +1418,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     if(value == null) {
       return BigDecimal.ZERO;
-    } if(value instanceof Number) {
+    } else if(value instanceof Number) {
       return (Number)value;
     }
     return Double.valueOf(value.toString());
@@ -1501,7 +1501,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @usage _advanced_method_
    */
   public static boolean toBooleanValue(Object obj) {
-    return ((obj != null) && ((Boolean)obj).booleanValue());
+    if(obj == null) {
+      return false;
+    } else if(obj instanceof Boolean) {
+      return ((Boolean)obj).booleanValue();
+    }
+    return Boolean.parseBoolean(obj.toString());
   }
   
   /**
