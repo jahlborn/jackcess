@@ -123,7 +123,7 @@
             <forkMode>once</forkMode>
             <parallel>classes</parallel>
             <threadCount>1</threadCount>
-            <argLine>-Xmx256M -server</argLine>
+            <argLine>-Xmx256M</argLine>
             <systemProperties>
               <property>
                 <name>log4j.configuration</name>
