@@ -114,8 +114,8 @@ public enum DataType {
    * null}.  Equivalent to SQL {@link Types#VARCHAR}, {@link Types#CHAR}.
    */
   TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
-       50 * JetFormat.TEXT_FIELD_UNIT_SIZE,
-       JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_UNIT_SIZE),
+       JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_MAX_LENGTH, 
+       JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
    * Corresponds to a java {@code byte[]} of max length 16777215 bytes.
    * Accepts a {@code byte[]}, or {@code null}.  Equivalent to SQL

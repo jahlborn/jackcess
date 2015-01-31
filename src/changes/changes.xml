@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.0.9" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="116">
+        Make ColumnBuilder.setMaxLength do the right thing regardless of
+        column type.
+      </action>
+    </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">
         Add newer sql type to access type mappings if the jvm supports them.

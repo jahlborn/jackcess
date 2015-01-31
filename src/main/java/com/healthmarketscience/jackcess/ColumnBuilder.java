@@ -130,6 +130,17 @@ public class ColumnBuilder {
   }
 
   /**
+   * Sets the precision for the new column to the max length for the type.
+   * Does nothing for types which do not have a precision.
+   */
+  public ColumnBuilder setMaxPrecision() {
+    if(_type.getHasScalePrecision()) {
+      setPrecision(_type.getMaxPrecision());
+    }
+    return this;
+  }
+
+  /**
    * Sets the scale for the new column.
    */
   public ColumnBuilder setScale(int newScale) {
@@ -139,6 +150,17 @@ public class ColumnBuilder {
 
   public byte getScale() {
     return ((_scale != null) ? _scale : (byte)_type.getDefaultScale());
+  }
+
+  /**
+   * Sets the scale for the new column to the max length for the type.  Does
+   * nothing for types which do not have a scale.
+   */
+  public ColumnBuilder setMaxScale() {
+    if(_type.getHasScalePrecision()) {
+      setScale(_type.getMaxScale());
+    }
+    return this;
   }
 
   /**
@@ -163,10 +185,15 @@ public class ColumnBuilder {
   }
   
   /**
-   * Sets the length for the new column to the max length for the type.
+   * Sets the length for the new column to the max length for the type.  Does
+   * nothing for types which are not variable length.
    */
   public ColumnBuilder setMaxLength() {
-    return setLength(_type.getMaxSize());
+    // length setting only makes sense for variable length columns
+    if(_type.isVariableLength()) {
+      setLength(_type.getMaxSize());
+    }
+    return this;
   }
   
   /**
