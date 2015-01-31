@@ -9,6 +9,9 @@
         Make ColumnBuilder.setMaxLength do the right thing regardless of
         column type.
       </action>
+      <action dev="jahlborn" type="update">
+        Handle input String boolean values.
+      </action>
     </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">
