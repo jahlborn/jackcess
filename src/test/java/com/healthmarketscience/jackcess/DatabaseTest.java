@@ -1441,6 +1441,10 @@ public class DatabaseTest extends TestCase
                 "Field1", "buzz"));
 
       assertTable(expectedRows, t3);
+
+      assertFalse(db.isLinkedTable(null));
+      assertFalse(db.isLinkedTable(t2));
+      assertTrue(db.isLinkedTable(t3));
       
       db.close();
     }
