@@ -329,6 +329,14 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public Map<String,Database> getLinkedDatabases();
 
+  
+  /**
+   * Returns {@code true} if this Database links to the given Table, {@code
+   * false} otherwise.
+   * @usage _general_method_
+   */
+  public boolean isLinkedTable(Table table) throws IOException;
+  
   /**
    * Gets currently configured TimeZone (always non-{@code null}).
    * @usage _intermediate_method_

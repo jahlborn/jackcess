@@ -599,6 +599,22 @@ public class DatabaseImpl implements Database
             Collections.unmodifiableMap(_linkedDbs));
   }
 
+  public boolean isLinkedTable(Table table) throws IOException {
+    
+    if((table == null) || (this == table.getDatabase())) {
+      // if the table is null or this db owns the table, not linked
+      return false;
+    }
+
+    TableInfo tableInfo = lookupTable(table.getName());
+    
+    return((tableInfo != null) &&
+           tableInfo.isLinked() &&
+           (_linkedDbs != null) &&
+           (_linkedDbs.get(((LinkedTableInfo)tableInfo).linkedDbName) ==
+            table.getDatabase()));
+  }  
+  
   public TimeZone getTimeZone() {
     return _timeZone;
   }
