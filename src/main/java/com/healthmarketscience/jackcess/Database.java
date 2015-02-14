@@ -36,6 +36,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
+import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 
 /**
  * An Access database instance.  A new instance can be instantiated by opening
@@ -179,6 +180,13 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public Iterator<Table> iterator();
 
+  /**
+   * Convenience method for constructing a new TableIterableBuilder for this
+   * cursor.  A TableIterableBuilder provides a variety of options for more
+   * flexible iteration of Tables.
+   */
+  public TableIterableBuilder newIterable();
+  
   /**
    * @param name Table name (case-insensitive)
    * @return The table, or null if it doesn't exist

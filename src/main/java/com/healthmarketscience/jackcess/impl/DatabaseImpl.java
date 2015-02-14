@@ -77,6 +77,7 @@ import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
+import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -844,32 +845,53 @@ public class DatabaseImpl implements Database
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished reading system catalog.  Tables: " +
-                getTableNames());
+      LOG.debug("Finished reading system catalog.  Tables: " + getTableNames());
     }
   }
   
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
-      Set<String> tableNames =
-        new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-      _tableFinder.getTableNames(tableNames, false);
-      _tableNames = tableNames;
+      _tableNames = getTableNames(true, false, true);
     }
     return _tableNames;
   }
 
   public Set<String> getSystemTableNames() throws IOException {
-    Set<String> sysTableNames =
-      new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-    _tableFinder.getTableNames(sysTableNames, true);
-    return sysTableNames;
+    return getTableNames(false, true, false);
+  }
+
+  private Set<String> getTableNames(boolean normalTables, boolean systemTables,
+                                    boolean linkedTables)
+    throws IOException
+  {
+    Set<String> tableNames = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    _tableFinder.getTableNames(tableNames, normalTables, systemTables,
+                               linkedTables);
+    return tableNames;
   }
 
   public Iterator<Table> iterator() {
-    return new TableIterator();
+    try {
+      return new TableIterator(getTableNames());
+    } catch(IOException e) {
+      throw new RuntimeIOException(e);
+    }
   }
 
+  public Iterator<Table> iterator(TableIterableBuilder builder) {
+    try {
+      return new TableIterator(getTableNames(builder.isIncludeNormalTables(),
+                                             builder.isIncludeSystemTables(),
+                                             builder.isIncludeLinkedTables()));
+    } catch(IOException e) {
+      throw new RuntimeIOException(e);
+    }
+  }
+
+  public TableIterableBuilder newIterable() {
+    return new TableIterableBuilder(this);
+  }
+  
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
@@ -1834,12 +1856,8 @@ public class DatabaseImpl implements Database
   {
     private Iterator<String> _tableNameIter;
 
-    private TableIterator() {
-      try {
-        _tableNameIter = getTableNames().iterator();
-      } catch(IOException e) {
-        throw new RuntimeIOException(e);
-      }
+    private TableIterator(Set<String> tableNames) {
+      _tableNameIter = tableNames.iterator();
     }
 
     public boolean hasNext() {
@@ -1895,7 +1913,9 @@ public class DatabaseImpl implements Database
     }
 
     public void getTableNames(Set<String> tableNames,
-                              boolean systemTables)
+                              boolean normalTables,
+                              boolean systemTables,
+                              boolean linkedTables)
       throws IOException
     {
       for(Row row : getTableNamesCursor().newIterable().setColumnNames(
@@ -1906,8 +1926,19 @@ public class DatabaseImpl implements Database
         Short type = row.getShort(CAT_COL_TYPE);
         int parentId = row.getInt(CAT_COL_PARENT_ID);
 
-        if((parentId == _tableParentId) && isTableType(type) && 
-           (isSystemObject(flags) == systemTables)) {
+        if(parentId != _tableParentId) {
+          continue;
+        }
+
+        if(TYPE_TABLE.equals(type)) {
+          if(!isSystemObject(flags)) {
+            if(normalTables) {
+              tableNames.add(tableName);
+            }
+          } else if(systemTables) {
+            tableNames.add(tableName);
+          }
+        } else if(TYPE_LINKED_TABLE.equals(type) && linkedTables) {
           tableNames.add(tableName);
         }
       }
