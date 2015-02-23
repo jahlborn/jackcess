@@ -1442,14 +1442,56 @@ public class DatabaseTest extends TestCase
 
       assertTable(expectedRows, t3);
 
+      Table t1 = db.getTable("Table1");
+      
       assertFalse(db.isLinkedTable(null));
-      assertFalse(db.isLinkedTable(t2));
+      assertTrue(db.isLinkedTable(t2));
       assertTrue(db.isLinkedTable(t3));
+      assertFalse(db.isLinkedTable(t1));
+
+      List<Table> tables = getTables(db.newIterable());
+      assertEquals(3, tables.size());
+      assertTrue(tables.contains(t1));
+      assertTrue(tables.contains(t2));
+      assertTrue(tables.contains(t3));
+      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
+      
+      tables = getTables(db.newIterable().setIncludeNormalTables(false));
+      assertEquals(2, tables.size());
+      assertFalse(tables.contains(t1));
+      assertTrue(tables.contains(t2));
+      assertTrue(tables.contains(t3));
+      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
+      
+      tables = getTables(db.newIterable().setIncludeLinkedTables(false));
+      assertEquals(1, tables.size());
+      assertTrue(tables.contains(t1));
+      assertFalse(tables.contains(t2));
+      assertFalse(tables.contains(t3));
+      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
+      
+      tables = getTables(db.newIterable().setIncludeLinkedTables(false)
+                         .setIncludeNormalTables(false)
+                         .setIncludeSystemTables(true));
+      assertTrue(tables.size() > 5);
+      assertFalse(tables.contains(t1));
+      assertFalse(tables.contains(t2));
+      assertFalse(tables.contains(t3));
+      assertTrue(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
       
       db.close();
     }
   }
 
+  private static List<Table> getTables(Iterable<Table> tableIter)
+  {
+    List<Table> tableList = new ArrayList<Table>();
+    for(Table t : tableIter) {
+      tableList.add(t);
+    }
+    return tableList;
+  }
+  
   public void testTimeZone() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");

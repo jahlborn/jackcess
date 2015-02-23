@@ -601,20 +601,31 @@ public class DatabaseImpl implements Database
   }
 
   public boolean isLinkedTable(Table table) throws IOException {
-    
+
     if((table == null) || (this == table.getDatabase())) {
       // if the table is null or this db owns the table, not linked
       return false;
     }
 
+    // common case, local table name == remote table name
     TableInfo tableInfo = lookupTable(table.getName());
-    
-    return((tableInfo != null) &&
-           tableInfo.isLinked() &&
-           (_linkedDbs != null) &&
-           (_linkedDbs.get(((LinkedTableInfo)tableInfo).linkedDbName) ==
-            table.getDatabase()));
+    if((tableInfo != null) && tableInfo.isLinked() &&
+       matchesLinkedTable(table, ((LinkedTableInfo)tableInfo).linkedTableName,
+                          ((LinkedTableInfo)tableInfo).linkedDbName)) {
+      return true;
+    }
+
+    // but, the local table name may not match the remote table name, so we
+    // need to do a search if the common case fails
+    return _tableFinder.isLinkedTable(table);
   }  
+
+  boolean matchesLinkedTable(Table table, String linkedTableName,
+                             String linkedDbName) {
+    return (table.getName().equalsIgnoreCase(linkedTableName) &&
+            (_linkedDbs != null) &&
+            (_linkedDbs.get(linkedDbName) == table.getDatabase()));
+  }
   
   public TimeZone getTimeZone() {
     return _timeZone;
@@ -1873,7 +1884,7 @@ public class DatabaseImpl implements Database
         throw new NoSuchElementException();
       }
       try {
-        return getTable(_tableNameIter.next());
+        return getTable(_tableNameIter.next(), true);
       } catch(IOException e) {
         throw new RuntimeIOException(e);
       }
@@ -1942,6 +1953,22 @@ public class DatabaseImpl implements Database
           tableNames.add(tableName);
         }
       }
+    }
+
+    public boolean isLinkedTable(Table table) throws IOException
+    {
+      for(Row row : getTableNamesCursor().newIterable().setColumnNames(
+              SYSTEM_CATALOG_COLUMNS)) {
+        Short type = row.getShort(CAT_COL_TYPE);
+        String linkedDbName = row.getString(CAT_COL_DATABASE);
+        String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
+
+        if(TYPE_LINKED_TABLE.equals(type) &&
+           matchesLinkedTable(table, linkedTableName, linkedDbName)) {
+          return true;
+        } 
+      }
+      return false;
     }
 
     protected abstract Cursor findRow(Integer parentId, String name)
