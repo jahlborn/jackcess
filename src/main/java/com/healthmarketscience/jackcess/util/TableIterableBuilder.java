@@ -70,6 +70,25 @@ public class TableIterableBuilder implements Iterable<Table>
     _includeLinkedTables = includeLinkedTables;
     return this;
   }
+
+  /**
+   * Convenience method to set the flags to include only non-linked (local)
+   * user tables.
+   */
+  public TableIterableBuilder withLocalUserTablesOnly() {
+    setIncludeNormalTables(true);
+    setIncludeSystemTables(false);
+    return setIncludeLinkedTables(false);
+  }
+  
+  /**
+   * Convenience method to set the flags to include only system tables.
+   */
+  public TableIterableBuilder withSystemTablesOnly() {
+    setIncludeNormalTables(false);
+    setIncludeSystemTables(true);
+    return setIncludeLinkedTables(false);
+  }
   
   public Iterator<Table> iterator() {
     return ((DatabaseImpl)_db).iterator(this);

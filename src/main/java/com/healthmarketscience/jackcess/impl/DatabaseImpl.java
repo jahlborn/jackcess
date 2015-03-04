@@ -620,8 +620,8 @@ public class DatabaseImpl implements Database
     return _tableFinder.isLinkedTable(table);
   }  
 
-  boolean matchesLinkedTable(Table table, String linkedTableName,
-                             String linkedDbName) {
+  private boolean matchesLinkedTable(Table table, String linkedTableName,
+                                     String linkedDbName) {
     return (table.getName().equalsIgnoreCase(linkedTableName) &&
             (_linkedDbs != null) &&
             (_linkedDbs.get(linkedDbName) == table.getDatabase()));

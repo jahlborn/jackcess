@@ -12,6 +12,15 @@
       <action dev="jahlborn" type="update">
         Handle input String boolean values.
       </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="28">
+        Added Database.isLinkedTable method to identify if the given Table is
+        linked to the database.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="28">
+        Added TableIterableBuilder for advanced Table iteration.  This allows
+        selectively including different table types when iterating the tables
+        in a Database.
+      </action>
     </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">

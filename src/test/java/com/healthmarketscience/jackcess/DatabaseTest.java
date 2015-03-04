@@ -1463,16 +1463,14 @@ public class DatabaseTest extends TestCase
       assertTrue(tables.contains(t3));
       assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
       
-      tables = getTables(db.newIterable().setIncludeLinkedTables(false));
+      tables = getTables(db.newIterable().withLocalUserTablesOnly());
       assertEquals(1, tables.size());
       assertTrue(tables.contains(t1));
       assertFalse(tables.contains(t2));
       assertFalse(tables.contains(t3));
       assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
       
-      tables = getTables(db.newIterable().setIncludeLinkedTables(false)
-                         .setIncludeNormalTables(false)
-                         .setIncludeSystemTables(true));
+      tables = getTables(db.newIterable().withSystemTablesOnly());
       assertTrue(tables.size() > 5);
       assertFalse(tables.contains(t1));
       assertFalse(tables.contains(t2));
