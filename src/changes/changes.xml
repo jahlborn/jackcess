@@ -21,6 +21,13 @@
         selectively including different table types when iterating the tables
         in a Database.
       </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Lowered the log level for certain warnings related to system tables
+        which do not generally affect jackcess functionality.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Added contextual information to many errors and warnings.
+      </action>
     </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">

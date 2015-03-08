@@ -368,80 +368,82 @@ public class ColumnBuilder {
    */
   public void validate(JetFormat format) {
     if(getType() == null) {
-      throw new IllegalArgumentException("must have type");
+      throw new IllegalArgumentException(withErrorContext("must have type"));
     }
     DatabaseImpl.validateIdentifierName(
         getName(), format.MAX_COLUMN_NAME_LENGTH, "column");
 
     if(getType().isUnsupported()) {
-      throw new IllegalArgumentException(
-          "Cannot create column with unsupported type " + getType());
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot create column with unsupported type " + getType()));
     }
     if(!format.isSupportedDataType(getType())) {
-      throw new IllegalArgumentException(
-          "Database format " + format + " does not support type " + getType());
+      throw new IllegalArgumentException(withErrorContext(
+          "Database format " + format + " does not support type " + getType()));
     }
     
     if(!getType().isVariableLength()) {
       if(getLength() != getType().getFixedSize()) {
         if(getLength() < getType().getFixedSize()) {
-          throw new IllegalArgumentException("invalid fixed length size");
+          throw new IllegalArgumentException(withErrorContext(
+              "invalid fixed length size"));
         }
-        LOG.warn("Column length " + getLength() + 
-                 " longer than expected fixed size " + 
-                 getType().getFixedSize());
+        LOG.warn(withErrorContext(
+                "Column length " + getLength() + 
+                " longer than expected fixed size " + getType().getFixedSize()));
       }
     } else if(!getType().isLongValue()) {
       if(!getType().isValidSize(getLength())) {
-        throw new IllegalArgumentException("var length out of range");
+        throw new IllegalArgumentException(withErrorContext(
+            "var length out of range"));
       }
     }
 
     if(getType().getHasScalePrecision()) {
       if(!getType().isValidScale(getScale())) {
-        throw new IllegalArgumentException(
+        throw new IllegalArgumentException(withErrorContext(
             "Scale must be from " + getType().getMinScale() + " to " +
-            getType().getMaxScale() + " inclusive");
+            getType().getMaxScale() + " inclusive"));
       }
       if(!getType().isValidPrecision(getPrecision())) {
-        throw new IllegalArgumentException(
+        throw new IllegalArgumentException(withErrorContext(
             "Precision must be from " + getType().getMinPrecision() + " to " +
-            getType().getMaxPrecision() + " inclusive");
+            getType().getMaxPrecision() + " inclusive"));
       }
     }
 
     if(isAutoNumber()) {
       if(!getType().mayBeAutoNumber()) {
-        throw new IllegalArgumentException(
-            "Auto number column must be long integer or guid");
+        throw new IllegalArgumentException(withErrorContext(
+            "Auto number column must be long integer or guid"));
       }
     }
 
     if(isCompressedUnicode()) {
       if(!getType().isTextual()) {
-        throw new IllegalArgumentException(
-            "Only textual columns allow unicode compression (text/memo)");
+        throw new IllegalArgumentException(withErrorContext(
+            "Only textual columns allow unicode compression (text/memo)"));
       }
     }
 
     if(isHyperlink()) {
       if(getType() != DataType.MEMO) {
-        throw new IllegalArgumentException(
-            "Only memo columns can be hyperlinks");
+        throw new IllegalArgumentException(withErrorContext(
+            "Only memo columns can be hyperlinks"));
       }
     }
 
     if(isCalculated()) {
       if(!format.isSupportedCalculatedDataType(getType())) {
-        throw new IllegalArgumentException(
+        throw new IllegalArgumentException(withErrorContext(
             "Database format " + format + " does not support calculated type " +
-            getType());
+            getType()));
       }
 
       // must have an expression
       if(getProperty(PropertyMap.EXPRESSION_PROP) == null) {
-        throw new IllegalArgumentException(
-            "No expression provided for calculated type " + getType());
+        throw new IllegalArgumentException(withErrorContext(
+            "No expression provided for calculated type " + getType()));
       }
 
       // must have result type (just fill in if missing)
@@ -458,5 +460,8 @@ public class ColumnBuilder {
     // for backwards compat w/ old code
     return this;
   }
-  
+
+  private String withErrorContext(String msg) {
+    return msg + "(Column=" + getName() + ")";
+  }
 }

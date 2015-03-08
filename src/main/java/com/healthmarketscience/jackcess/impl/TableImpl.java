@@ -279,8 +279,8 @@ public class TableImpl implements Table
         colOwnedPages = null;
         colFreeSpacePages = null;
         tableBuffer.position(pos + 8);
-        LOG.warn("Table " + _name + " invalid column " + umapColNum + 
-                 " usage map definition: " + e);
+        LOG.warn(withErrorContext("Invalid column " + umapColNum + 
+                                  " usage map definition: " + e));
       }
       
       for(ColumnImpl col : _columns) {
@@ -426,8 +426,8 @@ public class TableImpl implements Table
         return column;
       }
     }
-    throw new IllegalArgumentException("Column with name " + name +
-                                       " does not exist in this table");
+    throw new IllegalArgumentException(withErrorContext(
+            "Column with name " + name + " does not exist in this table"));
   }
   
   public boolean hasColumn(String name) {
@@ -468,8 +468,8 @@ public class TableImpl implements Table
         return index;
       }
     }
-    throw new IllegalArgumentException("Index with name " + name +
-                                       " does not exist on this table");
+    throw new IllegalArgumentException(withErrorContext(
+            "Index with name " + name + " does not exist on this table"));
   }
 
   public IndexImpl getPrimaryKeyIndex() {
@@ -478,8 +478,8 @@ public class TableImpl implements Table
         return index;
       }
     }
-    throw new IllegalArgumentException("Table " + getName() +
-                                       " does not have a primary key index");
+    throw new IllegalArgumentException(withErrorContext(
+            "No primary key index found"));
   }
   
   public IndexImpl getForeignKeyIndex(Table otherTable) {
@@ -490,9 +490,9 @@ public class TableImpl implements Table
         return index;
       }
     }
-    throw new IllegalArgumentException(
-        "Table " + getName() + " does not have a foreign key reference to " +
-        otherTable.getName());
+    throw new IllegalArgumentException(withErrorContext(
+        "No foreign key reference to " +
+        otherTable.getName() + " found"));
   }
   
   /**
@@ -622,8 +622,8 @@ public class TableImpl implements Table
     throws IOException
   {
     if(this != column.getTable()) {
-      throw new IllegalArgumentException(
-          "Given column " + column + " is not from this table");
+      throw new IllegalArgumentException(withErrorContext(
+          "Given column " + column + " is not from this table"));
     }
     requireValidRowId(rowId);
     
@@ -933,7 +933,8 @@ public class TableImpl implements Table
       if (overflowRow) {
 
         if((rowEnd - rowStart) < 4) {
-          throw new IOException("invalid overflow row info");
+          throw new IOException(rowState.getTable().withErrorContext(
+                                    "invalid overflow row info"));
         }
       
         // Overflow page.  the "row" data in the current page points to
@@ -1568,7 +1569,8 @@ public class TableImpl implements Table
       
           int rowSize = rowData.remaining();
           if (rowSize > getFormat().MAX_ROW_SIZE) {
-            throw new IOException("Row size " + rowSize + " is too large");
+            throw new IOException(withErrorContext(
+                                      "Row size " + rowSize + " is too large"));
           }
 
           // get page with space
@@ -1662,14 +1664,17 @@ public class TableImpl implements Table
             // corruption (failed write vs. a row failure which was not a
             // write failure).  we don't know the status of any rows at this
             // point (and the original failure is probably irrelevant)
-            LOG.warn("Secondary row failure which preceded the write failure", 
+            LOG.warn(withErrorContext(
+                    "Secondary row failure which preceded the write failure"), 
                      rowWriteFailure);
             updateCount = 0;
             rowWriteFailure = flushFailure;
           }
         }
 
-        throw new BatchUpdateException(updateCount, rowWriteFailure);
+        throw new BatchUpdateException(
+            updateCount, withErrorContext("Failed adding rows"),
+            rowWriteFailure);
       }
 
     } finally {
@@ -1809,8 +1814,8 @@ public class TableImpl implements Table
           keepRawVarValues);
 
       if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
-        throw new IOException("Row size " + newRowData.limit() + 
-                              " is too large");
+        throw new IOException(withErrorContext(
+                "Row size " + newRowData.limit() + " is too large"));
       }
 
       if(!_indexDatas.isEmpty()) {
@@ -2364,23 +2369,25 @@ public class TableImpl implements Table
   /**
    * @throws IllegalStateException if the given rowId is invalid
    */
-  private static void requireValidRowId(RowIdImpl rowId) {
+  private void requireValidRowId(RowIdImpl rowId) {
     if(!rowId.isValid()) {
-      throw new IllegalArgumentException("Given rowId is invalid: " + rowId);
+      throw new IllegalArgumentException(withErrorContext(
+              "Given rowId is invalid: " + rowId));
     }
   }
   
   /**
    * @throws IllegalStateException if the given row is invalid or deleted
    */
-  private static void requireNonDeletedRow(RowState rowState, RowIdImpl rowId)
+  private void requireNonDeletedRow(RowState rowState, RowIdImpl rowId)
   {
     if(!rowState.isValid()) {
-      throw new IllegalArgumentException(
-          "Given rowId is invalid for this table: " + rowId);
+      throw new IllegalArgumentException(withErrorContext(
+          "Given rowId is invalid for this table: " + rowId));
     }
     if(rowState.isDeleted()) {
-      throw new IllegalStateException("Row is deleted: " + rowId);
+      throw new IllegalStateException(withErrorContext(
+          "Row is deleted: " + rowId));
     }
   }
   
@@ -2483,6 +2490,15 @@ public class TableImpl implements Table
     Object[] copy = new Object[newRowLength];
     System.arraycopy(row, 0, copy, 0, Math.min(row.length, newRowLength));
     return copy;
+  }
+
+  private String withErrorContext(String msg) {
+    return withErrorContext(msg, getDatabase(), getName());
+  }
+
+  private static String withErrorContext(String msg, DatabaseImpl db,
+                                         String tableName) {
+    return msg + " (Db=" + db.getName() + ";Table=" + tableName + ")";
   }
 
   /** various statuses for the row data */
@@ -2722,10 +2738,12 @@ public class TableImpl implements Table
       // this should never see modifications because it only happens within
       // the positionAtRowData method
       if(!isUpToDate()) {
-        throw new IllegalStateException("Table modified while searching?");
+        throw new IllegalStateException(getTable().withErrorContext(
+                                            "Table modified while searching?"));
       }
       if(_rowStatus != RowStatus.OVERFLOW) {
-        throw new IllegalStateException("Row is not an overflow row?");
+        throw new IllegalStateException(getTable().withErrorContext(
+                                            "Row is not an overflow row?"));
       }
       _finalRowId = rowId;
       _finalRowBuffer = _overflowRowBufferH.setPage(getPageChannel(),

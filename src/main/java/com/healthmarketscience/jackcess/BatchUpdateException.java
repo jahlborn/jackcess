@@ -32,8 +32,8 @@ public class BatchUpdateException extends JackcessException
 
   private final int _updateCount;
 
-  public BatchUpdateException(int updateCount, Throwable cause) {
-    super(cause);
+  public BatchUpdateException(int updateCount, String msg, Throwable cause) {
+    super(msg + ": " + cause, cause);
     _updateCount = updateCount;
   }
 

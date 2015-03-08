@@ -141,28 +141,30 @@ public class IndexBuilder
         getName(), format.MAX_INDEX_NAME_LENGTH, "index");
 
     if(getColumns().isEmpty()) {
-      throw new IllegalArgumentException("index " + getName() +
-                                         " has no columns");
+      throw new IllegalArgumentException(withErrorContext(
+          "index has no columns"));
     }
     if(getColumns().size() > IndexData.MAX_COLUMNS) {
-      throw new IllegalArgumentException("index " + getName() +
-                                         " has too many columns, max " +
-                                         IndexData.MAX_COLUMNS);
+      throw new IllegalArgumentException(withErrorContext(
+          "index has too many columns, max " + IndexData.MAX_COLUMNS));
     }
 
     Set<String> idxColNames = new HashSet<String>();
     for(Column col : getColumns()) {
       String idxColName = col.getName().toUpperCase();
       if(!idxColNames.add(idxColName)) {
-        throw new IllegalArgumentException("duplicate column name " +
-                                           col.getName() + " in index " +
-                                           getName());
+        throw new IllegalArgumentException(withErrorContext(
+            "duplicate column name " + col.getName() + " in index"));
       }
       if(!tableColNames.contains(idxColName)) {
-        throw new IllegalArgumentException("column named " + col.getName() +
-                                           " not found in table");
+        throw new IllegalArgumentException(withErrorContext(
+            "column named " + col.getName() + " not found in table"));
       }
     }
+  }
+
+  private String withErrorContext(String msg) {
+    return msg + "(Index=" + getName() + ")";
   }
 
   /**

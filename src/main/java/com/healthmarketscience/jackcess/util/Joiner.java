@@ -31,6 +31,7 @@ import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 
 /**
@@ -291,7 +292,10 @@ public class Joiner
     for(int i = 1; i < toCols.size(); ++i) {
       sb.append(",").append(toCols.get(i).getName());
     }
-    sb.append(toType);
+    sb.append(toType)
+      .append(" (Db=")
+      .append(((DatabaseImpl)getFromTable().getDatabase()).getName())
+      .append(")");
     
     return sb.toString();
   }

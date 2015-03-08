@@ -204,8 +204,8 @@ public class IndexPageCache
   {
     for(CacheDataPage cacheDataPage : _modifiedPages) {
       if(cacheDataPage._extra._entryView.isEmpty()) {
-        throw new IllegalStateException("Unexpected empty page " +
-                                        cacheDataPage);
+        throw new IllegalStateException(withErrorContext(
+                "Unexpected empty page " + cacheDataPage));
       }
       writeDataPage(cacheDataPage);
     }
@@ -358,7 +358,8 @@ public class IndexPageCache
       break;
     }
     default:
-      throw new RuntimeException("unknown update type " + upType);
+      throw new RuntimeException(withErrorContext(
+              "unknown update type " + upType));
     }
 
     boolean updateLast = (oldLastEntry != dpExtra._entryView.getLast());
@@ -406,13 +407,13 @@ public class IndexPageCache
     DataPageExtra dpExtra = cacheDataPage._extra;
 
     if(dpMain.hasChildTail()) {
-      throw new IllegalStateException("Still has child tail?");
+      throw new IllegalStateException(withErrorContext("Still has child tail?"));
     }
 
     if(dpExtra._totalEntrySize != 0) {
-      throw new IllegalStateException("Empty page but size is not 0? " +
-                                      dpExtra._totalEntrySize + ", " +
-                                      cacheDataPage);
+      throw new IllegalStateException(withErrorContext(
+              "Empty page but size is not 0? " + dpExtra._totalEntrySize + ", " +
+              cacheDataPage));
     }
     
     if(dpMain.isRoot()) {
@@ -536,21 +537,22 @@ public class IndexPageCache
       break;
     
     default:
-      throw new RuntimeException("unknown update type " + upType);
+      throw new RuntimeException(withErrorContext(
+              "unknown update type " + upType));
     }
         
     if(idx < 0) {
       if(expectFound) {
-        throw new IllegalStateException(
+        throw new IllegalStateException(withErrorContext(
             "Could not find child entry in parent; childEntry " + oldEntry +
-            "; parent " + parentDataPage);
+            "; parent " + parentDataPage));
       }
       idx = missingIndexToInsertionPoint(idx);
     } else {
       if(!expectFound) {
-        throw new IllegalStateException(
+        throw new IllegalStateException(withErrorContext(
             "Unexpectedly found child entry in parent; childEntry " +
-            newEntry + "; parent " + parentDataPage);
+            newEntry + "; parent " + parentDataPage));
       }
     }
     updateEntry(parentDataPage, idx, newEntry, upType);
@@ -596,11 +598,11 @@ public class IndexPageCache
    * @throws IllegalStateException if the entry type does not match the page
    *         type
    */
-  private static void validateEntryForPage(DataPageMain dpMain, Entry entry) {
+  private void validateEntryForPage(DataPageMain dpMain, Entry entry) {
     if(dpMain._leaf != entry.isLeafEntry()) {
-      throw new IllegalStateException(
+      throw new IllegalStateException(withErrorContext(
           "Trying to update page with wrong entry type; pageLeaf " +
-          dpMain._leaf + ", entryLeaf " + entry.isLeafEntry());
+          dpMain._leaf + ", entryLeaf " + entry.isLeafEntry()));
     }
   }
 
@@ -619,8 +621,8 @@ public class IndexPageCache
     
     int numEntries = origExtra._entries.size();
     if(numEntries < 2) {
-      throw new IllegalStateException(
-          "Cannot split page with less than 2 entries " + origDataPage);
+      throw new IllegalStateException(withErrorContext(
+              "Cannot split page with less than 2 entries " + origDataPage));
     }
     
     if(origMain.isRoot()) {
@@ -702,7 +704,8 @@ public class IndexPageCache
     DataPageExtra rootExtra = rootDataPage._extra;
 
     if(!rootMain.isRoot()) {
-      throw new IllegalArgumentException("should be called with root, duh");
+      throw new IllegalArgumentException(withErrorContext(
+              "should be called with root, duh"));
     }
     
     CacheDataPage newDataPage =
@@ -1000,20 +1003,21 @@ public class IndexPageCache
    *
    * @param dpExtra the entries to validate
    */
-  private static void validateEntries(DataPageExtra dpExtra) throws IOException {
+  private void validateEntries(DataPageExtra dpExtra) throws IOException {
     int entrySize = 0;
     Entry prevEntry = IndexData.FIRST_ENTRY;
     for(Entry e : dpExtra._entries) {
       entrySize += e.size();
       if(prevEntry.compareTo(e) >= 0) {
-        throw new IOException("Unexpected order in index entries, " +
-                              prevEntry + " >= " + e);
+        throw new IOException(withErrorContext(
+                "Unexpected order in index entries, " + prevEntry + " >= " + e));
       }
       prevEntry = e;
     }
     if(entrySize != dpExtra._totalEntrySize) {
-      throw new IllegalStateException("Expected size " + entrySize +
-                                      " but was " + dpExtra._totalEntrySize);
+      throw new IllegalStateException(withErrorContext(
+              "Expected size " + entrySize +
+              " but was " + dpExtra._totalEntrySize));
     }
   }
 
@@ -1028,12 +1032,14 @@ public class IndexPageCache
     int childTailPageNumber = dpMain._childTailPageNumber;
     if(dpMain._leaf) {
       if(childTailPageNumber != INVALID_INDEX_PAGE_NUMBER) {
-        throw new IllegalStateException("Leaf page has tail " + dpMain);
+        throw new IllegalStateException(withErrorContext(
+                "Leaf page has tail " + dpMain));
       }
       return;
     }
     if((dpExtra._entryView.size() == 1) && dpMain.hasChildTail()) {
-      throw new IllegalStateException("Single child is tail " + dpMain);
+      throw new IllegalStateException(withErrorContext(
+              "Single child is tail " + dpMain));
     }
     for(Entry e : dpExtra._entryView) {
       validateEntryForPage(dpMain, e);
@@ -1042,19 +1048,19 @@ public class IndexPageCache
       if(childMain != null) {
         if(childMain._parentPageNumber != null) {
           if(childMain._parentPageNumber != dpMain._pageNumber) {
-            throw new IllegalStateException("Child's parent is incorrect " +
-                                            childMain);
+            throw new IllegalStateException(withErrorContext(
+                    "Child's parent is incorrect " + childMain));
           }
-          boolean expectTail = ((int)subPageNumber == childTailPageNumber);
+          boolean expectTail = (subPageNumber == childTailPageNumber);
           if(expectTail != childMain._tail) {
-            throw new IllegalStateException("Child tail status incorrect " +
-                                            childMain);
+            throw new IllegalStateException(withErrorContext(
+                    "Child tail status incorrect " + childMain));
           }
         }
         Entry lastEntry = childMain.getExtra()._entryView.getLast();
         if(e.compareTo(lastEntry) != 0) {
-          throw new IllegalStateException("Invalid entry " + e +
-                                          " but child is " + lastEntry);
+          throw new IllegalStateException(withErrorContext(
+                  "Invalid entry " + e + " but child is " + lastEntry));
         }
       }
     }
@@ -1068,18 +1074,18 @@ public class IndexPageCache
   private void validatePeers(DataPageMain dpMain) throws IOException {
     DataPageMain prevMain = _dataPages.get(dpMain._prevPageNumber);
     if(prevMain != null) {
-      if((int)prevMain._nextPageNumber != dpMain._pageNumber) {
-        throw new IllegalStateException("Prev page " + prevMain +
-                                        " does not ref " + dpMain);
+      if(prevMain._nextPageNumber != dpMain._pageNumber) {
+        throw new IllegalStateException(withErrorContext(
+                "Prev page " + prevMain + " does not ref " + dpMain));
       }
       validatePeerStatus(dpMain, prevMain);
     }
     
     DataPageMain nextMain = _dataPages.get(dpMain._nextPageNumber);
     if(nextMain != null) {
-      if((int)nextMain._prevPageNumber != dpMain._pageNumber) {
-        throw new IllegalStateException("Next page " + nextMain +
-                                        " does not ref " + dpMain);
+      if(nextMain._prevPageNumber != dpMain._pageNumber) {
+        throw new IllegalStateException(withErrorContext(
+                "Next page " + nextMain + " does not ref " + dpMain));
       }
       validatePeerStatus(dpMain, nextMain);
     }
@@ -1091,20 +1097,20 @@ public class IndexPageCache
    * @param dpMain the index page
    * @param peerMain the peer index page
    */
-  private static void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
+  private void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
     throws IOException
   {
     if(dpMain._leaf != peerMain._leaf) {
-      throw new IllegalStateException("Mismatched peer status " +
-                                      dpMain._leaf + " " + peerMain._leaf);
+      throw new IllegalStateException(withErrorContext(
+              "Mismatched peer status " + dpMain._leaf + " " + peerMain._leaf));
     }
     if(!dpMain._leaf) {
       if((dpMain._parentPageNumber != null) &&
          (peerMain._parentPageNumber != null) &&
          ((int)dpMain._parentPageNumber != (int)peerMain._parentPageNumber)) {
-        throw new IllegalStateException("Mismatched node parents " +
-                                        dpMain._parentPageNumber + " " +
-                                        peerMain._parentPageNumber);
+        throw new IllegalStateException(withErrorContext(
+                "Mismatched node parents " + dpMain._parentPageNumber + " " +
+                peerMain._parentPageNumber));
       }
     }
   }
@@ -1112,7 +1118,7 @@ public class IndexPageCache
   /**
    * Collects all the cache pages in the cache.
    *
-   * @param paages the List to update
+   * @param pages the List to update
    * @param dpMain the index page to collect
    */
   private List<Object> collectPages(List<Object> pages, DataPageMain dpMain) {
@@ -1160,6 +1166,11 @@ public class IndexPageCache
     return sb.toString();
   }
 
+  private String withErrorContext(String msg) {
+    return _indexData.withErrorContext(msg);
+  }
+  
+
   /**
    * Keeps track of the main info for an index page.
    */
@@ -1193,11 +1204,11 @@ public class IndexPageCache
     }
 
     public boolean hasChildTail() {
-      return((int)_childTailPageNumber != INVALID_INDEX_PAGE_NUMBER);
+      return(_childTailPageNumber != INVALID_INDEX_PAGE_NUMBER);
     }
 
     public boolean isChildTailPageNumber(int pageNumber) {
-      return((int)_childTailPageNumber == pageNumber);
+      return(_childTailPageNumber == pageNumber);
     }
     
     public DataPageMain getParentPage() throws IOException
@@ -1278,7 +1289,8 @@ public class IndexPageCache
         // pages along the path
         findCacheDataPage(getExtra()._entryView.getLast());
         if(_parentPageNumber == null) {
-          throw new IllegalStateException("Parent was not resolved");
+          throw new IllegalStateException(withErrorContext(
+                  "Parent was not resolved"));
         }
       }
     }

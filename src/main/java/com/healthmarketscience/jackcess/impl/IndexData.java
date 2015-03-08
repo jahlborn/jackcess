@@ -144,6 +144,8 @@ public class IndexData {
     };
         
   
+  /** name, generated on demand */
+  private String _name;
   /** owning table */
   private final TableImpl _table;
   /** 0-based index data number */
@@ -212,6 +214,23 @@ public class IndexData {
     return new IndexData(table, number, uniqueEntryCount, uniqueEntryCountOffset);
   }
 
+  public String getName() {
+    if(_name == null) {
+      if(_indexes.size() == 1) {
+        _name = _indexes.get(0).getName();
+      } else if(!_indexes.isEmpty()) {
+        List<String> names = new ArrayList<String>(_indexes.size());
+        for(Index idx : _indexes) {
+          names.add(idx.getName());
+        }
+        _name = names.toString();
+      } else {
+        _name = String.valueOf(_number);
+      }
+    } 
+    return _name;
+  }
+
   public TableImpl getTable() {
     return _table;
   }
@@ -260,6 +279,9 @@ public class IndexData {
       // also, keep track of whether or not this is a primary key index
       _primaryKey |= index.isPrimaryKey();
     }
+
+    // force name to be regenerated
+    _name = null;
   }
 
   public byte getIndexFlags() {
@@ -323,9 +345,15 @@ public class IndexData {
     return _rootPageNumber;
   }
 
-  private void setUnsupportedReason(String reason) {
-    _unsupportedReason = reason;
-    LOG.warn(reason + ", making read-only");
+  private void setUnsupportedReason(String reason, ColumnImpl col) {    
+    _unsupportedReason = withErrorContext(reason);
+    if(!col.getTable().isSystem()) {
+      LOG.warn(_unsupportedReason + ", making read-only");
+    } else {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(_unsupportedReason + ", making read-only");
+      }
+    }
   }
 
   String getUnsupportedReason() {
@@ -429,8 +457,9 @@ public class IndexData {
           }
         }
         if(idxCol == null) {
-          throw new IOException("Could not find column with number "
-                                + columnNumber + " for index");
+          throw new IOException(withErrorContext(
+                  "Could not find column with number "
+                  + columnNumber + " for index"));
         }
         _columns.add(newColumnDescriptor(idxCol, colFlags));
       }
@@ -447,8 +476,8 @@ public class IndexData {
 
   /**
    * Writes the index row count definitions into a table definition buffer.
+   * @param creator description of the indexes to write
    * @param buffer Buffer to write to
-   * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeRowCountDefinitions(
       TableCreator creator, ByteBuffer buffer)
@@ -460,8 +489,8 @@ public class IndexData {
 
   /**
    * Writes the index definitions into a table definition buffer.
+   * @param creator description of the indexes to write
    * @param buffer Buffer to write to
-   * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeDefinitions(
       TableCreator creator, ByteBuffer buffer)
@@ -497,7 +526,9 @@ public class IndexData {
           if(columnNumber == COLUMN_UNUSED) {
             // should never happen as this is validated before
             throw new IllegalArgumentException(
-                "Column with name " + idxCol.getName() + " not found");
+                withErrorContext(
+                    "Column with name " + idxCol.getName() + " not found",
+                    creator.getDatabase(), creator.getName(), idx.getName()));
           }
         }
          
@@ -550,9 +581,9 @@ public class IndexData {
       return change;
     }
     if(isBackingPrimaryKey() && (nullCount > 0)) {
-      throw new ConstraintViolationException(
+      throw new ConstraintViolationException(withErrorContext(
           "Null value found in row " + Arrays.asList(row) +
-          " for primary key index " + this);
+          " for primary key index"));
     }
     
     // make sure we've parsed the entries
@@ -589,9 +620,9 @@ public class IndexData {
           ((prevPos != null) &&
            newEntry.equalsEntryBytes(prevPos.getEntry())));
       if(isUnique() && !isNullEntry && isDupeEntry) {
-        throw new ConstraintViolationException(
+        throw new ConstraintViolationException(withErrorContext(
             "New row " + Arrays.asList(row) +
-            " violates uniqueness constraint for index " + this);
+            " violates uniqueness constraint for index"));
       }
 
       change.setAddRow(newEntry, dataPage, idx, isDupeEntry);
@@ -617,7 +648,7 @@ public class IndexData {
       }
       ++_modCount;
     } else {
-      LOG.warn("Added duplicate index entry " + oldEntry);
+      LOG.warn(withErrorContext("Added duplicate index entry " + oldEntry));
     }
   }
 
@@ -682,8 +713,9 @@ public class IndexData {
     if(removedEntry != null) {
       ++_modCount;
     } else {
-      LOG.warn("Failed removing index entry " + oldEntry + " for row: " +
-               Arrays.asList(row));
+      LOG.warn(withErrorContext(
+          "Failed removing index entry " + oldEntry + " for row: " + 
+          Arrays.asList(row)));
     }
     return removedEntry;
   }
@@ -906,9 +938,9 @@ public class IndexData {
   public Object[] constructIndexRowFromEntry(Object... values)
   {
     if(values.length != _columns.size()) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Wrong number of column values given " + values.length +
-          ", expected " + _columns.size());
+          ", expected " + _columns.size()));
     }
     int valIdx = 0;
     Object[] idxRow = new Object[getTable().getColumnCount()];
@@ -978,7 +1010,7 @@ public class IndexData {
     throws IOException
   {
     if(dataPage.getCompressedEntrySize() > _maxPageEntrySize) {
-      throw new IllegalStateException("data page is too large");
+      throw new IllegalStateException(withErrorContext("data page is too large"));
     }
     
     ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
@@ -1082,8 +1114,9 @@ public class IndexData {
 
           Entry entry = newEntry(curEntryBuffer, curEntryLen, isLeaf);
           if(prevEntry.compareTo(entry) >= 0) {
-            throw new IOException("Unexpected order in index entries, " +
-                                  prevEntry + " >= " + entry);
+            throw new IOException(withErrorContext(
+                    "Unexpected order in index entries, " +
+                    prevEntry + " >= " + entry));
           }
           
           entries.add(entry);
@@ -1151,7 +1184,7 @@ public class IndexData {
   /**
    * Determines if the given index page is a leaf or node page.
    */
-  private static boolean isLeafPage(ByteBuffer buffer)
+  private boolean isLeafPage(ByteBuffer buffer)
     throws IOException
   {
     byte pageType = buffer.get(0);
@@ -1160,7 +1193,7 @@ public class IndexData {
     } else if(pageType == PageTypes.INDEX_NODE) {
       return false;
     }
-    throw new IOException("Unexpected page type " + pageType);
+    throw new IOException(withErrorContext("Unexpected page type " + pageType));
   }
   
   /**
@@ -1305,7 +1338,7 @@ public class IndexData {
       }
       // unsupported sort order
       setUnsupportedReason("unsupported collating sort order " + sortOrder +
-                           " for text index");
+                           " for text index", col);
       return new ReadOnlyColumnDescriptor(col, flags);
     case INT:
     case LONG:
@@ -1330,7 +1363,7 @@ public class IndexData {
     default:
       // we can't modify this index at this point in time
       setUnsupportedReason("unsupported data type " + col.getType() + 
-                           " for index");
+                           " for index", col);
       return new ReadOnlyColumnDescriptor(col, flags);
     }
   }
@@ -1338,8 +1371,7 @@ public class IndexData {
   /**
    * Returns the EntryType based on the given entry info.
    */
-  private static EntryType determineEntryType(byte[] entryBytes, 
-                                              RowIdImpl rowId)
+  private static EntryType determineEntryType(byte[] entryBytes, RowIdImpl rowId)
   {
     if(entryBytes != null) {
       return ((rowId.getType() == RowIdImpl.Type.NORMAL) ?
@@ -1367,6 +1399,17 @@ public class IndexData {
                          format.SIZE_INDEX_ENTRY_MASK));
     int entryMaskSize = (format.SIZE_INDEX_ENTRY_MASK * 8);
     return Math.min(pageDataSize, entryMaskSize);
+  }
+
+  String withErrorContext(String msg) {
+    return withErrorContext(msg, getTable().getDatabase(), getTable().getName(),
+                            getName());
+  }
+
+  private static String withErrorContext(String msg, DatabaseImpl db,
+                                         String tableName, String idxName) {
+    return msg + " (Db=" + db.getName() + ";Table=" + tableName +
+      ";Index=" + idxName + ")";
   }
   
   /**
@@ -2227,7 +2270,8 @@ public class IndexData {
         } else if(_lastPos.equalsEntry(entry)) {
           return _lastPos;
         } else {
-          throw new IllegalArgumentException("Invalid entry given " + entry);
+          throw new IllegalArgumentException(
+              withErrorContext("Invalid entry given " + entry));
         }
       }
       

@@ -98,8 +98,8 @@ class LongValueColumnImpl extends ColumnImpl
       }
       return null;
     default:
-      throw new RuntimeException("unexpected var length, long value type: " +
-                                 getType());
+      throw new RuntimeException(withErrorContext(
+              "unexpected var length, long value type: " + getType()));
     }    
   }
 
@@ -116,8 +116,8 @@ class LongValueColumnImpl extends ColumnImpl
       obj = encodeTextValue(obj, 0, getMaxLengthInUnits(), false).array();
       break;
     default:
-      throw new RuntimeException("unexpected var length, long value type: " +
-                                 getType());
+      throw new RuntimeException(withErrorContext(
+              "unexpected var length, long value type: " + getType()));
     }    
 
     // create long value buffer
@@ -147,8 +147,9 @@ class LongValueColumnImpl extends ColumnImpl
       int rowLen = def.remaining();
       if(rowLen < length) {
         // warn the caller, but return whatever we can
-        LOG.warn(getName() + " value may be truncated: expected length " + 
-                 length + " found " + rowLen);
+        LOG.warn(withErrorContext(
+                "Value may be truncated: expected length " + 
+                length + " found " + rowLen));
         rtn = new byte[rowLen];
       }
 
@@ -158,9 +159,10 @@ class LongValueColumnImpl extends ColumnImpl
 
       // long value on other page(s)
       if (lvalDefinition.length != getFormat().SIZE_LONG_VALUE_DEF) {
-        throw new IOException("Expected " + getFormat().SIZE_LONG_VALUE_DEF +
-                              " bytes in long value definition, but found " +
-                              lvalDefinition.length);
+        throw new IOException(withErrorContext(
+                "Expected " + getFormat().SIZE_LONG_VALUE_DEF +
+                " bytes in long value definition, but found " +
+                lvalDefinition.length));
       }
 
       int rowNum = ByteUtil.getUnsignedByte(def);
@@ -178,8 +180,9 @@ class LongValueColumnImpl extends ColumnImpl
           int rowLen = rowEnd - rowStart;
           if(rowLen < length) {
             // warn the caller, but return whatever we can
-            LOG.warn(getName() + " value may be truncated: expected length " + 
-                     length + " found " + rowLen);
+            LOG.warn(withErrorContext(
+                    "Value may be truncated: expected length " + 
+                    length + " found " + rowLen));
             rtn = new byte[rowLen];
           }
         
@@ -219,7 +222,8 @@ class LongValueColumnImpl extends ColumnImpl
         break;
         
       default:
-        throw new IOException("Unrecognized long value type: " + type);
+        throw new IOException(withErrorContext(
+                "Unrecognized long value type: " + type));
       }
     }
     
@@ -255,9 +259,9 @@ class LongValueColumnImpl extends ColumnImpl
     throws IOException
   {
     if(value.length > getType().getMaxSize()) {
-      throw new IOException("value too big for column, max " +
-                            getType().getMaxSize() + ", got " +
-                            value.length);
+      throw new IOException(withErrorContext(
+              "value too big for column, max " +
+              getType().getMaxSize() + ", got " + value.length));
     }
 
     // determine which type to write
@@ -357,7 +361,8 @@ class LongValueColumnImpl extends ColumnImpl
         break;
 
       default:
-        throw new IOException("Unrecognized long value type: " + type);
+        throw new IOException(withErrorContext(
+                "Unrecognized long value type: " + type));
       }
 
       // update def

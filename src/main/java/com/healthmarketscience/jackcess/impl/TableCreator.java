@@ -65,6 +65,14 @@ class TableCreator
                 Collections.<IndexBuilder>emptyList());
   }
 
+  public String getName() {
+    return _name;
+  }
+
+  public DatabaseImpl getDatabase() {
+    return _database;
+  }
+
   public JetFormat getFormat() {
     return _database.getFormat();
   }

@@ -282,7 +282,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     try {
       args.type = DataType.fromByte(colType);
     } catch(IOException e) {
-      LOG.warn("Unsupported column type " + colType);
+      LOG.warn(withErrorContext("Unsupported column type " + colType,
+                                table.getDatabase(), table.getName(), name));
       boolean variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
       args.type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
                    DataType.UNSUPPORTED_FIXEDLEN);
@@ -496,8 +497,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // cannot set autonumber validator (autonumber values are controlled
       // internally)
       if(newValidator != null) {
-        throw new IllegalArgumentException(
-            "Cannot set ColumnValidator for autonumber columns");
+        throw new IllegalArgumentException(withErrorContext(
+                "Cannot set ColumnValidator for autonumber columns"));
       }
       // just leave default validator instance alone
       return;
@@ -530,7 +531,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case COMPLEX_TYPE:
       return new ComplexTypeAutoNumberGenerator();
     default:
-      LOG.warn("Unknown auto number column type " + _type);
+      LOG.warn(withErrorContext("Unknown auto number column type " + _type));
       return new UnsupportedAutoNumberGenerator(_type);
     }
   }
@@ -603,7 +604,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     switch(getType()) {
     case BOOLEAN:
-      throw new IOException("Tried to read a boolean from data instead of null mask.");
+      throw new IOException(withErrorContext("Tried to read a boolean from data instead of null mask."));
     case BYTE:
       return Byte.valueOf(buffer.get());
     case INT:
@@ -633,7 +634,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case COMPLEX_TYPE:
       return new ComplexValueForeignKeyImpl(this, buffer.getInt());
     default:
-      throw new IOException("Unrecognized data type: " + _type);
+      throw new IOException(withErrorContext("Unrecognized data type: " + _type));
     }
   }
 
@@ -644,11 +645,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @return BigDecimal representing the monetary value
    * @throws IOException if the value cannot be parsed 
    */
-  private static BigDecimal readCurrencyValue(ByteBuffer buffer)
+  private BigDecimal readCurrencyValue(ByteBuffer buffer)
     throws IOException
   {
     if(buffer.remaining() != 8) {
-      throw new IOException("Invalid money value.");
+      throw new IOException(withErrorContext("Invalid money value"));
     }
     
     return new BigDecimal(BigInteger.valueOf(buffer.getLong(0)), 4);
@@ -735,9 +736,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
       // check precision
       if(decVal.precision() > getPrecision()) {
-        throw new IOException(
+        throw new IOException(withErrorContext(
             "Numeric value is too big for specified precision "
-            + getPrecision() + ": " + decVal);
+            + getPrecision() + ": " + decVal));
       }
     
       // convert to unscaled BigInteger, big-endian bytes
@@ -754,7 +755,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
   }
 
-  static byte[] toUnscaledByteArray(BigDecimal decVal, int maxByteLen)
+  byte[] toUnscaledByteArray(BigDecimal decVal, int maxByteLen)
     throws IOException
   {
     // convert to unscaled BigInteger, big-endian bytes
@@ -766,7 +767,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         // with unsigned values, so we can drop the extra leading 0
         intValBytes = ByteUtil.copyOf(intValBytes, 1, maxByteLen);
       } else {
-        throw new IOException("Too many bytes for valid BigInteger?");
+        throw new IOException(withErrorContext(
+                                  "Too many bytes for valid BigInteger?"));
       }
     } else if(intValBytes.length < maxByteLen) {
       intValBytes = ByteUtil.copyOf(intValBytes, 0, maxByteLen, 
@@ -910,12 +912,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Writes a GUID value.
    */
-  private static void writeGUIDValue(ByteBuffer buffer, Object value)
+  private void writeGUIDValue(ByteBuffer buffer, Object value)
     throws IOException
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
     if(!m.matches()) {
-      throw new IOException("Invalid GUID: " + value);
+      throw new IOException(withErrorContext("Invalid GUID: " + value));
     }
 
     ByteBuffer origBuffer = null;
@@ -1017,8 +1019,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // should already be "encoded"
       break;
     default:
-      throw new RuntimeException("unexpected inline var length type: " +
-                                 getType());
+      throw new RuntimeException(withErrorContext(
+              "unexpected inline var length type: " + getType()));
     }
 
     ByteBuffer buffer = ByteBuffer.wrap(toByteArray(obj)).order(order);
@@ -1099,13 +1101,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
       if(bytes.length != getLength()) {
-        throw new IOException("Invalid fixed size binary data, size "
-                              + getLength() + ", got " + bytes.length);
+        throw new IOException(withErrorContext(
+                                  "Invalid fixed size binary data, size "
+                                  + getLength() + ", got " + bytes.length));
       }
       buffer.put(bytes);
       break;
     default:
-      throw new IOException("Unsupported data type: " + getType());
+      throw new IOException(withErrorContext(
+                                "Unsupported data type: " + getType()));
     }
     return buffer;
   }
@@ -1205,9 +1209,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     CharSequence text = toCharSequence(obj);
     if((text.length() > maxChars) || (text.length() < minChars)) {
-      throw new IOException("Text is wrong length for " + getType() +
+      throw new IOException(withErrorContext(
+                            "Text is wrong length for " + getType() +
                             " column, max " + maxChars
-                            + ", min " + minChars + ", got " + text.length());
+                            + ", min " + minChars + ", got " + text.length()));
     }
     
     // may only compress if column type allows it
@@ -1757,6 +1762,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // some variation of binary data
       return toByteArray(value);
     }
+  }
+
+  String withErrorContext(String msg) {
+    return withErrorContext(msg, getDatabase(), getTable().getName(), getName());
+  }
+
+  private static String withErrorContext(
+      String msg, DatabaseImpl db, String tableName, String colName) {
+    return msg + " (Db=" + db.getName() + ";Table=" + tableName + ";Column=" + 
+      colName + ")";
   }
 
   /**

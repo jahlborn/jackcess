@@ -176,8 +176,8 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
         _reference.getOtherTablePageNumber());
 
     if(refTable == null) {
-      throw new IOException("Reference to missing table " + 
-                            _reference.getOtherTablePageNumber());
+      throw new IOException(withErrorContext(
+              "Reference to missing table " + _reference.getOtherTablePageNumber()));
     }
 
     IndexImpl refIndex = null;
@@ -190,8 +190,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     }
     
     if(refIndex == null) {
-      throw new IOException("Reference to missing index " + idxNumber + 
-                            " on table " + refTable.getName());
+      throw new IOException(withErrorContext(
+              "Reference to missing index " + idxNumber + 
+              " on table " + refTable.getName()));
     }
 
     // finally verify that we found the expected index (should reference this
@@ -201,9 +202,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
        (otherRef.getOtherTablePageNumber() != 
         getTable().getTableDefPageNumber()) ||
        (otherRef.getOtherIndexNumber() != _indexNumber)) {
-      throw new IOException("Found unexpected index " + refIndex.getName() +
-                            " on table " + refTable.getName() +
-                            " with reference " + otherRef);
+      throw new IOException(withErrorContext(
+              "Found unexpected index " + refIndex.getName() +
+              " on table " + refTable.getName() + " with reference " + otherRef));
     }
 
     return refIndex;
@@ -335,8 +336,8 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
   /**
    * Writes the logical index definitions into a table definition buffer.
+   * @param creator description of the indexes to write
    * @param buffer Buffer to write to
-   * @param indexes List of IndexBuilders to write definitions for
    */
   protected static void writeDefinitions(
       TableCreator creator, ByteBuffer buffer)
@@ -362,6 +363,16 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
       TableImpl.writeName(buffer, idx.getName(), creator.getCharset());
     }
   }
+
+  private String withErrorContext(String msg) {
+    return withErrorContext(msg, getTable().getDatabase(), getName());
+  }
+
+  private static String withErrorContext(String msg, DatabaseImpl db,
+                                         String idxName) {
+    return msg + " (Db=" + db.getName() + ";Index=" + idxName + ")";
+  }
+  
 
   /**
    * Information about a foreign key reference defined in an index (when

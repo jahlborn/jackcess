@@ -55,9 +55,7 @@ class CalculatedColumnUtil
    * Creates the appropriate ColumnImpl class for a calculated column and
    * reads a column definition in from a buffer
    * 
-   * @param table owning table
-   * @param buffer Buffer containing column definition
-   * @param offset Offset in the buffer at which the column definition starts
+   * @param args column construction info
    * @usage _advanced_method_
    */
   static ColumnImpl create(ColumnImpl.InitArgs args) throws IOException
@@ -333,9 +331,9 @@ class CalculatedColumnUtil
         
         // check precision
         if(decVal.precision() > getType().getMaxPrecision()) {
-          throw new IOException(
+          throw new IOException(withErrorContext(
               "Numeric value is too big for specified precision "
-              + getType().getMaxPrecision() + ": " + decVal);
+              + getType().getMaxPrecision() + ": " + decVal));
         }
     
         // convert to unscaled BigInteger, big-endian bytes

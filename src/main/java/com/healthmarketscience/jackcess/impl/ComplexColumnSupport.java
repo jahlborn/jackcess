@@ -74,16 +74,16 @@ public class ComplexColumnSupport
     IndexCursor cursor = CursorBuilder.createCursor(
         complexColumns.getPrimaryKeyIndex());
     if(!cursor.findFirstRowByEntry(complexTypeId)) {
-      throw new IOException(
+      throw new IOException(column.withErrorContext(
           "Could not find complex column info for complex column with id " +
-          complexTypeId);
+          complexTypeId));
     }
     Row cColRow = cursor.getCurrentRow();
     int tableId = cColRow.getInt(COL_TABLE_ID);
     if(tableId != column.getTable().getTableDefPageNumber()) {
-      throw new IOException(
+      throw new IOException(column.withErrorContext(
           "Found complex column for table " + tableId + " but expected table " +
-          column.getTable().getTableDefPageNumber());
+          column.getTable().getTableDefPageNumber()));
     }
     int flatTableId = cColRow.getInt(COL_FLAT_TABLE_ID);
     int typeObjId = cColRow.getInt(COL_COMPLEX_TYPE_OBJECT_ID);
@@ -92,9 +92,9 @@ public class ComplexColumnSupport
     TableImpl flatTable = db.getTable(flatTableId);
 
     if((typeObjTable == null) || (flatTable == null)) {
-      throw new IOException(
+      throw new IOException(column.withErrorContext(
           "Could not find supporting tables (" + typeObjId + ", " + flatTableId
-          + ") for complex column with id " + complexTypeId);
+          + ") for complex column with id " + complexTypeId));
     }
     
     // we inspect the structore of the "type table" to determine what kind of
@@ -110,9 +110,10 @@ public class ComplexColumnSupport
                                           flatTable);
     }
     
-    LOG.warn("Unsupported complex column type " + typeObjTable.getName());
+    LOG.warn(column.withErrorContext(
+                 "Unsupported complex column type " + typeObjTable.getName()));
     return new UnsupportedColumnInfoImpl(column, complexTypeId, typeObjTable,
-                                     flatTable);
+                                         flatTable);
   }
 
 

@@ -78,7 +78,8 @@ public abstract class QueryImpl implements Query
       short foundType = getShortValue(getQueryType(rows),
                                       _type.getValue());
       if(foundType != _type.getValue()) {
-        throw new IllegalStateException("Unexpected query type " + foundType);
+        throw new IllegalStateException(withErrorContext(
+                "Unexpected query type " + foundType));
       }
     }
   }
@@ -189,7 +190,8 @@ public abstract class QueryImpl implements Query
         @Override protected void format(StringBuilder builder, Row row) {
           String typeName = PARAM_TYPE_MAP.get(row.flag);
           if(typeName == null) {
-            throw new IllegalStateException("Unknown param type " + row.flag);
+            throw new IllegalStateException(withErrorContext(
+                "Unknown param type " + row.flag));
           }
               
           builder.append(row.name1).append(' ').append(typeName);
@@ -255,7 +257,8 @@ public abstract class QueryImpl implements Query
         Join toExpr = getJoinExpr(toTable, joinExprs);
         String joinType = JOIN_TYPE_MAP.get(join.flag);
         if(joinType == null) {
-            throw new IllegalStateException("Unknown join type " + join.flag);
+          throw new IllegalStateException(withErrorContext(
+                "Unknown join type " + join.flag));
         }
 
         String expr = new StringBuilder().append(fromExpr)
@@ -275,7 +278,7 @@ public abstract class QueryImpl implements Query
     return result;
   }
 
-  private static Join getJoinExpr(String table, List<Join> joinExprs)
+  private Join getJoinExpr(String table, List<Join> joinExprs)
   {
     for(Iterator<Join> iter = joinExprs.iterator(); iter.hasNext(); ) {
       Join joinExpr = iter.next();
@@ -284,10 +287,11 @@ public abstract class QueryImpl implements Query
         return joinExpr;
       }
     }
-    throw new IllegalStateException("Cannot find join table " + table);
+    throw new IllegalStateException(withErrorContext(
+            "Cannot find join table " + table));
   }
 
-  private static Collection<List<Row>> combineJoins(List<Row> joins)
+  private Collection<List<Row>> combineJoins(List<Row> joins)
   {
     // combine joins with the same to/from tables
     Map<List<String>,List<Row>> comboJoinMap = 
@@ -299,9 +303,9 @@ public abstract class QueryImpl implements Query
         comboJoins = new ArrayList<Row>();
         comboJoinMap.put(key, comboJoins);
       } else {
-        if((short)comboJoins.get(0).flag != join.flag) {
-          throw new IllegalStateException(
-              "Mismatched join flags for combo joins");
+        if(comboJoins.get(0).flag != join.flag) {
+          throw new IllegalStateException(withErrorContext(
+              "Mismatched join flags for combo joins"));
         }
       }
       comboJoins.add(join);
@@ -417,18 +421,18 @@ public abstract class QueryImpl implements Query
         return new UnionQueryImpl(name, rows, objectId, objectFlag);
       default:
         // unknown querytype
-        throw new IllegalStateException(
-            "unknown query object flag " + typeFlag);
+        throw new IllegalStateException(withErrorContext(
+                "unknown query object flag " + typeFlag, name));
       }
     } catch(IllegalStateException e) {
-      LOG.warn("Failed parsing query", e);
+      LOG.warn(withErrorContext("Failed parsing query", name), e);
     }
 
     // return unknown query
     return new UnknownQueryImpl(name, rows, objectId, objectFlag);
   }
 
-  private static Short getQueryType(List<Row> rows)
+  private Short getQueryType(List<Row> rows)
   {
     return getUniqueRow(getRowsByAttribute(rows, TYPE_ATTRIBUTE)).flag;
   }
@@ -443,14 +447,15 @@ public abstract class QueryImpl implements Query
     return result;
   }
 
-  protected static Row getUniqueRow(List<Row> rows) {
+  protected Row getUniqueRow(List<Row> rows) {
     if(rows.size() == 1) {
       return rows.get(0);
     }
     if(rows.isEmpty()) {
       return EMPTY_ROW;
     }
-    throw new IllegalStateException("Unexpected number of rows for" + rows);
+    throw new IllegalStateException(withErrorContext(
+            "Unexpected number of rows for" + rows));
   }
 
   protected static List<Row> filterRowsByFlag(
@@ -544,6 +549,15 @@ public abstract class QueryImpl implements Query
     }
     return builder;
   }
+
+  private String withErrorContext(String msg) {
+    return withErrorContext(msg, getName());
+  }
+
+  private static String withErrorContext(String msg, String queryName) {
+    return msg + " (Query: " + queryName + ")";
+  }
+
 
   private static final class UnknownQueryImpl extends QueryImpl
   {

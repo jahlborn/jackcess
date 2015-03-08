@@ -257,6 +257,8 @@ public class DatabaseImpl implements Database
   
   /** the File of the database */
   private final File _file;
+  /** the simple name of the database */
+  private final String _name;
   /** Buffer to hold database pages */
   private ByteBuffer _buffer;
   /** ID of the Tables system object */
@@ -388,12 +390,12 @@ public class DatabaseImpl implements Database
 
         if(jetFormat.READ_ONLY) {
           throw new IOException("jet format '" + jetFormat +
-                                "' does not support writing");
+                                "' does not support writing for " + mdbFile);
         }
       }
 
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
-                                 null, charset, timeZone, provider);
+                                         null, charset, timeZone, provider);
       success = true;
       return db;
 
@@ -433,7 +435,7 @@ public class DatabaseImpl implements Database
     FileFormatDetails details = getFileFormatDetails(fileFormat);
     if (details.getFormat().READ_ONLY) {
       throw new IOException("file format " + fileFormat +       
-                            " does not support writing");
+                            " does not support writing for " + mdbFile);
     }
 
     boolean closeChannel = false;
@@ -504,6 +506,7 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     _file = file;
+    _name = getName(file);
     _format = JetFormat.getFormat(channel);
     _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
     _columnOrder = getDefaultColumnOrder();
@@ -524,6 +527,10 @@ public class DatabaseImpl implements Database
 
   public File getFile() {
     return _file;
+  }
+
+  public String getName() {
+    return _name;
   }
 
   /**
@@ -554,12 +561,7 @@ public class DatabaseImpl implements Database
    */
   public TableImpl getAccessControlEntries() throws IOException {
     if(_accessControlEntries == null) {
-      _accessControlEntries = getSystemTable(TABLE_SYSTEM_ACES);
-      if(_accessControlEntries == null) {
-        throw new IOException("Could not find system table " +
-                              TABLE_SYSTEM_ACES);
-      }
-
+      _accessControlEntries = getRequiredSystemTable(TABLE_SYSTEM_ACES);
     }
     return _accessControlEntries;
   }
@@ -570,11 +572,7 @@ public class DatabaseImpl implements Database
    */
   public TableImpl getSystemComplexColumns() throws IOException {
     if(_complexCols == null) {
-      _complexCols = getSystemTable(TABLE_SYSTEM_COMPLEX_COLS);
-      if(_complexCols == null) {
-        throw new IOException("Could not find system table " +
-                              TABLE_SYSTEM_COMPLEX_COLS);
-      }
+      _complexCols = getRequiredSystemTable(TABLE_SYSTEM_COMPLEX_COLS);
     }
     return _complexCols;
   }
@@ -735,7 +733,8 @@ public class DatabaseImpl implements Database
         _fileFormat = possibleFileFormats.get(accessVersion);
         
         if(_fileFormat == null) {
-          throw new IllegalStateException("Could not determine FileFormat");
+          throw new IllegalStateException(withErrorContext(
+                  "Could not determine FileFormat"));
         }
       }
     }
@@ -839,8 +838,11 @@ public class DatabaseImpl implements Database
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toIndexCursor());
     } catch(IllegalArgumentException e) {
-      LOG.info("Could not find expected index on table " + 
-               _systemCatalog.getName());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(withErrorContext(
+                "Could not find expected index on table " +
+                _systemCatalog.getName()));
+      }
       // use table scan instead
       _tableFinder = new FallbackTableFinder(
           _systemCatalog.newCursor()
@@ -852,11 +854,13 @@ public class DatabaseImpl implements Database
                                                SYSTEM_OBJECT_NAME_TABLES);
 
     if(_tableParentId == null) {  
-      throw new IOException("Did not find required parent table id");
+      throw new IOException(withErrorContext(
+              "Did not find required parent table id"));
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished reading system catalog.  Tables: " + getTableNames());
+      LOG.debug(withErrorContext(
+          "Finished reading system catalog.  Tables: " + getTableNames()));
     }
   }
   
@@ -996,8 +1000,8 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     if(lookupTable(name) != null) {
-      throw new IllegalArgumentException(
-          "Cannot create table with name of existing table");
+      throw new IllegalArgumentException(withErrorContext(
+              "Cannot create table with name of existing table '" + name + "'"));
     }
 
     new TableCreator(this, name, columns, indexes).createTable();
@@ -1008,8 +1012,9 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     if(lookupTable(name) != null) {
-      throw new IllegalArgumentException(
-          "Cannot create linked table with name of existing table");
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot create linked table with name of existing table '" + name +   
+          "'"));
     }
 
     validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
@@ -1060,7 +1065,8 @@ public class DatabaseImpl implements Database
   {
     int nameCmp = table1.getName().compareTo(table2.getName());
     if(nameCmp == 0) {
-      throw new IllegalArgumentException("Must provide two different tables");
+      throw new IllegalArgumentException(withErrorContext(
+              "Must provide two different tables"));
     }
     if(nameCmp > 0) {
       // we "order" the two tables given so that we will return a collection
@@ -1078,7 +1084,7 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     if(table == null) {
-      throw new IllegalArgumentException("Must provide a table");
+      throw new IllegalArgumentException(withErrorContext("Must provide a table"));
     }
     // since we are getting relationships specific to certain table include
     // all tables
@@ -1103,10 +1109,7 @@ public class DatabaseImpl implements Database
   {
     // the relationships table does not get loaded until first accessed
     if(_relationships == null) {
-      _relationships = getSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
-      if(_relationships == null) {
-        throw new IOException("Could not find system relationships table");
-      }
+      _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
     }
 
     List<Relationship> relationships = new ArrayList<Relationship>();
@@ -1132,10 +1135,7 @@ public class DatabaseImpl implements Database
   {
     // the queries table does not get loaded until first accessed
     if(_queries == null) {
-      _queries = getSystemTable(TABLE_SYSTEM_QUERIES);
-      if(_queries == null) {
-        throw new IOException("Could not find system queries table");
-      }
+      _queries = getRequiredSystemTable(TABLE_SYSTEM_QUERIES);
     }
 
     // find all the queries from the system catalog
@@ -1159,8 +1159,9 @@ public class DatabaseImpl implements Database
       QueryImpl.Row queryRow = new QueryImpl.Row(row);
       List<QueryImpl.Row> queryRows = queryRowMap.get(queryRow.objectId);
       if(queryRows == null) {
-        LOG.warn("Found rows for query with id " + queryRow.objectId +
-                 " missing from system catalog");
+        LOG.warn(withErrorContext(
+                     "Found rows for query with id " + queryRow.objectId +
+                     " missing from system catalog"));
         continue;
       }
       queryRows.add(queryRow);
@@ -1182,6 +1183,16 @@ public class DatabaseImpl implements Database
   public TableImpl getSystemTable(String tableName) throws IOException
   {
     return getTable(tableName, true);
+  }
+
+  private TableImpl getRequiredSystemTable(String tableName) throws IOException
+  {
+    TableImpl table = getSystemTable(tableName);
+    if(table == null) { 
+      throw new IOException(withErrorContext(
+              "Could not find system table " + tableName));
+    } 
+    return table;
   }
 
   public PropertyMap getDatabaseProperties() throws IOException {
@@ -1234,7 +1245,8 @@ public class DatabaseImpl implements Database
       _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
                                               SYSTEM_OBJECT_NAME_DATABASES);
       if(_dbParentId == null) {  
-        throw new IOException("Did not find required parent db id");
+        throw new IOException(withErrorContext(
+                "Did not find required parent db id"));
       }
     }
 
@@ -1483,9 +1495,9 @@ public class DatabaseImpl implements Database
       _pageChannel.readPage(buffer, pageNumber);
       byte pageType = buffer.get(0);
       if (pageType != PageTypes.TABLE_DEF) {
-        throw new IOException(
+        throw new IOException(withErrorContext(
             "Looking for " + name + " at page " + pageNumber +
-            ", but page type is " + pageType);
+            ", but page type is " + pageType));
       }
       return _tableCache.put(
           new TableImpl(this, buffer, pageNumber, name, flags));
@@ -1498,7 +1510,7 @@ public class DatabaseImpl implements Database
    * Creates a Cursor restricted to the given column value if possible (using
    * an existing index), otherwise a simple table cursor.
    */
-  private static Cursor createCursorWithOptionalIndex(
+  private Cursor createCursorWithOptionalIndex(
       TableImpl table, String colName, Object colValue)
     throws IOException
   {
@@ -1508,7 +1520,10 @@ public class DatabaseImpl implements Database
         .setSpecificEntry(colValue)
         .toCursor();
     } catch(IllegalArgumentException e) {
-      LOG.info("Could not find expected index on table " + table.getName());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(withErrorContext(
+            "Could not find expected index on table " + table.getName()));
+      } 
     }
     // use table scan instead
     return CursorImpl.createCursor(table);
@@ -1556,13 +1571,14 @@ public class DatabaseImpl implements Database
     // additional identifier validation
     if(INVALID_IDENTIFIER_CHARS.matcher(name).find()) {
       throw new IllegalArgumentException(
-          identifierType + " name contains invalid characters");
+          identifierType + " name '" + name + "' contains invalid characters");
     }
 
     // cannot start with spaces
     if(name.charAt(0) == ' ') {
       throw new IllegalArgumentException(
-          identifierType + " name cannot start with a space character");
+          identifierType + " name '" + name +
+          "' cannot start with a space character");
     }
   }
 
@@ -1818,6 +1834,21 @@ public class DatabaseImpl implements Database
     FILE_FORMAT_DETAILS.put(fileFormat, new FileFormatDetails(emptyFile, format));
   }
 
+  private static String getName(File file) {
+    if(file == null) {
+      return "<UNKNOWN.DB>";
+    } 
+    return file.getName();
+  }
+
+  private String withErrorContext(String msg) {
+    return withErrorContext(msg, getName());
+  }
+
+  private static String withErrorContext(String msg, String dbName) {
+    return msg + " (Db=" + dbName + ")";
+  }
+
   /**
    * Utility class for storing table page number and actual name.
    */
@@ -1989,7 +2020,8 @@ public class DatabaseImpl implements Database
       int maxSynthId = findMaxSyntheticId();
       if(maxSynthId >= -1) {
         // bummer, no more ids available
-        throw new IllegalStateException("Too many database objects!");
+        throw new IllegalStateException(withErrorContext(
+                "Too many database objects!"));
       }
       return maxSynthId + 1;
     }
