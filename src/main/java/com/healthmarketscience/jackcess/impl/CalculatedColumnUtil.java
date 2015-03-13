@@ -351,7 +351,8 @@ class CalculatedColumnUtil
 
       } catch(ArithmeticException e) {
         throw (IOException)
-          new IOException("Numeric value '" + inValue + "' out of range")
+          new IOException(withErrorContext(
+              "Numeric value '" + inValue + "' out of range"))
           .initCause(e);
       }
     }

@@ -658,7 +658,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Writes "Currency" values.
    */
-  private static void writeCurrencyValue(ByteBuffer buffer, Object value)
+  private void writeCurrencyValue(ByteBuffer buffer, Object value)
     throws IOException
   {
     Object inValue = value;
@@ -675,7 +675,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.putLong(decVal.movePointRight(4).longValueExact());
     } catch(ArithmeticException e) {
       throw (IOException)
-        new IOException("Currency value '" + inValue + "' out of range")
+        new IOException(withErrorContext(
+                "Currency value '" + inValue + "' out of range"))
         .initCause(e);
     }
   }
@@ -750,7 +751,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       buffer.put(intValBytes);
     } catch(ArithmeticException e) {
       throw (IOException)
-        new IOException("Numeric value '" + inValue + "' out of range")
+        new IOException(withErrorContext(
+                "Numeric value '" + inValue + "' out of range"))
         .initCause(e);
     }
   }
