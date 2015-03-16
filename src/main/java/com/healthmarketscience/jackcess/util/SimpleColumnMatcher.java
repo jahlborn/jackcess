@@ -21,6 +21,7 @@ USA
 package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
@@ -45,7 +46,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {
-    if(ObjectUtils.equals(value1, value2)) {
+    if(equals(value1, value2)) {
       return true;
     }
 
@@ -59,12 +60,23 @@ public class SimpleColumnMatcher implements ColumnMatcher {
         Object internalV1 = ColumnImpl.toInternalValue(dataType, value1);
         Object internalV2 = ColumnImpl.toInternalValue(dataType, value2);
         
-        return ObjectUtils.equals(internalV1, internalV2);
+        return equals(internalV1, internalV2);
       } catch(IOException e) {
         // ignored, just go with the original result
       }
     }
     return false;
+  }
+
+  /**
+   * Returns {@code true} if the two objects are equal, handling {@code null}
+   * and objects of type {@code byte[]}.
+   */
+  private static boolean equals(Object o1, Object o2)
+  {
+    return (ObjectUtils.equals(o1, o2) || 
+            ((o1 instanceof byte[]) && (o2 instanceof byte[]) &&
+             Arrays.equals((byte[])o1, (byte[])o2)));
   }
 
 }

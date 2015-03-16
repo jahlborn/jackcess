@@ -1314,6 +1314,71 @@ public class IndexData {
   }    
 
   /**
+   * Writes a binary value using the general binary entry encoding rules.
+   */
+  private static void writeGeneralBinaryEntry(byte[] valueBytes, boolean isAsc,
+                                              ByteStream bout)
+  {
+    int dataLen = valueBytes.length;
+    int extraLen = (dataLen + 7) / 8;
+    int entryLen = ((dataLen + extraLen + 8) / 9) * 9;
+
+    // reserve space for the full entry
+    bout.ensureNewCapacity(entryLen);
+
+    // binary data is written in 8 byte segments with a trailing length byte.
+    // The length byte is the amount of valid bytes in the segment (where 9
+    // indicates that there is more data _after_ this segment).
+    byte[] partialEntryBytes = new byte[9];
+
+    // bit twiddling rules:
+    // - isAsc  => nothing
+    // - !isAsc => flipBytes, _but keep intermediate 09 unflipped_!      
+
+    // first, write any intermediate segements
+    int segmentLen = dataLen;
+    int pos = 0;
+    while(segmentLen > 8) {
+
+      System.arraycopy(valueBytes, pos, partialEntryBytes, 0, 8);
+      if(!isAsc) {
+        // note, we do _not_ flip the length byte for intermediate segments
+        flipBytes(partialEntryBytes, 0, 8);
+      }
+
+      // we are writing intermediate segments (there is more data after this
+      // segment), so the length is always 9.
+      partialEntryBytes[8] = (byte)9;
+
+      pos += 8;
+      segmentLen -= 8;
+
+      bout.write(partialEntryBytes);
+    }
+
+    // write the last segment (with slightly different rules)
+    if(segmentLen > 0) {
+
+      System.arraycopy(valueBytes, pos, partialEntryBytes, 0, segmentLen);
+
+      // clear out an intermediate bytes between the real data and the final
+      // length byte
+      for(int i = segmentLen; i < 8; ++i) {
+        partialEntryBytes[i] = 0;
+      }
+
+      partialEntryBytes[8] = (byte)segmentLen;
+
+      if(!isAsc) {
+        // note, we _do_ flip the last length byte
+        flipBytes(partialEntryBytes, 0, 9);
+      }
+
+      bout.write(partialEntryBytes);
+    }
+  }
+
+  /**
    * Creates one of the special index entries.
    */
   private static Entry createSpecialEntry(RowIdImpl rowId) {
@@ -1359,6 +1424,8 @@ public class IndexData {
       return new BooleanColumnDescriptor(col, flags);
     case GUID:
       return new GuidColumnDescriptor(col, flags);
+    case BINARY:
+      return new BinaryColumnDescriptor(col, flags);
 
     default:
       // we can't modify this index at this point in time
@@ -1467,15 +1534,14 @@ public class IndexData {
       writeNonNullValue(value, bout);
     }
 
-    protected abstract void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected abstract void writeNonNullValue(Object value, ByteStream bout)
       throws IOException; 
     
     @Override
     public String toString() {
       return CustomToStringStyle.builder(this)
         .append("column", getColumn())
-        .append("flags", getFlags())
+        .append("flags", getFlags() + " " + (isAscending() ? "(ASC)" : "(DSC)"))
         .toString();
     }
   }
@@ -1492,8 +1558,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1524,8 +1589,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1575,8 +1639,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1641,8 +1704,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
@@ -1699,8 +1761,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       GeneralLegacyIndexCodes.GEN_LEG_INSTANCE.writeNonNullIndexTextValue(
@@ -1720,8 +1781,7 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       GeneralIndexCodes.GEN_INSTANCE.writeNonNullIndexTextValue(
@@ -1741,29 +1801,37 @@ public class IndexData {
     }
     
     @Override
-    protected void writeNonNullValue(
-        Object value, ByteStream bout)
+    protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
-      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-
-      // index format <8-bytes> 0x09 <8-bytes> 0x08
-      
-      // bit twiddling rules:
-      // - isAsc  => nothing
-      // - !isAsc => flipBytes, _but keep 09 unflipped_!      
-      if(!isAscending()) {
-        flipBytes(valueBytes);
-      }
-      
-      bout.write(valueBytes, 0, 8);
-      bout.write(MID_GUID);
-      bout.write(valueBytes, 8, 8);
-      bout.write(isAscending() ? ASC_END_GUID : DESC_END_GUID);
+      writeGeneralBinaryEntry(
+          encodeNumberColumnValue(value, getColumn()), isAscending(),
+          bout);
     }
   }
   
 
+  /**
+   * ColumnDescriptor for BINARY columns.
+   */
+  private static final class BinaryColumnDescriptor extends ColumnDescriptor
+  {
+    private BinaryColumnDescriptor(ColumnImpl column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+
+    @Override
+    protected void writeNonNullValue(Object value, ByteStream bout)
+      throws IOException
+    {
+      writeGeneralBinaryEntry(
+          ColumnImpl.toByteArray(value), isAscending(), bout);
+    }
+  }
+  
+  
   /**
    * ColumnDescriptor for columns which we cannot currently write.
    */

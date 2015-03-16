@@ -40,10 +40,6 @@ public class IndexCodes {
   static final byte DESC_START_FLAG = (byte)0x80;
   static final byte DESC_NULL_FLAG = (byte)0xFF;
 
-  static final byte MID_GUID = (byte)0x09;
-  static final byte ASC_END_GUID = (byte)0x08;
-  static final byte DESC_END_GUID = (byte)0xF7;
-
   static final byte ASC_BOOLEAN_TRUE = (byte)0x00;
   static final byte ASC_BOOLEAN_FALSE = (byte)0xFF;
   

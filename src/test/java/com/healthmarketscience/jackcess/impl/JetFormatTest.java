@@ -48,7 +48,8 @@ public class JetFormatTest extends TestCase {
     UNSUPPORTED("unsupportedFieldsTest"),
     LINKED("linkerTest"),
     BLOB("testOle"),
-    CALC_FIELD("calcFieldTest");
+    CALC_FIELD("calcFieldTest"),
+    BINARY_INDEX("binIdxTest");
 
     private final String _basename;
 

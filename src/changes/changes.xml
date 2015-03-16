@@ -28,6 +28,9 @@
       <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
         Added contextual information to many errors and warnings.
       </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Implement support for indexes on BINARY fields.
+      </action>
     </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">

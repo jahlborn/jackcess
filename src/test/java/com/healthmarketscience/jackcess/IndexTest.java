@@ -678,6 +678,45 @@ public class IndexTest extends TestCase {
     }
   }
   
+  public void testBinaryIndex() throws Exception
+  {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.BINARY_INDEX)) {
+      Database db = open(testDB);
+
+      Table table = db.getTable("Test");
+
+      Index idx = table.getIndex("BinAscIdx");
+      doTestBinaryIndex(idx, "BinAsc", false);
+
+      idx = table.getIndex("BinDscIdx");
+      doTestBinaryIndex(idx, "BinDsc", true);
+
+      db.close();
+    }
+  }
+
+  private static void doTestBinaryIndex(Index idx, String colName, boolean forward)
+    throws Exception
+  {
+    IndexCursor ic = CursorBuilder.createCursor(idx);
+
+    for(Row row : idx.getTable().getDefaultCursor().newIterable().setForward(forward)) {
+      int id = row.getInt("ID");
+      byte[] data = row.getBytes(colName);
+
+      boolean found = false;
+      for(Row idxRow : ic.newEntryIterable(data)) {
+          
+        assertTrue(Arrays.equals(data, idxRow.getBytes(colName)));
+        if(id == idxRow.getInt("ID")) {
+          found = true;
+        }
+      }
+
+      assertTrue(found);
+    }
+  }
+
   private void doCheckForeignKeyIndex(Table ta, Index ia, Table tb)
     throws Exception
   {
