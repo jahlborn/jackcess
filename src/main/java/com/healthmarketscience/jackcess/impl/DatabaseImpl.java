@@ -1516,7 +1516,7 @@ public class DatabaseImpl implements Database
   {
     try {
       return table.newCursor()
-        .setIndexByColumns(table.getColumn(colName))
+        .setIndexByColumnNames(colName)
         .setSpecificEntry(colValue)
         .toCursor();
     } catch(IllegalArgumentException e) {
