@@ -31,6 +31,11 @@
       <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
         Implement support for indexes on BINARY fields.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="120">
+        Remove useless warning for fixed length columns lengths with longer
+        length.  Cleanup some other stuff related to copying existing columns
+        in ColumnBuilder.
+      </action>
     </release>
     <release version="2.0.8" date="2014-12-26">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">

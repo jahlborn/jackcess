@@ -27,6 +27,7 @@ King of Prussia, PA 19406
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -273,10 +274,7 @@ public class ColumnBuilder {
    * Sets the column property with the given name and type to the given value.
    */
   public ColumnBuilder putProperty(String name, DataType type, Object value) {
-    if(_props == null) {
-      _props = new HashMap<String,PropertyMap.Property>();
-    }
-    _props.put(name, PropertyMapImpl.createProperty(name, type, value));
+    setProperty(name, PropertyMapImpl.createProperty(name, type, value));
     return this;
   }
 
@@ -284,14 +282,27 @@ public class ColumnBuilder {
     return _props;
   }
 
+  private void setProperty(String name, PropertyMap.Property prop) {
+    if(prop == null) {
+      return;
+    }
+    if(_props == null) {
+      _props = new HashMap<String,PropertyMap.Property>();
+    }
+    _props.put(name, prop);
+  }
+
   private PropertyMap.Property getProperty(String name) {
     return ((_props != null) ? _props.get(name) : null);
   }
   
   /**
-   * Sets all attributes except name from the given Column template.
+   * Sets all attributes except name from the given Column template (including
+   * all column properties except GUID).
    */
-  public ColumnBuilder setFromColumn(Column template) {
+  public ColumnBuilder setFromColumn(Column template) 
+    throws IOException
+  {
     DataType type = template.getType();
     setType(type);
     setLength(template.getLength());
@@ -300,8 +311,20 @@ public class ColumnBuilder {
       setScale(template.getScale());
       setPrecision(template.getPrecision());
     }
+    setCalculated(template.isCalculated());
     setCompressedUnicode(template.isCompressedUnicode());
     setHyperlink(template.isHyperlink());
+    if(template instanceof ColumnImpl) {
+      setTextSortOrder(((ColumnImpl)template).getTextSortOrder());
+    }
+
+    PropertyMap colProps = template.getProperties();
+    for(PropertyMap.Property colProp : colProps) {
+      // copy everything but guid
+      if(!PropertyMap.GUID_PROP.equalsIgnoreCase(colProp.getName())) {
+        setProperty(colProp.getName(), colProp);
+      }
+    }
     
     return this;
   }
@@ -311,15 +334,21 @@ public class ColumnBuilder {
    */
   public ColumnBuilder setFromColumn(ColumnBuilder template) {
     DataType type = template.getType();
-    setType(type);
-    setLength(template.getLength());
-    setAutoNumber(template.isAutoNumber());
+    _type = type;
+    _length = template._length;
+    _autoNumber = template._autoNumber;
     if(type.getHasScalePrecision()) {
-      setScale(template.getScale());
-      setPrecision(template.getPrecision());
+      _scale = template._scale;
+      _precision = template._precision;
     }
-    setCompressedUnicode(template.isCompressedUnicode());
-    setHyperlink(template.isHyperlink());
+    _calculated = template._calculated;
+    _compressedUnicode = template._compressedUnicode;
+    _hyperlink = template._hyperlink;
+    _sortOrder = template._sortOrder;
+
+    if(template._props != null) {
+      _props = new HashMap<String,PropertyMap.Property>(template._props);
+    }
     
     return this;
   }
@@ -383,19 +412,15 @@ public class ColumnBuilder {
     }
     
     if(!getType().isVariableLength()) {
-      if(getLength() != getType().getFixedSize()) {
-        if(getLength() < getType().getFixedSize()) {
-          throw new IllegalArgumentException(withErrorContext(
-              "invalid fixed length size"));
-        }
-        LOG.warn(withErrorContext(
-                "Column length " + getLength() + 
-                " longer than expected fixed size " + getType().getFixedSize()));
+      if(getLength() < getType().getFixedSize()) {
+        throw new IllegalArgumentException(withErrorContext(
+            "Invalid fixed length size " + getLength()));
       }
     } else if(!getType().isLongValue()) {
       if(!getType().isValidSize(getLength())) {
         throw new IllegalArgumentException(withErrorContext(
-            "var length out of range"));
+            "Var length must be from " + getType().getMinSize() + " to " +
+            getType().getMaxSize() + " inclusive, found " + getLength()));
       }
     }
 
@@ -403,12 +428,13 @@ public class ColumnBuilder {
       if(!getType().isValidScale(getScale())) {
         throw new IllegalArgumentException(withErrorContext(
             "Scale must be from " + getType().getMinScale() + " to " +
-            getType().getMaxScale() + " inclusive"));
+            getType().getMaxScale() + " inclusive, found " + getScale()));
       }
       if(!getType().isValidPrecision(getPrecision())) {
         throw new IllegalArgumentException(withErrorContext(
             "Precision must be from " + getType().getMinPrecision() + " to " +
-            getType().getMaxPrecision() + " inclusive"));
+            getType().getMaxPrecision() + " inclusive, found " + 
+            getPrecision()));
       }
     }
 
