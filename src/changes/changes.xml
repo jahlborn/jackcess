@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.0.9" date="TBD">
+    <release version="2.0.9" date="2015-03-21">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="116">
         Make ColumnBuilder.setMaxLength do the right thing regardless of
         column type.
