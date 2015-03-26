@@ -48,8 +48,6 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Utility class for importing tables to an Access database from other
@@ -62,9 +60,6 @@ import org.apache.commons.logging.LogFactory;
  */
 public class ImportUtil 
 {
-
-  private static final Log LOG = LogFactory.getLog(ImportUtil.class);
-
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
 

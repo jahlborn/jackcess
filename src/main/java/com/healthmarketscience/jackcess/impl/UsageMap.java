@@ -33,8 +33,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Describes which database pages a particular table uses
@@ -42,8 +40,6 @@ import org.apache.commons.logging.LogFactory;
  */
 public class UsageMap
 {
-  private static final Log LOG = LogFactory.getLog(UsageMap.class);
-  
   /** Inline map type */
   public static final byte MAP_TYPE_INLINE = 0x0;
   /** Reference map type, for maps that are too large to fit inline */

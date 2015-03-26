@@ -34,16 +34,12 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Reads and writes individual pages in a database file
  * @author Tim McCune
  */
 public class PageChannel implements Channel, Flushable {
-  
-  private static final Log LOG = LogFactory.getLog(PageChannel.class);
   
   static final int INVALID_PAGE_NUMBER = -1;
 

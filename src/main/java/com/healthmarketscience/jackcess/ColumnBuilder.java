@@ -36,8 +36,6 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
@@ -47,8 +45,6 @@ import org.apache.commons.logging.LogFactory;
  * @usage _general_class_
  */
 public class ColumnBuilder {
-
-  private static final Log LOG = LogFactory.getLog(ColumnBuilder.class);
 
   /** name of the new column */
   private String _name;

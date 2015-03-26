@@ -44,8 +44,6 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Utility class for exporting tables from an Access database to other
@@ -57,8 +55,6 @@ import org.apache.commons.logging.LogFactory;
  * @usage _general_class_
  */
 public class ExportUtil {
-
-  private static final Log LOG = LogFactory.getLog(ExportUtil.class);
 
   public static final String DEFAULT_DELIMITER = ",";
   public static final char DEFAULT_QUOTE_CHAR = '"';
