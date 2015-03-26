@@ -303,7 +303,7 @@ public abstract class QueryImpl implements Query
         comboJoins = new ArrayList<Row>();
         comboJoinMap.put(key, comboJoins);
       } else {
-        if(comboJoins.get(0).flag != join.flag) {
+        if(comboJoins.get(0).flag != (short)join.flag) {
           throw new IllegalStateException(withErrorContext(
               "Mismatched join flags for combo joins"));
         }
