@@ -13,12 +13,20 @@
         Access databases (currently supporting versions 2000-2010).  It is part of the <a href="http://openhms.sourceforge.net/">OpenHMS</a> project from <a href="http://www.healthmarketscience.com/">Health Market Science, Inc.</a>.  It is not an application.  There is no GUI.  It's a
         library, intended for other developers to use to build Java
         applications.  Jackcess is licensed under the
-
-        <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt">GNU Lesser General Public License</a>.
+        <a href="http://www.apache.org/licenses/LICENSE-2.0.txt">Apache License</a> (as of version 2.1.0).
         Take a look
         at our <a href="faq.html">Frequently Asked Questions</a>
         for more info.
       </p>
+
+      <subsection name="Brand New License!">
+        <p>
+          Due to the generosity of Health Market Science and the efforts of
+          the <a href="https://tika.apache.org/">Apache Tika project</a>, the
+          OpenHMS projects have been relicensed under the Apache License,
+          Version 2.0 (Jackcess versions 2.1.0 and higher).
+        </p>
+      </subsection>
 
       <subsection name="All New: Jackcess 2.0">
         <p>

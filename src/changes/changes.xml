@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.0" date="2015-04-16" 
+             description="Relicense to Apache License">
+      <action dev="jahlborn" type="add">
+        OpenHMS relicenses to Apache License, 2.0!
+      </action>
+    </release>
     <release version="2.0.9" date="2015-03-21">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="116">
         Make ColumnBuilder.setMaxLength do the right thing regardless of
@@ -123,7 +129,8 @@
         Add support for modifying PropertyMaps.
       </action>
     </release>
-    <release version="2.0.0" date="2013-08-26">
+    <release version="2.0.0" date="2013-08-26"
+             description="Major API Revision">
       <action dev="jahlborn" type="update">
         Brand new API!  This release is not backwards compatible with 1.x
         releases.  See Migration Guide at http://jackcess.sourceforge.net/jackcess-2.html
