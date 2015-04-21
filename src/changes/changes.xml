@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.1" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="123">
+        Load linked table info from system table when reading databases with
+        unsupported sort orders.
+      </action>
+    </release>
     <release version="2.1.0" date="2015-04-16" 
              description="Relicense to Apache License">
       <action dev="jahlborn" type="add">

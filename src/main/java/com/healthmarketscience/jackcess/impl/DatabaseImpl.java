@@ -230,12 +230,12 @@ public class DatabaseImpl implements Database
   /** the columns to read when reading system catalog normally */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
-                                      CAT_COL_FLAGS, CAT_COL_DATABASE, 
-                                      CAT_COL_FOREIGN_NAME));
-  /** the columns to read when finding table names */
-  private static Collection<String> SYSTEM_CATALOG_TABLE_NAME_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID));
+  /** the columns to read when finding table details */
+  private static Collection<String> SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS =
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
+                                      CAT_COL_FLAGS, CAT_COL_PARENT_ID, 
+                                      CAT_COL_DATABASE, CAT_COL_FOREIGN_NAME));
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
@@ -1950,7 +1950,7 @@ public class DatabaseImpl implements Database
       throws IOException
     {
       for(Row row : getTableNamesCursor().newIterable().setColumnNames(
-              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+              SYSTEM_CATALOG_COLUMNS)) {
 
         String tableName = row.getString(CAT_COL_NAME);
         int flags = row.getInt(CAT_COL_FLAGS);
@@ -1978,7 +1978,7 @@ public class DatabaseImpl implements Database
     public boolean isLinkedTable(Table table) throws IOException
     {
       for(Row row : getTableNamesCursor().newIterable().setColumnNames(
-              SYSTEM_CATALOG_COLUMNS)) {
+              SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS)) {
         Short type = row.getShort(CAT_COL_TYPE);
         String linkedDbName = row.getString(CAT_COL_DATABASE);
         String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
@@ -2060,7 +2060,7 @@ public class DatabaseImpl implements Database
       }
 
       Row row = _systemCatalogCursor.getCurrentRow(
-          SYSTEM_CATALOG_COLUMNS);
+          SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS);
       Integer pageNumber = row.getInt(CAT_COL_ID);
       String realName = row.getString(CAT_COL_NAME);
       int flags = row.getInt(CAT_COL_FLAGS);
@@ -2135,7 +2135,7 @@ public class DatabaseImpl implements Database
     public TableInfo lookupTable(String tableName) throws IOException {
 
       for(Row row : _systemCatalogCursor.newIterable().setColumnNames(
-              SYSTEM_CATALOG_TABLE_NAME_COLUMNS)) {
+              SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS)) {
 
         Short type = row.getShort(CAT_COL_TYPE);
         if(!isTableType(type)) {
