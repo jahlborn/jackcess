@@ -378,8 +378,9 @@ public class DatabaseImpl implements Database
         JetFormat jetFormat = JetFormat.getFormat(channel);
 
         if(jetFormat.READ_ONLY) {
-          throw new IOException("jet format '" + jetFormat +
-                                "' does not support writing for " + mdbFile);
+          throw new IOException("file format " + 
+                                jetFormat.getPossibleFileFormats().values() +
+                                " does not support writing for " + mdbFile);
         }
       }
 
