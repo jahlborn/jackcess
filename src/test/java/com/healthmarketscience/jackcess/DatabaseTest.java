@@ -390,7 +390,7 @@ public class DatabaseTest extends TestCase
 
   public void testWriteAndReadInBatch() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
       createTestTable(db);
       int count = 1000;
       List<Object[]> rows = new ArrayList<Object[]>(count);
@@ -1203,7 +1203,7 @@ public class DatabaseTest extends TestCase
   public void testUpdateRow() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
 
       Table t = new TableBuilder("test")
         .addColumn(new ColumnBuilder("name", DataType.TEXT))
@@ -1528,7 +1528,7 @@ public class DatabaseTest extends TestCase
   public void testUnicodeCompression() throws Exception
   {
     File dbFile = new File("src/test/data/V2003/testUnicodeCompV2003.mdb");
-    Database db = open(Database.FileFormat.V2003, new File("src/test/data/V2003/testUnicodeCompV2003.mdb"));
+    Database db = open(Database.FileFormat.V2003, new File("src/test/data/V2003/testUnicodeCompV2003.mdb"), true);
 
     StringBuilder sb = new StringBuilder(127);
     for(int i = 1; i <= 0xFF; ++i) {

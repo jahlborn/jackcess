@@ -122,7 +122,7 @@
           <configuration>
             <forkMode>once</forkMode>
             <parallel>classes</parallel>
-            <threadCount>1</threadCount>
+            <threadCount>2</threadCount>
             <argLine>-Xmx256M</argLine>
             <systemProperties>
               <property>

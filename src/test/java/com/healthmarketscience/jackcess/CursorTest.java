@@ -85,7 +85,7 @@ public class CursorTest extends TestCase {
   private static Database createTestTable(final FileFormat fileFormat) 
     throws Exception 
   {
-    Database db = create(fileFormat);
+    Database db = createMem(fileFormat);
 
     Table table = new TableBuilder("test")
       .addColumn(new ColumnBuilder("id", DataType.LONG))
@@ -143,7 +143,7 @@ public class CursorTest extends TestCase {
   private static Database createDupeTestTable(final FileFormat fileFormat) 
     throws Exception 
   {
-    Database db = create(fileFormat);
+    Database db = createMem(fileFormat);
 
     Table table = new TableBuilder("test")
       .addColumn(new ColumnBuilder("id", DataType.LONG))
@@ -1069,7 +1069,7 @@ public class CursorTest extends TestCase {
   { 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
-      Database db = open(testDB);
+      Database db = openMem(testDB);
       Table t1 = db.getTable("Table1");
       Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
       IndexCursor cursor = CursorBuilder.createCursor(idx);
@@ -1278,7 +1278,7 @@ public class CursorTest extends TestCase {
   public void testIterationEarlyExit() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
 
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
 
       Table table = new TableBuilder("test")
         .addColumn(new ColumnBuilder("id", DataType.LONG))
