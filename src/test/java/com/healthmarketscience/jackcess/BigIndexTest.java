@@ -40,7 +40,7 @@ public class BigIndexTest extends TestCase {
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX, true)) {
       // this file has an index with "compressed" entries and node pages
-      Database db = open(testDB);
+      Database db = openMem(testDB);
       TableImpl t = (TableImpl)db.getTable("Table1");
       IndexImpl index = t.getIndex("CD_AGENTE");
       assertFalse(index.isInitialized());
@@ -54,7 +54,7 @@ public class BigIndexTest extends TestCase {
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.BIG_INDEX)) {
     // this file has an index with "compressed" entries and node pages
-      Database db = open(testDB);
+      Database db = openMem(testDB);
       TableImpl t = (TableImpl)db.getTable("Table1");
       IndexImpl index = t.getIndex("col1");
       assertFalse(index.isInitialized());
@@ -68,7 +68,7 @@ public class BigIndexTest extends TestCase {
         String extraText = " some random text to fill out the index and make it fill up pages with lots of extra bytes so i will keep typing until i think that i probably have enough text in the index entry so that i do not need to add as many entries in order";
 
         // copy to temp file and attempt to edit
-        db = openCopy(testDB);
+        db = openMem(testDB);
         t = (TableImpl)db.getTable("Table1");
         index = t.getIndex("col1");
 

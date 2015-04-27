@@ -58,7 +58,6 @@ public class DatabaseTest extends TestCase
     super(name);
   }
 
-
   public void testInvalidTableDefs() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -190,7 +189,7 @@ public class DatabaseTest extends TestCase
 
     // make sure correct row is deleted
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
       createTestTable(db);
       Map<String,Object> row1 = createTestRowMap("Tim1");
       Map<String,Object> row2 = createTestRowMap("Tim2");
@@ -214,8 +213,10 @@ public class DatabaseTest extends TestCase
       assertEquals("Tim3", outRow.get("A"));
       assertRowCount(2, table);
 
+      db.close();
+
       // test multi row delete/add
-      db = create(fileFormat);
+      db = createMem(fileFormat);
       createTestTable(db);
       Object[] row = createTestRow();
       table = db.getTable("Test");
@@ -258,7 +259,7 @@ public class DatabaseTest extends TestCase
 
     // make sure correct row is deleted
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
       createTestTable(db);
       Table table = db.getTable("Test");
       for(int i = 0; i < 10; ++i) {
@@ -552,7 +553,7 @@ public class DatabaseTest extends TestCase
 
   public void testUsageMapPromotion() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.PROMOTION)) {
-      Database db = openCopy(testDB);
+      Database db = openMem(testDB);
       Table t = db.getTable("jobDB1");
 
       assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
@@ -620,7 +621,7 @@ public class DatabaseTest extends TestCase
 
   public void testAutoNumber() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
 
       Table table = new TableBuilder("test")
         .addColumn(new ColumnBuilder("a", DataType.LONG)
@@ -636,7 +637,7 @@ public class DatabaseTest extends TestCase
 
   public void testAutoNumberPK() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
-      Database db = openCopy(testDB);
+      Database db = openMem(testDB);
 
       Table table = db.getTable("Table3");
 
@@ -696,7 +697,7 @@ public class DatabaseTest extends TestCase
   
   public void testWriteAndReadDate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
 
       Table table = new TableBuilder("test")
         .addColumn(new ColumnBuilder("name", DataType.TEXT))

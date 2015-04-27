@@ -50,7 +50,7 @@ public class LongValueTest extends TestCase
   public void testReadLongValue() throws Exception {
 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2, true)) {
-      Database db = open(testDB);
+      Database db = openMem(testDB);
       Table table = db.getTable("MSP_PROJECTS");
       Row row = table.getNextRow();
       assertEquals("Jon Iles this is a a vawesrasoih aksdkl fas dlkjflkasjd flkjaslkdjflkajlksj dfl lkasjdf lkjaskldfj lkas dlk lkjsjdfkl; aslkdf lkasjkldjf lka skldf lka sdkjfl;kasjd falksjdfljaslkdjf laskjdfk jalskjd flkj aslkdjflkjkjasljdflkjas jf;lkasjd fjkas dasdf asd fasdf asdf asdmhf lksaiyudfoi jasodfj902384jsdf9 aw90se fisajldkfj lkasj dlkfslkd jflksjadf as", row.get("PROJ_PROP_AUTHOR"));
@@ -69,7 +69,7 @@ public class LongValueTest extends TestCase
   public void testWriteLongValue() throws Exception {
 
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
 
       Table table =
       new TableBuilder("test")
@@ -120,7 +120,7 @@ public class LongValueTest extends TestCase
 
   public void testManyMemos() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
       final int numColumns = 126;
       TableBuilder bigTableBuilder = new TableBuilder("test");
 
@@ -190,7 +190,7 @@ public class LongValueTest extends TestCase
   public void testLongValueAsMiddleColumn() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      Database db = createMem(fileFormat);
       Table newTable = new TableBuilder("NewTable")
         .addColumn(new ColumnBuilder("a").setSQLType(Types.INTEGER))
         .addColumn(new ColumnBuilder("b").setSQLType(Types.LONGVARCHAR))

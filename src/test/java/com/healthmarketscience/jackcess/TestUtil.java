@@ -84,7 +84,7 @@ public class TestUtil
   public static Database open(FileFormat fileFormat, File file, boolean inMem) 
     throws Exception 
   {
-    FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "r") 
+    FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "rw") 
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(getTestAutoSync()).setChannel(channel).open();

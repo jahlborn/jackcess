@@ -114,7 +114,7 @@ public class CursorTest extends TestCase {
   static Database createTestIndexTable(final TestDB indexCursorDB) 
     throws Exception 
   {
-    Database db = openCopy(indexCursorDB);
+    Database db = openMem(indexCursorDB);
 
     Table table = db.getTable("test");
 
@@ -160,7 +160,7 @@ public class CursorTest extends TestCase {
   static Database createDupeTestTable(final TestDB indexCursorDB) 
     throws Exception 
   {
-    Database db = openCopy(indexCursorDB);
+    Database db = openMem(indexCursorDB);
 
     Table table = db.getTable("test");
 
@@ -1096,7 +1096,7 @@ public class CursorTest extends TestCase {
   { 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
-      Database db = openCopy(testDB);
+      Database db = openMem(testDB);
       Table t1 = db.getTable("Table1");
       Index idx = t1.getIndex("Table2Table1");
       IndexCursor cursor = CursorBuilder.createCursor(idx);
@@ -1150,7 +1150,7 @@ public class CursorTest extends TestCase {
   { 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
-      Database db = openCopy(testDB);
+      Database db = openMem(testDB);
       Table t1 = db.getTable("Table1");
       Cursor cursor = CursorBuilder.createCursor(t1);
 
