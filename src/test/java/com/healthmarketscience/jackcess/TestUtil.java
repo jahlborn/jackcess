@@ -81,7 +81,7 @@ public class TestUtil
     return open(fileFormat, file, false);
   }
 
-  static Database open(FileFormat fileFormat, File file, boolean inMem) 
+  public static Database open(FileFormat fileFormat, File file, boolean inMem) 
     throws Exception 
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "r") 
@@ -163,7 +163,7 @@ public class TestUtil
         777.88f, (short) 999, new Date()};
   }
 
-  static Object[] createTestRow() {
+  public static Object[] createTestRow() {
     return createTestRow("Tim");
   }
   
@@ -173,7 +173,7 @@ public class TestUtil
                              "G", 777.88f, "H", (short) 999, "I", new Date());
   }
 
-  static void createTestTable(Database db) throws Exception {
+  public static void createTestTable(Database db) throws Exception {
     new TableBuilder("test")
       .addColumn(new ColumnBuilder("A", DataType.TEXT))
       .addColumn(new ColumnBuilder("B", DataType.TEXT))
