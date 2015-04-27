@@ -18,15 +18,14 @@ package com.healthmarketscience.jackcess;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import junit.framework.TestCase;
 
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author james
@@ -63,7 +62,7 @@ public class BigIndexTest extends TestCase {
       assertEquals(0, index.getIndexData().getEntryCount());
       db.close();
 
-      DatabaseTest.setTestAutoSync(false);
+      TestUtil.setTestAutoSync(false);
       try {
 
         String extraText = " some random text to fill out the index and make it fill up pages with lots of extra bytes so i will keep typing until i think that i probably have enough text in the index entry so that i do not need to add as many entries in order";
@@ -192,7 +191,7 @@ public class BigIndexTest extends TestCase {
         db.close();
 
       } finally {
-        DatabaseTest.clearTestAutoSync();
+        TestUtil.clearTestAutoSync();
       }
     }
   }

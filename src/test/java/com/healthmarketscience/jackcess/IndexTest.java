@@ -26,7 +26,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.IndexCodesTest;
 import com.healthmarketscience.jackcess.impl.IndexData;
@@ -35,6 +34,7 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn
@@ -47,12 +47,12 @@ public class IndexTest extends TestCase {
 
   @Override
   protected void setUp() {
-    DatabaseTest.setTestAutoSync(false);
+    TestUtil.setTestAutoSync(false);
   }
 
   @Override
   protected void tearDown() {
-    DatabaseTest.clearTestAutoSync();
+    TestUtil.clearTestAutoSync();
   }
 
   public void testByteOrder() throws Exception {
@@ -390,9 +390,9 @@ public class IndexTest extends TestCase {
       // Row order is arbitrary, so v2007 row order difference is valid
       if (testDB.getExpectedFileFormat().ordinal() >= 
           Database.FileFormat.V2007.ordinal()) {
-        DatabaseTest.checkTestDBTable1RowA(testDB, table, row);
+        TestUtil.checkTestDBTable1RowA(testDB, table, row);
       } else {
-        DatabaseTest.checkTestDBTable1RowABCDEFG(testDB, table, row);
+        TestUtil.checkTestDBTable1RowABCDEFG(testDB, table, row);
       }
       c.deleteCurrentRow();
 

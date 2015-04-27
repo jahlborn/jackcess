@@ -81,7 +81,7 @@ public class TableTest extends TestCase {
 
     String small = "this is a string";
     String smallNotAscii = "this is a string\0";
-    String large = DatabaseTest.createString(30);
+    String large = TestUtil.createString(30);
     String largeNotAscii = large + "\0";
 
     ByteBuffer[] buf1 = encodeColumns(small, large);

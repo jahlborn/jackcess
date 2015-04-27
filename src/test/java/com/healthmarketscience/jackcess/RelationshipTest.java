@@ -22,10 +22,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RelationshipImpl;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn

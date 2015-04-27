@@ -21,10 +21,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.healthmarketscience.jackcess.DataType;
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn

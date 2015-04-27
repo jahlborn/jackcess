@@ -31,6 +31,7 @@ import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn
@@ -348,7 +349,7 @@ public class PropertiesTest extends TestCase
   public void testCreateDbProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS) {
-      File file = DatabaseTest.createTempFile(false);
+      File file = TestUtil.createTempFile(false);
       Database db = new DatabaseBuilder(file)
         .setFileFormat(ff)
         .putUserDefinedProperty("testing", "123")

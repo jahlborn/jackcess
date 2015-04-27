@@ -26,7 +26,6 @@ import java.util.NoSuchElementException;
 import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -36,6 +35,7 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn
@@ -52,12 +52,12 @@ public class CursorTest extends TestCase {
 
   @Override
   protected void setUp() {
-    DatabaseTest.setTestAutoSync(false);
+    TestUtil.setTestAutoSync(false);
   }
 
   @Override
   protected void tearDown() {
-    DatabaseTest.clearTestAutoSync();
+    TestUtil.clearTestAutoSync();
   }
 
   private static List<Map<String,Object>> createTestTableData()

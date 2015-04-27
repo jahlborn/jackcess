@@ -11,8 +11,8 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 
 
 /**

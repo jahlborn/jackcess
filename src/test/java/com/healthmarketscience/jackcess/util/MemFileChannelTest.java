@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.util;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
@@ -27,7 +26,7 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
-import com.healthmarketscience.jackcess.DatabaseTest;
+import com.healthmarketscience.jackcess.TestUtil;
 
 /**
  *
@@ -131,8 +130,8 @@ public class MemFileChannelTest extends TestCase
 
     assertEquals(testFile.length(), tmpFile.length());
 
-    assertTrue(Arrays.equals(DatabaseTest.toByteArray(testFile),
-                             DatabaseTest.toByteArray(tmpFile)));
+    assertTrue(Arrays.equals(TestUtil.toByteArray(testFile),
+                             TestUtil.toByteArray(tmpFile)));
 
     ch2.truncate(0L);
     assertTrue(ch2.isOpen());

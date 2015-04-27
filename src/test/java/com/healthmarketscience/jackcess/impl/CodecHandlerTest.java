@@ -29,13 +29,13 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.DatabaseTest;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
+import com.healthmarketscience.jackcess.TestUtil;
 
 /**
  *
@@ -72,7 +72,7 @@ public class CodecHandlerTest extends TestCase
   private static void doTestCodecHandler(boolean simple) throws Exception
   {
     for(Database.FileFormat ff : SUPPORTED_FILEFORMATS) {
-      Database db = DatabaseTest.create(ff);
+      Database db = TestUtil.create(ff);
       int pageSize = ((DatabaseImpl)db).getFormat().PAGE_SIZE;
       File dbFile = db.getFile();
       db.close();
@@ -115,8 +115,8 @@ public class CodecHandlerTest extends TestCase
     ((DatabaseImpl)db).getPageChannel().startWrite();
     try {
       for(int i = start; i < end; ++i) {
-        t1.addRow(null, "rowdata-" + i + DatabaseTest.createString(100));
-        t2.addRow(null, "rowdata-" + i + DatabaseTest.createString(100));
+        t1.addRow(null, "rowdata-" + i + TestUtil.createString(100));
+        t2.addRow(null, "rowdata-" + i + TestUtil.createString(100));
       }
     } finally {
       ((DatabaseImpl)db).getPageChannel().finishWrite();
