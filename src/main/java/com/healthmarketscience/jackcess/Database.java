@@ -117,6 +117,13 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public static final String FK_ENFORCE_PROPERTY = 
     "com.healthmarketscience.jackcess.enforceForeignKeys";
 
+  /** system property which can be used to set the default allow auto number
+   * insert policy.  Defaults to {@code false}.
+   * @usage _general_field_
+   */
+  public static final String ALLOW_AUTONUM_INSERT_PROPERTY = 
+    "com.healthmarketscience.jackcess.allowAutoNumberInsert";
+
   /**
    * Enum which indicates which version of Access created the database.
    * @usage _general_class_
@@ -391,6 +398,31 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _intermediate_method_
    */
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys);
+
+  /**
+   * Gets current allow auto number insert policy.  By default, jackcess does
+   * not allow auto numbers to be inserted or updated directly (they are
+   * always handled internally by the Table).  Setting this policy to {@code
+   * true} allows the caller to optionally set the value explicitly when
+   * adding or updating rows (if a value is not provided, it will still be
+   * handled internally by the Table).  This value can be set database-wide
+   * using {@link #setAllowAutoNumberInsert} and/or on a per-table basis using
+   * {@link Table#setAllowAutoNumberInsert} (and/or on a jvm-wide using the
+   * {@link #ALLOW_AUTONUM_INSERT_PROPERTY} system property).  Note that
+   * <i>enabling this feature should be done with care</i> to reduce the
+   * chances of screwing up the database.
+   * 
+   * @usage _intermediate_method_
+   */
+  public boolean isAllowAutoNumberInsert();
+
+  /**
+   * Sets the new auto number insert policy for the database (unless
+   * overridden at the Table level).  If {@code null}, resets to the default
+   * value.
+   * @usage _intermediate_method_
+   */
+  public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert);
 
   /**
    * Gets currently configured ColumnValidatorFactory (always non-{@code null}).

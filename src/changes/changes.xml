@@ -9,6 +9,12 @@
         Load linked table info from system table when reading databases with
         unsupported sort orders.
       </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="32">
+        Allow optional direct insert/update of autonumber values.  This is
+        disabled by default, but can be selectively enabled per-jvm (using
+        system property), per-database, and per-table.
+      </action>
     </release>
     <release version="2.1.0" date="2015-04-16" 
              description="Relicense to Apache License">

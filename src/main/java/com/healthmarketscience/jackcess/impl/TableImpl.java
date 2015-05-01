@@ -38,7 +38,6 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.CursorBuilder;
-import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
@@ -166,6 +165,9 @@ public class TableImpl implements Table
   private PropertyMap _props;
   /** properties group for this table (and columns) */
   private PropertyMaps _propertyMaps;
+  /** optional flag indicating whether or not auto numbers can be directly
+      inserted by the user */
+  private Boolean _allowAutoNumInsert;
   /** foreign-key enforcer for this table */
   private final FKEnforcer _fkEnforcer;
 
@@ -354,6 +356,15 @@ public class TableImpl implements Table
 
   public int getTableDefPageNumber() {
     return _tableDefPageNumber;
+  }
+
+  public boolean isAllowAutoNumberInsert() {
+    return ((_allowAutoNumInsert != null) ? (boolean)_allowAutoNumInsert :
+            getDatabase().isAllowAutoNumberInsert());
+  }
+
+  public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert) {
+    _allowAutoNumInsert = allowAutoNumInsert;
   }
 
   /**
@@ -1079,7 +1090,6 @@ public class TableImpl implements Table
 
   /**
    * @param buffer Buffer to write to
-   * @param columns List of Columns in the table
    */
   private static void writeTableDefinitionHeader(
       TableCreator creator, ByteBuffer buffer, int totalTableDefSize)
@@ -1499,7 +1509,7 @@ public class TableImpl implements Table
   /**
    * Add multiple rows to this table, only writing to disk after all
    * rows have been written, and every time a data page is filled.
-   * @param inRows List of Object[] row values
+   * @param rows List of Object[] row values
    */
   private List<? extends Object[]> addRows(List<? extends Object[]> rows,
                                            final boolean isBatchWrite)
@@ -1516,6 +1526,8 @@ public class TableImpl implements Table
       int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
       int updateCount = 0;
       int autoNumAssignCount = 0;
+      WriteRowState writeRowState = 
+        (!_autoNumColumns.isEmpty() ? new WriteRowState() : null);
       try {
 
         List<Object[]> dupeRows = null;
@@ -1549,7 +1561,7 @@ public class TableImpl implements Table
           }
 
           // fill in autonumbers
-          handleAutoNumbersForAdd(row);
+          handleAutoNumbersForAdd(row, writeRowState);
           ++autoNumAssignCount;
       
           // write the row of data to a temporary buffer
@@ -1758,44 +1770,43 @@ public class TableImpl implements Table
 
       // handle various value massaging activities
       for(ColumnImpl column : _columns) {
-        
-        Object rowValue = null;
+
         if(column.isAutoNumber()) {
-          
-          // fill in any auto-numbers (we don't allow autonumber values to be
-          // modified)
-          rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState, null);
-          
+          // handle these separately (below)
+          continue;
+        }
+
+        Object rowValue = column.getRowValue(row);
+        if(rowValue == Column.KEEP_VALUE) {
+            
+          // fill in any "keep value" fields (restore old value)
+          rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState,
+                                  keepRawVarValues);
+            
         } else {
 
-          rowValue = column.getRowValue(row);
-          if(rowValue == Column.KEEP_VALUE) {
-            
-            // fill in any "keep value" fields (restore old value)
-            rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState,
-                                    keepRawVarValues);
-            
+          // set oldValue to something that could not possibly be a real value
+          Object oldValue = Column.KEEP_VALUE;
+          if(_indexColumns.contains(column)) {
+            // read (old) row value to help update indexes
+            oldValue = getRowColumn(getFormat(), rowBuffer, column, rowState,
+                                    null);
           } else {
-
-            // set oldValue to something that could not possibly be a real value
-            Object oldValue = Column.KEEP_VALUE;
-            if(_indexColumns.contains(column)) {
-              // read (old) row value to help update indexes
-              oldValue = getRowColumn(getFormat(), rowBuffer, column, rowState, null);
-            } else {
-              oldValue = rowState.getRowCacheValue(column.getColumnIndex());
-            }
-
-            // if the old value was passed back in, we don't need to validate
-            if(oldValue != rowValue) {
-              // pass input value through column validator
-              rowValue = column.validate(rowValue);
-            } 
+            oldValue = rowState.getRowCacheValue(column.getColumnIndex());
           }
+
+          // if the old value was passed back in, we don't need to validate
+          if(oldValue != rowValue) {
+            // pass input value through column validator
+            rowValue = column.validate(rowValue);
+          } 
         }
 
         column.setRowValue(row, rowValue);
       }
+
+      // fill in autonumbers
+      handleAutoNumbersForUpdate(row, rowBuffer, rowState);
 
       // generate new row bytes
       ByteBuffer newRowData = createRow(
@@ -2178,30 +2189,77 @@ public class TableImpl implements Table
   }
 
   /**
-   * Fill in all autonumber column values.
+   * Fill in all autonumber column values for add.
    */
-  private void handleAutoNumbersForAdd(Object[] row)
+  private void handleAutoNumbersForAdd(Object[] row, WriteRowState writeRowState)
     throws IOException
   {
     if(_autoNumColumns.isEmpty()) {
       return;
     }
- 
-    Object complexAutoNumber = null;
+
+    boolean enableInsert = isAllowAutoNumberInsert();
+    writeRowState.resetAutoNumber();
     for(ColumnImpl col : _autoNumColumns) {
-      // ignore given row value, use next autonumber
+
+      // ignore input row value, use original row value (unless explicitly
+      // enabled)
+      Object inRowValue = getInputAutoNumberRowValue(enableInsert, col, row);
+
       ColumnImpl.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
-      Object rowValue = null;
-      if(autoNumGen.getType() != DataType.COMPLEX_TYPE) {
-        rowValue = autoNumGen.getNext(null);
-      } else {
-        // complex type auto numbers are shared across all complex columns
-        // in the row
-        complexAutoNumber = autoNumGen.getNext(complexAutoNumber);
-        rowValue = complexAutoNumber;
-      }
+      Object rowValue = ((inRowValue == null) ? 
+                         autoNumGen.getNext(writeRowState) :
+                         autoNumGen.handleInsert(writeRowState, inRowValue));
+
       col.setRowValue(row, rowValue);
     }
+  }
+  
+  /**
+   * Fill in all autonumber column values for update.
+   */
+  private void handleAutoNumbersForUpdate(Object[] row, ByteBuffer rowBuffer,
+                                          RowState rowState)
+    throws IOException
+  {
+    if(_autoNumColumns.isEmpty()) {
+      return;
+    }
+
+    boolean enableInsert = isAllowAutoNumberInsert();
+    rowState.resetAutoNumber();
+    for(ColumnImpl col : _autoNumColumns) {
+
+      // ignore input row value, use original row value (unless explicitly
+      // enabled)
+      Object inRowValue = getInputAutoNumberRowValue(enableInsert, col, row);
+
+      Object rowValue = 
+        ((inRowValue == null) ?
+         getRowColumn(getFormat(), rowBuffer, col, rowState, null) :
+         col.getAutoNumberGenerator().handleInsert(rowState, inRowValue));
+
+      col.setRowValue(row, rowValue);
+    }
+  }
+
+  /**
+   * Optionally get the input autonumber row value for the given column from
+   * the given row if one was provided.
+   */
+  private static Object getInputAutoNumberRowValue(
+      boolean enableInsert, ColumnImpl col, Object[] row)
+  {
+    if(!enableInsert) {
+      return null;
+    }
+
+    Object inRowValue = col.getRowValue(row);
+    if((inRowValue == Column.KEEP_VALUE) || (inRowValue == Column.AUTO_NUMBER)) {
+      // these "special" values both behave like nothing was given
+      inRowValue = null;
+    }
+    return inRowValue;
   }
   
   /**
@@ -2246,6 +2304,12 @@ public class TableImpl implements Table
     return _lastLongAutoNumber;
   }
 
+  void adjustLongAutoNumber(int inLongAutoNumber) {
+    if(inLongAutoNumber > _lastLongAutoNumber) {
+      _lastLongAutoNumber = inLongAutoNumber;
+    }
+  }
+
   void restoreLastLongAutoNumber(int lastLongAutoNumber) {
     // restores the last used auto number
     _lastLongAutoNumber = lastLongAutoNumber - 1;
@@ -2259,6 +2323,12 @@ public class TableImpl implements Table
   int getLastComplexTypeAutoNumber() {
     // gets the last used auto number (does not modify)
     return _lastComplexTypeAutoNumber;
+  }
+
+  void adjustComplexTypeAutoNumber(int inComplexTypeAutoNumber) {
+    if(inComplexTypeAutoNumber > _lastComplexTypeAutoNumber) {
+      _lastComplexTypeAutoNumber = inComplexTypeAutoNumber;
+    }
   }
 
   void restoreLastComplexTypeAutoNumber(int lastComplexTypeAutoNumber) {
@@ -2501,10 +2571,31 @@ public class TableImpl implements Table
   }
 
   /**
-   * Maintains the state of reading a row of data.
+   * Maintains state for writing a new row of data.
+   */
+  protected static class WriteRowState
+  {
+    private int _complexAutoNumber = ColumnImpl.INVALID_AUTO_NUMBER;
+
+    public int getComplexAutoNumber() {
+      return _complexAutoNumber;
+    }
+
+    public void setComplexAutoNumber(int complexAutoNumber) {
+      _complexAutoNumber = complexAutoNumber;
+    }
+
+    public void resetAutoNumber() {
+      _complexAutoNumber = ColumnImpl.INVALID_AUTO_NUMBER;
+    }
+  }
+
+  /**
+   * Maintains the state of reading/updating a row of data.
    * @usage _advanced_class_
    */
-  public final class RowState implements ErrorHandler.Location
+  public final class RowState extends WriteRowState
+    implements ErrorHandler.Location
   {
     /** Buffer used for reading the header row data pages */
     private final TempPageHolder _headerRowBufferH;
@@ -2560,6 +2651,7 @@ public class TableImpl implements Table
     }
     
     public void reset() {
+      resetAutoNumber();
       _finalRowId = null;
       _finalRowBuffer = null;
       _rowsOnHeaderPage = 0;

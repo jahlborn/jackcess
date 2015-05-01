@@ -301,6 +301,8 @@ public class DatabaseImpl implements Database
   private Table.ColumnOrder _columnOrder;
   /** whether or not enforcement of foreign-keys is enabled */
   private boolean _enforceForeignKeys;
+  /** whether or not auto numbers can be directly inserted by the user */
+  private boolean _allowAutoNumInsert;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables */
@@ -501,6 +503,7 @@ public class DatabaseImpl implements Database
     _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
     _columnOrder = getDefaultColumnOrder();
     _enforceForeignKeys = getDefaultEnforceForeignKeys();
+    _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
@@ -661,6 +664,18 @@ public class DatabaseImpl implements Database
     }
     _enforceForeignKeys = newEnforceForeignKeys;
   }
+
+  public boolean isAllowAutoNumberInsert() {
+    return _allowAutoNumInsert;
+  }
+
+  public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert) {
+    if(allowAutoNumInsert == null) {
+      allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
+    }
+    _allowAutoNumInsert = allowAutoNumInsert;
+  }
+
 
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
@@ -1741,6 +1756,21 @@ public class DatabaseImpl implements Database
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
     return true;
+  }
+  
+  /**
+   * Returns the default allow auto number insert policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#ALLOW_AUTONUM_INSERT_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultAllowAutoNumberInsert()
+  {
+    String prop = System.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
+    if(prop != null) {
+      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
+    }
+    return false;
   }
   
   /**

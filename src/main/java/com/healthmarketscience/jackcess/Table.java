@@ -99,6 +99,20 @@ public interface Table extends Iterable<Row>
   public void setErrorHandler(ErrorHandler newErrorHandler);
 
   /**
+   * Gets the currently configured auto number insert policy.
+   * @see Database#isAllowAutoNumberInsert
+   * @usage _intermediate_method_
+   */
+  public boolean isAllowAutoNumberInsert();
+
+  /**
+   * Sets the new auto number insert policy for the Table.  If {@code null},
+   * resets to using the policy configured at the Database level.
+   * @usage _intermediate_method_
+   */
+  public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert);
+
+  /**
    * @return All of the columns in this table (unmodifiable List)
    * @usage _general_method_
    */

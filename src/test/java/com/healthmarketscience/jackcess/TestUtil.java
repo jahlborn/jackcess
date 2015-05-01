@@ -254,17 +254,17 @@ public class TestUtil
     return Arrays.<Row>asList(rows);
   }    
   
-  static void dumpDatabase(Database mdb) throws Exception {
+  public static void dumpDatabase(Database mdb) throws Exception {
     dumpDatabase(mdb, false);
   }
 
-  static void dumpDatabase(Database mdb, boolean systemTables)
+  public static void dumpDatabase(Database mdb, boolean systemTables)
     throws Exception
   {
     dumpDatabase(mdb, systemTables, new PrintWriter(System.out, true));
   }
 
-  static void dumpTable(Table table) throws Exception {
+  public static void dumpTable(Table table) throws Exception {
     dumpTable(table, new PrintWriter(System.out, true));
   }
 
