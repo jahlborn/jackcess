@@ -25,3 +25,11 @@ Refactor goals:
 - implement page buffering in PageChannel
   * need to implement logical flushing in update code (startUpdate/finishUpdate)
 - add typed getter methods to PropertyMap
+
+Index add (fk impl)
+- Database.addIndex(IndexBuilder) - use TableCreator internal
+  - add indexes separately from adding fk info,
+    - need to populate index after creation! populate first, then add?
+  - add relationships
+- flush all non-system tables from DbImpl._tableCache (references to old table
+  impls)

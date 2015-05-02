@@ -75,7 +75,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  *
  * @author Tim McCune
- * @usage _general_class_
+ * @usage _intermediate_class_
  */
 public class DatabaseImpl implements Database
 {  
