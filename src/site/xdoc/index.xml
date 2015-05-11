@@ -108,6 +108,10 @@ db.close();</source>
           support for some forms of Microsoft Access and Microsoft Money
           encryption.
         </li>
+        <li>
+          <a href="http://ucanaccess.sourceforge.net/site.html">UCanAccess</a>
+          - Open Source pure Java JDBC Driver implementation.
+        </li>
       </ul>
     </section>
   </body>

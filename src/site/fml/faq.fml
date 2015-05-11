@@ -232,8 +232,10 @@
         library.  While this library would be a great foundation for a JDBC
         driver, implementing the JDBC API is currently outside the scope of
         this project.  There have been a few attempts to use Jackcess to build
-        JDBC drivers for Access databases, but none of the projects seem to
-        have progressed very far before becoming inactive.
+        JDBC drivers for Access databases, but most of the projects have note
+        progressed very far before becoming inactive.  The <a href="http://ucanaccess.sourceforge.net/site.html">UCanAccess project</a>,
+        however, is a currently active open source project which provides a
+        JDBC driver built on top of Jackcess.
       </answer>
     </faq>
 
