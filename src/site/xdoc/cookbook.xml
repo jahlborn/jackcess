@@ -192,10 +192,10 @@
           is possible may be out of date).
         </p>
         <p>
-          As of version 2.0.0, Jackcess supports:
+          As of version 2.1.0, Jackcess supports:
         </p>
         <ul>
-          <li>Creating databases for Access all versions 2000-2010</li>
+          <li>Creating databases for Access all versions 2000-2013</li>
           <li>Creating columns for all simple data types</li>
           <li>Creating tables with single-table Indexes</li>
         </ul>
