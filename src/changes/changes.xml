@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.2" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="125">
+        Handle reading null calculated values.
+      </action>
+    </release>
     <release version="2.1.1" date="2015-05-14">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="123">
         Load linked table info from system table when reading databases with

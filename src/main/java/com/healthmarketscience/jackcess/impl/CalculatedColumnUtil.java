@@ -139,7 +139,12 @@ class CalculatedColumnUtil
 
     @Override
     public Object read(byte[] data, ByteOrder order) throws IOException {
-      return super.read(unwrapCalculatedValue(data), order);
+      data = unwrapCalculatedValue(data);
+      if((data.length == 0) && !getType().isVariableLength()) {
+        // apparently "null" values can be written as actual data
+        return null;
+      }
+      return super.read(data, order);
     }
 
     @Override
@@ -173,6 +178,9 @@ class CalculatedColumnUtil
     @Override
     public Object read(byte[] data, ByteOrder order) throws IOException {
       data = unwrapCalculatedValue(data);
+      if(data.length == 0) {
+        return Boolean.FALSE;
+      }
       return ((data[0] != 0) ? Boolean.TRUE : Boolean.FALSE);
     }
 
@@ -266,6 +274,10 @@ class CalculatedColumnUtil
     @Override
     public Object read(byte[] data, ByteOrder order) throws IOException {
       data = unwrapCalculatedValue(data);
+      if(data.length == 0) {
+        // apparently "null" values can be written as actual data
+        return null;
+      }
       return readCalcNumericValue(ByteBuffer.wrap(data).order(order));
     }
 
