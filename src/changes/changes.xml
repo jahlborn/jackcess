@@ -8,6 +8,9 @@
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="125">
         Handle reading null calculated values.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="126">
+        Fix handling of dateTimes before the access epoch.
+      </action>
     </release>
     <release version="2.1.1" date="2015-05-14">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="123">

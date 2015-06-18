@@ -76,15 +76,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Access stores numeric dates in days.  Java stores them in milliseconds.
    */
-  private static final double MILLISECONDS_PER_DAY =
+  private static final long MILLISECONDS_PER_DAY =
     (24L * 60L * 60L * 1000L);
 
   /**
-   * Access starts counting dates at Jan 1, 1900.  Java starts counting
-   * at Jan 1, 1970.  This is the # of millis between them for conversion.
+   * Access starts counting dates at Dec 30, 1899 (note, this strange date
+   * seems to be caused by MS compatibility with Lotus-1-2-3 and incorrect
+   * leap years).  Java starts counting at Jan 1, 1970.  This is the # of
+   * millis between them for conversion.
    */
-  private static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
-    25569L * (long)MILLISECONDS_PER_DAY;
+  static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
+    25569L * MILLISECONDS_PER_DAY;
   
   /**
    * mask for the fixed len bit
@@ -789,9 +791,24 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public long fromDateDouble(double value)
   {
-    long time = Math.round(value * MILLISECONDS_PER_DAY);
+    long localTime = fromLocalDateDouble(value);
+    return localTime - getFromLocalTimeZoneOffset(localTime);
+  }
+
+  static long fromLocalDateDouble(double value)
+  {
+    long datePart = ((long)value) * MILLISECONDS_PER_DAY;
+
+    // the fractional part of the double represents the time.  it is always
+    // a positive fraction of the day (even if the double is negative),
+    // _not_ the time distance from zero (as one would expect with "normal"
+    // numbers).  therefore, we need to do a little number logic to convert
+    // the absolute time fraction into a normal distance from zero number.
+    long timePart = Math.round((Math.abs(value) % 1.0) * 
+                               (double)MILLISECONDS_PER_DAY);
+
+    long time = datePart + timePart;
     time -= MILLIS_BETWEEN_EPOCH_AND_1900;
-    time -= getFromLocalTimeZoneOffset(time);
     return time;
   }
 
@@ -825,8 +842,22 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // hope you read it in the same timezone in which it was written!
     long time = toDateLong(value);
     time += getToLocalTimeZoneOffset(time);
+    return toLocalDateDouble(time);
+  }
+
+  static double toLocalDateDouble(long time)
+  {
     time += MILLIS_BETWEEN_EPOCH_AND_1900;
-    return time / MILLISECONDS_PER_DAY;
+
+    if(time < 0L) {
+      // reverse the crazy math described in fromLocalDateDouble
+      long timePart = -time % MILLISECONDS_PER_DAY;
+      if(timePart > 0) {
+        time -= (2 * (MILLISECONDS_PER_DAY - timePart));
+      }
+    }
+
+    return time / (double)MILLISECONDS_PER_DAY;
   }
 
   /**

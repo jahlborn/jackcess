@@ -230,4 +230,31 @@ public class DatabaseReadWriteTest extends TestCase
       db.close();
     }
   }
+
+  public void testDateMath()
+  {
+    long now = System.currentTimeMillis();
+
+    // test around current time
+    doTestDateMath(now);
+
+    // test around the unix epoch
+    doTestDateMath(0L);
+
+    // test around the access epoch
+    doTestDateMath(-ColumnImpl.MILLIS_BETWEEN_EPOCH_AND_1900);
+  }
+
+  private static void doTestDateMath(long testTime)
+  {
+    final long timeRange = 100000000L;
+    final long timeStep = 37L;
+
+    for(long time = testTime - timeRange; time < testTime + timeRange; 
+        time += timeStep) {
+      double accTime = ColumnImpl.toLocalDateDouble(time);
+      long newTime = ColumnImpl.fromLocalDateDouble(accTime);
+      assertEquals(time, newTime);
+    }
+  }
 }
