@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.2" date="TBD">
+    <release version="2.1.2" date="2015-06-22">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="125">
         Handle reading null calculated values.
       </action>
