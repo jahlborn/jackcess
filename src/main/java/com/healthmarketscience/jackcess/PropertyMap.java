@@ -96,8 +96,8 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   /**
    * Puts all the given properties into this map.
    *
-   * @props the properties to put into this map ({@code null} is tolerated and
-   *        ignored).
+   * @param props the properties to put into this map ({@code null} is
+   *              tolerated and ignored).
    */
   public void putAll(Iterable<? extends Property> props);
   
