@@ -38,7 +38,7 @@ import com.healthmarketscience.jackcess.util.MemFileChannel;
  * </pre>
  * <p/>
  * Advanced example usage:
- * <pre>
+ * <pre class="prettyprint linenums">
  *   Database db = new DatabaseBuilder(new File("test.mdb"))
  *     .setReadOnly(true)
  *     .open();
