@@ -1,11 +1,6 @@
 <?xml version="1.0"?>
 
 <project name="Jackcess">
-  <skin>
-    <groupId>org.apache.maven.skins</groupId>
-    <artifactId>maven-fluido-skin</artifactId>
-    <version>1.4</version>
-  </skin>
   <body>
     <menu name="Jackcess">
       <item name="About" href="index.html"/>
@@ -20,11 +15,5 @@
     <menu ref="reports"/>
 
   </body>
-
-  <custom>
-    <fluidoSkin>
-      <sourceLineNumbersEnabled>true</sourceLineNumbersEnabled>
-    </fluidoSkin>
-  </custom>
   
 </project>
