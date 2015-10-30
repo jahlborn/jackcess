@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
@@ -208,6 +208,54 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <id>no-regex</id>
+            <phase>site</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+        <configuration>
+          <includes>
+            <include>${project.build.directory}/site/apidocs/**/*.html</include>
+          </includes>
+          <regex>false</regex>
+          <replacements>
+            <replacement>
+              <token>&lt;pre&gt;</token>
+              <value>&lt;div class="source"&gt;&lt;pre class="prettyprint linenums"&gt;</value>
+            </replacement>
+            <replacement>
+              <token>&lt;/pre&gt;</token>
+              <value>&lt;/pre&gt;&lt;/div&gt;</value>
+            </replacement>
+          </replacements>
+        </configuration>
+          </execution>
+          <execution>
+            <id>with-regex</id>
+            <phase>site</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+        <configuration>
+          <includes>
+            <include>${project.build.directory}/site/apidocs/**/*.html</include>
+          </includes>
+          <replacements>
+            <replacement>
+              <token>\s+&lt;/pre&gt;</token>
+              <value>&lt;/pre&gt;</value>
+            </replacement>
+          </replacements>
+        </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -293,6 +341,9 @@
             </taglet>
           </taglets>
           <quiet>true</quiet>
+          <top><![CDATA[
+          <script type="text/javascript" src="{@docRoot}/../js/apache-maven-fluido-1.4.min.js"></script>
+          ]]></top>
         </configuration>
       </plugin>
     </plugins>

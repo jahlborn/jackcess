@@ -70,3 +70,183 @@ a:link.selfref, a:visited.selfref {
 .UsageGeneral       { background: #efefef }
 .UsageIntermediate  { background: #efefef }
 .UsageAdvanced      { background: #efefef }
+
+
+/* Customizations pulled in from fluido 1.4 (and custom site.css) */
+ul,ol {
+    padding:0;
+    margin:0 0 10px 25px
+}
+ul ul,ul ol,ol ol,ol ul {
+    margin-bottom:0
+}
+li {
+    line-height:20px
+}
+ul.unstyled,ol.unstyled {
+    margin-left:0;
+    list-style:none
+}
+ul.inline,ol.inline {
+    margin-left:0;
+    list-style:none
+}
+ul.inline>li,ol.inline>li {
+    display:inline-block;
+    *display:inline;
+    padding-right:5px;
+    padding-left:5px;
+    *zoom:1
+}
+
+
+pre.prettyprint {
+    border:1px solid #999;
+    page-break-inside:avoid
+}
+pre.prettyprint {
+    padding:0 3px 2px;
+    font-family:Monaco,Menlo,Consolas,"Courier New",monospace;
+    font-size:12px;
+    color:#333;
+    -webkit-border-radius:3px;
+    -moz-border-radius:3px;
+    border-radius:3px
+}
+/* code { */
+/*     padding:2px 4px; */
+/*     color:#d14; */
+/*     white-space:nowrap; */
+/*     background-color:#f7f7f9; */
+/*     border:1px solid #e1e1e8 */
+/* } */
+pre.prettyprint {
+    display:block;
+    padding:9.5px;
+    margin:0 0 10px;
+    font-size:13px;
+    line-height:20px;
+    word-break:break-all;
+    word-wrap:break-word;
+    white-space:pre;
+    white-space:pre-wrap;
+    background-color:#f5f5f5;
+    border:1px solid #ccc;
+    border:1px solid rgba(0,0,0,0.15);
+    -webkit-border-radius:4px;
+    -moz-border-radius:4px;
+    border-radius:4px
+}
+pre.prettyprint {
+    margin-bottom:20px
+}
+pre.prettyprint code {
+    padding:0;
+    color:inherit;
+    white-space:pre;
+    white-space:pre-wrap;
+    background-color:transparent;
+    border:0
+}
+.pre-scrollable {
+    max-height:340px;
+    overflow-y:scroll
+}
+
+.pln {
+    color:#000
+}
+@media screen {
+    .str {
+        color:#080
+    }
+    .kwd {
+        color:#008
+    }
+    .com {
+        color:#800
+    }
+    .typ {
+        color:#606
+    }
+    .lit {
+        color:#066
+    }
+    .pun,.opn,.clo {
+        color:#660
+    }
+    .tag {
+        color:#008
+    }
+    .atn {
+        color:#606
+    }
+    .atv {
+        color:#080
+    }
+    .dec,.var {
+        color:#606
+    }
+    .fun {
+        color:red
+    }
+
+}
+@media print,projection {
+    .str {
+        color:#060
+    }
+    .kwd {
+        color:#006;
+        font-weight:bold
+    }
+    .com {
+        color:#600;
+        font-style:italic
+    }
+    .typ {
+        color:#404;
+        font-weight:bold
+    }
+    .lit {
+        color:#044
+    }
+    .pun,.opn,.clo {
+        color:#440
+    }
+    .tag {
+        color:#006;
+        font-weight:bold
+    }
+    .atn {
+        color:#404
+    }
+    .atv {
+        color:#060
+    }
+
+}
+pre.prettyprint {
+    padding:2px;
+    border:1px solid #888
+}
+ol.linenums {
+    margin-top:0;
+    margin-bottom:0;
+    padding-left:15px
+}
+li.L1,li.L3,li.L5,li.L7,li.L9 {
+    background:#eee
+}
+
+li.L1,li.L3,li.L5,li.L7,li.L9 {
+    color:#888
+}
+li.L0,li.L2,li.L4,li.L6,li.L8 {
+    color:#888
+}
+.source
+{
+    padding-left: 10pt;
+    padding-right: 10pt;    
+}

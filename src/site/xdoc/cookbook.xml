@@ -89,8 +89,8 @@
           So, what's in a row?  Well, let's assume your "Test" table is
           defined in the following way in Access:
         </p>
-        <blockquote>
-          <table>
+        <div class="indented">
+          <table border="1">
             <tr>
               <th>Field Name</th><th>Data Type</th>
             </tr>
@@ -107,7 +107,7 @@
               <td>StartDate</td><td>Date/Time</td>
             </tr>
           </table>
-        </blockquote>
+        </div>
         <p>
           Then, given a row of data, we could inspect the various <a href="apidocs/com/healthmarketscience/jackcess/Column.html">Columns</a> and
           their values like so:

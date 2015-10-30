@@ -39,7 +39,8 @@
         <p>Data validation in Access is controlled via a variety of
            mechanisms, not all of which are supported by Jackces.  See the
            table below for details:</p>
-        <table>
+        <div class="indented">
+        <table border="1">
           <tr>
             <th>Data Validation Type</th>
             <th>Support</th>
@@ -66,6 +67,7 @@
             <td>No (but Jackcess does provide access to the Properties)</td>
           </tr>
         </table>
+        </div>
       </answer>
     </faq>
 
