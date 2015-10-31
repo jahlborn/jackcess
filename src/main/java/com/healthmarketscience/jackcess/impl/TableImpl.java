@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -1571,7 +1572,7 @@ public class TableImpl implements Table
           int rowSize = rowData.remaining();
           if (rowSize > getFormat().MAX_ROW_SIZE) {
             throw new IOException(withErrorContext(
-                                      "Row size " + rowSize + " is too large"));
+                    "Row size " + rowSize + " is too large"));
           }
 
           // get page with space
@@ -2148,7 +2149,14 @@ public class TableImpl implements Table
             // above.  add that space back so we don't double count
             maxRowSize += getFormat().SIZE_LONG_VALUE_DEF;
           }
-          buffer.put(varDataBuf);
+          try {
+            buffer.put(varDataBuf);
+          } catch(BufferOverflowException e) {
+            // if the data is too big for the buffer, then we have gone over
+            // the max row size
+            throw new IOException(withErrorContext(
+                    "Row size " + buffer.limit() + " is too large"));
+          } 
         }
 
         // we do a loop here so that we fill in offsets for deleted columns

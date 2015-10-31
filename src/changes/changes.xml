@@ -4,6 +4,15 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.3" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="127">
+        Throw a prettier exception when maxing out the row size during row
+        creation.
+      </action>
+      <action dev="jahlborn" type="update">
+        New site style!
+      </action>
+    </release>
     <release version="2.1.2" date="2015-06-22">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="125">
         Handle reading null calculated values.
