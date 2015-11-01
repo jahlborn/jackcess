@@ -107,7 +107,7 @@ public class OleUtil
   /**
    * Creates a new OlBlob instance using the given information.
    */
-  public static OleBlob createBlob(OleBlob.Builder oleBuilder)
+  public static OleBlob createBlob(Builder oleBuilder)
     throws IOException
   {
     try {
@@ -183,7 +183,7 @@ public class OleUtil
     }
   }
 
-  private static byte[] writePackageHeader(OleBlob.Builder oleBuilder,
+  private static byte[] writePackageHeader(Builder oleBuilder,
                                            long contentLen) {
 
     byte[] prettyNameBytes = getZeroTermStrBytes(oleBuilder.getPrettyName());
@@ -229,7 +229,7 @@ public class OleUtil
     return headerBytes;
   }
 
-  private static byte[] writePackageStreamHeader(OleBlob.Builder oleBuilder) {
+  private static byte[] writePackageStreamHeader(Builder oleBuilder) {
 
     byte[] fileNameBytes = getZeroTermStrBytes(oleBuilder.getFileName());
     byte[] filePathBytes = getZeroTermStrBytes(oleBuilder.getFilePath());
@@ -264,7 +264,7 @@ public class OleUtil
     return headerBytes;
   }
 
-  private static byte[] writePackageStreamFooter(OleBlob.Builder oleBuilder) {
+  private static byte[] writePackageStreamFooter(Builder oleBuilder) {
 
     // note, these are _not_ zero terminated
     byte[] fileNameBytes = oleBuilder.getFileName().getBytes(OLE_UTF_CHARSET);
@@ -299,19 +299,19 @@ public class OleUtil
 
     // read outer package header
     int headerSize = bb.getShort();
-    int objType = bb.getInt();
+    /* int objType = */ bb.getInt();
     int prettyNameLen = bb.getShort();
     int classNameLen = bb.getShort();
     int prettyNameOff = bb.getShort();
     int classNameOff = bb.getShort();       
-    int objSize = bb.getInt();
+    /* int objSize = */ bb.getInt();
     String prettyName = readStr(bb, prettyNameOff, prettyNameLen);
     String className = readStr(bb, classNameOff, classNameLen);
     bb.position(headerSize);
 
     // read ole header
     int oleVer = bb.getInt();
-    int format = bb.getInt();
+    /* int format = */ bb.getInt();
 
     if(oleVer != OLE_VERSION) {
       return new UnknownContentImpl(blob);
