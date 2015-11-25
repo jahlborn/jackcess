@@ -52,6 +52,7 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.PropertyMap;
@@ -702,10 +703,10 @@ public class DatabaseImpl implements Database
   /**
    * @usage _advanced_method_
    */
-  Calendar getCalendar()
-  {
+  Calendar getCalendar() {
     if(_calendar == null) {
-      _calendar = Calendar.getInstance(_timeZone);
+      _calendar = DatabaseBuilder.toCompatibleCalendar(
+          Calendar.getInstance(_timeZone));
     }
     return _calendar;
   }

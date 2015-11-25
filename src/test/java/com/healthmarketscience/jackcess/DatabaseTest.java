@@ -681,6 +681,57 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  public void testAncientDates() throws Exception
+  {
+    TimeZone tz = TimeZone.getTimeZone("America/New_York");
+    SimpleDateFormat sdf = DatabaseBuilder.createDateFormat("yyyy-MM-dd");
+    sdf.getCalendar().setTimeZone(tz);
+    
+    List<String> dates = Arrays.asList("1582-10-15", "1582-10-14", 
+                                       "1492-01-10", "1392-01-10");
+
+
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = createMem(fileFormat);
+      db.setTimeZone(tz);
+
+      Table table = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("name", DataType.TEXT))
+        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+        .toTable(db);
+
+      for(String dateStr : dates) {
+        Date d = sdf.parse(dateStr);
+        table.addRow("row " + dateStr, d);
+      }
+       
+      List<String> foundDates = new ArrayList<String>();
+      for(Row row : table) {
+        foundDates.add(sdf.format(row.getDate("date")));
+      }
+
+      assertEquals(dates, foundDates);
+
+      db.close();
+    }
+
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OLD_DATES)) {
+      Database db = openCopy(testDB);
+
+      Table t = db.getTable("Table1");
+
+      List<String> foundDates = new ArrayList<String>();
+      for(Row row : t) {
+        foundDates.add(sdf.format(row.getDate("DateField")));
+      }
+
+      assertEquals(dates, foundDates);
+
+      db.close();
+    }
+
+  }
+
   public void testSystemTable() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

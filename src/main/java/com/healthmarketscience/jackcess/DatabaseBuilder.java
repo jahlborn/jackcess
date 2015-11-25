@@ -20,6 +20,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
@@ -301,5 +305,29 @@ public class DatabaseBuilder
     throws IOException 
   {
     return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
+  }
+
+  /**
+   * Returns a SimpleDateFormat for the given format string which is
+   * configured with a compatible Calendar instance (see
+   * {@link #toCompatibleCalendar}).
+   */
+  public static SimpleDateFormat createDateFormat(String formatStr) {
+    SimpleDateFormat sdf = new SimpleDateFormat(formatStr);
+    toCompatibleCalendar(sdf.getCalendar());
+    return sdf;
+  }
+
+  /**
+   * Ensures that the given {@link Calendar} is configured to be compatible
+   * with how Access handles dates.  Specifically, alters the gregorian change
+   * (the java default gregorian change switches to julian dates for dates pre
+   * 1582-10-15, whereas Access uses <a href="https://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar">proleptic gregorian dates</a>).
+   */
+  public static Calendar toCompatibleCalendar(Calendar cal) {
+    if(cal instanceof GregorianCalendar) {
+      ((GregorianCalendar)cal).setGregorianChange(new Date(Long.MIN_VALUE));
+    }
+    return cal;
   }
 }

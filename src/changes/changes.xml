@@ -9,6 +9,11 @@
         Throw a prettier exception when maxing out the row size during row
         creation.
       </action>
+      <action dev="jahlborn" type="update" system="SourceForge2" issue="128">
+        Add some utility methods (DatabaseBuilder.createDateFormat and
+        DatabaseBuilder.toCompatibleCalendar) for handling Dates in an Access
+        compatible manner.
+      </action>
       <action dev="jahlborn" type="update">
         New site style!
       </action>

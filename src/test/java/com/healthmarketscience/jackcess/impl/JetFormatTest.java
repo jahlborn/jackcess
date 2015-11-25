@@ -49,7 +49,8 @@ public class JetFormatTest extends TestCase {
     LINKED("linkerTest"),
     BLOB("testOle"),
     CALC_FIELD("calcFieldTest"),
-    BINARY_INDEX("binIdxTest");
+    BINARY_INDEX("binIdxTest"),
+    OLD_DATES("oldDates");
 
     private final String _basename;
 
