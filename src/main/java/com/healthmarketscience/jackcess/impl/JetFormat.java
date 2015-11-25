@@ -127,6 +127,7 @@ public abstract class JetFormat {
     static {
       POSSIBLE_VERSION_4.put(ACCESS_VERSION_2000, Database.FileFormat.V2000);
       POSSIBLE_VERSION_4.put(ACCESS_VERSION_2003, Database.FileFormat.V2003);
+      POSSIBLE_VERSION_4.put(null, Database.FileFormat.GENERIC_JET4);
     }
   }
 

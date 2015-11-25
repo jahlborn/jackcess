@@ -110,6 +110,7 @@ public class DatabaseImpl implements Database
 
   static {
     addFileFormatDetails(FileFormat.V1997, null, JetFormat.VERSION_3);
+    addFileFormatDetails(FileFormat.GENERIC_JET4, null, JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2000, "empty", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2003, "empty2003", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
@@ -202,6 +203,7 @@ public class DatabaseImpl implements Database
   /** Name of the system object that is the parent of all databases */
   private static final String SYSTEM_OBJECT_NAME_DATABASES = "Databases";
   /** Name of the system object that is the parent of all relationships */
+  @SuppressWarnings("unused")
   private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = 
     "Relationships";
   /** Name of the table that contains system access control entries */
@@ -739,6 +741,11 @@ public class DatabaseImpl implements Database
         // need to check the "AccessVersion" property
         String accessVersion = (String)getDatabaseProperties().getValue(
             PropertyMap.ACCESS_VERSION_PROP);
+
+        if(isBlank(accessVersion)) {
+          // no access version, fall back to "generic"
+          accessVersion = null;
+        }
         
         _fileFormat = possibleFileFormats.get(accessVersion);
         

@@ -130,11 +130,20 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public enum FileFormat {
 
+    /** A database which was created by MS Access 97 */
     V1997(".mdb"),
+    /** A database which was most likely created programmatically (e.g. using
+        windows ADOX) */
+    GENERIC_JET4(".mdb"),
+    /** A database which was created by MS Access 2000 */
     V2000(".mdb"),
+    /** A database which was created by MS Access 2002/2003 */
     V2003(".mdb"),
+    /** A database which was created by MS Access 2007 */
     V2007(".accdb"),
+    /** A database which was created by MS Access 2010+ */
     V2010(".accdb"),
+    /** A database which was created by MS Money */
     MSISAM(".mny");
 
     private final String _ext;

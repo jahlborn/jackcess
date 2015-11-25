@@ -242,6 +242,17 @@ public class JetFormatTest extends TestCase {
         }
       }
     }
+
+    Database db = null;
+    try {
+      db = open(Database.FileFormat.GENERIC_JET4,
+                new File(DIR_TEST_DATA, "adox_jet4.mdb"));
+      assertEquals(Database.FileFormat.GENERIC_JET4, db.getFileFormat());
+    } finally {
+      if(db != null) {
+        db.close();
+      }
+    }
   }
 
 }

@@ -9,6 +9,11 @@
         Throw a prettier exception when maxing out the row size during row
         creation.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="129">
+        Add FileFormat.GENERIC_JET4 in order to support getting the file
+        format for jet4 databases with no AccessVersion property (e.g. those
+        created programmatically using ADOX).
+      </action>
       <action dev="jahlborn" type="update" system="SourceForge2" issue="128">
         Add some utility methods (DatabaseBuilder.createDateFormat and
         DatabaseBuilder.toCompatibleCalendar) for handling Dates in an Access
