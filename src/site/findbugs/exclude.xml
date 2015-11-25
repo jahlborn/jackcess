@@ -1,5 +1,41 @@
 <FindBugsFilter>
+
+  <!-- General stuff we don't care about -->
   <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT"/>
   </Match>
+
+  <!-- Convenience catch for a variety of exceptions -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.DataType"/>
+    <Method name="addNewSqlType"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
+  <!-- Debug code -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.impl.ByteUtil"/>
+    <Method name="toHexFile"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+
+  <!-- Streams kept open on purpose -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.util.OleBlob$Builder"/>
+    <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
+  </Match>
+
+  <!-- Utility code which uses FileWriter/FileReader -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.util.ImportUtil"/>
+    <Method name="importFile"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.util.ExportUtil"/>
+    <Method name="exportFile"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+
+
 </FindBugsFilter>
