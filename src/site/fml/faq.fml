@@ -125,6 +125,9 @@
             <li>
               Simplicity - With Jackcess, there is no ODBC configuration to set up.
             </li>
+            <li>
+              Longevity - The JDBC/ODBC bridge has been removed in Java 8.
+            </li>
           </ul>
         </p>
       </answer>
@@ -153,10 +156,9 @@
         <p>
           Probably because you're missing a jar that Jackcess depends on from
           your classpath.  Take a look at the <a href="dependencies.html">dependencies list</a>.  The "compile" and
-          "runtime" dependencies are necessary for using Jackcess in your
-          application.  One great place to track down these dependencies is in
-          the <a href="http://repo1.maven.org/maven2/">Ibiblio Maven
-          Repository</a>.
+          "runtime" dependencies (which are not marked as "optional") are
+          necessary for using Jackcess in your application.  One great place
+          to track down these dependencies is in the <a href="http://repo1.maven.org/maven2/">Ibiblio Maven Repository</a>.
         </p>
       </answer>
     </faq>
@@ -198,18 +200,18 @@
           here for reference.
         </p>
         <p>
-          Jackcess cannot currently update a text column index with values
-          which contain non-ascii characters.  This situation often arises
-          when tables are created with names which contain international
-          characters.  Access stores the table names in another table which
-          has an index on the table name column.  The index encoding is not
-          simple to reverse engineer, so it is not likely that Jackcess will
-          support this anytime soon.
-        </p>
-        <p>
-          Update: As of the 1.1.13 release, the text index handling supports
+          Legacy: As of the 1.1.13 release, the text index handling supports
           the entire ISO-8859-1 character set.  Consequently table names can
           (as of this release) contain any character in this character set.
+        </p>
+        <p>
+          Legacy: Jackcess cannot currently update a text column index with
+          values which contain non-ascii characters.  This situation often
+          arises when tables are created with names which contain
+          international characters.  Access stores the table names in another
+          table which has an index on the table name column.  The index
+          encoding is not simple to reverse engineer, so it is not likely that
+          Jackcess will support this anytime soon.
         </p>
         <p>
           Some suggestions (for older releases):
@@ -234,7 +236,7 @@
         library.  While this library would be a great foundation for a JDBC
         driver, implementing the JDBC API is currently outside the scope of
         this project.  There have been a few attempts to use Jackcess to build
-        JDBC drivers for Access databases, but most of the projects have note
+        JDBC drivers for Access databases, but most of the projects have not
         progressed very far before becoming inactive.  The <a href="http://ucanaccess.sourceforge.net/site.html">UCanAccess project</a>,
         however, is a currently active open source project which provides a
         JDBC driver built on top of Jackcess.
@@ -316,9 +318,9 @@
           you might imagine, it's kind of hard to test, simply by its nature.
           There are bugs that we are aware of, and certainly many more that we
           are not.  If you find what looks like a bug, please <a
-          href="http://sf.net/tracker/?group_id=134943&amp;atid=731445">report
+          href="https://sourceforge.net/p/jackcess/bugs/">report
           it.</a> Even better, fix it, and <a
-          href="http://sf.net/tracker/?group_id=134943&amp;atid=731447">submit
+          href="https://sourceforge.net/p/jackcess/patches/">submit
           a patch.</a>
         </p>
       </answer>
