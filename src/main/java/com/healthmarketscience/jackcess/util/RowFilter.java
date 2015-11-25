@@ -18,10 +18,11 @@ package com.healthmarketscience.jackcess.util;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import com.healthmarketscience.jackcess.Column;
-import org.apache.commons.lang.ObjectUtils;
 import com.healthmarketscience.jackcess.Row;
+import org.apache.commons.lang.ObjectUtils;
 
 
 /**
@@ -180,6 +181,9 @@ public abstract class RowFilter
         }
 
         public Row next() {
+          if(_next == null) {
+            throw new NoSuchElementException();
+          }
           return _next;
         }
 
