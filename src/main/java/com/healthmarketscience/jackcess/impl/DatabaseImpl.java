@@ -426,8 +426,12 @@ public class DatabaseImpl implements Database
   {
     FileFormatDetails details = getFileFormatDetails(fileFormat);
     if (details.getFormat().READ_ONLY) {
-      throw new IOException("file format " + fileFormat +       
+      throw new IOException("File format " + fileFormat +       
                             " does not support writing for " + mdbFile);
+    }
+    if(details.getEmptyFilePath() == null) {
+      throw new IOException("File format " + fileFormat +       
+                            " does not support file creation for " + mdbFile);
     }
 
     boolean closeChannel = false;
