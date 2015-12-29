@@ -44,7 +44,7 @@
         </p>
         <p>
           Well, the first thing you need to do is open the database.  The
-          entry point class in the Jackcess API is, suprisingly enough, the
+          entry point class in the Jackcess API is, surprisingly enough, the
           <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database</a> class.
         </p>
         <source>
