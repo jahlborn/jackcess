@@ -30,6 +30,8 @@ public interface AppendQuery extends BaseSelectQuery
 
   public String getTargetTable();
 
+  public List<String> getTargetColumns();
+
   public String getRemoteDbPath();
 
   public String getRemoteDbType();

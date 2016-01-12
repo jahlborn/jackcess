@@ -206,7 +206,7 @@ public class QueryTest extends TestCase
               "WHERE (((Table1.col1)>\"blah\"));"));
       expectedQueries.put(
           "AppendQuery",multiline(
-              "INSERT INTO Table3",
+              "INSERT INTO Table3 (col2, col2, col3)",
               "SELECT [Table1].[col2], [Table2].[col2], [Table2].[col3]",
               "FROM Table3, Table1 INNER JOIN Table2 ON [Table1].[col1]=[Table2].[col1];"));
       expectedQueries.put(
@@ -255,6 +255,27 @@ public class QueryTest extends TestCase
 
       db.close();
     }
+  }
+
+  public void testAppendQuery() throws Exception
+  {
+    AppendQuery query = (AppendQuery)newQuery(
+        Query.Type.APPEND, null, "Table2",
+        // newRow(TABLE_ATTRIBUTE, null, "Table1", null),
+        newRow(COLUMN_ATTRIBUTE, "54", APPEND_VALUE_FLAG, null, null),
+        newRow(COLUMN_ATTRIBUTE, "'hello'", APPEND_VALUE_FLAG, null, null));
+
+    assertEquals(multiline("INSERT INTO Table2", 
+                           "VALUES (54, 'hello');"), query.toSQLString());
+
+    query = (AppendQuery)newQuery(
+        Query.Type.APPEND, null, "Table2",
+        // newRow(TABLE_ATTRIBUTE, null, "Table1", null),
+        newRow(COLUMN_ATTRIBUTE, "54", APPEND_VALUE_FLAG, null, "ID"),
+        newRow(COLUMN_ATTRIBUTE, "'hello'", APPEND_VALUE_FLAG, null, "Field 3"));
+
+    assertEquals(multiline("INSERT INTO Table2 (ID, [Field 3])", 
+                           "VALUES (54, 'hello');"), query.toSQLString());
   }
 
   private void doTestColumns(SelectQuery query) throws Exception

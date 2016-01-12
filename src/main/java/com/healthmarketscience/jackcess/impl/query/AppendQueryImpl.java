@@ -40,12 +40,28 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
     return getTypeRow().name1;
   }
 
+  public List<String> getTargetColumns() {
+    return new RowFormatter(getTargetRows()) {
+        @Override protected void format(StringBuilder builder, Row row) {
+          toOptionalQuotedExpr(builder, row.name2, true);
+        }
+      }.format();
+  }
+
   public String getRemoteDbPath() {
     return getTypeRow().name2;
   }
 
   public String getRemoteDbType() {
     return getTypeRow().expression;
+  }
+
+  public List<String> getValues() {
+    return new RowFormatter(getValueRows()) {
+        @Override protected void format(StringBuilder builder, Row row) {
+          builder.append(row.expression);
+        }
+      }.format();
   }
 
   protected List<Row> getValueRows() {
@@ -57,12 +73,12 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
     return filterRowsByNotFlag(super.getColumnRows(), APPEND_VALUE_FLAG);
   }
 
-  public List<String> getValues() {
-    return new RowFormatter(getValueRows()) {
-        @Override protected void format(StringBuilder builder, Row row) {
-          builder.append(row.expression);
-        }
-      }.format();
+  protected List<Row> getTargetRows() {
+    return new RowFilter() {
+        @Override protected boolean keep(Row row) {
+          return (row.name2 != null);
+        }      
+    }.filter(super.getColumnRows());
   }
 
   @Override
@@ -70,6 +86,10 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
   {
     builder.append("INSERT INTO ");
     toOptionalQuotedExpr(builder, getTargetTable(), true);
+    List<String> columns = getTargetColumns();
+    if(!columns.isEmpty()) {
+      builder.append(" (").append(columns).append(')');
+    }
     toRemoteDb(builder, getRemoteDbPath(), getRemoteDbType());
     builder.append(NEWLINE);
     List<String> values = getValues();
