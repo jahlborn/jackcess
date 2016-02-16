@@ -10,25 +10,21 @@ Missing pieces:
   * EASY
 - implement table, column, index deletion
   * EASY - MEDIUM
-- implement more comprehensive unicode compression write support
-  * EASY? (have the code, do we trust it?)
 - implement createReadOnlyTemp(InputStream) (delete temp file on close)
   * EASY
 - figure out how msaccess manages page/row locks
   * MEDIUM
 
-Refactor goals:
-- tweak lookup apis (specify column vs column name)
-- clean up javadocs
-  - enhance public api classes
-  * add @usage tags to util classes
-- implement page buffering in PageChannel
-  * need to implement logical flushing in update code (startUpdate/finishUpdate)
-- add typed getter methods to PropertyMap
+Rename:
+- Table - update table def, queries, relationships, complex tables?
+- Column - update table def, queries, relationships, complex tables?
+- Index - update table def
 
 Index add (fk impl)
 - Database.addIndex(IndexBuilder) - use TableCreator internal
-  - add indexes separately from adding fk info,
+  - add indexes separately from adding fk info, (backing indexes need to be
+    added first)
+    - require baking indexes to be created first (does MSAccess?)
     - need to populate index after creation! populate first, then add?
   - add relationships
 - flush all non-system tables from DbImpl._tableCache (references to old table
