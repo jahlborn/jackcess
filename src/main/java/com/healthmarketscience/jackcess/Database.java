@@ -201,11 +201,19 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public TableIterableBuilder newIterable();
   
   /**
-   * @param name Table name (case-insensitive)
-   * @return The table, or null if it doesn't exist
+   * @param name User table name (case-insensitive)
+   * @return The Table, or null if it doesn't exist (or is a system table)
    * @usage _general_method_
    */
   public Table getTable(String name) throws IOException;
+
+  /**
+   * @param name Table name (case-insensitive), may be any table type
+   *             (i.e. includes system or linked tables).
+   * @return The meta data for the table, or null if it doesn't exist
+   * @usage _intermediate_method_
+   */
+  public TableMetaData getTableMetaData(String name) throws IOException;
 
   /**
    * Finds all the relationships in the database between the given tables.

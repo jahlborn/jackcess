@@ -777,6 +777,10 @@ public class DatabaseTest extends TestCase
 
       assertNull(db.getSystemTable("MSysBogus"));
 
+      TableMetaData tmd = db.getTableMetaData("MSysObjects");
+      assertEquals("MSysObjects", tmd.getName());
+      assertFalse(tmd.isLinked());
+      assertTrue(tmd.isSystem());
       
       db.close();
     }
@@ -858,6 +862,16 @@ public class DatabaseTest extends TestCase
         // success
       }
 
+      TableMetaData tmd = db.getTableMetaData("Table2");
+      assertEquals("Table2", tmd.getName());
+      assertTrue(tmd.isLinked());
+      assertFalse(tmd.isSystem());
+      assertEquals("Table1", tmd.getLinkedTableName());
+      assertEquals("Z:\\jackcess_test\\linkeeTest.accdb", tmd.getLinkedDbName());
+
+      tmd = db.getTableMetaData("FooTable");
+      assertNull(tmd);
+
       assertTrue(db.getLinkedDatabases().isEmpty());
 
       final String linkeeDbName = "Z:\\jackcess_test\\linkeeTest.accdb";
@@ -887,6 +901,13 @@ public class DatabaseTest extends TestCase
 
       db.createLinkedTable("FooTable", linkeeDbName, "Table2");      
 
+      tmd = db.getTableMetaData("FooTable");
+      assertEquals("FooTable", tmd.getName());
+      assertTrue(tmd.isLinked());
+      assertFalse(tmd.isSystem());
+      assertEquals("Table2", tmd.getLinkedTableName());
+      assertEquals("Z:\\jackcess_test\\linkeeTest.accdb", tmd.getLinkedDbName());
+
       Table t3 = db.getTable("FooTable");
 
       assertEquals(1, db.getLinkedDatabases().size());
@@ -899,7 +920,14 @@ public class DatabaseTest extends TestCase
 
       assertTable(expectedRows, t3);
 
-      Table t1 = db.getTable("Table1");
+      tmd = db.getTableMetaData("Table1");
+      assertEquals("Table1", tmd.getName());
+      assertFalse(tmd.isLinked());
+      assertFalse(tmd.isSystem());
+      assertNull(tmd.getLinkedTableName());
+      assertNull(tmd.getLinkedDbName());
+
+      Table t1 = tmd.open(db);
       
       assertFalse(db.isLinkedTable(null));
       assertTrue(db.isLinkedTable(t2));
@@ -933,7 +961,7 @@ public class DatabaseTest extends TestCase
       assertFalse(tables.contains(t2));
       assertFalse(tables.contains(t3));
       assertTrue(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-      
+
       db.close();
     }
   }

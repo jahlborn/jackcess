@@ -60,6 +60,7 @@ import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableMetaData;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
@@ -928,6 +929,10 @@ public class DatabaseImpl implements Database
     return getTable(name, false);
   }
 
+  public TableMetaData getTableMetaData(String name) throws IOException {
+    return getTableInfo(name, true);
+  }  
+
   /**
    * @param tableDefPageNumber the page number of a table definition
    * @return The table, or null if it doesn't exist
@@ -962,15 +967,29 @@ public class DatabaseImpl implements Database
   private TableImpl getTable(String name, boolean includeSystemTables) 
     throws IOException 
   {
+    TableInfo tableInfo = getTableInfo(name, includeSystemTables);
+    return ((tableInfo != null) ? 
+            getTable(tableInfo, includeSystemTables) : null);
+  }
+
+  private TableInfo getTableInfo(String name, boolean includeSystemTables) 
+    throws IOException 
+  {
     TableInfo tableInfo = lookupTable(name);
     
     if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
     }
-    if(!includeSystemTables && isSystemObject(tableInfo.flags)) {
+    if(!includeSystemTables && tableInfo.isSystem()) {
       return null;
     }
 
+    return tableInfo;
+  }
+
+  private TableImpl getTable(TableInfo tableInfo, boolean includeSystemTables) 
+    throws IOException 
+  {
     if(tableInfo.isLinked()) {
 
       if(_linkedDbs == null) {
@@ -1884,7 +1903,7 @@ public class DatabaseImpl implements Database
   /**
    * Utility class for storing table page number and actual name.
    */
-  private static class TableInfo
+  private static class TableInfo implements TableMetaData
   {
     public final Integer pageNumber;
     public final String tableName;
@@ -1896,8 +1915,43 @@ public class DatabaseImpl implements Database
       flags = newFlags;
     }
 
+    public String getName() {
+      return tableName;
+    }
+    
     public boolean isLinked() {
       return false;
+    }
+
+    public boolean isSystem() {
+      return isSystemObject(flags);
+    } 
+
+    public String getLinkedTableName() {
+      return null;
+    }
+
+    public String getLinkedDbName() {
+      return null;
+    }
+
+    public Table open(Database db) throws IOException {
+      return ((DatabaseImpl)db).getTable(this, true);
+    }
+
+    @Override
+    public String toString() {
+      ToStringBuilder sb = CustomToStringStyle.valueBuilder("TableMetaData")
+        .append("name", getName());
+        if(isSystem()) {
+          sb.append("isSystem", isSystem());
+        }
+        if(isLinked()) {
+          sb.append("isLinked", isLinked())
+            .append("linkedTableName", getLinkedTableName())
+            .append("linkedDbName", getLinkedDbName());
+        }
+        return sb.toString();
     }
   }
 
@@ -1920,6 +1974,16 @@ public class DatabaseImpl implements Database
     @Override
     public boolean isLinked() {
       return true;
+    }
+
+    @Override
+    public String getLinkedTableName() {
+      return linkedTableName;
+    }
+
+    @Override
+    public String getLinkedDbName() {
+      return linkedDbName;
     }
   }
 

@@ -8,6 +8,11 @@
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="131">
         Fix missing column names in AppendQuery SQL strings.
       </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="33">
+        Add Database.getTableMetaData method to enable getting basic info
+        about a Table (by name) without actually loading it.
+      </action>
     </release>
     <release version="2.1.3" date="2015-12-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="127">
