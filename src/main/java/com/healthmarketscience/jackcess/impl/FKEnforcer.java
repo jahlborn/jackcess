@@ -219,8 +219,8 @@ final class FKEnforcer
     throws IOException 
   {
     // ensure that the relevant rows exist in the primary tables for which
-    // this table is a secondary table.
-    if(!joiner.hasRows(row)) {
+    // this table is a secondary table.  however, null values are allowed
+    if(!areNull(joiner, row) && !joiner.hasRows(row)) {
       throw new ConstraintViolationException(
           "Adding new row " + Arrays.asList(row) + " violates constraint " +
           joiner.toFKString());
@@ -286,6 +286,15 @@ final class FKEnforcer
       }
     }
     return false;
+  }
+
+  private static boolean areNull(Joiner joiner, Object[] row) {
+    for(Index.Column col : joiner.getColumns()) {
+      if(col.getColumn().getRowValue(row) != null) {
+        return false;
+      }
+    } 
+    return true;
   }
 
   private boolean enforcing() {

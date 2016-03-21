@@ -102,6 +102,8 @@ public class FKEnforcerTest extends TestCase
         assertTrue(ignored.getMessage().contains("Table3[id]"));
       }
 
+      t1.addRow(21, null, null, "null fks", null);
+
       Cursor c = CursorBuilder.createCursor(t3);
       Column col = t3.getColumn("id");
       for(Row row : c) {
@@ -115,7 +117,8 @@ public class FKEnforcerTest extends TestCase
             createT1Row(0, 0, 30, "baz0", 0),
             createT1Row(1, 1, 31, "baz11", 0),
             createT1Row(2, 1, 31, "baz11-2", 0),
-            createT1Row(3, 2, 33, "baz13", 0));
+            createT1Row(3, 2, 33, "baz13", 0),
+            createT1Row(21, null, null, "null fks", null));
 
       assertTable(expectedRows, t1);
 
@@ -125,7 +128,7 @@ public class FKEnforcerTest extends TestCase
         iter.remove();
       }
 
-      assertEquals(0, t1.getRowCount());
+      assertEquals(1, t1.getRowCount());
 
       db.close();
     }
@@ -133,7 +136,7 @@ public class FKEnforcerTest extends TestCase
   }
 
   private static Row createT1Row(
-      int id1, int fk1, int fk2, String data, int fk3)
+      int id1, Integer fk1, Integer fk2, String data, Integer fk3)
   {
     return createExpectedRow("id", id1, "otherfk1", fk1, "otherfk2", fk2,
                              "data", data, "otherfk3", fk3);
