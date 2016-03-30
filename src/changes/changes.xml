@@ -17,6 +17,12 @@
         Allow null values in foreign key fields when enforcing referential
         integrity.
       </action>
+      <action dev="jahlborn" type="update">
+        Add support for cascade null on delete relationships.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for the required flag for an index.
+      </action>
     </release>
     <release version="2.1.3" date="2015-12-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="127">

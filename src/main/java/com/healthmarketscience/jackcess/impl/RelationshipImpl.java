@@ -40,6 +40,9 @@ public class RelationshipImpl implements Relationship
   private static final int CASCADE_UPDATES_FLAG =          0x00000100;
   /** flag indicating cascading deletes (requires referential integrity) */
   private static final int CASCADE_DELETES_FLAG =          0x00001000;
+  /** flag indicating cascading null on delete (requires referential
+      integrity) */
+  private static final int CASCADE_NULL_FLAG =             0x00002000;
   /** flag indicating left outer join */
   private static final int LEFT_OUTER_JOIN_FLAG =          0x01000000;
   /** flag indicating right outer join */
@@ -111,6 +114,10 @@ public class RelationshipImpl implements Relationship
   
   public boolean cascadeDeletes() {
     return hasFlag(CASCADE_DELETES_FLAG);
+  }
+
+  public boolean cascadeNullOnDelete() {
+    return hasFlag(CASCADE_NULL_FLAG);
   }
 
   public boolean isLeftOuterJoin() {

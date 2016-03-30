@@ -55,6 +55,7 @@ final class FKEnforcer
   private List<Joiner> _primaryJoinersChkDel;
   private List<Joiner> _primaryJoinersDoUp;
   private List<Joiner> _primaryJoinersDoDel;
+  private List<Joiner> _primaryJoinersDoNull;
   private List<Joiner> _secondaryJoiners;
 
   FKEnforcer(TableImpl table) {
@@ -91,6 +92,7 @@ final class FKEnforcer
     _primaryJoinersChkDel = new ArrayList<Joiner>(1);
     _primaryJoinersDoUp = new ArrayList<Joiner>(1);
     _primaryJoinersDoDel = new ArrayList<Joiner>(1);
+    _primaryJoinersDoNull = new ArrayList<Joiner>(1);
     _secondaryJoiners = new ArrayList<Joiner>(1);
 
     for(IndexImpl idx : _table.getIndexes()) {
@@ -106,6 +108,8 @@ final class FKEnforcer
           }
           if(ref.isCascadeDeletes()) {
             _primaryJoinersDoDel.add(joiner);
+          } else if(ref.isCascadeNullOnDelete()) {
+            _primaryJoinersDoNull.add(joiner);
           } else {
             _primaryJoinersChkDel.add(joiner);
           }
@@ -208,10 +212,16 @@ final class FKEnforcer
       requireNoSecondaryValues(joiner, row);
     }
 
-    // lastly, delete from the tables for which we are the primary table in
+    // next, delete from the tables for which we are the primary table in
     // the relationship
     for(Joiner joiner : _primaryJoinersDoDel) {
       joiner.deleteRows(row);
+    }
+
+    // lastly, null the tables for which we are the primary table in
+    // the relationship
+    for(Joiner joiner : _primaryJoinersDoNull) {
+      nullSecondaryValues(joiner, row);
     }
   }
 
@@ -258,6 +268,29 @@ final class FKEnforcer
       for(int i = 0; i < fromCols.size(); ++i) {
         Object val = fromCols.get(i).getColumn().getRowValue(newFromRow);
         toCols.get(i).getColumn().setRowValue(toRow, val);
+      }
+
+      toCursor.updateCurrentRow(toRow);
+    }
+  }
+
+  private static void nullSecondaryValues(Joiner joiner, Object[] oldFromRow)
+    throws IOException
+  {
+    IndexCursor toCursor = joiner.getToCursor();
+    List<? extends Index.Column> fromCols = joiner.getColumns();
+    List<? extends Index.Column> toCols = joiner.getToIndex().getColumns();
+    Object[] toRow = new Object[joiner.getToTable().getColumnCount()];
+
+    for(Iterator<Row> iter = joiner.findRows(oldFromRow)
+          .setColumnNames(Collections.<String>emptySet())
+          .iterator(); iter.hasNext(); ) {
+      iter.next();
+
+      // create update row for "to" table
+      Arrays.fill(toRow, Column.KEEP_VALUE);
+      for(int i = 0; i < fromCols.size(); ++i) {
+        toCols.get(i).getColumn().setRowValue(toRow, null);
       }
 
       toCursor.updateCurrentRow(toRow);

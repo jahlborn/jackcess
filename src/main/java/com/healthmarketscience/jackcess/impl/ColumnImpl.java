@@ -113,10 +113,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public static final byte HYPERLINK_FLAG_MASK = (byte)0x80;
   
   /**
-   * mask for the unknown bit (possible "can be null"?)
+   * mask for the "is updatable" field bit
    * @usage _advanced_field_
    */
-  public static final byte UNKNOWN_FLAG_MASK = (byte)0x02;
+  public static final byte UPDATABLE_FLAG_MASK = (byte)0x02;
 
   // some other flags?
   // 0x10: replication related field (or hidden?)
@@ -1283,7 +1283,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Constructs a byte containing the flags for this column.
    */
   private static byte getColumnBitFlags(ColumnBuilder col) {
-    byte flags = UNKNOWN_FLAG_MASK;
+    byte flags = UPDATABLE_FLAG_MASK;
     if(!col.isVariableLength()) {
       flags |= FIXED_LEN_FLAG_MASK;
     }

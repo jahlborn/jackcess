@@ -216,7 +216,7 @@ public class TableImpl implements Table
    * @param name Table name
    */
   protected TableImpl(DatabaseImpl database, ByteBuffer tableBuffer,
-                  int pageNumber, String name, int flags)
+                      int pageNumber, String name, int flags)
     throws IOException
   {
     _database = database;

@@ -49,6 +49,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   private static final byte CASCADE_UPDATES_FLAG = (byte)1;
   /** flag for indicating that deletes should cascade in a foreign key index */
   private static final byte CASCADE_DELETES_FLAG = (byte)1;
+  /** flag for indicating that deletes should cascade a null in a foreign key
+      index */
+  private static final byte CASCADE_NULL_FLAG = (byte)2;
 
   /** index table type for the "primary" table in a foreign key index */
   private static final byte PRIMARY_TABLE_TYPE = (byte)1;
@@ -90,8 +93,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
        (relIndexNumber != INVALID_INDEX_NUMBER)) {
       _reference = new ForeignKeyReference(
           relIndexType, relIndexNumber, relTablePageNumber,
-          (cascadeUpdatesFlag == CASCADE_UPDATES_FLAG),
-          (cascadeDeletesFlag == CASCADE_DELETES_FLAG));
+          ((cascadeUpdatesFlag & CASCADE_UPDATES_FLAG) != 0),
+          ((cascadeDeletesFlag & CASCADE_DELETES_FLAG) != 0),
+          ((cascadeDeletesFlag & CASCADE_NULL_FLAG) != 0));
     } else {
       _reference = null;
     }
@@ -205,6 +209,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
   public boolean isUnique() {
     return getIndexData().isUnique();
+  }
+  
+  public boolean isRequired() {
+    return getIndexData().isRequired();
   }
   
   public List<IndexData.ColumnDescriptor> getColumns() {
@@ -374,16 +382,18 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     private final int _otherTablePageNumber;
     private final boolean _cascadeUpdates;
     private final boolean _cascadeDeletes;
+    private final boolean _cascadeNull;
     
     public ForeignKeyReference(
         byte tableType, int otherIndexNumber, int otherTablePageNumber,
-        boolean cascadeUpdates, boolean cascadeDeletes)
+        boolean cascadeUpdates, boolean cascadeDeletes, boolean cascadeNull)
     {
       _tableType = tableType;
       _otherIndexNumber = otherIndexNumber;
       _otherTablePageNumber = otherTablePageNumber;
       _cascadeUpdates = cascadeUpdates;
       _cascadeDeletes = cascadeDeletes;
+      _cascadeNull = cascadeNull;
     }
 
     public byte getTableType() {
@@ -410,6 +420,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
       return _cascadeDeletes;
     }
 
+    public boolean isCascadeNullOnDelete() {
+      return _cascadeNull;
+    }
+
     @Override
     public String toString() {
       return CustomToStringStyle.builder(this)
@@ -418,6 +432,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
         .append("isPrimaryTable", isPrimaryTable())
         .append("isCascadeUpdates", isCascadeUpdates())
         .append("isCascadeDeletes", isCascadeDeletes())
+        .append("isCascadeNullOnDelete", isCascadeNullOnDelete())
         .toString();
     }
   }

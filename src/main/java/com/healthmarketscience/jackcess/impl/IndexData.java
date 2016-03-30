@@ -79,7 +79,7 @@ public class IndexData {
 
   public static final byte UNIQUE_INDEX_FLAG = (byte)0x01;
   public static final byte IGNORE_NULLS_INDEX_FLAG = (byte)0x02;
-  public static final byte SPECIAL_INDEX_FLAG = (byte)0x08; // set on MSysACEs and MSysAccessObjects indexes, purpose unknown
+  public static final byte REQUIRED_INDEX_FLAG = (byte)0x08;
   public static final byte UNKNOWN_INDEX_FLAG = (byte)0x80; // always seems to be set on indexes in access 2000+
 
   private static final int MAGIC_INDEX_NUMBER = 1923;
@@ -316,6 +316,13 @@ public class IndexData {
     return(isBackingPrimaryKey() || ((_indexFlags & UNIQUE_INDEX_FLAG) != 0));
   }
   
+  /**
+   * Whether or not values are required in the columns.
+   */
+  public boolean isRequired() {
+    return((_indexFlags & REQUIRED_INDEX_FLAG) != 0);
+  }
+
   /**
    * Returns the Columns for this index (unmodifiable)
    */
@@ -569,10 +576,10 @@ public class IndexData {
       // nothing to do
       return change;
     }
-    if(isBackingPrimaryKey() && (nullCount > 0)) {
+    if((nullCount > 0) && (isBackingPrimaryKey() || isRequired())) {
       throw new ConstraintViolationException(withErrorContext(
           "Null value found in row " + Arrays.asList(row) +
-          " for primary key index"));
+          " for primary key or required index"));
     }
     
     // make sure we've parsed the entries
@@ -979,6 +986,7 @@ public class IndexData {
       .append("isBackingPrimaryKey", isBackingPrimaryKey())
       .append("isUnique", isUnique())
       .append("ignoreNulls", shouldIgnoreNulls())
+      .append("isRequired", isRequired())
       .append("columns", _columns)
       .append("initialized", _initialized);
     if(_initialized) {

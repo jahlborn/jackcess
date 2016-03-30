@@ -70,6 +70,11 @@ public interface Index
   public boolean isUnique();
 
   /**
+   * Whether or not values are required for index columns.
+   */
+  public boolean isRequired();
+
+  /**
    * Convenience method for constructing a new CursorBuilder for this Index.
    */
   public CursorBuilder newCursor();
