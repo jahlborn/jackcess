@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -37,9 +36,8 @@ import com.healthmarketscience.jackcess.IndexBuilder;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class TableCreator 
+class TableCreator extends DBMutator
 {
-  private final DatabaseImpl _database;
   private final String _name;
   private final List<ColumnBuilder> _columns;
   private final List<IndexBuilder> _indexes;
@@ -53,9 +51,9 @@ class TableCreator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(DatabaseImpl database, String name, List<ColumnBuilder> columns,
-                      List<IndexBuilder> indexes) {
-    _database = database;
+  public TableCreator(DatabaseImpl database, String name, 
+                      List<ColumnBuilder> columns, List<IndexBuilder> indexes) {
+    super(database);
     _name = name;
     _columns = columns;
     _indexes = ((indexes != null) ? indexes : 
@@ -64,22 +62,6 @@ class TableCreator
 
   public String getName() {
     return _name;
-  }
-
-  public DatabaseImpl getDatabase() {
-    return _database;
-  }
-
-  public JetFormat getFormat() {
-    return _database.getFormat();
-  }
-
-  public PageChannel getPageChannel() {
-    return _database.getPageChannel();
-  }
-
-  public Charset getCharset() {
-    return _database.getCharset();
   }
 
   public int getTdefPageNumber() {
@@ -114,10 +96,6 @@ class TableCreator
     return _indexStates.get(idx);
   }
 
-  public int reservePageNumber() throws IOException {
-    return getPageChannel().allocateNewPage();
-  }
-
   public ColumnState getColumnState(ColumnBuilder col) {
     return _columnStates.get(col);
   }
@@ -125,6 +103,22 @@ class TableCreator
   public List<ColumnBuilder> getLongValueColumns() {
     return _lvalCols;
   }
+
+  /**
+   * @return The number of variable length columns which are not long values
+   *         found in the list
+   * @usage _advanced_method_
+   */
+  public short countNonLongVariableLength() {
+    short rtn = 0;
+    for (ColumnBuilder col : _columns) {
+      if (col.isVariableLength() && !col.getType().isLongValue()) {
+        rtn++;
+      }
+    }
+    return rtn;
+  }
+  
 
   /**
    * Creates the table in the database.
@@ -167,7 +161,8 @@ class TableCreator
       TableImpl.writeTableDefinition(this);
 
       // update the database with the new table info
-      _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
+      getDatabase().addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, 
+                                null, null);
 
     } finally {
       getPageChannel().finishWrite();
@@ -192,33 +187,10 @@ class TableCreator
           getFormat().MAX_COLUMNS_PER_TABLE + " columns");
     }
     
-    ColumnImpl.SortOrder dbSortOrder = null;
-    try {
-      dbSortOrder = _database.getDefaultSortOrder();
-    } catch(IOException e) {
-      // ignored, just use the jet format default
-    }
-
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(ColumnBuilder column : _columns) {
-
-      // FIXME for now, we can't create complex columns
-      if(column.getType() == DataType.COMPLEX_TYPE) {
-        throw new UnsupportedOperationException(
-            "Complex column creation is not yet implemented");
-      }
-      
-      column.validate(getFormat());
-      if(!colNames.add(column.getName().toUpperCase())) {
-        throw new IllegalArgumentException("duplicate column name: " +
-                                           column.getName());
-      }
-
-      // set the sort order to the db default (if unspecified)
-      if(column.getType().isTextual() && (column.getTextSortOrder() == null)) {
-        column.setTextSortOrder(dbSortOrder);
-      }
+      validateColumn(colNames, column);
     }
 
     List<ColumnBuilder> autoCols = getAutoNumberColumns();
@@ -226,12 +198,7 @@ class TableCreator
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
       for(ColumnBuilder c : autoCols) {
-        if(!c.getType().isMultipleAutoNumberAllowed() &&
-           !autoTypes.add(c.getType())) {
-          throw new IllegalArgumentException(
-              "Can have at most one AutoNumber column of type " + c.getType() +
-              " per table");
-        }
+        validateAutoNumberColumn(autoTypes, c);
       }
     }
 
@@ -327,39 +294,4 @@ class TableCreator
     }
   }
     
-  /**
-   * Maintains additional state used during column creation.
-   * @usage _advanced_class_
-   */
-  static final class ColumnState
-  {
-    private byte _umapOwnedRowNumber;
-    private byte _umapFreeRowNumber;
-    // we always put both usage maps on the same page
-    private int _umapPageNumber;
-
-    public byte getUmapOwnedRowNumber() {
-      return _umapOwnedRowNumber;
-  }
-
-    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
-      _umapOwnedRowNumber = newUmapOwnedRowNumber;
-}
-
-    public byte getUmapFreeRowNumber() {
-      return _umapFreeRowNumber;
-    }
-
-    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
-      _umapFreeRowNumber = newUmapFreeRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
-  }
 }

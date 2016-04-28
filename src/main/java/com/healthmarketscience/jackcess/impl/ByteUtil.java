@@ -397,6 +397,22 @@ public final class ByteUtil {
     }
     return -1;
   }
+
+  /**
+   * Inserts empty data of the given length at the current position of the
+   * given buffer (moving existing data forward the given length).  The limit
+   * of the buffer is adjusted by the given length.  The buffer is expecting
+   * to have the required capacity available.
+   */
+  public static void insertEmptyData(ByteBuffer buffer, int len) {
+    byte[] buf = buffer.array();
+    int pos = buffer.position();
+    int limit = buffer.limit();
+    System.out.println("FOO insert " + pos + " " + len + " " + limit + " " + buffer.capacity());
+    System.arraycopy(buf, pos, buf, pos + len, limit - pos);
+    Arrays.fill(buf, pos, pos + len, (byte)0);
+    buffer.limit(limit + len);
+  }
   
   /**
    * Convert a byte buffer to a hexadecimal string for display

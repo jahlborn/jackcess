@@ -117,9 +117,9 @@ public class TableImpl implements Table
   /** page number of the definition of this table */
   private final int _tableDefPageNumber;
   /** max Number of columns in the table (includes previous deletions) */
-  private final short _maxColumnCount;
+  private short _maxColumnCount;
   /** max Number of variable columns in the table */
-  private final short _maxVarColumnCount;
+  private short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
   private final List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   /** List of variable length columns in this table, ordered by offset */
@@ -198,7 +198,7 @@ public class TableImpl implements Table
     }
     _maxColumnCount = (short)_columns.size();
     _maxVarColumnCount = (short)_varColumns.size();
-    getAutoNumberColumns();
+    initAutoNumberColumns();
 
     _fkEnforcer = null;
     _flags = 0;
@@ -224,8 +224,13 @@ public class TableImpl implements Table
     _name = name;
     _flags = flags;
 
+    System.out.println("FOO " + _name + " tdefLen " + tableBuffer.getInt(8) + 
+                       " free " +
+                       tableBuffer.getShort(database.getFormat().OFFSET_FREE_SPACE));
+
     // read table definition
-    tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer);
+    tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer, null);
+
     _rowCount = tableBuffer.getInt(getFormat().OFFSET_NUM_ROWS);
     _lastLongAutoNumber = tableBuffer.getInt(getFormat().OFFSET_NEXT_AUTO_NUMBER);
     if(getFormat().OFFSET_NEXT_COMPLEX_AUTO_NUMBER >= 0) {
@@ -253,36 +258,13 @@ public class TableImpl implements Table
     readIndexDefinitions(tableBuffer);
 
     // read column usage map info
-    while(tableBuffer.remaining() >= 2) {
-
-      short umapColNum = tableBuffer.getShort();
-      if(umapColNum == IndexData.COLUMN_UNUSED) {
-        break;
-      }
-      
-      int pos = tableBuffer.position();
-      UsageMap colOwnedPages = null;
-      UsageMap colFreeSpacePages = null;
-      try {
-        colOwnedPages = UsageMap.read(getDatabase(), tableBuffer, false);
-        colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
-      } catch(IllegalStateException e) {
-        // ignore invalid usage map info
-        colOwnedPages = null;
-        colFreeSpacePages = null;
-        tableBuffer.position(pos + 8);
-        LOG.warn(withErrorContext("Invalid column " + umapColNum + 
-                                  " usage map definition: " + e));
-      }
-      
-      for(ColumnImpl col : _columns) {
-        if(col.getColumnNumber() == umapColNum) {
-          col.setUsageMaps(colOwnedPages, colFreeSpacePages);
-          break;
-        }
-      }
+    while((tableBuffer.remaining() >= 2) && 
+          readColumnUsageMaps(tableBuffer)) {
+      // keep reading ...
     }
 
+    System.out.println("FOO done " + tableBuffer.position());
+    
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
       Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
@@ -510,6 +492,10 @@ public class TableImpl implements Table
    */
   public int getLogicalIndexCount() {
     return _logicalIndexCount;
+  }
+
+  List<ColumnImpl> getAutoNumberColumns() {
+    return _autoNumColumns;
   }
 
   public CursorImpl getDefaultCursor() {
@@ -983,15 +969,11 @@ public class TableImpl implements Table
     // total up the amount of space used by the column and index names (2
     // bytes per char + 2 bytes for the length)
     for(ColumnBuilder col : creator.getColumns()) {
-      int nameByteLen = (col.getName().length() *
-                         JetFormat.TEXT_FIELD_UNIT_SIZE);
-      totalTableDefSize += nameByteLen + 2;
+      totalTableDefSize += DBMutator.calculateNameLength(col.getName());
     }
     
     for(IndexBuilder idx : creator.getIndexes()) {
-      int nameByteLen = (idx.getName().length() *
-                         JetFormat.TEXT_FIELD_UNIT_SIZE);
-      totalTableDefSize += nameByteLen + 2;
+      totalTableDefSize += DBMutator.calculateNameLength(idx.getName());
     }
     
 
@@ -1032,19 +1014,46 @@ public class TableImpl implements Table
     //End of tabledef
     buffer.put((byte) 0xff);
     buffer.put((byte) 0xff);
+    buffer.flip();
+
+    // write table buffer to database
+    writeTableDefinitionBuffer(buffer, creator.getTdefPageNumber(), creator,
+                               Collections.<Integer>emptyList());
+  }
+
+  private static void writeTableDefinitionBuffer(
+      ByteBuffer buffer, int tdefPageNumber, 
+      DBMutator mutator, List<Integer> reservedPages)
+    throws IOException
+  {
+    buffer.rewind();
+    int totalTableDefSize = buffer.remaining();
+    System.out.println("FOO writing tdef to " + tdefPageNumber + " and " +
+                       reservedPages + " tot size " + totalTableDefSize + " " +
+                       buffer.remaining());
+
+    JetFormat format = mutator.getFormat();
+    PageChannel pageChannel = mutator.getPageChannel();
 
     // write table buffer to database
     if(totalTableDefSize <= format.PAGE_SIZE) {
       
       // easy case, fits on one page
+
+      // overwrite page free space
       buffer.putShort(format.OFFSET_FREE_SPACE,
-                      (short)(buffer.remaining() - 8)); // overwrite page free space
+                      (short)(Math.max(
+                                format.PAGE_SIZE - totalTableDefSize - 8, 0)));
       // Write the tdef page to disk.
-      pageChannel.writePage(buffer, creator.getTdefPageNumber());
+      buffer.clear();
+      pageChannel.writePage(buffer, tdefPageNumber);
       
     } else {
 
+      System.out.println("FOO splitting tdef");
+
       // need to split across multiple pages
+
       ByteBuffer partialTdef = pageChannel.createPageBuffer();
       buffer.rewind();
       int nextTdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
@@ -1057,7 +1066,7 @@ public class TableImpl implements Table
           
           // this is the first page.  note, the first page already has the
           // page header, so no need to write it here
-          nextTdefPageNumber = creator.getTdefPageNumber();
+          nextTdefPageNumber = tdefPageNumber;
           
         } else {
 
@@ -1073,20 +1082,197 @@ public class TableImpl implements Table
 
         if(buffer.hasRemaining()) {
           // need a next page
-          nextTdefPageNumber = pageChannel.allocateNewPage();
+          if(reservedPages.isEmpty()) {
+            nextTdefPageNumber = pageChannel.allocateNewPage();
+          } else {
+            nextTdefPageNumber = reservedPages.remove(0);
+          }
           partialTdef.putInt(format.OFFSET_NEXT_TABLE_DEF_PAGE,
                              nextTdefPageNumber);
         }
 
         // update page free space
         partialTdef.putShort(format.OFFSET_FREE_SPACE,
-                             (short)(partialTdef.remaining() - 8)); // overwrite page free space
+                             (short)(Math.max(
+                                       partialTdef.remaining() - 8, 0)));
 
         // write partial page to disk
         pageChannel.writePage(partialTdef, curTdefPageNumber);
       }
         
     }
+    
+  }
+
+  /**
+   * Writes a column defined by the given TableMutator to this table.
+   * @usage _advanced_method_
+   */
+  protected ColumnImpl mutateAddColumn(TableMutator mutator) throws IOException
+  {
+    ColumnBuilder column = mutator.getColumn();
+    JetFormat format = mutator.getFormat();
+    boolean isVarCol = column.isVariableLength();
+    boolean isLongVal = column.getType().isLongValue();
+
+    // calculate how much more space we need in the table def
+    int addedLen = 0;
+
+    if(isLongVal) {
+      addedLen += 10;
+    }
+
+    addedLen += format.SIZE_COLUMN_DEF_BLOCK;
+
+    int nameByteLen = DBMutator.calculateNameLength(column.getName());
+    addedLen += nameByteLen;
+
+    // load current table definition and add space for new info
+    List<Integer> nextPages = new ArrayList<Integer>(1);
+    ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
+        nextPages, addedLen);
+    int origTdefLen = tableBuffer.limit();
+
+    // update various bits of the table def
+    ByteUtil.forward(tableBuffer, 29);
+    tableBuffer.putShort((short)(_maxColumnCount + 1));
+    short varColCount = (short)(_varColumns.size() + (isVarCol ? 1 : 0));
+    tableBuffer.putShort(varColCount);
+    tableBuffer.putShort((short)(_columns.size() + 1));
+
+    // move to end of column def blocks
+    tableBuffer.position(format.SIZE_TDEF_HEADER + 
+                         (_indexCount * format.SIZE_INDEX_DEFINITION) +
+                         (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
+
+    // figure out the data offsets for the new column
+    int fixedOffset = 0;
+    int varOffset = 0;
+    if(column.isVariableLength()) {
+      // find the variable offset
+      for(ColumnImpl col : _varColumns) {
+        if(col.getVarLenTableIndex() >= varOffset) {
+          varOffset = col.getVarLenTableIndex() + 1;
+        }
+      }
+    } else {
+      // find the fixed offset
+      for(ColumnImpl col : _columns) {
+        if(!col.isVariableLength() && 
+           (col.getFixedDataOffset() >= fixedOffset)) {
+          fixedOffset = col.getFixedDataOffset() + 
+            col.getType().getFixedSize(col.getLength());
+        }
+      }
+    }
+
+    mutator.setColumnOffsets(fixedOffset, varOffset, varOffset);
+
+    // insert space for the column definition and write it
+    int colDefPos = tableBuffer.position();
+    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_COLUMN_DEF_BLOCK);
+    ColumnImpl.writeDefinition(mutator, column, tableBuffer);
+
+    // skip existing column names and write new name
+    for(int i = 0; i < _columns.size(); ++i) {
+      ByteUtil.forward(tableBuffer, tableBuffer.getShort());
+    }
+    ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
+    writeName(tableBuffer, column.getName(), mutator.getCharset());
+
+    int umapPos = -1;
+    if(isLongVal) {
+
+      // skip past index defs
+      ByteUtil.forward(tableBuffer, (_indexDatas.size() * 
+                                     (format.SIZE_INDEX_DEFINITION + 
+                                      format.SIZE_INDEX_COLUMN_BLOCK)));
+      ByteUtil.forward(tableBuffer,
+                       (_indexes.size() * format.SIZE_INDEX_INFO_BLOCK));
+      for(int i = 0; i < _indexes.size(); ++i) {
+        ByteUtil.forward(tableBuffer, tableBuffer.getShort());
+      }
+
+      // FIXME add usage maps...
+    }
+
+    // sanity check the updates
+    if((origTdefLen + addedLen) != tableBuffer.limit()) {
+      throw new IllegalStateException(
+          withErrorContext("Failed update table definition"));
+    }
+
+    // before writing the new table def, create the column
+    ColumnImpl newCol = ColumnImpl.create(this, tableBuffer, colDefPos,
+                                          column.getName(), _columns.size());
+    newCol.setColumnIndex(_columns.size());
+
+    // write updated table def back to the database
+    writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+                               nextPages);
+
+
+    // now, update current TableImpl
+
+    _columns.add(newCol);
+    ++_maxColumnCount;
+    if(newCol.isVariableLength()) {
+      _varColumns.add(newCol);
+      ++_maxVarColumnCount;
+    }
+    if(newCol.isAutoNumber()) {
+      _autoNumColumns.add(newCol);
+    }
+
+    if(umapPos >= 0) {
+      // read column usage map
+      tableBuffer.position(umapPos);
+      readColumnUsageMaps(tableBuffer);
+    }
+
+    newCol.postTableLoadInit();
+
+    if(!isSystem()) {
+      // after fully constructed, allow column validator to be configured (but
+      // only for user tables)
+      newCol.setColumnValidator(null);
+    }
+
+    // lastly, may need to clear table def buffer
+    _tableDefBufferH.possiblyInvalidate(_tableDefPageNumber, tableBuffer);
+
+    // update modification count so any active RowStates can keep themselves
+    // up-to-date
+    ++_modCount;
+
+    return newCol;
+  }
+
+  private ByteBuffer loadCompleteTableDefinitionBufferForUpdate(
+      List<Integer> nextPages, int addedLen)
+    throws IOException
+  {
+    // load complete table definition
+    ByteBuffer tableBuffer = _tableDefBufferH.setPage(getPageChannel(),
+                                                      _tableDefPageNumber);
+    tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer, nextPages);
+
+    // make sure the table buffer has enough room for the new info
+    int origTdefLen = tableBuffer.getInt(8);
+    int newTdefLen = origTdefLen + addedLen;
+    System.out.println("FOO new " + newTdefLen + " add " + addedLen);
+    while(newTdefLen > tableBuffer.capacity()) {
+      tableBuffer = expandTableBuffer(tableBuffer);
+      tableBuffer.flip();
+    }
+
+    tableBuffer.limit(origTdefLen);
+
+    // set new tdef length
+    tableBuffer.position(8);
+    tableBuffer.putInt(newTdefLen);    
+
+    return tableBuffer;
   }
 
   /**
@@ -1180,7 +1366,7 @@ public class TableImpl implements Table
         } else {
           // need another umap page
           umapPageNumber = creator.reservePageNumber();
-    }
+        }
 
         freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
 
@@ -1247,7 +1433,7 @@ public class TableImpl implements Table
           // data page, so just discard the previous one we wrote
           --i;
           umapType = 0;
-      }
+        }
         
         if(umapType == 0) {
           // lval column "owned pages" usage map
@@ -1256,7 +1442,7 @@ public class TableImpl implements Table
         } else {
           // lval column "free space pages" usage map (always on same page)
           colState.setUmapFreeRowNumber((byte)umapRowNum);
-    }
+        }
       }
 
       rowStart -= umapRowLength;
@@ -1278,25 +1464,34 @@ public class TableImpl implements Table
    * Returns a single ByteBuffer which contains the entire table definition
    * (which may span multiple database pages).
    */
-  private ByteBuffer loadCompleteTableDefinitionBuffer(ByteBuffer tableBuffer)
+  private ByteBuffer loadCompleteTableDefinitionBuffer(
+      ByteBuffer tableBuffer, List<Integer> pages)
     throws IOException
   {
     int nextPage = tableBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
     ByteBuffer nextPageBuffer = null;
     while (nextPage != 0) {
+      if(pages != null) {
+        pages.add(nextPage);
+      }
       if (nextPageBuffer == null) {
         nextPageBuffer = getPageChannel().createPageBuffer();
       }
       getPageChannel().readPage(nextPageBuffer, nextPage);
       nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
-      ByteBuffer newBuffer = PageChannel.createBuffer(
-          tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
-      newBuffer.put(tableBuffer);
-      newBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
-      tableBuffer = newBuffer;
+      System.out.println("FOO next page free " + nextPageBuffer.getShort(getFormat().OFFSET_FREE_SPACE));
+      tableBuffer = expandTableBuffer(tableBuffer);
+      tableBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
       tableBuffer.flip();
     }
     return tableBuffer;
+  }
+    
+  private ByteBuffer expandTableBuffer(ByteBuffer tableBuffer) {
+      ByteBuffer newBuffer = PageChannel.createBuffer(
+          tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
+      newBuffer.put(tableBuffer);
+      return newBuffer;
   }
     
   private void readColumnDefinitions(ByteBuffer tableBuffer, short columnCount)
@@ -1326,7 +1521,7 @@ public class TableImpl implements Table
     }
 
     Collections.sort(_columns);
-    getAutoNumberColumns();
+    initAutoNumberColumns();
 
     // setup the data index for the columns
     int colIdx = 0;
@@ -1364,6 +1559,39 @@ public class TableImpl implements Table
     Collections.sort(_indexes);
   }
   
+  private boolean readColumnUsageMaps(ByteBuffer tableBuffer) 
+    throws IOException
+  {
+    short umapColNum = tableBuffer.getShort();
+    if(umapColNum == IndexData.COLUMN_UNUSED) {
+      return false;
+    }
+      
+    int pos = tableBuffer.position();
+    UsageMap colOwnedPages = null;
+    UsageMap colFreeSpacePages = null;
+    try {
+      colOwnedPages = UsageMap.read(getDatabase(), tableBuffer, false);
+      colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
+    } catch(IllegalStateException e) {
+      // ignore invalid usage map info
+      colOwnedPages = null;
+      colFreeSpacePages = null;
+      tableBuffer.position(pos + 8);
+      LOG.warn(withErrorContext("Invalid column " + umapColNum + 
+                                " usage map definition: " + e));
+    }
+      
+    for(ColumnImpl col : _columns) {
+      if(col.getColumnNumber() == umapColNum) {
+        col.setUsageMaps(colOwnedPages, colFreeSpacePages);
+        break;
+      }
+    }
+
+    return true;
+  }
+
   /**
    * Writes the given page data to the given page number, clears any other
    * relevant buffers.
@@ -2525,7 +2753,7 @@ public class TableImpl implements Table
     return rowSize + format.SIZE_ROW_LOCATION;
   }
 
-  private void getAutoNumberColumns() {
+  private void initAutoNumberColumns() {
     for(ColumnImpl c : _columns) {
       if(c.isAutoNumber()) {
         _autoNumColumns.add(c);
@@ -2627,7 +2855,7 @@ public class TableImpl implements Table
     /** true if the row values array has data */
     private boolean _haveRowValues;
     /** values read from the last row */
-    private final Object[] _rowValues;
+    private Object[] _rowValues;
     /** null mask for the last row */
     private NullMask _nullMask;
     /** last modification count seen on the table we track this so that the
@@ -2682,6 +2910,10 @@ public class TableImpl implements Table
         reset();
         _headerRowBufferH.invalidate();
         _overflowRowBufferH.invalidate();
+        if(TableImpl.this._maxColumnCount != _rowValues.length) {
+          // columns added or removed from table
+          _rowValues = new Object[TableImpl.this._maxColumnCount];
+        }
         _lastModCount = TableImpl.this._modCount;
       }
     }

@@ -1405,22 +1405,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
-   * @param columns A list of columns in a table definition
-   * @return The number of variable length columns which are not long values
-   *         found in the list
-   * @usage _advanced_method_
-   */
-  private static short countNonLongVariableLength(List<ColumnBuilder> columns) {
-    short rtn = 0;
-    for (ColumnBuilder col : columns) {
-      if (col.isVariableLength() && !col.getType().isLongValue()) {
-        rtn++;
-      }
-    }
-    return rtn;
-  }
-  
-  /**
    * @return an appropriate BigDecimal representation of the given object.
    *         <code>null</code> is returned as 0 and Numbers are converted
    *         using their double representation.
@@ -1585,87 +1569,89 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   protected static void writeDefinitions(TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
-    List<ColumnBuilder> columns = creator.getColumns();
-    short fixedOffset = (short) 0;
-    short variableOffset = (short) 0;
     // we specifically put the "long variable" values after the normal
     // variable length values so that we have a better chance of fitting it
     // all (because "long variable" values can go in separate pages)
-    short longVariableOffset = countNonLongVariableLength(columns);
-    for (ColumnBuilder col : columns) {
+    int longVariableOffset = creator.countNonLongVariableLength();
+    creator.setColumnOffsets(0, 0, longVariableOffset);
 
-      buffer.put(col.getType().getValue());
-      buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
-      buffer.putShort(col.getColumnNumber());  //Column Number
-
-      if(col.isVariableLength()) {
-        if(!col.getType().isLongValue()) {
-          buffer.putShort(variableOffset++);
-        } else {
-          buffer.putShort(longVariableOffset++);
-        }          
-      } else {
-        buffer.putShort((short) 0);
-      }
-
-      buffer.putShort(col.getColumnNumber()); //Column Number again
-
-      if(col.getType().isTextual()) {
-        // this will write 4 bytes (note we don't support writing dbs which
-        // use the text code page)
-        writeSortOrder(buffer, col.getTextSortOrder(), creator.getFormat());
-      } else {
-        // note scale/precision not stored for calculated numeric fields
-        if(col.getType().getHasScalePrecision() && !col.isCalculated()) {
-          buffer.put(col.getPrecision());  // numeric precision
-          buffer.put(col.getScale());  // numeric scale
-        } else {
-          buffer.put((byte) 0x00); //unused
-          buffer.put((byte) 0x00); //unused
-        }
-        buffer.putShort((short) 0); //Unknown
-      }
-
-      buffer.put(getColumnBitFlags(col)); // misc col flags
-
-      // note access doesn't seem to allow unicode compression for calced fields
-      if(col.isCalculated()) {
-        buffer.put(CALCULATED_EXT_FLAG_MASK);
-      } else if (col.isCompressedUnicode()) {  //Compressed
-        buffer.put(COMPRESSED_UNICODE_EXT_FLAG_MASK);
-      } else {
-        buffer.put((byte)0);
-      }
-
-      buffer.putInt(0); //Unknown, but always 0.
-
-      //Offset for fixed length columns
-      if(col.isVariableLength()) {
-        buffer.putShort((short) 0);
-      } else {
-        buffer.putShort(fixedOffset);
-        fixedOffset += col.getType().getFixedSize(col.getLength());
-      }
-
-      if(!col.getType().isLongValue()) {
-        short length = col.getLength();
-        if(col.isCalculated()) {
-          // calced columns have additional value overhead
-          if(!col.getType().isVariableLength() || 
-             col.getType().getHasScalePrecision()) {
-            length = CalculatedColumnUtil.CALC_FIXED_FIELD_LEN; 
-          } else {
-            length += CalculatedColumnUtil.CALC_EXTRA_DATA_LEN;
-          }
-        }
-        buffer.putShort(length); //Column length
-      } else {
-        buffer.putShort((short)0x0000); // unused
-      }
-
+    for (ColumnBuilder col : creator.getColumns()) {
+      writeDefinition(creator, col, buffer);
     }
-    for (ColumnBuilder col : columns) {
+
+    for (ColumnBuilder col : creator.getColumns()) {
       TableImpl.writeName(buffer, col.getName(), creator.getCharset());
+    }
+  }
+
+  protected static void writeDefinition(
+      DBMutator mutator, ColumnBuilder col, ByteBuffer buffer) 
+    throws IOException
+  {
+    DBMutator.ColumnOffsets colOffsets = mutator.getColumnOffsets();
+
+    buffer.put(col.getType().getValue());
+    buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
+    buffer.putShort(col.getColumnNumber());  //Column Number
+
+    if(col.isVariableLength()) {
+      buffer.putShort(colOffsets.getNextVariableOffset(col));
+    } else {
+      buffer.putShort((short) 0);
+    }
+
+    buffer.putShort(col.getColumnNumber()); //Column Number again
+
+    if(col.getType().isTextual()) {
+      // this will write 4 bytes (note we don't support writing dbs which
+      // use the text code page)
+      writeSortOrder(buffer, col.getTextSortOrder(), mutator.getFormat());
+    } else {
+      // note scale/precision not stored for calculated numeric fields
+      if(col.getType().getHasScalePrecision() && !col.isCalculated()) {
+        buffer.put(col.getPrecision());  // numeric precision
+        buffer.put(col.getScale());  // numeric scale
+      } else {
+        buffer.put((byte) 0x00); //unused
+        buffer.put((byte) 0x00); //unused
+      }
+      buffer.putShort((short) 0); //Unknown
+    }
+
+    buffer.put(getColumnBitFlags(col)); // misc col flags
+
+    // note access doesn't seem to allow unicode compression for calced fields
+    if(col.isCalculated()) {
+      buffer.put(CALCULATED_EXT_FLAG_MASK);
+    } else if (col.isCompressedUnicode()) {  //Compressed
+      buffer.put(COMPRESSED_UNICODE_EXT_FLAG_MASK);
+    } else {
+      buffer.put((byte)0);
+    }
+
+    buffer.putInt(0); //Unknown, but always 0.
+
+    //Offset for fixed length columns
+    if(col.isVariableLength()) {
+      buffer.putShort((short) 0);
+    } else {
+      buffer.putShort(colOffsets.getNextFixedOffset(col));
+    }
+
+    if(!col.getType().isLongValue()) {
+      short length = col.getLength();
+      if(col.isCalculated()) {
+        // calced columns have additional value overhead
+        if(!col.getType().isVariableLength() || 
+           col.getType().getHasScalePrecision()) {
+          length = CalculatedColumnUtil.CALC_FIXED_FIELD_LEN; 
+        } else {
+          length += CalculatedColumnUtil.CALC_EXTRA_DATA_LEN;
+        }
+      }
+      buffer.putShort(length); //Column length
+    } else {
+      buffer.putShort((short)0x0000); // unused
     }
   }
 
