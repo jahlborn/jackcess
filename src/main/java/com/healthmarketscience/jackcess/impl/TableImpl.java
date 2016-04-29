@@ -29,12 +29,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.healthmarketscience.jackcess.BatchUpdateException;
 import com.healthmarketscience.jackcess.Column;
@@ -1185,6 +1185,12 @@ public class TableImpl implements Table
     int umapPos = -1;
     if(isLongVal) {
 
+      // allocate usage maps for the long value col
+      Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2);
+      int umapPageNum = umapInfo.getKey();
+      int umapRow1 = umapInfo.getValue();
+      int umapRow2 = umapRow1 + 1;
+
       // skip past index defs
       ByteUtil.forward(tableBuffer, (_indexDatas.size() * 
                                      (format.SIZE_INDEX_DEFINITION + 
@@ -1195,7 +1201,12 @@ public class TableImpl implements Table
         ByteUtil.forward(tableBuffer, tableBuffer.getShort());
       }
 
-      // FIXME add usage maps...
+      // owned pages umap (both are on same page)
+      tableBuffer.put((byte)umapRow1);
+      ByteUtil.put3ByteInt(tableBuffer, umapPageNum);
+      // free space pages umap
+      tableBuffer.put((byte)umapRow2);
+      ByteUtil.put3ByteInt(tableBuffer, umapPageNum);
     }
 
     // sanity check the updates
@@ -1277,28 +1288,61 @@ public class TableImpl implements Table
     return tableBuffer;
   }
 
-  private Map.Entry<Integer,Integer> addUsageMaps(int numMaps)
+  private Map.Entry<Integer,Integer> addUsageMaps(int numMaps) throws IOException
   {
     JetFormat format = getFormat();
+    PageChannel pageChannel = getPageChannel();
     int umapRowLength = format.OFFSET_USAGE_MAP_START +
       format.USAGE_MAP_TABLE_BYTE_LENGTH;
     int totalUmapSpaceUsage = getRowSpaceUsage(umapRowLength, format) * numMaps;
     int umapPageNumber = PageChannel.INVALID_PAGE_NUMBER;
     int firstRowNum = -1;
-    ByteBuffer umapBuf = null;
     int freeSpace = 0;
-    int rowStart = 0;
-    int umapRowNum = 0;
 
     // search currently known usage map buffers to find one with enough free
     // space (the numMaps should always be small enough to put them all on one
-    // page)
-    Set<Integer> knownPages = new HashSet<Integer>();
+    // page).  pages will free space will probaby be newer pages (higher
+    // numbers), so we sort in reverse order.
+    Set<Integer> knownPages = new TreeSet<Integer>(Collections.reverseOrder());
     collectUsageMapPages(knownPages);
-    // FIXME
 
-    
-    
+    ByteBuffer umapBuf = pageChannel.createPageBuffer();
+    for(Integer pageNum : knownPages) {
+      pageChannel.readPage(umapBuf, pageNum);
+      freeSpace = umapBuf.getShort(format.OFFSET_FREE_SPACE);
+      if(freeSpace >= totalUmapSpaceUsage) {
+        // found a page!
+        umapPageNumber = pageNum;
+        firstRowNum = getRowsOnDataPage(umapBuf, format);
+        break;
+      }
+    }
+
+    if(umapPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
+      
+      // didn't find any existing pages, need to create a new one
+      freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
+      firstRowNum = 0;
+      umapBuf = createUsageMapDefPage(pageChannel, freeSpace);
+    }
+
+    // write the actual usage map defs
+    int rowStart = findRowEnd(umapBuf, firstRowNum, format) - umapRowLength;
+    int umapRowNum = firstRowNum;
+    for(int i = 0; i < numMaps; ++i) {
+      umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
+      umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+      rowStart -= umapRowLength;      
+      ++umapRowNum;
+    }
+
+    // finish the page
+    freeSpace -= totalUmapSpaceUsage;
+    umapBuf.putShort(format.OFFSET_FREE_SPACE, (short)freeSpace);
+    umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE, 
+                     (short)umapRowNum);
+    pageChannel.writePage(umapBuf, umapPageNumber);
+
     return new AbstractMap.SimpleImmutableEntry<Integer,Integer>(
         umapPageNumber, firstRowNum);
   }
@@ -1309,6 +1353,10 @@ public class TableImpl implements Table
 
     for(IndexData idx : _indexDatas) {
       idx.collectUsageMapPages(pages);
+    }
+
+    for(ColumnImpl col : _columns) {
+      col.collectUsageMapPages(pages);
     }
   }    
   
@@ -1407,13 +1455,7 @@ public class TableImpl implements Table
 
         freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
 
-        umapBuf = pageChannel.createPageBuffer();
-        umapBuf.put(PageTypes.DATA);
-        umapBuf.put((byte) 0x1);  //Unknown
-        umapBuf.putShort((short)freeSpace);  //Free space in page
-        umapBuf.putInt(0); //Table definition
-        umapBuf.putInt(0); //Unknown
-        umapBuf.putShort((short)0); //Number of records on this page
+        umapBuf = createUsageMapDefPage(pageChannel, freeSpace);
 
         rowStart = findRowEnd(umapBuf, 0, format) - umapRowLength;
         umapRowNum = 0;
@@ -1495,6 +1537,19 @@ public class TableImpl implements Table
         umapBuf = null;
       }
     }
+  }
+
+  private static ByteBuffer createUsageMapDefPage(
+      PageChannel pageChannel, int freeSpace)
+  {
+    ByteBuffer umapBuf = pageChannel.createPageBuffer();
+    umapBuf.put(PageTypes.DATA);
+    umapBuf.put((byte) 0x1);  //Unknown
+    umapBuf.putShort((short)freeSpace);  //Free space in page
+    umapBuf.putInt(0); //Table definition
+    umapBuf.putInt(0); //Unknown
+    umapBuf.putShort((short)0); //Number of records on this page    
+    return umapBuf;
   }
 
   /**

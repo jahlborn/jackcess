@@ -71,8 +71,9 @@ class LongValueColumnImpl extends ColumnImpl
     _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
   }
 
+  @Override
   void collectUsageMapPages(Collection<Integer> pages) {
-    // FIXME, writeme
+    _lvalBufferH.collectUsageMapPages(pages);
   }
   
   @Override
@@ -446,6 +447,10 @@ class LongValueColumnImpl extends ColumnImpl
       getBufferHolder().clear();
     }
 
+    public void collectUsageMapPages(Collection<Integer> pages) {
+      // base does nothing
+    }
+
     protected abstract TempPageHolder getBufferHolder();
   }
 
@@ -521,6 +526,12 @@ class LongValueColumnImpl extends ColumnImpl
         _freeSpacePages.removePageNumber(pageNumber, true);
       }
       super.clear();
+    }
+
+    @Override
+    public void collectUsageMapPages(Collection<Integer> pages) {
+      pages.add(_ownedPages.getTablePageNumber());
+      pages.add(_freeSpacePages.getTablePageNumber());
     }
   }
 }

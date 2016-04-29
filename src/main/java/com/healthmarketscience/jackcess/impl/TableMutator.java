@@ -35,7 +35,6 @@ public class TableMutator extends DBMutator
   private final TableImpl _table;
 
   private ColumnBuilder _column;
-  private ColumnState _columnState;
 
   public TableMutator(TableImpl table) {
     super(table.getDatabase());
@@ -55,10 +54,6 @@ public class TableMutator extends DBMutator
     // assign column numbers and do some assorted column bookkeeping
     short columnNumber = (short)_table.getMaxColumnCount();
     _column.setColumnNumber(columnNumber);
-    if(_column.getType().isLongValue()) {      
-      // only lval columns need extra state
-      _columnState = new ColumnState();
-    }
 
     getPageChannel().startExclusiveWrite();
     try {
