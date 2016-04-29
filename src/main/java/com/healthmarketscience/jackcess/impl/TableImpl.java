@@ -22,12 +22,14 @@ import java.io.StringWriter;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -1275,6 +1277,41 @@ public class TableImpl implements Table
     return tableBuffer;
   }
 
+  private Map.Entry<Integer,Integer> addUsageMaps(int numMaps)
+  {
+    JetFormat format = getFormat();
+    int umapRowLength = format.OFFSET_USAGE_MAP_START +
+      format.USAGE_MAP_TABLE_BYTE_LENGTH;
+    int totalUmapSpaceUsage = getRowSpaceUsage(umapRowLength, format) * numMaps;
+    int umapPageNumber = PageChannel.INVALID_PAGE_NUMBER;
+    int firstRowNum = -1;
+    ByteBuffer umapBuf = null;
+    int freeSpace = 0;
+    int rowStart = 0;
+    int umapRowNum = 0;
+
+    // search currently known usage map buffers to find one with enough free
+    // space (the numMaps should always be small enough to put them all on one
+    // page)
+    Set<Integer> knownPages = new HashSet<Integer>();
+    collectUsageMapPages(knownPages);
+    // FIXME
+
+    
+    
+    return new AbstractMap.SimpleImmutableEntry<Integer,Integer>(
+        umapPageNumber, firstRowNum);
+  }
+
+  void collectUsageMapPages(Collection<Integer> pages) {
+    pages.add(_ownedPages.getTablePageNumber());
+    pages.add(_freeSpacePages.getTablePageNumber());
+
+    for(IndexData idx : _indexDatas) {
+      idx.collectUsageMapPages(pages);
+    }
+  }    
+  
   /**
    * @param buffer Buffer to write to
    */

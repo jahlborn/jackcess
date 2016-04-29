@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -372,6 +373,10 @@ public class IndexData {
     _ownedPages.addPageNumber(pageNumber);
   }
 
+  void collectUsageMapPages(Collection<Integer> pages) {
+    pages.add(_ownedPages.getTablePageNumber());
+  }
+  
   /**
    * Used by unit tests to validate the internal status of the index.
    * @usage _advanced_method_

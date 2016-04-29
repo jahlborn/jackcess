@@ -17,8 +17,10 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collection;
 
 
 /**
@@ -69,6 +71,10 @@ class LongValueColumnImpl extends ColumnImpl
     _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
   }
 
+  void collectUsageMapPages(Collection<Integer> pages) {
+    // FIXME, writeme
+  }
+  
   @Override
   void postTableLoadInit() throws IOException {
     if(_lvalBufferH == null) {

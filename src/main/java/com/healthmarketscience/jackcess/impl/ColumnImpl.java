@@ -33,6 +33,7 @@ import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -309,13 +310,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return new ColumnImpl(args);
   }
 
-   /**
+  /**
    * Sets the usage maps for this column.
    */
   void setUsageMaps(UsageMap ownedPages, UsageMap freeSpacePages) {
     // base does nothing
   }
 
+  void collectUsageMapPages(Collection<Integer> pages) {
+    // base does nothing
+  }
+    
   /**
    * Secondary column initialization after the table is fully loaded.
    */
