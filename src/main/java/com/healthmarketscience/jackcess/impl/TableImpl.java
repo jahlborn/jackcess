@@ -980,7 +980,6 @@ public class TableImpl implements Table
     
 
     // now, create the table definition
-    PageChannel pageChannel = creator.getPageChannel();
     ByteBuffer buffer = PageChannel.createBuffer(Math.max(totalTableDefSize,
                                                           format.PAGE_SIZE));
     writeTableDefinitionHeader(creator, buffer, totalTableDefSize);
@@ -1180,26 +1179,52 @@ public class TableImpl implements Table
       ByteUtil.forward(tableBuffer, tableBuffer.getShort());
     }
     ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
+    System.out.println("FOO pre name " + tableBuffer.position());
     writeName(tableBuffer, column.getName(), mutator.getCharset());
+    System.out.println("FOO post name " + tableBuffer.position());
 
     int umapPos = -1;
     if(isLongVal) {
 
       // allocate usage maps for the long value col
       Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2);
+      System.out.println("FOO created umap " + umapInfo);
       int umapPageNum = umapInfo.getKey();
       int umapRow1 = umapInfo.getValue();
       int umapRow2 = umapRow1 + 1;
 
       // skip past index defs
+      System.out.println("FOO pre move " + tableBuffer.position());
       ByteUtil.forward(tableBuffer, (_indexDatas.size() * 
-                                     (format.SIZE_INDEX_DEFINITION + 
-                                      format.SIZE_INDEX_COLUMN_BLOCK)));
+                                     format.SIZE_INDEX_COLUMN_BLOCK));
+      System.out.println("FOO moved to " + tableBuffer.position());
       ByteUtil.forward(tableBuffer,
                        (_indexes.size() * format.SIZE_INDEX_INFO_BLOCK));
+      System.out.println("FOO moved to " + tableBuffer.position());
       for(int i = 0; i < _indexes.size(); ++i) {
-        ByteUtil.forward(tableBuffer, tableBuffer.getShort());
+        short len = tableBuffer.getShort();
+        System.out.println("FOO skipping " + len);
+        ByteUtil.forward(tableBuffer, len);
       }
+
+      // skip existing usage maps
+      while(tableBuffer.remaining() >= 2) {
+        if(tableBuffer.getShort() == IndexData.COLUMN_UNUSED) {
+          // found end of tdef, we want to insert before this
+          ByteUtil.forward(tableBuffer, -2);
+          break;
+        }
+        
+        ByteUtil.forward(tableBuffer, 8);
+
+        // keep reading ...
+      }
+
+      // write new column usage map info
+      System.out.println("FOO about to write " + tableBuffer.position());
+      umapPos = tableBuffer.position();
+      ByteUtil.insertEmptyData(tableBuffer, 10);
+      tableBuffer.putShort(column.getColumnNumber());
 
       // owned pages umap (both are on same page)
       tableBuffer.put((byte)umapRow1);
@@ -1212,7 +1237,7 @@ public class TableImpl implements Table
     // sanity check the updates
     if((origTdefLen + addedLen) != tableBuffer.limit()) {
       throw new IllegalStateException(
-          withErrorContext("Failed update table definition"));
+          withErrorContext("Failed update table definition (unexpected length)"));
     }
 
     // before writing the new table def, create the column
@@ -1305,6 +1330,7 @@ public class TableImpl implements Table
     // numbers), so we sort in reverse order.
     Set<Integer> knownPages = new TreeSet<Integer>(Collections.reverseOrder());
     collectUsageMapPages(knownPages);
+    System.out.println("FOO found umap pages " + knownPages);
 
     ByteBuffer umapBuf = pageChannel.createPageBuffer();
     for(Integer pageNum : knownPages) {

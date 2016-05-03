@@ -68,6 +68,7 @@ class LongValueColumnImpl extends ColumnImpl
   
   @Override
   void setUsageMaps(UsageMap ownedPages, UsageMap freeSpacePages) {
+    System.out.println("FOO setting col umaps " + ownedPages);
     _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
   }
 
