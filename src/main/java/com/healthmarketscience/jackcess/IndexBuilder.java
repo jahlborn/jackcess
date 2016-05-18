@@ -109,10 +109,11 @@ public class IndexBuilder
 
   /**
    * Sets this index to be a primary key index (additionally sets the index as
-   * unique).
+   * unique and required).
    */
   public IndexBuilder setPrimaryKey() {
     _type = IndexImpl.PRIMARY_KEY_INDEX_TYPE;
+    setRequired();
     return setUnique();
   }
 
@@ -121,6 +122,14 @@ public class IndexBuilder
    */
   public IndexBuilder setUnique() {
     _flags |= IndexData.UNIQUE_INDEX_FLAG;
+    return this;
+  }    
+
+  /**
+   * Sets this index to encforce required.
+   */
+  public IndexBuilder setRequired() {
+    _flags |= IndexData.REQUIRED_INDEX_FLAG;
     return this;
   }    
 
