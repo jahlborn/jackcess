@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.4" date="TBD">
+    <release version="2.1.4" date="2016-05-18">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="131">
         Fix missing column names in AppendQuery SQL strings.
       </action>
