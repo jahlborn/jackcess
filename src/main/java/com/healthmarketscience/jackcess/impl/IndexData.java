@@ -501,10 +501,11 @@ public class IndexData {
     writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE, 
                   creator.getTdefPageNumber(), creator.getFormat());
 
-    for(IndexBuilder idx : creator.getIndexes()) {
+    for(TableCreator.IndexDataState idxDataState : creator.getIndexDataStates()) {
       buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
 
       // write column information (always MAX_COLUMNS entries)
+      IndexBuilder idx = idxDataState.getIndex();
       List<IndexBuilder.Column> idxColumns = idx.getColumns();
       for(int i = 0; i < MAX_COLUMNS; ++i) {
 
@@ -537,16 +538,14 @@ public class IndexData {
         buffer.put(flags); // column flags (e.g. ordering)
       }
 
-      TableCreator.IndexState idxState = creator.getIndexState(idx);
-
-      buffer.put(idxState.getUmapRowNumber()); // umap row
+      buffer.put(idxDataState.getUmapRowNumber()); // umap row
       ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber()); // umap page
 
       // write empty root index page
       creator.getPageChannel().writePage(rootPageBuffer, 
-                                         idxState.getRootPageNumber());
+                                         idxDataState.getRootPageNumber());
 
-      buffer.putInt(idxState.getRootPageNumber());
+      buffer.putInt(idxDataState.getRootPageNumber());
       buffer.putInt(0); // unknown
       buffer.put(idx.getFlags()); // index flags (unique, etc.)
       ByteUtil.forward(buffer, 5); // unknown

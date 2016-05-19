@@ -345,7 +345,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
       TableCreator.IndexState idxState = creator.getIndexState(idx);
       buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
       buffer.putInt(idxState.getIndexNumber()); // index num
-      buffer.putInt(idxState.getIndexDataNumber()); // index data num
+      buffer.putInt(idxState.getIndexDataState().getIndexDataNumber()); // index data num
       buffer.put((byte)0); // related table type
       buffer.putInt(INVALID_INDEX_NUMBER); // related index num
       buffer.putInt(0); // related table definition page number

@@ -1503,16 +1503,16 @@ public class TableImpl implements Table
 
         // index umap
         int indexIdx = i - 2;
-        IndexBuilder idx = creator.getIndexes().get(indexIdx);
+        TableCreator.IndexDataState idxDataState = 
+          creator.getIndexDataStates().get(indexIdx);
         
         // allocate root page for the index
         int rootPageNumber = pageChannel.allocateNewPage();
 
         // stash info for later use
-        TableCreator.IndexState idxState = creator.getIndexState(idx);
-        idxState.setRootPageNumber(rootPageNumber);
-        idxState.setUmapRowNumber((byte)umapRowNum);
-        idxState.setUmapPageNumber(umapPageNumber);
+        idxDataState.setRootPageNumber(rootPageNumber);
+        idxDataState.setUmapRowNumber((byte)umapRowNum);
+        idxDataState.setUmapPageNumber(umapPageNumber);
 
         // index map definition, including initial root page
         umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);

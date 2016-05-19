@@ -43,6 +43,8 @@ class TableCreator extends DBMutator
   private final List<IndexBuilder> _indexes;
   private final Map<IndexBuilder,IndexState> _indexStates = 
     new IdentityHashMap<IndexBuilder,IndexState>();
+  private final List<IndexDataState> _indexDataStates = 
+    new ArrayList<IndexDataState>();
   private final Map<ColumnBuilder,ColumnState> _columnStates = 
     new IdentityHashMap<ColumnBuilder,ColumnState>();
   private final List<ColumnBuilder> _lvalCols = new ArrayList<ColumnBuilder>();
@@ -96,6 +98,10 @@ class TableCreator extends DBMutator
     return _indexStates.get(idx);
   }
 
+  public List<IndexDataState> getIndexDataStates() {
+    return _indexDataStates;
+  }
+
   public ColumnState getColumnState(ColumnBuilder col) {
     return _columnStates.get(col);
   }
@@ -145,7 +151,7 @@ class TableCreator extends DBMutator
       for(IndexBuilder idx : _indexes) {
         IndexState idxState = new IndexState();
         idxState.setIndexNumber(_logicalIndexCount++);
-        idxState.setIndexDataNumber(_indexCount++);
+        idxState.setIndexDataState(findIndexDataState(idx));
         _indexStates.put(idx, idxState);
       }
     }
@@ -167,6 +173,24 @@ class TableCreator extends DBMutator
     } finally {
       getPageChannel().finishWrite();
     }
+  }
+
+  private IndexDataState findIndexDataState(IndexBuilder idx) {
+
+    // search for an index which matches the given index (in terms of the
+    // backing data)
+    for(IndexDataState idxDataState : _indexDataStates) {
+      if(sameIndexData(idxDataState.getIndex(), idx)) {
+        return idxDataState;
+      }
+    }
+
+    // no matches found, need new index data state
+    IndexDataState idxDataState = new IndexDataState();
+    idxDataState.setIndex(idx);
+    idxDataState.setIndexDataNumber(_indexCount++);
+    _indexDataStates.add(idxDataState);
+    return idxDataState;
   }
 
   /**
@@ -241,6 +265,35 @@ class TableCreator extends DBMutator
     return autoCols;
   }
 
+  private static boolean sameIndexData(IndexBuilder idx1, IndexBuilder idx2) {
+    // index data can be combined if flags match and columns (and col flags)
+    // match
+    if(idx1.getFlags() != idx2.getFlags()) {
+      return false;
+    }
+
+    if(idx1.getColumns().size() != idx2.getColumns().size()) {
+      return false;
+    }
+    
+    for(int i = 0; i < idx1.getColumns().size(); ++i) {
+      IndexBuilder.Column col1 = idx1.getColumns().get(i);
+      IndexBuilder.Column col2 = idx2.getColumns().get(i);
+
+      if(!sameIndexData(col1, col2)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static boolean sameIndexData(
+      IndexBuilder.Column col1, IndexBuilder.Column col2) {
+    return (col1.getName().equals(col2.getName()) && 
+            (col1.getFlags() == col2.getFlags()));
+  }
+
   /**
    * Maintains additional state used during index creation.
    * @usage _advanced_class_
@@ -248,10 +301,7 @@ class TableCreator extends DBMutator
   static final class IndexState
   {
     private int _indexNumber;
-    private int _indexDataNumber;
-    private byte _umapRowNumber;
-    private int _umapPageNumber;
-    private int _rootPageNumber;
+    private IndexDataState _dataState;
 
     public int getIndexNumber() {
       return _indexNumber;
@@ -259,6 +309,38 @@ class TableCreator extends DBMutator
 
     public void setIndexNumber(int newIndexNumber) {
       _indexNumber = newIndexNumber;
+    }
+
+    public IndexDataState getIndexDataState() {
+      return _dataState;
+    }
+
+    public void setIndexDataState(IndexDataState dataState) {
+      _dataState = dataState;
+    }
+  }
+    
+  /**
+   * Maintains additional state used during index data creation.
+   * @usage _advanced_class_
+   */
+  static final class IndexDataState
+  {
+    // all indexes which have the same backing IndexDataState will have
+    // equivalent columns and flags.  we keep a reference to the first index
+    // which uses this backing index data.
+    private IndexBuilder _idx;
+    private int _indexDataNumber;
+    private byte _umapRowNumber;
+    private int _umapPageNumber;
+    private int _rootPageNumber;
+
+    public IndexBuilder getIndex() {
+      return _idx;
+    }
+
+    public void setIndex(IndexBuilder idx) {
+      _idx = idx;
     }
 
     public int getIndexDataNumber() {

@@ -462,6 +462,57 @@ public class IndexTest extends TestCase {
     }    
   }
   
+  public void testIndexCreationSharedData() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      Table t = new TableBuilder("TestTable")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data", DataType.TEXT))
+        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+                  .addColumns("id").setPrimaryKey())
+        .addIndex(new IndexBuilder("Index1").addColumns("id"))
+        .addIndex(new IndexBuilder("Index2").addColumns("id"))
+        .addIndex(new IndexBuilder("Index3").addColumns(false, "id"))
+        .toTable(db);
+
+      assertEquals(4, t.getIndexes().size());
+      IndexImpl idx = (IndexImpl)t.getIndexes().get(0);
+      
+      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());       
+      assertEquals(1, idx.getColumns().size());
+      assertEquals("id", idx.getColumns().get(0).getName());
+      assertTrue(idx.getColumns().get(0).isAscending());
+      assertTrue(idx.isPrimaryKey());
+      assertTrue(idx.isUnique());
+      assertFalse(idx.shouldIgnoreNulls());
+      assertNull(idx.getReference());
+
+      IndexImpl idx1 = (IndexImpl)t.getIndexes().get(1);
+      IndexImpl idx2 = (IndexImpl)t.getIndexes().get(2);
+      IndexImpl idx3 = (IndexImpl)t.getIndexes().get(3);
+
+      assertNotSame(idx.getIndexData(), idx1.getIndexData());
+      assertSame(idx1.getIndexData(), idx2.getIndexData());
+      assertNotSame(idx2.getIndexData(), idx3.getIndexData());
+
+      t.addRow(2, "row2");
+      t.addRow(1, "row1");
+      t.addRow(3, "row3");
+
+      Cursor c = t.newCursor()
+        .setIndexByName(IndexBuilder.PRIMARY_KEY_NAME).toCursor();
+
+      for(int i = 1; i <= 3; ++i) {
+        Map<String,Object> row = c.getNextRow();
+        assertEquals(i, row.get("id"));
+        assertEquals("row" + i, row.get("data"));
+      }
+      assertFalse(c.moveToNextRow());
+    }
+  }
+  
   public void testGetForeignKeyIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
