@@ -1117,22 +1117,18 @@ public class TableImpl implements Table
     boolean isLongVal = column.getType().isLongValue();
 
     // calculate how much more space we need in the table def
-    int addedLen = 0;
-
     if(isLongVal) {
-      addedLen += 10;
+      mutator.addTdefLen(10);
     }
 
-    addedLen += format.SIZE_COLUMN_DEF_BLOCK;
+    mutator.addTdefLen(format.SIZE_COLUMN_DEF_BLOCK);
 
     int nameByteLen = DBMutator.calculateNameLength(column.getName());
-    addedLen += nameByteLen;
+    mutator.addTdefLen(nameByteLen);
 
     // load current table definition and add space for new info
-    List<Integer> nextPages = new ArrayList<Integer>(1);
     ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
-        nextPages, addedLen);
-    int origTdefLen = tableBuffer.limit();
+        mutator);
 
     // update various bits of the table def
     ByteUtil.forward(tableBuffer, 29);
@@ -1195,13 +1191,13 @@ public class TableImpl implements Table
 
       // skip past index defs
       System.out.println("FOO pre move " + tableBuffer.position());
-      ByteUtil.forward(tableBuffer, (_indexDatas.size() * 
+      ByteUtil.forward(tableBuffer, (_indexCount * 
                                      format.SIZE_INDEX_COLUMN_BLOCK));
       System.out.println("FOO moved to " + tableBuffer.position());
       ByteUtil.forward(tableBuffer,
-                       (_indexes.size() * format.SIZE_INDEX_INFO_BLOCK));
+                       (_logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK));
       System.out.println("FOO moved to " + tableBuffer.position());
-      for(int i = 0; i < _indexes.size(); ++i) {
+      for(int i = 0; i < _logicalIndexCount; ++i) {
         short len = tableBuffer.getShort();
         System.out.println("FOO skipping " + len);
         ByteUtil.forward(tableBuffer, len);
@@ -1235,7 +1231,7 @@ public class TableImpl implements Table
     }
 
     // sanity check the updates
-    if((origTdefLen + addedLen) != tableBuffer.limit()) {
+    if(!mutator.validateUpdatedTdef(tableBuffer)) {
       throw new IllegalStateException(
           withErrorContext("Failed update table definition (unexpected length)"));
     }
@@ -1247,7 +1243,7 @@ public class TableImpl implements Table
 
     // write updated table def back to the database
     writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
-                               nextPages);
+                               mutator.getNextPages());
 
 
     // now, update current TableImpl
@@ -1276,27 +1272,119 @@ public class TableImpl implements Table
       newCol.setColumnValidator(null);
     }
 
+    // save any column properties
+    Map<String,PropertyMap.Property> colProps = column.getProperties();
+    if(colProps != null) {
+      newCol.getProperties().putAll(colProps.values());
+      getProperties().save();
+    }
+
+    completeTableMutation(tableBuffer);
+
+    return newCol;
+  }
+
+  /**
+   * Writes a index defined by the given TableMutator to this table.
+   * @usage _advanced_method_
+   */
+  protected IndexImpl mutateAddIndex(TableMutator mutator) throws IOException
+  {
+    IndexBuilder index = mutator.getIndex();
+    JetFormat format = mutator.getFormat();
+
+    // calculate how much more space we need in the table def
+    mutator.addTdefLen(format.SIZE_INDEX_INFO_BLOCK);
+
+    // FIXME
+    int indexDataNumber = 0;
+    boolean addingIndexData = (indexDataNumber >= _indexCount);
+    if(addingIndexData) {
+
+      // we are adding an index data as well
+      mutator.addTdefLen(format.SIZE_INDEX_DEFINITION + 
+                         format.SIZE_INDEX_COLUMN_BLOCK);
+    }
+
+    int nameByteLen = DBMutator.calculateNameLength(index.getName());
+    mutator.addTdefLen(nameByteLen);
+
+    // load current table definition and add space for new info
+    ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
+        mutator);
+
+    // update various bits of the table def
+    ByteUtil.forward(tableBuffer, 35);
+    tableBuffer.putInt(_logicalIndexCount + 1);
+    int numIdxData = _indexCount + (addingIndexData ? 1 : 0);
+    tableBuffer.putInt(numIdxData);
+
+    // move to end of index data def blocks
+    tableBuffer.position(format.SIZE_TDEF_HEADER + 
+                         (_indexCount * format.SIZE_INDEX_DEFINITION));
+
+    if(addingIndexData) {
+      // write index row count definition (empty initially)
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_DEFINITION);
+      IndexData.writeRowCountDefinitions(mutator, tableBuffer, 1);
+    }
+
+    // skip columns and column names
+    ByteUtil.forward(tableBuffer, 
+                     (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
+    for(int i = 0; i < _columns.size(); ++i) {
+      ByteUtil.forward(tableBuffer, tableBuffer.getShort());
+    }
+
+    // move to end of current index datas
+    ByteUtil.forward(tableBuffer, (_indexCount * 
+                                   format.SIZE_INDEX_COLUMN_BLOCK));
+
+    if(addingIndexData) {
+      // write index data def
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_COLUMN_BLOCK);
+      
+      // FIXME
+    }
+
+    // FIXME
+
+    IndexImpl newIdx = null;
+
+    // FIXME
+
+
+    // FIXME, need to reset fkenforcer?
+
+    completeTableMutation(tableBuffer);
+
+    return newIdx;
+  }
+
+  private void completeTableMutation(ByteBuffer tableBuffer) throws IOException
+  {
     // lastly, may need to clear table def buffer
     _tableDefBufferH.possiblyInvalidate(_tableDefPageNumber, tableBuffer);
 
     // update modification count so any active RowStates can keep themselves
     // up-to-date
     ++_modCount;
-
-    return newCol;
   }
 
   private ByteBuffer loadCompleteTableDefinitionBufferForUpdate(
-      List<Integer> nextPages, int addedLen)
+      TableMutator mutator)
     throws IOException
   {
     // load complete table definition
     ByteBuffer tableBuffer = _tableDefBufferH.setPage(getPageChannel(),
                                                       _tableDefPageNumber);
-    tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer, nextPages);
+    tableBuffer = loadCompleteTableDefinitionBuffer(
+        tableBuffer, mutator.getNextPages());
 
     // make sure the table buffer has enough room for the new info
+    int addedLen = mutator.getAddedTdefLen();
     int origTdefLen = tableBuffer.getInt(8);
+    mutator.setOrigTdefLen(origTdefLen);
     int newTdefLen = origTdefLen + addedLen;
     System.out.println("FOO new " + newTdefLen + " add " + addedLen);
     while(newTdefLen > tableBuffer.capacity()) {
@@ -1308,7 +1396,7 @@ public class TableImpl implements Table
 
     // set new tdef length
     tableBuffer.position(8);
-    tableBuffer.putInt(newTdefLen);    
+    tableBuffer.putInt(newTdefLen);
 
     return tableBuffer;
   }

@@ -47,6 +47,8 @@ public class IndexBuilder
   private byte _flags = IndexData.UNKNOWN_INDEX_FLAG;
   /** the names and orderings of the indexed columns */
   private final List<Column> _columns = new ArrayList<Column>();
+  /** 0-based index number */
+  private int _indexNumber;
 
   public IndexBuilder(String name) {
     _name = name;
@@ -140,6 +142,20 @@ public class IndexBuilder
     _flags |= IndexData.IGNORE_NULLS_INDEX_FLAG;
     return this;
   }    
+
+  /**
+   * @usage _advanced_method_
+   */
+  public int getIndexNumber() {
+    return _indexNumber;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public void setIndexNumber(int newIndexNumber) {
+    _indexNumber = newIndexNumber;
+  }
 
   public void validate(Set<String> tableColNames, JetFormat format) {
 

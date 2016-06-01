@@ -22,6 +22,7 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.IndexBuilder;
 
 /**
  * Helper class used to maintain state during database mutation.
@@ -90,8 +91,25 @@ abstract class DBMutator
       setColumnSortOrder(column);
   }
 
-  protected void validateAutoNumberColumn(Set<DataType> autoTypes, 
-                                          ColumnBuilder column) 
+  protected void validateIndex(Set<String> colNames, Set<String> idxNames, 
+                               boolean[] foundPk, IndexBuilder index) {
+    
+    index.validate(colNames, getFormat());
+    if(!idxNames.add(index.getName().toUpperCase())) {
+      throw new IllegalArgumentException("duplicate index name: " +
+                                         index.getName());
+    }
+    if(index.isPrimaryKey()) {
+      if(foundPk[0]) {
+        throw new IllegalArgumentException(
+            "found second primary key index: " + index.getName());
+      }
+      foundPk[0] = true;
+    }
+  }
+
+  protected static void validateAutoNumberColumn(Set<DataType> autoTypes, 
+                                                 ColumnBuilder column) 
   {
     if(!column.getType().isMultipleAutoNumberAllowed() &&
        !autoTypes.add(column.getType())) {
@@ -117,41 +135,9 @@ abstract class DBMutator
     return null;
   }
 
-  /**
-   * Maintains additional state used during column creation.
-   * @usage _advanced_class_
-   */
-  static final class ColumnState
-  {
-    private byte _umapOwnedRowNumber;
-    private byte _umapFreeRowNumber;
-    // we always put both usage maps on the same page
-    private int _umapPageNumber;
+  public abstract int getTdefPageNumber();
 
-    public byte getUmapOwnedRowNumber() {
-      return _umapOwnedRowNumber;
-    }
-
-    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
-      _umapOwnedRowNumber = newUmapOwnedRowNumber;
-    }
-
-    public byte getUmapFreeRowNumber() {
-      return _umapFreeRowNumber;
-    }
-
-    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
-      _umapFreeRowNumber = newUmapFreeRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
-  }
+  abstract short getColumnNumber(String colName);
 
   /**
    * Maintains additional state used during column writing.

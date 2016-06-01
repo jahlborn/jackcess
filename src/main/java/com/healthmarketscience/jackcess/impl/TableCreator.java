@@ -41,8 +41,6 @@ class TableCreator extends DBMutator
   private final String _name;
   private final List<ColumnBuilder> _columns;
   private final List<IndexBuilder> _indexes;
-  private final Map<IndexBuilder,IndexState> _indexStates = 
-    new IdentityHashMap<IndexBuilder,IndexState>();
   private final List<IndexDataState> _indexDataStates = 
     new ArrayList<IndexDataState>();
   private final Map<ColumnBuilder,ColumnState> _columnStates = 
@@ -66,6 +64,7 @@ class TableCreator extends DBMutator
     return _name;
   }
 
+  @Override
   public int getTdefPageNumber() {
     return _tdefPageNumber;
   }
@@ -94,8 +93,15 @@ class TableCreator extends DBMutator
     return _logicalIndexCount;
   }
 
-  public IndexState getIndexState(IndexBuilder idx) {
-    return _indexStates.get(idx);
+  public IndexDataState getIndexDataState(IndexBuilder idx) {
+    for(IndexDataState idxDataState : _indexDataStates) {
+      for(IndexBuilder curIdx : idxDataState.getIndexes()) {
+        if(idx == curIdx) {
+          return idxDataState;
+        }
+      }
+    }
+    throw new IllegalStateException("could not find state for index");
   }
 
   public List<IndexDataState> getIndexDataStates() {
@@ -109,6 +115,16 @@ class TableCreator extends DBMutator
   public List<ColumnBuilder> getLongValueColumns() {
     return _lvalCols;
   }
+
+  @Override
+  short getColumnNumber(String colName) {
+    for(ColumnBuilder col : _columns) {
+      if(col.getName().equalsIgnoreCase(colName)) {
+        return col.getColumnNumber();
+      }
+    }
+    return IndexData.COLUMN_UNUSED;
+  }  
 
   /**
    * @return The number of variable length columns which are not long values
@@ -146,13 +162,10 @@ class TableCreator extends DBMutator
     }
 
     if(hasIndexes()) {
-      // sort out index numbers.  for now, these values will always match
-      // (until we support writing foreign key indexes)
+      // sort out index numbers (and backing index data).  
       for(IndexBuilder idx : _indexes) {
-        IndexState idxState = new IndexState();
-        idxState.setIndexNumber(_logicalIndexCount++);
-        idxState.setIndexDataState(findIndexDataState(idx));
-        _indexStates.put(idx, idxState);
+        idx.setIndexNumber(_logicalIndexCount++);
+        findIndexDataState(idx);
       }
     }
 
@@ -180,15 +193,16 @@ class TableCreator extends DBMutator
     // search for an index which matches the given index (in terms of the
     // backing data)
     for(IndexDataState idxDataState : _indexDataStates) {
-      if(sameIndexData(idxDataState.getIndex(), idx)) {
+      if(sameIndexData(idxDataState.getFirstIndex(), idx)) {
+        idxDataState.addIndex(idx);
         return idxDataState;
       }
     }
 
     // no matches found, need new index data state
     IndexDataState idxDataState = new IndexDataState();
-    idxDataState.setIndex(idx);
     idxDataState.setIndexDataNumber(_indexCount++);
+    idxDataState.addIndex(idx);
     _indexDataStates.add(idxDataState);
     return idxDataState;
   }
@@ -236,20 +250,9 @@ class TableCreator extends DBMutator
 
       // now, validate the indexes
       Set<String> idxNames = new HashSet<String>();
-      boolean foundPk = false;
+      boolean foundPk[] = new boolean[1];
       for(IndexBuilder index : _indexes) {
-        index.validate(colNames, getFormat());
-        if(!idxNames.add(index.getName().toUpperCase())) {
-          throw new IllegalArgumentException("duplicate index name: " +
-                                             index.getName());
-        }
-        if(index.isPrimaryKey()) {
-          if(foundPk) {
-            throw new IllegalArgumentException(
-                "found second primary key index: " + index.getName());
-          }
-          foundPk = true;
-        }
+        validateIndex(colNames, idxNames, foundPk, index);
       }
     }
   }
@@ -295,52 +298,65 @@ class TableCreator extends DBMutator
   }
 
   /**
-   * Maintains additional state used during index creation.
+   * Maintains additional state used during column creation.
    * @usage _advanced_class_
    */
-  static final class IndexState
+  static final class ColumnState
   {
-    private int _indexNumber;
-    private IndexDataState _dataState;
+    private byte _umapOwnedRowNumber;
+    private byte _umapFreeRowNumber;
+    // we always put both usage maps on the same page
+    private int _umapPageNumber;
 
-    public int getIndexNumber() {
-      return _indexNumber;
+    public byte getUmapOwnedRowNumber() {
+      return _umapOwnedRowNumber;
     }
 
-    public void setIndexNumber(int newIndexNumber) {
-      _indexNumber = newIndexNumber;
+    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
+      _umapOwnedRowNumber = newUmapOwnedRowNumber;
     }
 
-    public IndexDataState getIndexDataState() {
-      return _dataState;
+    public byte getUmapFreeRowNumber() {
+      return _umapFreeRowNumber;
     }
 
-    public void setIndexDataState(IndexDataState dataState) {
-      _dataState = dataState;
+    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
+      _umapFreeRowNumber = newUmapFreeRowNumber;
+    }
+
+    public int getUmapPageNumber() {
+      return _umapPageNumber;
+    }
+
+    public void setUmapPageNumber(int newUmapPageNumber) {
+      _umapPageNumber = newUmapPageNumber;
     }
   }
-    
+
   /**
    * Maintains additional state used during index data creation.
    * @usage _advanced_class_
    */
   static final class IndexDataState
   {
-    // all indexes which have the same backing IndexDataState will have
-    // equivalent columns and flags.  we keep a reference to the first index
-    // which uses this backing index data.
-    private IndexBuilder _idx;
+    private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
     private int _indexDataNumber;
     private byte _umapRowNumber;
     private int _umapPageNumber;
     private int _rootPageNumber;
 
-    public IndexBuilder getIndex() {
-      return _idx;
+    public IndexBuilder getFirstIndex() {
+      // all indexes which have the same backing IndexDataState will have
+      // equivalent columns and flags.
+      return _indexes.get(0);
     }
 
-    public void setIndex(IndexBuilder idx) {
-      _idx = idx;
+    public List<IndexBuilder> getIndexes() {
+      return _indexes;
+    }
+
+    public void addIndex(IndexBuilder idx) {
+      _indexes.add(idx);
     }
 
     public int getIndexDataNumber() {

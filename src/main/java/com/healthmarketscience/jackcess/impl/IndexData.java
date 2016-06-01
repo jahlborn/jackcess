@@ -483,8 +483,20 @@ public class IndexData {
   protected static void writeRowCountDefinitions(
       TableCreator creator, ByteBuffer buffer)
   {
+    writeRowCountDefinitions(creator, buffer, creator.getIndexCount());
+  }
+
+  /**
+   * Writes the index row count definitions into a table definition buffer.
+   * @param creator description of the indexes to write
+   * @param buffer Buffer to write to
+   * @param idxCount num indexes to write
+   */
+  protected static void writeRowCountDefinitions(
+      DBMutator creator, ByteBuffer buffer, int idxCount)
+  {
     // index row counts (empty data)
-    ByteUtil.forward(buffer, (creator.getIndexCount() *
+    ByteUtil.forward(buffer, (idxCount *
                               creator.getFormat().SIZE_INDEX_DEFINITION));
   }
 
@@ -497,15 +509,13 @@ public class IndexData {
       TableCreator creator, ByteBuffer buffer)
     throws IOException
   {
-    ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
-    writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE, 
-                  creator.getTdefPageNumber(), creator.getFormat());
+    ByteBuffer rootPageBuffer = createRootPageBuffer(creator);
 
     for(TableCreator.IndexDataState idxDataState : creator.getIndexDataStates()) {
       buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
 
       // write column information (always MAX_COLUMNS entries)
-      IndexBuilder idx = idxDataState.getIndex();
+      IndexBuilder idx = idxDataState.getFirstIndex();
       List<IndexBuilder.Column> idxColumns = idx.getColumns();
       for(int i = 0; i < MAX_COLUMNS; ++i) {
 
@@ -550,6 +560,76 @@ public class IndexData {
       buffer.put(idx.getFlags()); // index flags (unique, etc.)
       ByteUtil.forward(buffer, 5); // unknown
     }
+  }
+
+  /**
+   * Writes the index definitions into a table definition buffer.
+   * @param creator description of the indexes to write
+   * @param buffer Buffer to write to
+   */
+  protected static void writeDefinition(
+      DBMutator creator, ByteBuffer buffer, 
+      TableCreator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
+    throws IOException
+  {
+    if(rootPageBuffer == null) {
+      rootPageBuffer = createRootPageBuffer(creator);
+    }
+
+    // FIXME
+    buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
+
+    // write column information (always MAX_COLUMNS entries)
+    IndexBuilder idx = idxDataState.getFirstIndex();
+    List<IndexBuilder.Column> idxColumns = idx.getColumns();
+    for(int i = 0; i < MAX_COLUMNS; ++i) {
+
+      short columnNumber = COLUMN_UNUSED;
+      byte flags = 0;
+
+      if(i < idxColumns.size()) {
+
+        // determine column info
+        IndexBuilder.Column idxCol = idxColumns.get(i);
+        flags = idxCol.getFlags();
+
+        // find actual table column number
+        columnNumber = creator.getColumnNumber(idxCol.getName());
+        if(columnNumber == COLUMN_UNUSED) {
+          // should never happen as this is validated before
+          // FIXME
+          // throw new IllegalArgumentException(
+          //     withErrorContext(
+          //         "Column with name " + idxCol.getName() + " not found",
+          //         creator.getDatabase(), creator.getName(), idx.getName()));
+        }
+      }
+         
+      buffer.putShort(columnNumber); // table column number
+      buffer.put(flags); // column flags (e.g. ordering)
+    }
+
+    // FIXME
+    // buffer.put(idxDataState.getUmapRowNumber()); // umap row
+    // ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber()); // umap page
+
+    // // write empty root index page
+    // creator.getPageChannel().writePage(rootPageBuffer, 
+    //                                    idxDataState.getRootPageNumber());
+
+    // buffer.putInt(idxDataState.getRootPageNumber());
+    // buffer.putInt(0); // unknown
+    // buffer.put(idx.getFlags()); // index flags (unique, etc.)
+    // ByteUtil.forward(buffer, 5); // unknown
+  }
+
+  private static ByteBuffer createRootPageBuffer(DBMutator creator) 
+    throws IOException
+  {
+    ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
+    writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE, 
+                  creator.getTdefPageNumber(), creator.getFormat());
+    return rootPageBuffer;
   }
 
   /**

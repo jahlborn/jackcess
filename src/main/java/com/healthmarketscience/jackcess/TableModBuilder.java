@@ -37,6 +37,10 @@ public class TableModBuilder
     return new AddColumn(column);
   }
 
+  public AddIndex addIndex(IndexBuilder index) {
+    return new AddIndex(index);
+  }
+
   public class AddColumn
   {
     private ColumnBuilder _column;
@@ -48,6 +52,20 @@ public class TableModBuilder
     public Column add() throws IOException
     {
       return new TableMutator((TableImpl)_table).addColumn(_column);
+    }
+  }
+
+  public class AddIndex
+  {
+    private IndexBuilder _index;
+
+    private AddIndex(IndexBuilder index) {
+      _index = index;
+    }
+
+    public Index add() throws IOException
+    {
+      return new TableMutator((TableImpl)_table).addIndex(_index);
     }
   }
 }
