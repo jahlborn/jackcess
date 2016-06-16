@@ -27,7 +27,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
@@ -511,54 +510,8 @@ public class IndexData {
   {
     ByteBuffer rootPageBuffer = createRootPageBuffer(creator);
 
-    for(TableCreator.IndexDataState idxDataState : creator.getIndexDataStates()) {
-      buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
-
-      // write column information (always MAX_COLUMNS entries)
-      IndexBuilder idx = idxDataState.getFirstIndex();
-      List<IndexBuilder.Column> idxColumns = idx.getColumns();
-      for(int i = 0; i < MAX_COLUMNS; ++i) {
-
-        short columnNumber = COLUMN_UNUSED;
-        byte flags = 0;
-
-        if(i < idxColumns.size()) {
-
-          // determine column info
-          IndexBuilder.Column idxCol = idxColumns.get(i);
-          flags = idxCol.getFlags();
-
-          // find actual table column number
-          for(ColumnBuilder col : creator.getColumns()) {
-            if(col.getName().equalsIgnoreCase(idxCol.getName())) {
-              columnNumber = col.getColumnNumber();
-              break;
-            }
-          }
-          if(columnNumber == COLUMN_UNUSED) {
-            // should never happen as this is validated before
-            throw new IllegalArgumentException(
-                withErrorContext(
-                    "Column with name " + idxCol.getName() + " not found",
-                    creator.getDatabase(), creator.getName(), idx.getName()));
-          }
-        }
-         
-        buffer.putShort(columnNumber); // table column number
-        buffer.put(flags); // column flags (e.g. ordering)
-      }
-
-      buffer.put(idxDataState.getUmapRowNumber()); // umap row
-      ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber()); // umap page
-
-      // write empty root index page
-      creator.getPageChannel().writePage(rootPageBuffer, 
-                                         idxDataState.getRootPageNumber());
-
-      buffer.putInt(idxDataState.getRootPageNumber());
-      buffer.putInt(0); // unknown
-      buffer.put(idx.getFlags()); // index flags (unique, etc.)
-      ByteUtil.forward(buffer, 5); // unknown
+    for(DBMutator.IndexDataState idxDataState : creator.getIndexDataStates()) {
+      writeDefinition(creator, buffer, idxDataState, rootPageBuffer);
     }
   }
 
@@ -569,14 +522,13 @@ public class IndexData {
    */
   protected static void writeDefinition(
       DBMutator creator, ByteBuffer buffer, 
-      TableCreator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
+      DBMutator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
     throws IOException
   {
     if(rootPageBuffer == null) {
       rootPageBuffer = createRootPageBuffer(creator);
     }
 
-    // FIXME
     buffer.putInt(MAGIC_INDEX_NUMBER); // seemingly constant magic value
 
     // write column information (always MAX_COLUMNS entries)
@@ -609,18 +561,17 @@ public class IndexData {
       buffer.put(flags); // column flags (e.g. ordering)
     }
 
-    // FIXME
-    // buffer.put(idxDataState.getUmapRowNumber()); // umap row
-    // ByteUtil.put3ByteInt(buffer, creator.getUmapPageNumber()); // umap page
+    buffer.put(idxDataState.getUmapRowNumber()); // umap row
+    ByteUtil.put3ByteInt(buffer, idxDataState.getUmapPageNumber()); // umap page
 
-    // // write empty root index page
-    // creator.getPageChannel().writePage(rootPageBuffer, 
-    //                                    idxDataState.getRootPageNumber());
+    // write empty root index page
+    creator.getPageChannel().writePage(rootPageBuffer, 
+                                       idxDataState.getRootPageNumber());
 
-    // buffer.putInt(idxDataState.getRootPageNumber());
-    // buffer.putInt(0); // unknown
-    // buffer.put(idx.getFlags()); // index flags (unique, etc.)
-    // ByteUtil.forward(buffer, 5); // unknown
+    buffer.putInt(idxDataState.getRootPageNumber());
+    buffer.putInt(0); // unknown
+    buffer.put(idx.getFlags()); // index flags (unique, etc.)
+    ByteUtil.forward(buffer, 5); // unknown
   }
 
   private static ByteBuffer createRootPageBuffer(DBMutator creator) 

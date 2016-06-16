@@ -93,6 +93,7 @@ class TableCreator extends DBMutator
     return _logicalIndexCount;
   }
 
+  @Override
   public IndexDataState getIndexDataState(IndexBuilder idx) {
     for(IndexDataState idxDataState : _indexDataStates) {
       for(IndexBuilder curIdx : idxDataState.getIndexes()) {
@@ -108,6 +109,7 @@ class TableCreator extends DBMutator
     return _indexDataStates;
   }
 
+  @Override
   public ColumnState getColumnState(ColumnBuilder col) {
     return _columnStates.get(col);
   }
@@ -297,99 +299,4 @@ class TableCreator extends DBMutator
             (col1.getFlags() == col2.getFlags()));
   }
 
-  /**
-   * Maintains additional state used during column creation.
-   * @usage _advanced_class_
-   */
-  static final class ColumnState
-  {
-    private byte _umapOwnedRowNumber;
-    private byte _umapFreeRowNumber;
-    // we always put both usage maps on the same page
-    private int _umapPageNumber;
-
-    public byte getUmapOwnedRowNumber() {
-      return _umapOwnedRowNumber;
-    }
-
-    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
-      _umapOwnedRowNumber = newUmapOwnedRowNumber;
-    }
-
-    public byte getUmapFreeRowNumber() {
-      return _umapFreeRowNumber;
-    }
-
-    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
-      _umapFreeRowNumber = newUmapFreeRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
-  }
-
-  /**
-   * Maintains additional state used during index data creation.
-   * @usage _advanced_class_
-   */
-  static final class IndexDataState
-  {
-    private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
-    private int _indexDataNumber;
-    private byte _umapRowNumber;
-    private int _umapPageNumber;
-    private int _rootPageNumber;
-
-    public IndexBuilder getFirstIndex() {
-      // all indexes which have the same backing IndexDataState will have
-      // equivalent columns and flags.
-      return _indexes.get(0);
-    }
-
-    public List<IndexBuilder> getIndexes() {
-      return _indexes;
-    }
-
-    public void addIndex(IndexBuilder idx) {
-      _indexes.add(idx);
-    }
-
-    public int getIndexDataNumber() {
-      return _indexDataNumber;
-    }
-
-    public void setIndexDataNumber(int newIndexDataNumber) {
-      _indexDataNumber = newIndexDataNumber;
-    }
-
-    public byte getUmapRowNumber() {
-      return _umapRowNumber;
-    }
-
-    public void setUmapRowNumber(byte newUmapRowNumber) {
-      _umapRowNumber = newUmapRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
-
-    public int getRootPageNumber() {
-      return _rootPageNumber;
-    }
-
-    public void setRootPageNumber(int newRootPageNumber) {
-      _rootPageNumber = newRootPageNumber;
-    }
-  }
-    
 }

@@ -1660,6 +1660,32 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
   }
 
+  protected static void writeColUsageMapDefinitions(
+      TableCreator creator, ByteBuffer buffer)
+    throws IOException
+  {
+    // write long value column usage map references
+    for(ColumnBuilder lvalCol : creator.getLongValueColumns()) {
+      writeColUsageMapDefinition(creator, lvalCol, buffer);
+    }
+  }
+
+  protected static void writeColUsageMapDefinition(
+      DBMutator creator, ColumnBuilder lvalCol, ByteBuffer buffer)
+    throws IOException
+  {
+    DBMutator.ColumnState colState = creator.getColumnState(lvalCol);
+
+    buffer.putShort(lvalCol.getColumnNumber());
+      
+    // owned pages umap (both are on same page)
+    buffer.put(colState.getUmapOwnedRowNumber());
+    ByteUtil.put3ByteInt(buffer, colState.getUmapPageNumber());
+    // free space pages umap
+    buffer.put(colState.getUmapFreeRowNumber());
+    ByteUtil.put3ByteInt(buffer, colState.getUmapPageNumber());
+  }
+
   /**
    * Reads the sort order info from the given buffer from the given position.
    */

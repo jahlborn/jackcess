@@ -43,6 +43,8 @@ public class TableMutator extends DBMutator
   private int _origTdefLen;
   private int _addedTdefLen;
   private List<Integer> _nextPages = new ArrayList<Integer>(1);
+  private ColumnState _colState;
+  private IndexDataState _idxDataState;
 
   public TableMutator(TableImpl table) {
     super(table.getDatabase());
@@ -72,6 +74,16 @@ public class TableMutator extends DBMutator
     return IndexData.COLUMN_UNUSED;
   }
 
+  @Override
+  public ColumnState getColumnState(ColumnBuilder col) {
+    return ((col == _column) ? _colState : null);
+  }
+
+  @Override
+  public IndexDataState getIndexDataState(IndexBuilder idx) {
+    return ((idx == _index) ? _idxDataState : null);
+  }
+
   int getAddedTdefLen() {
     return _addedTdefLen;
   }
@@ -97,6 +109,9 @@ public class TableMutator extends DBMutator
     // assign column number and do some assorted column bookkeeping
     short columnNumber = (short)_table.getMaxColumnCount();
     _column.setColumnNumber(columnNumber);
+    if(_column.getType().isLongValue()) {
+      _colState = new ColumnState();
+    }
 
     getPageChannel().startExclusiveWrite();
     try {
@@ -115,7 +130,7 @@ public class TableMutator extends DBMutator
     validateAddIndex();
 
     // assign index number and do some assorted index bookkeeping
-    int indexNumber = _table.getIndexes().size();
+    int indexNumber = _table.getLogicalIndexCount();
     _index.setIndexNumber(indexNumber);
 
     // find backing index state
@@ -125,6 +140,9 @@ public class TableMutator extends DBMutator
 
     getPageChannel().startExclusiveWrite();
     try {
+
+      // FIXME, maybe add index data
+      // _table.mutateAddIndexData(this);
 
       return _table.mutateAddIndex(this);
 
@@ -169,7 +187,7 @@ public class TableMutator extends DBMutator
     if(_index == null) {
       throw new IllegalArgumentException("Cannot add index with no index");
     }
-    if((_table.getIndexes().size() + 1) > getFormat().MAX_INDEXES_PER_TABLE) {
+    if((_table.getLogicalIndexCount() + 1) > getFormat().MAX_INDEXES_PER_TABLE) {
       throw new IllegalArgumentException(
           "Cannot add index to table with " +
           getFormat().MAX_INDEXES_PER_TABLE + " indexes");

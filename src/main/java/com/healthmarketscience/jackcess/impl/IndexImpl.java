@@ -75,7 +75,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
                       JetFormat format) 
     throws IOException
   {
-
     ByteUtil.forward(tableBuffer, format.SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
     _indexNumber = tableBuffer.getInt();
     int indexDataNumber = tableBuffer.getInt();
@@ -342,23 +341,32 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     // write logical index information
     for(IndexBuilder idx : creator.getIndexes()) {
-      TableCreator.IndexDataState idxDataState = creator.getIndexDataState(idx);
-      buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
-      buffer.putInt(idx.getIndexNumber()); // index num
-      buffer.putInt(idxDataState.getIndexDataNumber()); // index data num
-      buffer.put((byte)0); // related table type
-      buffer.putInt(INVALID_INDEX_NUMBER); // related index num
-      buffer.putInt(0); // related table definition page number
-      buffer.put((byte)0); // cascade updates flag
-      buffer.put((byte)0); // cascade deletes flag
-      buffer.put(idx.getType()); // index type flags
-      buffer.putInt(0); // unknown
+      writeDefinition(creator, idx, buffer);
     }
 
     // write index names
     for(IndexBuilder idx : creator.getIndexes()) {
       TableImpl.writeName(buffer, idx.getName(), creator.getCharset());
     }
+  }
+
+  protected static void writeDefinition(
+      DBMutator mutator, IndexBuilder idx, ByteBuffer buffer)
+    throws IOException
+  {
+    DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(idx);
+
+    // write logical index information
+    buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
+    buffer.putInt(idx.getIndexNumber()); // index num
+    buffer.putInt(idxDataState.getIndexDataNumber()); // index data num
+    buffer.put((byte)0); // related table type
+    buffer.putInt(INVALID_INDEX_NUMBER); // related index num
+    buffer.putInt(0); // related table definition page number
+    buffer.put((byte)0); // cascade updates flag
+    buffer.put((byte)0); // cascade deletes flag
+    buffer.put(idx.getType()); // index type flags
+    buffer.putInt(0); // unknown
   }
 
   private String withErrorContext(String msg) {
