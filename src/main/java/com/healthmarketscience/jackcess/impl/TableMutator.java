@@ -134,15 +134,15 @@ public class TableMutator extends DBMutator
     _index.setIndexNumber(indexNumber);
 
     // find backing index state
-
-    // FIXME, writeme!
-
+    findIndexDataState();
 
     getPageChannel().startExclusiveWrite();
     try {
 
-      // FIXME, maybe add index data
-      // _table.mutateAddIndexData(this);
+      if(_idxDataState.getIndexDataNumber() == _table.getIndexCount()) {
+        // we need a new backing index data
+        _table.mutateAddIndexData(this);
+      }
 
       return _table.mutateAddIndex(this);
 
@@ -216,5 +216,52 @@ public class TableMutator extends DBMutator
       }
     }
     return idxNames;
+  }
+
+  private void findIndexDataState() {
+
+    _idxDataState = new IndexDataState();
+    _idxDataState.addIndex(_index);
+    
+    // search for an existing index which matches the given index (in terms of
+    // the backing data)
+    for(IndexData idxData : _table.getIndexDatas()) {
+      if(sameIndexData(_index, idxData)) {
+        _idxDataState.setIndexDataNumber(idxData.getIndexDataNumber());
+        return;
+      }
+    }
+
+    // no matches found, need new index data state
+    _idxDataState.setIndexDataNumber(_table.getIndexCount());
+  }
+
+  private static boolean sameIndexData(IndexBuilder idx1, IndexData idx2) {
+    // index data can be combined if flags match and columns (and col flags)
+    // match
+    if(idx1.getFlags() != idx2.getIndexFlags()) {
+      return false;
+    }
+
+    if(idx1.getColumns().size() != idx2.getColumns().size()) {
+      return false;
+    }
+    
+    for(int i = 0; i < idx1.getColumns().size(); ++i) {
+      IndexBuilder.Column col1 = idx1.getColumns().get(i);
+      IndexData.ColumnDescriptor col2 = idx2.getColumns().get(i);
+
+      if(!sameIndexData(col1, col2)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static boolean sameIndexData(
+      IndexBuilder.Column col1, IndexData.ColumnDescriptor col2) {
+    return (col1.getName().equals(col2.getName()) && 
+            (col1.getFlags() == col2.getFlags()));
   }
 }

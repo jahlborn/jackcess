@@ -496,6 +496,10 @@ public class TableImpl implements Table
     return _logicalIndexCount;
   }
 
+  int getIndexCount() {
+    return _indexCount;
+  }
+
   List<ColumnImpl> getAutoNumberColumns() {
     return _autoNumColumns;
   }
