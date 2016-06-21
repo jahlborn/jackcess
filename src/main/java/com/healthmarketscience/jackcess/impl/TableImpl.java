@@ -1177,7 +1177,7 @@ public class TableImpl implements Table
     if(isLongVal) {
 
       // allocate usage maps for the long value col
-      Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2);
+      Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2, null);
       System.out.println("FOO created umap " + umapInfo);
       DBMutator.ColumnState colState = mutator.getColumnState(column);
       colState.setUmapPageNumber(umapInfo.getKey());
@@ -1309,8 +1309,16 @@ public class TableImpl implements Table
     ByteUtil.forward(tableBuffer, (_indexCount * 
                                    format.SIZE_INDEX_COLUMN_BLOCK));
 
-    // write index data def
+    // allocate usage maps and root page
     DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
+    int rootPageNumber = getPageChannel().allocateNewPage();
+    Map.Entry<Integer,Integer> umapInfo = addUsageMaps(1, rootPageNumber);
+    System.out.println("FOO created umap " + umapInfo);
+    idxDataState.setRootPageNumber(rootPageNumber);
+    idxDataState.setUmapPageNumber(umapInfo.getKey());
+    idxDataState.setUmapRowNumber(umapInfo.getValue().byteValue());
+
+    // write index data def
     int idxDataDefPos = tableBuffer.position();
     ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_COLUMN_BLOCK);
     IndexData.writeDefinition(mutator, tableBuffer, idxDataState, null);
@@ -1388,6 +1396,7 @@ public class TableImpl implements Table
                                    format.SIZE_INDEX_INFO_BLOCK));
 
     int idxDefPos = tableBuffer.position();
+    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_INFO_BLOCK);
     IndexImpl.writeDefinition(mutator, index, tableBuffer);
 
     // skip existing index names and write new name
@@ -1480,7 +1489,9 @@ public class TableImpl implements Table
     return tableBuffer;
   }
 
-  private Map.Entry<Integer,Integer> addUsageMaps(int numMaps) throws IOException
+  private Map.Entry<Integer,Integer> addUsageMaps(
+      int numMaps, Integer firstUsedPage)
+    throws IOException
   {
     JetFormat format = getFormat();
     PageChannel pageChannel = getPageChannel();
@@ -1525,6 +1536,13 @@ public class TableImpl implements Table
     for(int i = 0; i < numMaps; ++i) {
       umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
       umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
+
+      if(firstUsedPage != null) {
+        // fill in the first used page of the usage map
+        umapBuf.putInt(rowStart + 1, firstUsedPage);
+        umapBuf.put(rowStart + 5, (byte)1);
+      }
+
       rowStart -= umapRowLength;      
       ++umapRowNum;
     }

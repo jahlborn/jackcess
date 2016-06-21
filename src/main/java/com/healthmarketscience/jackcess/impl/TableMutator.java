@@ -60,6 +60,11 @@ public class TableMutator extends DBMutator
   }
 
   @Override
+  String getTableName() {
+    return _table.getName();
+  }
+  
+  @Override
   public int getTdefPageNumber() {
     return _table.getTableDefPageNumber();
   }
@@ -98,6 +103,12 @@ public class TableMutator extends DBMutator
 
   List<Integer> getNextPages() {
     return _nextPages;
+  }
+
+  void resetTdefInfo() {
+    _addedTdefLen = 0;
+    _origTdefLen = 0;
+    _nextPages.clear();
   }
 
   public ColumnImpl addColumn(ColumnBuilder column) throws IOException {
@@ -142,9 +153,12 @@ public class TableMutator extends DBMutator
       if(_idxDataState.getIndexDataNumber() == _table.getIndexCount()) {
         // we need a new backing index data
         _table.mutateAddIndexData(this);
+        resetTdefInfo();
       }
 
       return _table.mutateAddIndex(this);
+
+      // FIXME, need to add data to index!!!
 
     } finally {
       getPageChannel().finishWrite();

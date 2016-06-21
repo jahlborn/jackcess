@@ -137,6 +137,8 @@ abstract class DBMutator
     return null;
   }
 
+  abstract String getTableName();
+
   public abstract int getTdefPageNumber();
 
   abstract short getColumnNumber(String colName);

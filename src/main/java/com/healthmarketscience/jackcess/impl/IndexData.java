@@ -549,11 +549,10 @@ public class IndexData {
         columnNumber = creator.getColumnNumber(idxCol.getName());
         if(columnNumber == COLUMN_UNUSED) {
           // should never happen as this is validated before
-          // FIXME
-          // throw new IllegalArgumentException(
-          //     withErrorContext(
-          //         "Column with name " + idxCol.getName() + " not found",
-          //         creator.getDatabase(), creator.getName(), idx.getName()));
+          throw new IllegalArgumentException(
+              withErrorContext(
+                  "Column with name " + idxCol.getName() + " not found",
+                  creator.getDatabase(), creator.getTableName(), idx.getName()));
         }
       }
          

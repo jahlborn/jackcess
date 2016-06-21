@@ -65,6 +65,11 @@ class TableCreator extends DBMutator
   }
 
   @Override
+  String getTableName() {
+    return getName();
+  }
+  
+  @Override
   public int getTdefPageNumber() {
     return _tdefPageNumber;
   }
