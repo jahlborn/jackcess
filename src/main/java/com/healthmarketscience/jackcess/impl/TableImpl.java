@@ -1125,109 +1125,121 @@ public class TableImpl implements Table
     ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
         mutator);
 
-    ////
-    // update various bits of the table def
-    ByteUtil.forward(tableBuffer, 29);
-    tableBuffer.putShort((short)(_maxColumnCount + 1));
-    short varColCount = (short)(_varColumns.size() + (isVarCol ? 1 : 0));
-    tableBuffer.putShort(varColCount);
-    tableBuffer.putShort((short)(_columns.size() + 1));
-
-    // move to end of column def blocks
-    tableBuffer.position(format.SIZE_TDEF_HEADER + 
-                         (_indexCount * format.SIZE_INDEX_DEFINITION) +
-                         (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
-
-    // figure out the data offsets for the new column
-    int fixedOffset = 0;
-    int varOffset = 0;
-    if(column.isVariableLength()) {
-      // find the variable offset
-      for(ColumnImpl col : _varColumns) {
-        if(col.getVarLenTableIndex() >= varOffset) {
-          varOffset = col.getVarLenTableIndex() + 1;
-        }
-      }
-    } else {
-      // find the fixed offset
-      for(ColumnImpl col : _columns) {
-        if(!col.isVariableLength() && 
-           (col.getFixedDataOffset() >= fixedOffset)) {
-          fixedOffset = col.getFixedDataOffset() + 
-            col.getType().getFixedSize(col.getLength());
-        }
-      }
-    }
-
-    mutator.setColumnOffsets(fixedOffset, varOffset, varOffset);
-
-    // insert space for the column definition and write it
-    int colDefPos = tableBuffer.position();
-    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_COLUMN_DEF_BLOCK);
-    ColumnImpl.writeDefinition(mutator, column, tableBuffer);
-
-    // skip existing column names and write new name
-    skipNames(tableBuffer, _columns.size());
-    ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
-    System.out.println("FOO pre name " + tableBuffer.position());
-    writeName(tableBuffer, column.getName(), mutator.getCharset());
-    System.out.println("FOO post name " + tableBuffer.position());
-
+    ColumnImpl newCol = null;
     int umapPos = -1;
-    if(isLongVal) {
+    boolean success = false;
+    try {
+      
+      ////
+      // update various bits of the table def
+      ByteUtil.forward(tableBuffer, 29);
+      tableBuffer.putShort((short)(_maxColumnCount + 1));
+      short varColCount = (short)(_varColumns.size() + (isVarCol ? 1 : 0));
+      tableBuffer.putShort(varColCount);
+      tableBuffer.putShort((short)(_columns.size() + 1));
 
-      // allocate usage maps for the long value col
-      Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2, null);
-      System.out.println("FOO created umap " + umapInfo);
-      DBMutator.ColumnState colState = mutator.getColumnState(column);
-      colState.setUmapPageNumber(umapInfo.getKey());
-      byte rowNum = umapInfo.getValue().byteValue();
-      colState.setUmapOwnedRowNumber(rowNum);
-      colState.setUmapFreeRowNumber((byte)(rowNum + 1));
+      // move to end of column def blocks
+      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+                           (_indexCount * format.SIZE_INDEX_DEFINITION) +
+                           (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
 
-      // skip past index defs
-      System.out.println("FOO pre move " + tableBuffer.position());
-      ByteUtil.forward(tableBuffer, (_indexCount * 
-                                     format.SIZE_INDEX_COLUMN_BLOCK));
-      System.out.println("FOO moved to " + tableBuffer.position());
-      ByteUtil.forward(tableBuffer,
-                       (_logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK));
-      System.out.println("FOO moved to " + tableBuffer.position());
-      skipNames(tableBuffer, _logicalIndexCount);
-
-      // skip existing usage maps
-      while(tableBuffer.remaining() >= 2) {
-        if(tableBuffer.getShort() == IndexData.COLUMN_UNUSED) {
-          // found end of tdef, we want to insert before this
-          ByteUtil.forward(tableBuffer, -2);
-          break;
+      // figure out the data offsets for the new column
+      int fixedOffset = 0;
+      int varOffset = 0;
+      if(column.isVariableLength()) {
+        // find the variable offset
+        for(ColumnImpl col : _varColumns) {
+          if(col.getVarLenTableIndex() >= varOffset) {
+            varOffset = col.getVarLenTableIndex() + 1;
+          }
         }
-        
-        ByteUtil.forward(tableBuffer, 8);
-
-        // keep reading ...
+      } else {
+        // find the fixed offset
+        for(ColumnImpl col : _columns) {
+          if(!col.isVariableLength() && 
+             (col.getFixedDataOffset() >= fixedOffset)) {
+            fixedOffset = col.getFixedDataOffset() + 
+              col.getType().getFixedSize(col.getLength());
+          }
+        }
       }
 
-      // write new column usage map info
-      System.out.println("FOO about to write " + tableBuffer.position());
-      umapPos = tableBuffer.position();
-      ByteUtil.insertEmptyData(tableBuffer, 10);
-      ColumnImpl.writeColUsageMapDefinition(
-          mutator, column, tableBuffer);
+      mutator.setColumnOffsets(fixedOffset, varOffset, varOffset);
+
+      // insert space for the column definition and write it
+      int colDefPos = tableBuffer.position();
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_COLUMN_DEF_BLOCK);
+      ColumnImpl.writeDefinition(mutator, column, tableBuffer);
+
+      // skip existing column names and write new name
+      skipNames(tableBuffer, _columns.size());
+      ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
+      System.out.println("FOO pre name " + tableBuffer.position());
+      writeName(tableBuffer, column.getName(), mutator.getCharset());
+      System.out.println("FOO post name " + tableBuffer.position());
+
+      if(isLongVal) {
+
+        // allocate usage maps for the long value col
+        Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2, null);
+        System.out.println("FOO created umap " + umapInfo);
+        DBMutator.ColumnState colState = mutator.getColumnState(column);
+        colState.setUmapPageNumber(umapInfo.getKey());
+        byte rowNum = umapInfo.getValue().byteValue();
+        colState.setUmapOwnedRowNumber(rowNum);
+        colState.setUmapFreeRowNumber((byte)(rowNum + 1));
+
+        // skip past index defs
+        System.out.println("FOO pre move " + tableBuffer.position());
+        ByteUtil.forward(tableBuffer, (_indexCount * 
+                                       format.SIZE_INDEX_COLUMN_BLOCK));
+        System.out.println("FOO moved to " + tableBuffer.position());
+        ByteUtil.forward(tableBuffer,
+                         (_logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK));
+        System.out.println("FOO moved to " + tableBuffer.position());
+        skipNames(tableBuffer, _logicalIndexCount);
+
+        // skip existing usage maps
+        while(tableBuffer.remaining() >= 2) {
+          if(tableBuffer.getShort() == IndexData.COLUMN_UNUSED) {
+            // found end of tdef, we want to insert before this
+            ByteUtil.forward(tableBuffer, -2);
+            break;
+          }
+        
+          ByteUtil.forward(tableBuffer, 8);
+
+          // keep reading ...
+        }
+
+        // write new column usage map info
+        System.out.println("FOO about to write " + tableBuffer.position());
+        umapPos = tableBuffer.position();
+        ByteUtil.insertEmptyData(tableBuffer, 10);
+        ColumnImpl.writeColUsageMapDefinition(
+            mutator, column, tableBuffer);
+      }
+
+      // sanity check the updates
+      validateTableDefUpdate(mutator, tableBuffer);
+
+      // before writing the new table def, create the column
+      newCol = ColumnImpl.create(this, tableBuffer, colDefPos,
+                                 column.getName(), _columns.size());
+      newCol.setColumnIndex(_columns.size());
+
+      ////
+      // write updated table def back to the database
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+                                 mutator.getNextPages());
+      success = true;
+
+    } finally {
+      if(!success) {
+        // need to discard modified table buffer
+        _tableDefBufferH.invalidate();
+      }
     }
-
-    // sanity check the updates
-    validateTableDefUpdate(mutator, tableBuffer);
-
-    // before writing the new table def, create the column
-    ColumnImpl newCol = ColumnImpl.create(this, tableBuffer, colDefPos,
-                                          column.getName(), _columns.size());
-    newCol.setColumnIndex(_columns.size());
-
-    ////
-    // write updated table def back to the database
-    writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
-                               mutator.getNextPages());
 
     ////
     // now, update current TableImpl
@@ -1287,56 +1299,68 @@ public class TableImpl implements Table
     ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
         mutator);
 
-    ////
-    // update various bits of the table def
-    ByteUtil.forward(tableBuffer, 39);
-    tableBuffer.putInt(_indexCount + 1);
+    IndexData newIdxData = null;
+    boolean success = false;
+    try {
+      
+      ////
+      // update various bits of the table def
+      ByteUtil.forward(tableBuffer, 39);
+      tableBuffer.putInt(_indexCount + 1);
 
-    // move to end of index data def blocks
-    tableBuffer.position(format.SIZE_TDEF_HEADER + 
-                         (_indexCount * format.SIZE_INDEX_DEFINITION));
+      // move to end of index data def blocks
+      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+                           (_indexCount * format.SIZE_INDEX_DEFINITION));
 
-    // write index row count definition (empty initially)
-    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_DEFINITION);
-    IndexData.writeRowCountDefinitions(mutator, tableBuffer, 1);
+      // write index row count definition (empty initially)
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_DEFINITION);
+      IndexData.writeRowCountDefinitions(mutator, tableBuffer, 1);
 
-    // skip columns and column names
-    ByteUtil.forward(tableBuffer, 
-                     (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
-    skipNames(tableBuffer, _columns.size());
+      // skip columns and column names
+      ByteUtil.forward(tableBuffer, 
+                       (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
+      skipNames(tableBuffer, _columns.size());
 
-    // move to end of current index datas
-    ByteUtil.forward(tableBuffer, (_indexCount * 
-                                   format.SIZE_INDEX_COLUMN_BLOCK));
+      // move to end of current index datas
+      ByteUtil.forward(tableBuffer, (_indexCount * 
+                                     format.SIZE_INDEX_COLUMN_BLOCK));
 
-    // allocate usage maps and root page
-    DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
-    int rootPageNumber = getPageChannel().allocateNewPage();
-    Map.Entry<Integer,Integer> umapInfo = addUsageMaps(1, rootPageNumber);
-    System.out.println("FOO created umap " + umapInfo);
-    idxDataState.setRootPageNumber(rootPageNumber);
-    idxDataState.setUmapPageNumber(umapInfo.getKey());
-    idxDataState.setUmapRowNumber(umapInfo.getValue().byteValue());
+      // allocate usage maps and root page
+      DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
+      int rootPageNumber = getPageChannel().allocateNewPage();
+      Map.Entry<Integer,Integer> umapInfo = addUsageMaps(1, rootPageNumber);
+      System.out.println("FOO created umap " + umapInfo);
+      idxDataState.setRootPageNumber(rootPageNumber);
+      idxDataState.setUmapPageNumber(umapInfo.getKey());
+      idxDataState.setUmapRowNumber(umapInfo.getValue().byteValue());
 
-    // write index data def
-    int idxDataDefPos = tableBuffer.position();
-    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_COLUMN_BLOCK);
-    IndexData.writeDefinition(mutator, tableBuffer, idxDataState, null);
+      // write index data def
+      int idxDataDefPos = tableBuffer.position();
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_COLUMN_BLOCK);
+      IndexData.writeDefinition(mutator, tableBuffer, idxDataState, null);
 
-    // sanity check the updates
-    validateTableDefUpdate(mutator, tableBuffer);
+      // sanity check the updates
+      validateTableDefUpdate(mutator, tableBuffer);
 
-    // before writing the new table def, create the index data
-    tableBuffer.position(0);
-    IndexData newIdxData = IndexData.create(
-        this, tableBuffer, idxDataState.getIndexDataNumber(), format);
-    tableBuffer.position(idxDataDefPos);
-    newIdxData.read(tableBuffer, _columns);
+      // before writing the new table def, create the index data
+      tableBuffer.position(0);
+      newIdxData = IndexData.create(
+          this, tableBuffer, idxDataState.getIndexDataNumber(), format);
+      tableBuffer.position(idxDataDefPos);
+      newIdxData.read(tableBuffer, _columns);
 
-    ////
-    // write updated table def back to the database
-    writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
-                               mutator.getNextPages());
+      ////
+      // write updated table def back to the database
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+                                 mutator.getNextPages());
+      success = true;
+
+    } finally {
+      if(!success) {
+        // need to discard modified table buffer
+        _tableDefBufferH.invalidate();
+      }
+    }
 
     ////
     // now, update current TableImpl
@@ -1350,7 +1374,33 @@ public class TableImpl implements Table
 
     completeTableMutation(tableBuffer);
 
+    // don't forget to populate the new index
+    populateIndexData(newIdxData);
+
     return newIdxData;
+  }
+
+  private void populateIndexData(IndexData idxData)
+    throws IOException
+  {
+    // grab the columns involved in this index
+    List<ColumnImpl> idxCols = new ArrayList<ColumnImpl>();
+    for(IndexData.ColumnDescriptor col : idxData.getColumns()) {
+      idxCols.add(col.getColumn());
+    }
+
+    // iterate through all the rows and add them to the index
+    Object[] rowVals = new Object[_columns.size()];
+    for(Row row : getDefaultCursor().newIterable().addColumns(idxCols)) {
+      for(Column col : idxCols) {
+        col.setRowValue(rowVals, col.getRowValue(row));
+      }
+
+      IndexData.commitAll(      
+          idxData.prepareAddRow(rowVals, (RowIdImpl)row.getId(), null));
+    }
+
+    updateTableDefinition(0);
   }
 
   /**
@@ -1374,48 +1424,60 @@ public class TableImpl implements Table
     ByteBuffer tableBuffer = loadCompleteTableDefinitionBufferForUpdate(
         mutator);
 
-    ////
-    // update various bits of the table def
-    ByteUtil.forward(tableBuffer, 35);
-    tableBuffer.putInt(_logicalIndexCount + 1);
+    IndexImpl newIdx = null;
+    boolean success = false;
+    try {
+      
+      ////
+      // update various bits of the table def
+      ByteUtil.forward(tableBuffer, 35);
+      tableBuffer.putInt(_logicalIndexCount + 1);
 
-    // move to end of index data def blocks
-    tableBuffer.position(format.SIZE_TDEF_HEADER + 
-                         (_indexCount * format.SIZE_INDEX_DEFINITION));
+      // move to end of index data def blocks
+      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+                           (_indexCount * format.SIZE_INDEX_DEFINITION));
 
-    // skip columns and column names
-    ByteUtil.forward(tableBuffer, 
-                     (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
-    skipNames(tableBuffer, _columns.size());
+      // skip columns and column names
+      ByteUtil.forward(tableBuffer, 
+                       (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
+      skipNames(tableBuffer, _columns.size());
 
-    // move to end of current index datas
-    ByteUtil.forward(tableBuffer, (_indexCount * 
-                                   format.SIZE_INDEX_COLUMN_BLOCK));
-    // move to end of current indexes
-    ByteUtil.forward(tableBuffer, (_logicalIndexCount * 
-                                   format.SIZE_INDEX_INFO_BLOCK));
+      // move to end of current index datas
+      ByteUtil.forward(tableBuffer, (_indexCount * 
+                                     format.SIZE_INDEX_COLUMN_BLOCK));
+      // move to end of current indexes
+      ByteUtil.forward(tableBuffer, (_logicalIndexCount * 
+                                     format.SIZE_INDEX_INFO_BLOCK));
 
-    int idxDefPos = tableBuffer.position();
-    ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_INFO_BLOCK);
-    IndexImpl.writeDefinition(mutator, index, tableBuffer);
+      int idxDefPos = tableBuffer.position();
+      ByteUtil.insertEmptyData(tableBuffer, format.SIZE_INDEX_INFO_BLOCK);
+      IndexImpl.writeDefinition(mutator, index, tableBuffer);
 
-    // skip existing index names and write new name
-    skipNames(tableBuffer, _logicalIndexCount);
-    ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
-    writeName(tableBuffer, index.getName(), mutator.getCharset());
+      // skip existing index names and write new name
+      skipNames(tableBuffer, _logicalIndexCount);
+      ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
+      writeName(tableBuffer, index.getName(), mutator.getCharset());
 
-    // sanity check the updates
-    validateTableDefUpdate(mutator, tableBuffer);
+      // sanity check the updates
+      validateTableDefUpdate(mutator, tableBuffer);
 
-    // before writing the new table def, create the index
-    tableBuffer.position(idxDefPos);
-    IndexImpl newIdx = new IndexImpl(tableBuffer, _indexDatas, format);
-    newIdx.setName(index.getName());
+      // before writing the new table def, create the index
+      tableBuffer.position(idxDefPos);
+      newIdx = new IndexImpl(tableBuffer, _indexDatas, format);
+      newIdx.setName(index.getName());
     
-    ////
-    // write updated table def back to the database
-    writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
-                               mutator.getNextPages());
+      ////
+      // write updated table def back to the database
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+                                 mutator.getNextPages());
+      success = true;
+
+    } finally {
+      if(!success) {
+        // need to discard modified table buffer
+        _tableDefBufferH.invalidate();
+      }
+    }
 
     ////
     // now, update current TableImpl
@@ -3213,9 +3275,10 @@ public class TableImpl implements Table
         reset();
         _headerRowBufferH.invalidate();
         _overflowRowBufferH.invalidate();
-        if(TableImpl.this._maxColumnCount != _rowValues.length) {
+        int colCount = TableImpl.this.getColumnCount();
+        if(colCount != _rowValues.length) {
           // columns added or removed from table
-          _rowValues = new Object[TableImpl.this._maxColumnCount];
+          _rowValues = new Object[colCount];
         }
         _lastModCount = TableImpl.this._modCount;
       }

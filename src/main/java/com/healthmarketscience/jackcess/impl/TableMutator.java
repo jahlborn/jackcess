@@ -153,12 +153,12 @@ public class TableMutator extends DBMutator
       if(_idxDataState.getIndexDataNumber() == _table.getIndexCount()) {
         // we need a new backing index data
         _table.mutateAddIndexData(this);
+
+        // we need to modify the table def again when adding the Index, so reset
         resetTdefInfo();
       }
 
       return _table.mutateAddIndex(this);
-
-      // FIXME, need to add data to index!!!
 
     } finally {
       getPageChannel().finishWrite();
