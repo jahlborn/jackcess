@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,10 +26,13 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.TableMutator;
 
 /**
  * Builder style class for constructing an {@link Index}.  See {@link
- * TableBuilder} for example usage.
+ * TableBuilder} for example usage.  Additionally, an Index can be added to an
+ * existing Table using the {@link #addToTable(Table)} method.
  *
  * @author James Ahlborn
  * @usage _general_class_
@@ -183,6 +187,15 @@ public class IndexBuilder
             "column named " + col.getName() + " not found in table"));
       }
     }
+  }
+
+  /**
+   * Adds a new Index to the given Table with the currently configured
+   * attributes.
+   */
+  public Index addToTable(Table table) throws IOException
+  {
+      return new TableMutator((TableImpl)table).addIndex(this);
   }
 
   private String withErrorContext(String msg) {

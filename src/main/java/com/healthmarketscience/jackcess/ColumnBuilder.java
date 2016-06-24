@@ -25,10 +25,13 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.TableMutator;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
- * TableBuilder} for example usage.
+ * TableBuilder} for example usage.  Additionally, a Column can be added to an
+ * existing Table using the {@link #addToTable(Table)} method.
  *
  * @author James Ahlborn
  * @usage _general_class_
@@ -470,6 +473,15 @@ public class ColumnBuilder {
   public ColumnBuilder toColumn() {
     // for backwards compat w/ old code
     return this;
+  }
+
+  /**
+   * Adds a new Column to the given Table with the currently configured
+   * attributes.
+   */
+  public Column addToTable(Table table) throws IOException
+  {
+      return new TableMutator((TableImpl)table).addColumn(this);
   }
 
   private String withErrorContext(String msg) {
