@@ -161,6 +161,12 @@ public class IndexBuilder
     _indexNumber = newIndexNumber;
   }
 
+  /**
+   * Checks that this index definition is valid.
+   *
+   * @throws IllegalArgumentException if this index definition is invalid.
+   * @usage _advanced_method_
+   */
   public void validate(Set<String> tableColNames, JetFormat format) {
 
     DatabaseImpl.validateIdentifierName(

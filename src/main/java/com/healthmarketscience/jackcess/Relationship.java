@@ -45,6 +45,8 @@ public interface Relationship
   
   public boolean cascadeDeletes();
 
+  public boolean cascadeNullOnDelete();
+
   public boolean isLeftOuterJoin();
 
   public boolean isRightOuterJoin();
