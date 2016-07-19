@@ -60,6 +60,7 @@ import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.TableMetaData;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
@@ -1035,12 +1036,10 @@ public class DatabaseImpl implements Database
                           List<IndexBuilder> indexes)
     throws IOException
   {
-    if(lookupTable(name) != null) {
-      throw new IllegalArgumentException(withErrorContext(
-              "Cannot create table with name of existing table '" + name + "'"));
-    }
-
-    new TableCreator(this, name, columns, indexes).createTable();
+    new TableBuilder(name)
+      .addColumns(columns)
+      .addIndexes(indexes)
+      .toTable(this);
   }
 
   public void createLinkedTable(String name, String linkedDbName, 
@@ -1581,6 +1580,15 @@ public class DatabaseImpl implements Database
       }
     }
     _pageChannel.close();
+  }
+
+  public void validateNewTableName(String name) throws IOException {
+    if(lookupTable(name) != null) {
+      throw new IllegalArgumentException(withErrorContext(
+              "Cannot create table with name of existing table '" + name + "'"));
+    }
+
+    validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
   }
   
   /**

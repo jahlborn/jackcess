@@ -16,11 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -29,253 +25,215 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.IndexBuilder;
 
 /**
- * Helper class used to maintain state during table mutation.
+ * Common helper class used to maintain state during table mutation.
  *
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-public class TableMutator extends DBMutator
+public abstract class TableMutator extends DBMutator
 {
-  private final TableImpl _table;
+  private ColumnOffsets _colOffsets;
 
-  private ColumnBuilder _column;
-  private IndexBuilder _index;
-  private int _origTdefLen;
-  private int _addedTdefLen;
-  private List<Integer> _nextPages = new ArrayList<Integer>(1);
-  private ColumnState _colState;
-  private IndexDataState _idxDataState;
-
-  public TableMutator(TableImpl table) {
-    super(table.getDatabase());
-    _table = table;
+  protected TableMutator(DatabaseImpl database) {
+    super(database);
   }
 
-  public ColumnBuilder getColumn() {
-    return _column;
-  }
-
-  public IndexBuilder getIndex() {
-    return _index;
-  }
-
-  @Override
-  String getTableName() {
-    return _table.getName();
-  }
-  
-  @Override
-  public int getTdefPageNumber() {
-    return _table.getTableDefPageNumber();
-  }
-
-  @Override
-  short getColumnNumber(String colName) {
-    for(ColumnImpl col : _table.getColumns()) {
-      if(col.getName().equalsIgnoreCase(colName)) {
-        return col.getColumnNumber();
-      }
+  public void setColumnOffsets(
+      int fixedOffset, int varOffset, int longVarOffset) {
+    if(_colOffsets == null) {
+      _colOffsets = new ColumnOffsets();
     }
-    return IndexData.COLUMN_UNUSED;
+    _colOffsets.set(fixedOffset, varOffset, longVarOffset);
   }
 
-  @Override
-  public ColumnState getColumnState(ColumnBuilder col) {
-    return ((col == _column) ? _colState : null);
+  public ColumnOffsets getColumnOffsets() {
+    return _colOffsets;
   }
 
-  @Override
-  public IndexDataState getIndexDataState(IndexBuilder idx) {
-    return ((idx == _index) ? _idxDataState : null);
+  protected void validateColumn(Set<String> colNames, ColumnBuilder column) {
+
+      // FIXME for now, we can't create complex columns
+      if(column.getType() == DataType.COMPLEX_TYPE) {
+        throw new UnsupportedOperationException(
+            "Complex column creation is not yet implemented");
+      }
+      
+      column.validate(getFormat());
+      if(!colNames.add(column.getName().toUpperCase())) {
+        throw new IllegalArgumentException("duplicate column name: " +
+                                           column.getName());
+      }
+
+      setColumnSortOrder(column);
   }
 
-  int getAddedTdefLen() {
-    return _addedTdefLen;
-  }
-
-  void addTdefLen(int add) {
-    _addedTdefLen += add;
-  }
-
-  void setOrigTdefLen(int len) {
-    _origTdefLen = len;
-  }
-
-  List<Integer> getNextPages() {
-    return _nextPages;
-  }
-
-  void resetTdefInfo() {
-    _addedTdefLen = 0;
-    _origTdefLen = 0;
-    _nextPages.clear();
-  }
-
-  public ColumnImpl addColumn(ColumnBuilder column) throws IOException {
-
-    _column = column;
-
-    validateAddColumn();
+  protected void validateIndex(Set<String> colNames, Set<String> idxNames, 
+                               boolean[] foundPk, IndexBuilder index) {
     
-    // assign column number and do some assorted column bookkeeping
-    short columnNumber = (short)_table.getMaxColumnCount();
-    _column.setColumnNumber(columnNumber);
-    if(_column.getType().isLongValue()) {
-      _colState = new ColumnState();
+    index.validate(colNames, getFormat());
+    if(!idxNames.add(index.getName().toUpperCase())) {
+      throw new IllegalArgumentException("duplicate index name: " +
+                                         index.getName());
     }
-
-    getPageChannel().startExclusiveWrite();
-    try {
-
-      return _table.mutateAddColumn(this);
-
-    } finally {
-      getPageChannel().finishWrite();
-    }
-  }
-
-  public IndexImpl addIndex(IndexBuilder index) throws IOException {
-
-    _index = index;
-
-    validateAddIndex();
-
-    // assign index number and do some assorted index bookkeeping
-    int indexNumber = _table.getLogicalIndexCount();
-    _index.setIndexNumber(indexNumber);
-
-    // find backing index state
-    findIndexDataState();
-
-    getPageChannel().startExclusiveWrite();
-    try {
-
-      if(_idxDataState.getIndexDataNumber() == _table.getIndexCount()) {
-        // we need a new backing index data
-        _table.mutateAddIndexData(this);
-
-        // we need to modify the table def again when adding the Index, so reset
-        resetTdefInfo();
+    if(index.isPrimaryKey()) {
+      if(foundPk[0]) {
+        throw new IllegalArgumentException(
+            "found second primary key index: " + index.getName());
       }
-
-      return _table.mutateAddIndex(this);
-
-    } finally {
-      getPageChannel().finishWrite();
+      foundPk[0] = true;
     }
   }
 
-  boolean validateUpdatedTdef(ByteBuffer tableBuffer) {
-    // sanity check the updates
-    return((_origTdefLen + _addedTdefLen) == tableBuffer.limit());
-  }
-
-  private void validateAddColumn() {
-
-    if(_column == null) {
-      throw new IllegalArgumentException("Cannot add column with no column");
-    }
-    if((_table.getColumnCount() + 1) > getFormat().MAX_COLUMNS_PER_TABLE) {
+  protected static void validateAutoNumberColumn(Set<DataType> autoTypes, 
+                                                 ColumnBuilder column) 
+  {
+    if(!column.getType().isMultipleAutoNumberAllowed() &&
+       !autoTypes.add(column.getType())) {
       throw new IllegalArgumentException(
-          "Cannot add column to table with " +
-          getFormat().MAX_COLUMNS_PER_TABLE + " columns");
-    }
-    
-    Set<String> colNames = getColumnNames();
-    // next, validate the column definition
-    validateColumn(colNames, _column);
-    
-    if(_column.isAutoNumber()) {
-      // for most autonumber types, we can only have one of each type
-      Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
-      for(ColumnImpl column : _table.getAutoNumberColumns()) {
-        autoTypes.add(column.getType());
+          "Can have at most one AutoNumber column of type " + column.getType() +
+          " per table");
+    }    
+  }
+
+  private void setColumnSortOrder(ColumnBuilder column) {
+      // set the sort order to the db default (if unspecified)
+      if(column.getType().isTextual() && (column.getTextSortOrder() == null)) {
+        column.setTextSortOrder(getDbSortOrder());
       }
-
-      validateAutoNumberColumn(autoTypes, _column);
-    }
   }
 
-  private void validateAddIndex() {
+  abstract String getTableName();
+
+  public abstract int getTdefPageNumber();
+
+  abstract short getColumnNumber(String colName);
+
+  public abstract ColumnState getColumnState(ColumnBuilder col);
+
+  public abstract IndexDataState getIndexDataState(IndexBuilder idx);
+
+  /**
+   * Maintains additional state used during column writing.
+   * @usage _advanced_class_
+   */
+  static final class ColumnOffsets
+  {
+    private short _fixedOffset;
+    private short _varOffset;
+    private short _longVarOffset;
+
+    public void set(int fixedOffset, int varOffset, int longVarOffset) {
+      _fixedOffset = (short)fixedOffset;
+      _varOffset = (short)varOffset;
+      _longVarOffset = (short)longVarOffset;
+    }
     
-    if(_index == null) {
-      throw new IllegalArgumentException("Cannot add index with no index");
-    }
-    if((_table.getLogicalIndexCount() + 1) > getFormat().MAX_INDEXES_PER_TABLE) {
-      throw new IllegalArgumentException(
-          "Cannot add index to table with " +
-          getFormat().MAX_INDEXES_PER_TABLE + " indexes");
-    }
-    
-    boolean foundPk[] = new boolean[1];
-    Set<String> idxNames = getIndexNames(foundPk);
-    // next, validate the index definition
-    validateIndex(getColumnNames(), idxNames, foundPk, _index);    
-  }
-
-  private Set<String> getColumnNames() {
-    Set<String> colNames = new HashSet<String>();
-    for(ColumnImpl column : _table.getColumns()) {
-      colNames.add(column.getName().toUpperCase());
-    }
-    return colNames;
-  }
-
-  private Set<String> getIndexNames(boolean[] foundPk) {
-    Set<String> idxNames = new HashSet<String>();
-    for(IndexImpl index : _table.getIndexes()) {
-      idxNames.add(index.getName().toUpperCase());
-      if(index.isPrimaryKey()) {
-        foundPk[0] = true;
+    public short getNextVariableOffset(ColumnBuilder col) {
+      if(!col.getType().isLongValue()) {
+        return _varOffset++;
       }
+      return _longVarOffset++;
     }
-    return idxNames;
+
+    public short getNextFixedOffset(ColumnBuilder col) {
+      short offset = _fixedOffset;
+      _fixedOffset += col.getType().getFixedSize(col.getLength());
+      return offset;
+    }
   }
 
-  private void findIndexDataState() {
+  /**
+   * Maintains additional state used during column creation.
+   * @usage _advanced_class_
+   */
+  static final class ColumnState
+  {
+    private byte _umapOwnedRowNumber;
+    private byte _umapFreeRowNumber;
+    // we always put both usage maps on the same page
+    private int _umapPageNumber;
 
-    _idxDataState = new IndexDataState();
-    _idxDataState.addIndex(_index);
-    
-    // search for an existing index which matches the given index (in terms of
-    // the backing data)
-    for(IndexData idxData : _table.getIndexDatas()) {
-      if(sameIndexData(_index, idxData)) {
-        _idxDataState.setIndexDataNumber(idxData.getIndexDataNumber());
-        return;
-      }
+    public byte getUmapOwnedRowNumber() {
+      return _umapOwnedRowNumber;
     }
 
-    // no matches found, need new index data state
-    _idxDataState.setIndexDataNumber(_table.getIndexCount());
+    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
+      _umapOwnedRowNumber = newUmapOwnedRowNumber;
+    }
+
+    public byte getUmapFreeRowNumber() {
+      return _umapFreeRowNumber;
+    }
+
+    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
+      _umapFreeRowNumber = newUmapFreeRowNumber;
+    }
+
+    public int getUmapPageNumber() {
+      return _umapPageNumber;
+    }
+
+    public void setUmapPageNumber(int newUmapPageNumber) {
+      _umapPageNumber = newUmapPageNumber;
+    }
   }
 
-  private static boolean sameIndexData(IndexBuilder idx1, IndexData idx2) {
-    // index data can be combined if flags match and columns (and col flags)
-    // match
-    if(idx1.getFlags() != idx2.getIndexFlags()) {
-      return false;
+  /**
+   * Maintains additional state used during index data creation.
+   * @usage _advanced_class_
+   */
+  static final class IndexDataState
+  {
+    private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
+    private int _indexDataNumber;
+    private byte _umapRowNumber;
+    private int _umapPageNumber;
+    private int _rootPageNumber;
+
+    public IndexBuilder getFirstIndex() {
+      // all indexes which have the same backing IndexDataState will have
+      // equivalent columns and flags.
+      return _indexes.get(0);
     }
 
-    if(idx1.getColumns().size() != idx2.getColumns().size()) {
-      return false;
-    }
-    
-    for(int i = 0; i < idx1.getColumns().size(); ++i) {
-      IndexBuilder.Column col1 = idx1.getColumns().get(i);
-      IndexData.ColumnDescriptor col2 = idx2.getColumns().get(i);
-
-      if(!sameIndexData(col1, col2)) {
-        return false;
-      }
+    public List<IndexBuilder> getIndexes() {
+      return _indexes;
     }
 
-    return true;
-  }
+    public void addIndex(IndexBuilder idx) {
+      _indexes.add(idx);
+    }
 
-  private static boolean sameIndexData(
-      IndexBuilder.Column col1, IndexData.ColumnDescriptor col2) {
-    return (col1.getName().equals(col2.getName()) && 
-            (col1.getFlags() == col2.getFlags()));
-  }
+    public int getIndexDataNumber() {
+      return _indexDataNumber;
+    }
+
+    public void setIndexDataNumber(int newIndexDataNumber) {
+      _indexDataNumber = newIndexDataNumber;
+    }
+
+    public byte getUmapRowNumber() {
+      return _umapRowNumber;
+    }
+
+    public void setUmapRowNumber(byte newUmapRowNumber) {
+      _umapRowNumber = newUmapRowNumber;
+    }
+
+    public int getUmapPageNumber() {
+      return _umapPageNumber;
+    }
+
+    public void setUmapPageNumber(int newUmapPageNumber) {
+      _umapPageNumber = newUmapPageNumber;
+    }
+
+    public int getRootPageNumber() {
+      return _rootPageNumber;
+    }
+
+    public void setRootPageNumber(int newRootPageNumber) {
+      _rootPageNumber = newRootPageNumber;
+    }
+  }    
 }

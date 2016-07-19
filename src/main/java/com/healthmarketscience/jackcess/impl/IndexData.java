@@ -492,7 +492,7 @@ public class IndexData {
    * @param idxCount num indexes to write
    */
   protected static void writeRowCountDefinitions(
-      DBMutator creator, ByteBuffer buffer, int idxCount)
+      TableMutator creator, ByteBuffer buffer, int idxCount)
   {
     // index row counts (empty data)
     ByteUtil.forward(buffer, (idxCount *
@@ -510,7 +510,7 @@ public class IndexData {
   {
     ByteBuffer rootPageBuffer = createRootPageBuffer(creator);
 
-    for(DBMutator.IndexDataState idxDataState : creator.getIndexDataStates()) {
+    for(TableMutator.IndexDataState idxDataState : creator.getIndexDataStates()) {
       writeDefinition(creator, buffer, idxDataState, rootPageBuffer);
     }
   }
@@ -521,8 +521,8 @@ public class IndexData {
    * @param buffer Buffer to write to
    */
   protected static void writeDefinition(
-      DBMutator creator, ByteBuffer buffer, 
-      DBMutator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
+      TableMutator creator, ByteBuffer buffer, 
+      TableMutator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
     throws IOException
   {
     if(rootPageBuffer == null) {
@@ -573,7 +573,7 @@ public class IndexData {
     ByteUtil.forward(buffer, 5); // unknown
   }
 
-  private static ByteBuffer createRootPageBuffer(DBMutator creator) 
+  private static ByteBuffer createRootPageBuffer(TableMutator creator) 
     throws IOException
   {
     ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();

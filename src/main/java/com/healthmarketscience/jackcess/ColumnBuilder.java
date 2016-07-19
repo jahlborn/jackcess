@@ -26,7 +26,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.impl.TableMutator;
+import com.healthmarketscience.jackcess.impl.TableUpdater;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
@@ -479,9 +479,8 @@ public class ColumnBuilder {
    * Adds a new Column to the given Table with the currently configured
    * attributes.
    */
-  public Column addToTable(Table table) throws IOException
-  {
-      return new TableMutator((TableImpl)table).addColumn(this);
+  public Column addToTable(Table table) throws IOException {
+      return new TableUpdater((TableImpl)table).addColumn(this);
   }
 
   private String withErrorContext(String msg) {

@@ -27,6 +27,10 @@ import java.util.List;
  */
 public interface Relationship 
 {
+  public enum JoinType {
+    INNER, LEFT_OUTER, RIGHT_OUTER;
+  }
+  
   public String getName();
   
   public Table getFromTable();
@@ -50,4 +54,6 @@ public interface Relationship
   public boolean isLeftOuterJoin();
 
   public boolean isRightOuterJoin();
+
+  public JoinType getJoinType();
 }

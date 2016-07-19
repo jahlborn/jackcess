@@ -29,6 +29,8 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.PropertyMap;
+import com.healthmarketscience.jackcess.TableBuilder;
 
 /**
  * Helper class used to maintain state during table creation.
@@ -36,11 +38,11 @@ import com.healthmarketscience.jackcess.IndexBuilder;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class TableCreator extends DBMutator
+public class TableCreator extends TableMutator
 {
-  private final String _name;
-  private final List<ColumnBuilder> _columns;
-  private final List<IndexBuilder> _indexes;
+  private String _name;
+  private List<ColumnBuilder> _columns;
+  private List<IndexBuilder> _indexes;
   private final List<IndexDataState> _indexDataStates = 
     new ArrayList<IndexDataState>();
   private final Map<ColumnBuilder,ColumnState> _columnStates = 
@@ -51,13 +53,8 @@ class TableCreator extends DBMutator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(DatabaseImpl database, String name, 
-                      List<ColumnBuilder> columns, List<IndexBuilder> indexes) {
+  public TableCreator(DatabaseImpl database) {
     super(database);
-    _name = name;
-    _columns = columns;
-    _indexes = ((indexes != null) ? indexes : 
-                Collections.<IndexBuilder>emptyList());
   }
 
   public String getName() {
@@ -153,7 +150,14 @@ class TableCreator extends DBMutator
    * Creates the table in the database.
    * @usage _advanced_method_
    */
-  public void createTable() throws IOException {
+  public TableImpl createTable(TableBuilder table) throws IOException {
+
+    _name = table.getName();
+    _columns = table.getColumns();
+    _indexes = table.getIndexes();
+    if(_indexes == null) {
+      _indexes = Collections.<IndexBuilder>emptyList();
+    }
 
     validate();
 
@@ -190,6 +194,31 @@ class TableCreator extends DBMutator
       getDatabase().addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, 
                                 null, null);
 
+      TableImpl newTable = getDatabase().getTable(_name);
+
+      // add any table properties
+      boolean addedProps = false;
+      Map<String,PropertyMap.Property> props = table.getProperties();
+      if(props != null) {
+        newTable.getProperties().putAll(props.values());
+        addedProps = true;
+      }
+      for(ColumnBuilder cb : _columns) {
+        Map<String,PropertyMap.Property> colProps = cb.getProperties();
+        if(colProps != null) {
+          newTable.getColumn(cb.getName()).getProperties()
+            .putAll(colProps.values());
+          addedProps = true;
+        }
+      }
+
+      // all table and column props are saved together
+      if(addedProps) {
+        newTable.getProperties().save();
+      }
+
+      return newTable;
+
     } finally {
       getPageChannel().finishWrite();
     }
@@ -217,10 +246,9 @@ class TableCreator extends DBMutator
   /**
    * Validates the new table information before attempting creation.
    */
-  private void validate() {
+  private void validate() throws IOException {
 
-    DatabaseImpl.validateIdentifierName(
-        _name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
+    getDatabase().validateNewTableName(_name);
     
     if((_columns == null) || _columns.isEmpty()) {
       throw new IllegalArgumentException(

@@ -27,7 +27,7 @@ import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.impl.TableMutator;
+import com.healthmarketscience.jackcess.impl.TableUpdater;
 
 /**
  * Builder style class for constructing an {@link Index}.  See {@link
@@ -199,9 +199,8 @@ public class IndexBuilder
    * Adds a new Index to the given Table with the currently configured
    * attributes.
    */
-  public Index addToTable(Table table) throws IOException
-  {
-      return new TableMutator((TableImpl)table).addIndex(this);
+  public Index addToTable(Table table) throws IOException {
+      return new TableUpdater((TableImpl)table).addIndex(this);
   }
 
   private String withErrorContext(String msg) {

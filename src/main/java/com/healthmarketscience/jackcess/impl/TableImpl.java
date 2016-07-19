@@ -1017,7 +1017,7 @@ public class TableImpl implements Table
 
   private static void writeTableDefinitionBuffer(
       ByteBuffer buffer, int tdefPageNumber, 
-      DBMutator mutator, List<Integer> reservedPages)
+      TableMutator mutator, List<Integer> reservedPages)
     throws IOException
   {
     buffer.rewind();
@@ -1099,10 +1099,10 @@ public class TableImpl implements Table
   }
 
   /**
-   * Writes a column defined by the given TableMutator to this table.
+   * Writes a column defined by the given TableUpdater to this table.
    * @usage _advanced_method_
    */
-  protected ColumnImpl mutateAddColumn(TableMutator mutator) throws IOException
+  protected ColumnImpl mutateAddColumn(TableUpdater mutator) throws IOException
   {
     ColumnBuilder column = mutator.getColumn();
     JetFormat format = mutator.getFormat();
@@ -1183,7 +1183,7 @@ public class TableImpl implements Table
         // allocate usage maps for the long value col
         Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2, null);
         System.out.println("FOO created umap " + umapInfo);
-        DBMutator.ColumnState colState = mutator.getColumnState(column);
+        TableMutator.ColumnState colState = mutator.getColumnState(column);
         colState.setUmapPageNumber(umapInfo.getKey());
         byte rowNum = umapInfo.getValue().byteValue();
         colState.setUmapOwnedRowNumber(rowNum);
@@ -1281,10 +1281,10 @@ public class TableImpl implements Table
   }
 
   /**
-   * Writes a index defined by the given TableMutator to this table.
+   * Writes a index defined by the given TableUpdater to this table.
    * @usage _advanced_method_
    */
-  protected IndexData mutateAddIndexData(TableMutator mutator) throws IOException
+  protected IndexData mutateAddIndexData(TableUpdater mutator) throws IOException
   {
     IndexBuilder index = mutator.getIndex();
     JetFormat format = mutator.getFormat();
@@ -1326,7 +1326,7 @@ public class TableImpl implements Table
                                      format.SIZE_INDEX_COLUMN_BLOCK));
 
       // allocate usage maps and root page
-      DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
+      TableMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
       int rootPageNumber = getPageChannel().allocateNewPage();
       Map.Entry<Integer,Integer> umapInfo = addUsageMaps(1, rootPageNumber);
       System.out.println("FOO created umap " + umapInfo);
@@ -1404,10 +1404,10 @@ public class TableImpl implements Table
   }
 
   /**
-   * Writes a index defined by the given TableMutator to this table.
+   * Writes a index defined by the given TableUpdater to this table.
    * @usage _advanced_method_
    */
-  protected IndexImpl mutateAddIndex(TableMutator mutator) throws IOException
+  protected IndexImpl mutateAddIndex(TableUpdater mutator) throws IOException
   {
     IndexBuilder index = mutator.getIndex();
     JetFormat format = mutator.getFormat();
@@ -1490,7 +1490,7 @@ public class TableImpl implements Table
     return newIdx;
   }
 
-  private void validateTableDefUpdate(TableMutator mutator, ByteBuffer tableBuffer)
+  private void validateTableDefUpdate(TableUpdater mutator, ByteBuffer tableBuffer)
     throws IOException
   {
     if(!mutator.validateUpdatedTdef(tableBuffer)) {
@@ -1522,7 +1522,7 @@ public class TableImpl implements Table
   }
 
   private ByteBuffer loadCompleteTableDefinitionBufferForUpdate(
-      TableMutator mutator)
+      TableUpdater mutator)
     throws IOException
   {
     // load complete table definition
@@ -1750,7 +1750,7 @@ public class TableImpl implements Table
 
         // index umap
         int indexIdx = i - 2;
-        DBMutator.IndexDataState idxDataState = 
+        TableMutator.IndexDataState idxDataState = 
           creator.getIndexDataStates().get(indexIdx);
         
         // allocate root page for the index
@@ -1774,7 +1774,7 @@ public class TableImpl implements Table
         lvalColIdx /= 2;
 
         ColumnBuilder lvalCol = lvalCols.get(lvalColIdx);
-        DBMutator.ColumnState colState = 
+        TableMutator.ColumnState colState = 
           creator.getColumnState(lvalCol);
 
         umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);

@@ -351,10 +351,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   }
 
   protected static void writeDefinition(
-      DBMutator mutator, IndexBuilder idx, ByteBuffer buffer)
+      TableMutator mutator, IndexBuilder idx, ByteBuffer buffer)
     throws IOException
   {
-    DBMutator.IndexDataState idxDataState = mutator.getIndexDataState(idx);
+    TableMutator.IndexDataState idxDataState = mutator.getIndexDataState(idx);
 
     // write logical index information
     buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def

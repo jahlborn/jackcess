@@ -1590,10 +1590,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   protected static void writeDefinition(
-      DBMutator mutator, ColumnBuilder col, ByteBuffer buffer) 
+      TableMutator mutator, ColumnBuilder col, ByteBuffer buffer) 
     throws IOException
   {
-    DBMutator.ColumnOffsets colOffsets = mutator.getColumnOffsets();
+    TableMutator.ColumnOffsets colOffsets = mutator.getColumnOffsets();
 
     buffer.put(col.getType().getValue());
     buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
@@ -1671,10 +1671,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   protected static void writeColUsageMapDefinition(
-      DBMutator creator, ColumnBuilder lvalCol, ByteBuffer buffer)
+      TableMutator creator, ColumnBuilder lvalCol, ByteBuffer buffer)
     throws IOException
   {
-    DBMutator.ColumnState colState = creator.getColumnState(lvalCol);
+    TableMutator.ColumnState colState = creator.getColumnState(lvalCol);
 
     buffer.putShort(lvalCol.getColumnNumber());
       
