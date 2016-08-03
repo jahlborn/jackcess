@@ -18,6 +18,9 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
+
+import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.RelationshipBuilder;
 
 /**
@@ -98,5 +101,62 @@ public class RelationshipCreator extends DBMutator
     // - index must be ascending
 
     // FIXME
+  }
+
+  private IndexBuilder createPrimaryIndex() {
+    String name = getUniqueIndexName(_primaryTable);
+    // FIXME?
+    return createIndex(name, _primaryCols).setUnique();
+  }
+  
+  private IndexBuilder createSecondaryIndex() {
+    String name = getUniqueIndexName(_secondaryTable);
+    // FIXME?
+
+    return createIndex(name, _primaryCols);
+  }
+  
+  private static IndexBuilder createIndex(String name, List<ColumnImpl> cols) {
+    IndexBuilder idx = new IndexBuilder(name);
+    for(ColumnImpl col : cols) {
+      idx.addColumns(col.getName());
+    }
+    return idx;
+  }
+
+  private String getUniqueIndexName(TableImpl table) {
+    Set<String> idxNames = TableUpdater.getIndexNames(table, null);
+
+    boolean isPrimary = (table == _primaryTable);
+    String baseName = null;
+    String suffix = null;
+    if(isPrimary) {
+      // primary naming scheme: ".rC", ".rD", "rE" ...
+      baseName = ".r";
+      suffix = "C";
+    } else {
+      // secondary naming scheme: "<t1><t2>", "<t1><t2>1", "<t1><t2>2"
+      baseName = _primaryTable.getName() + _secondaryTable.getName();
+      suffix = "";
+    }
+
+    int count = 0;
+    while(true) {
+      String idxName = baseName + suffix;
+      if(!idxNames.contains(idxName.toUpperCase())) {
+        return idxName;
+      }
+
+      ++count;
+      if(isPrimary) {
+        char c = (char)(suffix.charAt(0) + 1);
+        if(c == '[') {
+          c = 'a';
+        }
+        suffix = "" + c;
+      } else {
+        suffix = "" + count;
+      }      
+    }    
   }
 }

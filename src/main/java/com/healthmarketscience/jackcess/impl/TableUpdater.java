@@ -144,8 +144,8 @@ public class TableUpdater extends TableMutator
     int indexNumber = _table.getLogicalIndexCount();
     _index.setIndexNumber(indexNumber);
 
-    // find backing index state
-    findIndexDataState();
+    // initialize backing index state
+    initIndexDataState();
 
     getPageChannel().startExclusiveWrite();
     try {
@@ -208,7 +208,7 @@ public class TableUpdater extends TableMutator
     }
     
     boolean foundPk[] = new boolean[1];
-    Set<String> idxNames = getIndexNames(foundPk);
+    Set<String> idxNames = getIndexNames(_table, foundPk);
     // next, validate the index definition
     validateIndex(getColumnNames(), idxNames, foundPk, _index);    
   }
@@ -221,39 +221,50 @@ public class TableUpdater extends TableMutator
     return colNames;
   }
 
-  private Set<String> getIndexNames(boolean[] foundPk) {
+  static Set<String> getIndexNames(TableImpl table, boolean[] foundPk) {
     Set<String> idxNames = new HashSet<String>();
-    for(IndexImpl index : _table.getIndexes()) {
+    for(IndexImpl index : table.getIndexes()) {
       idxNames.add(index.getName().toUpperCase());
-      if(index.isPrimaryKey()) {
+      if(index.isPrimaryKey() && (foundPk != null)) {
         foundPk[0] = true;
       }
     }
     return idxNames;
   }
 
-  private void findIndexDataState() {
+  private void initIndexDataState() {
 
     _idxDataState = new IndexDataState();
     _idxDataState.addIndex(_index);
     
     // search for an existing index which matches the given index (in terms of
     // the backing data)
-    for(IndexData idxData : _table.getIndexDatas()) {
-      if(sameIndexData(_index, idxData)) {
-        _idxDataState.setIndexDataNumber(idxData.getIndexDataNumber());
-        return;
-      }
-    }
+    IndexData idxData = findIndexData(_index, _table, (byte)0, (byte)0);
 
-    // no matches found, need new index data state
-    _idxDataState.setIndexDataNumber(_table.getIndexCount());
+    int idxDataNumber = ((idxData != null) ?
+                         idxData.getIndexDataNumber() :
+                         _table.getIndexCount());
+
+    _idxDataState.setIndexDataNumber(idxDataNumber);
   }
 
-  private static boolean sameIndexData(IndexBuilder idx1, IndexData idx2) {
+  static IndexData findIndexData(IndexBuilder idx, TableImpl table,
+                                 byte ignoreIdxFlags, byte ignoreColFlags)
+  {
+    for(IndexData idxData : table.getIndexDatas()) {
+      if(sameIndexData(idx, idxData, ignoreIdxFlags, ignoreColFlags)) {
+        return idxData;
+      }
+    }
+    return null;
+  }
+  
+  private static boolean sameIndexData(IndexBuilder idx1, IndexData idx2,
+                                       byte ignoreIdxFlags, byte ignoreColFlags) {
     // index data can be combined if flags match and columns (and col flags)
     // match
-    if(idx1.getFlags() != idx2.getIndexFlags()) {
+    if((idx1.getFlags() | ignoreIdxFlags) !=
+       (idx2.getIndexFlags() | ignoreIdxFlags)) {
       return false;
     }
 
@@ -265,7 +276,7 @@ public class TableUpdater extends TableMutator
       IndexBuilder.Column col1 = idx1.getColumns().get(i);
       IndexData.ColumnDescriptor col2 = idx2.getColumns().get(i);
 
-      if(!sameIndexData(col1, col2)) {
+      if(!sameIndexData(col1, col2, ignoreColFlags)) {
         return false;
       }
     }
@@ -274,8 +285,10 @@ public class TableUpdater extends TableMutator
   }
 
   private static boolean sameIndexData(
-      IndexBuilder.Column col1, IndexData.ColumnDescriptor col2) {
+      IndexBuilder.Column col1, IndexData.ColumnDescriptor col2,
+      int ignoreColFlags) {
     return (col1.getName().equals(col2.getName()) && 
-            (col1.getFlags() == col2.getFlags()));
+            ((col1.getFlags() | ignoreColFlags) ==
+             (col2.getFlags() | ignoreColFlags)));
   }
 }
