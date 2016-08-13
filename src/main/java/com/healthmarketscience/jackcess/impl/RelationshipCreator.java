@@ -41,6 +41,23 @@ public class RelationshipCreator extends DBMutator
     super(database);
   }
 
+  public TableImpl getPrimaryTable() {
+    return _primaryTable;
+  }
+
+  public TableImpl getSecondaryTable() {
+    return _secondaryTable;
+  }
+
+  public RelationshipImpl createRelationshipImpl(String name) {
+    RelationshipImpl newRel = new RelationshipImpl(
+        name, _primaryTable, _secondaryTable, _relationship.getFlags(),
+        _primaryCols.size());
+    newRel.getFromColumns().addAll(_primaryCols);
+    newRel.getToColumns().addAll(_secondaryCols);
+    return newRel;
+  }
+
   /**
    * Creates the relationship in the database.
    * @usage _advanced_method_
@@ -52,8 +69,18 @@ public class RelationshipCreator extends DBMutator
 
     validate();
 
-    // FIXME 
-    return null;
+    getPageChannel().startExclusiveWrite();
+    try {
+
+      RelationshipImpl newRel = getDatabase().writeRelationship(this);
+
+      // FIXME, handle indexes
+
+      return newRel;
+
+    } finally {
+      getPageChannel().finishWrite();
+    }
   }
 
   private void validate() throws IOException {

@@ -1150,12 +1150,12 @@ public class DatabaseImpl implements Database
     List<Relationship> relationships = new ArrayList<Relationship>();
 
     if(table1 != null) {
-    Cursor cursor = createCursorWithOptionalIndex(
-        _relationships, REL_COL_FROM_TABLE, table1.getName());
+      Cursor cursor = createCursorWithOptionalIndex(
+          _relationships, REL_COL_FROM_TABLE, table1.getName());
       collectRelationships(cursor, table1, table2, relationships,
                            includeSystemTables);
-    cursor = createCursorWithOptionalIndex(
-        _relationships, REL_COL_TO_TABLE, table1.getName());
+      cursor = createCursorWithOptionalIndex(
+          _relationships, REL_COL_TO_TABLE, table1.getName());
       collectRelationships(cursor, table2, table1, relationships,
                            includeSystemTables);
     } else {
@@ -1164,6 +1164,45 @@ public class DatabaseImpl implements Database
     }
     
     return relationships;
+  }
+
+  RelationshipImpl writeRelationship(RelationshipCreator creator) 
+    throws IOException
+  {
+    // the relationships table does not get loaded until first accessed
+    if(_relationships == null) {
+      _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
+    }
+    
+    String name = creator.getPrimaryTable().getName() +
+      creator.getSecondaryTable().getName(); // FIXME make unique
+    RelationshipImpl newRel = creator.createRelationshipImpl(name);
+
+    ColumnImpl ccol = _relationships.getColumn(REL_COL_COLUMN_COUNT);
+    ColumnImpl flagCol = _relationships.getColumn(REL_COL_FLAGS);
+    ColumnImpl icol = _relationships.getColumn(REL_COL_COLUMN_INDEX);
+    ColumnImpl nameCol = _relationships.getColumn(REL_COL_NAME);
+    ColumnImpl fromTableCol = _relationships.getColumn(REL_COL_FROM_TABLE);
+    ColumnImpl fromColCol = _relationships.getColumn(REL_COL_FROM_COLUMN);
+    ColumnImpl toTableCol = _relationships.getColumn(REL_COL_TO_TABLE);
+    ColumnImpl toColCol = _relationships.getColumn(REL_COL_TO_COLUMN);
+
+    int numCols = newRel.getFromColumns().size();
+    List<Object[]> rows = new ArrayList<Object[]>(numCols);
+    for(int i = 0; i < numCols; ++i) {
+      Object[] row = new Object[_relationships.getColumnCount()];
+      ccol.setRowValue(row, ccol);
+      flagCol.setRowValue(row, newRel.getFlags());
+      icol.setRowValue(row, i);
+      nameCol.setRowValue(row, name);
+      fromTableCol.setRowValue(row, newRel.getFromTable().getName());
+      fromColCol.setRowValue(row, newRel.getFromColumns().get(i).getName());
+      toTableCol.setRowValue(row, newRel.getToTable().getName());
+      toColCol.setRowValue(row, newRel.getToColumns().get(i).getName());
+    }
+    _relationships.addRows(rows);
+
+    return newRel;
   }
 
   public List<Query> getQueries() throws IOException
