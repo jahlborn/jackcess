@@ -104,7 +104,8 @@ public class TableCreator extends TableMutator
         }
       }
     }
-    throw new IllegalStateException("could not find state for index");
+    throw new IllegalStateException(withErrorContext(
+        "could not find state for index"));
   }
 
   public List<IndexDataState> getIndexDataStates() {
@@ -251,13 +252,13 @@ public class TableCreator extends TableMutator
     getDatabase().validateNewTableName(_name);
     
     if((_columns == null) || _columns.isEmpty()) {
-      throw new IllegalArgumentException(
-          "Cannot create table with no columns");
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot create table with no columns"));
     }
     if(_columns.size() > getFormat().MAX_COLUMNS_PER_TABLE) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Cannot create table with more than " +
-          getFormat().MAX_COLUMNS_PER_TABLE + " columns");
+          getFormat().MAX_COLUMNS_PER_TABLE + " columns"));
     }
     
     Set<String> colNames = new HashSet<String>();
@@ -278,9 +279,9 @@ public class TableCreator extends TableMutator
     if(hasIndexes()) {
 
       if(_indexes.size() > getFormat().MAX_INDEXES_PER_TABLE) {
-        throw new IllegalArgumentException(
+        throw new IllegalArgumentException(withErrorContext(
             "Cannot create table with more than " +
-            getFormat().MAX_INDEXES_PER_TABLE + " indexes");
+            getFormat().MAX_INDEXES_PER_TABLE + " indexes"));
       }
 
       // now, validate the indexes
@@ -332,4 +333,7 @@ public class TableCreator extends TableMutator
             (col1.getFlags() == col2.getFlags()));
   }
 
+  private String withErrorContext(String msg) {
+    return msg + "(Table=" + getName() + ")";
+  }
 }

@@ -17,45 +17,91 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.RelationshipCreator;
 import com.healthmarketscience.jackcess.impl.RelationshipImpl;
 
 /**
+ * Builder style class for constructing a {@link Relationship}, and,
+ * optionally, the associated backing foreign key (if referential integrity
+ * enforcement is enabled).
  *
  * @author James Ahlborn
  */
 public class RelationshipBuilder 
 {
+  private static final int JOIN_FLAGS =
+    RelationshipImpl.LEFT_OUTER_JOIN_FLAG |
+    RelationshipImpl.RIGHT_OUTER_JOIN_FLAG;
+
   /** relationship flags (default to "don't enforce") */
   private int _flags = RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG;
+  private String _toTable;
+  private String _fromTable;
+  private List<String> _toCols = new ArrayList<String>(); 
+  private List<String> _fromCols = new ArrayList<String>();
 
-  // - primary table must have unique index
-  // - primary table index name ".rC", ".rD"...
-  // - secondary index name "<PTable><STable>"
-  // - add <name>1, <name>2 after names to make unique (index names and
-  //   relationship names)
-
-  public RelationshipBuilder() 
+  public RelationshipBuilder(String toTable, String fromTable) 
   {
+    _toTable = toTable;
+    _fromTable = fromTable;
   }
 
+  /**
+   * Adds a pair of columns to the relationship.
+   */
+  public RelationshipBuilder addColumns(String toCol, String fromCol) {
+    _toCols.add(toCol);
+    _fromCols.add(fromCol);
+    return this;
+  }
+
+  /**
+   * Enables referential integrity enforcement for this relationship.
+   *
+   * Note, this requires the "to" table to have an existing unique index on
+   * the relevant columns.
+   */
   public RelationshipBuilder setReferentialIntegrity() {
     return clearFlag(RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG);
   }
 
+  /**
+   * Enables deletes to be cascaded from the "to" table to the "from" table.
+   *
+   * Note, this requires referential integrity to be enforced.
+   */
   public RelationshipBuilder setCascadeDeletes() {
     return setFlag(RelationshipImpl.CASCADE_DELETES_FLAG);
   }
   
+  /**
+   * Enables updates to be cascaded from the "to" table to the "from" table.
+   *
+   * Note, this requires referential integrity to be enforced.
+   */
   public RelationshipBuilder setCascadeUpdates() {
     return setFlag(RelationshipImpl.CASCADE_UPDATES_FLAG);
   }
 
+  /**
+   * Enables deletes in the "to" table to be cascaded as "null" to the "from"
+   * table.
+   *
+   * Note, this requires referential integrity to be enforced.
+   */
   public RelationshipBuilder setCascadeNullOnDelete() {
     return setFlag(RelationshipImpl.CASCADE_NULL_FLAG);
   }  
-  
+
+  /**
+   * Sets the preferred join type for this relationship.
+   */
   public RelationshipBuilder setJoinType(Relationship.JoinType joinType) {
+    clearFlag(JOIN_FLAGS);
     switch(joinType) {
     case INNER:
       // nothing to do
@@ -80,6 +126,22 @@ public class RelationshipBuilder
     return _flags;
   }
 
+  public String getToTable() {
+    return _toTable;
+  }
+
+  public String getFromTable() {
+    return _fromTable;
+  }
+
+  public List<String> getToColumns() {
+    return _toCols;
+  }
+  
+  public List<String> getFromColumns() {
+    return _fromCols;
+  }
+  
   /**
    * Creates a new Relationship in the given Database with the currently
    * configured attributes.
@@ -87,10 +149,7 @@ public class RelationshipBuilder
   public Relationship toRelationship(Database db)
     throws IOException
   {
-    
-
-    // FIXME writeme
-    return null;
+    return new RelationshipCreator((DatabaseImpl)db).createRelationship(this);
   }
 
   private RelationshipBuilder setFlag(int flagMask) {

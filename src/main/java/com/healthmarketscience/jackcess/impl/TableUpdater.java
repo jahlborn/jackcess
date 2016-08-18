@@ -173,12 +173,13 @@ public class TableUpdater extends TableMutator
   private void validateAddColumn() {
 
     if(_column == null) {
-      throw new IllegalArgumentException("Cannot add column with no column");
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot add column with no column"));
     }
     if((_table.getColumnCount() + 1) > getFormat().MAX_COLUMNS_PER_TABLE) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Cannot add column to table with " +
-          getFormat().MAX_COLUMNS_PER_TABLE + " columns");
+          getFormat().MAX_COLUMNS_PER_TABLE + " columns"));
     }
     
     Set<String> colNames = getColumnNames();
@@ -199,12 +200,13 @@ public class TableUpdater extends TableMutator
   private void validateAddIndex() {
     
     if(_index == null) {
-      throw new IllegalArgumentException("Cannot add index with no index");
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot add index with no index"));
     }
     if((_table.getLogicalIndexCount() + 1) > getFormat().MAX_INDEXES_PER_TABLE) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Cannot add index to table with " +
-          getFormat().MAX_INDEXES_PER_TABLE + " indexes");
+          getFormat().MAX_INDEXES_PER_TABLE + " indexes"));
     }
     
     boolean foundPk[] = new boolean[1];
@@ -290,5 +292,15 @@ public class TableUpdater extends TableMutator
     return (col1.getName().equals(col2.getName()) && 
             ((col1.getFlags() | ignoreColFlags) ==
              (col2.getFlags() | ignoreColFlags)));
+  }
+
+  private String withErrorContext(String msg) {
+    String objStr = "";
+    if(_column != null) {
+      objStr = ";Column=" + _column.getName();
+    } else if(_index != null) {
+      objStr = ";Index=" + _index.getName();
+    }
+    return msg + "(Table=" + _table.getName() + objStr + ")";
   }
 }

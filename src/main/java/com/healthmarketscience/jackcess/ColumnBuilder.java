@@ -384,12 +384,12 @@ public class ColumnBuilder {
    * @usage _advanced_method_
    */
   public void validate(JetFormat format) {
-    if(getType() == null) {
-      throw new IllegalArgumentException(withErrorContext("must have type"));
-    }
     DatabaseImpl.validateIdentifierName(
         getName(), format.MAX_COLUMN_NAME_LENGTH, "column");
 
+    if(getType() == null) {
+      throw new IllegalArgumentException(withErrorContext("must have type"));
+    }
     if(getType().isUnsupported()) {
       throw new IllegalArgumentException(withErrorContext(
           "Cannot create column with unsupported type " + getType()));

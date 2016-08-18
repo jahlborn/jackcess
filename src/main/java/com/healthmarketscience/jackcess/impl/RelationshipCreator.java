@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -29,12 +30,23 @@ import com.healthmarketscience.jackcess.RelationshipBuilder;
  */
 public class RelationshipCreator extends DBMutator
 {
+  private final static int CASCADE_FLAGS =
+    RelationshipImpl.CASCADE_DELETES_FLAG |
+    RelationshipImpl.CASCADE_UPDATES_FLAG |
+    RelationshipImpl.CASCADE_NULL_FLAG;
+    
+  
   private TableImpl _primaryTable;
   private TableImpl _secondaryTable;
   private RelationshipBuilder _relationship;
   private List<ColumnImpl> _primaryCols; 
   private List<ColumnImpl> _secondaryCols;
-  private int _flags;
+    
+  // - primary table must have unique index
+  // - primary table index name ".rC", ".rD"...
+  // - secondary index name "<PTable><STable>"
+  // - add <name>1, <name>2 after names to make unique (index names and
+  //   relationship names)
 
   public RelationshipCreator(DatabaseImpl database) 
   {
@@ -66,7 +78,7 @@ public class RelationshipCreator extends DBMutator
     throws IOException 
   {
     _relationship = relationship;
-
+    
     validate();
 
     getPageChannel().startExclusiveWrite();
@@ -85,22 +97,26 @@ public class RelationshipCreator extends DBMutator
 
   private void validate() throws IOException {
 
+    _primaryTable = getDatabase().getTable(_relationship.getToTable());
+    _secondaryTable = getDatabase().getTable(_relationship.getToTable());
+    
     if((_primaryTable == null) || (_secondaryTable == null)) {
-      throw new IllegalArgumentException(
-          "Two tables are required in relationship");
-    }
-    if(_primaryTable.getDatabase() != _secondaryTable.getDatabase()) {
-      throw new IllegalArgumentException("Tables are not from same database");
+      throw new IllegalArgumentException(withErrorContext(
+          "Two valid tables are required in relationship"));
     }
 
+    _primaryCols = getColumns(_primaryTable, _relationship.getToColumns());
+    _secondaryCols = getColumns(_secondaryTable, _relationship.getFromColumns());
+    
     if((_primaryCols == null) || (_primaryCols.isEmpty()) || 
        (_secondaryCols == null) || (_secondaryCols.isEmpty())) {
-      throw new IllegalArgumentException("Missing columns in relationship");
+      throw new IllegalArgumentException(withErrorContext(
+          "Missing columns in relationship"));
     }
 
     if(_primaryCols.size() != _secondaryCols.size()) {
-      throw new IllegalArgumentException(
-          "Must have same number of columns on each side of relationship");
+      throw new IllegalArgumentException(withErrorContext(
+          "Must have same number of columns on each side of relationship"));
     }
 
     for(int i = 0; i < _primaryCols.size(); ++i) {
@@ -108,12 +124,18 @@ public class RelationshipCreator extends DBMutator
       ColumnImpl scol = _primaryCols.get(i);
 
       if(pcol.getType() != scol.getType()) {
-        throw new IllegalArgumentException(
-            "Matched columns must have the same data type");
+        throw new IllegalArgumentException(withErrorContext(
+            "Matched columns must have the same data type"));
       }
     }
 
     if(!_relationship.hasReferentialIntegrity()) {
+
+      if((_relationship.getFlags() & CASCADE_FLAGS) != 0) {
+        throw new IllegalArgumentException(withErrorContext(
+            "Cascade flags cannot be enabled if referential integrity is not enforced"));
+      }
+      
       return;
     }
 
@@ -123,7 +145,8 @@ public class RelationshipCreator extends DBMutator
     // - cols come from right tables, tables from right db
     // - (cols can be duped in index)
     // - cols have same data types
-    // - if enforce, require unique index on primary (auto-create?), index on secondary
+    // - if enforce, require unique index on primary,
+    // - auto-create index on secondary
     // - advanced, check for enforce cycles?
     // - index must be ascending
 
@@ -185,5 +208,39 @@ public class RelationshipCreator extends DBMutator
         suffix = "" + count;
       }      
     }    
+  }
+
+  private static List<ColumnImpl> getColumns(TableImpl table, List<String> colNames) {
+    List<ColumnImpl> cols = new ArrayList<ColumnImpl>();
+    for(String colName : colNames) {
+      cols.add(table.getColumn(colName));
+    }
+    return cols;
+  }
+
+  private static String getTableErrorContext(
+      TableImpl table, List<ColumnImpl> cols,
+      String tableName, List<String> colNames) {
+    if(table != null) {
+      tableName = table.getName();
+    }
+    if(cols != null) {
+      colNames = new ArrayList<String>();
+      for(ColumnImpl col : cols) {
+        colNames.add(col.getName());
+      }
+    }
+
+    return CustomToStringStyle.valueBuilder(tableName)
+      .append(null, cols)
+      .toString();
+  }
+  
+  private String withErrorContext(String msg) {
+    return msg + "(Rel=" +
+      getTableErrorContext(_primaryTable, _primaryCols, _relationship.getToTable(),
+                           _relationship.getToColumns()) + " <- " +
+      getTableErrorContext(_secondaryTable, _secondaryCols, _relationship.getFromTable(),
+                           _relationship.getFromColumns()) + ")";
   }
 }
