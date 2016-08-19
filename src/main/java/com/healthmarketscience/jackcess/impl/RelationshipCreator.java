@@ -81,8 +81,7 @@ public class RelationshipCreator extends DBMutator
     
     validate();
 
-    // FIXME determine the type of relationship
-    // FIXME what about "indeterminiate?" (not 1-1 or 1-n)
+    // FIXME determine if rel is one to one (integ enforced and both unique)
     _flags = _relationship.getFlags();
     
 
