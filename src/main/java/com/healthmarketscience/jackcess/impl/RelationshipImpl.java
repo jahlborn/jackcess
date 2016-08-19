@@ -66,13 +66,20 @@ public class RelationshipImpl implements Relationship
   public RelationshipImpl(String name, Table fromTable, Table toTable, int flags,
                           int numCols)
   {
+    this(name, fromTable, toTable, flags, 
+         Collections.nCopies(numCols, (Column)null),
+         Collections.nCopies(numCols, (Column)null));
+  }
+
+  public RelationshipImpl(String name, Table fromTable, Table toTable, int flags,
+                          List<? extends Column> fromCols,
+                          List<? extends Column> toCols)
+  {
     _name = name;
     _fromTable = fromTable;
-    _fromColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _fromColumns = new ArrayList<Column>(fromCols);
     _toTable = toTable;
-    _toColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _toColumns = new ArrayList<Column>(toCols);
     _flags = flags;
   }
 

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.RelationshipBuilder;
 
@@ -41,6 +42,7 @@ public class RelationshipCreator extends DBMutator
   private RelationshipBuilder _relationship;
   private List<ColumnImpl> _primaryCols; 
   private List<ColumnImpl> _secondaryCols;
+  private int _flags;
     
   // - primary table must have unique index
   // - primary table index name ".rC", ".rD"...
@@ -63,10 +65,8 @@ public class RelationshipCreator extends DBMutator
 
   public RelationshipImpl createRelationshipImpl(String name) {
     RelationshipImpl newRel = new RelationshipImpl(
-        name, _primaryTable, _secondaryTable, _relationship.getFlags(),
-        _primaryCols.size());
-    newRel.getFromColumns().addAll(_primaryCols);
-    newRel.getToColumns().addAll(_secondaryCols);
+        name, _secondaryTable, _primaryTable, _flags, 
+        _secondaryCols, _primaryCols);
     return newRel;
   }
 
@@ -80,6 +80,11 @@ public class RelationshipCreator extends DBMutator
     _relationship = relationship;
     
     validate();
+
+    // FIXME determine the type of relationship
+    // FIXME what about "indeterminiate?" (not 1-1 or 1-n)
+    _flags = _relationship.getFlags();
+    
 
     getPageChannel().startExclusiveWrite();
     try {
@@ -98,7 +103,7 @@ public class RelationshipCreator extends DBMutator
   private void validate() throws IOException {
 
     _primaryTable = getDatabase().getTable(_relationship.getToTable());
-    _secondaryTable = getDatabase().getTable(_relationship.getToTable());
+    _secondaryTable = getDatabase().getTable(_relationship.getFromTable());
     
     if((_primaryTable == null) || (_secondaryTable == null)) {
       throw new IllegalArgumentException(withErrorContext(
@@ -238,9 +243,11 @@ public class RelationshipCreator extends DBMutator
   
   private String withErrorContext(String msg) {
     return msg + "(Rel=" +
-      getTableErrorContext(_primaryTable, _primaryCols, _relationship.getToTable(),
+      getTableErrorContext(_primaryTable, _primaryCols, 
+                           _relationship.getToTable(),
                            _relationship.getToColumns()) + " <- " +
-      getTableErrorContext(_secondaryTable, _secondaryCols, _relationship.getFromTable(),
+      getTableErrorContext(_secondaryTable, _secondaryCols, 
+                           _relationship.getFromTable(),
                            _relationship.getFromColumns()) + ")";
   }
 }

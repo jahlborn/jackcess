@@ -1191,7 +1191,7 @@ public class DatabaseImpl implements Database
     List<Object[]> rows = new ArrayList<Object[]>(numCols);
     for(int i = 0; i < numCols; ++i) {
       Object[] row = new Object[_relationships.getColumnCount()];
-      ccol.setRowValue(row, ccol);
+      ccol.setRowValue(row, numCols);
       flagCol.setRowValue(row, newRel.getFlags());
       icol.setRowValue(row, i);
       nameCol.setRowValue(row, name);
@@ -1199,6 +1199,7 @@ public class DatabaseImpl implements Database
       fromColCol.setRowValue(row, newRel.getFromColumns().get(i).getName());
       toTableCol.setRowValue(row, newRel.getToTable().getName());
       toColCol.setRowValue(row, newRel.getToColumns().get(i).getName());
+      rows.add(row);
     }
     _relationships.addRows(rows);
 
