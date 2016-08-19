@@ -41,6 +41,7 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.CursorBuilder;
+import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
@@ -500,6 +501,35 @@ public class TableImpl implements Table
     return _indexCount;
   }
 
+  public IndexImpl findIndexForColumns(Collection<String> searchColumns, 
+                                       boolean uniqueOnly) {
+    for(IndexImpl index : _indexes) {
+      
+      Collection<? extends Index.Column> indexColumns = index.getColumns();
+      if(indexColumns.size() != searchColumns.size()) {
+        continue;
+      }
+      Iterator<String> sIter = searchColumns.iterator();
+      Iterator<? extends Index.Column> iIter = indexColumns.iterator();
+      boolean matches = true;
+      while(sIter.hasNext()) {
+        String sColName = sIter.next();
+        String iColName = iIter.next().getName();
+        if((sColName != iColName) &&
+           ((sColName == null) || !sColName.equalsIgnoreCase(iColName))) {
+          matches = false;
+          break;
+        }
+      }
+
+      if(matches && (!uniqueOnly || index.isUnique())) {
+        return index;
+      }
+    }
+
+    return null;
+  }
+  
   List<ColumnImpl> getAutoNumberColumns() {
     return _autoNumColumns;
   }

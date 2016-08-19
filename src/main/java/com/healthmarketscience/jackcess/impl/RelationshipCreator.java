@@ -18,10 +18,11 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.RelationshipBuilder;
 
@@ -81,9 +82,11 @@ public class RelationshipCreator extends DBMutator
     
     validate();
 
-    // FIXME determine if rel is one to one (integ enforced and both unique)
     _flags = _relationship.getFlags();
-    
+    // need to determine the one-to-one flag on our own
+    if(isOneToOne()) {
+      _flags |= RelationshipImpl.ONE_TO_ONE_FLAG;
+    }
 
     getPageChannel().startExclusiveWrite();
     try {
@@ -222,17 +225,35 @@ public class RelationshipCreator extends DBMutator
     return cols;
   }
 
+  private static Collection<String> getColumnNames(
+      List<ColumnImpl> cols, Collection<String> colNames) {
+    for(ColumnImpl col : cols) {
+      colNames.add(col.getName());
+    }
+    return colNames;
+  }
+
+  private boolean isOneToOne() {
+    // a relationship is one to one if the two sides of the relationship have
+    // unique indexes on the relevant columns
+    IndexImpl idx = _primaryTable.findIndexForColumns(
+        getColumnNames(_primaryCols, new HashSet<String>()), true);
+    if(idx == null) {
+      return false;
+    }
+    idx = _secondaryTable.findIndexForColumns(
+        getColumnNames(_secondaryCols, new HashSet<String>()), true);
+    return (idx != null);
+  }
+
   private static String getTableErrorContext(
       TableImpl table, List<ColumnImpl> cols,
-      String tableName, List<String> colNames) {
+      String tableName, Collection<String> colNames) {
     if(table != null) {
       tableName = table.getName();
     }
     if(cols != null) {
-      colNames = new ArrayList<String>();
-      for(ColumnImpl col : cols) {
-        colNames.add(col.getName());
-      }
+      colNames = getColumnNames(cols, new ArrayList<String>());
     }
 
     return CustomToStringStyle.valueBuilder(tableName)
