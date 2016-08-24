@@ -50,6 +50,8 @@ public class RelationshipCreator extends DBMutator
   // - secondary index name "<PTable><STable>"
   // - add <name>1, <name>2 after names to make unique (index names and
   //   relationship names)
+  // FIXME
+  // - relationships also have entry in MSysObjects table
 
   public RelationshipCreator(DatabaseImpl database) 
   {
