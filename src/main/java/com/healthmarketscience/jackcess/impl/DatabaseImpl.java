@@ -205,9 +205,7 @@ public class DatabaseImpl implements Database
   /** Name of the system object that is the parent of all databases */
   private static final String SYSTEM_OBJECT_NAME_DATABASES = "Databases";
   /** Name of the system object that is the parent of all relationships */
-  @SuppressWarnings("unused")
-  private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = 
-    "Relationships";
+  private static final String SYSTEM_OBJECT_NAME_RELATIONSHIPS = "Relationships";
   /** Name of the table that contains system access control entries */
   private static final String TABLE_SYSTEM_ACES = "MSysACEs";
   /** Name of the table that contains table relationships */
@@ -228,6 +226,8 @@ public class DatabaseImpl implements Database
   private static final Short TYPE_QUERY = 5;
   /** System object type for linked table definitions */
   private static final Short TYPE_LINKED_TABLE = 6;
+  /** System object type for relationships */
+  private static final Short TYPE_RELATIONSHIP = 8;
 
   /** max number of table lookups to cache */
   private static final int MAX_CACHED_LOOKUP_TABLES = 50;
@@ -282,6 +282,8 @@ public class DatabaseImpl implements Database
   private TableFinder _tableFinder;
   /** System access control entries table (initialized on first use) */
   private TableImpl _accessControlEntries;
+  /** ID of the Relationships system object */
+  private Integer _relParentId;
   /** System relationships table (initialized on first use) */
   private TableImpl _relationships;
   /** System queries table (initialized on first use) */
@@ -1084,7 +1086,7 @@ public class DatabaseImpl implements Database
     
     //Add this table to system tables
     addToSystemCatalog(name, tdefPageNumber, type, linkedDbName, 
-                       linkedTableName);
+                       linkedTableName, _tableParentId);
     addToAccessControlEntries(tdefPageNumber);
   }
 
@@ -1142,11 +1144,8 @@ public class DatabaseImpl implements Database
       TableImpl table1, TableImpl table2, boolean includeSystemTables)
     throws IOException
   {
-    // the relationships table does not get loaded until first accessed
-    if(_relationships == null) {
-      _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
-    }
-
+    initRelationships();
+    
     List<Relationship> relationships = new ArrayList<Relationship>();
 
     if(table1 != null) {
@@ -1169,10 +1168,7 @@ public class DatabaseImpl implements Database
   RelationshipImpl writeRelationship(RelationshipCreator creator) 
     throws IOException
   {
-    // the relationships table does not get loaded until first accessed
-    if(_relationships == null) {
-      _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
-    }
+    initRelationships();
     
     String name = creator.getPrimaryTable().getName() +
       creator.getSecondaryTable().getName(); // FIXME make unique
@@ -1201,11 +1197,32 @@ public class DatabaseImpl implements Database
       toColCol.setRowValue(row, newRel.getToColumns().get(i).getName());
       rows.add(row);
     }
-    _relationships.addRows(rows);
+
+    getPageChannel().startWrite();
+    try {
+      
+      int relObjId = _tableFinder.getNextFreeSyntheticId();
+      _relationships.addRows(rows);
+      addToSystemCatalog(name, relObjId, TYPE_RELATIONSHIP, null, null,
+                         _relParentId);
+      
+    } finally {
+      getPageChannel().finishWrite();
+    }
 
     return newRel;
   }
 
+  private void initRelationships() throws IOException {
+    // the relationships table does not get loaded until first accessed
+    if(_relationships == null) {
+      // need the parent id of the relationships objects
+      _relParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+                                               SYSTEM_OBJECT_NAME_RELATIONSHIPS);
+      _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
+    }
+  }
+  
   public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
@@ -1316,7 +1333,7 @@ public class DatabaseImpl implements Database
     throws IOException
   {
     if(_dbParentId == null) {
-      // need the parent if of the databases objects
+      // need the parent id of the databases objects
       _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
                                               SYSTEM_OBJECT_NAME_DATABASES);
       if(_dbParentId == null) {  
@@ -1459,10 +1476,11 @@ public class DatabaseImpl implements Database
   /**
    * Add a new table to the system catalog
    * @param name Table name
-   * @param pageNumber Page number that contains the table definition
+   * @param objectId id of the new object
    */
-  private void addToSystemCatalog(String name, int pageNumber, Short type, 
-                                  String linkedDbName, String linkedTableName)
+  private void addToSystemCatalog(String name, int objectId, Short type, 
+                                  String linkedDbName, String linkedTableName,
+                                  Integer parentId)
     throws IOException
   {
     Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
@@ -1473,7 +1491,7 @@ public class DatabaseImpl implements Database
     {
       ColumnImpl col = iter.next();
       if (CAT_COL_ID.equals(col.getName())) {
-        catalogRow[idx] = Integer.valueOf(pageNumber);
+        catalogRow[idx] = Integer.valueOf(objectId);
       } else if (CAT_COL_NAME.equals(col.getName())) {
         catalogRow[idx] = name;
       } else if (CAT_COL_TYPE.equals(col.getName())) {
@@ -1482,7 +1500,7 @@ public class DatabaseImpl implements Database
                  CAT_COL_DATE_UPDATE.equals(col.getName())) {
         catalogRow[idx] = creationTime;
       } else if (CAT_COL_PARENT_ID.equals(col.getName())) {
-        catalogRow[idx] = _tableParentId;
+        catalogRow[idx] = parentId;
       } else if (CAT_COL_FLAGS.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(0);
       } else if (CAT_COL_OWNER.equals(col.getName())) {
