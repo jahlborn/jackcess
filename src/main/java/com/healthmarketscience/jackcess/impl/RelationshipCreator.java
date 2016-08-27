@@ -96,6 +96,8 @@ public class RelationshipCreator extends DBMutator
 
       // FIXME, handle indexes
 
+      // FIXME, enforce ref integ before adding indexes!
+
       return newRel;
 
     } finally {
@@ -149,32 +151,42 @@ public class RelationshipCreator extends DBMutator
 
     // for now, we will require the unique index on the primary table (just
     // like access does).  we could just create it auto-magically...
-    // FIXME
+    IndexImpl primaryIdx = getPrimaryUniqueIndex();
+    if(primaryIdx == null) {
+      throw new IllegalArgumentException(withErrorContext(
+          "Missing unique index on primary table required to enforce integrity"));
+    }
+
+    // while relationships can have "dupe" columns, indexes (and therefore
+    // integrity enforced relationships) cannot
+    if((new HashSet<String>(getColumnNames(_primaryCols)).size() != 
+        _primaryCols.size()) ||
+       (new HashSet<String>(getColumnNames(_secondaryCols)).size() != 
+        _secondaryCols.size())) {
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot have duplicate columns in an integrity enforced relationship"));
+    }
     
-
-    // - same number cols
-    // - cols come from right tables, tables from right db
-    // - (cols can be duped in index)
-    // - cols have same data types
-    // - if enforce, require unique index on primary,
-    // - auto-create index on secondary
-    // - advanced, check for enforce cycles?
-    // - index must be ascending
-
+    // check referential integrity
     // FIXME
+
+    // TODO: future, check for enforce cycles?
   }
 
   private IndexBuilder createPrimaryIndex() {
     String name = getUniqueIndexName(_primaryTable);
     // FIXME?
-    return createIndex(name, _primaryCols).setUnique();
+    return createIndex(name, _primaryCols)
+      .setUnique()
+      .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
   
   private IndexBuilder createSecondaryIndex() {
     String name = getUniqueIndexName(_secondaryTable);
     // FIXME?
 
-    return createIndex(name, _primaryCols);
+    return createIndex(name, _primaryCols)
+      .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
   
   private static IndexBuilder createIndex(String name, List<ColumnImpl> cols) {
@@ -219,6 +231,8 @@ public class RelationshipCreator extends DBMutator
         suffix = "" + count;
       }      
     }    
+
+    // FIXME, truncate to max index name length
   }
 
   private static List<ColumnImpl> getColumns(TableImpl table, List<String> colNames) {
@@ -240,14 +254,16 @@ public class RelationshipCreator extends DBMutator
   private boolean isOneToOne() {
     // a relationship is one to one if the two sides of the relationship have
     // unique indexes on the relevant columns
-    IndexImpl idx = _primaryTable.findIndexForColumns(
-        getColumnNames(_primaryCols), true);
-    if(idx == null) {
+    if(getPrimaryUniqueIndex() == null) {
       return false;
     }
-    idx = _secondaryTable.findIndexForColumns(
+    IndexImpl idx = _secondaryTable.findIndexForColumns(
         getColumnNames(_secondaryCols), true);
     return (idx != null);
+  }
+
+  private IndexImpl getPrimaryUniqueIndex() {
+    return _primaryTable.findIndexForColumns(getColumnNames(_primaryCols), true);
   }
 
   private static String getTableErrorContext(

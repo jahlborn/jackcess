@@ -1244,6 +1244,8 @@ public class DatabaseImpl implements Database
       name = baseName + (++i);
     }
 
+    // FIXME, truncate to max identifier length
+
     return ((i == 0) ? origName : (origName + i));
   }
   
