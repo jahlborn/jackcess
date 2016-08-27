@@ -1170,8 +1170,9 @@ public class DatabaseImpl implements Database
   {
     initRelationships();
     
-    String name = creator.getPrimaryTable().getName() +
-      creator.getSecondaryTable().getName(); // FIXME make unique
+    String name = findUniqueRelationshipName(
+        creator.getPrimaryTable().getName() +
+        creator.getSecondaryTable().getName());
     RelationshipImpl newRel = creator.createRelationshipImpl(name);
 
     ColumnImpl ccol = _relationships.getColumn(REL_COL_COLUMN_COUNT);
@@ -1221,6 +1222,29 @@ public class DatabaseImpl implements Database
                                                SYSTEM_OBJECT_NAME_RELATIONSHIPS);
       _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
     }
+  }
+
+  private String findUniqueRelationshipName(String origName) throws IOException {
+    Set<String> names = new HashSet<String>();
+    
+    for(Row row :
+          CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
+              SYSTEM_CATALOG_COLUMNS))
+    {
+      String name = row.getString(CAT_COL_NAME);
+      if (name != null && TYPE_RELATIONSHIP.equals(row.get(CAT_COL_TYPE))) {
+        names.add(toLookupName(name));
+      }
+    }
+
+    String baseName = toLookupName(origName);
+    String name = baseName;
+    int i = 0;
+    while(names.contains(name)) {
+      name = baseName + (++i);
+    }
+
+    return ((i == 0) ? origName : (origName + i));
   }
   
   public List<Query> getQueries() throws IOException

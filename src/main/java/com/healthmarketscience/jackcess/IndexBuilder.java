@@ -124,6 +124,14 @@ public class IndexBuilder
   }
 
   /**
+   * @usage _advanced_method_
+   */
+  public IndexBuilder setType(byte type) {
+    _type = type;
+    return this;
+  }
+
+  /**
    * Sets this index to enforce uniqueness.
    */
   public IndexBuilder setUnique() {

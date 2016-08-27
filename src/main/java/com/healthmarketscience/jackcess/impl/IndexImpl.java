@@ -360,12 +360,34 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
     buffer.putInt(idx.getIndexNumber()); // index num
     buffer.putInt(idxDataState.getIndexDataNumber()); // index data num
-    buffer.put((byte)0); // related table type
-    buffer.putInt(INVALID_INDEX_NUMBER); // related index num
-    buffer.putInt(0); // related table definition page number
-    buffer.put((byte)0); // cascade updates flag
-    buffer.put((byte)0); // cascade deletes flag
-    buffer.put(idx.getType()); // index type flags
+
+    byte idxType = idx.getType();
+    if(idxType != FOREIGN_KEY_INDEX_TYPE) {
+      buffer.put((byte)0); // related table type
+      buffer.putInt(INVALID_INDEX_NUMBER); // related index num
+      buffer.putInt(0); // related table definition page number
+      buffer.put((byte)0); // cascade updates flag
+      buffer.put((byte)0); // cascade deletes flag
+    } else {
+      ForeignKeyReference reference = mutator.getForeignKey(idx);
+      buffer.put(reference.getTableType()); // related table type
+      buffer.putInt(reference.getOtherIndexNumber()); // related index num
+      buffer.putInt(reference.getOtherTablePageNumber()); // related table definition page number
+      byte updateFlags = 0;
+      if(reference.isCascadeUpdates()) {
+        updateFlags |= CASCADE_UPDATES_FLAG;
+      }
+      byte deleteFlags = 0;
+      if(reference.isCascadeDeletes()) {
+        deleteFlags |= CASCADE_DELETES_FLAG;
+      }
+      if(reference.isCascadeNullOnDelete()) {
+        deleteFlags |= CASCADE_NULL_FLAG;
+      }
+      buffer.put(updateFlags); // cascade updates flag
+      buffer.put(deleteFlags); // cascade deletes flag
+    }
+    buffer.put(idxType); // index type flags
     buffer.putInt(0); // unknown
   }
 

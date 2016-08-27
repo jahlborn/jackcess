@@ -50,8 +50,7 @@ public class RelationshipCreator extends DBMutator
   // - secondary index name "<PTable><STable>"
   // - add <name>1, <name>2 after names to make unique (index names and
   //   relationship names)
-  // FIXME
-  // - relationships also have entry in MSysObjects table
+  // - enforcing rel integrity can't have dupe cols 
 
   public RelationshipCreator(DatabaseImpl database) 
   {
@@ -148,6 +147,9 @@ public class RelationshipCreator extends DBMutator
       return;
     }
 
+    // for now, we will require the unique index on the primary table (just
+    // like access does).  we could just create it auto-magically...
+    // FIXME
     
 
     // - same number cols
@@ -227,8 +229,8 @@ public class RelationshipCreator extends DBMutator
     return cols;
   }
 
-  private static Collection<String> getColumnNames(
-      List<ColumnImpl> cols, Collection<String> colNames) {
+  private static List<String> getColumnNames(List<ColumnImpl> cols) {
+    List<String> colNames = new ArrayList<String>();
     for(ColumnImpl col : cols) {
       colNames.add(col.getName());
     }
@@ -239,12 +241,12 @@ public class RelationshipCreator extends DBMutator
     // a relationship is one to one if the two sides of the relationship have
     // unique indexes on the relevant columns
     IndexImpl idx = _primaryTable.findIndexForColumns(
-        getColumnNames(_primaryCols, new HashSet<String>()), true);
+        getColumnNames(_primaryCols), true);
     if(idx == null) {
       return false;
     }
     idx = _secondaryTable.findIndexForColumns(
-        getColumnNames(_secondaryCols, new HashSet<String>()), true);
+        getColumnNames(_secondaryCols), true);
     return (idx != null);
   }
 
@@ -255,7 +257,7 @@ public class RelationshipCreator extends DBMutator
       tableName = table.getName();
     }
     if(cols != null) {
-      colNames = getColumnNames(cols, new ArrayList<String>());
+      colNames = getColumnNames(cols);
     }
 
     return CustomToStringStyle.valueBuilder(tableName)

@@ -50,18 +50,22 @@ public abstract class TableMutator extends DBMutator
     return _colOffsets;
   }
 
+  public IndexImpl.ForeignKeyReference getForeignKey(IndexBuilder idx) {
+    return null;
+  }
+
   protected void validateColumn(Set<String> colNames, ColumnBuilder column) {
 
       // FIXME for now, we can't create complex columns
       if(column.getType() == DataType.COMPLEX_TYPE) {
-        throw new UnsupportedOperationException(
-            "Complex column creation is not yet implemented");
+        throw new UnsupportedOperationException(withErrorContext(
+            "Complex column creation is not yet implemented"));
       }
       
       column.validate(getFormat());
       if(!colNames.add(column.getName().toUpperCase())) {
-        throw new IllegalArgumentException("duplicate column name: " +
-                                           column.getName());
+        throw new IllegalArgumentException(withErrorContext(
+            "duplicate column name: " + column.getName()));
       }
 
       setColumnSortOrder(column);
@@ -72,26 +76,31 @@ public abstract class TableMutator extends DBMutator
     
     index.validate(colNames, getFormat());
     if(!idxNames.add(index.getName().toUpperCase())) {
-      throw new IllegalArgumentException("duplicate index name: " +
-                                         index.getName());
+      throw new IllegalArgumentException(withErrorContext(
+          "duplicate index name: " + index.getName()));
     }
     if(index.isPrimaryKey()) {
       if(foundPk[0]) {
-        throw new IllegalArgumentException(
-            "found second primary key index: " + index.getName());
+        throw new IllegalArgumentException(withErrorContext(
+            "found second primary key index: " + index.getName()));
       }
       foundPk[0] = true;
+    } else if(index.getType() == IndexImpl.FOREIGN_KEY_INDEX_TYPE) {
+      if(getForeignKey(index) == null) {
+        throw new IllegalArgumentException(withErrorContext(
+            "missing foreign key info for " + index.getName()));
+      }
     }
   }
 
-  protected static void validateAutoNumberColumn(Set<DataType> autoTypes, 
-                                                 ColumnBuilder column) 
+  protected void validateAutoNumberColumn(Set<DataType> autoTypes, 
+                                          ColumnBuilder column) 
   {
     if(!column.getType().isMultipleAutoNumberAllowed() &&
        !autoTypes.add(column.getType())) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Can have at most one AutoNumber column of type " + column.getType() +
-          " per table");
+          " per table"));
     }    
   }
 
@@ -111,6 +120,8 @@ public abstract class TableMutator extends DBMutator
   public abstract ColumnState getColumnState(ColumnBuilder col);
 
   public abstract IndexDataState getIndexDataState(IndexBuilder idx);
+
+  protected abstract String withErrorContext(String msg);
 
   /**
    * Maintains additional state used during column writing.

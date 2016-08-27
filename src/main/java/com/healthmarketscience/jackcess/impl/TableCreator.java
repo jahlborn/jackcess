@@ -333,7 +333,8 @@ public class TableCreator extends TableMutator
             (col1.getFlags() == col2.getFlags()));
   }
 
-  private String withErrorContext(String msg) {
+  @Override
+  protected String withErrorContext(String msg) {
     return msg + "(Table=" + getName() + ")";
   }
 }

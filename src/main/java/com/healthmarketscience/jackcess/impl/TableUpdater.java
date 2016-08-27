@@ -45,6 +45,7 @@ public class TableUpdater extends TableMutator
   private List<Integer> _nextPages = new ArrayList<Integer>(1);
   private ColumnState _colState;
   private IndexDataState _idxDataState;
+  private IndexImpl.ForeignKeyReference _fkReference;
 
   public TableUpdater(TableImpl table) {
     super(table.getDatabase());
@@ -88,6 +89,15 @@ public class TableUpdater extends TableMutator
   public IndexDataState getIndexDataState(IndexBuilder idx) {
     return ((idx == _index) ? _idxDataState : null);
   }
+
+  void setForeignKey(IndexImpl.ForeignKeyReference fkReference) {
+    _fkReference = fkReference;
+  }
+
+  @Override
+  public IndexImpl.ForeignKeyReference getForeignKey(IndexBuilder idx) {
+    return ((idx == _index) ? _fkReference : null);
+  }  
 
   int getAddedTdefLen() {
     return _addedTdefLen;
@@ -294,7 +304,8 @@ public class TableUpdater extends TableMutator
              (col2.getFlags() | ignoreColFlags)));
   }
 
-  private String withErrorContext(String msg) {
+  @Override
+  protected String withErrorContext(String msg) {
     String objStr = "";
     if(_column != null) {
       objStr = ";Column=" + _column.getName();
