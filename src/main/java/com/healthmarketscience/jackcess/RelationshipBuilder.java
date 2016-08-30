@@ -39,30 +39,30 @@ public class RelationshipBuilder
 
   /** relationship flags (default to "don't enforce") */
   private int _flags = RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG;
-  private String _toTable;
   private String _fromTable;
-  private List<String> _toCols = new ArrayList<String>(); 
+  private String _toTable;
   private List<String> _fromCols = new ArrayList<String>();
+  private List<String> _toCols = new ArrayList<String>(); 
 
-  public RelationshipBuilder(String toTable, String fromTable) 
+  public RelationshipBuilder(String fromTable, String toTable) 
   {
-    _toTable = toTable;
     _fromTable = fromTable;
+    _toTable = toTable;
   }
 
   /**
    * Adds a pair of columns to the relationship.
    */
-  public RelationshipBuilder addColumns(String toCol, String fromCol) {
-    _toCols.add(toCol);
+  public RelationshipBuilder addColumns(String fromCol, String toCol) {
     _fromCols.add(fromCol);
+    _toCols.add(toCol);
     return this;
   }
 
   /**
    * Enables referential integrity enforcement for this relationship.
    *
-   * Note, this requires the "to" table to have an existing unique index on
+   * Note, this requires the "from" table to have an existing unique index on
    * the relevant columns.
    */
   public RelationshipBuilder setReferentialIntegrity() {
@@ -70,7 +70,7 @@ public class RelationshipBuilder
   }
 
   /**
-   * Enables deletes to be cascaded from the "to" table to the "from" table.
+   * Enables deletes to be cascaded from the "from" table to the "to" table.
    *
    * Note, this requires referential integrity to be enforced.
    */
@@ -79,7 +79,7 @@ public class RelationshipBuilder
   }
   
   /**
-   * Enables updates to be cascaded from the "to" table to the "from" table.
+   * Enables updates to be cascaded from the "from" table to the "to" table.
    *
    * Note, this requires referential integrity to be enforced.
    */
@@ -88,7 +88,7 @@ public class RelationshipBuilder
   }
 
   /**
-   * Enables deletes in the "to" table to be cascaded as "null" to the "from"
+   * Enables deletes in the "from" table to be cascaded as "null" to the "to"
    * table.
    *
    * Note, this requires referential integrity to be enforced.
@@ -126,20 +126,20 @@ public class RelationshipBuilder
     return _flags;
   }
 
-  public String getToTable() {
-    return _toTable;
-  }
-
   public String getFromTable() {
     return _fromTable;
   }
 
-  public List<String> getToColumns() {
-    return _toCols;
+  public String getToTable() {
+    return _toTable;
   }
   
   public List<String> getFromColumns() {
     return _fromCols;
+  }
+
+  public List<String> getToColumns() {
+    return _toCols;
   }
   
   /**

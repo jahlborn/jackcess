@@ -70,8 +70,8 @@ public class RelationshipCreator extends DBMutator
 
   public RelationshipImpl createRelationshipImpl(String name) {
     RelationshipImpl newRel = new RelationshipImpl(
-        name, _secondaryTable, _primaryTable, _flags, 
-        _secondaryCols, _primaryCols);
+        name, _primaryTable, _secondaryTable, _flags, 
+        _primaryCols, _secondaryCols);
     return newRel;
   }
 
@@ -145,16 +145,16 @@ public class RelationshipCreator extends DBMutator
 
   private void validate() throws IOException {
 
-    _primaryTable = getDatabase().getTable(_relationship.getToTable());
-    _secondaryTable = getDatabase().getTable(_relationship.getFromTable());
+    _primaryTable = getDatabase().getTable(_relationship.getFromTable());
+    _secondaryTable = getDatabase().getTable(_relationship.getToTable());
     
     if((_primaryTable == null) || (_secondaryTable == null)) {
       throw new IllegalArgumentException(withErrorContext(
           "Two valid tables are required in relationship"));
     }
 
-    _primaryCols = getColumns(_primaryTable, _relationship.getToColumns());
-    _secondaryCols = getColumns(_secondaryTable, _relationship.getFromColumns());
+    _primaryCols = getColumns(_primaryTable, _relationship.getFromColumns());
+    _secondaryCols = getColumns(_secondaryTable, _relationship.getToColumns());
     
     if((_primaryCols == null) || (_primaryCols.isEmpty()) || 
        (_secondaryCols == null) || (_secondaryCols.isEmpty())) {
@@ -212,7 +212,7 @@ public class RelationshipCreator extends DBMutator
     Object[] entryValues = new Object[_secondaryCols.size()];
     for(Row row : _secondaryTable.newCursor().toCursor()
           .newIterable().addColumns(_secondaryCols)) {
-      // grab the from table values
+      // grab the secondary table values
       boolean hasValues = false;
       for(int i = 0; i < _secondaryCols.size(); ++i) {
         entryValues[i] = _secondaryCols.get(i).getRowValue(row);
@@ -224,6 +224,7 @@ public class RelationshipCreator extends DBMutator
         continue;
       }
 
+      // check that they exist in the primary table
       if(!primaryCursor.findFirstRowByEntry(entryValues)) {
         throw new ConstraintViolationException(withErrorContext(
             "Integrity constraint violation found for relationship"));
@@ -343,10 +344,10 @@ public class RelationshipCreator extends DBMutator
   private String withErrorContext(String msg) {
     return msg + "(Rel=" +
       getTableErrorContext(_primaryTable, _primaryCols, 
-                           _relationship.getToTable(),
-                           _relationship.getToColumns()) + " <- " +
-      getTableErrorContext(_secondaryTable, _secondaryCols, 
                            _relationship.getFromTable(),
-                           _relationship.getFromColumns()) + ")";
+                           _relationship.getFromColumns()) + " -> " +
+      getTableErrorContext(_secondaryTable, _secondaryCols, 
+                           _relationship.getToTable(),
+                           _relationship.getToColumns()) + ")";
   }
 }
