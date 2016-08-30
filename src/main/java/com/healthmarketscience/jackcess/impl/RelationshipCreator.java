@@ -23,8 +23,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.RelationshipBuilder;
+import com.healthmarketscience.jackcess.Row;
 
 /**
  *
@@ -94,15 +97,49 @@ public class RelationshipCreator extends DBMutator
 
       RelationshipImpl newRel = getDatabase().writeRelationship(this);
 
-      // FIXME, handle indexes
-
-      // FIXME, enforce ref integ before adding indexes!
+      if(_relationship.hasReferentialIntegrity()) {
+        addPrimaryIndex();
+        addSecondaryIndex();
+      }
 
       return newRel;
 
     } finally {
       getPageChannel().finishWrite();
     }
+  }
+
+  private void addPrimaryIndex() throws IOException {
+    TableUpdater updater = new TableUpdater(_primaryTable);
+    updater.setForeignKey(createFKReference(true));
+    updater.addIndex(createPrimaryIndex(), true);
+  }
+
+  private void addSecondaryIndex() throws IOException {
+    TableUpdater updater = new TableUpdater(_secondaryTable);
+    updater.setForeignKey(createFKReference(false));
+    updater.addIndex(createSecondaryIndex(), true);
+  }
+
+  private IndexImpl.ForeignKeyReference createFKReference(boolean isPrimary) {
+    byte tableType = 0;
+    int otherTableNum = 0;
+    int otherIdxNum = 0;
+    if(isPrimary) {
+      tableType = IndexImpl.PRIMARY_TABLE_TYPE;
+      otherTableNum = _secondaryTable.getTableDefPageNumber();
+      otherIdxNum = _secondaryTable.getLogicalIndexCount();
+    } else {
+      otherTableNum = _primaryTable.getTableDefPageNumber();
+      otherIdxNum = _primaryTable.getLogicalIndexCount();
+    }
+    boolean cascadeUpdates = ((_flags & RelationshipImpl.CASCADE_UPDATES_FLAG) != 0);
+    boolean cascadeDeletes = ((_flags & RelationshipImpl.CASCADE_DELETES_FLAG) != 0);
+    boolean cascadeNull = ((_flags & RelationshipImpl.CASCADE_NULL_FLAG) != 0);
+
+    return new IndexImpl.ForeignKeyReference(
+        tableType, otherIdxNum, otherTableNum, cascadeUpdates, cascadeDeletes, 
+        cascadeNull);
   }
 
   private void validate() throws IOException {
@@ -167,10 +204,31 @@ public class RelationshipCreator extends DBMutator
           "Cannot have duplicate columns in an integrity enforced relationship"));
     }
     
-    // check referential integrity
-    // FIXME
-
     // TODO: future, check for enforce cycles?
+
+    // check referential integrity
+    IndexCursor primaryCursor = primaryIdx.newCursor().toIndexCursor();
+    Object[] entryValues = new Object[_secondaryCols.size()];
+    for(Row row : _secondaryTable.newCursor().toCursor()
+          .newIterable().addColumns(_secondaryCols)) {
+      // grab the from table values
+      boolean hasValues = false;
+      for(int i = 0; i < _secondaryCols.size(); ++i) {
+        entryValues[i] = _secondaryCols.get(i).getRowValue(row);
+        hasValues = hasValues || (entryValues[i] != null);
+      }
+
+      if(!hasValues) {
+        // we can ignore null entries
+        continue;
+      }
+
+      if(!primaryCursor.findFirstRowByEntry(entryValues)) {
+        throw new ConstraintViolationException(withErrorContext(
+            "Integrity constraint violation found for relationship"));
+      }
+    }
+
   }
 
   private IndexBuilder createPrimaryIndex() {
@@ -185,7 +243,7 @@ public class RelationshipCreator extends DBMutator
     String name = getUniqueIndexName(_secondaryTable);
     // FIXME?
 
-    return createIndex(name, _primaryCols)
+    return createIndex(name, _secondaryCols)
       .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
   

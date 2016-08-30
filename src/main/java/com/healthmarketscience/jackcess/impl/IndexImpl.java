@@ -54,7 +54,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   private static final byte CASCADE_NULL_FLAG = (byte)2;
 
   /** index table type for the "primary" table in a foreign key index */
-  private static final byte PRIMARY_TABLE_TYPE = (byte)1;
+  static final byte PRIMARY_TABLE_TYPE = (byte)1;
 
   /** indicate an invalid index number for foreign key field */
   private static final int INVALID_INDEX_NUMBER = -1;

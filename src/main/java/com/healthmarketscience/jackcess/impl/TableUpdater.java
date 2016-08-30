@@ -145,10 +145,16 @@ public class TableUpdater extends TableMutator
   }
 
   public IndexImpl addIndex(IndexBuilder index) throws IOException {
+    return addIndex(index, false);
+  }
+
+  IndexImpl addIndex(IndexBuilder index, boolean isInternal) throws IOException {
 
     _index = index;
 
-    validateAddIndex();
+    if(!isInternal) {
+      validateAddIndex();
+    }
 
     // assign index number and do some assorted index bookkeeping
     int indexNumber = _table.getLogicalIndexCount();
@@ -157,7 +163,11 @@ public class TableUpdater extends TableMutator
     // initialize backing index state
     initIndexDataState();
 
-    getPageChannel().startExclusiveWrite();
+    if(!isInternal) {
+      getPageChannel().startExclusiveWrite();
+    } else {
+      getPageChannel().startWrite();      
+    }
     try {
 
       if(_idxDataState.getIndexDataNumber() == _table.getIndexCount()) {
