@@ -251,7 +251,6 @@ final class FKEnforcer
     // ensure that the relevant rows exist in the primary tables for which
     // this table is a secondary table.  however, null values are allowed
     if(!areNull(joiner, row) && !joiner.hasRows(row)) {
-      // FIXME, add error context here?
       throw new ConstraintViolationException(
           "Adding new row " + Arrays.asList(row) + " violates constraint " +
           joiner.toFKString());
