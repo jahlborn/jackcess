@@ -53,7 +53,10 @@ public class RelationshipCreator extends DBMutator
   // - secondary index name "<PTable><STable>"
   // - add <name>1, <name>2 after names to make unique (index names and
   //   relationship names)
-  // - enforcing rel integrity can't have dupe cols 
+  // - enforcing rel integrity can't have dupe cols
+  // FIXME
+  // - what about index name clashes?
+  // - access crashes deleting rel? (bad idxs)?
 
   public RelationshipCreator(DatabaseImpl database) 
   {
