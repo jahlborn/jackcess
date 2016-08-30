@@ -130,6 +130,7 @@ public class RelationshipCreator extends DBMutator
       otherTableNum = _secondaryTable.getTableDefPageNumber();
       otherIdxNum = _secondaryTable.getLogicalIndexCount();
     } else {
+      tableType = IndexImpl.SECONDARY_TABLE_TYPE;
       otherTableNum = _primaryTable.getTableDefPageNumber();
       otherIdxNum = _primaryTable.getLogicalIndexCount();
     }

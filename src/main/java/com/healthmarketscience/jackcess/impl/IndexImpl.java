@@ -56,6 +56,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   /** index table type for the "primary" table in a foreign key index */
   static final byte PRIMARY_TABLE_TYPE = (byte)1;
 
+  /** index table type for the "secondary" table in a foreign key index */
+  static final byte SECONDARY_TABLE_TYPE = (byte)2;
+
   /** indicate an invalid index number for foreign key field */
   private static final int INVALID_INDEX_NUMBER = -1;
 
