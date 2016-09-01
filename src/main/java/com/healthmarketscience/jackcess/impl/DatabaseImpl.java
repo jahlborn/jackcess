@@ -86,11 +86,8 @@ public class DatabaseImpl implements Database
 
   /** this is the default "userId" used if we cannot find existing info.  this
       seems to be some standard "Admin" userId for access files */
-  private static final byte[] SYS_DEFAULT_SID = new byte[2];
-  static {
-    SYS_DEFAULT_SID[0] = (byte) 0xA6;
-    SYS_DEFAULT_SID[1] = (byte) 0x33;
-  }
+  private static final byte[] SYS_DEFAULT_SID = new byte[] {
+    (byte) 0xA6, (byte) 0x33};
 
   /** the default value for the resource path used to load classpath
    *  resources.
@@ -284,6 +281,8 @@ public class DatabaseImpl implements Database
   private TableImpl _accessControlEntries;
   /** ID of the Relationships system object */
   private Integer _relParentId;
+  /** SIDs to use for the ACEs added for new relationships */
+  private final List<byte[]> _newRelSIDs = new ArrayList<byte[]>();
   /** System relationships table (initialized on first use) */
   private TableImpl _relationships;
   /** System queries table (initialized on first use) */
@@ -318,6 +317,8 @@ public class DatabaseImpl implements Database
   private PropertyMaps.Handler _propsHandler;
   /** ID of the Databases system object */
   private Integer _dbParentId;
+  /** owner of objects we create */
+  private byte[] _newObjOwner;
   /** core database properties */
   private PropertyMaps _dbPropMaps;
   /** summary properties */
@@ -1087,7 +1088,7 @@ public class DatabaseImpl implements Database
     //Add this table to system tables
     addToSystemCatalog(name, tdefPageNumber, type, linkedDbName, 
                        linkedTableName, _tableParentId);
-    addToAccessControlEntries(tdefPageNumber);
+    addToAccessControlEntries(tdefPageNumber, _tableParentId, _newTableSIDs);
   }
 
   public List<Relationship> getRelationships(Table table1, Table table2)
@@ -1206,6 +1207,7 @@ public class DatabaseImpl implements Database
       _relationships.addRows(rows);
       addToSystemCatalog(name, relObjId, TYPE_RELATIONSHIP, null, null,
                          _relParentId);
+      addToAccessControlEntries(relObjId, _relParentId, _newRelSIDs);
       
     } finally {
       getPageChannel().finishWrite();
@@ -1352,12 +1354,7 @@ public class DatabaseImpl implements Database
     return readProperties(propsBytes, objectId, rowId);
   }
 
-  /**
-   * @return property group for the given "database" object
-   */
-  private PropertyMaps getPropertiesForDbObject(String dbName)
-    throws IOException
-  {
+  private Integer getDbParentId() throws IOException {
     if(_dbParentId == null) {
       // need the parent id of the databases objects
       _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
@@ -1367,9 +1364,36 @@ public class DatabaseImpl implements Database
                 "Did not find required parent db id"));
       }
     }
+    return _dbParentId;
+  }
 
+  private byte[] getNewObjectOwner() throws IOException {
+    if(_newObjOwner == null) {
+      // there doesn't seem to be any obvious way to find the main "owner" of
+      // an access db, but certain db objects seem to have the common db
+      // owner.  we attempt to grab the db properties object and use its
+      // owner.
+      Row msysDbRow = _tableFinder.getObjectRow(
+          getDbParentId(), OBJECT_NAME_DB_PROPS,
+          Collections.singleton(CAT_COL_OWNER));
+      byte[] owner = null;
+      if(msysDbRow != null) {
+        owner = msysDbRow.getBytes(CAT_COL_OWNER);
+      }
+      _newObjOwner = (((owner != null) && (owner.length > 0)) ? 
+                      owner : SYS_DEFAULT_SID);
+    }
+    return _newObjOwner;
+  }
+
+  /**
+   * @return property group for the given "database" object
+   */
+  private PropertyMaps getPropertiesForDbObject(String dbName)
+    throws IOException
+  {
     Row objectRow = _tableFinder.getObjectRow(
-        _dbParentId, dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
+        getDbParentId(), dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
     byte[] propsBytes = null;
     int objectId = -1;
     RowIdImpl rowId = null;
@@ -1509,6 +1533,7 @@ public class DatabaseImpl implements Database
                                   Integer parentId)
     throws IOException
   {
+    byte[] owner = getNewObjectOwner();
     Object[] catalogRow = new Object[_systemCatalog.getColumnCount()];
     int idx = 0;
     Date creationTime = new Date();
@@ -1530,10 +1555,7 @@ public class DatabaseImpl implements Database
       } else if (CAT_COL_FLAGS.equals(col.getName())) {
         catalogRow[idx] = Integer.valueOf(0);
       } else if (CAT_COL_OWNER.equals(col.getName())) {
-        byte[] owner = new byte[2];
         catalogRow[idx] = owner;
-        owner[0] = (byte) 0xcf;
-        owner[1] = (byte) 0x5f;
       } else if (CAT_COL_DATABASE.equals(col.getName())) {
         catalogRow[idx] = linkedDbName;
       } else if (CAT_COL_FOREIGN_NAME.equals(col.getName())) {
@@ -1542,15 +1564,16 @@ public class DatabaseImpl implements Database
     }
     _systemCatalog.addRow(catalogRow);
   }
-  
-  /**
-   * Add a new table to the system's access control entries
-   * @param pageNumber Page number that contains the table definition
-   */
-  private void addToAccessControlEntries(int pageNumber) throws IOException {
 
-    if(_newTableSIDs.isEmpty()) {
-      initNewTableSIDs();
+  /**
+   * Adds a new object to the system's access control entries
+   */
+  private void addToAccessControlEntries(
+      Integer objectId, Integer parentId, List<byte[]> sids) 
+    throws IOException 
+  {
+    if(sids.isEmpty()) {
+      collectNewObjectSIDs(parentId, sids);
     }
 
     TableImpl acEntries = getAccessControlEntries();
@@ -1559,14 +1582,13 @@ public class DatabaseImpl implements Database
     ColumnImpl objIdCol = acEntries.getColumn(ACE_COL_OBJECT_ID);
     ColumnImpl sidCol = acEntries.getColumn(ACE_COL_SID);
 
-    // construct a collection of ACE entries mimicing those of our parent, the
-    // "Tables" system object
-    List<Object[]> aceRows = new ArrayList<Object[]>(_newTableSIDs.size());
-    for(byte[] sid : _newTableSIDs) {
+    // construct a collection of ACE entries
+    List<Object[]> aceRows = new ArrayList<Object[]>(sids.size());
+    for(byte[] sid : sids) {
       Object[] aceRow = new Object[acEntries.getColumnCount()];
       acmCol.setRowValue(aceRow, SYS_FULL_ACCESS_ACM);
       inheritCol.setRowValue(aceRow, Boolean.FALSE);
-      objIdCol.setRowValue(aceRow, Integer.valueOf(pageNumber));
+      objIdCol.setRowValue(aceRow, objectId);
       sidCol.setRowValue(aceRow, sid);
       aceRows.add(aceRow);
     }
@@ -1574,25 +1596,26 @@ public class DatabaseImpl implements Database
   }
 
   /**
-   * Determines the collection of SIDs which need to be added to new tables.
+   * Find collection of SIDs for the given parent id.
    */
-  private void initNewTableSIDs() throws IOException
+  private void collectNewObjectSIDs(Integer parentId, List<byte[]> sids) 
+    throws IOException
   {
-    // search for ACEs matching the tableParentId.  use the index on the
+    // search for ACEs matching the given parentId.  use the index on the
     // objectId column if found (should be there)
     Cursor cursor = createCursorWithOptionalIndex(
-        getAccessControlEntries(), ACE_COL_OBJECT_ID, _tableParentId);
+        getAccessControlEntries(), ACE_COL_OBJECT_ID, parentId);
     
     for(Row row : cursor) {
       Integer objId = row.getInt(ACE_COL_OBJECT_ID);
-      if(_tableParentId.equals(objId)) {
-        _newTableSIDs.add(row.getBytes(ACE_COL_SID));
+      if(parentId.equals(objId)) {
+        sids.add(row.getBytes(ACE_COL_SID));
       }
     }
 
-    if(_newTableSIDs.isEmpty()) {
+    if(sids.isEmpty()) {
       // if all else fails, use the hard-coded default
-      _newTableSIDs.add(SYS_DEFAULT_SID);
+      sids.add(SYS_DEFAULT_SID);
     }
   }
 
