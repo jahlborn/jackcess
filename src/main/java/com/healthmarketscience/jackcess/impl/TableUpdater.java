@@ -145,11 +145,13 @@ public class TableUpdater extends TableMutator
   }
 
   public IndexImpl addIndex(IndexBuilder index) throws IOException {
-    return addIndex(index, false);
+    return addIndex(index, false, (byte)0, (byte)0);
   }
 
-  IndexImpl addIndex(IndexBuilder index, boolean isInternal) throws IOException {
-
+  IndexImpl addIndex(IndexBuilder index, boolean isInternal, byte ignoreIdxFlags,
+                     byte ignoreColFlags) 
+    throws IOException 
+  {
     _index = index;
 
     if(!isInternal) {
@@ -161,7 +163,7 @@ public class TableUpdater extends TableMutator
     _index.setIndexNumber(indexNumber);
 
     // initialize backing index state
-    initIndexDataState();
+    initIndexDataState(ignoreIdxFlags, ignoreColFlags);
 
     if(!isInternal) {
       getPageChannel().startExclusiveWrite();
@@ -254,14 +256,15 @@ public class TableUpdater extends TableMutator
     return idxNames;
   }
 
-  private void initIndexDataState() {
+  private void initIndexDataState(byte ignoreIdxFlags, byte ignoreColFlags) {
 
     _idxDataState = new IndexDataState();
     _idxDataState.addIndex(_index);
     
     // search for an existing index which matches the given index (in terms of
     // the backing data)
-    IndexData idxData = findIndexData(_index, _table, (byte)0, (byte)0);
+    IndexData idxData = findIndexData(
+        _index, _table, ignoreIdxFlags, ignoreColFlags);
 
     int idxDataNumber = ((idxData != null) ?
                          idxData.getIndexDataNumber() :

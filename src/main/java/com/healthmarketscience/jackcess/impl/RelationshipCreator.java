@@ -39,7 +39,11 @@ public class RelationshipCreator extends DBMutator
     RelationshipImpl.CASCADE_DELETES_FLAG |
     RelationshipImpl.CASCADE_UPDATES_FLAG |
     RelationshipImpl.CASCADE_NULL_FLAG;
-    
+
+  // for the purposes of choosing a backing index for a foreign key, there are
+  // certain index flags that can be ignored (we don't care how they are set)
+  private final static byte IGNORED_INDEX_FLAGS = 
+    IndexData.IGNORE_NULLS_INDEX_FLAG | IndexData.REQUIRED_INDEX_FLAG;
   
   private TableImpl _primaryTable;
   private TableImpl _secondaryTable;
@@ -115,13 +119,13 @@ public class RelationshipCreator extends DBMutator
   private void addPrimaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_primaryTable);
     updater.setForeignKey(createFKReference(true));
-    updater.addIndex(createPrimaryIndex(), true);
+    updater.addIndex(createPrimaryIndex(), true, IGNORED_INDEX_FLAGS, (byte)0);
   }
 
   private void addSecondaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_secondaryTable);
     updater.setForeignKey(createFKReference(false));
-    updater.addIndex(createSecondaryIndex(), true);
+    updater.addIndex(createSecondaryIndex(), true, IGNORED_INDEX_FLAGS, (byte)0);
   }
 
   private IndexImpl.ForeignKeyReference createFKReference(boolean isPrimary) {
@@ -131,11 +135,15 @@ public class RelationshipCreator extends DBMutator
     if(isPrimary) {
       tableType = IndexImpl.PRIMARY_TABLE_TYPE;
       otherTableNum = _secondaryTable.getTableDefPageNumber();
+      // we create the primary index first, so the secondary index does not
+      // exist yet
       otherIdxNum = _secondaryTable.getLogicalIndexCount();
     } else {
       tableType = IndexImpl.SECONDARY_TABLE_TYPE;
       otherTableNum = _primaryTable.getTableDefPageNumber();
-      otherIdxNum = _primaryTable.getLogicalIndexCount();
+      // at this point, we've already created the primary index, it's the last
+      // one on the primary table
+      otherIdxNum = _primaryTable.getLogicalIndexCount() - 1;
     }
     boolean cascadeUpdates = ((_flags & RelationshipImpl.CASCADE_UPDATES_FLAG) != 0);
     boolean cascadeDeletes = ((_flags & RelationshipImpl.CASCADE_DELETES_FLAG) != 0);
@@ -267,9 +275,9 @@ public class RelationshipCreator extends DBMutator
     String baseName = null;
     String suffix = null;
     if(isPrimary) {
-      // primary naming scheme: ".rC", ".rD", "rE" ...
+      // primary naming scheme: ".rB", .rC", ".rD", "rE" ...
       baseName = ".r";
-      suffix = "C";
+      suffix = "B";
     } else {
       // secondary naming scheme: "<t1><t2>", "<t1><t2>1", "<t1><t2>2"
       baseName = _primaryTable.getName() + _secondaryTable.getName();
