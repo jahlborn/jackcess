@@ -42,8 +42,10 @@ public class RelationshipCreator extends DBMutator
 
   // for the purposes of choosing a backing index for a foreign key, there are
   // certain index flags that can be ignored (we don't care how they are set)
-  private final static byte IGNORED_INDEX_FLAGS = 
+  private final static byte IGNORED_PRIMARY_INDEX_FLAGS = 
     IndexData.IGNORE_NULLS_INDEX_FLAG | IndexData.REQUIRED_INDEX_FLAG;
+  private final static byte IGNORED_SECONDARY_INDEX_FLAGS = 
+    IGNORED_PRIMARY_INDEX_FLAGS | IndexData.UNIQUE_INDEX_FLAG;
   
   private TableImpl _primaryTable;
   private TableImpl _secondaryTable;
@@ -60,7 +62,6 @@ public class RelationshipCreator extends DBMutator
   // - enforcing rel integrity can't have dupe cols
   // FIXME
   // - what about index name clashes?
-  // - access crashes deleting rel? (bad idxs)?
 
   public RelationshipCreator(DatabaseImpl database) 
   {
@@ -119,13 +120,15 @@ public class RelationshipCreator extends DBMutator
   private void addPrimaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_primaryTable);
     updater.setForeignKey(createFKReference(true));
-    updater.addIndex(createPrimaryIndex(), true, IGNORED_INDEX_FLAGS, (byte)0);
+    updater.addIndex(createPrimaryIndex(), true, 
+                     IGNORED_PRIMARY_INDEX_FLAGS, (byte)0);
   }
 
   private void addSecondaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_secondaryTable);
     updater.setForeignKey(createFKReference(false));
-    updater.addIndex(createSecondaryIndex(), true, IGNORED_INDEX_FLAGS, (byte)0);
+    updater.addIndex(createSecondaryIndex(), true, 
+                     IGNORED_SECONDARY_INDEX_FLAGS, (byte)0);
   }
 
   private IndexImpl.ForeignKeyReference createFKReference(boolean isPrimary) {
