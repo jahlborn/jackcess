@@ -18,9 +18,13 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
 
+import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
+import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.MultiValueColumnInfoImpl;
+import com.healthmarketscience.jackcess.impl.complex.MultiValueColumnPropertyMap;
 
 /**
  * ColumnImpl subclass which is used for complex data types.
@@ -32,6 +36,8 @@ class ComplexColumnImpl extends ColumnImpl
 {
   /** additional information specific to complex columns */
   private final ComplexColumnInfo<? extends ComplexValue> _complexInfo;
+  /** properties for multi-value column */
+  private PropertyMap _mvProps;
 
   ComplexColumnImpl(InitArgs args) throws IOException
   {
@@ -46,6 +52,20 @@ class ComplexColumnImpl extends ColumnImpl
         .postTableLoadInit();
     }
     super.postTableLoadInit();
+  }
+
+  @Override
+  public PropertyMap getProperties() throws IOException {
+    if(_complexInfo.getType() == ComplexDataType.MULTI_VALUE) {
+      if(_mvProps == null) {
+        PropertyMap primaryProps = super.getProperties();
+        PropertyMap complexProps = ((MultiValueColumnInfoImpl)_complexInfo)
+          .getValueColumn().getProperties();
+        _mvProps = new MultiValueColumnPropertyMap(primaryProps, complexProps);
+      }
+      return _mvProps;
+    }
+    return super.getProperties();
   }
 
   @Override

@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.5" date="TBD">
+      <action dev="jahlborn" type="update">
+        Change multi-value complex columns so that they return all relevant
+        column properties.
+      </action>
+    </release>
     <release version="2.1.4" date="2016-05-18">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="131">
         Fix missing column names in AppendQuery SQL strings.
