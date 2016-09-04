@@ -306,9 +306,9 @@ public class ComplexColumnTest extends TestCase
       // test multi-value col props
       PropertyMap props = col.getProperties();
       assertEquals(Boolean.TRUE, props.getValue(PropertyMap.ALLOW_MULTI_VALUE_PROP));
-      assertEquals("Value List", props.getValue("RowSourceType"));
+      assertEquals("Value List", props.getValue(PropertyMap.ROW_SOURCE_TYPE_PROP));
       assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"", 
-                   props.getValue("RowSource"));      
+                   props.getValue(PropertyMap.ROW_SOURCE_PROP));
     
       db.close();
     }

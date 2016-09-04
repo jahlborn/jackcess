@@ -85,7 +85,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
   public Property put(String name, DataType type, Object value) {
     // the only property which seems to go in the "primary" is the "multi
     // value" property
-    if(ALLOW_MULTI_VALUE_PROP.equals(name)) {
+    if(isPrimaryKey(name)) {
       return _primary.put(name, DataType.BOOLEAN, value);
     }
     return _complex.put(name, value);
@@ -97,7 +97,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     }
 
     for(Property prop : props) {
-      if(ALLOW_MULTI_VALUE_PROP.equals(prop.getName())) {
+      if(isPrimaryKey(prop.getName())) {
         ((PropertyMapImpl)_primary).put(prop);
       } else {
         ((PropertyMapImpl)_complex).put(prop);
@@ -106,7 +106,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
   }  
 
   public Property remove(String name) {
-    if(ALLOW_MULTI_VALUE_PROP.equals(name)) {
+    if(isPrimaryKey(name)) {
       return _primary.remove(name);
     }
     return _complex.remove(name);
@@ -164,4 +164,9 @@ public class MultiValueColumnPropertyMap implements PropertyMap
   public String toString() {
     return PropertyMapImpl.toString(this);
   }
+
+  private static boolean isPrimaryKey(String name) {
+    // the multi-value key seems to be the only one on the primary column
+    return ALLOW_MULTI_VALUE_PROP.equals(name);
+  } 
 }
