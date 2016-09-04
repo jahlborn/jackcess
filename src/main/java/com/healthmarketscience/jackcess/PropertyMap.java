@@ -45,6 +45,8 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public static final String RESULT_TYPE_PROP = "ResultType";
   public static final String EXPRESSION_PROP = "Expression";
   public static final String ALLOW_MULTI_VALUE_PROP = "AllowMultipleValues";
+  public static final String ROW_SOURCE_TYPE_PROP = "RowSourceType";
+  public static final String ROW_SOURCE_PROP = "RowSource";
 
 
   public String getName();
