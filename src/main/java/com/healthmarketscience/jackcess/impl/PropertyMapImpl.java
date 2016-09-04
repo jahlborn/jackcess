@@ -120,14 +120,18 @@ public class PropertyMapImpl implements PropertyMap
     }
 
     for(Property prop : props) {
-      byte flag = 0;
-      if(prop instanceof PropertyImpl) {
-        flag = ((PropertyImpl)prop).getFlag();
-      }
-      put(prop.getName(), prop.getType(), flag, prop.getValue());
+      put(prop);
     }
   }  
   
+  public PropertyImpl put(Property prop) {
+    byte flag = 0;
+    if(prop instanceof PropertyImpl) {
+      flag = ((PropertyImpl)prop).getFlag();
+    }
+    return put(prop.getName(), prop.getType(), flag, prop.getValue());
+  }
+
   /**
    * Puts a property into this map with the given information.
    */
@@ -151,11 +155,15 @@ public class PropertyMapImpl implements PropertyMap
 
   @Override
   public String toString() {
+    return toString(this);
+  }      
+
+  public static String toString(PropertyMap map) {
     StringBuilder sb = new StringBuilder();
-    sb.append(PropertyMaps.DEFAULT_NAME.equals(getName()) ?
-              "<DEFAULT>" : getName())
+    sb.append(PropertyMaps.DEFAULT_NAME.equals(map.getName()) ?
+              "<DEFAULT>" : map.getName())
       .append(" {");
-    for(Iterator<Property> iter = iterator(); iter.hasNext(); ) {
+    for(Iterator<Property> iter = map.iterator(); iter.hasNext(); ) {
       sb.append(iter.next());
       if(iter.hasNext()) {
         sb.append(",");
@@ -163,7 +171,7 @@ public class PropertyMapImpl implements PropertyMap
     }
     sb.append("}");
     return sb.toString();
-  }      
+  }
 
   public static Property createProperty(String name, DataType type, Object value) {
     return createProperty(name, type, (byte)0, value);

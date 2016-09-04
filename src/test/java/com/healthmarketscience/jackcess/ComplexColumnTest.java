@@ -302,6 +302,13 @@ public class ComplexColumnTest extends TestCase
         cursor.getCurrentRowValue(col);
       row3ValFk.deleteAllValues();
       checkMultiValues(3, row3ValFk);
+
+      // test multi-value col props
+      PropertyMap props = col.getProperties();
+      assertEquals(Boolean.TRUE, props.getValue(PropertyMap.ALLOW_MULTI_VALUE_PROP));
+      assertEquals("Value List", props.getValue("RowSourceType"));
+      assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"", 
+                   props.getValue("RowSource"));      
     
       db.close();
     }
