@@ -408,7 +408,6 @@ public final class ByteUtil {
     byte[] buf = buffer.array();
     int pos = buffer.position();
     int limit = buffer.limit();
-    System.out.println("FOO insert " + pos + " " + len + " " + limit + " " + buffer.capacity());
     System.arraycopy(buf, pos, buf, pos + len, limit - pos);
     Arrays.fill(buf, pos, pos + len, (byte)0);
     buffer.limit(limit + len);

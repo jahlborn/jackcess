@@ -227,10 +227,6 @@ public class TableImpl implements Table
     _name = name;
     _flags = flags;
 
-    System.out.println("FOO " + _name + " tdefLen " + tableBuffer.getInt(8) + 
-                       " free " +
-                       tableBuffer.getShort(database.getFormat().OFFSET_FREE_SPACE));
-
     // read table definition
     tableBuffer = loadCompleteTableDefinitionBuffer(tableBuffer, null);
 
@@ -266,8 +262,6 @@ public class TableImpl implements Table
       // keep reading ...
     }
 
-    System.out.println("FOO done " + tableBuffer.position());
-    
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
       Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
@@ -1052,10 +1046,6 @@ public class TableImpl implements Table
   {
     buffer.rewind();
     int totalTableDefSize = buffer.remaining();
-    System.out.println("FOO writing tdef to " + tdefPageNumber + " and " +
-                       reservedPages + " tot size " + totalTableDefSize + " " +
-                       buffer.remaining());
-
     JetFormat format = mutator.getFormat();
     PageChannel pageChannel = mutator.getPageChannel();
 
@@ -1073,8 +1063,6 @@ public class TableImpl implements Table
       pageChannel.writePage(buffer, tdefPageNumber);
       
     } else {
-
-      System.out.println("FOO splitting tdef");
 
       // need to split across multiple pages
 
@@ -1204,15 +1192,12 @@ public class TableImpl implements Table
       // skip existing column names and write new name
       skipNames(tableBuffer, _columns.size());
       ByteUtil.insertEmptyData(tableBuffer, nameByteLen);
-      System.out.println("FOO pre name " + tableBuffer.position());
       writeName(tableBuffer, column.getName(), mutator.getCharset());
-      System.out.println("FOO post name " + tableBuffer.position());
 
       if(isLongVal) {
 
         // allocate usage maps for the long value col
         Map.Entry<Integer,Integer> umapInfo = addUsageMaps(2, null);
-        System.out.println("FOO created umap " + umapInfo);
         TableMutator.ColumnState colState = mutator.getColumnState(column);
         colState.setUmapPageNumber(umapInfo.getKey());
         byte rowNum = umapInfo.getValue().byteValue();
@@ -1220,13 +1205,10 @@ public class TableImpl implements Table
         colState.setUmapFreeRowNumber((byte)(rowNum + 1));
 
         // skip past index defs
-        System.out.println("FOO pre move " + tableBuffer.position());
         ByteUtil.forward(tableBuffer, (_indexCount * 
                                        format.SIZE_INDEX_COLUMN_BLOCK));
-        System.out.println("FOO moved to " + tableBuffer.position());
         ByteUtil.forward(tableBuffer,
                          (_logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK));
-        System.out.println("FOO moved to " + tableBuffer.position());
         skipNames(tableBuffer, _logicalIndexCount);
 
         // skip existing usage maps
@@ -1243,7 +1225,6 @@ public class TableImpl implements Table
         }
 
         // write new column usage map info
-        System.out.println("FOO about to write " + tableBuffer.position());
         umapPos = tableBuffer.position();
         ByteUtil.insertEmptyData(tableBuffer, 10);
         ColumnImpl.writeColUsageMapDefinition(
@@ -1359,7 +1340,6 @@ public class TableImpl implements Table
       TableMutator.IndexDataState idxDataState = mutator.getIndexDataState(index);
       int rootPageNumber = getPageChannel().allocateNewPage();
       Map.Entry<Integer,Integer> umapInfo = addUsageMaps(1, rootPageNumber);
-      System.out.println("FOO created umap " + umapInfo);
       idxDataState.setRootPageNumber(rootPageNumber);
       idxDataState.setUmapPageNumber(umapInfo.getKey());
       idxDataState.setUmapRowNumber(umapInfo.getValue().byteValue());
@@ -1566,7 +1546,6 @@ public class TableImpl implements Table
     int origTdefLen = tableBuffer.getInt(8);
     mutator.setOrigTdefLen(origTdefLen);
     int newTdefLen = origTdefLen + addedLen;
-    System.out.println("FOO new " + newTdefLen + " add " + addedLen);
     while(newTdefLen > tableBuffer.capacity()) {
       tableBuffer = expandTableBuffer(tableBuffer);
       tableBuffer.flip();
@@ -1600,7 +1579,6 @@ public class TableImpl implements Table
     // numbers), so we sort in reverse order.
     Set<Integer> knownPages = new TreeSet<Integer>(Collections.reverseOrder());
     collectUsageMapPages(knownPages);
-    System.out.println("FOO found umap pages " + knownPages);
 
     ByteBuffer umapBuf = pageChannel.createPageBuffer();
     for(Integer pageNum : knownPages) {
@@ -1874,7 +1852,6 @@ public class TableImpl implements Table
       }
       getPageChannel().readPage(nextPageBuffer, nextPage);
       nextPage = nextPageBuffer.getInt(getFormat().OFFSET_NEXT_TABLE_DEF_PAGE);
-      System.out.println("FOO next page free " + nextPageBuffer.getShort(getFormat().OFFSET_FREE_SPACE));
       tableBuffer = expandTableBuffer(tableBuffer);
       tableBuffer.put(nextPageBuffer.array(), 8, getFormat().PAGE_SIZE - 8);
       tableBuffer.flip();

@@ -168,6 +168,8 @@ public class TableUpdater extends TableMutator
     if(!isInternal) {
       getPageChannel().startExclusiveWrite();
     } else {
+      // if "internal" update, this is part of a larger operation which
+      // already holds an exclusive write lock
       getPageChannel().startWrite();      
     }
     try {

@@ -30,6 +30,7 @@ import com.healthmarketscience.jackcess.RelationshipBuilder;
 import com.healthmarketscience.jackcess.Row;
 
 /**
+ * Helper class used to maintain state during relationship creation.
  *
  * @author James Ahlborn
  */

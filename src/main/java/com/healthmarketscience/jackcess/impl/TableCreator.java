@@ -181,7 +181,7 @@ public class TableCreator extends TableMutator
       }
     }
 
-    getPageChannel().startWrite();
+    getPageChannel().startExclusiveWrite();
     try {
       
       // reserve some pages
