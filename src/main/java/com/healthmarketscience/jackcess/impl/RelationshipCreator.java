@@ -53,16 +53,8 @@ public class RelationshipCreator extends DBMutator
   private List<ColumnImpl> _primaryCols; 
   private List<ColumnImpl> _secondaryCols;
   private int _flags;
+  private String _name;
     
-  // - primary table must have unique index
-  // - primary table index name ".rC", ".rD"...
-  // - secondary index name "<PTable><STable>"
-  // - add <name>1, <name>2 after names to make unique (index names and
-  //   relationship names)
-  // - enforcing rel integrity can't have dupe cols
-  // FIXME
-  // - what about index name clashes?
-
   public RelationshipCreator(DatabaseImpl database) 
   {
     super(database);
@@ -76,7 +68,12 @@ public class RelationshipCreator extends DBMutator
     return _secondaryTable;
   }
 
+  public boolean hasReferentialIntegrity() {
+    return _relationship.hasReferentialIntegrity();
+  }
+
   public RelationshipImpl createRelationshipImpl(String name) {
+    _name = name;
     RelationshipImpl newRel = new RelationshipImpl(
         name, _primaryTable, _secondaryTable, _flags, 
         _primaryCols, _secondaryCols);
@@ -105,7 +102,7 @@ public class RelationshipCreator extends DBMutator
 
       RelationshipImpl newRel = getDatabase().writeRelationship(this);
 
-      if(_relationship.hasReferentialIntegrity()) {
+      if(hasReferentialIntegrity()) {
         addPrimaryIndex();
         addSecondaryIndex();
       }
@@ -136,13 +133,13 @@ public class RelationshipCreator extends DBMutator
     int otherTableNum = 0;
     int otherIdxNum = 0;
     if(isPrimary) {
-      tableType = IndexImpl.PRIMARY_TABLE_TYPE;
+      tableType = IndexImpl.FK_PRIMARY_TABLE_TYPE;
       otherTableNum = _secondaryTable.getTableDefPageNumber();
       // we create the primary index first, so the secondary index does not
       // exist yet
       otherIdxNum = _secondaryTable.getLogicalIndexCount();
     } else {
-      tableType = IndexImpl.SECONDARY_TABLE_TYPE;
+      tableType = IndexImpl.FK_SECONDARY_TABLE_TYPE;
       otherTableNum = _primaryTable.getTableDefPageNumber();
       // at this point, we've already created the primary index, it's the last
       // one on the primary table
@@ -191,7 +188,7 @@ public class RelationshipCreator extends DBMutator
       }
     }
 
-    if(!_relationship.hasReferentialIntegrity()) {
+    if(!hasReferentialIntegrity()) {
 
       if((_relationship.getFlags() & CASCADE_FLAGS) != 0) {
         throw new IllegalArgumentException(withErrorContext(
@@ -248,18 +245,15 @@ public class RelationshipCreator extends DBMutator
   }
 
   private IndexBuilder createPrimaryIndex() {
-    String name = getUniqueIndexName(_primaryTable);
-    // FIXME?
+    String name = createPrimaryIndexName();
     return createIndex(name, _primaryCols)
       .setUnique()
       .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
   
   private IndexBuilder createSecondaryIndex() {
-    String name = getUniqueIndexName(_secondaryTable);
-    // FIXME?
-
-    return createIndex(name, _secondaryCols)
+    // secondary index uses relationship name
+    return createIndex(_name, _secondaryCols)
       .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
   
@@ -271,45 +265,29 @@ public class RelationshipCreator extends DBMutator
     return idx;
   }
 
-  private String getUniqueIndexName(TableImpl table) {
-    Set<String> idxNames = TableUpdater.getIndexNames(table, null);
+  private String createPrimaryIndexName() {
+    Set<String> idxNames = TableUpdater.getIndexNames(_primaryTable, null);
 
-    boolean isPrimary = (table == _primaryTable);
-    String baseName = null;
-    String suffix = null;
-    if(isPrimary) {
-      // primary naming scheme: ".rB", .rC", ".rD", "rE" ...
-      baseName = ".r";
-      suffix = "B";
-    } else {
-      // secondary naming scheme: "<t1><t2>", "<t1><t2>1", "<t1><t2>2"
-      baseName = _primaryTable.getName() + _secondaryTable.getName();
-      suffix = "";
-    }
+    // primary naming scheme: ".rB", .rC", ".rD", "rE" ...
+    String baseName = ".r";
+    String suffix = "B";
 
-    int count = 0;
     while(true) {
       String idxName = baseName + suffix;
-      if(!idxNames.contains(idxName.toUpperCase())) {
+      if(!idxNames.contains(DatabaseImpl.toLookupName(idxName))) {
         return idxName;
       }
 
-      ++count;
-      if(isPrimary) {
-        char c = (char)(suffix.charAt(0) + 1);
-        if(c == '[') {
-          c = 'a';
-        }
-        suffix = "" + c;
-      } else {
-        suffix = "" + count;
-      }      
+      char c = (char)(suffix.charAt(0) + 1);
+      if(c == '[') {
+        c = 'a';
+      }
+      suffix = "" + c;
     }    
-
-    // FIXME, truncate to max index name length
   }
 
-  private static List<ColumnImpl> getColumns(TableImpl table, List<String> colNames) {
+  private static List<ColumnImpl> getColumns(TableImpl table, 
+                                             List<String> colNames) {
     List<ColumnImpl> cols = new ArrayList<ColumnImpl>();
     for(String colName : colNames) {
       cols.add(table.getColumn(colName));

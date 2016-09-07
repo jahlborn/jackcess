@@ -54,10 +54,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   private static final byte CASCADE_NULL_FLAG = (byte)2;
 
   /** index table type for the "primary" table in a foreign key index */
-  static final byte PRIMARY_TABLE_TYPE = (byte)1;
-
+  static final byte FK_PRIMARY_TABLE_TYPE = (byte)1;
   /** index table type for the "secondary" table in a foreign key index */
-  static final byte SECONDARY_TABLE_TYPE = (byte)2;
+  static final byte FK_SECONDARY_TABLE_TYPE = (byte)2;
 
   /** indicate an invalid index number for foreign key field */
   private static final int INVALID_INDEX_NUMBER = -1;
@@ -434,7 +433,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     }
 
     public boolean isPrimaryTable() {
-      return(getTableType() == PRIMARY_TABLE_TYPE);
+      return(getTableType() == FK_PRIMARY_TABLE_TYPE);
     }
 
     public int getOtherIndexNumber() {

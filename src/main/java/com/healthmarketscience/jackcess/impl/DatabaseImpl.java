@@ -53,6 +53,7 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.PropertyMap;
@@ -1171,9 +1172,7 @@ public class DatabaseImpl implements Database
   {
     initRelationships();
     
-    String name = findUniqueRelationshipName(
-        creator.getPrimaryTable().getName() +
-        creator.getSecondaryTable().getName());
+    String name = createRelationshipName(creator);
     RelationshipImpl newRel = creator.createRelationshipImpl(name);
 
     ColumnImpl ccol = _relationships.getColumn(REL_COL_COLUMN_COUNT);
@@ -1226,9 +1225,28 @@ public class DatabaseImpl implements Database
     }
   }
 
-  private String findUniqueRelationshipName(String origName) throws IOException {
+  private String createRelationshipName(RelationshipCreator creator)
+    throws IOException 
+  {
+    // ensure that the final identifier name does not get too long
+    // - the primary name is limited to ((max / 2) - 3)
+    // - the total name is limited to (max - 3)
+    int maxIdLen = getFormat().MAX_INDEX_NAME_LENGTH;
+    int limit = (maxIdLen / 2) - 3;
+    String origName = creator.getPrimaryTable().getName();
+    if(origName.length() > limit) {
+      origName = origName.substring(0, limit);
+    }
+    limit = maxIdLen - 3;
+    origName += creator.getSecondaryTable().getName();
+    if(origName.length() > limit) {
+      origName = origName.substring(0, limit);
+    }
+
+    // now ensure name is unique
     Set<String> names = new HashSet<String>();
     
+    // collect the names of all relationships for uniqueness check
     for(Row row :
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
               SYSTEM_CATALOG_COLUMNS))
@@ -1239,14 +1257,20 @@ public class DatabaseImpl implements Database
       }
     }
 
+    if(creator.hasReferentialIntegrity()) {
+      // relationship name will also be index name in secondary table, so must
+      // check those names as well
+      for(Index idx : creator.getSecondaryTable().getIndexes()) {
+        names.add(toLookupName(idx.getName()));
+      } 
+    }
+
     String baseName = toLookupName(origName);
     String name = baseName;
     int i = 0;
     while(names.contains(name)) {
       name = baseName + (++i);
     }
-
-    // FIXME, truncate to max identifier length
 
     return ((i == 0) ? origName : (origName + i));
   }

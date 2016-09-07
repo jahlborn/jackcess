@@ -240,7 +240,7 @@ public class TableUpdater extends TableMutator
   private Set<String> getColumnNames() {
     Set<String> colNames = new HashSet<String>();
     for(ColumnImpl column : _table.getColumns()) {
-      colNames.add(column.getName().toUpperCase());
+      colNames.add(DatabaseImpl.toLookupName(column.getName()));
     }
     return colNames;
   }
@@ -248,7 +248,7 @@ public class TableUpdater extends TableMutator
   static Set<String> getIndexNames(TableImpl table, boolean[] foundPk) {
     Set<String> idxNames = new HashSet<String>();
     for(IndexImpl index : table.getIndexes()) {
-      idxNames.add(index.getName().toUpperCase());
+      idxNames.add(DatabaseImpl.toLookupName(index.getName()));
       if(index.isPrimaryKey() && (foundPk != null)) {
         foundPk[0] = true;
       }

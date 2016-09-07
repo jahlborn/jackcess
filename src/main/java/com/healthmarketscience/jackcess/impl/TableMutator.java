@@ -63,7 +63,7 @@ public abstract class TableMutator extends DBMutator
       }
       
       column.validate(getFormat());
-      if(!colNames.add(column.getName().toUpperCase())) {
+      if(!colNames.add(DatabaseImpl.toLookupName(column.getName()))) {
         throw new IllegalArgumentException(withErrorContext(
             "duplicate column name: " + column.getName()));
       }
@@ -75,7 +75,7 @@ public abstract class TableMutator extends DBMutator
                                boolean[] foundPk, IndexBuilder index) {
     
     index.validate(colNames, getFormat());
-    if(!idxNames.add(index.getName().toUpperCase())) {
+    if(!idxNames.add(DatabaseImpl.toLookupName(index.getName()))) {
       throw new IllegalArgumentException(withErrorContext(
           "duplicate index name: " + index.getName()));
     }
