@@ -45,6 +45,9 @@ import com.healthmarketscience.jackcess.impl.TableCreator;
  * </pre>
  *
  * @author James Ahlborn
+ * @see ColumnBuilder
+ * @see IndexBuilder
+ * @see RelationshipBuilder
  * @usage _general_class_
  */
 public class TableBuilder {

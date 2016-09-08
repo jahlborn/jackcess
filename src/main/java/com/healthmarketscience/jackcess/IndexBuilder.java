@@ -35,6 +35,7 @@ import com.healthmarketscience.jackcess.impl.TableUpdater;
  * existing Table using the {@link #addToTable(Table)} method.
  *
  * @author James Ahlborn
+ * @see TableBuilder
  * @usage _general_class_
  */
 public class IndexBuilder 

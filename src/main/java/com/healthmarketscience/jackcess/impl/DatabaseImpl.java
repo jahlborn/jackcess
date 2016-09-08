@@ -1021,8 +1021,9 @@ public class DatabaseImpl implements Database
    * Create a new table in this database
    * @param name Name of the table to create
    * @param columns List of Columns in the table
-   * @usage _general_method_
+   * @deprecated use {@link TableBuilder} instead
    */
+  @Deprecated
   public void createTable(String name, List<ColumnBuilder> columns)
     throws IOException
   {
@@ -1034,8 +1035,9 @@ public class DatabaseImpl implements Database
    * @param name Name of the table to create
    * @param columns List of Columns in the table
    * @param indexes List of IndexBuilders describing indexes for the table
-   * @usage _general_method_
+   * @deprecated use {@link TableBuilder} instead
    */
+  @Deprecated
   public void createTable(String name, List<ColumnBuilder> columns,
                           List<IndexBuilder> indexes)
     throws IOException

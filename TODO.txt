@@ -2,8 +2,6 @@ Missing pieces:
 
 - fix long text index entries (for new general sort order)
   * ???
-- implement foreign key index creation & relationship creation
-  * MEDIUM
 - implement table creation w/ complex columns
   * MEDIUM
 - implement table, column, index renaming
@@ -19,13 +17,3 @@ Rename:
 - Table - update table def, queries, relationships, complex tables?
 - Column - update table def, queries, relationships, complex tables?
 - Index - update table def
-
-Index add (fk impl)
-- Database.addIndex(IndexBuilder) - use TableCreator internal
-  - add indexes separately from adding fk info, (backing indexes need to be
-    added first)
-    - require baking indexes to be created first (does MSAccess?)
-    - need to populate index after creation! populate first, then add?
-  - add relationships
-- flush all non-system tables from DbImpl._tableCache (references to old table
-  impls)

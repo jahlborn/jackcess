@@ -27,9 +27,24 @@ import com.healthmarketscience.jackcess.impl.RelationshipImpl;
 /**
  * Builder style class for constructing a {@link Relationship}, and,
  * optionally, the associated backing foreign key (if referential integrity
- * enforcement is enabled).
+ * enforcement is enabled).  A Relationship can only be constructed for
+ * {@link Table}s which already exist in the {@link Database}.  Additionally,
+ * if integrity enforcement is enabled, there must already be a unique index
+ * on the "from" Table for the relevant columns (same requirement as MS
+ * Access).
+ * <p/>
+ * Example:
+ * <pre>
+ *   Relationship rel = new RelationshipBuilder("FromTable", "ToTable")
+ *     .addColumns("ID", "FK_ID")
+ *     .setReferentialIntegrity()
+ *     .setCascadeDeletes()
+ *     .toRelationship(db);
+ * </pre>
  *
  * @author James Ahlborn
+ * @see TableBuilder
+ * @usage _general_class_
  */
 public class RelationshipBuilder 
 {

@@ -25,7 +25,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -63,7 +62,7 @@ public class DatabaseTest extends TestCase
       Database db = create(fileFormat);
 
       try {
-        ((DatabaseImpl)db).createTable("test", Collections.<ColumnBuilder>emptyList());
+        new TableBuilder("test").toTable(db);
         fail("created table with no columns?");
       } catch(IllegalArgumentException e) {
         // success
@@ -598,9 +597,9 @@ public class DatabaseTest extends TestCase
         columns.add(new ColumnBuilder(colName, DataType.TEXT).toColumn());
       }
 
-      ((DatabaseImpl)db).createTable("test", columns);
-
-      Table t = db.getTable("test");
+      Table t = new TableBuilder("test")
+        .addColumns(columns)
+        .toTable(db);
 
       List<String> row = new ArrayList<String>();
       Map<String,Object> expectedRowData = new LinkedHashMap<String, Object>();
