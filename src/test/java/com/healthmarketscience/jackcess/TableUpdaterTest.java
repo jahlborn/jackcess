@@ -20,6 +20,7 @@ import java.util.Arrays;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
@@ -39,49 +40,96 @@ public class TableUpdaterTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t1 = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .toTable(db);
+      doTestUpdating(db, false, true);
+ 
+      db.close();
+    }    
+  }
+
+  public void testTableUpdatingOneToOne() throws Exception {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      doTestUpdating(db, true, true);
+      // FIXME, add one-to-one, add no enforce rel
+ 
+      db.close();
+    }    
+  }
+
+  public void testTableUpdatingNoEnforce() throws Exception {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      doTestUpdating(db, false, false);
+ 
+      db.close();
+    }    
+  }
+
+  private void doTestUpdating(Database db, boolean oneToOne, boolean enforce) 
+    throws Exception
+  {
+    Table t1 = new TableBuilder("TestTable")
+      .addColumn(new ColumnBuilder("id", DataType.LONG))
+      .toTable(db);
       
-      Table t2 = new TableBuilder("TestTable2")
-        .addColumn(new ColumnBuilder("id2", DataType.LONG))
-        .toTable(db);
+    Table t2 = new TableBuilder("TestTable2")
+      .addColumn(new ColumnBuilder("id2", DataType.LONG))
+      .toTable(db);
 
+    int t1idxs = 1;
+    new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+      .addColumns("id").setPrimaryKey()
+      .addToTable(t1);
+    new ColumnBuilder("data", DataType.TEXT)
+      .addToTable(t1);
+    new ColumnBuilder("bigdata", DataType.MEMO)
+      .addToTable(t1);
+
+    new ColumnBuilder("data2", DataType.TEXT)
+      .addToTable(t2);
+    new ColumnBuilder("bigdata2", DataType.MEMO)
+      .addToTable(t2);
+
+    int t2idxs = 0;
+    if(oneToOne) {
+      ++t2idxs;
       new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-        .addColumns("id").setPrimaryKey()
-        .addToTable(t1);
-      new ColumnBuilder("data", DataType.TEXT)
-        .addToTable(t1);
-      new ColumnBuilder("bigdata", DataType.MEMO)
-        .addToTable(t1);
-
-      new ColumnBuilder("data2", DataType.TEXT)
+        .addColumns("id2").setPrimaryKey()
         .addToTable(t2);
-      new ColumnBuilder("bigdata2", DataType.MEMO)
-        .addToTable(t2);
+    }
 
-      Relationship rel = new RelationshipBuilder("TestTable", "TestTable2")
-        .addColumns("id", "id2")
-        .setReferentialIntegrity()
-        .setCascadeDeletes()
-        .toRelationship(db);
+    RelationshipBuilder rb = new RelationshipBuilder("TestTable", "TestTable2")
+      .addColumns("id", "id2");
+    if(enforce) {
+      ++t1idxs;
+      ++t2idxs;      
+      rb.setReferentialIntegrity()
+        .setCascadeDeletes();
+    }
 
-      assertEquals("TestTableTestTable2", rel.getName());
-      assertSame(t1, rel.getFromTable());
-      assertEquals(Arrays.asList(t1.getColumn("id")), rel.getFromColumns());
-      assertSame(t2, rel.getToTable());
-      assertEquals(Arrays.asList(t2.getColumn("id2")), rel.getToColumns());
-      assertFalse(rel.isOneToOne());
-      assertTrue(rel.hasReferentialIntegrity());
-      assertTrue(rel.cascadeDeletes());
-      assertFalse(rel.cascadeUpdates());
-      assertEquals(Relationship.JoinType.INNER, rel.getJoinType());
+    Relationship rel = rb.toRelationship(db);
 
-      assertEquals(2, t1.getIndexes().size());
-      assertEquals(1, ((TableImpl)t1).getIndexDatas().size());
+    assertEquals("TestTableTestTable2", rel.getName());
+    assertSame(t1, rel.getFromTable());
+    assertEquals(Arrays.asList(t1.getColumn("id")), rel.getFromColumns());
+    assertSame(t2, rel.getToTable());
+    assertEquals(Arrays.asList(t2.getColumn("id2")), rel.getToColumns());
+    assertEquals(oneToOne, rel.isOneToOne());
+    assertEquals(enforce, rel.hasReferentialIntegrity());
+    assertEquals(enforce, rel.cascadeDeletes());
+    assertFalse(rel.cascadeUpdates());
+    assertEquals(Relationship.JoinType.INNER, rel.getJoinType());
 
-      assertEquals(1, t2.getIndexes().size());
-      assertEquals(1, ((TableImpl)t2).getIndexDatas().size());
+    assertEquals(t1idxs, t1.getIndexes().size());
+    assertEquals(1, ((TableImpl)t1).getIndexDatas().size());
+
+    assertEquals(t2idxs, t2.getIndexes().size());
+    assertEquals((t2idxs > 0 ? 1 : 0), ((TableImpl)t2).getIndexDatas().size());
+
+    ((DatabaseImpl)db).getPageChannel().startWrite();
+    try {
 
       for(int i = 0; i < 10; ++i) {
         t1.addRow(i, "row" + i, "row-data" + i);
@@ -91,35 +139,39 @@ public class TableUpdaterTest extends TestCase
         t2.addRow(i, "row2_" + i, "row-data2_" + i);
       }
 
-      try {
-        t2.addRow(13, "row13", "row-data13");
-        fail("ConstraintViolationException should have been thrown");
-      } catch(ConstraintViolationException cv) {
-        // success
-      }
+    } finally {
+      ((DatabaseImpl)db).getPageChannel().finishWrite();
+    }
 
-      Row r1 = CursorBuilder.findRowByPrimaryKey(t1, 5);
-      t1.deleteRow(r1);
+    try {
+      t2.addRow(10, "row10", "row-data10");
+      if(enforce) {
+        fail("ConstraintViolationException should have been thrown");
+      } 
+    } catch(ConstraintViolationException cv) {
+      // success
+      if(!enforce) { throw cv; }
+    }
+
+    Row r1 = CursorBuilder.findRowByPrimaryKey(t1, 5);
+    t1.deleteRow(r1);
    
-      int id = 0;
-      for(Row r : t1) {
-        assertEquals(id, r.get("id"));
+    int id = 0;
+    for(Row r : t1) {
+      assertEquals(id, r.get("id"));
+      ++id;
+      if(id == 5) {
         ++id;
-        if(id == 5) {
-          ++id;
-        }
       }
+    }
  
-      id = 0;
-      for(Row r : t2) {
-        assertEquals(id, r.get("id2"));
+    id = 0;
+    for(Row r : t2) {
+      assertEquals(id, r.get("id2"));
+      ++id;
+      if(enforce && (id == 5)) {
         ++id;
-        if(id == 5) {
-          ++id;
-        }
       }
- 
-      db.close();
-    }    
+    }
   }
 }
