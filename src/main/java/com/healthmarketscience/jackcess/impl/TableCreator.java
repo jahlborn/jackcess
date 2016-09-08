@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -30,6 +29,8 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.PropertyMap;
+import com.healthmarketscience.jackcess.TableBuilder;
 
 /**
  * Helper class used to maintain state during table creation.
@@ -37,14 +38,13 @@ import com.healthmarketscience.jackcess.IndexBuilder;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class TableCreator 
+public class TableCreator extends TableMutator
 {
-  private final DatabaseImpl _database;
-  private final String _name;
-  private final List<ColumnBuilder> _columns;
-  private final List<IndexBuilder> _indexes;
-  private final Map<IndexBuilder,IndexState> _indexStates = 
-    new IdentityHashMap<IndexBuilder,IndexState>();
+  private String _name;
+  private List<ColumnBuilder> _columns;
+  private List<IndexBuilder> _indexes;
+  private final List<IndexDataState> _indexDataStates = 
+    new ArrayList<IndexDataState>();
   private final Map<ColumnBuilder,ColumnState> _columnStates = 
     new IdentityHashMap<ColumnBuilder,ColumnState>();
   private final List<ColumnBuilder> _lvalCols = new ArrayList<ColumnBuilder>();
@@ -53,35 +53,20 @@ class TableCreator
   private int _indexCount;
   private int _logicalIndexCount;
 
-  public TableCreator(DatabaseImpl database, String name, List<ColumnBuilder> columns,
-                      List<IndexBuilder> indexes) {
-    _database = database;
-    _name = name;
-    _columns = columns;
-    _indexes = ((indexes != null) ? indexes : 
-                Collections.<IndexBuilder>emptyList());
+  public TableCreator(DatabaseImpl database) {
+    super(database);
   }
 
   public String getName() {
     return _name;
   }
 
-  public DatabaseImpl getDatabase() {
-    return _database;
+  @Override
+  String getTableName() {
+    return getName();
   }
-
-  public JetFormat getFormat() {
-    return _database.getFormat();
-  }
-
-  public PageChannel getPageChannel() {
-    return _database.getPageChannel();
-  }
-
-  public Charset getCharset() {
-    return _database.getCharset();
-  }
-
+  
+  @Override
   public int getTdefPageNumber() {
     return _tdefPageNumber;
   }
@@ -110,14 +95,24 @@ class TableCreator
     return _logicalIndexCount;
   }
 
-  public IndexState getIndexState(IndexBuilder idx) {
-    return _indexStates.get(idx);
+  @Override
+  public IndexDataState getIndexDataState(IndexBuilder idx) {
+    for(IndexDataState idxDataState : _indexDataStates) {
+      for(IndexBuilder curIdx : idxDataState.getIndexes()) {
+        if(idx == curIdx) {
+          return idxDataState;
+        }
+      }
+    }
+    throw new IllegalStateException(withErrorContext(
+        "could not find state for index"));
   }
 
-  public int reservePageNumber() throws IOException {
-    return getPageChannel().allocateNewPage();
+  public List<IndexDataState> getIndexDataStates() {
+    return _indexDataStates;
   }
 
+  @Override
   public ColumnState getColumnState(ColumnBuilder col) {
     return _columnStates.get(col);
   }
@@ -126,11 +121,44 @@ class TableCreator
     return _lvalCols;
   }
 
+  @Override
+  short getColumnNumber(String colName) {
+    for(ColumnBuilder col : _columns) {
+      if(col.getName().equalsIgnoreCase(colName)) {
+        return col.getColumnNumber();
+      }
+    }
+    return IndexData.COLUMN_UNUSED;
+  }  
+
+  /**
+   * @return The number of variable length columns which are not long values
+   *         found in the list
+   * @usage _advanced_method_
+   */
+  public short countNonLongVariableLength() {
+    short rtn = 0;
+    for (ColumnBuilder col : _columns) {
+      if (col.isVariableLength() && !col.getType().isLongValue()) {
+        rtn++;
+      }
+    }
+    return rtn;
+  }
+  
+
   /**
    * Creates the table in the database.
    * @usage _advanced_method_
    */
-  public void createTable() throws IOException {
+  public TableImpl createTable(TableBuilder table) throws IOException {
+
+    _name = table.getName();
+    _columns = table.getColumns();
+    _indexes = table.getIndexes();
+    if(_indexes == null) {
+      _indexes = Collections.<IndexBuilder>emptyList();
+    }
 
     validate();
 
@@ -146,17 +174,14 @@ class TableCreator
     }
 
     if(hasIndexes()) {
-      // sort out index numbers.  for now, these values will always match
-      // (until we support writing foreign key indexes)
+      // sort out index numbers (and backing index data).  
       for(IndexBuilder idx : _indexes) {
-        IndexState idxState = new IndexState();
-        idxState.setIndexNumber(_logicalIndexCount++);
-        idxState.setIndexDataNumber(_indexCount++);
-        _indexStates.put(idx, idxState);
+        idx.setIndexNumber(_logicalIndexCount++);
+        findIndexDataState(idx);
       }
     }
 
-    getPageChannel().startWrite();
+    getPageChannel().startExclusiveWrite();
     try {
       
       // reserve some pages
@@ -167,58 +192,79 @@ class TableCreator
       TableImpl.writeTableDefinition(this);
 
       // update the database with the new table info
-      _database.addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, null, null);
+      getDatabase().addNewTable(_name, _tdefPageNumber, DatabaseImpl.TYPE_TABLE, 
+                                null, null);
+
+      TableImpl newTable = getDatabase().getTable(_name);
+
+      // add any table properties
+      boolean addedProps = false;
+      Map<String,PropertyMap.Property> props = table.getProperties();
+      if(props != null) {
+        newTable.getProperties().putAll(props.values());
+        addedProps = true;
+      }
+      for(ColumnBuilder cb : _columns) {
+        Map<String,PropertyMap.Property> colProps = cb.getProperties();
+        if(colProps != null) {
+          newTable.getColumn(cb.getName()).getProperties()
+            .putAll(colProps.values());
+          addedProps = true;
+        }
+      }
+
+      // all table and column props are saved together
+      if(addedProps) {
+        newTable.getProperties().save();
+      }
+
+      return newTable;
 
     } finally {
       getPageChannel().finishWrite();
     }
   }
 
+  private IndexDataState findIndexDataState(IndexBuilder idx) {
+
+    // search for an index which matches the given index (in terms of the
+    // backing data)
+    for(IndexDataState idxDataState : _indexDataStates) {
+      if(sameIndexData(idxDataState.getFirstIndex(), idx)) {
+        idxDataState.addIndex(idx);
+        return idxDataState;
+      }
+    }
+
+    // no matches found, need new index data state
+    IndexDataState idxDataState = new IndexDataState();
+    idxDataState.setIndexDataNumber(_indexCount++);
+    idxDataState.addIndex(idx);
+    _indexDataStates.add(idxDataState);
+    return idxDataState;
+  }
+
   /**
    * Validates the new table information before attempting creation.
    */
-  private void validate() {
+  private void validate() throws IOException {
 
-    DatabaseImpl.validateIdentifierName(
-        _name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
+    getDatabase().validateNewTableName(_name);
     
     if((_columns == null) || _columns.isEmpty()) {
-      throw new IllegalArgumentException(
-          "Cannot create table with no columns");
+      throw new IllegalArgumentException(withErrorContext(
+          "Cannot create table with no columns"));
     }
     if(_columns.size() > getFormat().MAX_COLUMNS_PER_TABLE) {
-      throw new IllegalArgumentException(
+      throw new IllegalArgumentException(withErrorContext(
           "Cannot create table with more than " +
-          getFormat().MAX_COLUMNS_PER_TABLE + " columns");
+          getFormat().MAX_COLUMNS_PER_TABLE + " columns"));
     }
     
-    ColumnImpl.SortOrder dbSortOrder = null;
-    try {
-      dbSortOrder = _database.getDefaultSortOrder();
-    } catch(IOException e) {
-      // ignored, just use the jet format default
-    }
-
     Set<String> colNames = new HashSet<String>();
     // next, validate the column definitions
     for(ColumnBuilder column : _columns) {
-
-      // FIXME for now, we can't create complex columns
-      if(column.getType() == DataType.COMPLEX_TYPE) {
-        throw new UnsupportedOperationException(
-            "Complex column creation is not yet implemented");
-      }
-      
-      column.validate(getFormat());
-      if(!colNames.add(column.getName().toUpperCase())) {
-        throw new IllegalArgumentException("duplicate column name: " +
-                                           column.getName());
-      }
-
-      // set the sort order to the db default (if unspecified)
-      if(column.getType().isTextual() && (column.getTextSortOrder() == null)) {
-        column.setTextSortOrder(dbSortOrder);
-      }
+      validateColumn(colNames, column);
     }
 
     List<ColumnBuilder> autoCols = getAutoNumberColumns();
@@ -226,39 +272,23 @@ class TableCreator
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
       for(ColumnBuilder c : autoCols) {
-        if(!c.getType().isMultipleAutoNumberAllowed() &&
-           !autoTypes.add(c.getType())) {
-          throw new IllegalArgumentException(
-              "Can have at most one AutoNumber column of type " + c.getType() +
-              " per table");
-        }
+        validateAutoNumberColumn(autoTypes, c);
       }
     }
 
     if(hasIndexes()) {
 
       if(_indexes.size() > getFormat().MAX_INDEXES_PER_TABLE) {
-        throw new IllegalArgumentException(
+        throw new IllegalArgumentException(withErrorContext(
             "Cannot create table with more than " +
-            getFormat().MAX_INDEXES_PER_TABLE + " indexes");
+            getFormat().MAX_INDEXES_PER_TABLE + " indexes"));
       }
 
       // now, validate the indexes
       Set<String> idxNames = new HashSet<String>();
-      boolean foundPk = false;
+      boolean foundPk[] = new boolean[1];
       for(IndexBuilder index : _indexes) {
-        index.validate(colNames, getFormat());
-        if(!idxNames.add(index.getName().toUpperCase())) {
-          throw new IllegalArgumentException("duplicate index name: " +
-                                             index.getName());
-        }
-        if(index.isPrimaryKey()) {
-          if(foundPk) {
-            throw new IllegalArgumentException(
-                "found second primary key index: " + index.getName());
-          }
-          foundPk = true;
-        }
+        validateIndex(colNames, idxNames, foundPk, index);
       }
     }
   }
@@ -274,92 +304,37 @@ class TableCreator
     return autoCols;
   }
 
-  /**
-   * Maintains additional state used during index creation.
-   * @usage _advanced_class_
-   */
-  static final class IndexState
-  {
-    private int _indexNumber;
-    private int _indexDataNumber;
-    private byte _umapRowNumber;
-    private int _umapPageNumber;
-    private int _rootPageNumber;
-
-    public int getIndexNumber() {
-      return _indexNumber;
+  private static boolean sameIndexData(IndexBuilder idx1, IndexBuilder idx2) {
+    // index data can be combined if flags match and columns (and col flags)
+    // match
+    if(idx1.getFlags() != idx2.getFlags()) {
+      return false;
     }
 
-    public void setIndexNumber(int newIndexNumber) {
-      _indexNumber = newIndexNumber;
+    if(idx1.getColumns().size() != idx2.getColumns().size()) {
+      return false;
     }
-
-    public int getIndexDataNumber() {
-      return _indexDataNumber;
-    }
-
-    public void setIndexDataNumber(int newIndexDataNumber) {
-      _indexDataNumber = newIndexDataNumber;
-    }
-
-    public byte getUmapRowNumber() {
-      return _umapRowNumber;
-    }
-
-    public void setUmapRowNumber(byte newUmapRowNumber) {
-      _umapRowNumber = newUmapRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
-
-    public int getRootPageNumber() {
-      return _rootPageNumber;
-    }
-
-    public void setRootPageNumber(int newRootPageNumber) {
-      _rootPageNumber = newRootPageNumber;
-    }
-  }
     
-  /**
-   * Maintains additional state used during column creation.
-   * @usage _advanced_class_
-   */
-  static final class ColumnState
-  {
-    private byte _umapOwnedRowNumber;
-    private byte _umapFreeRowNumber;
-    // we always put both usage maps on the same page
-    private int _umapPageNumber;
+    for(int i = 0; i < idx1.getColumns().size(); ++i) {
+      IndexBuilder.Column col1 = idx1.getColumns().get(i);
+      IndexBuilder.Column col2 = idx2.getColumns().get(i);
 
-    public byte getUmapOwnedRowNumber() {
-      return _umapOwnedRowNumber;
+      if(!sameIndexData(col1, col2)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
-    public void setUmapOwnedRowNumber(byte newUmapOwnedRowNumber) {
-      _umapOwnedRowNumber = newUmapOwnedRowNumber;
-}
+  private static boolean sameIndexData(
+      IndexBuilder.Column col1, IndexBuilder.Column col2) {
+    return (col1.getName().equals(col2.getName()) && 
+            (col1.getFlags() == col2.getFlags()));
+  }
 
-    public byte getUmapFreeRowNumber() {
-      return _umapFreeRowNumber;
-    }
-
-    public void setUmapFreeRowNumber(byte newUmapFreeRowNumber) {
-      _umapFreeRowNumber = newUmapFreeRowNumber;
-    }
-
-    public int getUmapPageNumber() {
-      return _umapPageNumber;
-    }
-
-    public void setUmapPageNumber(int newUmapPageNumber) {
-      _umapPageNumber = newUmapPageNumber;
-    }
+  @Override
+  protected String withErrorContext(String msg) {
+    return msg + "(Table=" + getName() + ")";
   }
 }

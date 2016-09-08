@@ -54,7 +54,9 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   private static final byte CASCADE_NULL_FLAG = (byte)2;
 
   /** index table type for the "primary" table in a foreign key index */
-  private static final byte PRIMARY_TABLE_TYPE = (byte)1;
+  static final byte FK_PRIMARY_TABLE_TYPE = (byte)1;
+  /** index table type for the "secondary" table in a foreign key index */
+  static final byte FK_SECONDARY_TABLE_TYPE = (byte)2;
 
   /** indicate an invalid index number for foreign key field */
   private static final int INVALID_INDEX_NUMBER = -1;
@@ -75,7 +77,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
                       JetFormat format) 
     throws IOException
   {
-
     ByteUtil.forward(tableBuffer, format.SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
     _indexNumber = tableBuffer.getInt();
     int indexDataNumber = tableBuffer.getInt();
@@ -342,23 +343,54 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     // write logical index information
     for(IndexBuilder idx : creator.getIndexes()) {
-      TableCreator.IndexState idxState = creator.getIndexState(idx);
-      buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
-      buffer.putInt(idxState.getIndexNumber()); // index num
-      buffer.putInt(idxState.getIndexDataNumber()); // index data num
-      buffer.put((byte)0); // related table type
-      buffer.putInt(INVALID_INDEX_NUMBER); // related index num
-      buffer.putInt(0); // related table definition page number
-      buffer.put((byte)0); // cascade updates flag
-      buffer.put((byte)0); // cascade deletes flag
-      buffer.put(idx.getType()); // index type flags
-      buffer.putInt(0); // unknown
+      writeDefinition(creator, idx, buffer);
     }
 
     // write index names
     for(IndexBuilder idx : creator.getIndexes()) {
       TableImpl.writeName(buffer, idx.getName(), creator.getCharset());
     }
+  }
+
+  protected static void writeDefinition(
+      TableMutator mutator, IndexBuilder idx, ByteBuffer buffer)
+    throws IOException
+  {
+    TableMutator.IndexDataState idxDataState = mutator.getIndexDataState(idx);
+
+    // write logical index information
+    buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER); // seemingly constant magic value which matches the table def
+    buffer.putInt(idx.getIndexNumber()); // index num
+    buffer.putInt(idxDataState.getIndexDataNumber()); // index data num
+
+    byte idxType = idx.getType();
+    if(idxType != FOREIGN_KEY_INDEX_TYPE) {
+      buffer.put((byte)0); // related table type
+      buffer.putInt(INVALID_INDEX_NUMBER); // related index num
+      buffer.putInt(0); // related table definition page number
+      buffer.put((byte)0); // cascade updates flag
+      buffer.put((byte)0); // cascade deletes flag
+    } else {
+      ForeignKeyReference reference = mutator.getForeignKey(idx);
+      buffer.put(reference.getTableType()); // related table type
+      buffer.putInt(reference.getOtherIndexNumber()); // related index num
+      buffer.putInt(reference.getOtherTablePageNumber()); // related table definition page number
+      byte updateFlags = 0;
+      if(reference.isCascadeUpdates()) {
+        updateFlags |= CASCADE_UPDATES_FLAG;
+      }
+      byte deleteFlags = 0;
+      if(reference.isCascadeDeletes()) {
+        deleteFlags |= CASCADE_DELETES_FLAG;
+      }
+      if(reference.isCascadeNullOnDelete()) {
+        deleteFlags |= CASCADE_NULL_FLAG;
+      }
+      buffer.put(updateFlags); // cascade updates flag
+      buffer.put(deleteFlags); // cascade deletes flag
+    }
+    buffer.put(idxType); // index type flags
+    buffer.putInt(0); // unknown
   }
 
   private String withErrorContext(String msg) {
@@ -401,7 +433,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     }
 
     public boolean isPrimaryTable() {
-      return(getTableType() == PRIMARY_TABLE_TYPE);
+      return(getTableType() == FK_PRIMARY_TABLE_TYPE);
     }
 
     public int getOtherIndexNumber() {

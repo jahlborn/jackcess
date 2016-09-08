@@ -33,20 +33,20 @@ public class RelationshipImpl implements Relationship
 {
 
   /** flag indicating one-to-one relationship */
-  private static final int ONE_TO_ONE_FLAG =               0x00000001;
+  public static final int ONE_TO_ONE_FLAG =               0x00000001;
   /** flag indicating no referential integrity */
-  private static final int NO_REFERENTIAL_INTEGRITY_FLAG = 0x00000002;
+  public static final int NO_REFERENTIAL_INTEGRITY_FLAG = 0x00000002;
   /** flag indicating cascading updates (requires referential integrity) */
-  private static final int CASCADE_UPDATES_FLAG =          0x00000100;
+  public static final int CASCADE_UPDATES_FLAG =          0x00000100;
   /** flag indicating cascading deletes (requires referential integrity) */
-  private static final int CASCADE_DELETES_FLAG =          0x00001000;
+  public static final int CASCADE_DELETES_FLAG =          0x00001000;
   /** flag indicating cascading null on delete (requires referential
       integrity) */
-  private static final int CASCADE_NULL_FLAG =             0x00002000;
+  public static final int CASCADE_NULL_FLAG =             0x00002000;
   /** flag indicating left outer join */
-  private static final int LEFT_OUTER_JOIN_FLAG =          0x01000000;
+  public static final int LEFT_OUTER_JOIN_FLAG =          0x01000000;
   /** flag indicating right outer join */
-  private static final int RIGHT_OUTER_JOIN_FLAG =         0x02000000;
+  public static final int RIGHT_OUTER_JOIN_FLAG =         0x02000000;
 
   /** the name of this relationship */
   private final String _name;
@@ -66,13 +66,20 @@ public class RelationshipImpl implements Relationship
   public RelationshipImpl(String name, Table fromTable, Table toTable, int flags,
                           int numCols)
   {
+    this(name, fromTable, toTable, flags, 
+         Collections.nCopies(numCols, (Column)null),
+         Collections.nCopies(numCols, (Column)null));
+  }
+
+  public RelationshipImpl(String name, Table fromTable, Table toTable, int flags,
+                          List<? extends Column> fromCols,
+                          List<? extends Column> toCols)
+  {
     _name = name;
     _fromTable = fromTable;
-    _fromColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _fromColumns = new ArrayList<Column>(fromCols);
     _toTable = toTable;
-    _toColumns = new ArrayList<Column>(
-        Collections.nCopies(numCols, (Column)null));
+    _toColumns = new ArrayList<Column>(toCols);
     _flags = flags;
   }
 
@@ -126,6 +133,15 @@ public class RelationshipImpl implements Relationship
 
   public boolean isRightOuterJoin() {
     return hasFlag(RIGHT_OUTER_JOIN_FLAG);
+  }
+
+  public JoinType getJoinType() {
+    if(isLeftOuterJoin()) {
+      return JoinType.LEFT_OUTER;
+    } else if(isRightOuterJoin()) {
+      return JoinType.RIGHT_OUTER;
+    }
+    return JoinType.INNER;
   }
   
   private boolean hasFlag(int flagMask) {

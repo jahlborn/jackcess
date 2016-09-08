@@ -672,7 +672,7 @@ public abstract class JetFormat {
     @Override
     protected int defineMaxCompressedUnicodeSize() { return 1024; }
     @Override
-    protected int defineSizeTdefHeader() { return 63; }
+    protected int defineSizeTdefHeader() { return 43; }
     @Override
     protected int defineSizeTdefTrailer() { return 2; }
     @Override

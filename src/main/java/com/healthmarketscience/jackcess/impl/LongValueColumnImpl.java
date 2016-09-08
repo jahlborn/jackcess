@@ -17,8 +17,10 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collection;
 
 
 /**
@@ -69,6 +71,11 @@ class LongValueColumnImpl extends ColumnImpl
     _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
   }
 
+  @Override
+  void collectUsageMapPages(Collection<Integer> pages) {
+    _lvalBufferH.collectUsageMapPages(pages);
+  }
+  
   @Override
   void postTableLoadInit() throws IOException {
     if(_lvalBufferH == null) {
@@ -440,6 +447,10 @@ class LongValueColumnImpl extends ColumnImpl
       getBufferHolder().clear();
     }
 
+    public void collectUsageMapPages(Collection<Integer> pages) {
+      // base does nothing
+    }
+
     protected abstract TempPageHolder getBufferHolder();
   }
 
@@ -515,6 +526,12 @@ class LongValueColumnImpl extends ColumnImpl
         _freeSpacePages.removePageNumber(pageNumber, true);
       }
       super.clear();
+    }
+
+    @Override
+    public void collectUsageMapPages(Collection<Integer> pages) {
+      pages.add(_ownedPages.getTablePageNumber());
+      pages.add(_freeSpacePages.getTablePageNumber());
     }
   }
 }

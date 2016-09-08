@@ -50,7 +50,7 @@ final class FKEnforcer
     CaseInsensitiveColumnMatcher.INSTANCE;
 
   private final TableImpl _table;
-  private final List<ColumnImpl> _cols;
+  private List<ColumnImpl> _cols;
   private List<Joiner> _primaryJoinersChkUp;
   private List<Joiner> _primaryJoinersChkDel;
   private List<Joiner> _primaryJoinersDoUp;
@@ -62,6 +62,10 @@ final class FKEnforcer
     _table = table;
 
     // at this point, only init the index columns
+    initColumns();
+  }
+
+  private void initColumns() {
     Set<ColumnImpl> cols = new TreeSet<ColumnImpl>();
     for(IndexImpl idx : _table.getIndexes()) {
       IndexImpl.ForeignKeyReference ref = idx.getReference();
@@ -76,6 +80,22 @@ final class FKEnforcer
     _cols = !cols.isEmpty() ?
       Collections.unmodifiableList(new ArrayList<ColumnImpl>(cols)) :
       Collections.<ColumnImpl>emptyList();
+  }
+
+  /**
+   * Resets the internals of this FKEnforcer (for post-table modification)
+   */
+  void reset() {
+    // columns to enforce may have changed
+    initColumns();
+
+    // clear any existing joiners (will be re-created on next use)
+    _primaryJoinersChkUp = null;
+    _primaryJoinersChkDel = null;
+    _primaryJoinersDoUp = null;
+    _primaryJoinersDoDel = null;
+    _primaryJoinersDoNull = null;
+    _secondaryJoiners = null;
   }
 
   /**

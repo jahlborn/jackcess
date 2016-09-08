@@ -28,6 +28,7 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
+import com.healthmarketscience.jackcess.impl.TableCreator;
 
 /**
  * Builder style class for constructing a {@link Table}.
@@ -44,6 +45,9 @@ import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
  * </pre>
  *
  * @author James Ahlborn
+ * @see ColumnBuilder
+ * @see IndexBuilder
+ * @see RelationshipBuilder
  * @usage _general_class_
  */
 public class TableBuilder {
@@ -116,6 +120,9 @@ public class TableBuilder {
     }
   }
 
+  public String getName() {
+    return _name;
+  }
 
   /**
    * Adds a Column to the new table.
@@ -140,6 +147,10 @@ public class TableBuilder {
     return this;
   }
 
+  public List<ColumnBuilder> getColumns() {
+    return _columns;
+  }
+  
   /**
    * Adds an IndexBuilder to the new table.
    */
@@ -154,6 +165,22 @@ public class TableBuilder {
     return this;
   }
 
+  /**
+   * Adds the Indexes to the new table.
+   */
+  public TableBuilder addIndexes(Collection<? extends IndexBuilder> indexes) {
+    if(indexes != null) {
+      for(IndexBuilder col : indexes) {
+        addIndex(col);
+      }
+    }
+    return this;
+  }
+
+  public List<IndexBuilder> getIndexes() {
+    return _indexes;
+  }
+  
   /**
    * Sets whether or not subsequently added columns will have their names
    * automatically escaped
@@ -202,35 +229,16 @@ public class TableBuilder {
     return this;
   }
 
+  public Map<String,PropertyMap.Property> getProperties() {
+    return _props;
+  }
+
   /**
    * Creates a new Table in the given Database with the currently configured
    * attributes.
    */
-  public Table toTable(Database db)
-    throws IOException
-  {
-    ((DatabaseImpl)db).createTable(_name, _columns, _indexes);
-    Table table = db.getTable(_name);
-
-    boolean addedProps = false;
-    if(_props != null) {
-      table.getProperties().putAll(_props.values());
-      addedProps = true;
-    }
-    for(ColumnBuilder cb : _columns) {
-      Map<String,PropertyMap.Property> colProps = cb.getProperties();
-      if(colProps != null) {
-        table.getColumn(cb.getName()).getProperties().putAll(colProps.values());
-        addedProps = true;
-      }
-    }
-
-    // all table and column props are saved together
-    if(addedProps) {
-      table.getProperties().save();
-    }
-    
-    return table;
+  public Table toTable(Database db) throws IOException {
+    return new TableCreator(((DatabaseImpl)db)).createTable(this);
   }
 
   /**

@@ -19,8 +19,6 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -147,37 +145,13 @@ public class CursorBuilder {
    * Searches for an index with the given column names.
    */
   private CursorBuilder setIndexByColumns(List<String> searchColumns) {
-    boolean found = false;
-    for(IndexImpl index : _table.getIndexes()) {
-      
-      Collection<? extends Index.Column> indexColumns = index.getColumns();
-      if(indexColumns.size() != searchColumns.size()) {
-        continue;
-      }
-      Iterator<String> sIter = searchColumns.iterator();
-      Iterator<? extends Index.Column> iIter = indexColumns.iterator();
-      boolean matches = true;
-      while(sIter.hasNext()) {
-        String sColName = sIter.next();
-        String iColName = iIter.next().getName();
-        if((sColName != iColName) &&
-           ((sColName == null) || !sColName.equalsIgnoreCase(iColName))) {
-          matches = false;
-          break;
-        }
-      }
-
-      if(matches) {
-        _index = index;
-        found = true;
-        break;
-      }
-    }
-    if(!found) {
+    IndexImpl index = _table.findIndexForColumns(searchColumns, false);
+    if(index == null) {
       throw new IllegalArgumentException("Index with columns " +
                                          searchColumns +
                                          " does not exist in table " + _table);
     }
+    _index = index;
     return this;
   }
 

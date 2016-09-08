@@ -135,6 +135,19 @@ public class PageChannel implements Channel, Flushable {
   }
 
   /**
+   * Begins an exclusive "logical" write operation (throws an exception if
+   * another write operation is outstanding).  See {@link #finishWrite} for
+   * more details.
+   */
+  public void startExclusiveWrite() {
+    if(_writeCount != 0) {
+      throw new IllegalArgumentException(
+          "Another write operation is currently in progress");
+    }
+    startWrite();
+  }
+
+  /**
    * Completes a "logical" write operation.  This method should be called in
    * finally block which wraps a logical write operation (which is preceded by
    * a {@link #startWrite} call).  Logical write operations may be nested.  If

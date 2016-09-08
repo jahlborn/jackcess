@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,12 +26,16 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.TableUpdater;
 
 /**
  * Builder style class for constructing an {@link Index}.  See {@link
- * TableBuilder} for example usage.
+ * TableBuilder} for example usage.  Additionally, an Index can be added to an
+ * existing Table using the {@link #addToTable(Table)} method.
  *
  * @author James Ahlborn
+ * @see TableBuilder
  * @usage _general_class_
  */
 public class IndexBuilder 
@@ -47,6 +52,8 @@ public class IndexBuilder
   private byte _flags = IndexData.UNKNOWN_INDEX_FLAG;
   /** the names and orderings of the indexed columns */
   private final List<Column> _columns = new ArrayList<Column>();
+  /** 0-based index number */
+  private int _indexNumber;
 
   public IndexBuilder(String name) {
     _name = name;
@@ -118,6 +125,14 @@ public class IndexBuilder
   }
 
   /**
+   * @usage _advanced_method_
+   */
+  public IndexBuilder setType(byte type) {
+    _type = type;
+    return this;
+  }
+
+  /**
    * Sets this index to enforce uniqueness.
    */
   public IndexBuilder setUnique() {
@@ -141,6 +156,26 @@ public class IndexBuilder
     return this;
   }    
 
+  /**
+   * @usage _advanced_method_
+   */
+  public int getIndexNumber() {
+    return _indexNumber;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public void setIndexNumber(int newIndexNumber) {
+    _indexNumber = newIndexNumber;
+  }
+
+  /**
+   * Checks that this index definition is valid.
+   *
+   * @throws IllegalArgumentException if this index definition is invalid.
+   * @usage _advanced_method_
+   */
   public void validate(Set<String> tableColNames, JetFormat format) {
 
     DatabaseImpl.validateIdentifierName(
@@ -167,6 +202,14 @@ public class IndexBuilder
             "column named " + col.getName() + " not found in table"));
       }
     }
+  }
+
+  /**
+   * Adds a new Index to the given Table with the currently configured
+   * attributes.
+   */
+  public Index addToTable(Table table) throws IOException {
+      return new TableUpdater((TableImpl)table).addIndex(this);
   }
 
   private String withErrorContext(String msg) {

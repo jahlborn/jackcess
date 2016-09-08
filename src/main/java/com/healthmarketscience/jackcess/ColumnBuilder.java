@@ -25,12 +25,16 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.TableUpdater;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
- * TableBuilder} for example usage.
+ * TableBuilder} for example usage.  Additionally, a Column can be added to an
+ * existing Table using the {@link #addToTable(Table)} method.
  *
  * @author James Ahlborn
+ * @see TableBuilder
  * @usage _general_class_
  */
 public class ColumnBuilder {
@@ -381,12 +385,12 @@ public class ColumnBuilder {
    * @usage _advanced_method_
    */
   public void validate(JetFormat format) {
-    if(getType() == null) {
-      throw new IllegalArgumentException(withErrorContext("must have type"));
-    }
     DatabaseImpl.validateIdentifierName(
         getName(), format.MAX_COLUMN_NAME_LENGTH, "column");
 
+    if(getType() == null) {
+      throw new IllegalArgumentException(withErrorContext("must have type"));
+    }
     if(getType().isUnsupported()) {
       throw new IllegalArgumentException(withErrorContext(
           "Cannot create column with unsupported type " + getType()));
@@ -470,6 +474,14 @@ public class ColumnBuilder {
   public ColumnBuilder toColumn() {
     // for backwards compat w/ old code
     return this;
+  }
+
+  /**
+   * Adds a new Column to the given Table with the currently configured
+   * attributes.
+   */
+  public Column addToTable(Table table) throws IOException {
+      return new TableUpdater((TableImpl)table).addColumn(this);
   }
 
   private String withErrorContext(String msg) {
