@@ -16,7 +16,11 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -51,7 +55,6 @@ public class TableUpdaterTest extends TestCase
       Database db = create(fileFormat);
 
       doTestUpdating(db, true, true);
-      // FIXME, add one-to-one, add no enforce rel
  
       db.close();
     }    
@@ -174,4 +177,76 @@ public class TableUpdaterTest extends TestCase
       }
     }
   }
+
+  public void testInvalidUpdate() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      Table t1 = new TableBuilder("TestTable")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .toTable(db);
+
+      try {
+        new ColumnBuilder("ID", DataType.TEXT)
+          .addToTable(t1);
+        fail("created table with no columns?");
+      } catch(IllegalArgumentException e) {
+        // success
+      }
+
+      new TableBuilder("TestTable2")
+        .addColumn(new ColumnBuilder("id2", DataType.LONG))
+        .toTable(db);
+
+      try {
+        new RelationshipBuilder("TestTable", "TestTable2")
+          .addColumns("id", "id")
+          .toRelationship(db);
+        fail("created rel with wrong columns?");
+      } catch(IllegalArgumentException e) {
+        // success
+      }
+ 
+      db.close();
+    }    
+  }
+
+  public void testUpdateLargeTableDef() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      final int numColumns = 89;
+
+      Table t = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("first", DataType.TEXT))
+        .toTable(db);
+
+      List<String> colNames = new ArrayList<String>();
+      colNames.add("first");
+      for(int i = 0; i < numColumns; ++i) {
+        String colName = "MyColumnName" + i;
+        colNames.add(colName);
+        DataType type = (((i % 3) == 0) ? DataType.MEMO : DataType.TEXT);
+        new ColumnBuilder(colName, type)
+          .addToTable(t);
+      }
+
+      List<String> row = new ArrayList<String>();
+      Map<String,Object> expectedRowData = new LinkedHashMap<String, Object>();
+      for(int i = 0; i < colNames.size(); ++i) {
+        String value = "" + i + " some row data";
+        row.add(value);
+        expectedRowData.put(colNames.get(i), value);
+      }
+
+      t.addRow(row.toArray());
+
+      t.reset();
+      assertEquals(expectedRowData, t.getNextRow());
+
+      db.close();
+    }
+  } 
 }

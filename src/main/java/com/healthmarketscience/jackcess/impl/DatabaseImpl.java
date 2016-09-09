@@ -1716,12 +1716,12 @@ public class DatabaseImpl implements Database
   }
 
   public void validateNewTableName(String name) throws IOException {
+    validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
+
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(withErrorContext(
               "Cannot create table with name of existing table '" + name + "'"));
     }
-
-    validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
   }
   
   /**

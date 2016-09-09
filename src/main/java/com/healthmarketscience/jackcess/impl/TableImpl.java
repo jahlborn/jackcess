@@ -1560,6 +1560,10 @@ public class TableImpl implements Table
     return tableBuffer;
   }
 
+  /**
+   * Adds some usage maps for use with this table.  This method is expected to
+   * be called with a small-ish number of requested usage maps.
+   */
   private Map.Entry<Integer,Integer> addUsageMaps(
       int numMaps, Integer firstUsedPage)
     throws IOException
@@ -1595,6 +1599,7 @@ public class TableImpl implements Table
     if(umapPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
       
       // didn't find any existing pages, need to create a new one
+      umapPageNumber = pageChannel.allocateNewPage();
       freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
       firstRowNum = 0;
       umapBuf = createUsageMapDefPage(pageChannel, freeSpace);
