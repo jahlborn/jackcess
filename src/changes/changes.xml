@@ -9,6 +9,16 @@
         Change multi-value complex columns so that they return all relevant
         column properties.
       </action>
+      <action dev="jahlborn" type="update">
+        Add some initial support for Table metadata modification.  Columns and
+        Indexes can now be added to an existing table (using
+        ColumnBuilder.addToTable and IndexBuilder.addToTable respectively).
+      </action>
+      <action dev="jahlborn" type="update">
+        Add the ability to create Relationships using RelationshipBuilder.
+        With this support finally brings the ability to create foreign key
+        indexes (aka integrity enforcement in Relationships).
+      </action>
     </release>
     <release version="2.1.4" date="2016-05-18">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="131">

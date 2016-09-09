@@ -192,19 +192,19 @@
           is possible may be out of date).
         </p>
         <p>
-          As of version 2.1.0, Jackcess supports:
+          As of version 2.1.5, Jackcess supports:
         </p>
         <ul>
           <li>Creating databases for Access all versions 2000-2013</li>
           <li>Creating columns for all simple data types</li>
           <li>Creating tables with single-table Indexes</li>
+          <li>Creating tables with (index backed) foreign-key constraints
+              (i.e. relationships with integrity enforcement enabled)</li>
         </ul>
         <p>
           Some notable gaps:
         </p>
         <ul>
-          <li>Cannot currently create tables with (index backed) foreign-key
-              constraints</li>
           <li>Cannot currently create tables with "complex" columns
               (attachment, multi-value, versioned memo)</li>
         </ul>
