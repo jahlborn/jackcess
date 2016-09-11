@@ -243,13 +243,12 @@
     .addColumn(new ColumnBuilder("StartDate", DataType.SHORT_DATE_TIME))
     .toTable(db);
 </source>
-      </subsection>
-      <p>
-        That is a very simple Table.  In the real world, we often need Indexes
-        to speed up lookups and enforce uniqueness constraints.  Adding the
-        following to the previous example will make the "ID" column a primary
-        key and enable speedier lookups on the "Name" column.
-      </p>
+        <p>
+          That is a very simple Table.  In the real world, we often need Indexes
+          to speed up lookups and enforce uniqueness constraints.  Adding the
+          following to the previous example will make the "ID" column a primary
+          key and enable speedier lookups on the "Name" column.
+        </p>
 <source>
   // ... new TableBuilder( ...
     .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
@@ -258,11 +257,12 @@
               .addColumns("Name"))
   // ... .toTable( ...
 </source>
-      <p>
-        Don't forget to close the Database when you are finished building it
-        and now you have a fresh, new Database on which to test some more
-        recipes.
-      </p>
+        <p>
+          Don't forget to close the Database when you are finished building it
+          and now you have a fresh, new Database on which to test some more
+          recipes.
+        </p>
+      </subsection>
     </section>
 
     <section name="Finding Stuff">
@@ -363,17 +363,13 @@
   }
 </source>
       </subsection>
-
-      <p>
-        FIXME, writeme
-      </p>
     </section>
 
-    <section name="Miscellaneous Examples">
-      <p>
-        FIXME, writeme
-      </p>
-    </section>
+    <!-- <section name="Miscellaneous Examples"> -->
+    <!--   <p> -->
+    <!--     FIXME, writeme -->
+    <!--   </p> -->
+    <!-- </section> -->
 
   </body>
 </document>

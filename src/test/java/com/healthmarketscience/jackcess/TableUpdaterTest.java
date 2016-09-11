@@ -195,9 +195,17 @@ public class TableUpdaterTest extends TestCase
         // success
       }
 
-      new TableBuilder("TestTable2")
+      Table t2 = new TableBuilder("TestTable2")
         .addColumn(new ColumnBuilder("id2", DataType.LONG))
         .toTable(db);
+
+      try {
+        new RelationshipBuilder(t1, t2)
+          .toRelationship(db);
+        fail("created rel with no columns?");
+      } catch(IllegalArgumentException e) {
+        // success
+      }
 
       try {
         new RelationshipBuilder("TestTable", "TestTable2")

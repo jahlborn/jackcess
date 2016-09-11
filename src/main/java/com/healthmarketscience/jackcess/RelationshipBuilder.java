@@ -59,8 +59,11 @@ public class RelationshipBuilder
   private List<String> _fromCols = new ArrayList<String>();
   private List<String> _toCols = new ArrayList<String>(); 
 
-  public RelationshipBuilder(String fromTable, String toTable) 
-  {
+  public RelationshipBuilder(Table fromTable, Table toTable) {
+    this(fromTable.getName(), toTable.getName());
+  }
+
+  public RelationshipBuilder(String fromTable, String toTable) {
     _fromTable = fromTable;
     _toTable = toTable;
   }
@@ -72,6 +75,13 @@ public class RelationshipBuilder
     _fromCols.add(fromCol);
     _toCols.add(toCol);
     return this;
+  }
+
+  /**
+   * Adds a pair of columns to the relationship.
+   */
+  public RelationshipBuilder addColumns(Column fromCol, Column toCol) {
+    return addColumns(fromCol.getName(), toCol.getName());
   }
 
   /**
