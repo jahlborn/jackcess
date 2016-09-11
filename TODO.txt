@@ -13,7 +13,7 @@ Missing pieces:
 - figure out how msaccess manages page/row locks
   * MEDIUM
 
-Rename:
+Rename implications:
 - Table - update table def, queries, relationships, complex tables?
 - Column - update table def, queries, relationships, complex tables?
 - Index - update table def
