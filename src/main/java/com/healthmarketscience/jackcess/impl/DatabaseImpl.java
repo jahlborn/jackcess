@@ -28,6 +28,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -74,6 +75,7 @@ import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.poi.poifs.filesystem.Entry;
 
 
 /**
@@ -717,6 +719,18 @@ public class DatabaseImpl implements Database
           Calendar.getInstance(_timeZone));
     }
     return _calendar;
+  }
+
+  /**
+   * Returns a SimpleDateFormat for the given format string which is
+   * configured with a compatible Calendar instance (see
+   * {@link DatabaseBuilder#toCompatibleCalendar}) and this database's
+   * {@link TimeZone}.
+   */
+  public SimpleDateFormat createDateFormat(String formatStr) {
+    SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
+    sdf.setTimeZone(getTimeZone());
+    return sdf;
   }
 
   /**
