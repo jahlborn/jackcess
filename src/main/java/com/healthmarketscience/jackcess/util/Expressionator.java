@@ -153,13 +153,30 @@ public class Expressionator
 
       switch(t.getType()) {
       case OBJ_NAME:
+
+        buf.setPendingExpr(parseObjectReference(t, buf));
         break;
+
       case LITERAL:
+        
+        buf.setPendingExpr(new ELiteralValue(t.getValue()));
         break;
+        
       case OP:
-        break;
-      case STRING:
+
         WordType wordType = getWordType(t);
+        if(wordType == null) {
+          // shouldn't happen
+          throw new RuntimeException("Invalid operator " + t);
+        }
+
+        
+        break;
+        
+      case STRING:
+
+        // see if it's a special word?
+        wordType = getWordType(t);
         if(wordType == null) {
           // literal string? or possibly function?
           Expr funcExpr = maybeParseFuncCall(t, buf, exprType, isSimpleExpr);
@@ -167,25 +184,68 @@ public class Expressionator
             buf.setPendingExpr(funcExpr);
             continue;
           }
+
+          // FIXME maybe obj name, maybe string?
+          
+        } else {
+        
+        
           // FIXME
         }
+
         break;
+        
       case SPACE:
-        // top-level space is irrelevant
+        // top-level space is irrelevant (and we strip them anyway)
         break;
+        
       default:
-        throw new RuntimeException("unknown token type " + t.getType());
+        throw new RuntimeException("unknown token type " + t);
       }
     }
 
     Expr expr = buf.takePendingExpr();
     if(expr == null) {
-      throw new IllegalArgumentException("No expression found?");
+      throw new IllegalArgumentException("No expression found? " + buf);
     }
 
     return expr;
   }
 
+  private static Expr parseObjectReference(Token firstTok, TokBuf buf) {
+
+    // object references may be joined by '.' or '!';
+    List<String> objNames = new ArrayList<String>();
+    objNames.add(firstTok.getValueStr());
+
+    Token t = null;
+    boolean atSep = false;
+    while((t = buf.peekNext()) != null) {
+      if(!atSep) {
+        if(isOp(t, ".") || isOp(t, "!")) {
+          buf.next();
+          atSep = true;
+          continue;
+        } 
+      } else {
+        if((t.getType() == TokenType.OBJ_NAME) ||
+           (t.getType() == TokenType.STRING)) {
+          buf.next();
+          objNames.add(t.getValueStr());
+          atSep = false;
+          continue;
+        }
+      }
+      break;
+    }
+
+    if(atSep) {
+      throw new IllegalArgumentException("Invalid object reference " + buf);
+    }
+    
+    return new EObjValue(objNames);
+  }
+  
   private static Expr maybeParseFuncCall(Token firstTok, TokBuf buf,
                                          Type exprType, boolean isSimpleExpr) {
 
@@ -210,7 +270,7 @@ public class Expressionator
         }
       }
         
-      return new EFunc((String)firstTok.getValue(), params);
+      return new EFunc(firstTok.getValueStr(), params);
 
     } finally {
       if(!foundFunc) {
@@ -254,7 +314,7 @@ public class Expressionator
             for(TokBuf paramBuf : params) {
               if(!paramBuf.hasNext()) {
                 throw new IllegalArgumentException(
-                    "Invalid empty parameter for function");
+                    "Invalid empty parameter for function " + paramBuf);
               }
             }
           }
@@ -270,7 +330,7 @@ public class Expressionator
     }
 
     throw new IllegalArgumentException("Missing closing '" + FUNC_END_DELIM +
-                                       "' for function call");
+                                       "' for function call " + buf);
   }
 
   private static boolean isSimpleExpression(TokBuf buf, Type exprType) {
@@ -290,12 +350,11 @@ public class Expressionator
   }
 
   private static boolean isOp(Token t, String opStr) {
-    return ((t.getType() == TokenType.OP) && 
-            opStr.equalsIgnoreCase((String)t.getValue()));
+    return ((t.getType() == TokenType.OP) && opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
   private static WordType getWordType(Token t) {
-    return WORD_TYPES.get(((String)t.getValue()).toLowerCase());
+    return WORD_TYPES.get(t.getValueStr().toLowerCase());
   }
 
   private static void setWordType(WordType type, String... words) {
@@ -307,21 +366,21 @@ public class Expressionator
   private static final class TokBuf
   {
     private final List<Token> _tokens;
-    private final boolean _topLevel;
+    private final TokBuf _parent;
     private int _pos;
     private Expr _pendingExpr;
 
     private TokBuf(List<Token> tokens) {
-      this(tokens, true);
+      this(tokens, null);
     }
 
-    private TokBuf(List<Token> tokens, boolean topLevel) {
+    private TokBuf(List<Token> tokens, TokBuf parent) {
       _tokens = tokens;
-      _topLevel = topLevel;
+      _parent = parent;
     }
 
     public boolean isTopLevel() {
-      return _topLevel;
+      return (_parent == null);
     }
 
     public int curPos() {
@@ -352,12 +411,13 @@ public class Expressionator
     }
 
     public TokBuf subBuf(int start, int end) {
-      return new TokBuf(_tokens.subList(start, end), false);
+      return new TokBuf(_tokens.subList(start, end), this);
     }
 
     public void setPendingExpr(Expr expr) {
       if(_pendingExpr == null) {
-        throw new IllegalArgumentException("Found multiple expressions with no operator");
+        throw new IllegalArgumentException(
+            "Found multiple expressions with no operator " + this);
       }
       _pendingExpr = expr;
     } 
@@ -371,6 +431,12 @@ public class Expressionator
     public boolean hasPendingExpr() {
       return (_pendingExpr != null);
     }
+
+    @Override
+    public String toString() {
+      // FIXME show current pos
+      return null;
+    } 
   }
 
   public static abstract class Expr
@@ -415,17 +481,19 @@ public class Expressionator
     }
   }
 
-  private static final class EColumnValue extends Expr
+  private static final class EObjValue extends Expr
   {
-    private final String _colName;
+    private final List<String> _objNames;
 
-    private EColumnValue(String colName) {
-      _colName = colName;
+    private EObjValue(List<String> objNames) {
+      _objNames = objNames;
     }
 
     @Override
     public Object eval(RowContext ctx) {
-      return ctx.getRowValue(_colName);
+      // FIXME
+      return null;
+      // return ctx.getRowValue(_colName);
     }
   }
 

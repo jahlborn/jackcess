@@ -482,6 +482,10 @@ class ExpressionTokenizer
       return _val;
     }
 
+    public String getValueStr() {
+      return (String)_val;
+    }
+
     @Override
     public String toString() {
       if(_type == TokenType.SPACE) {
