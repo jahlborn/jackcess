@@ -19,11 +19,12 @@ package com.healthmarketscience.jackcess.util;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
@@ -96,16 +97,19 @@ class ExpressionTokenizer
         // what could it be?
         switch(charFlag) {
         case IS_OP_FLAG:
+
           // special case '-' for negative number
-          Object numLit = maybeParseNumberLiteral(c, buf);
+          Map.Entry<?,String> numLit = maybeParseNumberLiteral(c, buf);
           if(numLit != null) {
-            tokens.add(new Token(TokenType.LITERAL, numLit));
+            tokens.add(new Token(TokenType.LITERAL, numLit.getKey(), 
+                                 numLit.getValue()));
             continue;
           }
           
           // all simple operator chars are single character operators
           tokens.add(new Token(TokenType.OP, String.valueOf(c)));
           break;
+
         case IS_COMP_FLAG:
 
           switch(exprType) {
@@ -120,8 +124,11 @@ class ExpressionTokenizer
             }
             // def values can't have cond at top level
             throw new IllegalArgumentException(
-                exprType + " cannot have top-level conditional");
+                exprType + " cannot have top-level conditional " + buf);
+
           case FIELD_VALIDATOR:
+          case RECORD_VALIDATOR:
+
             tokens.add(new Token(TokenType.OP, parseCompOp(c, buf)));
             break;
           }
@@ -148,15 +155,16 @@ class ExpressionTokenizer
             tokens.add(new Token(TokenType.LITERAL, parseQuotedString(buf)));
             break;
           case DATE_LIT_DELIM_CHAR:
-            tokens.add(new Token(TokenType.LITERAL, 
-                                 parseDateLiteralString(buf, db)));
+            Map.Entry<?,String> dateLit = parseDateLiteralString(buf, db);
+            tokens.add(new Token(TokenType.LITERAL, dateLit.getKey(), 
+                                 dateLit.getValue()));
             break;
           case OBJ_NAME_START_CHAR:
             tokens.add(new Token(TokenType.OBJ_NAME, parseObjNameString(buf)));
             break;
           default:
             throw new IllegalArgumentException(
-                "Invalid leading quote character " + c);
+                "Invalid leading quote character " + c + " " + buf);
           }
 
           break;
@@ -168,9 +176,10 @@ class ExpressionTokenizer
       } else {
 
         if(isDigit(c)) {
-          Object numLit = maybeParseNumberLiteral(c, buf);
+          Map.Entry<?,String> numLit = maybeParseNumberLiteral(c, buf);
           if(numLit != null) {
-            tokens.add(new Token(TokenType.LITERAL, numLit));
+            tokens.add(new Token(TokenType.LITERAL, numLit.getKey(), 
+                                 numLit.getValue()));
             continue;
           }
         }
@@ -262,17 +271,19 @@ class ExpressionTokenizer
 
     if(!complete) {
       throw new IllegalArgumentException("Missing closing '" + QUOTED_STR_CHAR + 
-                                         "' for quoted string");
+                                         "' for quoted string " + buf);
     }
 
     return sb.toString();
   }
 
   private static String parseObjNameString(ExprBuf buf) {
-    return parseStringUntil(buf, OBJ_NAME_END_CHAR);
+    return parseStringUntil(buf, OBJ_NAME_END_CHAR, OBJ_NAME_START_CHAR);
   }
 
-  private static String parseStringUntil(ExprBuf buf, char endChar) {
+  private static String parseStringUntil(ExprBuf buf, char endChar, 
+                                         Character startChar) 
+  {
     StringBuilder sb = buf.getScratchBuffer();
 
     boolean complete = false;
@@ -281,6 +292,10 @@ class ExpressionTokenizer
       if(c == endChar) {
         complete = true;
         break;
+      } else if((startChar != null) &&
+                (startChar == c)) {
+        throw new IllegalArgumentException("Missing closing '" + endChar +
+                                           "' for quoted string " + buf);
       }
 
       sb.append(c);
@@ -288,14 +303,16 @@ class ExpressionTokenizer
 
     if(!complete) {
       throw new IllegalArgumentException("Missing closing '" + endChar +
-                                         "' for quoted string");
+                                         "' for quoted string " + buf);
     }
 
     return sb.toString();
   }
 
-  private static Date parseDateLiteralString(ExprBuf buf, DatabaseImpl db) {
-    String dateStr = parseStringUntil(buf, DATE_LIT_DELIM_CHAR);
+  private static Map.Entry<?,String> parseDateLiteralString(
+      ExprBuf buf, DatabaseImpl db) 
+  {
+    String dateStr = parseStringUntil(buf, DATE_LIT_DELIM_CHAR, null);
     
     boolean hasDate = (dateStr.indexOf('/') >= 0);
     boolean hasTime = (dateStr.indexOf(':') >= 0);
@@ -308,19 +325,20 @@ class ExpressionTokenizer
     } else if(hasTime) {
       sdf = buf.getTimeFormat(db);
     } else {
-      throw new IllegalArgumentException("Invalid date time literal " + dateStr);
+      throw new IllegalArgumentException("Invalid date time literal " + dateStr +
+                                         " " + buf);
     }
 
     // FIXME, do we need to know which "type" it was?
     try {
-      return sdf.parse(dateStr);
+      return newEntry(sdf.parse(dateStr), dateStr);
     } catch(ParseException pe) {
       throw new IllegalArgumentException(       
-          "Invalid date time literal " + dateStr, pe);
+          "Invalid date time literal " + dateStr + " " + buf, pe);
     }
   }
 
-  private static Object maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
+  private static Map.Entry<?,String> maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
     StringBuilder sb = buf.getScratchBuffer().append(firstChar);
     boolean hasDigit = isDigit(firstChar);
 
@@ -356,10 +374,10 @@ class ExpressionTokenizer
         // what number type to use here?
         BigDecimal num = new BigDecimal(numStr);
         foundNum = true;
-        return num;
+        return newEntry(num, numStr);
       } catch(NumberFormatException ne) {
         throw new IllegalArgumentException(
-            "Invalid number literal " + numStr, ne);
+            "Invalid number literal " + numStr + " " + buf, ne);
       }
       
     } finally {
@@ -381,6 +399,10 @@ class ExpressionTokenizer
 
   private static boolean isDigit(int c) {
     return ((c >= '0') && (c <= '9'));
+  }
+
+  static <K,V> Map.Entry<K,V> newEntry(K a, V b) {
+    return new AbstractMap.SimpleImmutableEntry<K,V>(a, b);
   }
 
   private static final class ExprBuf
@@ -461,6 +483,11 @@ class ExpressionTokenizer
       return ((db != null) ? db.createDateFormat(str) :
               DatabaseBuilder.createDateFormat(str));
     } 
+
+    @Override
+    public String toString() {
+      return "[char " + _pos + "] '" + _str + "'";
+    }
   }
 
 
@@ -468,10 +495,16 @@ class ExpressionTokenizer
   {
     private final TokenType _type;
     private final Object _val;
+    private final String _valStr;
 
-    private Token(TokenType type, Object val) {
+    private Token(TokenType type, String val) {
+      this(type, val, val);
+    }
+
+    private Token(TokenType type, Object val, String valStr) {
       _type = type;
       _val = val;
+      _valStr = valStr;
     }
 
     public TokenType getType() {
@@ -483,7 +516,7 @@ class ExpressionTokenizer
     }
 
     public String getValueStr() {
-      return (String)_val;
+      return _valStr;
     }
 
     @Override

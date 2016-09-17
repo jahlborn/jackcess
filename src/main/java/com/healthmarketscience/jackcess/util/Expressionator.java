@@ -22,10 +22,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,8 +44,13 @@ import static com.healthmarketscience.jackcess.util.ExpressionTokenizer.TokenTyp
 public class Expressionator 
 {
 
+  // Useful links:
+  // - syntax: https://support.office.com/en-us/article/Guide-to-expression-syntax-ebc770bc-8486-4adc-a9ec-7427cce39a90
+  // - examples: https://support.office.com/en-us/article/Examples-of-expressions-d3901e11-c04e-4649-b40b-8b6ec5aed41f
+  // - validation rule usage: https://support.office.com/en-us/article/Restrict-data-input-by-using-a-validation-rule-6c0b2ce1-76fa-4be0-8ae9-038b52652320
+
   public enum Type {
-    DEFAULT_VALUE, FIELD_VALIDATOR;
+    DEFAULT_VALUE, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
 
   private enum WordType {
@@ -104,6 +112,12 @@ public class Expressionator
 
   public static Expr parse(Type exprType, String exprStr, Database db) {
 
+    // FIXME,restrictions:
+    // - default value only accepts simple exprs, otherwise becomes literal text
+    // - def val cannot refer to any columns
+    // - field validation cannot refer to other columns
+    // - record validation cannot refer to outside columns
+
     List<Token> tokens = trimSpaces(
         ExpressionTokenizer.tokenize(exprType, exprStr, (DatabaseImpl)db));
 
@@ -145,6 +159,7 @@ public class Expressionator
   private static Expr parseExpression(Type exprType, TokBuf buf, 
                                       boolean isSimpleExpr)     
   {
+    // FIXME pass exprType and isSimple expr in TokBuf?
 
     // FIXME, how do we handle order of ops when no parens?
     
@@ -170,6 +185,45 @@ public class Expressionator
           throw new RuntimeException("Invalid operator " + t);
         }
 
+        // this can old be an OP or a COMP (those are the only words that the
+        // tokenizer would define as TokenType.OP)
+        switch(wordType) {
+        case OP:
+
+          // most ops are two argument except that '-' could be negation
+          if(buf.hasPendingExpr()) {
+            buf.setPendingExpr(parseBinaryOperator(t, buf, exprType,
+                                                   isSimpleExpr));
+          } else if(isOp(t, "-")) {
+            buf.setPendingExpr(parseUnaryOperator(t, buf, exprType, 
+                                                  isSimpleExpr));
+          } else {
+            throw new IllegalArgumentException(
+                "Missing left expression for binary operator " + t.getValue() + 
+                " " + buf);
+          }
+          break;
+
+        case COMP:
+
+          if(!buf.hasPendingExpr() && (exprType == Type.FIELD_VALIDATOR)) {
+            // comparison operators for field validators can implicitly use
+            // the current field value for the left value
+            buf.setPendingExpr(THIS_COL_VALUE);
+          }
+          if(buf.hasPendingExpr()) {
+            buf.setPendingExpr(parseCompOperator(t, buf, exprType,
+                                                 isSimpleExpr));
+          } else {
+            throw new IllegalArgumentException(
+                "Missing left expression for comparison operator " + 
+                t.getValue() + " " + buf);
+          }
+          break;
+
+        default:
+          throw new RuntimeException("Unexpected OP word type " + wordType);
+        }
         
         break;
         
@@ -178,10 +232,18 @@ public class Expressionator
         // see if it's a special word?
         wordType = getWordType(t);
         if(wordType == null) {
-          // literal string? or possibly function?
+
+          // is it a function call?
           Expr funcExpr = maybeParseFuncCall(t, buf, exprType, isSimpleExpr);
           if(funcExpr != null) {
             buf.setPendingExpr(funcExpr);
+            continue;
+          }
+
+          // is it an object name?
+          Token next = buf.peekNext();
+          if((next != null) && isObjNameSep(next)) {
+            buf.setPendingExpr(parseObjectReference(t, buf));
             continue;
           }
 
@@ -214,15 +276,19 @@ public class Expressionator
 
   private static Expr parseObjectReference(Token firstTok, TokBuf buf) {
 
-    // object references may be joined by '.' or '!';
-    List<String> objNames = new ArrayList<String>();
+    // object references may be joined by '.' or '!'. access syntac docs claim
+    // object identifiers can be formatted like:
+    //     "[Collection name]![Object name].[Property name]"
+    // However, in practice, they only ever seem to be (at most) two levels
+    // and only use '.'.
+    Deque<String> objNames = new LinkedList<String>();
     objNames.add(firstTok.getValueStr());
 
     Token t = null;
     boolean atSep = false;
     while((t = buf.peekNext()) != null) {
       if(!atSep) {
-        if(isOp(t, ".") || isOp(t, "!")) {
+        if(isObjNameSep(t)) {
           buf.next();
           atSep = true;
           continue;
@@ -231,7 +297,8 @@ public class Expressionator
         if((t.getType() == TokenType.OBJ_NAME) ||
            (t.getType() == TokenType.STRING)) {
           buf.next();
-          objNames.add(t.getValueStr());
+          // always insert at beginning of list so names are in reverse order
+          objNames.addFirst(t.getValueStr());
           atSep = false;
           continue;
         }
@@ -239,11 +306,16 @@ public class Expressionator
       break;
     }
 
-    if(atSep) {
+    if(atSep || (objNames.size() > 3)) {
       throw new IllegalArgumentException("Invalid object reference " + buf);
     }
-    
-    return new EObjValue(objNames);
+
+    // names are in reverse order
+    String fieldName = objNames.poll();
+    String objName = objNames.poll();
+    String collectionName = objNames.poll();
+
+    return new EObjValue(collectionName, objName, fieldName);
   }
   
   private static Expr maybeParseFuncCall(Token firstTok, TokBuf buf,
@@ -333,6 +405,32 @@ public class Expressionator
                                        "' for function call " + buf);
   }
 
+  private static Expr parseBinaryOperator(Token firstTok, TokBuf buf,
+                                          Type exprType, boolean isSimpleExpr) {
+    String op = firstTok.getValueStr();
+    Expr leftExpr = buf.takePendingExpr();
+    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+
+    return new EBinaryOp(op, leftExpr, rightExpr);
+  }
+
+  private static Expr parseUnaryOperator(Token firstTok, TokBuf buf,
+                                         Type exprType, boolean isSimpleExpr) {
+    String op = firstTok.getValueStr();
+    Expr val = parseExpression(exprType, buf, isSimpleExpr);
+
+    return new EUnaryOp(op, val);
+  }
+
+  private static Expr parseCompOperator(Token firstTok, TokBuf buf,
+                                        Type exprType, boolean isSimpleExpr) {
+    String op = firstTok.getValueStr();
+    Expr leftExpr = buf.takePendingExpr();
+    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+
+    return new ECompOp(op, leftExpr, rightExpr);
+  }
+
   private static boolean isSimpleExpression(TokBuf buf, Type exprType) {
     if(exprType != Type.DEFAULT_VALUE) {
       return false;
@@ -349,8 +447,13 @@ public class Expressionator
     return true;
   }
 
+  private static boolean isObjNameSep(Token t) {
+    return (isOp(t, ".") || isOp(t, "!"));
+  }
+
   private static boolean isOp(Token t, String opStr) {
-    return ((t.getType() == TokenType.OP) && opStr.equalsIgnoreCase(t.getValueStr()));
+    return ((t.getType() == TokenType.OP) && 
+            opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
   private static WordType getWordType(Token t) {
@@ -367,16 +470,18 @@ public class Expressionator
   {
     private final List<Token> _tokens;
     private final TokBuf _parent;
+    private final int _parentOff;
     private int _pos;
     private Expr _pendingExpr;
 
     private TokBuf(List<Token> tokens) {
-      this(tokens, null);
+      this(tokens, null, 0);
     }
 
-    private TokBuf(List<Token> tokens, TokBuf parent) {
+    private TokBuf(List<Token> tokens, TokBuf parent, int parentOff) {
       _tokens = tokens;
       _parent = parent;
+      _parentOff = parentOff;
     }
 
     public boolean isTopLevel() {
@@ -411,7 +516,7 @@ public class Expressionator
     }
 
     public TokBuf subBuf(int start, int end) {
-      return new TokBuf(_tokens.subList(start, end), this);
+      return new TokBuf(_tokens.subList(start, end), this, start);
     }
 
     public void setPendingExpr(Expr expr) {
@@ -432,10 +537,38 @@ public class Expressionator
       return (_pendingExpr != null);
     }
 
+    private Map.Entry<Integer,List<Token>> getTopPos() {
+      int pos = _pos;
+      List<Token> toks = _tokens;
+      TokBuf cur = this;
+      while(cur._parent != null) {
+        pos += cur._parentOff;
+        cur = cur._parent;
+        toks = cur._tokens;
+      }
+      return ExpressionTokenizer.newEntry(pos, toks);
+    }
+
     @Override
     public String toString() {
-      // FIXME show current pos
-      return null;
+      
+      Map.Entry<Integer,List<Token>> e = getTopPos();
+
+      // TODO actually format expression?
+      StringBuilder sb = new StringBuilder()
+        .append("[token ").append(e.getKey()).append("] (");
+
+      for(Iterator<Token> iter = e.getValue().iterator(); iter.hasNext(); ) {
+        Token t = iter.next();
+        sb.append("'").append(t.getValueStr()).append("'");
+        if(iter.hasNext()) {
+          sb.append(",");
+        }
+      }
+
+      sb.append(")");
+
+      return sb.toString();
     } 
   }
 
@@ -464,7 +597,8 @@ public class Expressionator
   {
     public Object getThisColumnValue();
 
-    public Object getRowValue(String colName);
+    public Object getRowValue(String collectionName, String objName,
+                              String colName);
   }
 
   private static final class ELiteralValue extends Expr
@@ -483,17 +617,20 @@ public class Expressionator
 
   private static final class EObjValue extends Expr
   {
-    private final List<String> _objNames;
+    private final String _collectionName;
+    private final String _objName;
+    private final String _fieldName;
 
-    private EObjValue(List<String> objNames) {
-      _objNames = objNames;
+
+    private EObjValue(String collectionName, String objName, String fieldName) {
+      _collectionName = collectionName;
+      _objName = objName;
+      _fieldName = fieldName;
     }
 
     @Override
     public Object eval(RowContext ctx) {
-      // FIXME
-      return null;
-      // return ctx.getRowValue(_colName);
+      return ctx.getRowValue(_collectionName, _objName, _fieldName);
     }
   }
 
@@ -538,5 +675,63 @@ public class Expressionator
       return false;
     }
   }
+
+  private static class EBinaryOp extends Expr
+  {
+    private final String _op;
+    private final Expr _left;
+    private final Expr _right;
+
+    private EBinaryOp(String op, Expr left, Expr right) {
+      _op = op;
+      _left = left;
+      _right = right;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  } 
+
+  private static class EUnaryOp extends Expr
+  {
+    private final String _op;
+    private final Expr _val;
+
+    private EUnaryOp(String op, Expr val) {
+      _op = op;
+      _val = val;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  } 
+
+  private static class ECompOp extends Expr
+  {
+    private final String _op;
+    private final Expr _left;
+    private final Expr _right;
+
+    private ECompOp(String op, Expr left, Expr right) {
+      _op = op;
+      _left = left;
+      _right = right;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  } 
 
 }
