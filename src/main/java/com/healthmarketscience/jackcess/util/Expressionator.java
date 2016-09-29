@@ -49,16 +49,36 @@ public class Expressionator
   // - examples: https://support.office.com/en-us/article/Examples-of-expressions-d3901e11-c04e-4649-b40b-8b6ec5aed41f
   // - validation rule usage: https://support.office.com/en-us/article/Restrict-data-input-by-using-a-validation-rule-6c0b2ce1-76fa-4be0-8ae9-038b52652320
 
+  // FIXME
+  // - need to short-circuit AND/OR
+  // - need to handle order of operations
+  // - ^
+  // - - (negate)
+  // - * /
+  // - \
+  // - Mod
+  // - + -
+  // - &
+  // - < > <> <= >= = Like Is
+  // - Not
+  // - And
+  // - Or
+  // - Xor
+  // - Eqv
+  // - In, Between ????
+
   public enum Type {
     DEFAULT_VALUE, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
 
   private enum WordType {
-    OP, COMP, LOG_OP, CONST, SPEC_OP_PREFIX;
+    OP, COMP, LOG_OP, CONST, SPEC_OP_PREFIX, DELIM;
   }
 
   private static final String FUNC_START_DELIM = "(";
   private static final String FUNC_END_DELIM = ")";
+  private static final String OPEN_PAREN = "(";
+  private static final String CLOSE_PAREN = ")";
   private static final String FUNC_PARAM_SEP = ",";
 
   private static final Map<String,WordType> WORD_TYPES = new HashMap<String,WordType>();
@@ -66,11 +86,31 @@ public class Expressionator
   static {
     setWordType(WordType.OP, "+", "-", "*", "/", "\\", "^", "&", "mod");
     setWordType(WordType.COMP, "<", "<=", ">", ">=", "=", "<>");
-    setWordType(WordType.LOG_OP, "and", "or", "eqv", "not", "xor");
+    setWordType(WordType.LOG_OP, "and", "or", "eqv", "xor");
     setWordType(WordType.CONST, "true", "false", "null");
-    setWordType(WordType.SPEC_OP_PREFIX, "is", "like", "between", "in");
+    setWordType(WordType.SPEC_OP_PREFIX, "is", "like", "between", "in", "not");
+    // "X is null", "X is not null", "X like P", "X between A and B",
+    // "X not between A and B", "X in (A, B, C...)", "X not in (A, B, C...)",
+    // "not X"
+    setWordType(WordType.DELIM, ".", "!", ",", "(", ")");
   }
 
+  private static final Map<String, Integer> PRECENDENCE = 
+    buildPrecedenceMap(
+        new String[]{"^"}, 
+        new String[]{"-"}, // FIXME (negate)?
+        new String[]{"*", "/"}, 
+        new String[]{"\\"}, 
+        new String[]{"mod"}, 
+        new String[]{"+", "-"}, 
+        new String[]{"&"}, 
+        new String[]{"<", ">", "<>", "<=", ">=", "=", "like", "is"}, 
+        new String[]{"not"}, 
+        new String[]{"and"}, 
+        new String[]{"or"}, 
+        new String[]{"xor"}, 
+        new String[]{"eqv"}, 
+        new String[]{"in", "between"});
 
   private static final Expr THIS_COL_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
@@ -145,7 +185,7 @@ public class Expressionator
       Token t = tokens.get(i);
       if(t.getType() == TokenType.SPACE) {
         if((tokens.get(i - 1).getType() == TokenType.STRING) &&
-           isOp(tokens.get(i + 1), FUNC_START_DELIM)) {
+           isDelim(tokens.get(i + 1), FUNC_START_DELIM)) {
           // we want to keep this space
         } else {
           tokens.remove(i);
@@ -185,23 +225,11 @@ public class Expressionator
           throw new RuntimeException("Invalid operator " + t);
         }
 
-        // this can old be an OP or a COMP (those are the only words that the
+        // this can only be an OP or a COMP (those are the only words that the
         // tokenizer would define as TokenType.OP)
         switch(wordType) {
         case OP:
-
-          // most ops are two argument except that '-' could be negation
-          if(buf.hasPendingExpr()) {
-            buf.setPendingExpr(parseBinaryOperator(t, buf, exprType,
-                                                   isSimpleExpr));
-          } else if(isOp(t, "-")) {
-            buf.setPendingExpr(parseUnaryOperator(t, buf, exprType, 
-                                                  isSimpleExpr));
-          } else {
-            throw new IllegalArgumentException(
-                "Missing left expression for binary operator " + t.getValue() + 
-                " " + buf);
-          }
+          parseOperatorExpression(t, buf, exprType, isSimpleExpr);
           break;
 
         case COMP:
@@ -225,6 +253,19 @@ public class Expressionator
           throw new RuntimeException("Unexpected OP word type " + wordType);
         }
         
+        break;
+
+      case DELIM:
+
+        // the only "top-level" delim we expect to find is open paren, and
+        // there shouldn't be any pending expression
+        if(!isDelim(t, OPEN_PAREN) || buf.hasPendingExpr()) {
+          throw new IllegalArgumentException("Unexpected delimiter " + 
+                                             t.getValue() + " " + buf);
+        }
+
+        Expr subExpr = findParenExprs(buf, exprType, isSimpleExpr, false).get(0);
+        buf.setPendingExpr(new EParen(subExpr));
         break;
         
       case STRING:
@@ -250,7 +291,49 @@ public class Expressionator
           // FIXME maybe obj name, maybe string?
           
         } else {
-        
+
+          // this could be anything but COMP or DELIM (all COMPs would be
+          // returned as TokenType.OP and all DELIMs would be TokenType.DELIM)
+          switch(wordType) {
+          case OP:
+
+            parseOperatorExpression(t, buf, exprType, isSimpleExpr);
+            break;
+            
+          case LOG_OP:
+
+            if(buf.hasPendingExpr()) {
+              buf.setPendingExpr(parseLogicalOperator(t, buf, exprType,
+                                                      isSimpleExpr));
+            } else {
+              throw new IllegalArgumentException(
+                  "Missing left expression for logical operator " + 
+                  t.getValue() + " " + buf);
+            }
+            break;
+
+          case CONST:
+
+            if("true".equalsIgnoreCase(t.getValueStr())) {
+              buf.setPendingExpr(TRUE_VALUE);
+            } else if("false".equalsIgnoreCase(t.getValueStr())) {
+              buf.setPendingExpr(FALSE_VALUE);
+            } else if("false".equalsIgnoreCase(t.getValueStr())) {
+              buf.setPendingExpr(TRUE_VALUE);
+            } else {
+              throw new RuntimeException("Unexpected CONST word "
+                                         + t.getValue());
+            }
+            break;
+
+          case SPEC_OP_PREFIX:
+            // FIXME
+            break;
+
+          default:
+            throw new RuntimeException("Unexpected STRING word type "
+                                       + wordType);
+          }
         
           // FIXME
         }
@@ -326,22 +409,13 @@ public class Expressionator
 
     try {
       Token t = buf.peekNext();
-      if((t == null) || !isOp(t, FUNC_START_DELIM)) {
+      if((t == null) || !isDelim(t, FUNC_START_DELIM)) {
         // not a function call
         return null;
       }
         
       buf.next();
-      List<TokBuf> paramBufs = findFuncCallParams(buf);
-
-      List<Expr> params = Collections.emptyList();
-      if(!paramBufs.isEmpty()) {
-        params = new ArrayList<Expr>(paramBufs.size());
-        for(TokBuf paramBuf : paramBufs) {
-          params.add(parseExpression(exprType, paramBuf, isSimpleExpr));
-        }
-      }
-        
+      List<Expr> params = findParenExprs(buf, exprType, isSimpleExpr, true);
       return new EFunc(firstTok.getValueStr(), params);
 
     } finally {
@@ -351,58 +425,67 @@ public class Expressionator
     }
   }
 
-  private static List<TokBuf> findFuncCallParams(TokBuf buf) {
+  private static List<Expr> findParenExprs(
+      TokBuf buf, Type exprType, boolean isSimpleExpr, boolean isFunc) {
 
-    // simple case, no params
-    Token t = buf.peekNext();
-    if((t != null) && isOp(t, FUNC_END_DELIM)) {
-      buf.next();
-      return Collections.emptyList();
+    if(isFunc) {
+      // simple case, no nested expr
+      Token t = buf.peekNext();
+      if((t != null) && isDelim(t, CLOSE_PAREN)) {
+        buf.next();
+        return Collections.emptyList();
+      }
     }
 
     // find closing ")", handle nested parens
-    List<TokBuf> params = new ArrayList<TokBuf>(3);
+    List<Expr> exprs = new ArrayList<Expr>(3);
     int level = 1;
     int startPos = buf.curPos();
     while(buf.hasNext()) {
 
-      t = buf.next();
+      Token t = buf.next();
 
-      if(isOp(t, FUNC_START_DELIM)) {
+      if(isDelim(t, OPEN_PAREN)) {
 
         ++level;
 
-      } else if(isOp(t, FUNC_END_DELIM)) {
+      } else if(isDelim(t, CLOSE_PAREN)) {
 
         --level;
         if(level == 0) {
-          params.add(buf.subBuf(startPos, buf.prevPos()));
-
-          if(params.size() > 1) {
-            // if there is more than one param and one of them is empty, then
-            // something is messed up (note, it should not be possible to have
-            // an empty param if there is only one since we trim superfluous
-            // spaces)
-            for(TokBuf paramBuf : params) {
-              if(!paramBuf.hasNext()) {
-                throw new IllegalArgumentException(
-                    "Invalid empty parameter for function " + paramBuf);
-              }
-            }
-          }
-
-          return params;
+          TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
+          exprs.add(parseExpression(exprType, subBuf, isSimpleExpr));
+          return exprs;
         }
 
-      } else if((level == 1) && isOp(t, FUNC_PARAM_SEP)) {
+      } else if(isFunc && (level == 1) && isDelim(t, FUNC_PARAM_SEP)) {
 
-        params.add(buf.subBuf(startPos, buf.prevPos()));
+        TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
+        exprs.add(parseExpression(exprType, subBuf, isSimpleExpr));
         startPos = buf.curPos();
       }
     }
 
-    throw new IllegalArgumentException("Missing closing '" + FUNC_END_DELIM +
-                                       "' for function call " + buf);
+    String exprName = (isFunc ? "function call" : "parenthesized expression");
+    throw new IllegalArgumentException("Missing closing '" + CLOSE_PAREN +
+                                       "' for " + exprName + " " + buf);
+  }
+
+  private static void parseOperatorExpression(
+      Token t, TokBuf buf, Type exprType, boolean isSimpleExpr) {
+
+    // most ops are two argument except that '-' could be negation
+    if(buf.hasPendingExpr()) {
+      buf.setPendingExpr(parseBinaryOperator(t, buf, exprType,
+                                             isSimpleExpr));
+    } else if(isOp(t, "-")) {
+      buf.setPendingExpr(parseUnaryOperator(t, buf, exprType, 
+                                            isSimpleExpr));
+    } else {
+      throw new IllegalArgumentException(
+          "Missing left expression for binary operator " + t.getValue() + 
+          " " + buf);
+    }
   }
 
   private static Expr parseBinaryOperator(Token firstTok, TokBuf buf,
@@ -431,6 +514,15 @@ public class Expressionator
     return new ECompOp(op, leftExpr, rightExpr);
   }
 
+  private static Expr parseLogicalOperator(Token firstTok, TokBuf buf,
+                                           Type exprType, boolean isSimpleExpr) {
+    String op = firstTok.getValueStr();
+    Expr leftExpr = buf.takePendingExpr();
+    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+
+    return new ELogicalOp(op, leftExpr, rightExpr);
+  }
+
   private static boolean isSimpleExpression(TokBuf buf, Type exprType) {
     if(exprType != Type.DEFAULT_VALUE) {
       return false;
@@ -448,11 +540,16 @@ public class Expressionator
   }
 
   private static boolean isObjNameSep(Token t) {
-    return (isOp(t, ".") || isOp(t, "!"));
+    return (isDelim(t, ".") || isDelim(t, "!"));
   }
 
   private static boolean isOp(Token t, String opStr) {
     return ((t.getType() == TokenType.OP) && 
+            opStr.equalsIgnoreCase(t.getValueStr()));
+  }
+
+  private static boolean isDelim(Token t, String opStr) {
+    return ((t.getType() == TokenType.DELIM) && 
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
@@ -572,6 +669,20 @@ public class Expressionator
     } 
   }
 
+  private static final Map<String, Integer> buildPrecedenceMap(String[]... opArrs) {
+    Map<String, Integer> prec = new HashMap<String, Integer>();
+
+    int level = 0;
+    for(String[] ops : opArrs) {
+      for(String op : ops) {
+        prec.put(op, level);
+      }
+      ++level;
+    }
+
+    return prec;
+  }
+
   public static abstract class Expr
   {
     public Object evalDefault() {
@@ -670,7 +781,7 @@ public class Expressionator
 
     @Override
     protected Object eval(RowContext ctx) {
-      // FIXME how do func results act for conditional values?
+      // FIXME how do func results act for conditional values? (literals become = tests)
 
       return false;
     }
@@ -734,4 +845,24 @@ public class Expressionator
     }
   } 
 
+
+  private static class ELogicalOp extends Expr
+  {
+    private final String _op;
+    private final Expr _left;
+    private final Expr _right;
+
+    private ELogicalOp(String op, Expr left, Expr right) {
+      _op = op;
+      _left = left;
+      _right = right;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  } 
 }

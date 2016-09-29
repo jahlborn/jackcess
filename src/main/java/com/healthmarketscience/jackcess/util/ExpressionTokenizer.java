@@ -41,7 +41,7 @@ class ExpressionTokenizer
   private static final char QUOTED_STR_CHAR = '"';
   private static final char OBJ_NAME_START_CHAR = '[';
   private static final char OBJ_NAME_END_CHAR = ']';
-  private static final char DATE_LIT_DELIM_CHAR = '#';
+  private static final char DATE_LIT_QUOTE_CHAR = '#';
   private static final char EQUALS_CHAR = '=';
 
   private static final String DATE_FORMAT = "M/d/yyyy";
@@ -55,7 +55,7 @@ class ExpressionTokenizer
   private static final byte IS_QUOTE_FLAG =  0x10;
 
   enum TokenType {
-    OBJ_NAME, LITERAL, OP, STRING, SPACE;
+    OBJ_NAME, LITERAL, OP, DELIM, STRING, SPACE;
   }
 
   private static final byte[] CHAR_FLAGS = new byte[128];
@@ -137,8 +137,8 @@ class ExpressionTokenizer
 
         case IS_DELIM_FLAG:
 
-          // all delimiter chars are single character operators
-          tokens.add(new Token(TokenType.OP, String.valueOf(c)));
+          // all delimiter chars are single character symbols
+          tokens.add(new Token(TokenType.DELIM, String.valueOf(c)));
           break;
 
         case IS_SPACE_FLAG:
@@ -154,7 +154,7 @@ class ExpressionTokenizer
           case QUOTED_STR_CHAR:
             tokens.add(new Token(TokenType.LITERAL, parseQuotedString(buf)));
             break;
-          case DATE_LIT_DELIM_CHAR:
+          case DATE_LIT_QUOTE_CHAR:
             Map.Entry<?,String> dateLit = parseDateLiteralString(buf, db);
             tokens.add(new Token(TokenType.LITERAL, dateLit.getKey(), 
                                  dateLit.getValue()));
@@ -312,7 +312,7 @@ class ExpressionTokenizer
   private static Map.Entry<?,String> parseDateLiteralString(
       ExprBuf buf, DatabaseImpl db) 
   {
-    String dateStr = parseStringUntil(buf, DATE_LIT_DELIM_CHAR, null);
+    String dateStr = parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null);
     
     boolean hasDate = (dateStr.indexOf('/') >= 0);
     boolean hasTime = (dateStr.indexOf(':') >= 0);
