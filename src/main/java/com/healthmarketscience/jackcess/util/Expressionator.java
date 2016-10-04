@@ -166,8 +166,8 @@ public class Expressionator
       return null;
     }
 
-    TokBuf buf = new TokBuf(tokens);
-    parseExpression(exprType, buf, isSimpleExpression(buf, exprType));
+    TokBuf buf = new TokBuf(exprType, tokens);
+    parseExpression(buf);
     
     // FIXME
     return null;
@@ -196,11 +196,8 @@ public class Expressionator
     return tokens;
   }
 
-  private static Expr parseExpression(Type exprType, TokBuf buf, 
-                                      boolean isSimpleExpr)     
+  private static Expr parseExpression(TokBuf buf)     
   {
-    // FIXME pass exprType and isSimple expr in TokBuf?
-
     // FIXME, how do we handle order of ops when no parens?
     
     while(buf.hasNext()) {
@@ -229,19 +226,18 @@ public class Expressionator
         // tokenizer would define as TokenType.OP)
         switch(wordType) {
         case OP:
-          parseOperatorExpression(t, buf, exprType, isSimpleExpr);
+          parseOperatorExpression(t, buf);
           break;
 
         case COMP:
 
-          if(!buf.hasPendingExpr() && (exprType == Type.FIELD_VALIDATOR)) {
+          if(!buf.hasPendingExpr() && (buf.getExprType() == Type.FIELD_VALIDATOR)) {
             // comparison operators for field validators can implicitly use
             // the current field value for the left value
             buf.setPendingExpr(THIS_COL_VALUE);
           }
           if(buf.hasPendingExpr()) {
-            buf.setPendingExpr(parseCompOperator(t, buf, exprType,
-                                                 isSimpleExpr));
+            buf.setPendingExpr(parseCompOperator(t, buf));
           } else {
             throw new IllegalArgumentException(
                 "Missing left expression for comparison operator " + 
@@ -264,7 +260,7 @@ public class Expressionator
                                              t.getValue() + " " + buf);
         }
 
-        Expr subExpr = findParenExprs(buf, exprType, isSimpleExpr, false).get(0);
+        Expr subExpr = findParenExprs(buf, false).get(0);
         buf.setPendingExpr(new EParen(subExpr));
         break;
         
@@ -275,7 +271,7 @@ public class Expressionator
         if(wordType == null) {
 
           // is it a function call?
-          Expr funcExpr = maybeParseFuncCall(t, buf, exprType, isSimpleExpr);
+          Expr funcExpr = maybeParseFuncCall(t, buf);
           if(funcExpr != null) {
             buf.setPendingExpr(funcExpr);
             continue;
@@ -297,14 +293,13 @@ public class Expressionator
           switch(wordType) {
           case OP:
 
-            parseOperatorExpression(t, buf, exprType, isSimpleExpr);
+            parseOperatorExpression(t, buf);
             break;
             
           case LOG_OP:
 
             if(buf.hasPendingExpr()) {
-              buf.setPendingExpr(parseLogicalOperator(t, buf, exprType,
-                                                      isSimpleExpr));
+              buf.setPendingExpr(parseLogicalOperator(t, buf));
             } else {
               throw new IllegalArgumentException(
                   "Missing left expression for logical operator " + 
@@ -401,8 +396,7 @@ public class Expressionator
     return new EObjValue(collectionName, objName, fieldName);
   }
   
-  private static Expr maybeParseFuncCall(Token firstTok, TokBuf buf,
-                                         Type exprType, boolean isSimpleExpr) {
+  private static Expr maybeParseFuncCall(Token firstTok, TokBuf buf) {
 
     int startPos = buf.curPos();
     boolean foundFunc = false;
@@ -415,7 +409,7 @@ public class Expressionator
       }
         
       buf.next();
-      List<Expr> params = findParenExprs(buf, exprType, isSimpleExpr, true);
+      List<Expr> params = findParenExprs(buf, true);
       return new EFunc(firstTok.getValueStr(), params);
 
     } finally {
@@ -425,8 +419,7 @@ public class Expressionator
     }
   }
 
-  private static List<Expr> findParenExprs(
-      TokBuf buf, Type exprType, boolean isSimpleExpr, boolean isFunc) {
+  private static List<Expr> findParenExprs(TokBuf buf, boolean isFunc) {
 
     if(isFunc) {
       // simple case, no nested expr
@@ -454,14 +447,14 @@ public class Expressionator
         --level;
         if(level == 0) {
           TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
-          exprs.add(parseExpression(exprType, subBuf, isSimpleExpr));
+          exprs.add(parseExpression(subBuf));
           return exprs;
         }
 
       } else if(isFunc && (level == 1) && isDelim(t, FUNC_PARAM_SEP)) {
 
         TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
-        exprs.add(parseExpression(exprType, subBuf, isSimpleExpr));
+        exprs.add(parseExpression(subBuf));
         startPos = buf.curPos();
       }
     }
@@ -471,16 +464,13 @@ public class Expressionator
                                        "' for " + exprName + " " + buf);
   }
 
-  private static void parseOperatorExpression(
-      Token t, TokBuf buf, Type exprType, boolean isSimpleExpr) {
+  private static void parseOperatorExpression(Token t, TokBuf buf) {
 
     // most ops are two argument except that '-' could be negation
     if(buf.hasPendingExpr()) {
-      buf.setPendingExpr(parseBinaryOperator(t, buf, exprType,
-                                             isSimpleExpr));
+      buf.setPendingExpr(parseBinaryOperator(t, buf));
     } else if(isOp(t, "-")) {
-      buf.setPendingExpr(parseUnaryOperator(t, buf, exprType, 
-                                            isSimpleExpr));
+      buf.setPendingExpr(parseUnaryOperator(t, buf));
     } else {
       throw new IllegalArgumentException(
           "Missing left expression for binary operator " + t.getValue() + 
@@ -488,55 +478,35 @@ public class Expressionator
     }
   }
 
-  private static Expr parseBinaryOperator(Token firstTok, TokBuf buf,
-                                          Type exprType, boolean isSimpleExpr) {
+  private static Expr parseBinaryOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+    Expr rightExpr = parseExpression(buf);
 
     return new EBinaryOp(op, leftExpr, rightExpr);
   }
 
-  private static Expr parseUnaryOperator(Token firstTok, TokBuf buf,
-                                         Type exprType, boolean isSimpleExpr) {
+  private static Expr parseUnaryOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
-    Expr val = parseExpression(exprType, buf, isSimpleExpr);
+    Expr val = parseExpression(buf);
 
     return new EUnaryOp(op, val);
   }
 
-  private static Expr parseCompOperator(Token firstTok, TokBuf buf,
-                                        Type exprType, boolean isSimpleExpr) {
+  private static Expr parseCompOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+    Expr rightExpr = parseExpression(buf);
 
     return new ECompOp(op, leftExpr, rightExpr);
   }
 
-  private static Expr parseLogicalOperator(Token firstTok, TokBuf buf,
-                                           Type exprType, boolean isSimpleExpr) {
+  private static Expr parseLogicalOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(exprType, buf, isSimpleExpr);
+    Expr rightExpr = parseExpression(buf);
 
     return new ELogicalOp(op, leftExpr, rightExpr);
-  }
-
-  private static boolean isSimpleExpression(TokBuf buf, Type exprType) {
-    if(exprType != Type.DEFAULT_VALUE) {
-      return false;
-    }
-
-    // a leading "=" indicates "full" expression handling for a DEFAULT_VALUE
-    Token t = buf.peekNext();
-    if((t != null) && isOp(t, "=")) {
-      buf.next();
-      return false;
-    }
-
-    // this is a "simple" DEFAULT_VALUE
-    return true;
   }
 
   private static boolean isObjNameSep(Token t) {
@@ -565,20 +535,57 @@ public class Expressionator
 
   private static final class TokBuf
   {
+    private final Type _exprType;
     private final List<Token> _tokens;
     private final TokBuf _parent;
     private final int _parentOff;
     private int _pos;
     private Expr _pendingExpr;
+    private final boolean _simpleExpr;
 
-    private TokBuf(List<Token> tokens) {
-      this(tokens, null, 0);
+    private TokBuf(Type exprType, List<Token> tokens) {
+      this(exprType, false, tokens, null, 0);
     }
 
     private TokBuf(List<Token> tokens, TokBuf parent, int parentOff) {
+      this(parent._exprType, parent._simpleExpr, tokens, parent, parentOff);
+    }
+
+    private TokBuf(Type exprType, boolean simpleExpr, List<Token> tokens, 
+                   TokBuf parent, int parentOff) {
+      _exprType = exprType;
       _tokens = tokens;
       _parent = parent;
       _parentOff = parentOff;
+      if(parent == null) {
+        // "top-level" expression, determine if it is a simple expression or not
+        simpleExpr = isSimpleExpression();
+      }
+      _simpleExpr = simpleExpr;
+    }
+
+    private boolean isSimpleExpression() {
+      if(_exprType != Type.DEFAULT_VALUE) {
+        return false;
+      }
+
+      // a leading "=" indicates "full" expression handling for a DEFAULT_VALUE
+      Token t = peekNext();
+      if((t != null) && isOp(t, "=")) {
+        next();
+        return false;
+      }
+
+      // this is a "simple" DEFAULT_VALUE
+      return true;
+    }
+
+    public Type getExprType() {
+      return _exprType;
+    }
+
+    public boolean isSimpleExpr() {
+      return _simpleExpr;
     }
 
     public boolean isTopLevel() {
