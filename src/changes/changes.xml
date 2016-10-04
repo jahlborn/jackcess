@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.5" date="TBD">
+    <release version="2.1.5" date="2016-10-03">
       <action dev="jahlborn" type="update">
         Change multi-value complex columns so that they return all relevant
         column properties.
