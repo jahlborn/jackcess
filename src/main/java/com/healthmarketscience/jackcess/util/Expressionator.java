@@ -95,6 +95,23 @@ public class Expressionator
     setWordType(WordType.DELIM, ".", "!", ",", "(", ")");
   }
 
+  private enum SpecOp {
+    NOT("Not"), IS_NULL("Is Null"), IS_NOT_NULL("Is Not Null"), LIKE("Like"), 
+    BETWEEN("Between"), NOT_BETWEEN("Not Between"), IN("In"), 
+    NOT_IN("Not In");
+
+    private final String _str;
+
+    private SpecOp(String str) {
+      _str = str;
+    }
+
+    @Override
+    public String toString() {
+      return _str;
+    }
+  }
+
   private static final Map<String, Integer> PRECENDENCE = 
     buildPrecedenceMap(
         new String[]{"^"}, 
@@ -167,7 +184,7 @@ public class Expressionator
     }
 
     TokBuf buf = new TokBuf(exprType, tokens);
-    parseExpression(buf);
+    parseExpression(buf, false);
     
     // FIXME
     return null;
@@ -196,7 +213,7 @@ public class Expressionator
     return tokens;
   }
 
-  private static Expr parseExpression(TokBuf buf)     
+  private static Expr parseExpression(TokBuf buf, boolean singleExpr)     
   {
     // FIXME, how do we handle order of ops when no parens?
     
@@ -273,18 +290,23 @@ public class Expressionator
           // is it a function call?
           Expr funcExpr = maybeParseFuncCall(t, buf);
           if(funcExpr != null) {
+
             buf.setPendingExpr(funcExpr);
-            continue;
-          }
 
-          // is it an object name?
-          Token next = buf.peekNext();
-          if((next != null) && isObjNameSep(next)) {
-            buf.setPendingExpr(parseObjectReference(t, buf));
-            continue;
-          }
+          } else {
 
-          // FIXME maybe obj name, maybe string?
+            // is it an object name?
+            Token next = buf.peekNext();
+            if((next != null) && isObjNameSep(next)) {
+
+              buf.setPendingExpr(parseObjectReference(t, buf));
+
+            } else {
+              
+              // FIXME maybe obj name, maybe string?
+              throw new UnsupportedOperationException("FIXME");
+            }
+          }
           
         } else {
 
@@ -297,6 +319,8 @@ public class Expressionator
             break;
             
           case LOG_OP:
+
+            // FIXME, handle "between" expr ("and")
 
             if(buf.hasPendingExpr()) {
               buf.setPendingExpr(parseLogicalOperator(t, buf));
@@ -322,6 +346,8 @@ public class Expressionator
             break;
 
           case SPEC_OP_PREFIX:
+
+            parseSpecialOperator(t, buf);
             // FIXME
             break;
 
@@ -329,8 +355,6 @@ public class Expressionator
             throw new RuntimeException("Unexpected STRING word type "
                                        + wordType);
           }
-        
-          // FIXME
         }
 
         break;
@@ -341,6 +365,10 @@ public class Expressionator
         
       default:
         throw new RuntimeException("unknown token type " + t);
+      }
+
+      if(singleExpr && buf.hasPendingExpr()) {
+        break;
       }
     }
 
@@ -403,7 +431,7 @@ public class Expressionator
 
     try {
       Token t = buf.peekNext();
-      if((t == null) || !isDelim(t, FUNC_START_DELIM)) {
+      if(!isDelim(t, FUNC_START_DELIM)) {
         // not a function call
         return null;
       }
@@ -419,12 +447,13 @@ public class Expressionator
     }
   }
 
-  private static List<Expr> findParenExprs(TokBuf buf, boolean isFunc) {
+  private static List<Expr> findParenExprs(
+      TokBuf buf, boolean allowMulti) {
 
-    if(isFunc) {
+    if(allowMulti) {
       // simple case, no nested expr
       Token t = buf.peekNext();
-      if((t != null) && isDelim(t, CLOSE_PAREN)) {
+      if(isDelim(t, CLOSE_PAREN)) {
         buf.next();
         return Collections.emptyList();
       }
@@ -447,21 +476,20 @@ public class Expressionator
         --level;
         if(level == 0) {
           TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
-          exprs.add(parseExpression(subBuf));
+          exprs.add(parseExpression(subBuf, false));
           return exprs;
         }
 
-      } else if(isFunc && (level == 1) && isDelim(t, FUNC_PARAM_SEP)) {
+      } else if(allowMulti && (level == 1) && isDelim(t, FUNC_PARAM_SEP)) {
 
         TokBuf subBuf = buf.subBuf(startPos, buf.prevPos());
-        exprs.add(parseExpression(subBuf));
+        exprs.add(parseExpression(subBuf, false));
         startPos = buf.curPos();
       }
     }
 
-    String exprName = (isFunc ? "function call" : "parenthesized expression");
-    throw new IllegalArgumentException("Missing closing '" + CLOSE_PAREN +
-                                       "' for " + exprName + " " + buf);
+    throw new IllegalArgumentException("Missing closing '" + CLOSE_PAREN
+                                       + " " + buf);
   }
 
   private static void parseOperatorExpression(Token t, TokBuf buf) {
@@ -481,14 +509,14 @@ public class Expressionator
   private static Expr parseBinaryOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(buf);
+    Expr rightExpr = parseExpression(buf, true);
 
-    return new EBinaryOp(op, leftExpr, rightExpr);
+    return new EBinaryOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
   }
 
   private static Expr parseUnaryOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
-    Expr val = parseExpression(buf);
+    Expr val = parseExpression(buf, true);
 
     return new EUnaryOp(op, val);
   }
@@ -496,17 +524,133 @@ public class Expressionator
   private static Expr parseCompOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(buf);
+    Expr rightExpr = parseExpression(buf, true);
 
-    return new ECompOp(op, leftExpr, rightExpr);
+    return new ECompOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
   }
 
   private static Expr parseLogicalOperator(Token firstTok, TokBuf buf) {
     String op = firstTok.getValueStr();
     Expr leftExpr = buf.takePendingExpr();
-    Expr rightExpr = parseExpression(buf);
+    Expr rightExpr = parseExpression(buf, true);
 
-    return new ELogicalOp(op, leftExpr, rightExpr);
+    return new ELogicalOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
+  }
+
+  private static void parseSpecialOperator(Token firstTok, TokBuf buf) {
+    
+    SpecOp specOp = getSpecialOperator(firstTok, buf);
+
+    if(specOp == SpecOp.NOT) {
+      // this is the unary prefix operator
+      buf.setPendingExpr(parseUnaryOperator(firstTok, buf));
+      return;
+    }
+
+    if(!buf.hasPendingExpr() && (buf.getExprType() == Type.FIELD_VALIDATOR)) {
+      // comparison operators for field validators can implicitly use
+      // the current field value for the left value
+      buf.setPendingExpr(THIS_COL_VALUE);
+    }
+
+    if(!buf.hasPendingExpr()) {
+      throw new IllegalArgumentException(
+          "Missing left expression for comparison operator " + 
+          specOp + " " + buf);
+    }
+
+
+    Expr expr = buf.takePendingExpr();
+
+    // FIXME
+    Expr specOpExpr = null;
+    switch(specOp) {
+    case IS_NULL:
+    case IS_NOT_NULL:
+      specOpExpr = new ENullOp(specOp, expr);
+      break;
+
+    case LIKE:
+      Token t = buf.next();
+      // FIXME, create LITERAL_STRING TokenType?
+      if(t.getType() != TokenType.LITERAL) {
+        throw new IllegalArgumentException("Missing Like pattern " + buf);
+      }
+      specOpExpr = new ELikeOp(specOp, expr, t.getValueStr());
+      break;
+
+    case BETWEEN:
+    case NOT_BETWEEN:
+      
+      // the "rest" of a between expression is of the form "X And Y".  since
+      // that is the same as a normal "And" expression, we are going to cheat
+      // and just parse the remaining
+
+      if(true) {
+      // FIXME
+      throw new UnsupportedOperationException("FIXME");
+      }
+
+      break;
+
+    case IN:
+    case NOT_IN:
+
+      // there might be a space before open paren
+      t = buf.next();
+      if(t.getType() == TokenType.SPACE) {
+        t = buf.next();
+      }
+      if(!isDelim(t, OPEN_PAREN)) {
+        throw new IllegalArgumentException("Malformed In expression " + buf);
+      }
+
+      List<Expr> exprs = findParenExprs(buf, true);
+      specOpExpr = new EInOp(specOp, expr, exprs);
+      break;
+
+    default:
+      throw new RuntimeException("Unexpected special op " + specOp);
+    }
+
+    buf.setPendingExpr(specOpExpr);
+  }
+
+  private static SpecOp getSpecialOperator(Token firstTok, TokBuf buf) {
+    String opStr = firstTok.getValueStr().toLowerCase();
+
+    if("is".equals(opStr)) {
+      Token t = buf.peekNext();
+      if(isString(t, "null")) {
+        buf.next();
+        return SpecOp.IS_NULL;
+      } else if(isString(t, "not")) {
+        buf.next();
+        t = buf.peekNext();
+        if(isString(t, "null")) {
+          return SpecOp.IS_NOT_NULL;
+        }
+      }
+    } else if("like".equals(opStr)) {
+      return SpecOp.LIKE;
+    } else if("between".equals(opStr)) {
+      return SpecOp.BETWEEN;
+    } else if("in".equals(opStr)) {
+      return SpecOp.IN;
+    } else if("not".equals(opStr)) {
+      Token t = buf.peekNext();
+      if(isString(t, "between")) {
+        buf.next();
+        return SpecOp.NOT_BETWEEN;
+      } else if(isString(t, "in")) {
+        buf.next();
+        return SpecOp.NOT_IN;
+      }
+      return SpecOp.NOT;
+    }
+
+    throw new IllegalArgumentException(
+        "Malformed special operator " + opStr + " " + buf);
   }
 
   private static boolean isObjNameSep(Token t) {
@@ -514,12 +658,17 @@ public class Expressionator
   }
 
   private static boolean isOp(Token t, String opStr) {
-    return ((t.getType() == TokenType.OP) && 
+    return ((t != null) && (t.getType() == TokenType.OP) && 
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
   private static boolean isDelim(Token t, String opStr) {
-    return ((t.getType() == TokenType.DELIM) && 
+    return ((t != null) && (t.getType() == TokenType.DELIM) && 
+            opStr.equalsIgnoreCase(t.getValueStr()));
+  }
+
+  private static boolean isString(Token t, String opStr) {
+    return ((t != null) && (t.getType() == TokenType.STRING) && 
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
@@ -571,7 +720,7 @@ public class Expressionator
 
       // a leading "=" indicates "full" expression handling for a DEFAULT_VALUE
       Token t = peekNext();
-      if((t != null) && isOp(t, "=")) {
+      if(isOp(t, "=")) {
         next();
         return false;
       }
@@ -612,6 +761,10 @@ public class Expressionator
     }
 
     public Token next() {
+      if(!hasNext()) {
+        throw new IllegalArgumentException(
+            "Unexpected end of expression " + this);
+      }
       return _tokens.get(_pos++);
     }
 
@@ -674,6 +827,14 @@ public class Expressionator
 
       return sb.toString();
     } 
+  }
+
+  private static boolean isHigherPrecendence(String op1, String op2) {
+    int prec1 = PRECENDENCE.get(op1);
+    int prec2 = PRECENDENCE.get(op2);
+
+    // higher preceendence ops have lower numbers
+    return (prec1 < prec2);
   }
 
   private static final Map<String, Integer> buildPrecedenceMap(String[]... opArrs) {
@@ -794,16 +955,71 @@ public class Expressionator
     }
   }
 
-  private static class EBinaryOp extends Expr
+  private static abstract class EBaseBinaryOp extends Expr
   {
     private final String _op;
-    private final Expr _left;
-    private final Expr _right;
+    private Expr _left;
+    private Expr _right;
 
-    private EBinaryOp(String op, Expr left, Expr right) {
+    private EBaseBinaryOp(String op, Expr left, Expr right) {
       _op = op;
       _left = left;
       _right = right;
+    }
+
+    public Expr resolveOrderOfOperations() {
+
+      // in order to get the precedence right, we need to first associate this
+      // expression with the "rightmost" expression preceding it, then adjust
+      // this expression "down" (lower precedence) as the precedence of the
+      // operations dictates.  since we parse from left to right, the initial
+      // "left" value isn't the immediate left expression, instead it's based
+      // on how the preceding operator precedence worked out.  we need to
+      // adjust "this" expression to the closest preceding expression before
+      // we can correctly resolve precedence.
+
+      Expr outerExpr = this;
+
+      // current: <this>{<left>{A op1 B} op2 <right>{C}}
+      if(_left instanceof EBaseBinaryOp) {
+
+        EBaseBinaryOp leftOp = (EBaseBinaryOp)_left;
+        
+        // target: <left>{A op1 <this>{B op2 <right>{C}}}
+        _left = leftOp._right;
+
+        // give the new version of this expression an opportunity to further
+        // swap (since the swapped expression may itself be a binary
+        // expression)
+        leftOp._right = resolveOrderOfOperations();
+        outerExpr = leftOp;
+
+        // at this point, this expression has been pushed all the way to the
+        // rightmost preceding expression (we artifically gave "this" the
+        // highest precedence).  now, we want to adjust precedence as
+        // necessary (shift it back down if the operator precedence is
+        // incorrect).  note, we only need to check precedence against "this",
+        // as all other precedence has been resolved in previous parsing
+        // rounds.
+        if((leftOp._right == this) && isHigherPrecendence(leftOp._op, _op)) {
+          
+          // doh, "this" is lower precedence, restore the original order of
+          // things
+          leftOp._right = _left;
+          _left = leftOp;
+          outerExpr = this;
+        }
+      }
+
+      return outerExpr;
+    }
+  }
+
+  private static class EBinaryOp extends EBaseBinaryOp
+  {
+
+    private EBinaryOp(String op, Expr left, Expr right) {
+      super(op, left, right);
     }
 
     @Override
@@ -812,7 +1028,7 @@ public class Expressionator
 
       return null;
     }
-  } 
+  }
 
   private static class EUnaryOp extends Expr
   {
@@ -832,16 +1048,10 @@ public class Expressionator
     }
   } 
 
-  private static class ECompOp extends Expr
+  private static class ECompOp extends EBaseBinaryOp
   {
-    private final String _op;
-    private final Expr _left;
-    private final Expr _right;
-
     private ECompOp(String op, Expr left, Expr right) {
-      _op = op;
-      _left = left;
-      _right = right;
+      super(op, left, right);
     }
 
     @Override
@@ -850,19 +1060,12 @@ public class Expressionator
 
       return null;
     }
-  } 
+  }
 
-
-  private static class ELogicalOp extends Expr
+  private static class ELogicalOp extends EBaseBinaryOp
   {
-    private final String _op;
-    private final Expr _left;
-    private final Expr _right;
-
     private ELogicalOp(String op, Expr left, Expr right) {
-      _op = op;
-      _left = left;
-      _right = right;
+      super(op, left, right);
     }
 
     @Override
@@ -872,4 +1075,63 @@ public class Expressionator
       return null;
     }
   } 
+
+  private static abstract class ESpecOp extends Expr
+  {
+    private final SpecOp _op;
+    private final Expr _expr;
+
+    private ESpecOp(SpecOp op, Expr expr) {
+      _op = op;
+      _expr = expr;
+    }
+  }
+
+  private static class ENullOp extends ESpecOp
+  {
+    private ENullOp(SpecOp op, Expr expr) {
+      super(op, expr);
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  }
+
+  private static class ELikeOp extends ESpecOp
+  {
+    private final String _pattern;
+
+    private ELikeOp(SpecOp op, Expr expr, String pattern) {
+      super(op, expr);
+      _pattern = pattern;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  }
+
+  private static class EInOp extends ESpecOp
+  {
+    private final List<Expr> _exprs;
+
+    private EInOp(SpecOp op, Expr expr, List<Expr> exprs) {
+      super(op, expr);
+      _exprs = exprs;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+  }
 }
