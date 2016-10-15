@@ -133,20 +133,32 @@ public class Expressionator
     @Override protected Object eval(RowContext ctx) {
       return ctx.getThisColumnValue();
     }
+    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("<THIS_COL>");
+    }
   };
   private static final Expr NULL_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
       return null;
+    }
+    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("Null");
     }
   };
   private static final Expr TRUE_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
       return Boolean.TRUE;
     }
+    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("True");
+    }
   };
   private static final Expr FALSE_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
       return Boolean.FALSE;
+    }
+    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("False");
     }
   };
 
@@ -183,11 +195,7 @@ public class Expressionator
       return null;
     }
 
-    TokBuf buf = new TokBuf(exprType, tokens);
-    parseExpression(buf, false);
-    
-    // FIXME
-    return null;
+    return parseExpression(new TokBuf(exprType, tokens), false);
   }
 
   private static List<Token> trimSpaces(List<Token> tokens) {
@@ -777,7 +785,7 @@ public class Expressionator
     }
 
     public void setPendingExpr(Expr expr) {
-      if(_pendingExpr == null) {
+      if(_pendingExpr != null) {
         throw new IllegalArgumentException(
             "Found multiple expressions with no operator " + this);
       }
@@ -830,8 +838,8 @@ public class Expressionator
   }
 
   private static boolean isHigherPrecendence(String op1, String op2) {
-    int prec1 = PRECENDENCE.get(op1);
-    int prec2 = PRECENDENCE.get(op2);
+    int prec1 = PRECENDENCE.get(op1.toLowerCase());
+    int prec2 = PRECENDENCE.get(op2.toLowerCase());
 
     // higher preceendence ops have lower numbers
     return (prec1 < prec2);
@@ -869,7 +877,32 @@ public class Expressionator
       return val.equals(ctx.getThisColumnValue());
     }
 
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      toString(sb, false);
+      return sb.toString();
+    }
+    
+    public String toDebugString() {
+      StringBuilder sb = new StringBuilder();
+      toString(sb, true);
+      return sb.toString();
+    }
+    
+    protected void toString(StringBuilder sb, boolean isDebug) {
+      if(isDebug) {
+        sb.append("<").append(getClass().getSimpleName()).append(">{");
+      }
+      toExprString(sb, isDebug);
+      if(isDebug) {
+        sb.append("}");
+      }
+    }
+    
     protected abstract Object eval(RowContext ctx);
+
+    protected abstract void toExprString(StringBuilder sb, boolean isDebug);
   }
 
   public interface RowContext
@@ -892,6 +925,19 @@ public class Expressionator
     public Object eval(RowContext ctx) {
       return _value;
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      // FIXME, stronger typing?
+      if(_value instanceof String) {
+        sb.append("\"").append(_value).append("\"");
+      } else if(_value instanceof Date) {
+        // FIXME Date,Time,DateTime formatting?
+        sb.append("#").append(_value).append("#");
+      } else {
+        sb.append(_value);
+      } 
+    }
   }
 
   private static final class EObjValue extends Expr
@@ -910,6 +956,17 @@ public class Expressionator
     @Override
     public Object eval(RowContext ctx) {
       return ctx.getRowValue(_collectionName, _objName, _fieldName);
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      if(_collectionName != null) {
+        sb.append("[").append(_collectionName).append("].");
+      }
+      if(_objName != null) {
+        sb.append("[").append(_objName).append("].");
+      }
+      sb.append("[").append(_fieldName).append("]");
     }
   }
 
@@ -935,6 +992,13 @@ public class Expressionator
     protected Object eval(RowContext ctx) {
       return _expr.eval(ctx);
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("(");
+      _expr.toString(sb, isDebug);
+      sb.append(")");
+    }
   }
 
   private static class EFunc extends Expr
@@ -952,6 +1016,22 @@ public class Expressionator
       // FIXME how do func results act for conditional values? (literals become = tests)
 
       return false;
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append(_name).append("(");
+
+      if(!_params.isEmpty()) {
+        Iterator<Expr> iter = _params.iterator();
+        iter.next().toString(sb, isDebug);
+        while(iter.hasNext()) {
+          sb.append(",");
+          iter.next().toString(sb, isDebug);
+        }
+      }
+      
+      sb.append(")");
     }
   }
 
@@ -1002,6 +1082,8 @@ public class Expressionator
         // as all other precedence has been resolved in previous parsing
         // rounds.
         if((leftOp._right == this) && isHigherPrecendence(leftOp._op, _op)) {
+
+          // FIXME, need to move up if precedecne is the same!
           
           // doh, "this" is lower precedence, restore the original order of
           // things
@@ -1013,6 +1095,13 @@ public class Expressionator
 
       return outerExpr;
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      _left.toString(sb, isDebug);
+      sb.append(" ").append(_op).append(" ");
+      _right.toString(sb, isDebug);
+    }    
   }
 
   private static class EBinaryOp extends EBaseBinaryOp
@@ -1033,11 +1122,11 @@ public class Expressionator
   private static class EUnaryOp extends Expr
   {
     private final String _op;
-    private final Expr _val;
+    private final Expr _expr;
 
-    private EUnaryOp(String op, Expr val) {
+    private EUnaryOp(String op, Expr expr) {
       _op = op;
-      _val = val;
+      _expr = expr;
     }
 
     @Override
@@ -1045,6 +1134,12 @@ public class Expressionator
       // FIXME 
 
       return null;
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append(" ").append(_op).append(" ");
+      _expr.toString(sb, isDebug);
     }
   } 
 
@@ -1085,6 +1180,14 @@ public class Expressionator
       _op = op;
       _expr = expr;
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      // FIXME
+      throw new UnsupportedOperationException("FIXME");
+      // _expr.toString(sb, isDebug);
+      // sb.append(" ").append(_op);
+    } 
   }
 
   private static class ENullOp extends ESpecOp
