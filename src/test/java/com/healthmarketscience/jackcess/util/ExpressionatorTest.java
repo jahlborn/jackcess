@@ -50,5 +50,12 @@ public class ExpressionatorTest extends TestCase
         Expressionator.Type.FIELD_VALIDATOR, "\"A\" Eqv \"B\" Xor \"C\" Or \"D\" And \"E\"", null);
     assertEquals("<ELogicalOp>{<ELiteralValue>{\"A\"} Eqv <ELogicalOp>{<ELiteralValue>{\"B\"} Xor <ELogicalOp>{<ELiteralValue>{\"C\"} Or <ELogicalOp>{<ELiteralValue>{\"D\"} And <ELiteralValue>{\"E\"}}}}}",
                  expr.toDebugString());
+
+    expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, "\"A\" Or \"B\" Or \"C\"", null);
+    assertEquals("<ELogicalOp>{<ELogicalOp>{<ELiteralValue>{\"A\"} Or <ELiteralValue>{\"B\"}} Or <ELiteralValue>{\"C\"}}",
+                 expr.toDebugString());
+
+
   }
 }

@@ -1081,12 +1081,10 @@ public class Expressionator
         // incorrect).  note, we only need to check precedence against "this",
         // as all other precedence has been resolved in previous parsing
         // rounds.
-        if((leftOp._right == this) && isHigherPrecendence(leftOp._op, _op)) {
+        if((leftOp._right == this) && !isHigherPrecendence(_op, leftOp._op)) {
 
-          // FIXME, need to move up if precedecne is the same!
-          
-          // doh, "this" is lower precedence, restore the original order of
-          // things
+          // doh, "this" is lower (or the same) precedence, restore the
+          // original order of things
           leftOp._right = _left;
           _left = leftOp;
           outerExpr = this;
