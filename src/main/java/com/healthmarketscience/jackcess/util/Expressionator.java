@@ -95,7 +95,70 @@ public class Expressionator
     setWordType(WordType.DELIM, ".", "!", ",", "(", ")");
   }
 
-  private enum SpecOp {
+  private interface OpType {}
+
+  private enum UnaryOp implements OpType {
+    NEG("-"), NOT("Not");
+
+    private final String _str;
+
+    private UnaryOp(String str) {
+      _str = str;
+    }
+
+    @Override
+    public String toString() {
+      return _str;
+    }
+  }
+
+  private enum BinaryOp implements OpType {
+    PLUS("+"), MINUS("-"), MULT("*"), DIV("-"), INT_DIV("\\"), EXP("^"), 
+    CONCAT("&"), MOD("Mod");
+
+    private final String _str;
+
+    private BinaryOp(String str) {
+      _str = str;
+    }
+
+    @Override
+    public String toString() {
+      return _str;
+    }
+  }
+
+  private enum CompOp implements OpType {
+    LT("<"), LTE("<="), GT(">"), GTE(">="), EQ("="), NE("<>");
+
+    private final String _str;
+
+    private CompOp(String str) {
+      _str = str;
+    }
+
+    @Override
+    public String toString() {
+      return _str;
+    }
+  }
+
+  private enum LogOp implements OpType {
+    AND("And"), OR("Or"), EQV("Eqv"), XOR("Xor");
+
+    private final String _str;
+
+    private LogOp(String str) {
+      _str = str;
+    }
+
+    @Override
+    public String toString() {
+      return _str;
+    }
+  }
+
+  private enum SpecOp implements OpType {
     NOT("Not"), IS_NULL("Is Null"), IS_NOT_NULL("Is Not Null"), LIKE("Like"), 
     BETWEEN("Between"), NOT_BETWEEN("Not Between"), IN("In"), 
     NOT_IN("Not In");
@@ -112,22 +175,25 @@ public class Expressionator
     }
   }
 
-  private static final Map<String, Integer> PRECENDENCE = 
+  // FIXME, handle unary ops in precedence
+  private static final Map<OpType, Integer> PRECENDENCE = 
     buildPrecedenceMap(
-        new String[]{"^"}, 
-        new String[]{"-"}, // FIXME (negate)?
-        new String[]{"*", "/"}, 
-        new String[]{"\\"}, 
-        new String[]{"mod"}, 
-        new String[]{"+", "-"}, 
-        new String[]{"&"}, 
-        new String[]{"<", ">", "<>", "<=", ">=", "=", "like", "is"}, 
-        new String[]{"not"}, 
-        new String[]{"and"}, 
-        new String[]{"or"}, 
-        new String[]{"xor"}, 
-        new String[]{"eqv"}, 
-        new String[]{"in", "between"});
+        new OpType[]{BinaryOp.EXP},
+        new OpType[]{UnaryOp.NEG},
+        new OpType[]{BinaryOp.MULT, BinaryOp.DIV},
+        new OpType[]{BinaryOp.INT_DIV},
+        new OpType[]{BinaryOp.MOD},
+        new OpType[]{BinaryOp.PLUS, BinaryOp.MINUS},
+        new OpType[]{BinaryOp.CONCAT},
+        new OpType[]{CompOp.LT, CompOp.GT, CompOp.NE, CompOp.LTE, CompOp.GTE, 
+                     CompOp.EQ, SpecOp.LIKE, SpecOp.IS_NULL, SpecOp.IS_NOT_NULL},
+        new OpType[]{SpecOp.NOT},
+        new OpType[]{LogOp.AND},
+        new OpType[]{LogOp.OR},
+        new OpType[]{LogOp.XOR},
+        new OpType[]{LogOp.EQV},
+        new OpType[]{SpecOp.IN, SpecOp.NOT_IN, SpecOp.BETWEEN, 
+                     SpecOp.NOT_BETWEEN});
 
   private static final Expr THIS_COL_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
@@ -345,8 +411,8 @@ public class Expressionator
               buf.setPendingExpr(TRUE_VALUE);
             } else if("false".equalsIgnoreCase(t.getValueStr())) {
               buf.setPendingExpr(FALSE_VALUE);
-            } else if("false".equalsIgnoreCase(t.getValueStr())) {
-              buf.setPendingExpr(TRUE_VALUE);
+            } else if("null".equalsIgnoreCase(t.getValueStr())) {
+              buf.setPendingExpr(NULL_VALUE);
             } else {
               throw new RuntimeException("Unexpected CONST word "
                                          + t.getValue());
@@ -515,7 +581,7 @@ public class Expressionator
   }
 
   private static Expr parseBinaryOperator(Token firstTok, TokBuf buf) {
-    String op = firstTok.getValueStr();
+    BinaryOp op = getOpType(firstTok, BinaryOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
@@ -523,14 +589,14 @@ public class Expressionator
   }
 
   private static Expr parseUnaryOperator(Token firstTok, TokBuf buf) {
-    String op = firstTok.getValueStr();
+    UnaryOp op = getOpType(firstTok, UnaryOp.class);
     Expr val = parseExpression(buf, true);
 
     return new EUnaryOp(op, val);
   }
 
   private static Expr parseCompOperator(Token firstTok, TokBuf buf) {
-    String op = firstTok.getValueStr();
+    CompOp op = getOpType(firstTok, CompOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
@@ -538,7 +604,7 @@ public class Expressionator
   }
 
   private static Expr parseLogicalOperator(Token firstTok, TokBuf buf) {
-    String op = firstTok.getValueStr();
+    LogOp op = getOpType(firstTok, LogOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
@@ -690,6 +756,16 @@ public class Expressionator
     }
   }
 
+  private static <T extends Enum<T>> T getOpType(Token t, Class<T> opClazz) {
+    String str = t.getValueStr();
+    for(T op : opClazz.getEnumConstants()) {
+      if(str.equalsIgnoreCase(op.toString())) {
+        return op;
+      }
+    }
+    throw new IllegalArgumentException("Unexpected op string " + t.getValueStr());
+  }
+
   private static final class TokBuf
   {
     private final Type _exprType;
@@ -837,20 +913,21 @@ public class Expressionator
     } 
   }
 
-  private static boolean isHigherPrecendence(String op1, String op2) {
-    int prec1 = PRECENDENCE.get(op1.toLowerCase());
-    int prec2 = PRECENDENCE.get(op2.toLowerCase());
+  private static boolean isHigherPrecendence(OpType op1, OpType op2) {
+    int prec1 = PRECENDENCE.get(op1);
+    int prec2 = PRECENDENCE.get(op2);
 
     // higher preceendence ops have lower numbers
     return (prec1 < prec2);
   }
 
-  private static final Map<String, Integer> buildPrecedenceMap(String[]... opArrs) {
-    Map<String, Integer> prec = new HashMap<String, Integer>();
+  private static final Map<OpType, Integer> buildPrecedenceMap(
+      OpType[]... opArrs) {
+    Map<OpType, Integer> prec = new HashMap<OpType, Integer>();
 
     int level = 0;
-    for(String[] ops : opArrs) {
-      for(String op : ops) {
+    for(OpType[] ops : opArrs) {
+      for(OpType op : ops) {
         prec.put(op, level);
       }
       ++level;
@@ -1037,11 +1114,11 @@ public class Expressionator
 
   private static abstract class EBaseBinaryOp extends Expr
   {
-    private final String _op;
-    private Expr _left;
-    private Expr _right;
+    protected final OpType _op;
+    protected Expr _left;
+    protected Expr _right;
 
-    private EBaseBinaryOp(String op, Expr left, Expr right) {
+    private EBaseBinaryOp(OpType op, Expr left, Expr right) {
       _op = op;
       _left = left;
       _right = right;
@@ -1105,7 +1182,7 @@ public class Expressionator
   private static class EBinaryOp extends EBaseBinaryOp
   {
 
-    private EBinaryOp(String op, Expr left, Expr right) {
+    private EBinaryOp(BinaryOp op, Expr left, Expr right) {
       super(op, left, right);
     }
 
@@ -1117,14 +1194,10 @@ public class Expressionator
     }
   }
 
-  private static class EUnaryOp extends Expr
+  private static class EUnaryOp extends EBaseBinaryOp
   {
-    private final String _op;
-    private final Expr _expr;
-
-    private EUnaryOp(String op, Expr expr) {
-      _op = op;
-      _expr = expr;
+    private EUnaryOp(UnaryOp op, Expr expr) {
+      super(op, null, expr);
     }
 
     @Override
@@ -1137,13 +1210,13 @@ public class Expressionator
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       sb.append(" ").append(_op).append(" ");
-      _expr.toString(sb, isDebug);
+      _right.toString(sb, isDebug);
     }
   } 
 
   private static class ECompOp extends EBaseBinaryOp
   {
-    private ECompOp(String op, Expr left, Expr right) {
+    private ECompOp(CompOp op, Expr left, Expr right) {
       super(op, left, right);
     }
 
@@ -1157,7 +1230,7 @@ public class Expressionator
 
   private static class ELogicalOp extends EBaseBinaryOp
   {
-    private ELogicalOp(String op, Expr left, Expr right) {
+    private ELogicalOp(LogOp op, Expr left, Expr right) {
       super(op, left, right);
     }
 
