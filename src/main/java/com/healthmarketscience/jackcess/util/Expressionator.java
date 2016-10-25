@@ -51,21 +51,6 @@ public class Expressionator
 
   // FIXME
   // - need to short-circuit AND/OR
-  // - need to handle order of operations
-  // - ^
-  // - - (negate)
-  // - * /
-  // - \
-  // - Mod
-  // - + -
-  // - &
-  // - < > <> <= >= = Like Is
-  // - Not
-  // - And
-  // - Or
-  // - Xor
-  // - Eqv
-  // - In, Between ????
 
   public enum Type {
     DEFAULT_VALUE, FIELD_VALIDATOR, RECORD_VALIDATOR;
@@ -159,6 +144,8 @@ public class Expressionator
   }
 
   private enum SpecOp implements OpType {
+    // note, "NOT" is not actually used as a special operation, always
+    // replaced with UnaryOp.NOT
     NOT("Not"), IS_NULL("Is Null"), IS_NOT_NULL("Is Not Null"), LIKE("Like"), 
     BETWEEN("Between"), NOT_BETWEEN("Not Between"), IN("In"), 
     NOT_IN("Not In");
@@ -175,7 +162,6 @@ public class Expressionator
     }
   }
 
-  // FIXME, handle unary ops in precedence
   private static final Map<OpType, Integer> PRECENDENCE = 
     buildPrecedenceMap(
         new OpType[]{BinaryOp.EXP},
@@ -187,7 +173,7 @@ public class Expressionator
         new OpType[]{BinaryOp.CONCAT},
         new OpType[]{CompOp.LT, CompOp.GT, CompOp.NE, CompOp.LTE, CompOp.GTE, 
                      CompOp.EQ, SpecOp.LIKE, SpecOp.IS_NULL, SpecOp.IS_NOT_NULL},
-        new OpType[]{SpecOp.NOT},
+        new OpType[]{UnaryOp.NOT},
         new OpType[]{LogOp.AND},
         new OpType[]{LogOp.OR},
         new OpType[]{LogOp.XOR},
@@ -289,8 +275,6 @@ public class Expressionator
 
   private static Expr parseExpression(TokBuf buf, boolean singleExpr)     
   {
-    // FIXME, how do we handle order of ops when no parens?
-    
     while(buf.hasNext()) {
       Token t = buf.next();
 
@@ -592,7 +576,7 @@ public class Expressionator
     UnaryOp op = getOpType(firstTok, UnaryOp.class);
     Expr val = parseExpression(buf, true);
 
-    return new EUnaryOp(op, val);
+    return new EUnaryOp(op, val).resolveOrderOfOperations();
   }
 
   private static Expr parseCompOperator(Token firstTok, TokBuf buf) {
@@ -641,7 +625,7 @@ public class Expressionator
     switch(specOp) {
     case IS_NULL:
     case IS_NOT_NULL:
-      specOpExpr = new ENullOp(specOp, expr);
+      specOpExpr = new ENullOp(specOp, expr).resolveOrderOfOperations();
       break;
 
     case LIKE:
@@ -650,7 +634,8 @@ public class Expressionator
       if(t.getType() != TokenType.LITERAL) {
         throw new IllegalArgumentException("Missing Like pattern " + buf);
       }
-      specOpExpr = new ELikeOp(specOp, expr, t.getValueStr());
+      specOpExpr = new ELikeOp(specOp, expr, t.getValueStr())
+        .resolveOrderOfOperations();
       break;
 
     case BETWEEN:
@@ -680,7 +665,7 @@ public class Expressionator
       }
 
       List<Expr> exprs = findParenExprs(buf, true);
-      specOpExpr = new EInOp(specOp, expr, exprs);
+      specOpExpr = new EInOp(specOp, expr, exprs).resolveOrderOfOperations();
       break;
 
     default:
@@ -936,6 +921,28 @@ public class Expressionator
     return prec;
   }
 
+  private static void exprListToString(
+      List<Expr> exprs, String sep, StringBuilder sb, boolean isDebug) {
+    Iterator<Expr> iter = exprs.iterator();
+    iter.next().toString(sb, isDebug);
+    while(iter.hasNext()) {
+      sb.append(sep);
+      iter.next().toString(sb, isDebug);
+    }
+  }
+
+  private interface LeftAssocExpr {
+    public OpType getOp();
+    public Expr getLeft();
+    public void setLeft(Expr left);
+  }
+
+  private interface RightAssocExpr {
+    public OpType getOp();
+    public Expr getRight();
+    public void setRight(Expr right);
+  }
+
   public static abstract class Expr
   {
     public Object evalDefault() {
@@ -976,6 +983,62 @@ public class Expressionator
         sb.append("}");
       }
     }
+
+    public Expr resolveOrderOfOperations() {
+
+      if(!(this instanceof LeftAssocExpr)) {
+        // nothing we can do
+        return this;
+      }
+
+      // in order to get the precedence right, we need to first associate this
+      // expression with the "rightmost" expression preceding it, then adjust
+      // this expression "down" (lower precedence) as the precedence of the
+      // operations dictates.  since we parse from left to right, the initial
+      // "left" value isn't the immediate left expression, instead it's based
+      // on how the preceding operator precedence worked out.  we need to
+      // adjust "this" expression to the closest preceding expression before
+      // we can correctly resolve precedence.
+
+      Expr outerExpr = this;
+      final LeftAssocExpr thisExpr = (LeftAssocExpr)this;
+      final Expr thisLeft = thisExpr.getLeft();
+
+      // current: <this>{<left>{A op1 B} op2 <right>{C}}
+      if(thisLeft instanceof RightAssocExpr) {
+
+        RightAssocExpr leftOp = (RightAssocExpr)thisLeft;
+        
+        // target: <left>{A op1 <this>{B op2 <right>{C}}}
+        
+        thisExpr.setLeft(leftOp.getRight());
+
+        // give the new version of this expression an opportunity to further
+        // swap (since the swapped expression may itself be a binary
+        // expression)
+        leftOp.setRight(resolveOrderOfOperations());
+        outerExpr = thisLeft;
+
+        // at this point, this expression has been pushed all the way to the
+        // rightmost preceding expression (we artifically gave "this" the
+        // highest precedence).  now, we want to adjust precedence as
+        // necessary (shift it back down if the operator precedence is
+        // incorrect).  note, we only need to check precedence against "this",
+        // as all other precedence has been resolved in previous parsing
+        // rounds.
+        if((leftOp.getRight() == this) && 
+           !isHigherPrecendence(thisExpr.getOp(), leftOp.getOp())) {
+
+          // doh, "this" is lower (or the same) precedence, restore the
+          // original order of things
+          leftOp.setRight(thisExpr.getLeft());
+          thisExpr.setLeft(thisLeft);
+          outerExpr = this;
+        }
+      }
+
+      return outerExpr;
+    }
     
     protected abstract Object eval(RowContext ctx);
 
@@ -989,6 +1052,8 @@ public class Expressionator
     public Object getRowValue(String collectionName, String objName,
                               String colName);
   }
+
+
 
   private static final class ELiteralValue extends Expr
   {
@@ -1100,12 +1165,7 @@ public class Expressionator
       sb.append(_name).append("(");
 
       if(!_params.isEmpty()) {
-        Iterator<Expr> iter = _params.iterator();
-        iter.next().toString(sb, isDebug);
-        while(iter.hasNext()) {
-          sb.append(",");
-          iter.next().toString(sb, isDebug);
-        }
+        exprListToString(_params, ",", sb, isDebug);
       }
       
       sb.append(")");
@@ -1113,6 +1173,7 @@ public class Expressionator
   }
 
   private static abstract class EBaseBinaryOp extends Expr
+    implements LeftAssocExpr, RightAssocExpr
   {
     protected final OpType _op;
     protected Expr _left;
@@ -1124,51 +1185,24 @@ public class Expressionator
       _right = right;
     }
 
-    public Expr resolveOrderOfOperations() {
+    public OpType getOp() {
+      return _op;
+    }
 
-      // in order to get the precedence right, we need to first associate this
-      // expression with the "rightmost" expression preceding it, then adjust
-      // this expression "down" (lower precedence) as the precedence of the
-      // operations dictates.  since we parse from left to right, the initial
-      // "left" value isn't the immediate left expression, instead it's based
-      // on how the preceding operator precedence worked out.  we need to
-      // adjust "this" expression to the closest preceding expression before
-      // we can correctly resolve precedence.
+    public Expr getLeft() {
+      return _left;
+    }
 
-      Expr outerExpr = this;
+    public void setLeft(Expr left) {
+      _left = left;
+    }
 
-      // current: <this>{<left>{A op1 B} op2 <right>{C}}
-      if(_left instanceof EBaseBinaryOp) {
+    public Expr getRight() {
+      return _right;
+    }
 
-        EBaseBinaryOp leftOp = (EBaseBinaryOp)_left;
-        
-        // target: <left>{A op1 <this>{B op2 <right>{C}}}
-        _left = leftOp._right;
-
-        // give the new version of this expression an opportunity to further
-        // swap (since the swapped expression may itself be a binary
-        // expression)
-        leftOp._right = resolveOrderOfOperations();
-        outerExpr = leftOp;
-
-        // at this point, this expression has been pushed all the way to the
-        // rightmost preceding expression (we artifically gave "this" the
-        // highest precedence).  now, we want to adjust precedence as
-        // necessary (shift it back down if the operator precedence is
-        // incorrect).  note, we only need to check precedence against "this",
-        // as all other precedence has been resolved in previous parsing
-        // rounds.
-        if((leftOp._right == this) && !isHigherPrecendence(_op, leftOp._op)) {
-
-          // doh, "this" is lower (or the same) precedence, restore the
-          // original order of things
-          leftOp._right = _left;
-          _left = leftOp;
-          outerExpr = this;
-        }
-      }
-
-      return outerExpr;
+    public void setRight(Expr right) {
+      _right = right;
     }
 
     @Override
@@ -1194,10 +1228,27 @@ public class Expressionator
     }
   }
 
-  private static class EUnaryOp extends EBaseBinaryOp
+  private static class EUnaryOp extends Expr
+    implements RightAssocExpr
   {
+    private final OpType _op;
+    private Expr _expr;
+
     private EUnaryOp(UnaryOp op, Expr expr) {
-      super(op, null, expr);
+      _op = op;
+      _expr = expr;
+    }
+
+    public OpType getOp() {
+      return _op;
+    }
+
+    public Expr getRight() {
+      return _expr;
+    }
+
+    public void setRight(Expr right) {
+      _expr = right;
     }
 
     @Override
@@ -1209,8 +1260,9 @@ public class Expressionator
 
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append(" ").append(_op).append(" ");
-      _right.toString(sb, isDebug);
+      // FIXME, spacing for "Not" vs. "-"?
+      sb.append(_op).append(" ");
+      _expr.toString(sb, isDebug);
     }
   } 
 
@@ -1244,12 +1296,16 @@ public class Expressionator
 
   private static abstract class ESpecOp extends Expr
   {
-    private final SpecOp _op;
-    private final Expr _expr;
+    protected final SpecOp _op;
+    protected Expr _expr;
 
     private ESpecOp(SpecOp op, Expr expr) {
       _op = op;
       _expr = expr;
+    }
+
+    public OpType getOp() {
+      return _op;
     }
 
     @Override
@@ -1262,9 +1318,18 @@ public class Expressionator
   }
 
   private static class ENullOp extends ESpecOp
+    implements LeftAssocExpr
   {
     private ENullOp(SpecOp op, Expr expr) {
       super(op, expr);
+    }
+
+    public Expr getLeft() {
+      return _expr;
+    }
+
+    public void setLeft(Expr left) {
+      _expr = left;
     }
 
     @Override
@@ -1273,15 +1338,30 @@ public class Expressionator
 
       return null;
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      _expr.toString(sb, isDebug);
+      sb.append(" ").append(_op);
+    }
   }
 
   private static class ELikeOp extends ESpecOp
+    implements LeftAssocExpr
   {
     private final String _pattern;
 
     private ELikeOp(SpecOp op, Expr expr, String pattern) {
       super(op, expr);
       _pattern = pattern;
+    }
+
+    public Expr getLeft() {
+      return _expr;
+    }
+
+    public void setLeft(Expr left) {
+      _expr = left;
     }
 
     @Override
@@ -1293,6 +1373,7 @@ public class Expressionator
   }
 
   private static class EInOp extends ESpecOp
+    implements LeftAssocExpr
   {
     private final List<Expr> _exprs;
 
@@ -1301,11 +1382,27 @@ public class Expressionator
       _exprs = exprs;
     }
 
+    public Expr getLeft() {
+      return _expr;
+    }
+
+    public void setLeft(Expr left) {
+      _expr = left;
+    }
+
     @Override
     protected Object eval(RowContext ctx) {
       // FIXME 
 
       return null;
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      _expr.toString(sb, isDebug);
+      sb.append(" ").append(_op).append(" (");
+      exprListToString(_exprs, ",", sb, isDebug);
+      sb.append(")");
     }
   }
 }

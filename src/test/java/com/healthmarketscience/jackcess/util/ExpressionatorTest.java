@@ -56,6 +56,26 @@ public class ExpressionatorTest extends TestCase
     assertEquals("<ELogicalOp>{<ELogicalOp>{<ELiteralValue>{\"A\"} Or <ELiteralValue>{\"B\"}} Or <ELiteralValue>{\"C\"}}",
                  expr.toDebugString());
 
+    expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, "\"A\" & \"B\" Is Null", null);
+    assertEquals("<ENullOp>{<EBinaryOp>{<ELiteralValue>{\"A\"} & <ELiteralValue>{\"B\"}} Is Null}",
+                 expr.toDebugString());
+
+    expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, "\"A\" Or \"B\" Is Null", null);
+    assertEquals("<ELogicalOp>{<ELiteralValue>{\"A\"} Or <ENullOp>{<ELiteralValue>{\"B\"} Is Null}}",
+                 expr.toDebugString());
+
+    expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, "Not \"A\" & \"B\"", null);
+    assertEquals("<EUnaryOp>{Not <EBinaryOp>{<ELiteralValue>{\"A\"} & <ELiteralValue>{\"B\"}}}",
+                 expr.toDebugString());
+
+    expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, "Not \"A\" Or \"B\"", null);
+    assertEquals("<ELogicalOp>{<EUnaryOp>{Not <ELiteralValue>{\"A\"}} Or <ELiteralValue>{\"B\"}}",
+                 expr.toDebugString());
+
 
   }
 }
