@@ -16,8 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.util;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,9 +26,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
@@ -83,12 +81,18 @@ public class Expressionator
   private interface OpType {}
 
   private enum UnaryOp implements OpType {
-    NEG("-"), NOT("Not");
+    NEG("-", false), NOT("Not", true);
 
     private final String _str;
+    private final boolean _needSpace;
 
-    private UnaryOp(String str) {
+    private UnaryOp(String str, boolean needSpace) {
       _str = str;
+      _needSpace = needSpace;
+    }
+
+    public boolean needsSpace() {
+      return _needSpace;
     }
 
     @Override
@@ -98,7 +102,7 @@ public class Expressionator
   }
 
   private enum BinaryOp implements OpType {
-    PLUS("+"), MINUS("-"), MULT("*"), DIV("-"), INT_DIV("\\"), EXP("^"), 
+    PLUS("+"), MINUS("-"), MULT("*"), DIV("/"), INT_DIV("\\"), EXP("^"), 
     CONCAT("&"), MOD("Mod");
 
     private final String _str;
@@ -181,6 +185,10 @@ public class Expressionator
         new OpType[]{SpecOp.IN, SpecOp.NOT_IN, SpecOp.BETWEEN, 
                      SpecOp.NOT_BETWEEN});
 
+  private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<Character>(
+      Arrays.asList('\\','.','%','=','+', '$','^','|','(',')','{','}','&'));
+  
+
   private static final Expr THIS_COL_VALUE = new Expr() {
     @Override protected Object eval(RowContext ctx) {
       return ctx.getThisColumnValue();
@@ -189,36 +197,16 @@ public class Expressionator
       sb.append("<THIS_COL>");
     }
   };
-  private static final Expr NULL_VALUE = new Expr() {
-    @Override protected Object eval(RowContext ctx) {
-      return null;
-    }
-    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append("Null");
-    }
-  };
-  private static final Expr TRUE_VALUE = new Expr() {
-    @Override protected Object eval(RowContext ctx) {
-      return Boolean.TRUE;
-    }
-    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append("True");
-    }
-  };
-  private static final Expr FALSE_VALUE = new Expr() {
-    @Override protected Object eval(RowContext ctx) {
-      return Boolean.FALSE;
-    }
-    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append("False");
-    }
-  };
+
+  private static final Expr NULL_VALUE = new EConstValue(null, "Null");
+  private static final Expr TRUE_VALUE = new EConstValue(Boolean.TRUE, "True");
+  private static final Expr FALSE_VALUE = new EConstValue(Boolean.FALSE, "False");
 
   private Expressionator() 
   {
   }
 
-  public static String testTokenize(Type exprType, String exprStr, Database db) {
+  static String testTokenize(Type exprType, String exprStr, Database db) {
     
     List<Token> tokens = trimSpaces(
         ExpressionTokenizer.tokenize(exprType, exprStr, (DatabaseImpl)db));
@@ -281,7 +269,7 @@ public class Expressionator
       switch(t.getType()) {
       case OBJ_NAME:
 
-        buf.setPendingExpr(parseObjectReference(t, buf));
+        parseObjectRefExpression(t, buf);
         break;
 
       case LITERAL:
@@ -306,18 +294,7 @@ public class Expressionator
 
         case COMP:
 
-          if(!buf.hasPendingExpr() && (buf.getExprType() == Type.FIELD_VALIDATOR)) {
-            // comparison operators for field validators can implicitly use
-            // the current field value for the left value
-            buf.setPendingExpr(THIS_COL_VALUE);
-          }
-          if(buf.hasPendingExpr()) {
-            buf.setPendingExpr(parseCompOperator(t, buf));
-          } else {
-            throw new IllegalArgumentException(
-                "Missing left expression for comparison operator " + 
-                t.getValue() + " " + buf);
-          }
+          parseCompOpExpression(t, buf);
           break;
 
         default:
@@ -328,15 +305,7 @@ public class Expressionator
 
       case DELIM:
 
-        // the only "top-level" delim we expect to find is open paren, and
-        // there shouldn't be any pending expression
-        if(!isDelim(t, OPEN_PAREN) || buf.hasPendingExpr()) {
-          throw new IllegalArgumentException("Unexpected delimiter " + 
-                                             t.getValue() + " " + buf);
-        }
-
-        Expr subExpr = findParenExprs(buf, false).get(0);
-        buf.setPendingExpr(new EParen(subExpr));
+        parseDelimExpression(t, buf);
         break;
         
       case STRING:
@@ -346,22 +315,17 @@ public class Expressionator
         if(wordType == null) {
 
           // is it a function call?
-          Expr funcExpr = maybeParseFuncCall(t, buf);
-          if(funcExpr != null) {
-
-            buf.setPendingExpr(funcExpr);
-
-          } else {
+          if(!maybeParseFuncCallExpression(t, buf)) {
 
             // is it an object name?
             Token next = buf.peekNext();
             if((next != null) && isObjNameSep(next)) {
 
-              buf.setPendingExpr(parseObjectReference(t, buf));
+              parseObjectRefExpression(t, buf);
 
             } else {
               
-              // FIXME maybe obj name, maybe string?
+              // FIXME maybe bare obj name, maybe string literal?
               throw new UnsupportedOperationException("FIXME");
             }
           }
@@ -378,27 +342,12 @@ public class Expressionator
             
           case LOG_OP:
 
-            if(buf.hasPendingExpr()) {
-              buf.setPendingExpr(parseLogicalOperator(t, buf));
-            } else {
-              throw new IllegalArgumentException(
-                  "Missing left expression for logical operator " + 
-                  t.getValue() + " " + buf);
-            }
+            parseLogicalOpExpression(t, buf);
             break;
 
           case CONST:
 
-            if("true".equalsIgnoreCase(t.getValueStr())) {
-              buf.setPendingExpr(TRUE_VALUE);
-            } else if("false".equalsIgnoreCase(t.getValueStr())) {
-              buf.setPendingExpr(FALSE_VALUE);
-            } else if("null".equalsIgnoreCase(t.getValueStr())) {
-              buf.setPendingExpr(NULL_VALUE);
-            } else {
-              throw new RuntimeException("Unexpected CONST word "
-                                         + t.getValue());
-            }
+            parseConstExpression(t, buf);
             break;
 
           case SPEC_OP_PREFIX:
@@ -435,7 +384,7 @@ public class Expressionator
     return expr;
   }
 
-  private static Expr parseObjectReference(Token firstTok, TokBuf buf) {
+  private static void parseObjectRefExpression(Token firstTok, TokBuf buf) {
 
     // object references may be joined by '.' or '!'. access syntac docs claim
     // object identifiers can be formatted like:
@@ -476,10 +425,24 @@ public class Expressionator
     String objName = objNames.poll();
     String collectionName = objNames.poll();
 
-    return new EObjValue(collectionName, objName, fieldName);
+    buf.setPendingExpr(
+        new EObjValue(collectionName, objName, fieldName));
   }
   
-  private static Expr maybeParseFuncCall(Token firstTok, TokBuf buf) {
+  private static void parseDelimExpression(Token firstTok, TokBuf buf) {
+    // the only "top-level" delim we expect to find is open paren, and
+    // there shouldn't be any pending expression
+    if(!isDelim(firstTok, OPEN_PAREN) || buf.hasPendingExpr()) {
+      throw new IllegalArgumentException("Unexpected delimiter " + 
+                                         firstTok.getValue() + " " + buf);
+    }
+
+    Expr subExpr = findParenExprs(buf, false).get(0);
+    buf.setPendingExpr(new EParen(subExpr));
+  }
+
+  private static boolean maybeParseFuncCallExpression(
+      Token firstTok, TokBuf buf) {
 
     int startPos = buf.curPos();
     boolean foundFunc = false;
@@ -488,12 +451,15 @@ public class Expressionator
       Token t = buf.peekNext();
       if(!isDelim(t, FUNC_START_DELIM)) {
         // not a function call
-        return null;
+        return false;
       }
         
       buf.next();
       List<Expr> params = findParenExprs(buf, true);
-      return new EFunc(firstTok.getValueStr(), params);
+      buf.setPendingExpr(
+          new EFunc(firstTok.getValueStr(), params));
+      foundFunc = true;
+      return true;
 
     } finally {
       if(!foundFunc) {
@@ -551,9 +517,9 @@ public class Expressionator
 
     // most ops are two argument except that '-' could be negation
     if(buf.hasPendingExpr()) {
-      buf.setPendingExpr(parseBinaryOperator(t, buf));
+      parseBinaryOpExpression(t, buf);
     } else if(isOp(t, "-")) {
-      buf.setPendingExpr(parseUnaryOperator(t, buf));
+      parseUnaryOpExpression(t, buf);
     } else {
       throw new IllegalArgumentException(
           "Missing left expression for binary operator " + t.getValue() + 
@@ -561,35 +527,55 @@ public class Expressionator
     }
   }
 
-  private static Expr parseBinaryOperator(Token firstTok, TokBuf buf) {
+  private static void parseBinaryOpExpression(Token firstTok, TokBuf buf) {
     BinaryOp op = getOpType(firstTok, BinaryOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
-    return new EBinaryOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
+    buf.setPendingExpr(new EBinaryOp(op, leftExpr, rightExpr));
   }
 
-  private static Expr parseUnaryOperator(Token firstTok, TokBuf buf) {
+  private static void parseUnaryOpExpression(Token firstTok, TokBuf buf) {
     UnaryOp op = getOpType(firstTok, UnaryOp.class);
     Expr val = parseExpression(buf, true);
 
-    return new EUnaryOp(op, val).resolveOrderOfOperations();
+    buf.setPendingExpr(new EUnaryOp(op, val));
   }
 
-  private static Expr parseCompOperator(Token firstTok, TokBuf buf) {
+  private static void parseCompOpExpression(Token firstTok, TokBuf buf) {
+
+    if(!buf.hasPendingExpr()) {
+      if(buf.getExprType() == Type.FIELD_VALIDATOR) {
+        // comparison operators for field validators can implicitly use
+        // the current field value for the left value
+        buf.setPendingExpr(THIS_COL_VALUE);
+      } else {
+        throw new IllegalArgumentException(
+            "Missing left expression for comparison operator " + 
+            firstTok.getValue() + " " + buf);
+      }
+    }
+
     CompOp op = getOpType(firstTok, CompOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
-    return new ECompOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
+    buf.setPendingExpr(new ECompOp(op, leftExpr, rightExpr));
   }
 
-  private static Expr parseLogicalOperator(Token firstTok, TokBuf buf) {
+  private static void parseLogicalOpExpression(Token firstTok, TokBuf buf) {
+
+    if(!buf.hasPendingExpr()) {
+      throw new IllegalArgumentException(
+          "Missing left expression for logical operator " + 
+          firstTok.getValue() + " " + buf);
+    }
+
     LogOp op = getOpType(firstTok, LogOp.class);
     Expr leftExpr = buf.takePendingExpr();
     Expr rightExpr = parseExpression(buf, true);
 
-    return new ELogicalOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
+    buf.setPendingExpr(new ELogicalOp(op, leftExpr, rightExpr));
   }
 
   private static void parseSpecOpExpression(Token firstTok, TokBuf buf) {
@@ -598,22 +584,21 @@ public class Expressionator
 
     if(specOp == SpecOp.NOT) {
       // this is the unary prefix operator
-      buf.setPendingExpr(parseUnaryOperator(firstTok, buf));
+      parseUnaryOpExpression(firstTok, buf);
       return;
     }
 
-    if(!buf.hasPendingExpr() && (buf.getExprType() == Type.FIELD_VALIDATOR)) {
-      // comparison operators for field validators can implicitly use
-      // the current field value for the left value
-      buf.setPendingExpr(THIS_COL_VALUE);
-    }
-
     if(!buf.hasPendingExpr()) {
-      throw new IllegalArgumentException(
-          "Missing left expression for comparison operator " + 
-          specOp + " " + buf);
+      if(buf.getExprType() == Type.FIELD_VALIDATOR) {
+        // comparison operators for field validators can implicitly use
+        // the current field value for the left value
+        buf.setPendingExpr(THIS_COL_VALUE);
+      } else {
+        throw new IllegalArgumentException(
+            "Missing left expression for comparison operator " + 
+            specOp + " " + buf);
+      }
     }
-
 
     Expr expr = buf.takePendingExpr();
 
@@ -622,7 +607,7 @@ public class Expressionator
     switch(specOp) {
     case IS_NULL:
     case IS_NOT_NULL:
-      specOpExpr = new ENullOp(specOp, expr).resolveOrderOfOperations();
+      specOpExpr = new ENullOp(specOp, expr);
       break;
 
     case LIKE:
@@ -631,8 +616,9 @@ public class Expressionator
       if(t.getType() != TokenType.LITERAL) {
         throw new IllegalArgumentException("Missing Like pattern " + buf);
       }
-      specOpExpr = new ELikeOp(specOp, expr, t.getValueStr())
-        .resolveOrderOfOperations();
+      String patternStr = t.getValueStr();
+      Pattern pattern = likePatternToRegex(patternStr, buf);
+      specOpExpr = new ELikeOp(specOp, expr, pattern, patternStr);
       break;
 
     case BETWEEN:
@@ -653,20 +639,19 @@ public class Expressionator
               "Missing 'And' for 'Between' expression " + buf);
         }
 
-        if(isOp(tmpT, "and")) {
+        if(isString(tmpT, "and")) {
           buf.next();
           startRangeExpr = tmpExpr;
           break;
         }
 
         // put the pending expression back and try parsing some more
-        buf.setPendingExpr(tmpExpr);
+        buf.restorePendingExpr(tmpExpr);
       }
 
       Expr endRangeExpr = parseExpression(buf, true);
 
-      specOpExpr = new EBetweenOp(specOp, expr, startRangeExpr, endRangeExpr)
-        .resolveOrderOfOperations();
+      specOpExpr = new EBetweenOp(specOp, expr, startRangeExpr, endRangeExpr);
       break;
 
     case IN:
@@ -682,7 +667,7 @@ public class Expressionator
       }
 
       List<Expr> exprs = findParenExprs(buf, true);
-      specOpExpr = new EInOp(specOp, expr, exprs).resolveOrderOfOperations();
+      specOpExpr = new EInOp(specOp, expr, exprs);
       break;
 
     default:
@@ -727,6 +712,21 @@ public class Expressionator
 
     throw new IllegalArgumentException(
         "Malformed special operator " + opStr + " " + buf);
+  }
+
+  private static void parseConstExpression(Token firstTok, TokBuf buf) {
+    Expr constExpr = null;
+    if("true".equalsIgnoreCase(firstTok.getValueStr())) {
+      constExpr = TRUE_VALUE;
+    } else if("false".equalsIgnoreCase(firstTok.getValueStr())) {
+      constExpr = FALSE_VALUE;
+    } else if("null".equalsIgnoreCase(firstTok.getValueStr())) {
+      constExpr = NULL_VALUE;
+    } else {
+      throw new RuntimeException("Unexpected CONST word "
+                                 + firstTok.getValue());
+    }
+    buf.setPendingExpr(constExpr);
   }
 
   private static boolean isObjNameSep(Token t) {
@@ -867,8 +867,13 @@ public class Expressionator
         throw new IllegalArgumentException(
             "Found multiple expressions with no operator " + this);
       }
-      _pendingExpr = expr;
+      _pendingExpr = expr.resolveOrderOfOperations();
     } 
+
+    public void restorePendingExpr(Expr expr) {
+      // this is an expression which was previously set, so no need to re-resolve
+      _pendingExpr = expr;
+    }
 
     public Expr takePendingExpr() {
       Expr expr = _pendingExpr;
@@ -911,6 +916,11 @@ public class Expressionator
 
       sb.append(")");
 
+      if(_pendingExpr != null) {
+        sb.append(" [pending '").append(_pendingExpr.toDebugString())
+          .append("']");
+      }
+
       return sb.toString();
     } 
   }
@@ -946,6 +956,65 @@ public class Expressionator
       sb.append(sep);
       iter.next().toString(sb, isDebug);
     }
+  }
+
+  private static Pattern likePatternToRegex(String pattern, Object location) {
+
+    StringBuilder sb = new StringBuilder(pattern.length());
+
+    // Access LIKE pattern supports (note, matching is case-insensitive):
+    // - '*' -> 0 or more chars
+    // - '?' -> single character
+    // - '#' -> single digit
+    // - '[...]' -> character class, '[!...]' -> not in char class
+
+    for(int i = 0; i < pattern.length(); ++i) {
+      char c = pattern.charAt(i);
+
+      if(c == '*') {
+        sb.append(".*");
+      } else if(c == '?') {
+        sb.append('.');
+      } else if(c == '#') {
+        sb.append("\\d");
+      } else if(c == '[') {
+
+        // find closing brace
+        int startPos = i + 1;
+        int endPos = -1;
+        for(int j = startPos; j < pattern.length(); ++j) {
+          if(pattern.charAt(j) == ']') {
+            endPos = j;
+            break;
+          } 
+        }
+
+        if(endPos == -1) {
+          throw new IllegalArgumentException(
+              "Could not find closing bracket in pattern '" + pattern + "' " +
+              location);
+        }
+
+        String charClass = pattern.substring(startPos, endPos);
+        
+        if((charClass.length() > 0) && (charClass.charAt(0) == '!')) {
+          // this is a negated char class
+          charClass = '^' + charClass.substring(1);
+        }
+        
+        sb.append('[').append(charClass).append(']');
+
+      } else if(REGEX_SPEC_CHARS.contains(c)) {
+        // this char is special in regexes, so escape it
+        sb.append('\\').append(c);
+      } else {
+        sb.append(c);
+      }
+    }
+
+    return Pattern.compile(sb.toString(),
+                           Pattern.CASE_INSENSITIVE | Pattern.DOTALL | 
+                           Pattern.UNICODE_CASE);
   }
 
   private interface LeftAssocExpr {
@@ -1001,7 +1070,7 @@ public class Expressionator
       }
     }
 
-    public Expr resolveOrderOfOperations() {
+    protected Expr resolveOrderOfOperations() {
 
       if(!(this instanceof LeftAssocExpr)) {
         // nothing we can do
@@ -1070,7 +1139,26 @@ public class Expressionator
                               String colName);
   }
 
+  private static final class EConstValue extends Expr
+  {
+    private final Object _val;
+    private final String _str;
 
+    private EConstValue(Object val, String str) {
+      _val = val;
+      _str = str;
+    }
+
+    @Override 
+    protected Object eval(RowContext ctx) {
+      return _val;
+    }
+
+    @Override 
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append(_str);
+    }
+  }
 
   private static final class ELiteralValue extends Expr
   {
@@ -1277,8 +1365,10 @@ public class Expressionator
 
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
-      // FIXME, spacing for "Not" vs. "-"?
-      sb.append(_op).append(" ");
+      sb.append(_op);
+      if(isDebug || ((UnaryOp)_op).needsSpace()) {
+        sb.append(" ");
+      }
       _expr.toString(sb, isDebug);
     }
   } 
@@ -1357,11 +1447,13 @@ public class Expressionator
 
   private static class ELikeOp extends ESpecOp
   {
-    private final String _pattern;
+    private final Pattern _pattern;
+    private final String _patternStr;
 
-    private ELikeOp(SpecOp op, Expr expr, String pattern) {
+    private ELikeOp(SpecOp op, Expr expr, Pattern pattern, String patternStr) {
       super(op, expr);
       _pattern = pattern;
+      _patternStr = patternStr;
     }
 
     @Override
@@ -1374,9 +1466,12 @@ public class Expressionator
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       _expr.toString(sb, isDebug);
-      sb.append(" ").append(_op).append(" \"");
-      sb.append(_pattern.replace("\"", "\"\""));
-      sb.append("\"");
+      sb.append(" ").append(_op).append(" \"")
+        .append(_patternStr.replace("\"", "\"\""))
+        .append("\"");
+      if(isDebug) {
+        sb.append("(").append(_pattern).append(")");
+      }
     }
   }
 
