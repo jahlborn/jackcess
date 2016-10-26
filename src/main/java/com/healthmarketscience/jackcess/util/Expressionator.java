@@ -378,8 +378,6 @@ public class Expressionator
             
           case LOG_OP:
 
-            // FIXME, handle "between" expr ("and")
-
             if(buf.hasPendingExpr()) {
               buf.setPendingExpr(parseLogicalOperator(t, buf));
             } else {
@@ -405,8 +403,7 @@ public class Expressionator
 
           case SPEC_OP_PREFIX:
 
-            parseSpecialOperator(t, buf);
-            // FIXME
+            parseSpecOpExpression(t, buf);
             break;
 
           default:
@@ -595,7 +592,7 @@ public class Expressionator
     return new ELogicalOp(op, leftExpr, rightExpr).resolveOrderOfOperations();
   }
 
-  private static void parseSpecialOperator(Token firstTok, TokBuf buf) {
+  private static void parseSpecOpExpression(Token firstTok, TokBuf buf) {
     
     SpecOp specOp = getSpecialOperator(firstTok, buf);
 
@@ -641,15 +638,35 @@ public class Expressionator
     case BETWEEN:
     case NOT_BETWEEN:
       
-      // the "rest" of a between expression is of the form "X And Y".  since
-      // that is the same as a normal "And" expression, we are going to cheat
-      // and just parse the remaining
+      // the "rest" of a between expression is of the form "X And Y".  we are
+      // going to speculatively parse forward until we find the "And"
+      // operator.
+      Expr startRangeExpr = null;
+      while(true) {
 
-      if(true) {
-      // FIXME
-      throw new UnsupportedOperationException("FIXME");
+        Expr tmpExpr = parseExpression(buf, true);
+        Token tmpT = buf.peekNext();
+
+        if(tmpT == null) {
+          // ran out of expression?
+          throw new IllegalArgumentException(
+              "Missing 'And' for 'Between' expression " + buf);
+        }
+
+        if(isOp(tmpT, "and")) {
+          buf.next();
+          startRangeExpr = tmpExpr;
+          break;
+        }
+
+        // put the pending expression back and try parsing some more
+        buf.setPendingExpr(tmpExpr);
       }
 
+      Expr endRangeExpr = parseExpression(buf, true);
+
+      specOpExpr = new EBetweenOp(specOp, expr, startRangeExpr, endRangeExpr)
+        .resolveOrderOfOperations();
       break;
 
     case IN:
@@ -1295,6 +1312,7 @@ public class Expressionator
   } 
 
   private static abstract class ESpecOp extends Expr
+    implements LeftAssocExpr
   {
     protected final SpecOp _op;
     protected Expr _expr;
@@ -1308,28 +1326,19 @@ public class Expressionator
       return _op;
     }
 
-    @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      // FIXME
-      throw new UnsupportedOperationException("FIXME");
-      // _expr.toString(sb, isDebug);
-      // sb.append(" ").append(_op);
-    } 
-  }
-
-  private static class ENullOp extends ESpecOp
-    implements LeftAssocExpr
-  {
-    private ENullOp(SpecOp op, Expr expr) {
-      super(op, expr);
-    }
-
     public Expr getLeft() {
       return _expr;
     }
 
     public void setLeft(Expr left) {
       _expr = left;
+    }
+  }
+
+  private static class ENullOp extends ESpecOp
+  {
+    private ENullOp(SpecOp op, Expr expr) {
+      super(op, expr);
     }
 
     @Override
@@ -1347,7 +1356,6 @@ public class Expressionator
   }
 
   private static class ELikeOp extends ESpecOp
-    implements LeftAssocExpr
   {
     private final String _pattern;
 
@@ -1356,38 +1364,29 @@ public class Expressionator
       _pattern = pattern;
     }
 
-    public Expr getLeft() {
-      return _expr;
-    }
-
-    public void setLeft(Expr left) {
-      _expr = left;
-    }
-
     @Override
     protected Object eval(RowContext ctx) {
       // FIXME 
 
       return null;
     }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      _expr.toString(sb, isDebug);
+      sb.append(" ").append(_op).append(" \"");
+      sb.append(_pattern.replace("\"", "\"\""));
+      sb.append("\"");
+    }
   }
 
   private static class EInOp extends ESpecOp
-    implements LeftAssocExpr
   {
     private final List<Expr> _exprs;
 
     private EInOp(SpecOp op, Expr expr, List<Expr> exprs) {
       super(op, expr);
       _exprs = exprs;
-    }
-
-    public Expr getLeft() {
-      return _expr;
-    }
-
-    public void setLeft(Expr left) {
-      _expr = left;
     }
 
     @Override
@@ -1403,6 +1402,44 @@ public class Expressionator
       sb.append(" ").append(_op).append(" (");
       exprListToString(_exprs, ",", sb, isDebug);
       sb.append(")");
+    }
+  }
+
+  private static class EBetweenOp extends ESpecOp
+    implements RightAssocExpr
+  {
+    private final Expr _startRangeExpr;
+    private Expr _endRangeExpr;
+
+    private EBetweenOp(SpecOp op, Expr expr, Expr startRangeExpr,
+                       Expr endRangeExpr) {
+      super(op, expr);
+      _startRangeExpr = startRangeExpr;
+      _endRangeExpr = endRangeExpr;
+    }
+
+    public Expr getRight() {
+      return _endRangeExpr;
+    }
+
+    public void setRight(Expr right) {
+      _endRangeExpr = right;
+    }
+
+    @Override
+    protected Object eval(RowContext ctx) {
+      // FIXME 
+
+      return null;
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      _expr.toString(sb, isDebug);
+      sb.append(" ").append(_op).append(" ");
+      _startRangeExpr.toString(sb, isDebug);
+      sb.append(" And ");
+      _endRangeExpr.toString(sb, isDebug);
     }
   }
 }
