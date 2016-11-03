@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.util.Expressionator.*;
+import com.healthmarketscience.jackcess.util.Expression.ValueType;
+
 
 /**
  *
@@ -74,7 +74,8 @@ class ExpressionTokenizer
    * Tokenizes an expression string of the given type and (optionally) in the
    * context of the relevant database.
    */
-  static List<Token> tokenize(Type exprType, String exprStr, DatabaseImpl db) {
+  static List<Token> tokenize(Type exprType, String exprStr,
+                              ParseContext context) {
 
     if(exprStr != null) {
       exprStr = exprStr.trim();
@@ -99,10 +100,9 @@ class ExpressionTokenizer
         case IS_OP_FLAG:
 
           // special case '-' for negative number
-          Map.Entry<?,String> numLit = maybeParseNumberLiteral(c, buf);
+          Token numLit = maybeParseNumberLiteral(c, buf);
           if(numLit != null) {
-            tokens.add(new Token(TokenType.LITERAL, numLit.getKey(), 
-                                 numLit.getValue()));
+            tokens.add(numLit);
             continue;
           }
           
@@ -152,12 +152,11 @@ class ExpressionTokenizer
 
           switch(c) {
           case QUOTED_STR_CHAR:
-            tokens.add(new Token(TokenType.LITERAL, parseQuotedString(buf)));
+            tokens.add(new Token(TokenType.LITERAL, null, parseQuotedString(buf),
+                                 ValueType.STRING));
             break;
           case DATE_LIT_QUOTE_CHAR:
-            Map.Entry<?,String> dateLit = parseDateLiteralString(buf, db);
-            tokens.add(new Token(TokenType.LITERAL, dateLit.getKey(), 
-                                 dateLit.getValue()));
+            tokens.add(parseDateLiteralString(buf, context));
             break;
           case OBJ_NAME_START_CHAR:
             tokens.add(new Token(TokenType.OBJ_NAME, parseObjNameString(buf)));
@@ -176,10 +175,9 @@ class ExpressionTokenizer
       } else {
 
         if(isDigit(c)) {
-          Map.Entry<?,String> numLit = maybeParseNumberLiteral(c, buf);
+          Token numLit = maybeParseNumberLiteral(c, buf);
           if(numLit != null) {
-            tokens.add(new Token(TokenType.LITERAL, numLit.getKey(), 
-                                 numLit.getValue()));
+            tokens.add(numLit);
             continue;
           }
         }
@@ -309,8 +307,8 @@ class ExpressionTokenizer
     return sb.toString();
   }
 
-  private static Map.Entry<?,String> parseDateLiteralString(
-      ExprBuf buf, DatabaseImpl db) 
+  private static Token parseDateLiteralString(
+      ExprBuf buf, ParseContext context) 
   {
     String dateStr = parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null);
     
@@ -318,27 +316,30 @@ class ExpressionTokenizer
     boolean hasTime = (dateStr.indexOf(':') >= 0);
 
     SimpleDateFormat sdf = null;
+    ValueType valType = null;
     if(hasDate && hasTime) {
-      sdf = buf.getDateTimeFormat(db);
+      sdf = buf.getDateTimeFormat(context);
+      valType = ValueType.DATE_TIME;
     } else if(hasDate) {
-      sdf = buf.getDateFormat(db);
+      sdf = buf.getDateFormat(context);
+      valType = ValueType.DATE;
     } else if(hasTime) {
-      sdf = buf.getTimeFormat(db);
+      sdf = buf.getTimeFormat(context);
+      valType = ValueType.TIME;
     } else {
       throw new IllegalArgumentException("Invalid date time literal " + dateStr +
                                          " " + buf);
     }
 
-    // FIXME, do we need to know which "type" it was?
     try {
-      return newEntry(sdf.parse(dateStr), dateStr);
+      return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType);
     } catch(ParseException pe) {
       throw new IllegalArgumentException(       
           "Invalid date time literal " + dateStr + " " + buf, pe);
     }
   }
 
-  private static Map.Entry<?,String> maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
+  private static Token maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
     StringBuilder sb = buf.getScratchBuffer().append(firstChar);
     boolean hasDigit = isDigit(firstChar);
 
@@ -374,7 +375,7 @@ class ExpressionTokenizer
         // what number type to use here?
         BigDecimal num = new BigDecimal(numStr);
         foundNum = true;
-        return newEntry(num, numStr);
+        return new Token(TokenType.LITERAL, num, numStr, ValueType.BIG_DEC);
       } catch(NumberFormatException ne) {
         throw new IllegalArgumentException(
             "Invalid number literal " + numStr + " " + buf, ne);
@@ -458,31 +459,26 @@ class ExpressionTokenizer
       return _scratch;
     }
 
-    public SimpleDateFormat getDateFormat(DatabaseImpl db) {
+    public SimpleDateFormat getDateFormat(ParseContext context) {
       if(_dateFmt == null) {
-        _dateFmt = newFormat(DATE_FORMAT, db);
+        _dateFmt = context.createDateFormat(DATE_FORMAT);
       }
       return _dateFmt;
     }
 
-    public SimpleDateFormat getTimeFormat(DatabaseImpl db) {
+    public SimpleDateFormat getTimeFormat(ParseContext context) {
       if(_timeFmt == null) {
-        _timeFmt = newFormat(TIME_FORMAT, db);
+        _timeFmt = context.createDateFormat(TIME_FORMAT);
       }
       return _timeFmt;
     }
 
-    public SimpleDateFormat getDateTimeFormat(DatabaseImpl db) {
+    public SimpleDateFormat getDateTimeFormat(ParseContext context) {
       if(_dateTimeFmt == null) {
-        _dateTimeFmt = newFormat(DATE_TIME_FORMAT, db);
+        _dateTimeFmt = context.createDateFormat(DATE_TIME_FORMAT);
       }
       return _dateTimeFmt;
     }
-
-    private static SimpleDateFormat newFormat(String str, DatabaseImpl db) {
-      return ((db != null) ? db.createDateFormat(str) :
-              DatabaseBuilder.createDateFormat(str));
-    } 
 
     @Override
     public String toString() {
@@ -496,15 +492,21 @@ class ExpressionTokenizer
     private final TokenType _type;
     private final Object _val;
     private final String _valStr;
+    private final ValueType _valType;
 
     private Token(TokenType type, String val) {
       this(type, val, val);
     }
 
     private Token(TokenType type, Object val, String valStr) {
+      this(type, val, valStr, null);
+    }
+
+    private Token(TokenType type, Object val, String valStr, ValueType valType) {
       _type = type;
-      _val = val;
+      _val = ((val != null) ? val : valStr);
       _valStr = valStr;
+      _valType = valType;
     }
 
     public TokenType getType() {
@@ -519,14 +521,18 @@ class ExpressionTokenizer
       return _valStr;
     }
 
+    public ValueType getValueType() {
+      return _valType;
+    }
+
     @Override
     public String toString() {
       if(_type == TokenType.SPACE) {
         return "' '";
       }
       String str = "[" + _type + "] '" + _val + "'";
-      if(_type == TokenType.LITERAL) {
-        str += " (" + _val.getClass() + ")";
+      if(_valType != null) {
+        str += " (" + _valType + ")";
       }
       return str;
     }

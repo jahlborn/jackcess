@@ -40,7 +40,7 @@ public class ExpressionatorTest extends TestCase
 
     doTestSimpleBinOp("EBinaryOp", "+", "-", "*", "/", "\\", "^", "&", "Mod");
     doTestSimpleBinOp("ECompOp", "<", "<=", ">", ">=", "=", "<>");
-    doTestSimpleBinOp("ELogicalOp", "And", "Or", "Eqv", "Xor");
+    doTestSimpleBinOp("ELogicalOp", "And", "Or", "Eqv", "Xor", "Imp");
 
     for(String constStr : new String[]{"True", "False", "Null"}) {
       validateExpr(constStr, "<EConstValue>{" + constStr + "}");
@@ -120,7 +120,7 @@ public class ExpressionatorTest extends TestCase
 
   private static void validateExpr(String exprStr, String debugStr, 
                                    String cleanStr) {
-    Expressionator.Expr expr = Expressionator.parse(
+    Expression expr = Expressionator.parse(
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null);
     assertEquals(debugStr, expr.toDebugString());
     assertEquals(cleanStr, expr.toString());

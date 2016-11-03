@@ -1524,6 +1524,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return false;
     } else if(obj instanceof Boolean) {
       return ((Boolean)obj).booleanValue();
+    } else if(obj instanceof Number) {
+      // Access considers 0 as "false"
+      if(obj instanceof BigDecimal) {
+        return (((BigDecimal)obj).compareTo(BigDecimal.ZERO) != 0);
+      } 
+      if(obj instanceof BigInteger) {
+        return (((BigInteger)obj).compareTo(BigInteger.ZERO) != 0);
+      }
+      return (((Number)obj).doubleValue() != 0.0);
     }
     return Boolean.parseBoolean(obj.toString());
   }
