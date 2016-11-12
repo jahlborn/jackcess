@@ -1,8 +1,8 @@
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.channels.NonWritableChannelException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -11,6 +11,7 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.PropertyMap;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 
@@ -208,10 +209,17 @@ public class JetFormatTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
       Database db = null;
-      IOException failure = null;
+      Exception failure = null;
       try {
         db = openCopy(testDB);
-      } catch(IOException e) {
+
+        if(testDB.getExpectedFormat().READ_ONLY) {
+          PropertyMap props = db.getUserDefinedProperties();
+          props.put("foo", "bar");
+          props.save();
+        } 
+
+      } catch(Exception e) {
         failure = e;
       } finally {
         if(db != null) {
@@ -222,7 +230,7 @@ public class JetFormatTest extends TestCase {
       if(!testDB.getExpectedFormat().READ_ONLY) {
         assertNull(failure);
       } else {
-        assertTrue(failure.getMessage().contains("does not support writing"));
+        assertTrue(failure instanceof NonWritableChannelException);
       }
 
     }

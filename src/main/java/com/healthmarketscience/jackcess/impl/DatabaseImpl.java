@@ -389,9 +389,18 @@ public class DatabaseImpl implements Database
         JetFormat jetFormat = JetFormat.getFormat(channel);
 
         if(jetFormat.READ_ONLY) {
-          throw new IOException("file format " + 
-                                jetFormat.getPossibleFileFormats().values() +
-                                " does not support writing for " + mdbFile);
+
+          if(closeChannel) {
+            // we own the channel, close and re-open read only
+            ByteUtil.closeQuietly(channel);
+            channel = null;
+            readOnly = true;
+            channel = openChannel(mdbFile, readOnly);
+          } else {
+            throw new IOException("file format " + 
+                                  jetFormat.getPossibleFileFormats().values() +
+                                  " does not support writing for " + mdbFile);
+          }
         }
       }
 

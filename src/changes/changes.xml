@@ -4,6 +4,14 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.6" date="TBD">
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="34">
+        When opening a database for a format which is read-only, automatically
+        open the channel as read-only (instead of throwing an exception if
+        readOnly is false).
+      </action>
+    </release>
     <release version="2.1.5" date="2016-10-03">
       <action dev="jahlborn" type="update">
         Change multi-value complex columns so that they return all relevant
