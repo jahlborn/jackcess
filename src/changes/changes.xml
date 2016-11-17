@@ -11,6 +11,9 @@
         open the channel as read-only (instead of throwing an exception if
         readOnly is false).
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="138">
+        Add support for global usage maps which are reference type maps.
+      </action>
     </release>
     <release version="2.1.5" date="2016-10-03">
       <action dev="jahlborn" type="update">
