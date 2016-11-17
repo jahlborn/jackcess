@@ -477,8 +477,7 @@ public class UsageMap
   {
     private final int _maxInlinePages;
     
-    protected InlineHandler()
-      throws IOException
+    protected InlineHandler() throws IOException
     {
       _maxInlinePages = (getInlineDataEnd() - getInlineDataStart()) * 8;
       int startPage = getTableBuffer().getInt(getRowStart() + 1);
@@ -714,8 +713,7 @@ public class UsageMap
       TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
     private final int _maxPagesPerUsageMapPage;
   
-    private ReferenceHandler()
-      throws IOException
+    private ReferenceHandler() throws IOException
     {
       _maxPagesPerUsageMapPage = ((getFormat().PAGE_SIZE - 
                                    getFormat().OFFSET_USAGE_MAP_PAGE_DATA) * 8);
