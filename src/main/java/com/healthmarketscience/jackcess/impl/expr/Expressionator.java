@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.util;
+package com.healthmarketscience.jackcess.impl.expr;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -31,9 +31,12 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
-import static com.healthmarketscience.jackcess.util.ExpressionTokenizer.Token;
-import static com.healthmarketscience.jackcess.util.ExpressionTokenizer.TokenType;
-import com.healthmarketscience.jackcess.util.Expression.*;
+import com.healthmarketscience.jackcess.expr.Expression;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.RowContext;
+import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
+import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 
 /**
  *
@@ -1258,7 +1261,7 @@ public class Expressionator
       return _val;
     }
 
-    public ValueType getType() {
+    public Value.Type getType() {
       return getDelegate().getType();
     }
 
@@ -1273,7 +1276,7 @@ public class Expressionator
     public Object evalDefault() {
       Value val = eval(null);
 
-      if(val.getType() == ValueType.NULL) {
+      if(val.getType() == Value.Type.NULL) {
         return null;
       }
 
@@ -1285,11 +1288,11 @@ public class Expressionator
     public Boolean evalCondition(RowContext ctx) {
       Value val = eval(ctx);
 
-      if(val.getType() == ValueType.NULL) {
+      if(val.getType() == Value.Type.NULL) {
         return null;
       }
 
-      if(val.getType() != ValueType.BOOLEAN) {
+      if(val.getType() != Value.Type.BOOLEAN) {
         // a single value as a conditional expression seems to act like an
         // implicit "="
         // FIXME, what about row validators?
@@ -1408,7 +1411,7 @@ public class Expressionator
   {
     private final Value _val;
 
-    private ELiteralValue(ValueType valType, Object value) {
+    private ELiteralValue(Value.Type valType, Object value) {
       _val = new BuiltinOperators.SimpleValue(valType, value);
     }
 
@@ -1419,7 +1422,7 @@ public class Expressionator
 
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
-      if(_val.getType() == ValueType.STRING) {
+      if(_val.getType() == Value.Type.STRING) {
         literalStrToString((String)_val.get(), sb);
       } else if(_val.getType().isTemporal()) {
         //   // FIXME Date,Time,DateTime formatting?

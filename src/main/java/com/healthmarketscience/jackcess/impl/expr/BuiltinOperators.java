@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.util;
+package com.healthmarketscience.jackcess.impl.expr;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -25,7 +25,10 @@ import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.util.Expression.*;
+import com.healthmarketscience.jackcess.expr.Expression;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.RowContext;
 
 
 /**
@@ -36,23 +39,23 @@ public class BuiltinOperators
 {
 
   public static final Value NULL_VAL = 
-    new SimpleValue(ValueType.NULL, null);
+    new SimpleValue(Value.Type.NULL, null);
   public static final Value TRUE_VAL = 
-    new SimpleValue(ValueType.BOOLEAN, Boolean.TRUE);
+    new SimpleValue(Value.Type.BOOLEAN, Boolean.TRUE);
   public static final Value FALSE_VAL = 
-    new SimpleValue(ValueType.BOOLEAN, Boolean.FALSE);
+    new SimpleValue(Value.Type.BOOLEAN, Boolean.FALSE);
 
   public static class SimpleValue implements Value
   {
-    private final ValueType _type;
+    private final Value.Type _type;
     private final Object _val;
 
-    public SimpleValue(ValueType type, Object val) {
+    public SimpleValue(Value.Type type, Object val) {
       _type = type;
       _val = val;
     }
 
-    public ValueType getType() {
+    public Value.Type getType() {
       return _type;
     }
 
@@ -277,11 +280,11 @@ public class BuiltinOperators
   }
 
   public static Value isNull(Value param1) {
-    return toValue(param1.getType() == ValueType.NULL);
+    return toValue(param1.getType() == Value.Type.NULL);
   }
 
   public static Value isNotNull(Value param1) {
-    return toValue(param1.getType() == ValueType.NULL);
+    return toValue(param1.getType() == Value.Type.NULL);
   }
 
   public static Value like(Value param1, Pattern pattern) {
@@ -340,7 +343,7 @@ public class BuiltinOperators
   }
 
   private static boolean paramIsNull(Value param1) {
-    return (param1.getType() == ValueType.NULL);
+    return (param1.getType() == Value.Type.NULL);
   }
 
   protected static CharSequence paramToString(Object param) {
@@ -410,24 +413,24 @@ public class BuiltinOperators
 
     if(obj instanceof Date) {
       // any way to figure out whether it's a date/time/dateTime?
-      return new SimpleValue(ValueType.DATE_TIME, obj);
+      return new SimpleValue(Value.Type.DATE_TIME, obj);
     }
 
     if(obj instanceof Number) {
       if((obj instanceof Double) || (obj instanceof Float)) {
-        return new SimpleValue(ValueType.DOUBLE, obj);
+        return new SimpleValue(Value.Type.DOUBLE, obj);
       }
       if(obj instanceof BigDecimal) {
-        return new SimpleValue(ValueType.BIG_DEC, obj);
+        return new SimpleValue(Value.Type.BIG_DEC, obj);
       }
       if(obj instanceof BigInteger) {
-        return new SimpleValue(ValueType.BIG_INT, obj);
+        return new SimpleValue(Value.Type.BIG_INT, obj);
       }
-      return new SimpleValue(ValueType.LONG, obj);
+      return new SimpleValue(Value.Type.LONG, obj);
     }
 
     try {
-      return new SimpleValue(ValueType.STRING, 
+      return new SimpleValue(Value.Type.STRING, 
                              ColumnImpl.toCharSequence(obj).toString());
     } catch(IOException e) {
       throw new RuntimeIOException(e);

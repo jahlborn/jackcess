@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.util;
+package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.healthmarketscience.jackcess.util.Expressionator.*;
-import com.healthmarketscience.jackcess.util.Expression.ValueType;
+import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
+import com.healthmarketscience.jackcess.expr.Value;
 
 
 /**
@@ -153,7 +153,7 @@ class ExpressionTokenizer
           switch(c) {
           case QUOTED_STR_CHAR:
             tokens.add(new Token(TokenType.LITERAL, null, parseQuotedString(buf),
-                                 ValueType.STRING));
+                                 Value.Type.STRING));
             break;
           case DATE_LIT_QUOTE_CHAR:
             tokens.add(parseDateLiteralString(buf, context));
@@ -316,16 +316,16 @@ class ExpressionTokenizer
     boolean hasTime = (dateStr.indexOf(':') >= 0);
 
     SimpleDateFormat sdf = null;
-    ValueType valType = null;
+    Value.Type valType = null;
     if(hasDate && hasTime) {
       sdf = buf.getDateTimeFormat(context);
-      valType = ValueType.DATE_TIME;
+      valType = Value.Type.DATE_TIME;
     } else if(hasDate) {
       sdf = buf.getDateFormat(context);
-      valType = ValueType.DATE;
+      valType = Value.Type.DATE;
     } else if(hasTime) {
       sdf = buf.getTimeFormat(context);
-      valType = ValueType.TIME;
+      valType = Value.Type.TIME;
     } else {
       throw new IllegalArgumentException("Invalid date time literal " + dateStr +
                                          " " + buf);
@@ -375,7 +375,7 @@ class ExpressionTokenizer
         // what number type to use here?
         BigDecimal num = new BigDecimal(numStr);
         foundNum = true;
-        return new Token(TokenType.LITERAL, num, numStr, ValueType.BIG_DEC);
+        return new Token(TokenType.LITERAL, num, numStr, Value.Type.BIG_DEC);
       } catch(NumberFormatException ne) {
         throw new IllegalArgumentException(
             "Invalid number literal " + numStr + " " + buf, ne);
@@ -492,7 +492,7 @@ class ExpressionTokenizer
     private final TokenType _type;
     private final Object _val;
     private final String _valStr;
-    private final ValueType _valType;
+    private final Value.Type _valType;
 
     private Token(TokenType type, String val) {
       this(type, val, val);
@@ -502,7 +502,7 @@ class ExpressionTokenizer
       this(type, val, valStr, null);
     }
 
-    private Token(TokenType type, Object val, String valStr, ValueType valType) {
+    private Token(TokenType type, Object val, String valStr, Value.Type valType) {
       _type = type;
       _val = ((val != null) ? val : valStr);
       _valStr = valStr;
@@ -521,7 +521,7 @@ class ExpressionTokenizer
       return _valStr;
     }
 
-    public ValueType getValueType() {
+    public Value.Type getValueType() {
       return _valType;
     }
 

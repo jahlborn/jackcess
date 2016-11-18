@@ -14,23 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.util;
+package com.healthmarketscience.jackcess.expr;
 
 /**
  *
  * @author James Ahlborn
  */
-public interface Expression 
+public interface Value 
 {
-  public interface RowContext
-  {
-    public Value getThisColumnValue();
-
-    public Value getRowValue(String collectionName, String objName,
-                             String colName);
-  }
-
-  public enum ValueType
+  public enum Type
   {
     NULL, BOOLEAN, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_INT, BIG_DEC;
 
@@ -42,27 +34,12 @@ public interface Expression
       return inRange(DATE, DATE_TIME);
     }
 
-    private boolean inRange(ValueType start, ValueType end) {
+    private boolean inRange(Type start, Type end) {
       return ((start.ordinal() <= ordinal()) && (ordinal() <= end.ordinal()));
     }
   }
 
-  public interface Value
-  {
-    public ValueType getType();
-    public Object get();
-  }
 
-  public interface Function
-  {
-    public String getName();
-    public Value eval(Value... params);
-  }
-
-
-  public Object evalDefault();
-
-  public Boolean evalCondition(RowContext ctx);
-
-  public String toDebugString();
+  public Type getType();
+  public Object get();
 }

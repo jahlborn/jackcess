@@ -14,13 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.util;
+package com.healthmarketscience.jackcess.impl.expr;
 
 import java.util.HashMap;
 import java.util.Map;
 
 
-import com.healthmarketscience.jackcess.util.Expression.*;
+import com.healthmarketscience.jackcess.expr.Expression;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.RowContext;
 
 /**
  *
