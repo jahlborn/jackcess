@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.6" date="TBD">
+    <release version="2.1.6" date="2016-11-29">
       <action dev="jahlborn" type="update" system="SourceForge2Features"
               issue="34">
         When opening a database for a format which is read-only, automatically
