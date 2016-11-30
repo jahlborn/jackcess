@@ -994,7 +994,7 @@ public class IndexPageCache
    */
   private void validateEntries(DataPageExtra dpExtra) throws IOException {
     int entrySize = 0;
-    Entry prevEntry = IndexData.FIRST_ENTRY;
+    Entry prevEntry = FIRST_ENTRY;
     for(Entry e : dpExtra._entries) {
       entrySize += e.size();
       if(prevEntry.compareTo(e) >= 0) {
@@ -1333,8 +1333,7 @@ public class IndexPageCache
   /**
    * IndexPageCache implementation of an Index {@link DataPage}.
    */
-  private static final class CacheDataPage
-    extends IndexData.DataPage
+  private static final class CacheDataPage extends DataPage
   {
     public final DataPageMain _main;
     public final DataPageExtra _extra;
