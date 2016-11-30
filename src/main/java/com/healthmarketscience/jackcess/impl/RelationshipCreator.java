@@ -330,7 +330,7 @@ public class RelationshipCreator extends DBMutator
     }
 
     return CustomToStringStyle.valueBuilder(tableName)
-      .append(null, cols)
+      .append(null, colNames)
       .toString();
   }
   
