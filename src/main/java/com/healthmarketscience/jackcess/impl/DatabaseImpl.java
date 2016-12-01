@@ -75,7 +75,6 @@ import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.poi.poifs.filesystem.Entry;
 
 
 /**
