@@ -38,9 +38,9 @@ public class StringValue extends BaseValue
   }
 
   @Override
-  public Boolean getAsBoolean() {
+  public boolean getAsBoolean() {
     // ms access seems to treat strings as "true"
-    return Boolean.TRUE;
+    return true;
   }
 
   @Override

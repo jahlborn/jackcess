@@ -48,9 +48,9 @@ public abstract class BaseDateValue extends BaseValue
   }
 
   @Override
-  public Boolean getAsBoolean() {
+  public boolean getAsBoolean() {
     // ms access seems to treat dates/times as "true"
-    return Boolean.TRUE;
+    return true;
   }
 
   @Override

@@ -46,7 +46,7 @@ public class DoubleValue extends BaseNumericValue
   }
 
   @Override
-  public Boolean getAsBoolean() {
+  public boolean getAsBoolean() {
     return (_val.doubleValue() != 0.0d);
   }
 

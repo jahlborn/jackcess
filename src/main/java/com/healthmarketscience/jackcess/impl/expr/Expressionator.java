@@ -1304,14 +1304,15 @@ public class Expressionator
         return null;
       }
 
-      if(val.getType() != Value.Type.BOOLEAN) {
-        // a single value as a conditional expression seems to act like an
-        // implicit "="
-        // FIXME, what about row validators?
-        val = BuiltinOperators.equals(val, ctx.getThisColumnValue());
-      }
+      // FIXME, is this only true for non-numeric...?
+      // if(val.getType() != Value.Type.BOOLEAN) {
+      //   // a single value as a conditional expression seems to act like an
+      //   // implicit "="
+      //   // FIXME, what about row validators?
+      //   val = BuiltinOperators.equals(val, ctx.getThisColumnValue());
+      // }
 
-      return (Boolean)val.get();
+      return val.getAsBoolean();
     }
 
     @Override

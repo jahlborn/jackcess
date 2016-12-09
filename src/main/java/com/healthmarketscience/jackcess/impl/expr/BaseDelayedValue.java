@@ -34,7 +34,7 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().get();
   }
 
-  public Boolean getAsBoolean() {
+  public boolean getAsBoolean() {
     return getDelegate().getAsBoolean();
   }
 

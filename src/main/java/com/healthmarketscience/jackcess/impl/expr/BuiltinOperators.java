@@ -42,8 +42,10 @@ public class BuiltinOperators
       return null;
     }
   };
-  public static final Value TRUE_VAL = new BooleanValue(Boolean.TRUE);
-  public static final Value FALSE_VAL = new BooleanValue(Boolean.FALSE);
+  // access seems to like -1 for true and 0 for false (boolean values are
+  // basically an illusion)
+  public static final Value TRUE_VAL = new LongValue(-1L);
+  public static final Value FALSE_VAL = new LongValue(0L);
   public static final Value EMPTY_STR_VAL = new StringValue("");
 
   private BuiltinOperators() {}
@@ -69,8 +71,6 @@ public class BuiltinOperators
     Value.Type mathType = param1.getType();
 
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(-getAsNumericBoolean(param1));
     // case STRING: break; unsupported
     case DATE:
     case TIME:
@@ -100,8 +100,6 @@ public class BuiltinOperators
     Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
 
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) + getAsNumericBoolean(param2));
     case STRING: 
       // string '+' is a null-propagation (handled above) concat
       return nonNullConcat(param1, param2);
@@ -133,8 +131,6 @@ public class BuiltinOperators
     Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
 
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) - getAsNumericBoolean(param2));
     // case STRING: break; unsupported
     case DATE:
     case TIME:
@@ -164,8 +160,6 @@ public class BuiltinOperators
     Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
 
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) * getAsNumericBoolean(param2));
     // case STRING: break; unsupported
     // case DATE: break; promoted to double
     // case TIME: break; promoted to double
@@ -192,8 +186,6 @@ public class BuiltinOperators
     Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
 
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) / getAsNumericBoolean(param2));
     // case STRING: break; unsupported
     // case DATE: break; promoted to double
     // case TIME: break; promoted to double
@@ -233,8 +225,6 @@ public class BuiltinOperators
 
     boolean wasDouble = false;
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) / getAsNumericBoolean(param2));
     // case STRING: break; unsupported
     // case DATE: break; promoted to double
     // case TIME: break; promoted to double
@@ -267,7 +257,6 @@ public class BuiltinOperators
 
     // attempt to convert integral types back to integrals if possible
     switch(mathType) {
-    case BOOLEAN:
     case LONG:
       if(isIntegral(result)) {
         return toValue((long)result);
@@ -294,8 +283,6 @@ public class BuiltinOperators
 
     boolean wasDouble = false;
     switch(mathType) {
-    case BOOLEAN:
-      return toValue(getAsNumericBoolean(param1) % getAsNumericBoolean(param2));
     // case STRING: break; unsupported
     // case DATE: break; promoted to double
     // case TIME: break; promoted to double
@@ -561,8 +548,6 @@ public class BuiltinOperators
     Value.Type compareType = getGeneralMathTypePrecedence(param1, param2);
 
     switch(compareType) {
-    case BOOLEAN:
-      return compare(getAsNumericBoolean(param1), getAsNumericBoolean(param2));
     case STRING:
       // string comparison is only valid if _both_ params are strings
       if(param1.getType() != param2.getType()) {
@@ -587,10 +572,6 @@ public class BuiltinOperators
 
   private static int compare(long l1, long l2) {
     return ((l1 < l2) ? -1 : ((l1 > l2) ? 1 : 0));
-  }
-
-  private static long getAsNumericBoolean(Value v) {
-    return BooleanValue.numericBoolean(v.getAsBoolean());
   }
 
   public static Value toValue(boolean b) {

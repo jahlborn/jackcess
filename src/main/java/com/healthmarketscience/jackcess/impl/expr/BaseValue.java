@@ -28,8 +28,8 @@ import com.healthmarketscience.jackcess.expr.Value;
  */
 public abstract class BaseValue implements Value
 {
-  public Boolean getAsBoolean() {
-    throw invalidConversion(Value.Type.BOOLEAN);
+  public boolean getAsBoolean() {
+    throw invalidConversion(Value.Type.LONG);
   }
 
   public String getAsString() {

@@ -28,8 +28,7 @@ public interface Value
 {
   public enum Type
   {
-    // FIXME, ditch boolean type -> -1,0
-    NULL, BOOLEAN, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_INT, BIG_DEC;
+    NULL, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_INT, BIG_DEC;
 
     public boolean isNumeric() {
       return inRange(LONG, BIG_DEC);
@@ -37,7 +36,7 @@ public interface Value
 
     public boolean isIntegral() {
       // note when BOOLEAN is converted to number, it is integral
-      return ((this == LONG) || (this == BIG_INT) || (this == BOOLEAN));
+      return ((this == LONG) || (this == BIG_INT));
     }
 
     public boolean isTemporal() {
@@ -58,7 +57,7 @@ public interface Value
 
   public Object get();
 
-  public Boolean getAsBoolean();
+  public boolean getAsBoolean();
 
   public String getAsString();
 

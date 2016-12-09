@@ -46,7 +46,7 @@ public class BigIntegerValue extends BaseNumericValue
   }
 
   @Override
-  public Boolean getAsBoolean() {
+  public boolean getAsBoolean() {
     return (_val.compareTo(BigInteger.ZERO) != 0L);
   }
 
