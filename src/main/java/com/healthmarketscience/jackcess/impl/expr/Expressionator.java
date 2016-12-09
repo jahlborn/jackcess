@@ -16,10 +16,13 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,11 +35,12 @@ import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.Expression;
-import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.RowContext;
-import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
+import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
+import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
+
 
 /**
  *
@@ -452,7 +456,8 @@ public class Expressionator
 
       case LITERAL:
         
-        buf.setPendingExpr(new ELiteralValue(t.getValueType(), t.getValue()));
+        buf.setPendingExpr(new ELiteralValue(t.getValueType(), t.getValue(),
+                                             t.getDateFormat()));
         break;
         
       case OP:
@@ -1230,6 +1235,24 @@ public class Expressionator
                            Pattern.UNICODE_CASE);
   }
 
+  private static Value toLiteralValue(Value.Type valType, Object value, 
+                                      DateFormat sdf)
+  {
+    switch(valType) {
+    case STRING:
+      return new StringValue((String)value);
+    case DATE:
+      return new DateValue((Date)value, sdf);
+    case TIME:
+      return new TimeValue((Date)value, sdf);
+    case DATE_TIME:
+      return new DateTimeValue((Date)value, sdf);
+    case BIG_DEC:
+      return new BigDecimalValue((BigDecimal)value);
+    default:
+      throw new RuntimeException("unexpected literal type " + valType);
+    } 
+  }
 
   private interface LeftAssocExpr {
     public OpType getOp();
@@ -1243,9 +1266,8 @@ public class Expressionator
     public void setRight(Expr right);
   }
 
-  private static final class DelayedValue implements Value
+  private static final class DelayedValue extends BaseDelayedValue
   {
-    private Value _val;
     private final Expr _expr;
     private final RowContext _ctx;
 
@@ -1254,19 +1276,9 @@ public class Expressionator
       _ctx = ctx;
     }
 
-    private Value getDelegate() {
-      if(_val == null) {
-        _val = _expr.eval(_ctx);
-      }
-      return _val;
-    }
-
-    public Value.Type getType() {
-      return getDelegate().getType();
-    }
-
-    public Object get() {
-      return getDelegate().get();
+    @Override
+    protected Value eval() {
+      return _expr.eval(_ctx);
     }
   }
   
@@ -1411,8 +1423,9 @@ public class Expressionator
   {
     private final Value _val;
 
-    private ELiteralValue(Value.Type valType, Object value) {
-      _val = new BuiltinOperators.SimpleValue(valType, value);
+    private ELiteralValue(Value.Type valType, Object value,
+                          DateFormat sdf) {
+      _val = toLiteralValue(valType, value, sdf);
     }
 
     @Override
@@ -1425,9 +1438,7 @@ public class Expressionator
       if(_val.getType() == Value.Type.STRING) {
         literalStrToString((String)_val.get(), sb);
       } else if(_val.getType().isTemporal()) {
-        //   // FIXME Date,Time,DateTime formatting?
-        //   sb.append("#").append(_value).append("#");
-        throw new UnsupportedOperationException();
+        sb.append("#").append(_val.getAsString()).append("#");
       } else {
         sb.append(_val.get());
       }

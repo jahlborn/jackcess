@@ -20,10 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.RowContext;
 
 /**
  *
@@ -66,21 +64,6 @@ public class DefaultFunctions
             this + ": invalid number of parameters " +
             num + " passed, expected " + range);
       }
-    }
-
-    protected static CharSequence paramToString(Object param)
-    {
-      return BuiltinOperators.paramToString(param);
-    }
-
-    protected static boolean paramToBoolean(Object param)
-    {
-      return BuiltinOperators.paramToBoolean(param);
-    }
-
-    protected static Number paramToNumber(Object param)
-    {
-      return BuiltinOperators.paramToNumber(param);
     }
 
     @Override

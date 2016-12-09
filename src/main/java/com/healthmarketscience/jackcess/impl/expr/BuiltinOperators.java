@@ -16,19 +16,15 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.Format;
 import java.util.Date;
-import java.util.Map;
 import java.util.regex.Pattern;
 
-import com.healthmarketscience.jackcess.RuntimeIOException;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.RowContext;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 
 /**
@@ -38,31 +34,17 @@ import com.healthmarketscience.jackcess.expr.RowContext;
 public class BuiltinOperators 
 {
 
-  public static final Value NULL_VAL = 
-    new SimpleValue(Value.Type.NULL, null);
-  public static final Value TRUE_VAL = 
-    new SimpleValue(Value.Type.BOOLEAN, Boolean.TRUE);
-  public static final Value FALSE_VAL = 
-    new SimpleValue(Value.Type.BOOLEAN, Boolean.FALSE);
-
-  public static class SimpleValue implements Value
-  {
-    private final Value.Type _type;
-    private final Object _val;
-
-    public SimpleValue(Value.Type type, Object val) {
-      _type = type;
-      _val = val;
+  public static final Value NULL_VAL = new BaseValue() {
+    public Type getType() {
+      return Type.NULL;
     }
-
-    public Value.Type getType() {
-      return _type;
-    }
-
     public Object get() {
-      return _val;
+      return null;
     }
-  }
+  };
+  public static final Value TRUE_VAL = new BooleanValue(Boolean.TRUE);
+  public static final Value FALSE_VAL = new BooleanValue(Boolean.FALSE);
+  public static final Value EMPTY_STR_VAL = new StringValue("");
 
   private BuiltinOperators() {}
 
@@ -79,51 +61,275 @@ public class BuiltinOperators
   // FIXME, Imp operator?
 
   public static Value negate(Value param1) {
-    // FIXME
-    return null;
+    if(paramIsNull(param1)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = param1.getType();
+
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(-getAsNumericBoolean(param1));
+    // case STRING: break; unsupported
+    case DATE:
+    case TIME:
+    case DATE_TIME:
+      // dates/times get converted to date doubles for arithmetic
+      double result = -param1.getAsDouble();
+      return toDateValue(mathType, result, param1, null);
+    case LONG:
+      return toValue(-param1.getAsLong());
+    case DOUBLE:
+      return toValue(-param1.getAsDouble());
+    case BIG_INT:
+      return toValue(param1.getAsBigInteger().negate());
+    case BIG_DEC:
+      return toValue(param1.getAsBigDecimal().negate());
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value add(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
+
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) + getAsNumericBoolean(param2));
+    case STRING: 
+      // string '+' is a null-propagation (handled above) concat
+      return nonNullConcat(param1, param2);
+    case DATE:
+    case TIME:
+    case DATE_TIME:
+      // dates/times get converted to date doubles for arithmetic
+      double result = param1.getAsDouble() + param2.getAsDouble();
+      return toDateValue(mathType, result, param1, param2);
+    case LONG:
+      return toValue(param1.getAsLong() + param2.getAsLong());
+    case DOUBLE:
+      return toValue(param1.getAsDouble() + param2.getAsDouble());
+    case BIG_INT:
+      return toValue(param1.getAsBigInteger().add(param2.getAsBigInteger()));
+    case BIG_DEC:
+      return toValue(param1.getAsBigDecimal().add(param2.getAsBigDecimal()));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value subtract(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
+
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) - getAsNumericBoolean(param2));
+    // case STRING: break; unsupported
+    case DATE:
+    case TIME:
+    case DATE_TIME:
+      // dates/times get converted to date doubles for arithmetic
+      double result = param1.getAsDouble() - param2.getAsDouble();
+      return toDateValue(mathType, result, param1, param2);
+    case LONG:
+      return toValue(param1.getAsLong() - param2.getAsLong());
+    case DOUBLE:
+      return toValue(param1.getAsDouble() - param2.getAsDouble());
+    case BIG_INT:
+      return toValue(param1.getAsBigInteger().subtract(param2.getAsBigInteger()));
+    case BIG_DEC:
+      return toValue(param1.getAsBigDecimal().subtract(param2.getAsBigDecimal()));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value multiply(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) * getAsNumericBoolean(param2));
+    // case STRING: break; unsupported
+    // case DATE: break; promoted to double
+    // case TIME: break; promoted to double
+    // case DATE_TIME: break; promoted to double
+    case LONG:
+      return toValue(param1.getAsLong() * param2.getAsLong());
+    case DOUBLE:
+      return toValue(param1.getAsDouble() * param2.getAsDouble());
+    case BIG_INT:
+      return toValue(param1.getAsBigInteger().multiply(param2.getAsBigInteger()));
+    case BIG_DEC:
+      return toValue(param1.getAsBigDecimal().multiply(param2.getAsBigDecimal()));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value divide(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) / getAsNumericBoolean(param2));
+    // case STRING: break; unsupported
+    // case DATE: break; promoted to double
+    // case TIME: break; promoted to double
+    // case DATE_TIME: break; promoted to double
+    case LONG:
+      long lp1 = param1.getAsLong();
+      long lp2 = param2.getAsLong();
+      if((lp1 % lp2) == 0) {
+        return toValue(lp1 / lp2);
+      }
+      return toValue((double)lp1 / (double)lp2);
+    case DOUBLE:
+      return toValue(param1.getAsDouble() / param2.getAsDouble());
+    case BIG_INT:
+      BigInteger bip1 = param1.getAsBigInteger();
+      BigInteger bip2 = param2.getAsBigInteger();
+      BigInteger[] res = bip1.divideAndRemainder(bip2);
+      if(res[1].compareTo(BigInteger.ZERO) == 0) {
+        return toValue(res[0]);
+      }
+      return toValue(new BigDecimal(bip1).divide(new BigDecimal(bip2)));
+    case BIG_DEC:
+      return toValue(param1.getAsBigDecimal().divide(param2.getAsBigDecimal()));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
+  @SuppressWarnings("fallthrough")
   public static Value intDivide(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+
+    boolean wasDouble = false;
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) / getAsNumericBoolean(param2));
+    // case STRING: break; unsupported
+    // case DATE: break; promoted to double
+    // case TIME: break; promoted to double
+    // case DATE_TIME: break; promoted to double
+    case LONG:
+      return toValue(param1.getAsLong() / param2.getAsLong());
+    case DOUBLE:
+      wasDouble = true;
+      // fallthrough
+    case BIG_INT:
+    case BIG_DEC:
+      BigInteger result = param1.getAsBigInteger().divide(
+          param2.getAsBigInteger());
+      return (wasDouble ? toValue(result.longValue()) : toValue(result));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value exp(Value param1, Value param2) {
-    // FIXME
-    return null;
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+
+    // jdk only supports general pow() as doubles, let's go with that
+    double result = Math.pow(param1.getAsDouble(), param2.getAsDouble());
+
+    // attempt to convert integral types back to integrals if possible
+    switch(mathType) {
+    case BOOLEAN:
+    case LONG:
+      if(isIntegral(result)) {
+        return toValue((long)result);
+      }
+      break;
+    case BIG_INT:
+      if(isIntegral(result)) {
+        return toValue(BigDecimal.valueOf(result).toBigInteger());
+      }
+      break;
+    }
+
+    return toValue(result);
+  }
+
+  @SuppressWarnings("fallthrough")
+  public static Value mod(Value param1, Value param2) {
+    if(anyParamIsNull(param1, param2)) {
+      // null propagation
+      return NULL_VAL;
+    }
+
+    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+
+    boolean wasDouble = false;
+    switch(mathType) {
+    case BOOLEAN:
+      return toValue(getAsNumericBoolean(param1) % getAsNumericBoolean(param2));
+    // case STRING: break; unsupported
+    // case DATE: break; promoted to double
+    // case TIME: break; promoted to double
+    // case DATE_TIME: break; promoted to double
+    case LONG:
+      return toValue(param1.getAsDouble() % param2.getAsDouble());
+    case DOUBLE:
+      wasDouble = true;
+      // fallthrough
+    case BIG_INT:
+    case BIG_DEC:
+      BigInteger result = param1.getAsBigInteger().mod(param2.getAsBigInteger());
+      return (wasDouble ? toValue(result.longValue()) : toValue(result));
+    default:
+      throw new RuntimeException("Unexpected type " + mathType);
+    }
   }
 
   public static Value concat(Value param1, Value param2) {
-    // note, this op converts null to empty string
-    
 
-    // FIXME
-    return null;
+    // note, this op converts null to empty string
+    if(paramIsNull(param1)) {
+      param1 = EMPTY_STR_VAL;
+    }
+
+    if(paramIsNull(param2)) {
+      param2 = EMPTY_STR_VAL;
+    }
+
+    return nonNullConcat(param1, param2);
   }
 
-  public static Value mod(Value param1, Value param2) {
-    // FIXME
-    return null;
+  private static Value nonNullConcat(Value param1, Value param2) {
+    return toValue(param1.getAsString().concat(param2.getAsString()));
   }
 
   public static Value not(Value param1) {
@@ -132,7 +338,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
     
-    return toValue(!nonNullValueToBoolean(param1));
+    return toValue(!param1.getAsBoolean());
   }
 
   public static Value lessThan(Value param1, Value param2) {
@@ -197,7 +403,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = nonNullValueToBoolean(param1);
+    boolean b1 = param1.getAsBoolean();
     if(!b1) {
       return FALSE_VAL;
     }
@@ -206,7 +412,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(nonNullValueToBoolean(param2));
+    return toValue(param2.getAsBoolean());
   }
 
   public static Value or(Value param1, Value param2) {
@@ -217,7 +423,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = nonNullValueToBoolean(param1);
+    boolean b1 = param1.getAsBoolean();
     if(b1) {
       return TRUE_VAL;
     }
@@ -226,7 +432,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(nonNullValueToBoolean(param2));
+    return toValue(param2.getAsBoolean());
   }
 
   public static Value eqv(Value param1, Value param2) {
@@ -235,8 +441,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = nonNullValueToBoolean(param1);
-    boolean b2 = nonNullValueToBoolean(param2);
+    boolean b1 = param1.getAsBoolean();
+    boolean b2 = param2.getAsBoolean();
 
     return toValue(b1 == b2);
   }
@@ -247,8 +453,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = nonNullValueToBoolean(param1);
-    boolean b2 = nonNullValueToBoolean(param2);
+    boolean b1 = param1.getAsBoolean();
+    boolean b2 = param2.getAsBoolean();
 
     return toValue(b1 ^ b2);
   }
@@ -258,7 +464,7 @@ public class BuiltinOperators
     // "imp" uses short-circuit logic
 
     if(paramIsNull(param1)) {
-      if(paramIsNull(param2) || !nonNullValueToBoolean(param2)) {
+      if(paramIsNull(param2) || !param2.getAsBoolean()) {
         // null propagation
         return NULL_VAL;
       }
@@ -266,7 +472,7 @@ public class BuiltinOperators
       return TRUE_VAL;
     }
 
-    boolean b1 = nonNullValueToBoolean(param1);
+    boolean b1 = param1.getAsBoolean();
     if(!b1) {
       return TRUE_VAL;
     }
@@ -276,7 +482,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(nonNullValueToBoolean(param2));
+    return toValue(param2.getAsBoolean());
   }
 
   public static Value isNull(Value param1) {
@@ -288,20 +494,23 @@ public class BuiltinOperators
   }
 
   public static Value like(Value param1, Pattern pattern) {
-    // FIXME
-    return null;
+    if(paramIsNull(param1)) {
+      // null propagation
+      return NULL_VAL;
+    }
+    
+    return toValue(pattern.matcher(param1.getAsString()).matches());
   }
 
   public static Value between(Value param1, Value param2, Value param3) {
-
-    // null propagate any field left to right.  uses short circuit eval
+    // FIXME, use delay for and() or check here?
+    // null propagate any param.  uses short circuit eval of params
     if(anyParamIsNull(param1, param2, param3)) {
       // null propagation
       return NULL_VAL;
     }
 
-    // FIXME
-    return null;
+    return and(greaterThanEq(param1, param2), lessThanEq(param1, param3));
   }
 
   public static Value notBetween(Value param1, Value param2, Value param3) {
@@ -346,95 +555,163 @@ public class BuiltinOperators
     return (param1.getType() == Value.Type.NULL);
   }
 
-  protected static CharSequence paramToString(Object param) {
-    try {
-      return ColumnImpl.toCharSequence(param);
-    } catch(IOException e) {
-      throw new RuntimeIOException(e);
-    }
-  }
-
-  protected static boolean paramToBoolean(Object param) {
-    // FIXME, null is false...?
-    return ColumnImpl.toBooleanValue(param);
-  }
-
-  protected static Number paramToNumber(Object param) {
-    // FIXME
-    return null;
-  }
-
-  protected static boolean nonNullValueToBoolean(Value val) {
-    switch(val.getType()) {
-    case BOOLEAN:
-      return (Boolean)val.get();
-    case STRING:
-    case DATE:
-    case TIME:
-    case DATE_TIME:
-      // strings and dates are always true
-      return true;
-    case LONG:
-      return (((Number)val.get()).longValue() != 0L);
-    case DOUBLE:
-      return (((Number)val.get()).doubleValue() != 0.0d);
-    case BIG_INT:
-      return (((BigInteger)val.get()).compareTo(BigInteger.ZERO) != 0L);
-    case BIG_DEC:
-      return (((BigDecimal)val.get()).compareTo(BigDecimal.ZERO) != 0L);
-    default:
-      throw new RuntimeException("Unexpected type " + val.getType());
-    }
-  }
-
   protected static int nonNullCompareTo(
       Value param1, Value param2)
   {
-    // FIXME
-    return 0;
+    Value.Type compareType = getGeneralMathTypePrecedence(param1, param2);
+
+    switch(compareType) {
+    case BOOLEAN:
+      return compare(getAsNumericBoolean(param1), getAsNumericBoolean(param2));
+    case STRING:
+      // string comparison is only valid if _both_ params are strings
+      if(param1.getType() != param2.getType()) {
+        throw new RuntimeException("Unexpected type " + compareType);
+      }
+      return param1.getAsString().compareToIgnoreCase(param2.getAsString());
+    // case DATE: break; promoted to double
+    // case TIME: break; promoted to double
+    // case DATE_TIME: break; promoted to double
+    case LONG:
+      return param1.getAsLong().compareTo(param2.getAsLong());
+    case DOUBLE:
+      return param1.getAsDouble().compareTo(param2.getAsDouble());
+    case BIG_INT:
+      return param1.getAsBigInteger().compareTo(param2.getAsBigInteger());
+    case BIG_DEC:
+      return param1.getAsBigDecimal().compareTo(param2.getAsBigDecimal());
+    default:
+      throw new RuntimeException("Unexpected type " + compareType);
+    }
+  }
+
+  private static int compare(long l1, long l2) {
+    return ((l1 < l2) ? -1 : ((l1 > l2) ? 1 : 0));
+  }
+
+  private static long getAsNumericBoolean(Value v) {
+    return BooleanValue.numericBoolean(v.getAsBoolean());
   }
 
   public static Value toValue(boolean b) {
     return (b ? TRUE_VAL : FALSE_VAL);
   }
 
-  public static Value toValue(Object obj) {
-    if(obj == null) {
-      return NULL_VAL;
+  public static Value toValue(String s) {
+    return new StringValue(s);
+  }
+
+  public static Value toValue(Long s) {
+    return new LongValue(s);
+  }
+
+  public static Value toValue(Double s) {
+    return new DoubleValue(s);
+  }
+
+  public static Value toValue(BigInteger s) {
+    return new BigIntegerValue(s);
+  }
+
+  public static Value toValue(BigDecimal s) {
+    return new BigDecimalValue(s);
+  }
+
+  private static Value toDateValue(Value.Type type, double v, 
+                                   Value param1, Value param2)
+  {
+    // FIXME find format from first matching param
+    DateFormat fmt = null;
+    // if(param1.getType() == type) {
+    //   fmt = (DateFormat)param1.getFormat();
+    // } else if(param2 != null) {
+    //   fmt = (DateFormat)param2.getFormat();
+    // }
+
+    Date d = new Date(ColumnImpl.fromDateDouble(v, fmt.getCalendar()));
+
+    switch(type) {
+    case DATE:
+      return new DateValue(d, fmt);
+    case TIME:
+      return new TimeValue(d, fmt);
+    case DATE_TIME:
+      return new DateTimeValue(d, fmt);
+    default:
+      throw new RuntimeException("Unexpected type " + type);
+    }
+  }
+
+  private static Value.Type getSimpleMathTypePrecedence(
+      Value param1, Value param2)
+  {
+    Value.Type t1 = param1.getType();
+    Value.Type t2 = param2.getType();
+
+    if(t1 == t2) {
+      return t1;
     }
 
-    if(obj instanceof Value) {
-      return (Value)obj;
+    if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
+      // string always wins
+      return Value.Type.STRING;
     }
 
-    if(obj instanceof Boolean) {
-      return (((Boolean)obj) ? TRUE_VAL : FALSE_VAL);
+    // for "simple" math, keep as date/times
+    if(t1.isTemporal() || t2.isTemporal()) {
+      return (t1.isTemporal() ?
+              (t2.isTemporal() ? 
+               // for mixed temporal types, always go to date/time
+               Value.Type.DATE_TIME : t1) :
+              t2);
     }
 
-    if(obj instanceof Date) {
-      // any way to figure out whether it's a date/time/dateTime?
-      return new SimpleValue(Value.Type.DATE_TIME, obj);
+    // if both types are integral, choose "largest"
+    if(t1.isIntegral() && t2.isIntegral()) {
+      return max(t1, t2);
     }
 
-    if(obj instanceof Number) {
-      if((obj instanceof Double) || (obj instanceof Float)) {
-        return new SimpleValue(Value.Type.DOUBLE, obj);
+    // choose largest relevant floating-point type
+    return max(t1.getPreferredFPType(), t2.getPreferredFPType());
+  }
+
+  private static Value.Type getGeneralMathTypePrecedence(
+      Value param1, Value param2)
+  {
+    Value.Type t1 = param1.getType();
+    Value.Type t2 = param2.getType();
+
+    // note: for general math, date/time become double
+
+    if(t1 == t2) {
+
+      if(t1.isTemporal()) {
+        return Value.Type.DOUBLE;
       }
-      if(obj instanceof BigDecimal) {
-        return new SimpleValue(Value.Type.BIG_DEC, obj);
-      }
-      if(obj instanceof BigInteger) {
-        return new SimpleValue(Value.Type.BIG_INT, obj);
-      }
-      return new SimpleValue(Value.Type.LONG, obj);
+
+      return t1;
     }
 
-    try {
-      return new SimpleValue(Value.Type.STRING, 
-                             ColumnImpl.toCharSequence(obj).toString());
-    } catch(IOException e) {
-      throw new RuntimeIOException(e);
+    if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
+      // string always wins
+      return Value.Type.STRING;
     }
+
+    // if both types are integral, choose "largest"
+    if(t1.isIntegral() && t2.isIntegral()) {
+      return max(t1, t2);
+    }
+
+    // choose largest relevant floating-point type
+    return max(t1.getPreferredFPType(), t2.getPreferredFPType());
+  }
+
+  private static Value.Type max(Value.Type t1, Value.Type t2) {
+    return ((t1.compareTo(t2) > 0) ? t1 : t2);
+  }
+
+  private static boolean isIntegral(double d) {
+    return (d == Math.rint(d));
   }
 
 }

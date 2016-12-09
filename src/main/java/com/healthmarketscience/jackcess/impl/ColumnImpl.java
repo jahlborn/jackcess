@@ -796,8 +796,26 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public long fromDateDouble(double value)
   {
+    return fromDateDouble(value, getCalendar());
+  }
+
+  /**
+   * Returns a java long time value converted from an access date double.
+   * @usage _advanced_method_
+   */
+  public static long fromDateDouble(double value, DatabaseImpl db)
+  {
+    return fromDateDouble(value, db.getCalendar());
+  }
+
+  /**
+   * Returns a java long time value converted from an access date double.
+   * @usage _advanced_method_
+   */
+  public static long fromDateDouble(double value, Calendar c)
+  {
     long localTime = fromLocalDateDouble(value);
-    return localTime - getFromLocalTimeZoneOffset(localTime);
+    return localTime - getFromLocalTimeZoneOffset(localTime, c);
   }
 
   static long fromLocalDateDouble(double value)
@@ -843,10 +861,30 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   public double toDateDouble(Object value)
   {
+    return toDateDouble(value, getCalendar());
+  }
+
+  /**
+   * Returns an access date double converted from a java Date/Calendar/Number
+   * time value.
+   * @usage _advanced_method_
+   */
+  public static double toDateDouble(Object value, DatabaseImpl db)
+  {
+    return toDateDouble(value, db.getCalendar());
+  }
+
+  /**
+   * Returns an access date double converted from a java Date/Calendar/Number
+   * time value.
+   * @usage _advanced_method_
+   */
+  public static double toDateDouble(Object value, Calendar c)
+  {
     // seems access stores dates in the local timezone.  guess you just
     // hope you read it in the same timezone in which it was written!
     long time = toDateLong(value);
-    time += getToLocalTimeZoneOffset(time);
+    time += getToLocalTimeZoneOffset(time, c);
     return toLocalDateDouble(time);
   }
 
@@ -881,9 +919,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Gets the timezone offset from UTC to local time for the given time
    * (including DST).
    */
-  private long getToLocalTimeZoneOffset(long time)
+  private static long getToLocalTimeZoneOffset(long time, Calendar c)
   {
-    Calendar c = getCalendar();
     c.setTimeInMillis(time);
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
   }  
@@ -892,11 +929,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Gets the timezone offset from local time to UTC for the given time
    * (including DST).
    */
-  private long getFromLocalTimeZoneOffset(long time)
+  private static long getFromLocalTimeZoneOffset(long time, Calendar c)
   {
     // getting from local time back to UTC is a little wonky (and not
     // guaranteed to get you back to where you started)
-    Calendar c = getCalendar();
     c.setTimeInMillis(time);
     // apply the zone offset first to get us closer to the original time
     c.setTimeInMillis(time - c.get(Calendar.ZONE_OFFSET));
@@ -1414,7 +1450,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    *         <code>null</code> is returned as 0 and Numbers are converted
    *         using their double representation.
    */
-  static BigDecimal toBigDecimal(Object value)
+  BigDecimal toBigDecimal(Object value)
+  {
+    return toBigDecimal(value, getDatabase());
+  }
+
+  /**
+   * @return an appropriate BigDecimal representation of the given object.
+   *         <code>null</code> is returned as 0 and Numbers are converted
+   *         using their double representation.
+   */
+  static BigDecimal toBigDecimal(Object value, DatabaseImpl db)
   {
     if(value == null) {
       return BigDecimal.ZERO;
@@ -1424,6 +1470,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return new BigDecimal((BigInteger)value);
     } else if(value instanceof Number) {
       return new BigDecimal(((Number)value).doubleValue());
+    } else if(value instanceof Boolean) {
+      // access seems to like -1 for true and 0 for false
+      return ((Boolean)value) ? BigDecimal.valueOf(-1) : BigDecimal.ZERO;
+    } else if(value instanceof Date) {
+      return new BigDecimal(toDateDouble(value, db));
     }
     return new BigDecimal(value.toString());
   }
@@ -1433,12 +1484,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    *         <code>null</code> is returned as 0 and Strings are parsed as
    *         Doubles.
    */
-  private static Number toNumber(Object value)
+  private Number toNumber(Object value)
+  {
+    return toNumber(value, getDatabase());
+  }
+
+  /**
+   * @return an appropriate Number representation of the given object.
+   *         <code>null</code> is returned as 0 and Strings are parsed as
+   *         Doubles.
+   */
+  private static Number toNumber(Object value, DatabaseImpl db)
   {
     if(value == null) {
       return BigDecimal.ZERO;
     } else if(value instanceof Number) {
       return (Number)value;
+    } else if(value instanceof Boolean) {
+      // access seems to like -1 for true and 0 for false
+      return ((Boolean)value) ? -1 : 0;
+    } else if(value instanceof Date) {
+      return toDateDouble(value, db);
     }
     return Double.valueOf(value.toString());
   }
@@ -1532,7 +1598,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       if(obj instanceof BigInteger) {
         return (((BigInteger)obj).compareTo(BigInteger.ZERO) != 0);
       }
-      return (((Number)obj).doubleValue() != 0.0);
+      return (((Number)obj).doubleValue() != 0.0d);
     }
     return Boolean.parseBoolean(obj.toString());
   }
@@ -1549,11 +1615,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
-   * Treat booleans as integers (C-style).
+   * Treat booleans as integers (access-style).
    */
   protected static Object booleanToInteger(Object obj) {
     if (obj instanceof Boolean) {
-      obj = ((Boolean) obj) ? 1 : 0;
+      obj = ((Boolean) obj) ? -1 : 0;
     }
     return obj;
   }
@@ -1770,7 +1836,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Converts the given value to the "internal" representation for the given
    * data type.
    */
-  public static Object toInternalValue(DataType dataType, Object value)
+  public static Object toInternalValue(DataType dataType, Object value,
+                                       DatabaseImpl db)
     throws IOException
   {
     if(value == null) {
@@ -1781,21 +1848,21 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case BOOLEAN:
       return ((value instanceof Boolean) ? value : toBooleanValue(value));
     case BYTE:
-      return ((value instanceof Byte) ? value : toNumber(value).byteValue());
+      return ((value instanceof Byte) ? value : toNumber(value, db).byteValue());
     case INT:
       return ((value instanceof Short) ? value : 
-              toNumber(value).shortValue());
+              toNumber(value, db).shortValue());
     case LONG:
       return ((value instanceof Integer) ? value : 
-              toNumber(value).intValue());
+              toNumber(value, db).intValue());
     case MONEY:
-      return toBigDecimal(value);
+      return toBigDecimal(value, db);
     case FLOAT:
       return ((value instanceof Float) ? value : 
-              toNumber(value).floatValue());
+              toNumber(value, db).floatValue());
     case DOUBLE:
       return ((value instanceof Double) ? value : 
-              toNumber(value).doubleValue());
+              toNumber(value, db).doubleValue());
     case SHORT_DATE_TIME:
       return ((value instanceof DateExt) ? value :
               new Date(toDateLong(value)));
@@ -1805,7 +1872,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((value instanceof String) ? value : 
               toCharSequence(value).toString());
     case NUMERIC:
-      return toBigDecimal(value);
+      return toBigDecimal(value, db);
     case COMPLEX_TYPE:
       // leave alone for now?
       return value;

@@ -16,6 +16,10 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Date;
+
 /**
  *
  * @author James Ahlborn
@@ -24,14 +28,24 @@ public interface Value
 {
   public enum Type
   {
+    // FIXME, ditch boolean type -> -1,0
     NULL, BOOLEAN, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_INT, BIG_DEC;
 
     public boolean isNumeric() {
       return inRange(LONG, BIG_DEC);
     }
 
+    public boolean isIntegral() {
+      // note when BOOLEAN is converted to number, it is integral
+      return ((this == LONG) || (this == BIG_INT) || (this == BOOLEAN));
+    }
+
     public boolean isTemporal() {
       return inRange(DATE, DATE_TIME);
+    }
+
+    public Type getPreferredFPType() {
+      return((ordinal() <= DOUBLE.ordinal()) ? DOUBLE : BIG_DEC);
     }
 
     private boolean inRange(Type start, Type end) {
@@ -41,5 +55,22 @@ public interface Value
 
 
   public Type getType();
+
   public Object get();
+
+  public Boolean getAsBoolean();
+
+  public String getAsString();
+
+  public Date getAsDateTime();
+
+  public Long getAsLong();
+
+  public Double getAsDouble();
+
+  public BigInteger getAsBigInteger();
+
+  public BigDecimal getAsBigDecimal();
+
+  public Value toNumericValue();
 }

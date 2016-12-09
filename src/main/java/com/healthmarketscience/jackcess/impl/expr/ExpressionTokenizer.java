@@ -17,15 +17,20 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.FieldPosition;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.text.ParsePosition;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -44,9 +49,16 @@ class ExpressionTokenizer
   private static final char DATE_LIT_QUOTE_CHAR = '#';
   private static final char EQUALS_CHAR = '=';
 
-  private static final String DATE_FORMAT = "M/d/yyyy";
-  private static final String TIME_FORMAT = "HH:mm:ss";
-  private static final String DATE_TIME_FORMAT = DATE_FORMAT + " " + TIME_FORMAT;
+  static final String DATE_FORMAT = "M/d/yyyy";
+  static final String TIME_FORMAT_24 = "HH:mm:ss";
+  static final String TIME_FORMAT_12 = "hh:mm:ss a";
+  static final String DATE_TIME_FORMAT_24 = DATE_FORMAT + " " + TIME_FORMAT_24;
+  static final String DATE_TIME_FORMAT_12 = DATE_FORMAT + " " + TIME_FORMAT_12;
+  private static final int AMPM_SUFFIX_LEN = 3;
+  private static final String AM_SUFFIX = " am";
+  private static final String PM_SUFFIX = " pm";
+  // access times are based on this date (not the UTC base)
+  private static final String BASE_DATE = "12/30/1899 ";
 
   private static final byte IS_OP_FLAG =     0x01;
   private static final byte IS_COMP_FLAG =   0x02;
@@ -87,7 +99,7 @@ class ExpressionTokenizer
 
     List<Token> tokens = new ArrayList<Token>();
 
-    ExprBuf buf = new ExprBuf(exprStr);
+    ExprBuf buf = new ExprBuf(exprStr, context);
 
     while(buf.hasNext()) {
       char c = buf.next();
@@ -156,7 +168,7 @@ class ExpressionTokenizer
                                  Value.Type.STRING));
             break;
           case DATE_LIT_QUOTE_CHAR:
-            tokens.add(parseDateLiteralString(buf, context));
+            tokens.add(parseDateLiteralString(buf));
             break;
           case OBJ_NAME_START_CHAR:
             tokens.add(new Token(TokenType.OBJ_NAME, parseObjNameString(buf)));
@@ -307,24 +319,33 @@ class ExpressionTokenizer
     return sb.toString();
   }
 
-  private static Token parseDateLiteralString(
-      ExprBuf buf, ParseContext context) 
+  private static Token parseDateLiteralString(ExprBuf buf) 
   {
     String dateStr = parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null);
     
     boolean hasDate = (dateStr.indexOf('/') >= 0);
     boolean hasTime = (dateStr.indexOf(':') >= 0);
+    boolean hasAmPm = false;
+    
+    if(hasTime) {
+      int strLen = dateStr.length();
+      hasTime = ((strLen >= AMPM_SUFFIX_LEN) &&
+                 (dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
+                                        AM_SUFFIX, 0, AMPM_SUFFIX_LEN) ||
+                  dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
+                                        PM_SUFFIX, 0, AMPM_SUFFIX_LEN)));
+    }
 
-    SimpleDateFormat sdf = null;
+    DateFormat sdf = null;
     Value.Type valType = null;
     if(hasDate && hasTime) {
-      sdf = buf.getDateTimeFormat(context);
+      sdf = (hasAmPm ? buf.getDateTimeFormat12() : buf.getDateTimeFormat24());
       valType = Value.Type.DATE_TIME;
     } else if(hasDate) {
-      sdf = buf.getDateFormat(context);
+      sdf = buf.getDateFormat();
       valType = Value.Type.DATE;
     } else if(hasTime) {
-      sdf = buf.getTimeFormat(context);
+      sdf = (hasAmPm ? buf.getTimeFormat12() : buf.getTimeFormat24());
       valType = Value.Type.TIME;
     } else {
       throw new IllegalArgumentException("Invalid date time literal " + dateStr +
@@ -409,14 +430,18 @@ class ExpressionTokenizer
   private static final class ExprBuf
   {
     private final String _str;
+    private final ParseContext _ctx;
     private int _pos;
-    private SimpleDateFormat _dateFmt;
-    private SimpleDateFormat _timeFmt;
-    private SimpleDateFormat _dateTimeFmt;
+    private DateFormat _dateFmt;
+    private DateFormat _timeFmt12;
+    private DateFormat _dateTimeFmt12;
+    private DateFormat _timeFmt24;
+    private DateFormat _dateTimeFmt24;
     private final StringBuilder _scratch = new StringBuilder();
     
-    private ExprBuf(String str) {
+    private ExprBuf(String str, ParseContext ctx) {
       _str = str;
+      _ctx = ctx;
     }
 
     private int len() {
@@ -459,25 +484,41 @@ class ExpressionTokenizer
       return _scratch;
     }
 
-    public SimpleDateFormat getDateFormat(ParseContext context) {
+    public DateFormat getDateFormat() {
       if(_dateFmt == null) {
-        _dateFmt = context.createDateFormat(DATE_FORMAT);
+        _dateFmt = _ctx.createDateFormat(DATE_FORMAT);
       }
       return _dateFmt;
     }
 
-    public SimpleDateFormat getTimeFormat(ParseContext context) {
-      if(_timeFmt == null) {
-        _timeFmt = context.createDateFormat(TIME_FORMAT);
+    public DateFormat getTimeFormat12() {
+      if(_timeFmt12 == null) {
+        _timeFmt12 = new TimeFormat(
+            getDateTimeFormat12(), _ctx.createDateFormat(TIME_FORMAT_12));
       }
-      return _timeFmt;
+      return _timeFmt12;
     }
 
-    public SimpleDateFormat getDateTimeFormat(ParseContext context) {
-      if(_dateTimeFmt == null) {
-        _dateTimeFmt = context.createDateFormat(DATE_TIME_FORMAT);
+    public DateFormat getDateTimeFormat12() {
+      if(_dateTimeFmt12 == null) {
+        _dateTimeFmt12 = _ctx.createDateFormat(DATE_TIME_FORMAT_12);
       }
-      return _dateTimeFmt;
+      return _dateTimeFmt12;
+    }
+
+    public DateFormat getTimeFormat24() {
+      if(_timeFmt24 == null) {
+        _timeFmt24 = new TimeFormat(
+            getDateTimeFormat24(), _ctx.createDateFormat(TIME_FORMAT_24));
+      }
+      return _timeFmt24;
+    }
+
+    public DateFormat getDateTimeFormat24() {
+      if(_dateTimeFmt24 == null) {
+        _dateTimeFmt24 = _ctx.createDateFormat(DATE_TIME_FORMAT_24);
+      }
+      return _dateTimeFmt24;
     }
 
     @Override
@@ -493,20 +534,27 @@ class ExpressionTokenizer
     private final Object _val;
     private final String _valStr;
     private final Value.Type _valType;
+    private final DateFormat _sdf;
 
     private Token(TokenType type, String val) {
       this(type, val, val);
     }
 
     private Token(TokenType type, Object val, String valStr) {
-      this(type, val, valStr, null);
+      this(type, val, valStr, null, null);
     }
 
     private Token(TokenType type, Object val, String valStr, Value.Type valType) {
+      this(type, val, valStr, valType, null);
+    }
+
+    private Token(TokenType type, Object val, String valStr, Value.Type valType,
+                  DateFormat sdf) {
       _type = type;
       _val = ((val != null) ? val : valStr);
       _valStr = valStr;
       _valType = valType;
+      _sdf = sdf;
     }
 
     public TokenType getType() {
@@ -525,6 +573,10 @@ class ExpressionTokenizer
       return _valType;
     }
 
+    public DateFormat getDateFormat() {
+      return _sdf;
+    }
+
     @Override
     public String toString() {
       if(_type == TokenType.SPACE) {
@@ -536,6 +588,41 @@ class ExpressionTokenizer
       }
       return str;
     }
-  } 
+  }
+
+  private static final class TimeFormat extends DateFormat
+  {
+    private static final long serialVersionUID = 0L;
+    private final DateFormat _parseDelegate;
+    private final DateFormat _fmtDelegate;
+
+    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate)
+    {
+      _parseDelegate = parseDelegate;
+      _fmtDelegate = fmtDelegate;
+    }
+
+    @Override
+    public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition fieldPosition) {
+      return _fmtDelegate.format(date, toAppendTo, fieldPosition);
+    }
+
+    @Override
+    public Date parse(String source, ParsePosition pos) {
+      // we parse as a full date/time in order to get the correct "base date"
+      // used by access
+      return _parseDelegate.parse(BASE_DATE + source, pos);
+    }
+
+    @Override
+    public Calendar getCalendar() {
+      return _fmtDelegate.getCalendar();
+    }
+
+    @Override
+    public TimeZone getTimeZone() {
+      return _fmtDelegate.getTimeZone();
+    }
+  }
 
 }
