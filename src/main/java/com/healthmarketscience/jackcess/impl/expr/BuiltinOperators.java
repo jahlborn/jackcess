@@ -490,14 +490,22 @@ public class BuiltinOperators
   }
 
   public static Value between(Value param1, Value param2, Value param3) {
-    // FIXME, use delay for and() or check here?
     // null propagate any param.  uses short circuit eval of params
     if(anyParamIsNull(param1, param2, param3)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return and(greaterThanEq(param1, param2), lessThanEq(param1, param3));
+    // the between values can be in either order!?!
+    Value min = param2;
+    Value max = param3;
+    Value gt = greaterThan(min, max);
+    if(gt.getAsBoolean()) {
+      min = param3;
+      max = param2;
+    }
+
+    return and(greaterThanEq(param1, min), lessThanEq(param1, max));
   }
 
   public static Value notBetween(Value param1, Value param2, Value param3) {
@@ -517,11 +525,13 @@ public class BuiltinOperators
         continue;
       }
 
-      // FIXME test
+      Value eq = equals(param1, val);
+      if(eq.getAsBoolean()) {
+        return TRUE_VAL;
+      }
     }
 
-    // FIXME
-    return null;
+    return FALSE_VAL;
   }
 
   public static Value notIn(Value param1, Value[] params) {
