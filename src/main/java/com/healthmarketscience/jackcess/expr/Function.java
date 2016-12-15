@@ -24,4 +24,5 @@ public interface Function
 {
   public String getName();
   public Value eval(Value... params);
+  public boolean isPure();
 }

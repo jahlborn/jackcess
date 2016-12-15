@@ -360,6 +360,9 @@ public class Expressionator
   
 
   private static final Expr THIS_COL_VALUE = new Expr() {
+    @Override public boolean isPure() {
+      return false;
+    }
     @Override protected Value eval(RowContext ctx) {
       return ctx.getThisColumnValue();
     }
@@ -1170,6 +1173,24 @@ public class Expressionator
     return paramVals;
   }
 
+  private static boolean arePure(List<Expr> exprs) {
+    for(Expr expr : exprs) {
+      if(!expr.isPure()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean arePure(Expr... exprs) {
+    for(Expr expr : exprs) {
+      if(!expr.isPure()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static void literalStrToString(String str, StringBuilder sb) {
     sb.append("\"")
       .append(str.replace("\"", "\"\""))
@@ -1394,6 +1415,8 @@ public class Expressionator
       return outerExpr;
     }
     
+    public abstract boolean isPure();
+
     protected abstract Value eval(RowContext ctx);
 
     protected abstract void toExprString(StringBuilder sb, boolean isDebug);
@@ -1407,6 +1430,11 @@ public class Expressionator
     private EConstValue(Value val, String str) {
       _val = val;
       _str = str;
+    }
+
+    @Override
+    public boolean isPure() {
+      return true;
     }
 
     @Override 
@@ -1427,6 +1455,11 @@ public class Expressionator
     private ELiteralValue(Value.Type valType, Object value,
                           DateFormat sdf) {
       _val = toLiteralValue(valType, value, sdf);
+    }
+
+    @Override
+    public boolean isPure() {
+      return true;
     }
 
     @Override
@@ -1460,6 +1493,11 @@ public class Expressionator
     }
 
     @Override
+    public boolean isPure() {
+      return false;
+    }
+
+    @Override
     public Value eval(RowContext ctx) {
       return ctx.getRowValue(_collectionName, _objName, _fieldName);
     }
@@ -1485,6 +1523,11 @@ public class Expressionator
     }
 
     @Override
+    public boolean isPure() {
+      return _expr.isPure();
+    }
+
+    @Override
     protected Value eval(RowContext ctx) {
       return _expr.eval(ctx);
     }
@@ -1505,6 +1548,11 @@ public class Expressionator
     private EFunc(Function func, List<Expr> params) {
       _func = func;
       _params = params;
+    }
+
+    @Override
+    public boolean isPure() {
+      return _func.isPure() && arePure(_params);
     }
 
     @Override
@@ -1537,6 +1585,11 @@ public class Expressionator
       _right = right;
     }
 
+    @Override
+    public boolean isPure() {
+      return arePure(_left, _right);
+    }
+    
     public OpType getOp() {
       return _op;
     }
@@ -1586,6 +1639,11 @@ public class Expressionator
     private EUnaryOp(UnaryOp op, Expr expr) {
       _op = op;
       _expr = expr;
+    }
+
+    @Override
+    public boolean isPure() {
+      return _expr.isPure();
     }
 
     public OpType getOp() {
@@ -1652,6 +1710,11 @@ public class Expressionator
     private ESpecOp(SpecOp op, Expr expr) {
       _op = op;
       _expr = expr;
+    }
+
+    @Override
+    public boolean isPure() {
+      return _expr.isPure();
     }
 
     public OpType getOp() {
@@ -1723,6 +1786,11 @@ public class Expressionator
     }
 
     @Override
+    public boolean isPure() {
+      return super.isPure() && arePure(_exprs);
+    }
+
+    @Override
     protected Value eval(RowContext ctx) {
       return _op.eval(_expr.eval(ctx), 
                       exprListToDelayedValues(_exprs, ctx), null);
@@ -1748,6 +1816,11 @@ public class Expressionator
       super(op, expr);
       _startRangeExpr = startRangeExpr;
       _endRangeExpr = endRangeExpr;
+    }
+
+    @Override
+    public boolean isPure() {
+      return _expr.isPure() && arePure(_startRangeExpr, _endRangeExpr);
     }
 
     public Expr getRight() {

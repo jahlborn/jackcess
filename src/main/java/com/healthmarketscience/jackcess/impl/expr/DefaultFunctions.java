@@ -55,6 +55,10 @@ public class DefaultFunctions
       return _name;
     }
 
+    public boolean isPure() {
+      return true;
+    }
+
     protected void validateNumParams(Value[] params) {
       int num = params.length;
       if((num < _minParams) || (num > _maxParams)) {
