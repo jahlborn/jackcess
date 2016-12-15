@@ -27,4 +27,6 @@ public interface Expression
   public Boolean evalCondition(RowContext ctx);
 
   public String toDebugString();
+
+  public boolean isPure();
 }

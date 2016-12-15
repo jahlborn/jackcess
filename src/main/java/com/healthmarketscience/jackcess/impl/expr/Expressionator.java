@@ -420,7 +420,13 @@ public class Expressionator
       return null;
     }
 
-    return parseExpression(new TokBuf(exprType, tokens, context), false);
+    Expr expr = parseExpression(new TokBuf(exprType, tokens, context), false);
+    if(expr.isPure()) {
+      // for now, just cache at top-level for speed (could in theory cache
+      // intermediate values?)
+      expr = new MemoizedPureExpression(expr);
+    }
+    return expr;
   }
 
   private static List<Token> trimSpaces(List<Token> tokens) {
@@ -1845,6 +1851,44 @@ public class Expressionator
       _startRangeExpr.toString(sb, isDebug);
       sb.append(" And ");
       _endRangeExpr.toString(sb, isDebug);
+    }
+  }
+
+  /**
+   * Wrapper for a <i>pure</i> Expr which caches the result of evaluation.
+   */
+  private static final class MemoizedPureExpression extends Expr
+  {
+    private final Expr _expr;
+    private Value _val;
+
+    private MemoizedPureExpression(Expr expr) {
+      _expr = expr;
+    } 
+
+    @Override
+    protected Value eval(RowContext ctx) {
+      if(_val == null) {
+        // since expr is pure, row context should not be used
+        _val = _expr.eval(null);
+      }
+      return _val;
+    }
+
+    @Override
+    public boolean isPure() {
+      return true;
+    }
+
+    @Override
+    protected void toString(StringBuilder sb, boolean isDebug) {
+      // don't display this class in debug string
+      _expr.toString(sb, isDebug);
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      throw new UnsupportedOperationException();
     }
   }
 }
