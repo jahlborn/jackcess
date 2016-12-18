@@ -366,6 +366,7 @@ class ExpressionTokenizer
 
     int startPos = buf.curPos();
     boolean foundNum = false;
+    boolean hasDecimal = false;
 
     try {
 
@@ -376,6 +377,7 @@ class ExpressionTokenizer
           sb.append((char)c);
           buf.next();
         } else if(c == '.') {
+          hasDecimal = true;
           sb.append((char)c);
           buf.next();
         } else if(isSpecialChar((char)c)) {
@@ -394,9 +396,13 @@ class ExpressionTokenizer
       String numStr = sb.toString();
       try {
         // what number type to use here?
-        BigDecimal num = new BigDecimal(numStr);
+        // BigDecimal num = new BigDecimal(numStr);
+        Object num = (hasDecimal ? 
+                      (Number)Double.valueOf(numStr) : 
+                      (Number)Long.valueOf(numStr));
         foundNum = true;
-        return new Token(TokenType.LITERAL, num, numStr, Value.Type.BIG_DEC);
+        return new Token(TokenType.LITERAL, num, numStr, 
+                         (hasDecimal ? Value.Type.DOUBLE : Value.Type.LONG));
       } catch(NumberFormatException ne) {
         throw new IllegalArgumentException(
             "Invalid number literal " + numStr + " " + buf, ne);

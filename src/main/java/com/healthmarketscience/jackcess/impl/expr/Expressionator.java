@@ -1274,6 +1274,10 @@ public class Expressionator
       return new TimeValue((Date)value, sdf);
     case DATE_TIME:
       return new DateTimeValue((Date)value, sdf);
+    case LONG:
+      return new LongValue((Long)value);
+    case DOUBLE:
+      return new DoubleValue((Double)value);
     case BIG_DEC:
       return new BigDecimalValue((BigDecimal)value);
     default:

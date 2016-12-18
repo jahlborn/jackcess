@@ -16,9 +16,15 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import junit.framework.TestCase;
+import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
 
+import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.Expression;
+import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.Value;
+import junit.framework.TestCase;
 
 /**
  *
@@ -26,7 +32,6 @@ import com.healthmarketscience.jackcess.expr.Expression;
  */
 public class ExpressionatorTest extends TestCase 
 {
-
   public ExpressionatorTest(String name) {
     super(name);
   }
@@ -116,6 +121,55 @@ public class ExpressionatorTest extends TestCase
 
   }
 
+  public void testSimpleMathExpressions() throws Exception
+  {
+    for(int i = -10; i < 10; ++i) {
+      assertEquals((long)-i, eval("=-(" + i + ")"));
+    }
+
+    for(int i = -10; i < 10; ++i) {
+      for(int j = -10; j < 10; ++j) {
+        assertEquals((long)(i + j), eval("=" + i + " + " + j));
+      }
+    }
+
+    for(int i = -10; i < 10; ++i) {
+      for(int j = -10; j < 10; ++j) {
+        assertEquals((long)(i - j), eval("=" + i + " - " + j));
+      }
+    }
+
+    for(int i = -10; i < 10; ++i) {
+      for(int j = -10; j < 10; ++j) {
+        assertEquals((long)(i * j), eval("=" + i + " * " + j));
+      }
+    }
+
+    for(int i = -10; i < 10; ++i) {
+      for(int j = -10; j < 10; ++j) {
+        try {
+          assertEquals((long)(i / j), eval("=" + i + " \\ " + j));
+          if(j == 0) {
+            fail("ArithmeticException should have been thrown");
+          }
+        } catch(ArithmeticException ae) {
+          if(j != 0) {
+            throw ae;
+          }
+        } 
+      }
+    }
+
+    // for(int i = -10; i < 10; ++i) {
+    //   for(int j = -10; j < 10; ++j) {
+    //     System.out.println("FOO " + i + " " + j);
+    //     assertEquals((long)(Math.pow(i, j)), eval("=" + i + " ^ " + j));
+    //   }
+    // }
+
+
+  }
+
   private static void validateExpr(String exprStr, String debugStr) {
     validateExpr(exprStr, debugStr, exprStr);
   }
@@ -126,5 +180,24 @@ public class ExpressionatorTest extends TestCase
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null);
     assertEquals(debugStr, expr.toDebugString());
     assertEquals(cleanStr, expr.toString());
+  }
+
+  private static Object eval(String exprStr) {
+    Expression expr = Expressionator.parse(
+        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
+    return expr.evalDefault();
+  }
+
+  private static final class TestContext implements Expressionator.ParseContext
+  {
+    public SimpleDateFormat createDateFormat(String formatStr) {
+      SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
+      sdf.setTimeZone(TestUtil.TEST_TZ);
+      return sdf;
+    }
+
+    public Function getExpressionFunction(String name) {
+      return null;
+    }
   }
 }
