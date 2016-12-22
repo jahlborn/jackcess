@@ -366,7 +366,8 @@ class ExpressionTokenizer
 
     int startPos = buf.curPos();
     boolean foundNum = false;
-    boolean hasDecimal = false;
+    boolean isFp = false;
+    int expPos = -1;
 
     try {
 
@@ -377,7 +378,15 @@ class ExpressionTokenizer
           sb.append((char)c);
           buf.next();
         } else if(c == '.') {
-          hasDecimal = true;
+          isFp = true;
+          sb.append((char)c);
+          buf.next();
+        } else if(hasDigit && (expPos < 0) && ((c == 'e') || (c == 'E'))) {
+          isFp = true;
+          sb.append((char)c);
+          expPos = sb.length();
+          buf.next();
+        } else if((expPos == sb.length()) && ((c == '-') || (c == '+'))) {
           sb.append((char)c);
           buf.next();
         } else if(isSpecialChar((char)c)) {
@@ -396,13 +405,12 @@ class ExpressionTokenizer
       String numStr = sb.toString();
       try {
         // what number type to use here?
-        // BigDecimal num = new BigDecimal(numStr);
-        Object num = (hasDecimal ? 
+        Object num = (isFp ? 
                       (Number)Double.valueOf(numStr) : 
                       (Number)Long.valueOf(numStr));
         foundNum = true;
         return new Token(TokenType.LITERAL, num, numStr, 
-                         (hasDecimal ? Value.Type.DOUBLE : Value.Type.LONG));
+                         (isFp ? Value.Type.DOUBLE : Value.Type.LONG));
       } catch(NumberFormatException ne) {
         throw new IllegalArgumentException(
             "Invalid number literal " + numStr + " " + buf, ne);

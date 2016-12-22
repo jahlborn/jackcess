@@ -16,14 +16,12 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.Value;
 import junit.framework.TestCase;
 
 /**
@@ -32,6 +30,11 @@ import junit.framework.TestCase;
  */
 public class ExpressionatorTest extends TestCase 
 {
+  private static final double[] DBLS = {
+    -10.3d,-9.0d,-8.234d,-7.11111d,-6.99999d,-5.5d,-4.0d,-3.4159265d,-2.84d,
+    -1.0000002d,-1.0d,-0.0002013d,0.0d, 0.9234d,1.0d,1.954d,2.200032d,3.001d,
+    4.9321d,5.0d,6.66666d,7.396d,8.1d,9.20456200d,10.325d};
+
   public ExpressionatorTest(String name) {
     super(name);
   }
@@ -123,49 +126,125 @@ public class ExpressionatorTest extends TestCase
 
   public void testSimpleMathExpressions() throws Exception
   {
-    for(int i = -10; i < 10; ++i) {
-      assertEquals((long)-i, eval("=-(" + i + ")"));
+    for(long i = -10L; i <= 10L; ++i) {
+      assertEquals(-i, eval("=-(" + i + ")"));
     }
 
-    for(int i = -10; i < 10; ++i) {
-      for(int j = -10; j < 10; ++j) {
-        assertEquals((long)(i + j), eval("=" + i + " + " + j));
+    for(double i : DBLS) {
+      assertEquals(-i, eval("=-(" + i + ")"));
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        assertEquals((i + j), eval("=" + i + " + " + j));
       }
     }
 
-    for(int i = -10; i < 10; ++i) {
-      for(int j = -10; j < 10; ++j) {
-        assertEquals((long)(i - j), eval("=" + i + " - " + j));
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        assertEquals((i + j), eval("=" + i + " + " + j));
       }
     }
 
-    for(int i = -10; i < 10; ++i) {
-      for(int j = -10; j < 10; ++j) {
-        assertEquals((long)(i * j), eval("=" + i + " * " + j));
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        assertEquals((i - j), eval("=" + i + " - " + j));
       }
     }
 
-    for(int i = -10; i < 10; ++i) {
-      for(int j = -10; j < 10; ++j) {
-        try {
-          assertEquals((long)(i / j), eval("=" + i + " \\ " + j));
-          if(j == 0) {
-            fail("ArithmeticException should have been thrown");
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        assertEquals((i - j), eval("=" + i + " - " + j));
+      }
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        assertEquals((i * j), eval("=" + i + " * " + j));
+      }
+    }
+
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        assertEquals((i * j), eval("=" + i + " * " + j));
+      }
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        if(j == 0L) {
+          evalFail("=" + i + " \\ " + j, ArithmeticException.class);
+        } else {
+          assertEquals((i / j), eval("=" + i + " \\ " + j));
+        }
+      }
+    }
+
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        if((long)j == 0L) {
+          evalFail("=" + i + " \\ " + j, ArithmeticException.class);
+        } else {
+          assertEquals(((long)i / (long)j), eval("=" + i + " \\ " + j));
+        }
+      }
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        if(j == 0L) {
+          evalFail("=" + i + " Mod " + j, ArithmeticException.class);
+        } else {
+          assertEquals((i % j), eval("=" + i + " Mod " + j));
+        }
+      }
+    }
+
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        if((long)j == 0L) {
+          evalFail("=" + i + " Mod " + j, ArithmeticException.class);
+        } else {
+          assertEquals(((long)i % (long)j), eval("=" + i + " Mod " + j));
+        }
+      }
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        if(j == 0L) {
+          evalFail("=" + i + " / " + j, ArithmeticException.class);
+        } else {
+          double result = (double)i / (double)j;
+          if((long)result == result) {
+            assertEquals((long)result, eval("=" + i + " / " + j));
+          } else {
+            assertEquals(result, eval("=" + i + " / " + j));
           }
-        } catch(ArithmeticException ae) {
-          if(j != 0) {
-            throw ae;
-          }
-        } 
+        }
       }
     }
 
-    // for(int i = -10; i < 10; ++i) {
-    //   for(int j = -10; j < 10; ++j) {
-    //     System.out.println("FOO " + i + " " + j);
-    //     assertEquals((long)(Math.pow(i, j)), eval("=" + i + " ^ " + j));
-    //   }
-    // }
+    for(double i : DBLS) {
+      for(double j : DBLS) {
+        if(j == 0.0d) {
+          evalFail("=" + i + " / " + j, ArithmeticException.class);
+        } else {
+          assertEquals((i / j), eval("=" + i + " / " + j));
+        }
+      }
+    }
+
+    for(long i = -10L; i <= 10L; ++i) {
+      for(long j = -10L; j <= 10L; ++j) {
+        double result = Math.pow(i, j);
+        if((long)result == result) {
+          assertEquals((long)result, eval("=" + i + " ^ " + j));
+        } else {
+          assertEquals(result, eval("=" + i + " ^ " + j));
+        }
+      }
+    }
 
 
   }
@@ -186,6 +265,17 @@ public class ExpressionatorTest extends TestCase
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
     return expr.evalDefault();
+  }
+
+  private static void evalFail(String exprStr, Class<? extends Exception> failure) {
+    Expression expr = Expressionator.parse(
+        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
+    try {
+      expr.evalDefault();
+      fail(failure + " should have been thrown");
+    } catch(Exception e) {
+      assertTrue(failure.isInstance(e));
+    }
   }
 
   private static final class TestContext implements Expressionator.ParseContext

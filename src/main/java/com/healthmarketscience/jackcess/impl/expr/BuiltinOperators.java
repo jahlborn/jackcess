@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  */
 public class BuiltinOperators 
 {
+  private static final String DIV_BY_ZERO = "/ by zero";
 
   public static final Value NULL_VAL = new BaseValue() {
     public Type getType() {
@@ -198,7 +199,11 @@ public class BuiltinOperators
       }
       return toValue((double)lp1 / (double)lp2);
     case DOUBLE:
-      return toValue(param1.getAsDouble() / param2.getAsDouble());
+      double d2 = param2.getAsDouble();
+      if(d2 == 0.0d) {
+        throw new ArithmeticException(DIV_BY_ZERO);
+      }
+      return toValue(param1.getAsDouble() / d2);
     case BIG_INT:
       BigInteger bip1 = param1.getAsBigInteger();
       BigInteger bip2 = param2.getAsBigInteger();
@@ -288,13 +293,23 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      return toValue(param1.getAsDouble() % param2.getAsDouble());
+      return toValue(param1.getAsLong() % param2.getAsLong());
     case DOUBLE:
       wasDouble = true;
       // fallthrough
     case BIG_INT:
     case BIG_DEC:
-      BigInteger result = param1.getAsBigInteger().mod(param2.getAsBigInteger());
+      BigInteger bi1 = param1.getAsBigInteger();
+      BigInteger bi2 = param2.getAsBigInteger().abs();
+      if(bi2.signum() == 0) {
+        throw new ArithmeticException(DIV_BY_ZERO);
+      }
+      BigInteger result = bi1.mod(bi2);
+      // BigInteger.mod differs from % when using negative values, need to
+      // make them consistent
+      if((bi1.signum() == -1) && (result.signum() == 1)) {
+        result = result.subtract(bi2);
+      }
       return (wasDouble ? toValue(result.longValue()) : toValue(result));
     default:
       throw new RuntimeException("Unexpected type " + mathType);
@@ -702,7 +717,7 @@ public class BuiltinOperators
   }
 
   private static boolean isIntegral(double d) {
-    return (d == Math.rint(d));
+    return ((d == Math.rint(d)) && !Double.isInfinite(d) && !Double.isNaN(d));
   }
 
 }
