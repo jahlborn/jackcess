@@ -77,9 +77,4 @@ public abstract class BaseDateValue extends BaseValue
   public BigDecimal getAsBigDecimal() {
     return BigDecimal.valueOf(getNumber());
   }
-
-  @Override
-  public Value toNumericValue() {
-    return new DoubleValue(getNumber());
-  }
 }

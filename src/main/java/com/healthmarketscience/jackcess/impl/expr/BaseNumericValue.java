@@ -30,10 +30,5 @@ public abstract class BaseNumericValue extends BaseValue
     return getNumber().doubleValue();
   }
 
-  @Override
-  public Value toNumericValue() {
-    return this;
-  }
-
   protected abstract Number getNumber();
 }

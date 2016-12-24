@@ -26,6 +26,10 @@ public abstract class BaseDelayedValue implements Value
     return _val;
   }
 
+  public boolean isNull() {
+    return(getType() == Type.NULL);
+  }
+
   public Value.Type getType() {
     return getDelegate().getType();
   }
@@ -60,10 +64,6 @@ public abstract class BaseDelayedValue implements Value
 
   public BigDecimal getAsBigDecimal() {
     return getDelegate().getAsBigDecimal();
-  }
-
-  public Value toNumericValue() {
-    return getDelegate().toNumericValue();
   }
 
   protected abstract Value eval();

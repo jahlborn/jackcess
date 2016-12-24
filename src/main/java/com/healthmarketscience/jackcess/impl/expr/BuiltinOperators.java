@@ -64,7 +64,7 @@ public class BuiltinOperators
   // FIXME, Imp operator?
 
   public static Value negate(Value param1) {
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
@@ -319,11 +319,11 @@ public class BuiltinOperators
   public static Value concat(Value param1, Value param2) {
 
     // note, this op converts null to empty string
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       param1 = EMPTY_STR_VAL;
     }
 
-    if(paramIsNull(param2)) {
+    if(param2.isNull()) {
       param2 = EMPTY_STR_VAL;
     }
 
@@ -335,7 +335,7 @@ public class BuiltinOperators
   }
 
   public static Value not(Value param1) {
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
@@ -401,7 +401,7 @@ public class BuiltinOperators
 
     // "and" uses short-circuit logic
 
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       return NULL_VAL;
     }
 
@@ -410,7 +410,7 @@ public class BuiltinOperators
       return FALSE_VAL;
     }
 
-    if(paramIsNull(param2)) {
+    if(param2.isNull()) {
       return NULL_VAL;
     }
 
@@ -421,7 +421,7 @@ public class BuiltinOperators
 
     // "or" uses short-circuit logic
 
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       return NULL_VAL;
     }
 
@@ -430,7 +430,7 @@ public class BuiltinOperators
       return TRUE_VAL;
     }
 
-    if(paramIsNull(param2)) {
+    if(param2.isNull()) {
       return NULL_VAL;
     }
 
@@ -465,8 +465,8 @@ public class BuiltinOperators
 
     // "imp" uses short-circuit logic
 
-    if(paramIsNull(param1)) {
-      if(paramIsNull(param2) || !param2.getAsBoolean()) {
+    if(param1.isNull()) {
+      if(param2.isNull() || !param2.getAsBoolean()) {
         // null propagation
         return NULL_VAL;
       }
@@ -479,7 +479,7 @@ public class BuiltinOperators
       return TRUE_VAL;
     }
 
-    if(paramIsNull(param2)) {
+    if(param2.isNull()) {
       // null propagation
       return NULL_VAL;
     }
@@ -496,7 +496,7 @@ public class BuiltinOperators
   }
 
   public static Value like(Value param1, Pattern pattern) {
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
@@ -530,13 +530,13 @@ public class BuiltinOperators
   public static Value in(Value param1, Value[] params) {
 
     // null propagate any param.  uses short circuit eval of params
-    if(paramIsNull(param1)) {
+    if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
 
     for(Value val : params) {
-      if(paramIsNull(val)) {
+      if(val.isNull()) {
         continue;
       }
 
@@ -555,16 +555,12 @@ public class BuiltinOperators
 
   
   private static boolean anyParamIsNull(Value param1, Value param2) {
-    return (paramIsNull(param1) || paramIsNull(param2));
+    return (param1.isNull() || param2.isNull());
   }
 
   private static boolean anyParamIsNull(Value param1, Value param2,
                                         Value param3) {
-    return (paramIsNull(param1) || paramIsNull(param2) || paramIsNull(param3));
-  }
-
-  private static boolean paramIsNull(Value param1) {
-    return (param1.getType() == Value.Type.NULL);
+    return (param1.isNull() || param2.isNull() || param3.isNull());
   }
 
   protected static int nonNullCompareTo(

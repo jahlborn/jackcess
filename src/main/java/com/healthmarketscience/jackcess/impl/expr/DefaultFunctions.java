@@ -56,6 +56,7 @@ public class DefaultFunctions
     }
 
     public boolean isPure() {
+      // most functions are probably pure, so make this the default
       return true;
     }
 
@@ -118,25 +119,22 @@ public class DefaultFunctions
     protected abstract Value eval3(Value param1, Value param2, Value param3);
   }
 
-  public static final Function IIF = new Func3("IIf") {
+  public static final Function IIF = registerFunc(new Func3("IIf") {
     @Override
     protected Value eval3(Value param1, Value param2, Value param3) {
-      // FIXME
-      // return (paramToBoolean(param1) ? param2 : param3);
-      return null;
+      return (param1.getAsBoolean() ? param2 : param3);
     }
-  };
+  });
+
+  
 
   // https://www.techonthenet.com/access/functions/
   // https://support.office.com/en-us/article/Access-Functions-by-category-b8b136c3-2716-4d39-94a2-658ce330ed83
 
-  private static void registerFunc(Function func) {
+  private static Function registerFunc(Function func) {
     if(FUNCS.put(func.getName().toLowerCase(), func) != null) {
       throw new IllegalStateException("Duplicate function " + func);
     }
-  }
-
-  static {
-    registerFunc(IIF);
+    return func;
   }
 }

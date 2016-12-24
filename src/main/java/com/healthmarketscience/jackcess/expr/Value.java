@@ -57,6 +57,8 @@ public interface Value
 
   public Object get();
 
+  public boolean isNull();
+
   public boolean getAsBoolean();
 
   public String getAsString();
@@ -70,6 +72,4 @@ public interface Value
   public BigInteger getAsBigInteger();
 
   public BigDecimal getAsBigDecimal();
-
-  public Value toNumericValue();
 }

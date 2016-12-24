@@ -28,6 +28,10 @@ import com.healthmarketscience.jackcess.expr.Value;
  */
 public abstract class BaseValue implements Value
 {
+  public boolean isNull() {
+    return(getType() == Type.NULL);
+  }
+
   public boolean getAsBoolean() {
     throw invalidConversion(Value.Type.LONG);
   }
@@ -54,10 +58,6 @@ public abstract class BaseValue implements Value
 
   public BigDecimal getAsBigDecimal() {
     throw invalidConversion(Value.Type.BIG_DEC);
-  }
-
-  public Value toNumericValue() {
-    throw invalidConversion(Value.Type.LONG);
   }
 
   private UnsupportedOperationException invalidConversion(Value.Type newType) {
