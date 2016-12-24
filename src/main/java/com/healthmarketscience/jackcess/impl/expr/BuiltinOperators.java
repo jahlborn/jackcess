@@ -36,6 +36,9 @@ public class BuiltinOperators
   private static final String DIV_BY_ZERO = "/ by zero";
 
   public static final Value NULL_VAL = new BaseValue() {
+    @Override public boolean isNull() {
+      return true;
+    }
     public Type getType() {
       return Type.NULL;
     }
@@ -488,11 +491,11 @@ public class BuiltinOperators
   }
 
   public static Value isNull(Value param1) {
-    return toValue(param1.getType() == Value.Type.NULL);
+    return toValue(param1.isNull());
   }
 
   public static Value isNotNull(Value param1) {
-    return toValue(param1.getType() == Value.Type.NULL);
+    return toValue(!param1.isNull());
   }
 
   public static Value like(Value param1, Pattern pattern) {

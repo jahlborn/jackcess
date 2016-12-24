@@ -1319,7 +1319,7 @@ public class Expressionator
     public Object evalDefault() {
       Value val = eval(null);
 
-      if(val.getType() == Value.Type.NULL) {
+      if(val.isNull()) {
         return null;
       }
 
@@ -1331,7 +1331,7 @@ public class Expressionator
     public Boolean evalCondition(RowContext ctx) {
       Value val = eval(ctx);
 
-      if(val.getType() == Value.Type.NULL) {
+      if(val.isNull()) {
         return null;
       }
 
