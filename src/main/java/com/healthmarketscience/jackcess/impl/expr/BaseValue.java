@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.Value;
@@ -50,10 +49,6 @@ public abstract class BaseValue implements Value
 
   public Double getAsDouble() {
     throw invalidConversion(Value.Type.DOUBLE);
-  }
-
-  public BigInteger getAsBigInteger() {
-    throw invalidConversion(Value.Type.BIG_INT);
   }
 
   public BigDecimal getAsBigDecimal() {

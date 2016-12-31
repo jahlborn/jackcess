@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 /**
  *
@@ -53,11 +52,6 @@ public class DoubleValue extends BaseNumericValue
   @Override
   public Double getAsDouble() {
     return _val;
-  }
-
-  @Override
-  public BigInteger getAsBigInteger() {
-    return getAsBigDecimal().toBigInteger();
   }
 
   @Override

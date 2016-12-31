@@ -3,7 +3,6 @@
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.Value;
@@ -56,10 +55,6 @@ public abstract class BaseDelayedValue implements Value
 
   public Double getAsDouble() {
     return getDelegate().getAsDouble();
-  }
-
-  public BigInteger getAsBigInteger() {
-    return getDelegate().getAsBigInteger();
   }
 
   public BigDecimal getAsBigDecimal() {

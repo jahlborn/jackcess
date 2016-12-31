@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Date;
 
 /**
@@ -28,7 +27,7 @@ public interface Value
 {
   public enum Type
   {
-    NULL, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_INT, BIG_DEC;
+    NULL, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_DEC;
 
     public boolean isNumeric() {
       return inRange(LONG, BIG_DEC);
@@ -36,7 +35,7 @@ public interface Value
 
     public boolean isIntegral() {
       // note when BOOLEAN is converted to number, it is integral
-      return ((this == LONG) || (this == BIG_INT));
+      return (this == LONG);
     }
 
     public boolean isTemporal() {
@@ -68,8 +67,6 @@ public interface Value
   public Long getAsLong();
 
   public Double getAsDouble();
-
-  public BigInteger getAsBigInteger();
 
   public BigDecimal getAsBigDecimal();
 }

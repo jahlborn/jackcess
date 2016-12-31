@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.DateFormat;
-import java.text.Format;
 import java.util.Date;
 import java.util.regex.Pattern;
 
@@ -86,8 +85,6 @@ public class BuiltinOperators
       return toValue(-param1.getAsLong());
     case DOUBLE:
       return toValue(-param1.getAsDouble());
-    case BIG_INT:
-      return toValue(param1.getAsBigInteger().negate());
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().negate());
     default:
@@ -117,8 +114,6 @@ public class BuiltinOperators
       return toValue(param1.getAsLong() + param2.getAsLong());
     case DOUBLE:
       return toValue(param1.getAsDouble() + param2.getAsDouble());
-    case BIG_INT:
-      return toValue(param1.getAsBigInteger().add(param2.getAsBigInteger()));
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().add(param2.getAsBigDecimal()));
     default:
@@ -146,8 +141,6 @@ public class BuiltinOperators
       return toValue(param1.getAsLong() - param2.getAsLong());
     case DOUBLE:
       return toValue(param1.getAsDouble() - param2.getAsDouble());
-    case BIG_INT:
-      return toValue(param1.getAsBigInteger().subtract(param2.getAsBigInteger()));
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().subtract(param2.getAsBigDecimal()));
     default:
@@ -172,8 +165,6 @@ public class BuiltinOperators
       return toValue(param1.getAsLong() * param2.getAsLong());
     case DOUBLE:
       return toValue(param1.getAsDouble() * param2.getAsDouble());
-    case BIG_INT:
-      return toValue(param1.getAsBigInteger().multiply(param2.getAsBigInteger()));
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().multiply(param2.getAsBigDecimal()));
     default:
@@ -207,14 +198,6 @@ public class BuiltinOperators
         throw new ArithmeticException(DIV_BY_ZERO);
       }
       return toValue(param1.getAsDouble() / d2);
-    case BIG_INT:
-      BigInteger bip1 = param1.getAsBigInteger();
-      BigInteger bip2 = param2.getAsBigInteger();
-      BigInteger[] res = bip1.divideAndRemainder(bip2);
-      if(res[1].compareTo(BigInteger.ZERO) == 0) {
-        return toValue(res[0]);
-      }
-      return toValue(new BigDecimal(bip1).divide(new BigDecimal(bip2)));
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().divide(param2.getAsBigDecimal()));
     default:
@@ -242,10 +225,9 @@ public class BuiltinOperators
     case DOUBLE:
       wasDouble = true;
       // fallthrough
-    case BIG_INT:
     case BIG_DEC:
-      BigInteger result = param1.getAsBigInteger().divide(
-          param2.getAsBigInteger());
+      BigInteger result = getAsBigInteger(param1).divide(
+          getAsBigInteger(param2));
       return (wasDouble ? toValue(result.longValue()) : toValue(result));
     default:
       throw new RuntimeException("Unexpected type " + mathType);
@@ -264,17 +246,8 @@ public class BuiltinOperators
     double result = Math.pow(param1.getAsDouble(), param2.getAsDouble());
 
     // attempt to convert integral types back to integrals if possible
-    switch(mathType) {
-    case LONG:
-      if(isIntegral(result)) {
-        return toValue((long)result);
-      }
-      break;
-    case BIG_INT:
-      if(isIntegral(result)) {
-        return toValue(BigDecimal.valueOf(result).toBigInteger());
-      }
-      break;
+    if((mathType == Value.Type.LONG) && isIntegral(result)) {
+      return toValue((long)result);
     }
 
     return toValue(result);
@@ -300,10 +273,9 @@ public class BuiltinOperators
     case DOUBLE:
       wasDouble = true;
       // fallthrough
-    case BIG_INT:
     case BIG_DEC:
-      BigInteger bi1 = param1.getAsBigInteger();
-      BigInteger bi2 = param2.getAsBigInteger().abs();
+      BigInteger bi1 = getAsBigInteger(param1);
+      BigInteger bi2 = getAsBigInteger(param2).abs();
       if(bi2.signum() == 0) {
         throw new ArithmeticException(DIV_BY_ZERO);
       }
@@ -585,17 +557,11 @@ public class BuiltinOperators
       return param1.getAsLong().compareTo(param2.getAsLong());
     case DOUBLE:
       return param1.getAsDouble().compareTo(param2.getAsDouble());
-    case BIG_INT:
-      return param1.getAsBigInteger().compareTo(param2.getAsBigInteger());
     case BIG_DEC:
       return param1.getAsBigDecimal().compareTo(param2.getAsBigDecimal());
     default:
       throw new RuntimeException("Unexpected type " + compareType);
     }
-  }
-
-  private static int compare(long l1, long l2) {
-    return ((l1 < l2) ? -1 : ((l1 > l2) ? 1 : 0));
   }
 
   public static Value toValue(boolean b) {
@@ -615,7 +581,7 @@ public class BuiltinOperators
   }
 
   public static Value toValue(BigInteger s) {
-    return new BigIntegerValue(s);
+    return toValue(new BigDecimal(s));
   }
 
   public static Value toValue(BigDecimal s) {
@@ -734,4 +700,7 @@ public class BuiltinOperators
     return ((d == Math.rint(d)) && !Double.isInfinite(d) && !Double.isNaN(d));
   }
 
+  private static BigInteger getAsBigInteger(Value v) {
+    return v.getAsBigDecimal().toBigInteger();
+  }
 }

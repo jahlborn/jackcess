@@ -17,11 +17,9 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.text.DateFormat;
 import java.util.Date;
 
-import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 /**
@@ -70,11 +68,6 @@ public abstract class BaseDateValue extends BaseValue
   @Override
   public Double getAsDouble() {
     return getNumber();
-  }
-
-  @Override
-  public BigInteger getAsBigInteger() {
-    return getAsBigDecimal().toBigInteger();
   }
 
   @Override
