@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.RowContext;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
@@ -104,12 +104,12 @@ public class Expressionator
 
   private enum UnaryOp implements OpType {
     NEG("-", false) {
-      @Override public Value eval(Value param1) {
-        return BuiltinOperators.negate(param1);
+      @Override public Value eval(EvalContext ctx, Value param1) {
+        return BuiltinOperators.negate(ctx, param1);
       }
     },
     NOT("Not", true) {
-      @Override public Value eval(Value param1) {
+      @Override public Value eval(EvalContext ctx, Value param1) {
         return BuiltinOperators.not(param1);
       }
     };
@@ -131,47 +131,47 @@ public class Expressionator
       return _str;
     }
 
-    public abstract Value eval(Value param1);
+    public abstract Value eval(EvalContext ctx, Value param1);
   }
 
   private enum BinaryOp implements OpType {
     PLUS("+") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.add(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.add(ctx, param1, param2);
       }
     }, 
     MINUS("-") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.subtract(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.subtract(ctx, param1, param2);
       }
     }, 
     MULT("*") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.multiply(param1, param2);
       }
     },
     DIV("/") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.divide(param1, param2);
       }
     }, 
     INT_DIV("\\") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.intDivide(param1, param2);
       }
     },
     EXP("^") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.exp(param1, param2);
       }
     }, 
     CONCAT("&") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.concat(param1, param2);
       }
     }, 
     MOD("Mod") {
-      @Override public Value eval(Value param1, Value param2) {
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.mod(param1, param2);
       }
     };
@@ -187,7 +187,7 @@ public class Expressionator
       return _str;
     }
 
-    public abstract Value eval(Value param1, Value param2);
+    public abstract Value eval(EvalContext ctx, Value param1, Value param2);
   }
 
   private enum CompOp implements OpType {
@@ -363,7 +363,7 @@ public class Expressionator
     @Override public boolean isPure() {
       return false;
     }
-    @Override protected Value eval(RowContext ctx) {
+    @Override public Value eval(EvalContext ctx) {
       return ctx.getThisColumnValue();
     }
     @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
@@ -421,12 +421,11 @@ public class Expressionator
     }
 
     Expr expr = parseExpression(new TokBuf(exprType, tokens, context), false);
-    if(expr.isPure()) {
-      // for now, just cache at top-level for speed (could in theory cache
-      // intermediate values?)
-      expr = new MemoizedPureExpression(expr);
-    }
-    return expr;
+    return (expr.isPure() ?
+       // for now, just cache at top-level for speed (could in theory cache
+       // intermediate values?)
+       new MemoizedExprWrapper(exprType, expr) :
+       new ExprWrapper(exprType, expr));
   }
 
   private static List<Token> trimSpaces(List<Token> tokens) {
@@ -1162,7 +1161,7 @@ public class Expressionator
   }
 
   private static Value[] exprListToValues(
-      List<Expr> exprs, RowContext ctx) {
+      List<Expr> exprs, EvalContext ctx) {
     Value[] paramVals = new Value[exprs.size()];
     for(int i = 0; i < exprs.size(); ++i) {
       paramVals[i] = exprs.get(i).eval(ctx);
@@ -1171,7 +1170,7 @@ public class Expressionator
   }
 
   private static Value[] exprListToDelayedValues(
-      List<Expr> exprs, RowContext ctx) {
+      List<Expr> exprs, EvalContext ctx) {
     Value[] paramVals = new Value[exprs.size()];
     for(int i = 0; i < exprs.size(); ++i) {
       paramVals[i] = new DelayedValue(exprs.get(i), ctx);
@@ -1300,52 +1299,22 @@ public class Expressionator
   private static final class DelayedValue extends BaseDelayedValue
   {
     private final Expr _expr;
-    private final RowContext _ctx;
+    private final EvalContext _ctx;
 
-    private DelayedValue(Expr expr, RowContext ctx) {
+    private DelayedValue(Expr expr, EvalContext ctx) {
       _expr = expr;
       _ctx = ctx;
     }
 
     @Override
-    protected Value eval() {
+    public Value eval() {
       return _expr.eval(_ctx);
     }
   }
   
 
-  private static abstract class Expr implements Expression
+  private static abstract class Expr
   {
-    public Object evalDefault() {
-      Value val = eval(null);
-
-      if(val.isNull()) {
-        return null;
-      }
-
-      // FIXME, booleans seem to go to -1 (true),0 (false) ...?
-
-      return val.get();
-    }
-
-    public Boolean evalCondition(RowContext ctx) {
-      Value val = eval(ctx);
-
-      if(val.isNull()) {
-        return null;
-      }
-
-      // FIXME, is this only true for non-numeric...?
-      // if(val.getType() != Value.Type.BOOLEAN) {
-      //   // a single value as a conditional expression seems to act like an
-      //   // implicit "="
-      //   // FIXME, what about row validators?
-      //   val = BuiltinOperators.equals(val, ctx.getThisColumnValue());
-      // }
-
-      return val.getAsBoolean();
-    }
-
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -1427,7 +1396,7 @@ public class Expressionator
     
     public abstract boolean isPure();
 
-    protected abstract Value eval(RowContext ctx);
+    public abstract Value eval(EvalContext ctx);
 
     protected abstract void toExprString(StringBuilder sb, boolean isDebug);
   }
@@ -1448,7 +1417,7 @@ public class Expressionator
     }
 
     @Override 
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _val;
     }
 
@@ -1473,7 +1442,7 @@ public class Expressionator
     }
 
     @Override
-    public Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _val;
     }
 
@@ -1508,7 +1477,7 @@ public class Expressionator
     }
 
     @Override
-    public Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return ctx.getRowValue(_collectionName, _objName, _fieldName);
     }
 
@@ -1538,7 +1507,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _expr.eval(ctx);
     }
 
@@ -1566,8 +1535,8 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
-      return _func.eval(exprListToValues(_params, ctx));
+    public Value eval(EvalContext ctx) {
+      return _func.eval(ctx, exprListToValues(_params, ctx));
     }
 
     @Override
@@ -1635,8 +1604,8 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
-      return ((BinaryOp)_op).eval(_left.eval(ctx), _right.eval(ctx));
+    public Value eval(EvalContext ctx) {
+      return ((BinaryOp)_op).eval(ctx, _left.eval(ctx), _right.eval(ctx));
     }
   }
 
@@ -1669,8 +1638,8 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
-      return ((UnaryOp)_op).eval(_expr.eval(ctx));
+    public Value eval(EvalContext ctx) {
+      return ((UnaryOp)_op).eval(ctx, _expr.eval(ctx));
     }
 
     @Override
@@ -1690,7 +1659,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return ((CompOp)_op).eval(_left.eval(ctx), _right.eval(ctx));
     }
   }
@@ -1702,7 +1671,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(final RowContext ctx) {
+    public Value eval(final EvalContext ctx) {
       
       // logical operations do short circuit evaluation, so we need to delay
       // computing results until necessary
@@ -1747,7 +1716,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _op.eval(_expr.eval(ctx), null, null);
     }
 
@@ -1771,7 +1740,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _op.eval(_expr.eval(ctx), _pattern, null);
     }
 
@@ -1801,7 +1770,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _op.eval(_expr.eval(ctx), 
                       exprListToDelayedValues(_exprs, ctx), null);
     }
@@ -1842,7 +1811,7 @@ public class Expressionator
     }
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Value eval(EvalContext ctx) {
       return _op.eval(_expr.eval(ctx), 
                       new DelayedValue(_startRangeExpr, ctx),
                       new DelayedValue(_endRangeExpr, ctx));
@@ -1859,40 +1828,92 @@ public class Expressionator
   }
 
   /**
-   * Wrapper for a <i>pure</i> Expr which caches the result of evaluation.
+   * Expression wrapper for an Expr which caches the result of evaluation.
    */
-  private static final class MemoizedPureExpression extends Expr
+  private static class ExprWrapper implements Expression
   {
+    private final Type _type;
     private final Expr _expr;
-    private Value _val;
 
-    private MemoizedPureExpression(Expr expr) {
+    private ExprWrapper(Type type, Expr expr) {
+      _type = type;
       _expr = expr;
+    }
+
+    public Object eval(EvalContext ctx) {
+      switch(_type) {
+      case DEFAULT_VALUE:
+        return evalDefault(ctx);
+      case FIELD_VALIDATOR:
+      case RECORD_VALIDATOR:
+        return evalCondition(ctx);
+      default:
+        throw new RuntimeException("unexpected expression type " + _type);
+      }
+    }
+
+    public String toDebugString() {
+      return _expr.toDebugString();
+    }
+
+    public boolean isPure() {
+      return _expr.isPure();
+    }
+
+    @Override
+    public String toString() {
+      return _expr.toString();
+    }
+
+    private Object evalDefault(EvalContext ctx) {
+      Value val = _expr.eval(ctx);
+
+      if(val.isNull()) {
+        return null;
+      }
+
+      // FIXME, booleans seem to go to -1 (true),0 (false) ...?
+
+      return val.get();
+    }
+
+    private Boolean evalCondition(EvalContext ctx) {
+      Value val = _expr.eval(ctx);
+
+      if(val.isNull()) {
+        return null;
+      }
+
+      // FIXME, is this only true for non-numeric...?
+      // if(val.getType() != Value.Type.BOOLEAN) {
+      //   // a single value as a conditional expression seems to act like an
+      //   // implicit "="
+      //   // FIXME, what about row validators?
+      //   val = BuiltinOperators.equals(val, ctx.getThisColumnValue());
+      // }
+
+      return val.getAsBoolean();
+    }
+  }
+
+  /**
+   * Expression wrapper for a <i>pure</i> Expr which caches the result of
+   * evaluation.
+   */
+  private static final class MemoizedExprWrapper extends ExprWrapper
+  {
+    private Object _val;
+
+    private MemoizedExprWrapper(Type type, Expr expr) {
+      super(type, expr);
     } 
 
     @Override
-    protected Value eval(RowContext ctx) {
+    public Object eval(EvalContext ctx) {
       if(_val == null) {
-        // since expr is pure, row context should not be used
-        _val = _expr.eval(null);
+        _val = super.eval(ctx);
       }
       return _val;
-    }
-
-    @Override
-    public boolean isPure() {
-      return true;
-    }
-
-    @Override
-    protected void toString(StringBuilder sb, boolean isDebug) {
-      // don't display this class in debug string
-      _expr.toString(sb, isDebug);
-    }
-
-    @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      throw new UnsupportedOperationException();
     }
   }
 }

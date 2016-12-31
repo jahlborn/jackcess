@@ -264,14 +264,14 @@ public class ExpressionatorTest extends TestCase
   private static Object eval(String exprStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
-    return expr.evalDefault();
+    return expr.eval(null);
   }
 
   private static void evalFail(String exprStr, Class<? extends Exception> failure) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
     try {
-      expr.evalDefault();
+      expr.eval(null);
       fail(failure + " should have been thrown");
     } catch(Exception e) {
       assertTrue(failure.isInstance(e));

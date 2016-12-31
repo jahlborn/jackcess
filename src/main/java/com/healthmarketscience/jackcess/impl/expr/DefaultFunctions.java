@@ -22,6 +22,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 
 /**
  *
@@ -83,12 +84,12 @@ public class DefaultFunctions
       super(name, 1, 1);
     }
 
-    public final Value eval(Value... params) {
+    public final Value eval(EvalContext ctx, Value... params) {
       validateNumParams(params);
-      return eval1(params[0]);
+      return eval1(ctx, params[0]);
     }
 
-    protected abstract Value eval1(Value param);
+    protected abstract Value eval1(EvalContext ctx, Value param);
   }
 
   public static abstract class Func2 extends BaseFunction
@@ -97,12 +98,12 @@ public class DefaultFunctions
       super(name, 2, 2);
     }
 
-    public final Value eval(Value... params) {
+    public final Value eval(EvalContext ctx, Value... params) {
       validateNumParams(params);
-      return eval2(params[0], params[1]);
+      return eval2(ctx, params[0], params[1]);
     }
 
-    protected abstract Value eval2(Value param1, Value param2);
+    protected abstract Value eval2(EvalContext ctx, Value param1, Value param2);
   }
 
   public static abstract class Func3 extends BaseFunction
@@ -111,18 +112,21 @@ public class DefaultFunctions
       super(name, 3, 3);
     }
 
-    public final Value eval(Value... params) {
+    public final Value eval(EvalContext ctx, Value... params) {
       validateNumParams(params);
-      return eval3(params[0], params[1], params[2]);
+      return eval3(ctx, params[0], params[1], params[2]);
     }
 
-    protected abstract Value eval3(Value param1, Value param2, Value param3);
+    protected abstract Value eval3(EvalContext ctx, 
+                                   Value param1, Value param2, Value param3);
   }
 
   public static final Function IIF = registerFunc(new Func3("IIf") {
     @Override
-    protected Value eval3(Value param1, Value param2, Value param3) {
-      return (param1.getAsBoolean() ? param2 : param3);
+    protected Value eval3(EvalContext ctx, 
+                          Value param1, Value param2, Value param3) {
+      // null is false
+      return ((!param1.isNull() && param1.getAsBoolean()) ? param2 : param3);
     }
   });
 

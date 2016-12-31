@@ -23,6 +23,7 @@ import java.text.Format;
 import java.util.Date;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
@@ -54,7 +55,7 @@ public class BuiltinOperators
 
   private BuiltinOperators() {}
 
-  // FIXME, null propagation:
+  // null propagation rules:
   // http://www.utteraccess.com/wiki/index.php/Nulls_And_Their_Behavior
   // https://theaccessbuddy.wordpress.com/2012/10/24/6-logical-operators-in-ms-access-that-you-must-know-operator-types-3-of-5/
   // - number ops
@@ -64,9 +65,8 @@ public class BuiltinOperators
   //   - Or - can be true if one arg is true
   // - between, not, like, in
   // - *NOT* concal op '&'
-  // FIXME, Imp operator?
 
-  public static Value negate(Value param1) {
+  public static Value negate(EvalContext ctx, Value param1) {
     if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
@@ -81,7 +81,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = -param1.getAsDouble();
-      return toDateValue(mathType, result, param1, null);
+      return toDateValue(ctx, mathType, result, param1, null);
     case LONG:
       return toValue(-param1.getAsLong());
     case DOUBLE:
@@ -95,7 +95,7 @@ public class BuiltinOperators
     }
   }
 
-  public static Value add(Value param1, Value param2) {
+  public static Value add(EvalContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
@@ -112,7 +112,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = param1.getAsDouble() + param2.getAsDouble();
-      return toDateValue(mathType, result, param1, param2);
+      return toDateValue(ctx, mathType, result, param1, param2);
     case LONG:
       return toValue(param1.getAsLong() + param2.getAsLong());
     case DOUBLE:
@@ -126,7 +126,7 @@ public class BuiltinOperators
     }
   }
 
-  public static Value subtract(Value param1, Value param2) {
+  public static Value subtract(EvalContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
@@ -141,7 +141,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = param1.getAsDouble() - param2.getAsDouble();
-      return toDateValue(mathType, result, param1, param2);
+      return toDateValue(ctx, mathType, result, param1, param2);
     case LONG:
       return toValue(param1.getAsLong() - param2.getAsLong());
     case DOUBLE:
@@ -622,16 +622,31 @@ public class BuiltinOperators
     return new BigDecimalValue(s);
   }
 
-  private static Value toDateValue(Value.Type type, double v, 
+  private static Value toDateValue(EvalContext ctx, Value.Type type, double v, 
                                    Value param1, Value param2)
   {
-    // FIXME find format from first matching param
     DateFormat fmt = null;
-    // if(param1.getType() == type) {
-    //   fmt = (DateFormat)param1.getFormat();
-    // } else if(param2 != null) {
-    //   fmt = (DateFormat)param2.getFormat();
-    // }
+    if((param1 instanceof BaseDateValue) && (param1.getType() == type)) {
+      fmt = ((BaseDateValue)param1).getFormat();
+    } else if((param2 instanceof BaseDateValue) && (param2.getType() == type)) {
+      fmt = ((BaseDateValue)param2).getFormat();
+    } else {
+      String fmtStr = null;
+      switch(type) {
+      case DATE:
+        fmtStr = ExpressionTokenizer.DATE_FORMAT;
+        break;
+      case TIME:
+        fmtStr = ExpressionTokenizer.TIME_FORMAT_24;
+        break;
+      case DATE_TIME:
+        fmtStr = ExpressionTokenizer.DATE_TIME_FORMAT_24;
+        break;
+      default:
+        throw new RuntimeException("Unexpected type " + type);
+      }
+      fmt = ctx.createDateFormat(fmtStr);
+    }
 
     Date d = new Date(ColumnImpl.fromDateDouble(v, fmt.getCalendar()));
 

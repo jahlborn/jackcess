@@ -16,12 +16,18 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
+import java.text.SimpleDateFormat;
+
 /**
  *
  * @author James Ahlborn
  */
-public interface RowContext 
+public interface EvalContext 
 {
+  public Value.Type getResultType();
+
+  public SimpleDateFormat createDateFormat(String formatStr);
+
   public Value getThisColumnValue();
 
   public Value getRowValue(String collectionName, String objName,

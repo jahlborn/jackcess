@@ -43,6 +43,10 @@ public abstract class BaseDateValue extends BaseValue
     return _val;
   }
 
+  protected DateFormat getFormat() {
+    return _fmt;
+  }
+
   protected Double getNumber() {
     return ColumnImpl.toDateDouble(_val, _fmt.getCalendar());
   }

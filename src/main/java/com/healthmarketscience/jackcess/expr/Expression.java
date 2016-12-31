@@ -22,9 +22,7 @@ package com.healthmarketscience.jackcess.expr;
  */
 public interface Expression 
 {
-  public Object evalDefault();
-
-  public Boolean evalCondition(RowContext ctx);
+  public Object eval(EvalContext ctx);
 
   public String toDebugString();
 
