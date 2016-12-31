@@ -92,15 +92,14 @@ public class UsageMap
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
-  
+
   /**
    * @param database database that contains this usage map
    * @param buf buffer which contains the usage map row info
    * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
    *         which type of map is found
    */
-  public static UsageMap read(DatabaseImpl database, ByteBuffer buf,
-                              boolean assumeOutOfRangeBitsOn)
+  public static UsageMap read(DatabaseImpl database, ByteBuffer buf)
     throws IOException
   {
     int umapRowNum = buf.get();
@@ -112,11 +111,12 @@ public class UsageMap
    * @param database database that contains this usage map
    * @param pageNum Page number that this usage map is contained in
    * @param rowNum Number of the row on the page that contains this usage map
+   * @param isGlobal whether or not we are reading the "global" usage map
    * @return Either an InlineUsageMap or a ReferenceUsageMap, depending on
    *         which type of map is found
    */
-  public static UsageMap read(DatabaseImpl database, int pageNum,
-                              int rowNum, boolean assumeOutOfRangeBitsOn)
+  static UsageMap read(DatabaseImpl database, int pageNum,
+                       int rowNum, boolean isGlobal)
     throws IOException
   {
     if(pageNum <= 0) {
@@ -133,17 +133,19 @@ public class UsageMap
     tableBuffer.limit(rowEnd);    
     byte mapType = tableBuffer.get(rowStart);
     UsageMap rtn = new UsageMap(database, tableBuffer, pageNum, rowStart);
-    rtn.initHandler(mapType, assumeOutOfRangeBitsOn);
+    rtn.initHandler(mapType, isGlobal);
     return rtn;
   }
 
-  private void initHandler(byte mapType, boolean assumeOutOfRangeBitsOn)
+  private void initHandler(byte mapType, boolean isGlobal)
     throws IOException
   {
     if (mapType == MAP_TYPE_INLINE) {
-      _handler = new InlineHandler(assumeOutOfRangeBitsOn);
+      _handler = (isGlobal ? new GlobalInlineHandler() : 
+                  new InlineHandler());
     } else if (mapType == MAP_TYPE_REFERENCE) {
-      _handler = new ReferenceHandler();
+      _handler = (isGlobal ? new GlobalReferenceHandler() : 
+                  new ReferenceHandler());
     } else {
       throw new IOException(MSG_PREFIX_UNRECOGNIZED_MAP + mapType);
     }
@@ -315,7 +317,13 @@ public class UsageMap
   /**
    * Remove a page number from this usage map
    */
-  protected void removePageNumber(int pageNumber, boolean force) 
+  public void removePageNumber(int pageNumber) 
+    throws IOException 
+  {
+    removePageNumber(pageNumber, true);
+  }
+  
+  private void removePageNumber(int pageNumber, boolean force) 
     throws IOException 
   {
     ++_modCount;
@@ -467,28 +475,25 @@ public class UsageMap
    */
   private class InlineHandler extends Handler
   {
-    private final boolean _assumeOutOfRangeBitsOn;
     private final int _maxInlinePages;
     
-    private InlineHandler(boolean assumeOutOfRangeBitsOn)
-      throws IOException
+    protected InlineHandler() throws IOException
     {
-      _assumeOutOfRangeBitsOn = assumeOutOfRangeBitsOn;
       _maxInlinePages = (getInlineDataEnd() - getInlineDataStart()) * 8;
       int startPage = getTableBuffer().getInt(getRowStart() + 1);
       setInlinePageRange(startPage);
       processMap(getTableBuffer(), 0);
     }
 
-    private int getMaxInlinePages() {
+    protected final int getMaxInlinePages() {
       return _maxInlinePages;
     }
 
-    private int getInlineDataStart() {
+    protected final int getInlineDataStart() {
       return getRowStart() + getFormat().OFFSET_USAGE_MAP_START;
     }
 
-    private int getInlineDataEnd() {
+    protected final int getInlineDataEnd() {
       return getRowEnd();
     }
     
@@ -499,13 +504,6 @@ public class UsageMap
     private void setInlinePageRange(int startPage) {
       setPageRange(startPage, startPage + getMaxInlinePages());
     }      
-
-    @Override
-    public boolean containsPageNumber(int pageNumber) {
-      return(super.containsPageNumber(pageNumber) ||
-             (_assumeOutOfRangeBitsOn && (pageNumber >= 0) &&
-              !isPageWithinRange(pageNumber)));
-    }
     
     @Override
     public void addOrRemovePageNumber(int pageNumber, boolean add,
@@ -523,68 +521,55 @@ public class UsageMap
         
       } else {
 
-        // uh-oh, we've split our britches.  what now?  determine what our
-        // status is
+        // uh-oh, we've split our britches.  what now?
+        addOrRemovePageNumberOutsideRange(pageNumber, add, force);
+      }
+    }
+
+    protected void addOrRemovePageNumberOutsideRange(
+        int pageNumber, boolean add, boolean force)
+      throws IOException
+    {
+      // determine what our status is before taking action
+        
+      if(add) {
+
         int firstPage = getFirstPageNumber();
         int lastPage = getLastPageNumber();
-        
-        if(add) {
 
-          // we can ignore out-of-range page addition if we are already
-          // assuming out-of-range bits are "on".  Note, we are leaving small
-          // holes in the database here (leaving behind some free pages), but
-          // it's not the end of the world.
-          if(!_assumeOutOfRangeBitsOn) {
-            
-            // we are adding, can we shift the bits and stay inline?
-            if(firstPage <= PageChannel.INVALID_PAGE_NUMBER) {
-              // no pages currently
-              firstPage = pageNumber;
-              lastPage = pageNumber;
-            } else if(pageNumber > lastPage) {
-              lastPage = pageNumber;
-            } else {
-              firstPage = pageNumber;
-            }
-            if((lastPage - firstPage + 1) < getMaxInlinePages()) {
-
-              // we can still fit within an inline map
-              moveToNewStartPage(firstPage, pageNumber);
-            
-            } else {
-              // not going to happen, need to promote the usage map to a
-              // reference map
-              promoteInlineHandlerToReferenceHandler(pageNumber);
-            }
-          }
+        // we are adding, can we shift the bits and stay inline?
+        if(firstPage <= PageChannel.INVALID_PAGE_NUMBER) {
+          // no pages currently
+          firstPage = pageNumber;
+          lastPage = pageNumber;
+        } else if(pageNumber > lastPage) {
+          lastPage = pageNumber;
         } else {
+          firstPage = pageNumber;
+        }
+        if((lastPage - firstPage + 1) < getMaxInlinePages()) {
 
-          // we are removing, what does that mean?
-          if(_assumeOutOfRangeBitsOn) {
-
-            // we are using an inline map and assuming that anything not
-            // within the current range is "on".  so, if we attempt to set a
-            // bit which is before the current page, ignore it, we are not
-            // going back for it.
-            if((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ||
-               (pageNumber > lastPage)) {
-
-              // move to new start page, filling in as we move
-              moveToNewStartPageForRemove(firstPage, pageNumber);
-              
-            }
+          // we can still fit within an inline map
+          moveToNewStartPage(firstPage, pageNumber);
             
-          } else if(!force) {
-
-            // this should not happen, we are removing a page which is not in
-            // the map
-            throw new IOException("Page number " + pageNumber +
-                                  " already removed from usage map" +
-                                  ", expected range " +
-                                  _startPage + " to " + _endPage);
-          }
+        } else {
+          // not going to happen, need to promote the usage map to a
+          // reference map
+          promoteInlineHandlerToReferenceHandler(pageNumber);
         }
 
+      } else {
+
+        // we are removing, what does that mean?
+        if(!force) {
+
+          // this should not happen, we are removing a page which is not in
+          // the map
+          throw new IOException("Page number " + pageNumber +
+                                " already removed from usage map" +
+                                ", expected range " +
+                                _startPage + " to " + _endPage);
+        }
       }
     }
 
@@ -594,7 +579,7 @@ public class UsageMap
      * @param newPageNumber optional page number to add once the map has been
      *                      shifted to the new start page
      */
-    private void moveToNewStartPage(int newStartPage, int newPageNumber)
+    protected final void moveToNewStartPage(int newStartPage, int newPageNumber)
       throws IOException
     {
       int oldStartPage = getStartPage();
@@ -616,6 +601,57 @@ public class UsageMap
 
       // put the pages back in
       reAddPages(oldStartPage, oldPageNumbers, newPageNumber);
+    }
+  }
+
+  /**
+   * Modified version of an "inline" usage map used for the global usage map.
+   * When an inline usage map is used for the global usage map, we assume
+   * out-of-range bits are on.  We never promote the global usage map to a
+   * reference usage map (although ms access may).
+   *
+   * Note, this UsageMap does not implement all the methods "correctly".  Only
+   * addPageNumber and removePageNumber should be called by PageChannel.
+   */
+  private class GlobalInlineHandler extends InlineHandler
+  {
+    private GlobalInlineHandler() throws IOException {
+    }
+
+    @Override
+    public boolean containsPageNumber(int pageNumber) {
+      // should never be called on global map
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void addOrRemovePageNumberOutsideRange(
+        int pageNumber, boolean add, boolean force)
+      throws IOException
+    {
+      // determine what our status is
+
+      // for the global usage map, we can ignore out-of-range page addition
+      // since we assuming out-of-range bits are "on".  Note, we are leaving
+      // small holes in the database here (leaving behind some free pages),
+      // but it's not the end of the world.
+        
+      if(!add) {
+
+        int firstPage = getFirstPageNumber();
+        int lastPage = getLastPageNumber();
+
+        // we are using an inline map and assuming that anything not
+        // within the current range is "on".  so, if we attempt to set a
+        // bit which is before the current page, ignore it, we are not
+        // going back for it.
+        if((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ||
+           (pageNumber > lastPage)) {
+
+          // move to new start page, filling in as we move
+          moveToNewStartPageForRemove(firstPage, pageNumber);
+        }
+      }
     }
 
     /**
@@ -675,13 +711,15 @@ public class UsageMap
     /** Buffer that contains the current reference map page */ 
     private final TempPageHolder _mapPageHolder =
       TempPageHolder.newHolder(TempBufferHolder.Type.SOFT);
+    private final int _maxPagesPerUsageMapPage;
   
-    private ReferenceHandler()
-      throws IOException
+    private ReferenceHandler() throws IOException
     {
+      _maxPagesPerUsageMapPage = ((getFormat().PAGE_SIZE - 
+                                   getFormat().OFFSET_USAGE_MAP_PAGE_DATA) * 8);
       int numUsagePages = (getRowEnd() - getRowStart() - 1) / 4;
       setStartOffset(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
-      setPageRange(0, (numUsagePages * getMaxPagesPerUsagePage()));
+      setPageRange(0, (numUsagePages * _maxPagesPerUsageMapPage));
       
       // there is no "start page" for a reference usage map, so we get an
       // extra page reference on top of the number of page references that fit
@@ -699,14 +737,13 @@ public class UsageMap
                                   pageType);
           }
           mapPageBuffer.position(getFormat().OFFSET_USAGE_MAP_PAGE_DATA);
-          processMap(mapPageBuffer, (getMaxPagesPerUsagePage() * i));
+          processMap(mapPageBuffer, (_maxPagesPerUsageMapPage * i));
         }
       }
     }
 
-    private int getMaxPagesPerUsagePage() {
-      return((getFormat().PAGE_SIZE - getFormat().OFFSET_USAGE_MAP_PAGE_DATA)
-             * 8);
+    protected final int getMaxPagesPerUsagePage() {
+      return _maxPagesPerUsageMapPage;
     }
         
     @Override
@@ -745,10 +782,7 @@ public class UsageMap
      */
     private ByteBuffer createNewUsageMapPage(int pageIndex) throws IOException
     {
-      ByteBuffer mapPageBuffer = _mapPageHolder.setNewPage(getPageChannel());
-      mapPageBuffer.put(PageTypes.USAGE_MAP);
-      mapPageBuffer.put((byte) 0x01);  //Unknown
-      mapPageBuffer.putShort((short) 0); //Unknown
+      ByteBuffer mapPageBuffer = allocateNewUsageMapPage(pageIndex);
       int mapPageNum = _mapPageHolder.getPageNumber();
       getTableBuffer().putInt(calculateMapPagePointerOffset(pageIndex),
                               mapPageNum);
@@ -759,6 +793,108 @@ public class UsageMap
     private int calculateMapPagePointerOffset(int pageIndex) {
       return getRowStart() + getFormat().OFFSET_REFERENCE_MAP_PAGE_NUMBERS +
         (pageIndex * 4);
+    }
+
+    protected ByteBuffer allocateNewUsageMapPage(int pageIndex) 
+      throws IOException 
+    {
+      ByteBuffer mapPageBuffer = _mapPageHolder.setNewPage(getPageChannel());
+      mapPageBuffer.put(PageTypes.USAGE_MAP);
+      mapPageBuffer.put((byte) 0x01);  //Unknown
+      mapPageBuffer.putShort((short) 0); //Unknown
+      return mapPageBuffer;
+    }
+  }
+
+  /**
+   * Modified version of a "reference" usage map used for the global usage
+   * map.  Since reference usage maps require allocating pages for their own
+   * use, we need to handle potential cycles where the PageChannel is
+   * attempting to allocate a new page (and remove it from the global usage
+   * map) and this usage map also needs to allocate a new page.  When that
+   * happens, we stash the pending information from the PageChannel and handle
+   * it after we have retrieved the new page.
+   *
+   * Note, this UsageMap does not implement all the methods "correctly".  Only
+   * addPageNumber and removePageNumber should be called by PageChannel.
+   */
+  private class GlobalReferenceHandler extends ReferenceHandler
+  {
+    private boolean _allocatingPage;
+    private Integer _pendingPage;
+
+    private GlobalReferenceHandler() throws IOException {
+    }
+
+    @Override
+    public boolean containsPageNumber(int pageNumber) {
+      // should never be called on global map
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void addOrRemovePageNumber(int pageNumber, boolean add,
+                                      boolean force)
+      throws IOException
+    {
+      if(_allocatingPage && !add) {
+        // we are in the midst of allocating a page for ourself, keep track of
+        // this new page so we can mark it later...
+        if(_pendingPage != null) {
+          throw new IllegalStateException("should only have single pending page");
+        }
+        _pendingPage = pageNumber;
+        return;
+      }
+
+      super.addOrRemovePageNumber(pageNumber, add, force);
+
+      while(_pendingPage != null) {
+        
+        // while updating our usage map, we needed to allocate a new page (and
+        // thus mark a new page as used).  we delayed that marking so that we
+        // didn't get into an infinite loop.  now that we completed the
+        // original updated, handle the new page.  (we use a loop under the
+        // off the wall chance that adding this page requires allocating a new
+        // page.  in theory, we could do this more than once, but not
+        // forever).
+        int removedPageNumber = _pendingPage;
+        _pendingPage = null;
+
+        super.addOrRemovePageNumber(removedPageNumber, false, true);
+      } 
+    }    
+
+    @Override
+    protected ByteBuffer allocateNewUsageMapPage(int pageIndex)
+      throws IOException 
+    {
+      try {
+        // keep track of the fact that we are actively allocating a page for our
+        // own use so that we can break the potential cycle.
+        _allocatingPage = true;
+
+        ByteBuffer mapPageBuffer = super.allocateNewUsageMapPage(pageIndex);
+
+        // for the global usage map, all pages are "on" by default.  so
+        // whenever we add a new backing page to the usage map, we need to
+        // turn all the pages that it represents to "on" (we essentially lazy
+        // load this map, which is fine because we should only add pages which
+        // represent the size of the database currently in use).
+        int dataStart = getFormat().OFFSET_USAGE_MAP_PAGE_DATA;
+        ByteUtil.fillRange(mapPageBuffer, dataStart, 
+                           getFormat().PAGE_SIZE - dataStart);
+
+        int maxPagesPerUmapPage = getMaxPagesPerUsagePage();
+        int firstNewPage = (pageIndex * maxPagesPerUmapPage);
+        int lastNewPage = firstNewPage + maxPagesPerUmapPage;
+        _pageNumbers.set(firstNewPage, lastNewPage);
+
+        return mapPageBuffer;
+
+      } finally {
+        _allocatingPage = false;
+      }
     }
   }
 

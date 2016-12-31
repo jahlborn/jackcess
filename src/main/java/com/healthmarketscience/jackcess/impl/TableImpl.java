@@ -244,9 +244,9 @@ public class TableImpl implements Table
     _indexCount = tableBuffer.getInt(getFormat().OFFSET_NUM_INDEXES);
 
     tableBuffer.position(getFormat().OFFSET_OWNED_PAGES);
-    _ownedPages = UsageMap.read(getDatabase(), tableBuffer, false);
+    _ownedPages = UsageMap.read(getDatabase(), tableBuffer);
     tableBuffer.position(getFormat().OFFSET_FREE_SPACE_PAGES);
-    _freeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
+    _freeSpacePages = UsageMap.read(getDatabase(), tableBuffer);
     
     for (int i = 0; i < _indexCount; i++) {
       _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
@@ -1948,8 +1948,8 @@ public class TableImpl implements Table
     UsageMap colOwnedPages = null;
     UsageMap colFreeSpacePages = null;
     try {
-      colOwnedPages = UsageMap.read(getDatabase(), tableBuffer, false);
-      colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer, false);
+      colOwnedPages = UsageMap.read(getDatabase(), tableBuffer);
+      colFreeSpacePages = UsageMap.read(getDatabase(), tableBuffer);
     } catch(IllegalStateException e) {
       // ignore invalid usage map info
       colOwnedPages = null;
@@ -2547,7 +2547,7 @@ public class TableImpl implements Table
       if(modifiedPage) {
         writeDataPage(dataPage, pageNumber);
       }
-      _freeSpacePages.removePageNumber(pageNumber, true);
+      _freeSpacePages.removePageNumber(pageNumber);
 
       dataPage = newDataPage();
     }

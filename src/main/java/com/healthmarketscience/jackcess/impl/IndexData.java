@@ -465,7 +465,7 @@ public class IndexData {
       }
     }
 
-    _ownedPages = UsageMap.read(getTable().getDatabase(), tableBuffer, false);
+    _ownedPages = UsageMap.read(getTable().getDatabase(), tableBuffer);
     
     _rootPageNumber = tableBuffer.getInt();
 

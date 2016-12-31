@@ -70,6 +70,7 @@ import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
+import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -390,13 +391,14 @@ public class DatabaseImpl implements Database
         JetFormat jetFormat = JetFormat.getFormat(channel);
 
         if(jetFormat.READ_ONLY) {
-          throw new IOException("file format " + 
-                                jetFormat.getPossibleFileFormats().values() +
-                                " does not support writing for " + mdbFile);
+          // wrap the channel with a read-only version to enforce
+          // non-writability
+          channel = new ReadOnlyFileChannel(channel);
+          readOnly = true;
         }
       }
 
-      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
+      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
                                          null, charset, timeZone, provider);
       success = true;
       return db;

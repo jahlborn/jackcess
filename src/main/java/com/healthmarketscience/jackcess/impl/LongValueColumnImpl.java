@@ -523,7 +523,7 @@ class LongValueColumnImpl extends ColumnImpl
     public void clear() throws IOException {
       int pageNumber = getPageNumber();
       if(pageNumber != PageChannel.INVALID_PAGE_NUMBER) {
-        _freeSpacePages.removePageNumber(pageNumber, true);
+        _freeSpacePages.removePageNumber(pageNumber);
       }
       super.clear();
     }

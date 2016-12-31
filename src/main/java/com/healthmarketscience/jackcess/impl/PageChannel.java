@@ -347,9 +347,7 @@ public class PageChannel implements Channel, Flushable {
     // meaningful data, we do _not_ encode the page.
     _channel.write(_forceBytes, offset);
 
-    // note, we "force" page removal because we know that this is an unused
-    // page (since we just added it to the file)
-    _globalUsageMap.removePageNumber(pageNumber, true);
+    _globalUsageMap.removePageNumber(pageNumber);
     return pageNumber;
   }
 
