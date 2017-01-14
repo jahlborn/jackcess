@@ -22,6 +22,7 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import junit.framework.TestCase;
 
 /**
@@ -280,6 +281,9 @@ public class ExpressionatorTest extends TestCase
 
   private static final class TestContext implements Expressionator.ParseContext
   {
+    public TemporalConfig getTemporalConfig() {
+      return TemporalConfig.US_TEMPORAL_CONFIG;
+    }
     public SimpleDateFormat createDateFormat(String formatStr) {
       SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
       sdf.setTimeZone(TestUtil.TEST_TZ);

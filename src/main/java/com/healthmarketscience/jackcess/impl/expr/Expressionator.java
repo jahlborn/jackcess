@@ -37,6 +37,7 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
@@ -62,11 +63,15 @@ public class Expressionator
   }
 
   public interface ParseContext {
+    public TemporalConfig getTemporalConfig();
     public SimpleDateFormat createDateFormat(String formatStr);
     public Function getExpressionFunction(String name);
   }
 
   public static final ParseContext DEFAULT_PARSE_CONTEXT = new ParseContext() {
+    public TemporalConfig getTemporalConfig() {
+      return TemporalConfig.US_TEMPORAL_CONFIG;
+    }
     public SimpleDateFormat createDateFormat(String formatStr) {
       return DatabaseBuilder.createDateFormat(formatStr);
     }
@@ -807,8 +812,8 @@ public class Expressionator
 
     case LIKE:
       Token t = buf.next();
-      // FIXME, create LITERAL_STRING TokenType?
-      if(t.getType() != TokenType.LITERAL) {
+      if((t.getType() != TokenType.LITERAL) || 
+         (t.getValueType() != Value.Type.STRING)) {
         throw new IllegalArgumentException("Missing Like pattern " + buf);
       }
       String patternStr = t.getValueStr();

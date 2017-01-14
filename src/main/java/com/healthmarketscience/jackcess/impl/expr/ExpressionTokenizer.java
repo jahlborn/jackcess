@@ -16,7 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.FieldPosition;
 import java.text.ParseException;
@@ -34,6 +33,7 @@ import java.util.TimeZone;
 
 import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 
 
 /**
@@ -49,16 +49,12 @@ class ExpressionTokenizer
   private static final char DATE_LIT_QUOTE_CHAR = '#';
   private static final char EQUALS_CHAR = '=';
 
-  static final String DATE_FORMAT = "M/d/yyyy";
-  static final String TIME_FORMAT_24 = "HH:mm:ss";
-  static final String TIME_FORMAT_12 = "hh:mm:ss a";
-  static final String DATE_TIME_FORMAT_24 = DATE_FORMAT + " " + TIME_FORMAT_24;
-  static final String DATE_TIME_FORMAT_12 = DATE_FORMAT + " " + TIME_FORMAT_12;
   private static final int AMPM_SUFFIX_LEN = 3;
   private static final String AM_SUFFIX = " am";
   private static final String PM_SUFFIX = " pm";
   // access times are based on this date (not the UTC base)
   private static final String BASE_DATE = "12/30/1899 ";
+  private static final String BASE_DATE_FMT = "M/d/yyyy";
 
   private static final byte IS_OP_FLAG =     0x01;
   private static final byte IS_COMP_FLAG =   0x02;
@@ -321,10 +317,11 @@ class ExpressionTokenizer
 
   private static Token parseDateLiteralString(ExprBuf buf) 
   {
+    TemporalConfig cfg = buf.getTemporalConfig();
     String dateStr = parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null);
     
-    boolean hasDate = (dateStr.indexOf('/') >= 0);
-    boolean hasTime = (dateStr.indexOf(':') >= 0);
+    boolean hasDate = (dateStr.indexOf(cfg.getDateSeparator()) >= 0);
+    boolean hasTime = (dateStr.indexOf(cfg.getTimeSeparator()) >= 0);
     boolean hasAmPm = false;
     
     if(hasTime) {
@@ -451,6 +448,7 @@ class ExpressionTokenizer
     private DateFormat _dateTimeFmt12;
     private DateFormat _timeFmt24;
     private DateFormat _dateTimeFmt24;
+    private String _baseDate;
     private final StringBuilder _scratch = new StringBuilder();
     
     private ExprBuf(String str, ParseContext ctx) {
@@ -498,9 +496,13 @@ class ExpressionTokenizer
       return _scratch;
     }
 
+    public TemporalConfig getTemporalConfig() {
+      return _ctx.getTemporalConfig();
+    }
+
     public DateFormat getDateFormat() {
       if(_dateFmt == null) {
-        _dateFmt = _ctx.createDateFormat(DATE_FORMAT);
+        _dateFmt = _ctx.createDateFormat(getTemporalConfig().getDateFormat());
       }
       return _dateFmt;
     }
@@ -508,14 +510,17 @@ class ExpressionTokenizer
     public DateFormat getTimeFormat12() {
       if(_timeFmt12 == null) {
         _timeFmt12 = new TimeFormat(
-            getDateTimeFormat12(), _ctx.createDateFormat(TIME_FORMAT_12));
+            getDateTimeFormat12(), _ctx.createDateFormat(
+                getTemporalConfig().getTimeFormat12()),
+            getBaseDate());
       }
       return _timeFmt12;
     }
 
     public DateFormat getDateTimeFormat12() {
       if(_dateTimeFmt12 == null) {
-        _dateTimeFmt12 = _ctx.createDateFormat(DATE_TIME_FORMAT_12);
+        _dateTimeFmt12 = _ctx.createDateFormat(
+            getTemporalConfig().getDateTimeFormat12());
       }
       return _dateTimeFmt12;
     }
@@ -523,16 +528,37 @@ class ExpressionTokenizer
     public DateFormat getTimeFormat24() {
       if(_timeFmt24 == null) {
         _timeFmt24 = new TimeFormat(
-            getDateTimeFormat24(), _ctx.createDateFormat(TIME_FORMAT_24));
+            getDateTimeFormat24(), _ctx.createDateFormat(
+                getTemporalConfig().getTimeFormat24()),
+            getBaseDate());
       }
       return _timeFmt24;
     }
 
     public DateFormat getDateTimeFormat24() {
       if(_dateTimeFmt24 == null) {
-        _dateTimeFmt24 = _ctx.createDateFormat(DATE_TIME_FORMAT_24);
+        _dateTimeFmt24 = _ctx.createDateFormat(
+            getTemporalConfig().getDateTimeFormat24());
       }
       return _dateTimeFmt24;
+    }
+
+    private String getBaseDate() {
+      if(_baseDate == null) {
+        String dateFmt = getTemporalConfig().getDateFormat();
+        String baseDate = BASE_DATE;
+        if(!BASE_DATE_FMT.equals(dateFmt)) {
+          try {
+            // need to reformat the base date to the relevant date format
+            DateFormat df = _ctx.createDateFormat(BASE_DATE_FMT);
+            baseDate = getDateFormat().format(df.parse(baseDate));
+          } catch(Exception e) {
+            throw new IllegalStateException("Could not parse base date", e);
+          }
+        }
+        _baseDate = baseDate + " ";
+      }
+      return _baseDate;
     }
 
     @Override
@@ -607,13 +633,17 @@ class ExpressionTokenizer
   private static final class TimeFormat extends DateFormat
   {
     private static final long serialVersionUID = 0L;
+
     private final DateFormat _parseDelegate;
     private final DateFormat _fmtDelegate;
+    private final String _baseDate;
 
-    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate)
+    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate, 
+                       String baseDate)
     {
       _parseDelegate = parseDelegate;
       _fmtDelegate = fmtDelegate;
+      _baseDate = baseDate;
     }
 
     @Override
@@ -625,7 +655,7 @@ class ExpressionTokenizer
     public Date parse(String source, ParsePosition pos) {
       // we parse as a full date/time in order to get the correct "base date"
       // used by access
-      return _parseDelegate.parse(BASE_DATE + source, pos);
+      return _parseDelegate.parse(_baseDate + source, pos);
     }
 
     @Override

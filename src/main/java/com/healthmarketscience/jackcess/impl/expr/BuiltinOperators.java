@@ -600,13 +600,13 @@ public class BuiltinOperators
       String fmtStr = null;
       switch(type) {
       case DATE:
-        fmtStr = ExpressionTokenizer.DATE_FORMAT;
+        fmtStr = ctx.getTemporalConfig().getDefaultDateFormat();
         break;
       case TIME:
-        fmtStr = ExpressionTokenizer.TIME_FORMAT_24;
+        fmtStr = ctx.getTemporalConfig().getDefaultTimeFormat();
         break;
       case DATE_TIME:
-        fmtStr = ExpressionTokenizer.DATE_TIME_FORMAT_24;
+        fmtStr = ctx.getTemporalConfig().getDefaultDateTimeFormat();
         break;
       default:
         throw new RuntimeException("Unexpected type " + type);
