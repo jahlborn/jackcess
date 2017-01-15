@@ -365,7 +365,7 @@ public class Expressionator
   
 
   private static final Expr THIS_COL_VALUE = new Expr() {
-    @Override public boolean isPure() {
+    @Override public boolean isConstant() {
       return false;
     }
     @Override public Value eval(EvalContext ctx) {
@@ -426,7 +426,7 @@ public class Expressionator
     }
 
     Expr expr = parseExpression(new TokBuf(exprType, tokens, context), false);
-    return (expr.isPure() ?
+    return (expr.isConstant() ?
        // for now, just cache at top-level for speed (could in theory cache
        // intermediate values?)
        new MemoizedExprWrapper(exprType, expr) :
@@ -1183,18 +1183,18 @@ public class Expressionator
     return paramVals;
   }
 
-  private static boolean arePure(List<Expr> exprs) {
+  private static boolean areConstant(List<Expr> exprs) {
     for(Expr expr : exprs) {
-      if(!expr.isPure()) {
+      if(!expr.isConstant()) {
         return false;
       }
     }
     return true;
   }
 
-  private static boolean arePure(Expr... exprs) {
+  private static boolean areConstant(Expr... exprs) {
     for(Expr expr : exprs) {
-      if(!expr.isPure()) {
+      if(!expr.isConstant()) {
         return false;
       }
     }
@@ -1399,7 +1399,7 @@ public class Expressionator
       return outerExpr;
     }
     
-    public abstract boolean isPure();
+    public abstract boolean isConstant();
 
     public abstract Value eval(EvalContext ctx);
 
@@ -1417,7 +1417,7 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
+    public boolean isConstant() {
       return true;
     }
 
@@ -1442,7 +1442,7 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
+    public boolean isConstant() {
       return true;
     }
 
@@ -1477,7 +1477,7 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
+    public boolean isConstant() {
       return false;
     }
 
@@ -1507,8 +1507,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return _expr.isPure();
+    public boolean isConstant() {
+      return _expr.isConstant();
     }
 
     @Override
@@ -1535,8 +1535,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return _func.isPure() && arePure(_params);
+    public boolean isConstant() {
+      return _func.isPure() && areConstant(_params);
     }
 
     @Override
@@ -1570,8 +1570,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return arePure(_left, _right);
+    public boolean isConstant() {
+      return areConstant(_left, _right);
     }
     
     public OpType getOp() {
@@ -1626,8 +1626,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return _expr.isPure();
+    public boolean isConstant() {
+      return _expr.isConstant();
     }
 
     public OpType getOp() {
@@ -1697,8 +1697,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return _expr.isPure();
+    public boolean isConstant() {
+      return _expr.isConstant();
     }
 
     public OpType getOp() {
@@ -1770,8 +1770,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return super.isPure() && arePure(_exprs);
+    public boolean isConstant() {
+      return super.isConstant() && areConstant(_exprs);
     }
 
     @Override
@@ -1803,8 +1803,8 @@ public class Expressionator
     }
 
     @Override
-    public boolean isPure() {
-      return _expr.isPure() && arePure(_startRangeExpr, _endRangeExpr);
+    public boolean isConstant() {
+      return _expr.isConstant() && areConstant(_startRangeExpr, _endRangeExpr);
     }
 
     public Expr getRight() {
@@ -1861,8 +1861,8 @@ public class Expressionator
       return _expr.toDebugString();
     }
 
-    public boolean isPure() {
-      return _expr.isPure();
+    public boolean isConstant() {
+      return _expr.isConstant();
     }
 
     @Override

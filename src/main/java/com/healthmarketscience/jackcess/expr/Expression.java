@@ -26,5 +26,5 @@ public interface Expression
 
   public String toDebugString();
 
-  public boolean isPure();
+  public boolean isConstant();
 }
