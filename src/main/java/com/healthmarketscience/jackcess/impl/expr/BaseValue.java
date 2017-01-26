@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 
 /**
  *
@@ -39,7 +40,7 @@ public abstract class BaseValue implements Value
     throw invalidConversion(Value.Type.STRING);
   }
 
-  public Date getAsDateTime() {
+  public Date getAsDateTime(EvalContext ctx) {
     throw invalidConversion(Value.Type.DATE_TIME);
   }
 

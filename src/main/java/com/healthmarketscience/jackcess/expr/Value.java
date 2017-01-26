@@ -62,7 +62,7 @@ public interface Value
 
   public String getAsString();
 
-  public Date getAsDateTime();
+  public Date getAsDateTime(EvalContext ctx);
 
   public Long getAsLong();
 

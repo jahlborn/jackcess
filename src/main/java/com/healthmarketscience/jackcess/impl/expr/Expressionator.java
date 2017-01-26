@@ -1877,9 +1877,24 @@ public class Expressionator
         return null;
       }
 
-      // FIXME, booleans seem to go to -1 (true),0 (false) ...?
-
-      return val.get();
+      // FIXME possibly do some type coercion.  are there conversions here which don't work elsewhere? (string -> date, string -> number)?
+      switch(ctx.getResultType()) {
+      case STRING:
+        return val.getAsString();
+      case DATE:
+      case TIME:
+      case DATE_TIME:
+        return val.getAsDateTime(ctx);
+      case LONG:
+        return val.getAsLong();
+      case DOUBLE:
+        return val.getAsDouble();
+      case BIG_DEC:
+        return val.getAsBigDecimal();
+      default:
+        throw new IllegalStateException("unexpected result type " + 
+                                        ctx.getResultType());
+      }
     }
 
     private Boolean evalCondition(EvalContext ctx) {

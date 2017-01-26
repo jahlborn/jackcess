@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 
 /**
  *
@@ -58,6 +59,11 @@ public abstract class BaseDateValue extends BaseValue
   @Override
   public String getAsString() {
     return _fmt.format(_val);
+  }
+
+  @Override
+  public Date getAsDateTime(EvalContext ctx) {
+    return _val;
   }
 
   @Override

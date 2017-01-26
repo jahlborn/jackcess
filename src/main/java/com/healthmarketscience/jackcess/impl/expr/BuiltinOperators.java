@@ -154,6 +154,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
+    // FIXME, string will convert to number if one is number and one is a string parseable as a number!!!
+
     Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
 
     switch(mathType) {
@@ -696,7 +698,7 @@ public class BuiltinOperators
     return ((t1.compareTo(t2) > 0) ? t1 : t2);
   }
 
-  private static boolean isIntegral(double d) {
+  static boolean isIntegral(double d) {
     return ((d == Math.rint(d)) && !Double.isInfinite(d) && !Double.isNaN(d));
   }
 

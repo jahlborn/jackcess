@@ -24,9 +24,9 @@ import java.text.SimpleDateFormat;
  */
 public interface EvalContext 
 {
-  public TemporalConfig getTemporalConfig();
-
   public Value.Type getResultType();
+
+  public TemporalConfig getTemporalConfig();
 
   public SimpleDateFormat createDateFormat(String formatStr);
 

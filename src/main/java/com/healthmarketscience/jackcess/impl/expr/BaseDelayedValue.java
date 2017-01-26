@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.util.Date;
 
+import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Value;
 
 /**
@@ -59,8 +60,8 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().getAsString();
   }
 
-  public Date getAsDateTime() {
-    return getDelegate().getAsDateTime();
+  public Date getAsDateTime(EvalContext ctx) {
+    return getDelegate().getAsDateTime(ctx);
   }
 
   public Long getAsLong() {
