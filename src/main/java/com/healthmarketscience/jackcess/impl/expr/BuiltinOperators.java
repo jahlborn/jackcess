@@ -543,7 +543,8 @@ public class BuiltinOperators
   protected static int nonNullCompareTo(
       Value param1, Value param2)
   {
-    Value.Type compareType = getGeneralMathTypePrecedence(param1, param2);
+    // note that comparison does not do string to num coercion
+    Value.Type compareType = getGeneralMathTypePrecedence(param1, param2, false);
 
     switch(compareType) {
     case STRING:
@@ -641,6 +642,15 @@ public class BuiltinOperators
     }
 
     if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
+
+      // see if this is mixed string/numeric and the string can be coerced to
+      // a number
+      Value.Type numericType = coerceStringToNumeric(param1, param2);
+      if(numericType != null) {
+        // string can be coerced to number
+        return numericType;
+      }
+
       // string always wins
       return Value.Type.STRING;
     }
@@ -666,6 +676,12 @@ public class BuiltinOperators
   private static Value.Type getGeneralMathTypePrecedence(
       Value param1, Value param2)
   {
+    return getGeneralMathTypePrecedence(param1, param2, true);
+  }
+
+  private static Value.Type getGeneralMathTypePrecedence(
+      Value param1, Value param2, boolean allowCoerceToNum)
+  {
     Value.Type t1 = param1.getType();
     Value.Type t2 = param2.getType();
 
@@ -681,6 +697,17 @@ public class BuiltinOperators
     }
 
     if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
+
+      if(allowCoerceToNum) {
+        // see if this is mixed string/numeric and the string can be coerced
+        // to a number
+        Value.Type numericType = coerceStringToNumeric(param1, param2);
+        if(numericType != null) {
+          // string can be coerced to number
+          return numericType;
+        }
+      }
+
       // string always wins
       return Value.Type.STRING;
     }
@@ -692,6 +719,34 @@ public class BuiltinOperators
 
     // choose largest relevant floating-point type
     return max(t1.getPreferredFPType(), t2.getPreferredFPType());
+  }
+
+  private static Value.Type coerceStringToNumeric(Value param1, Value param2) {
+    Value.Type t1 = param1.getType();
+    Value.Type t2 = param2.getType();
+
+    Value.Type numericType = null;
+    Value strParam = null;
+    if(t1.isNumeric()) {
+      numericType = t1;
+      strParam = param2;
+    } else if(t2.isNumeric()) {
+      numericType = t2;
+      strParam = param1;
+    } else {
+      // no numeric type involved
+      return null;
+    }
+
+    try {
+      // see if string can be coerced to a number
+      strParam.getAsBigDecimal();
+      return numericType;
+    } catch(NumberFormatException ignored) {
+      // not a number
+    }
+
+    return null;
   }
 
   private static Value.Type max(Value.Type t1, Value.Type t2) {

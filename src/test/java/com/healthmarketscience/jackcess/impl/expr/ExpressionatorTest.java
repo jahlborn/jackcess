@@ -20,9 +20,11 @@ import java.text.SimpleDateFormat;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.Value;
 import junit.framework.TestCase;
 
 /**
@@ -264,22 +266,22 @@ public class ExpressionatorTest extends TestCase
 
   private static Object eval(String exprStr) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
-    return expr.eval(null);
+        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
+    return expr.eval(new TestEvalContext());
   }
 
   private static void evalFail(String exprStr, Class<? extends Exception> failure) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestContext());
+        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
     try {
-      expr.eval(null);
+      expr.eval(new TestEvalContext());
       fail(failure + " should have been thrown");
     } catch(Exception e) {
       assertTrue(failure.isInstance(e));
     }
   }
 
-  private static final class TestContext implements Expressionator.ParseContext
+  private static final class TestParseContext implements Expressionator.ParseContext
   {
     public TemporalConfig getTemporalConfig() {
       return TemporalConfig.US_TEMPORAL_CONFIG;
@@ -292,6 +294,32 @@ public class ExpressionatorTest extends TestCase
 
     public Function getExpressionFunction(String name) {
       return null;
+    }
+  }
+
+  private static final class TestEvalContext implements EvalContext
+  {
+    public Value.Type getResultType() {
+      return null;
+    }
+
+    public TemporalConfig getTemporalConfig() {
+      return TemporalConfig.US_TEMPORAL_CONFIG;
+    }
+
+    public SimpleDateFormat createDateFormat(String formatStr) {
+      SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
+      sdf.setTimeZone(TestUtil.TEST_TZ);
+      return sdf;
+    }
+
+    public Value getThisColumnValue() {
+      throw new UnsupportedOperationException();
+    }
+
+    public Value getRowValue(String collectionName, String objName,
+                             String colName) {
+      throw new UnsupportedOperationException();
     }
   }
 }

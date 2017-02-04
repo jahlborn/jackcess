@@ -16,13 +16,18 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
+
 /**
  *
  * @author James Ahlborn
  */
 public class StringValue extends BaseValue
 {
+  private static final Object NOT_A_NUMBER = new Object();
+
   private final String _val;
+  private Object _num;
 
   public StringValue(String val) 
   {
@@ -46,5 +51,37 @@ public class StringValue extends BaseValue
   @Override
   public String getAsString() {
     return _val;
+  }
+
+  @Override
+  public Long getAsLong() {
+    return getNumber().longValue();
+  }
+
+  @Override
+  public Double getAsDouble() {
+    return getNumber().doubleValue();
+  }
+
+  @Override
+  public BigDecimal getAsBigDecimal() {
+    return getNumber();
+  }
+
+  protected BigDecimal getNumber() {
+    if(_num instanceof BigDecimal) {
+      return (BigDecimal)_num;
+    }
+    if(_num == null) {
+      // see if it is parseable as a number
+      try {
+        _num = new BigDecimal(_val);
+        return (BigDecimal)_num;
+      } catch(NumberFormatException nfe) {
+        _num = NOT_A_NUMBER;
+        throw nfe;
+      }
+    }
+    throw new NumberFormatException();
   }
 }

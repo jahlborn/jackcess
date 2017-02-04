@@ -1877,8 +1877,14 @@ public class Expressionator
         return null;
       }
 
+      Value.Type resultType = ctx.getResultType();
+      if(resultType == null) {
+        // return as "native" type
+        return val.get();
+      }
+
       // FIXME possibly do some type coercion.  are there conversions here which don't work elsewhere? (string -> date, string -> number)?
-      switch(ctx.getResultType()) {
+      switch(resultType) {
       case STRING:
         return val.getAsString();
       case DATE:
