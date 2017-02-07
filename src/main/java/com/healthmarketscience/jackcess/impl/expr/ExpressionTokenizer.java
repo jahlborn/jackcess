@@ -350,7 +350,8 @@ class ExpressionTokenizer
     }
 
     try {
-      return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType);
+      return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType,
+                       sdf);
     } catch(ParseException pe) {
       throw new IllegalArgumentException(       
           "Invalid date time literal " + dateStr + " " + buf, pe);

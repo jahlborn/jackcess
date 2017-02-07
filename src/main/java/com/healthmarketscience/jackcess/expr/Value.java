@@ -46,6 +46,16 @@ public interface Value
       return((ordinal() <= DOUBLE.ordinal()) ? DOUBLE : BIG_DEC);
     }
 
+    public Type getPreferredNumericType() {
+      if(isNumeric()) {
+        return this;
+      }
+      if(isTemporal()) {
+        return ((this == DATE) ? LONG : DOUBLE);
+      }
+      return null;
+    }
+
     private boolean inRange(Type start, Type end) {
       return ((start.ordinal() <= ordinal()) && (ordinal() <= end.ordinal()));
     }

@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
@@ -250,6 +251,28 @@ public class ExpressionatorTest extends TestCase
     }
 
 
+  }
+
+  public void testTypeCoercion() throws Exception
+  {
+    assertEquals("foobar", eval("=\"foo\" + \"bar\""));
+
+    assertEquals("12foo", eval("=12 + \"foo\""));
+    assertEquals("foo12", eval("=\"foo\" + 12"));
+
+    assertEquals(37L, eval("=\"25\" + 12"));
+    assertEquals(37L, eval("=12 + \"25\""));
+
+    evalFail(("=12 - \"foo\""), RuntimeException.class);
+    evalFail(("=\"foo\" - 12"), RuntimeException.class);
+
+    assertEquals("foo1225", eval("=\"foo\" + 12 + 25"));
+    assertEquals("37foo", eval("=12 + 25 + \"foo\""));
+    assertEquals("foo37", eval("=\"foo\" + (12 + 25)"));
+    assertEquals("25foo12", eval("=\"25foo\" + 12"));
+
+    assertEquals(new Date(1485579600000L), eval("=#1/1/2017# + 27"));
+    assertEquals(128208L, eval("=#1/1/2017# * 3"));
   }
 
   private static void validateExpr(String exprStr, String debugStr) {

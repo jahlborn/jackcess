@@ -52,6 +52,19 @@ public class BuiltinOperators
   public static final Value FALSE_VAL = new LongValue(0L);
   public static final Value EMPTY_STR_VAL = new StringValue("");
 
+  private enum CoercionType {
+    SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
+
+    final boolean _preferTemporal;
+    final boolean _allowCoerceStringToNum;
+
+    private CoercionType(boolean preferTemporal,
+                         boolean allowCoerceStringToNum) {
+      _preferTemporal = preferTemporal;
+      _allowCoerceStringToNum = allowCoerceStringToNum;
+    }
+  }
+
   private BuiltinOperators() {}
 
   // null propagation rules:
@@ -98,7 +111,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.SIMPLE);
 
     switch(mathType) {
     case STRING: 
@@ -127,7 +141,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getSimpleMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.SIMPLE);
 
     switch(mathType) {
     // case STRING: break; unsupported
@@ -154,9 +169,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    // FIXME, string will convert to number if one is number and one is a string parseable as a number!!!
-
-    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.GENERAL);
 
     switch(mathType) {
     // case STRING: break; unsupported
@@ -180,7 +194,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.GENERAL);
 
     switch(mathType) {
     // case STRING: break; unsupported
@@ -214,7 +229,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.GENERAL);
 
     boolean wasDouble = false;
     switch(mathType) {
@@ -242,7 +258,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.GENERAL);
 
     // jdk only supports general pow() as doubles, let's go with that
     double result = Math.pow(param1.getAsDouble(), param2.getAsDouble());
@@ -262,7 +279,8 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getGeneralMathTypePrecedence(param1, param2);
+    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+                                                CoercionType.GENERAL);
 
     boolean wasDouble = false;
     switch(mathType) {
@@ -544,7 +562,8 @@ public class BuiltinOperators
       Value param1, Value param2)
   {
     // note that comparison does not do string to num coercion
-    Value.Type compareType = getGeneralMathTypePrecedence(param1, param2, false);
+    Value.Type compareType = getMathTypePrecedence(param1, param2, 
+                                                   CoercionType.COMPARE);
 
     switch(compareType) {
     case STRING:
@@ -631,56 +650,8 @@ public class BuiltinOperators
     }
   }
 
-  private static Value.Type getSimpleMathTypePrecedence(
-      Value param1, Value param2)
-  {
-    Value.Type t1 = param1.getType();
-    Value.Type t2 = param2.getType();
-
-    if(t1 == t2) {
-      return t1;
-    }
-
-    if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
-
-      // see if this is mixed string/numeric and the string can be coerced to
-      // a number
-      Value.Type numericType = coerceStringToNumeric(param1, param2);
-      if(numericType != null) {
-        // string can be coerced to number
-        return numericType;
-      }
-
-      // string always wins
-      return Value.Type.STRING;
-    }
-
-    // for "simple" math, keep as date/times
-    if(t1.isTemporal() || t2.isTemporal()) {
-      return (t1.isTemporal() ?
-              (t2.isTemporal() ? 
-               // for mixed temporal types, always go to date/time
-               Value.Type.DATE_TIME : t1) :
-              t2);
-    }
-
-    // if both types are integral, choose "largest"
-    if(t1.isIntegral() && t2.isIntegral()) {
-      return max(t1, t2);
-    }
-
-    // choose largest relevant floating-point type
-    return max(t1.getPreferredFPType(), t2.getPreferredFPType());
-  }
-
-  private static Value.Type getGeneralMathTypePrecedence(
-      Value param1, Value param2)
-  {
-    return getGeneralMathTypePrecedence(param1, param2, true);
-  }
-
-  private static Value.Type getGeneralMathTypePrecedence(
-      Value param1, Value param2, boolean allowCoerceToNum)
+  private static Value.Type getMathTypePrecedence(
+      Value param1, Value param2, CoercionType cType)
   {
     Value.Type t1 = param1.getType();
     Value.Type t2 = param2.getType();
@@ -689,8 +660,8 @@ public class BuiltinOperators
 
     if(t1 == t2) {
 
-      if(t1.isTemporal()) {
-        return Value.Type.DOUBLE;
+      if(!cType._preferTemporal && t1.isTemporal()) {
+        return t1.getPreferredNumericType();
       }
 
       return t1;
@@ -698,10 +669,10 @@ public class BuiltinOperators
 
     if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
 
-      if(allowCoerceToNum) {
+      if(cType._allowCoerceStringToNum) {
         // see if this is mixed string/numeric and the string can be coerced
         // to a number
-        Value.Type numericType = coerceStringToNumeric(param1, param2);
+        Value.Type numericType = coerceStringToNumeric(param1, param2, cType);
         if(numericType != null) {
           // string can be coerced to number
           return numericType;
@@ -712,6 +683,19 @@ public class BuiltinOperators
       return Value.Type.STRING;
     }
 
+    // for "simple" math, keep as date/times
+    if(cType._preferTemporal &&
+       (t1.isTemporal() || t2.isTemporal())) {
+      return (t1.isTemporal() ?
+              (t2.isTemporal() ? 
+               // for mixed temporal types, always go to date/time
+               Value.Type.DATE_TIME : t1) :
+              t2);
+    }
+
+    t1 = t1.getPreferredNumericType();
+    t2 = t2.getPreferredNumericType();
+
     // if both types are integral, choose "largest"
     if(t1.isIntegral() && t2.isIntegral()) {
       return max(t1, t2);
@@ -721,17 +705,24 @@ public class BuiltinOperators
     return max(t1.getPreferredFPType(), t2.getPreferredFPType());
   }
 
-  private static Value.Type coerceStringToNumeric(Value param1, Value param2) {
+  private static Value.Type coerceStringToNumeric(
+      Value param1, Value param2, CoercionType cType) {
     Value.Type t1 = param1.getType();
     Value.Type t2 = param2.getType();
 
-    Value.Type numericType = null;
+    Value.Type prefType = null;
     Value strParam = null;
     if(t1.isNumeric()) {
-      numericType = t1;
+      prefType = t1;
       strParam = param2;
     } else if(t2.isNumeric()) {
-      numericType = t2;
+      prefType = t2;
+      strParam = param1;
+    } else if(t1.isTemporal()) {
+      prefType = (cType._preferTemporal ? t1 : t1.getPreferredNumericType());
+      strParam = param2;
+    } else if(t2.isTemporal()) {
+      prefType = (cType._preferTemporal ? t2 : t2.getPreferredNumericType());
       strParam = param1;
     } else {
       // no numeric type involved
@@ -741,7 +732,7 @@ public class BuiltinOperators
     try {
       // see if string can be coerced to a number
       strParam.getAsBigDecimal();
-      return numericType;
+      return prefType;
     } catch(NumberFormatException ignored) {
       // not a number
     }
