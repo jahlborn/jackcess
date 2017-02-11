@@ -32,11 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
@@ -55,9 +56,7 @@ public class Expressionator
   // - examples: https://support.office.com/en-us/article/Examples-of-expressions-d3901e11-c04e-4649-b40b-8b6ec5aed41f
   // - validation rule usage: https://support.office.com/en-us/article/Restrict-data-input-by-using-a-validation-rule-6c0b2ce1-76fa-4be0-8ae9-038b52652320
 
-  // FIXME
-  // - need to short-circuit AND/OR
-
+  
   public enum Type {
     DEFAULT_VALUE, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
@@ -362,19 +361,10 @@ public class Expressionator
 
   private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<Character>(
       Arrays.asList('\\','.','%','=','+', '$','^','|','(',')','{','}','&'));
-  
+  // this is a regular expression which will never match any string
+  private static final Pattern UNMATCHABLE_REGEX = Pattern.compile("(?!)");
 
-  private static final Expr THIS_COL_VALUE = new Expr() {
-    @Override public boolean isConstant() {
-      return false;
-    }
-    @Override public Value eval(EvalContext ctx) {
-      return ctx.getThisColumnValue();
-    }
-    @Override protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append("<THIS_COL>");
-    }
-  };
+  private static final Expr THIS_COL_VALUE = new EThisValue();
 
   private static final Expr NULL_VALUE = new EConstValue(
       BuiltinOperators.NULL_VAL, "Null");
@@ -817,8 +807,7 @@ public class Expressionator
         throw new IllegalArgumentException("Missing Like pattern " + buf);
       }
       String patternStr = t.getValueStr();
-      Pattern pattern = likePatternToRegex(patternStr, buf);
-      specOpExpr = new ELikeOp(specOp, expr, pattern, patternStr);
+      specOpExpr = new ELikeOp(specOp, expr, patternStr);
       break;
 
     case BETWEEN:
@@ -1207,7 +1196,7 @@ public class Expressionator
       .append("\"");
   }
 
-  private static Pattern likePatternToRegex(String pattern, Object location) {
+  private static Pattern likePatternToRegex(String pattern) {
 
     StringBuilder sb = new StringBuilder(pattern.length());
 
@@ -1238,10 +1227,9 @@ public class Expressionator
           } 
         }
 
+        // access treats invalid expression like "unmatchable"
         if(endPos == -1) {
-          throw new IllegalArgumentException(
-              "Could not find closing bracket in pattern '" + pattern + "' " +
-              location);
+          return UNMATCHABLE_REGEX;
         }
 
         String charClass = pattern.substring(startPos, endPos);
@@ -1252,6 +1240,7 @@ public class Expressionator
         }
         
         sb.append('[').append(charClass).append(']');
+        i += (endPos - startPos) + 1;
 
       } else if(REGEX_SPEC_CHARS.contains(c)) {
         // this char is special in regexes, so escape it
@@ -1261,9 +1250,13 @@ public class Expressionator
       }
     }
 
-    return Pattern.compile(sb.toString(),
-                           Pattern.CASE_INSENSITIVE | Pattern.DOTALL | 
-                           Pattern.UNICODE_CASE);
+    try {
+      return Pattern.compile(sb.toString(),
+                             Pattern.CASE_INSENSITIVE | Pattern.DOTALL | 
+                             Pattern.UNICODE_CASE);
+    } catch(PatternSyntaxException ignored) {
+      return UNMATCHABLE_REGEX;
+    } 
   }
 
   private static Value toLiteralValue(Value.Type valType, Object value, 
@@ -1429,6 +1422,22 @@ public class Expressionator
     @Override 
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       sb.append(_str);
+    }
+  }
+
+  private static final class EThisValue extends Expr
+  {
+    @Override 
+    public boolean isConstant() {
+      return false;
+    }
+    @Override 
+    public Value eval(EvalContext ctx) {
+      return ctx.getThisColumnValue();
+    }
+    @Override 
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      sb.append("<THIS_COL>");
     }
   }
 
@@ -1734,19 +1743,25 @@ public class Expressionator
 
   private static class ELikeOp extends ESpecOp
   {
-    // FIXME, compile Pattern on first use?
-    private final Pattern _pattern;
     private final String _patternStr;
+    private Pattern _pattern;
 
-    private ELikeOp(SpecOp op, Expr expr, Pattern pattern, String patternStr) {
+    private ELikeOp(SpecOp op, Expr expr, String patternStr) {
       super(op, expr);
-      _pattern = pattern;
       _patternStr = patternStr;
+    }
+
+    private Pattern getPattern()
+    {
+      if(_pattern == null) {
+        _pattern = likePatternToRegex(_patternStr);
+      } 
+      return _pattern;
     }
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx), _pattern, null);
+      return _op.eval(_expr.eval(ctx), getPattern(), null);
     }
 
     @Override
@@ -1755,7 +1770,7 @@ public class Expressionator
       sb.append(" ").append(_op).append(" ");
       literalStrToString(_patternStr, sb);
       if(isDebug) {
-        sb.append("(").append(_pattern).append(")");
+        sb.append("(").append(getPattern()).append(")");
       }
     }
   }
@@ -1910,6 +1925,7 @@ public class Expressionator
         return null;
       }
 
+      // FIXME - field/row validator -> if top-level operator is not "boolean", then do value comparison withe coercion
       // FIXME, is this only true for non-numeric...?
       // if(val.getType() != Value.Type.BOOLEAN) {
       //   // a single value as a conditional expression seems to act like an

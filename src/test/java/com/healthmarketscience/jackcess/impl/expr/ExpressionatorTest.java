@@ -275,6 +275,20 @@ public class ExpressionatorTest extends TestCase
     assertEquals(128208L, eval("=#1/1/2017# * 3"));
   }
 
+  public void testLikeExpression() throws Exception
+  {
+    validateExpr("Like \"[abc]*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc]*\"([abc].*)}",
+                 "<THIS_COL> Like \"[abc]*\"");
+    assertTrue(evalCondition("Like \"[abc]*\"", "afcd"));
+    assertFalse(evalCondition("Like \"[abc]*\"", "fcd"));
+
+    validateExpr("Like \"[abc*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc*\"((?!))}",
+                 "<THIS_COL> Like \"[abc*\"");
+    assertFalse(evalCondition("Like \"[abc*\"", "afcd"));
+    assertFalse(evalCondition("Like \"[abc*\"", "fcd"));
+    assertFalse(evalCondition("Like \"[abc*\"", ""));
+  }
+
   private static void validateExpr(String exprStr, String debugStr) {
     validateExpr(exprStr, debugStr, exprStr);
   }
@@ -290,18 +304,24 @@ public class ExpressionatorTest extends TestCase
   private static Object eval(String exprStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
-    return expr.eval(new TestEvalContext());
+    return expr.eval(new TestEvalContext(null));
   }
 
   private static void evalFail(String exprStr, Class<? extends Exception> failure) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
     try {
-      expr.eval(new TestEvalContext());
+      expr.eval(new TestEvalContext(null));
       fail(failure + " should have been thrown");
     } catch(Exception e) {
       assertTrue(failure.isInstance(e));
     }
+  }
+
+  private static Boolean evalCondition(String exprStr, String thisVal) {
+    Expression expr = Expressionator.parse(
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, new TestParseContext());
+    return (Boolean)expr.eval(new TestEvalContext(BuiltinOperators.toValue(thisVal)));
   }
 
   private static final class TestParseContext implements Expressionator.ParseContext
@@ -322,6 +342,12 @@ public class ExpressionatorTest extends TestCase
 
   private static final class TestEvalContext implements EvalContext
   {
+    private final Value _thisVal;
+
+    private TestEvalContext(Value thisVal) {
+      _thisVal = thisVal;
+    }
+
     public Value.Type getResultType() {
       return null;
     }
@@ -337,7 +363,10 @@ public class ExpressionatorTest extends TestCase
     }
 
     public Value getThisColumnValue() {
-      throw new UnsupportedOperationException();
+      if(_thisVal == null) {
+        throw new UnsupportedOperationException();
+      }
+      return _thisVal;
     }
 
     public Value getRowValue(String collectionName, String objName,
