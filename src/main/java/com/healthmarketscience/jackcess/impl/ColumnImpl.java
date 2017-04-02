@@ -1205,11 +1205,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     int dataLength = dataEnd - dataStart;
 
     if(inCompressedMode) {
-      byte[] tmpData = new byte[dataLength * 2];
+      int bytesPerCharacter = 2;  // default
+      if (!getCharset().name().equals("UTF-16LE")) {
+        bytesPerCharacter = 1;
+      }
+      byte[] tmpData = new byte[dataLength * bytesPerCharacter];
       int tmpIdx = 0;
       for(int i = dataStart; i < dataEnd; ++i) {
         tmpData[tmpIdx] = data[i];
-        tmpIdx += 2;
+        tmpIdx += bytesPerCharacter;
       } 
       data = tmpData;
       dataStart = 0;
