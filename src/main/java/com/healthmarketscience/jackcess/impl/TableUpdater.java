@@ -295,7 +295,7 @@ public class TableUpdater extends TableMutator
       return false;
     }
 
-    if(idx1.getColumns().size() != idx2.getColumns().size()) {
+    if(idx1.getColumns().size() != idx2.getColumnCount()) {
       return false;
     }
     

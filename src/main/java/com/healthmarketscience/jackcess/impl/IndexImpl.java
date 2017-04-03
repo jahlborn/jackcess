@@ -220,6 +220,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return getIndexData().getColumns();
   }
 
+  public int getColumnCount() {
+    return getIndexData().getColumnCount();
+  }
+
   public CursorBuilder newCursor() {
     return getTable().newCursor().setIndex(this);
   }
@@ -288,6 +292,21 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     
   /**
    * Constructs an array of values appropriate for this index from the given
+   * column values, possibly only providing a prefix subset of the index
+   * columns (at least one value must be provided).  If a prefix entry is
+   * provided, any missing, trailing index entry values will use the given
+   * filler value.
+   * @return the appropriate sparse array of data
+   * @throws IllegalArgumentException if at least one value is not provided
+   */
+  public Object[] constructPartialIndexRowFromEntry(
+      Object filler, Object... values)
+  {
+    return getIndexData().constructPartialIndexRowFromEntry(filler, values);
+  }
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
    * column value.
    * @return the appropriate sparse array of data or {@code null} if not all
    *         columns for this index were provided
@@ -299,6 +318,18 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   
   /**
    * Constructs an array of values appropriate for this index from the given
+   * column value, which must be the first column of the index.  Any missing,
+   * trailing index entry values will use the given filler value.
+   * @return the appropriate sparse array of data or {@code null} if no prefix
+   *         list of columns for this index were provided
+   */
+  public Object[] constructPartialIndexRow(Object filler, String colName, Object value)
+  {
+    return constructPartialIndexRow(filler, Collections.singletonMap(colName, value));
+  }
+  
+  /**
+   * Constructs an array of values appropriate for this index from the given
    * column values.
    * @return the appropriate sparse array of data or {@code null} if not all
    *         columns for this index were provided
@@ -306,6 +337,20 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public Object[] constructIndexRow(Map<String,?> row)
   {
     return getIndexData().constructIndexRow(row);
+  }  
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column values, possibly only using a subset of the given values.  A
+   * partial row can be created if one or more prefix column values are
+   * provided.  If a prefix can be found, any missing, trailing index entry
+   * values will use the given filler value.
+   * @return the appropriate sparse array of data or {@code null} if no prefix
+   *         list of columns for this index were provided
+   */
+  public Object[] constructPartialIndexRow(Object filler, Map<String,?> row)
+  {
+    return getIndexData().constructPartialIndexRow(filler, row);
   }  
 
   @Override

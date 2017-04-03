@@ -30,6 +30,7 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
@@ -1332,5 +1333,271 @@ public class CursorTest extends TestCase {
     }
   }
 
+  public void testPartialIndexFind() throws Exception
+  {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      
+      Database db = createMem(fileFormat);
+
+      TableImpl t = (TableImpl)new TableBuilder("Test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("num2", DataType.LONG))
+        .addColumn(new ColumnBuilder("key3", DataType.TEXT))
+        .addColumn(new ColumnBuilder("value", DataType.TEXT))
+        .addIndex(new IndexBuilder("idx3").addColumns("data1", "num2", "key3"))
+        .toTable(db);
+
+      Index idx = t.findIndexForColumns(Arrays.asList("data1"), 
+                                        TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx3", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx3", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx3", idx.getName());
+
+      assertNull(t.findIndexForColumns(Arrays.asList("num2"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+      assertNull(t.findIndexForColumns(Arrays.asList("data1"), 
+                                       TableImpl.IndexFeature.EXACT_MATCH));
+
+
+      new IndexBuilder("idx2")
+        .addColumns("data1", "num2")
+        .addToTable(t);
+
+      idx = t.findIndexForColumns(Arrays.asList("data1"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx2", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx2", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx3", idx.getName());
+
+      assertNull(t.findIndexForColumns(Arrays.asList("num2"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+      assertNull(t.findIndexForColumns(Arrays.asList("data1"), 
+                                       TableImpl.IndexFeature.EXACT_MATCH));
+
+
+      new IndexBuilder("idx1")
+        .addColumns("data1")
+        .addToTable(t);
+
+      idx = t.findIndexForColumns(Arrays.asList("data1"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx1", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx2", idx.getName());
+
+      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"), 
+                                  TableImpl.IndexFeature.ANY_MATCH);
+      assertEquals("idx3", idx.getName());
+
+      assertNull(t.findIndexForColumns(Arrays.asList("num2"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"), 
+                                       TableImpl.IndexFeature.ANY_MATCH));
+
+      db.close();
+    }
+  }
+
+  public void testPartialIndexLookup() throws Exception
+  {
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      
+      Database db = createMem(fileFormat);
+
+      TableImpl t = (TableImpl)new TableBuilder("Test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("num2", DataType.LONG))
+        .addColumn(new ColumnBuilder("key3", DataType.TEXT))
+        .addColumn(new ColumnBuilder("value", DataType.TEXT))
+        .addIndex(new IndexBuilder("idx3")
+                  .addColumns(true, "data1")
+                  .addColumns(false, "num2")
+                  .addColumns(true, "key3")
+                  )
+        .toTable(db);
+
+      int id = 1;
+      for(String str : Arrays.asList("A", "B", "C", "D")) {
+        for(int i = 4; i >= 0; --i) {
+        // for(int i = 0; i < 5; ++i) {
+          for(int j = 1; j < 3; ++j) {
+            t.addRow(id, str, i, "K" + j, "value" + id);
+            ++id;
+          }
+        }
+      }
+
+      Index idx = t.getIndex("idx3");
+      doPartialIndexLookup(idx);
+
+      idx = new IndexBuilder("idx2")
+                  .addColumns(true, "data1")
+                  .addColumns(false, "num2")
+        .addToTable(t);
+      doPartialIndexLookup(idx);
+
+      idx = new IndexBuilder("idx1")
+                  .addColumns(true, "data1")
+        .addToTable(t);
+      doPartialIndexLookup(idx);
+
+      db.close();
+    }
+  }
+
+  private static void doPartialIndexLookup(Index idx) throws Exception
+  {
+    int colCount = idx.getColumnCount();
+    IndexCursor c = new CursorBuilder(idx.getTable()).setIndex(idx).toIndexCursor();
+
+    doFindFirstByEntry(c, 21, "C");
+    doFindFirstByEntry(c, null, "Z");
+
+    if(colCount > 1) {
+      doFindFirstByEntry(c, 23, "C", 3);
+      doFindFirstByEntry(c, null, "C", 20);
+    }
+
+    if(colCount > 2) {
+      doFindFirstByEntry(c, 27, "C", 1, "K1");
+      doFindFirstByEntry(c, null, "C", 4, "K3");
+    }
+      
+    try {
+      if(colCount > 2) {
+        c.findFirstRowByEntry("C", 4, "K1", 14);
+      } else if(colCount > 1) {
+        c.findFirstRowByEntry("C", 4, "K1");
+      } else {
+        c.findFirstRowByEntry("C", 4);
+      }
+      fail("IllegalArgumentException should have been thrown");
+    } catch(IllegalArgumentException expected) {
+      // scucess
+    }
+
+    doFindByEntryRange(c, 11, 20, "B");
+    doFindByEntry(c, new int[]{}, "Z");
+
+    if(colCount > 1) {
+      doFindByEntryRange(c, 13, 14, "B", 3);
+      doFindByEntry(c, new int[]{}, "B", 20);
+    }
+
+    if(colCount > 2) {
+      doFindByEntryRange(c, 14, 14, "B", 3, "K2");
+      doFindByEntry(c, new int[]{}, "B", 3, "K3");
+    }
+
+    doFindByRow(idx, 13, 
+                "data1", "B", "value", "value13");
+    doFindByRow(idx, 13, 
+                "data1", "B", "key3", "K1", "value", "value13");
+    doFindByRow(idx, 13, 
+        "data1", "B", "num2", 3, "key3", "K1", "value", "value13");
+    doFindByRow(idx, 13, 
+        "num2", 3, "value", "value13");
+    doFindByRow(idx, 13, 
+        "value", "value13");
+    doFindByRow(idx, null, 
+        "data1", "B", "num2", 5, "key3", "K1", "value", "value13");
+    doFindByRow(idx, null, 
+        "data1", "B", "value", "value4");
+
+    Column col = idx.getTable().getColumn("data1");
+    doFindValue(idx, 21, col, "C");
+    doFindValue(idx, null, col, "Z");    
+    col = idx.getTable().getColumn("value");
+    doFindValue(idx, 21, col, "value21");
+    doFindValue(idx, null, col, "valueZ");    
+  }
+
+  private static void doFindFirstByEntry(IndexCursor c, Integer expectedId,
+                                         Object... entry)
+    throws Exception
+  {
+    if(expectedId != null) {
+      assertTrue(c.findFirstRowByEntry(entry));
+      assertEquals(expectedId, c.getCurrentRow().get("id"));
+    } else {
+      assertFalse(c.findFirstRowByEntry(entry));
+    }
+  }
+    
+  private static void doFindByEntryRange(IndexCursor c, int start, int end,
+                                         Object... entry)
+  {
+    List<Integer> expectedIds = new ArrayList<Integer>();
+    for(int i = start; i <= end; ++i) {
+      expectedIds.add(i);
+    }
+    doFindByEntry(c, expectedIds, entry);
+  }
+    
+  private static void doFindByEntry(IndexCursor c, int[] ids,
+                                    Object... entry)
+  {
+    List<Integer> expectedIds = new ArrayList<Integer>();
+    for(int id : ids) {
+      expectedIds.add(id);
+    }
+    doFindByEntry(c, expectedIds, entry);
+  }
+    
+  private static void doFindByEntry(IndexCursor c, List<Integer> expectedIds,
+                                    Object... entry)
+  {
+    List<Integer> foundIds = new ArrayList<Integer>();
+    for(Row row : c.newEntryIterable(entry)) {
+      foundIds.add((Integer)row.get("id"));
+    }
+    assertEquals(expectedIds, foundIds);
+  }
+
+  private static void doFindByRow(Index idx, Integer id, Object... rowPairs)
+    throws Exception
+  {
+    Map<String,Object> map = createExpectedRow(
+        rowPairs);
+    Row r = CursorBuilder.findRow(idx, map);
+    if(id != null) {
+      assertEquals(id, r.get("id"));
+    } else {
+      assertNull(r);
+    }
+  } 
+
+  private static void doFindValue(Index idx, Integer id, 
+                                  Column columnPattern, Object valuePattern)
+    throws Exception
+  {
+    Object value = CursorBuilder.findValue(
+        idx, idx.getTable().getColumn("id"), columnPattern, valuePattern);
+    if(id != null) {
+      assertEquals(id, value);
+    } else {
+      assertNull(value);
+    }
+  } 
 }
   

@@ -22,10 +22,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.CursorImpl;
 import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
+import com.healthmarketscience.jackcess.impl.IndexData;
+import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 
 
@@ -145,7 +146,8 @@ public class CursorBuilder {
    * Searches for an index with the given column names.
    */
   private CursorBuilder setIndexByColumns(List<String> searchColumns) {
-    IndexImpl index = _table.findIndexForColumns(searchColumns, false);
+    IndexImpl index = _table.findIndexForColumns(
+        searchColumns, TableImpl.IndexFeature.ANY_MATCH);
     if(index == null) {
       throw new IllegalArgumentException("Index with columns " +
                                          searchColumns +
@@ -198,7 +200,8 @@ public class CursorBuilder {
    */
   public CursorBuilder setStartEntry(Object... startEntry) {
     if(startEntry != null) {
-      setStartRow(_index.constructIndexRowFromEntry(startEntry));
+      setStartRow(_index.constructPartialIndexRowFromEntry(
+                      IndexData.MIN_VALUE, startEntry));
     }
     return this;
   }
@@ -230,7 +233,8 @@ public class CursorBuilder {
    */
   public CursorBuilder setEndEntry(Object... endEntry) {
     if(endEntry != null) {
-      setEndRow(_index.constructIndexRowFromEntry(endEntry));
+      setEndRow(_index.constructPartialIndexRowFromEntry(
+                    IndexData.MAX_VALUE, endEntry));
     }
     return this;
   }
