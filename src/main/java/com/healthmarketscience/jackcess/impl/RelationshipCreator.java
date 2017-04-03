@@ -201,7 +201,7 @@ public class RelationshipCreator extends DBMutator
 
     // for now, we will require the unique index on the primary table (just
     // like access does).  we could just create it auto-magically...
-    IndexImpl primaryIdx = getPrimaryUniqueIndex();
+    IndexImpl primaryIdx = getUniqueIndex(_primaryTable, _primaryCols);
     if(primaryIdx == null) {
       throw new IllegalArgumentException(withErrorContext(
           "Missing unique index on primary table required to enforce integrity"));
@@ -307,16 +307,17 @@ public class RelationshipCreator extends DBMutator
   private boolean isOneToOne() {
     // a relationship is one to one if the two sides of the relationship have
     // unique indexes on the relevant columns
-    if(getPrimaryUniqueIndex() == null) {
+    if(getUniqueIndex(_primaryTable, _primaryCols) == null) {
       return false;
     }
-    IndexImpl idx = _secondaryTable.findIndexForColumns(
-        getColumnNames(_secondaryCols), true);
+    IndexImpl idx = getUniqueIndex(_secondaryTable, _secondaryCols);
     return (idx != null);
   }
 
-  private IndexImpl getPrimaryUniqueIndex() {
-    return _primaryTable.findIndexForColumns(getColumnNames(_primaryCols), true);
+  private static IndexImpl getUniqueIndex(
+      TableImpl table, List<ColumnImpl> cols) {
+    return table.findIndexForColumns(getColumnNames(cols), 
+                                     TableImpl.IndexFeature.EXACT_UNIQUE_ONLY);
   }
 
   private static String getTableErrorContext(

@@ -330,6 +330,10 @@ public class IndexData {
     return Collections.unmodifiableList(_columns);
   }
 
+  public int getColumnCount() {
+    return _columns.size();
+  }
+
   /**
    * Whether or not the complete index state has been read.
    */
@@ -784,7 +788,7 @@ public class IndexData {
     if(idx < 0) {
       // the caller may have only read some of the row data, if this is the
       // case, just search for the page/row numbers
-      // FIXME, we could force caller to get relevant values?
+      // TODO, we could force caller to get relevant values?
       EntryCursor cursor = cursor();
       Position tmpPos = null;
       Position endPos = cursor._lastPos;
@@ -979,6 +983,37 @@ public class IndexData {
     }
     return idxRow;
   }
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column values, possibly only providing a prefix subset of the index
+   * columns (at least one value must be provided).  If a prefix entry is
+   * provided, any missing, trailing index entry values will use the given
+   * filler value.
+   * @return the appropriate sparse array of data
+   * @throws IllegalArgumentException if at least one value is not provided
+   */
+  public Object[] constructPartialIndexRowFromEntry(
+      Object filler, Object... values)
+  {
+    if(values.length == 0) {
+      throw new IllegalArgumentException(withErrorContext(
+          "At least one column value must be provided"));
+    }
+    if(values.length > _columns.size()) {
+      throw new IllegalArgumentException(withErrorContext(
+          "Too many column values given " + values.length +
+          ", expected at most " + _columns.size()));
+    }
+    int valIdx = 0;
+    Object[] idxRow = new Object[getTable().getColumnCount()];
+    for(ColumnDescriptor col : _columns) {
+      idxRow[col.getColumnIndex()] = 
+        ((valIdx < values.length) ? values[valIdx] : filler);
+      ++valIdx;
+    }
+    return idxRow;
+  }
     
   /**
    * Constructs an array of values appropriate for this index from the given
@@ -989,6 +1024,18 @@ public class IndexData {
   public Object[] constructIndexRow(String colName, Object value)
   {
     return constructIndexRow(Collections.singletonMap(colName, value));
+  }
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column value, which must be the first column of the index.  Any missing,
+   * trailing index entry values will use the given filler value.
+   * @return the appropriate sparse array of data or {@code null} if no prefix
+   *         list of columns for this index were provided
+   */
+  public Object[] constructPartialIndexRow(Object filler, String colName, Object value)
+  {
+    return constructPartialIndexRow(filler, Collections.singletonMap(colName, value));
   }
 
   /**
@@ -1011,6 +1058,42 @@ public class IndexData {
     }
     return idxRow;
   }  
+
+  /**
+   * Constructs an array of values appropriate for this index from the given
+   * column values, possibly only using a subset of the given values.  A
+   * partial row can be created if one or more prefix column values are
+   * provided.  If a prefix can be found, any missing, trailing index entry
+   * values will use the given filler value.
+   * @return the appropriate sparse array of data or {@code null} if no prefix
+   *         list of columns for this index were provided
+   */
+  public Object[] constructPartialIndexRow(Object filler, Map<String,?> row)
+  {
+    // see if we have at least one prefix column
+    int numCols = 0;
+    for(ColumnDescriptor col : _columns) {
+      if(!row.containsKey(col.getName())) {
+        if(numCols == 0) {
+          // can't do it, need at least first column
+          return null;
+        }
+        break;
+      }
+      ++numCols;
+    }
+
+    // fill in the row with either the prefix values or the filler value, as
+    // appropriate
+    Object[] idxRow = new Object[getTable().getColumnCount()];
+    int valIdx = 0;
+    for(ColumnDescriptor col : _columns) {
+      idxRow[col.getColumnIndex()] = 
+        ((valIdx < numCols) ? row.get(col.getName()) : filler);
+      ++valIdx;
+    }
+    return idxRow;
+  }
 
   @Override
   public String toString() {
@@ -1266,6 +1349,7 @@ public class IndexData {
     _entryBuffer.reset();
     
     for(ColumnDescriptor col : _columns) {
+
       Object value = values[col.getColumnIndex()];
       if(ColumnImpl.isRawData(value)) {
         // ignore it, we could not parse it
@@ -1273,13 +1357,17 @@ public class IndexData {
       }
 
       if(value == MIN_VALUE) {
-        // null is the "least" value
-        _entryBuffer.write(getNullEntryFlag(col.isAscending()));
+        // null is the "least" value (note the column "ascending" flag is
+        // irrelevant here because the entry bytes are _always_ interpreted
+        // least to greatest)
+        _entryBuffer.write(getNullEntryFlag(true));
         continue;
       }
       if(value == MAX_VALUE) {
-        // the opposite null is the "greatest" value
-        _entryBuffer.write(getNullEntryFlag(!col.isAscending()));
+        // the opposite null is the "greatest" value (note the column
+        // "ascending" flag is irrelevant here because the entry bytes are
+        // _always_ interpreted least to greatest)
+        _entryBuffer.write(getNullEntryFlag(false));
         continue;
       }
 

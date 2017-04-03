@@ -40,6 +40,11 @@ public interface Index
   public boolean isForeignKey();
 
   /**
+   * @usage _general_method_
+   */
+  public int getColumnCount();
+
+  /**
    * @return the Columns for this index (unmodifiable)
    */
   public List<? extends Index.Column> getColumns();

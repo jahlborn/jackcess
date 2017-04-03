@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -260,8 +259,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       return false;
     }
 
-    // either we found a row with the given value, or none exist in the
-    // table
+    // either we found a row with the given value, or none exist in the table
     return currentRowMatchesImpl(columnPattern, valuePattern, columnMatcher);
   }
 
@@ -310,37 +308,24 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
       return false;
     }
 
-    // find actual matching row
-    IndexData indexData = _entryCursor.getIndexData();
-    Map<String,?> indexRowPattern = null;
-    if(rowPattern.size() == indexData.getColumns().size()) {
-      // the rowPattern matches our index columns exactly, so we can
-      // streamline our testing below
-      indexRowPattern = rowPattern;
-    } else {
-      // the rowPattern has more columns than just the index, so we need to
-      // do more work when testing below
-      Map<String,Object> tmpRowPattern = new LinkedHashMap<String,Object>();
-      indexRowPattern = tmpRowPattern;
-      for(IndexData.ColumnDescriptor idxCol : indexData.getColumns()) {
-        tmpRowPattern.put(idxCol.getName(), rowValues[idxCol.getColumnIndex()]);
-      }
-    }
-      
-    // there may be multiple columns which fit the pattern subset used by
+    // determine if the pattern columns exactly match the index columns
+    boolean exactColumnMatch = rowPattern.keySet().equals(
+        getIndexEntryPattern());
+    
+    // there may be multiple rows which fit the pattern subset used by
     // the index, so we need to keep checking until our index values no
     // longer match
     do {
 
-      if(!currentRowMatchesImpl(indexRowPattern, columnMatcher)) {
+      if(!currentRowMatchesEntryImpl(rowValues, columnMatcher)) {
         // there are no more rows which could possibly match
         break;
       }
 
-      // note, if rowPattern == indexRowPattern, no need to do an extra
-      // comparison with the current row
-      if((rowPattern == indexRowPattern) || 
-         currentRowMatchesImpl(rowPattern, columnMatcher)) {
+      // note, if exactColumnMatch, no need to do an extra comparison with the
+      // current row (since the entry match check above is equivalent to this
+      // check)
+      if(exactColumnMatch || currentRowMatchesImpl(rowPattern, columnMatcher)) {
         // found it!
         return true;
       }
@@ -359,8 +344,16 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     Row row = getCurrentRow(getIndexEntryPattern());
 
     for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
-      String columnName = col.getName();
+
       Object patValue = rowValues[col.getColumnIndex()];
+
+      if((patValue == IndexData.MIN_VALUE) || 
+         (patValue == IndexData.MAX_VALUE)) {
+        // all remaining entry values are "special" (used for partial lookups)
+        return true;
+      }
+
+      String columnName = col.getName();
       Object rowValue = row.get(columnName);
       if(!columnMatcher.matches(getTable(), columnName, patValue, rowValue)) {
         return false;
@@ -388,15 +381,16 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   protected Object prepareSearchInfo(ColumnImpl columnPattern, Object valuePattern)
   {
     // attempt to generate a lookup row for this index
-    return _entryCursor.getIndexData().constructIndexRow(
-        columnPattern.getName(), valuePattern);
+    return _entryCursor.getIndexData().constructPartialIndexRow(
+        IndexData.MIN_VALUE, columnPattern.getName(), valuePattern);
   }
 
   @Override
   protected Object prepareSearchInfo(Map<String,?> rowPattern)
   {
     // attempt to generate a lookup row for this index
-    return _entryCursor.getIndexData().constructIndexRow(rowPattern);
+    return _entryCursor.getIndexData().constructPartialIndexRow(
+        IndexData.MIN_VALUE, rowPattern);
   }
 
   @Override
@@ -417,7 +411,8 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
 
   private Object[] toRowValues(Object[] entryValues)
   {
-    return _entryCursor.getIndexData().constructIndexRowFromEntry(entryValues);
+    return _entryCursor.getIndexData().constructPartialIndexRowFromEntry(
+        IndexData.MIN_VALUE, entryValues);
   }
   
   @Override
@@ -545,5 +540,4 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }    
   }
 
-  
 }

@@ -86,6 +86,10 @@ public class TableImpl implements Table
    */
   public static final byte TYPE_USER = 0x4e;
 
+  public enum IndexFeature {
+    EXACT_MATCH, EXACT_UNIQUE_ONLY, ANY_MATCH;
+  }
+
   /** comparator which sorts variable length columns based on their index into
       the variable length offset table */
   private static final Comparator<ColumnImpl> VAR_LEN_COLUMN_COMPARATOR =
@@ -496,32 +500,47 @@ public class TableImpl implements Table
   }
 
   public IndexImpl findIndexForColumns(Collection<String> searchColumns, 
-                                       boolean uniqueOnly) {
+                                       IndexFeature feature) {
+
+    IndexImpl partialIndex = null;
     for(IndexImpl index : _indexes) {
       
       Collection<? extends Index.Column> indexColumns = index.getColumns();
-      if(indexColumns.size() != searchColumns.size()) {
+      if(indexColumns.size() < searchColumns.size()) {
         continue;
       }
+      boolean exactMatch = (indexColumns.size() == searchColumns.size());
+
       Iterator<String> sIter = searchColumns.iterator();
       Iterator<? extends Index.Column> iIter = indexColumns.iterator();
-      boolean matches = true;
+      boolean searchMatches = true;
       while(sIter.hasNext()) {
         String sColName = sIter.next();
         String iColName = iIter.next().getName();
         if((sColName != iColName) &&
            ((sColName == null) || !sColName.equalsIgnoreCase(iColName))) {
-          matches = false;
+          searchMatches = false;
           break;
         }
       }
 
-      if(matches && (!uniqueOnly || index.isUnique())) {
-        return index;
+      if(searchMatches) {
+        
+        if(exactMatch && ((feature != IndexFeature.EXACT_UNIQUE_ONLY) || 
+                          index.isUnique())) {
+          return index;
+        }
+
+        if(!exactMatch && (feature == IndexFeature.ANY_MATCH) && 
+           ((partialIndex == null) || 
+            (indexColumns.size() < partialIndex.getColumnCount()))) {
+          // this is a better partial index match
+          partialIndex = index;
+        }
       }
     }
 
-    return null;
+    return partialIndex;
   }
   
   List<ColumnImpl> getAutoNumberColumns() {
