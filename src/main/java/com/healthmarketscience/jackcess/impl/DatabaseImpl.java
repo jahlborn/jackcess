@@ -111,8 +111,8 @@ public class DatabaseImpl implements Database
 
   static {
     addFileFormatDetails(FileFormat.V1997, null, JetFormat.VERSION_3);
-    addFileFormatDetails(FileFormat.GENERIC_JET4, null, JetFormat.VERSION_4);
-    addFileFormatDetails(FileFormat.V2000, "empty", JetFormat.VERSION_4);
+    addFileFormatDetails(FileFormat.GENERIC_JET4, "emptyJet4", JetFormat.VERSION_4);
+    addFileFormatDetails(FileFormat.V2000, "empty2000", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2003, "empty2003", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
     addFileFormatDetails(FileFormat.V2010, "empty2010", JetFormat.VERSION_14);
