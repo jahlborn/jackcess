@@ -416,6 +416,14 @@ public class Expressionator
     }
 
     Expr expr = parseExpression(new TokBuf(exprType, tokens, context), false);
+
+    if((exprType == Type.FIELD_VALIDATOR) && !expr.isConditionalExpr()) {
+      // a non-conditional expression for a FIELD_VALIDATOR treats the result
+      // as an equality comparison with the field in question.  so, transform
+      // the expression accordingly
+      expr = new ECompOp(CompOp.EQ, THIS_COL_VALUE, expr);
+    }
+
     return (expr.isConstant() ?
        // for now, just cache at top-level for speed (could in theory cache
        // intermediate values?)
@@ -1325,6 +1333,10 @@ public class Expressionator
       toString(sb, true);
       return sb.toString();
     }
+
+    protected boolean isConditionalExpr() {
+      return false;
+    }
     
     protected void toString(StringBuilder sb, boolean isDebug) {
       if(isDebug) {
@@ -1521,6 +1533,11 @@ public class Expressionator
     }
 
     @Override
+    protected boolean isConditionalExpr() {
+      return _expr.isConditionalExpr();
+    }
+
+    @Override
     public Value eval(EvalContext ctx) {
       return _expr.eval(ctx);
     }
@@ -1673,6 +1690,11 @@ public class Expressionator
     }
 
     @Override
+    protected boolean isConditionalExpr() {
+      return true;
+    }
+
+    @Override
     public Value eval(EvalContext ctx) {
       return ((CompOp)_op).eval(_left.eval(ctx), _right.eval(ctx));
     }
@@ -1720,6 +1742,11 @@ public class Expressionator
 
     public void setLeft(Expr left) {
       _expr = left;
+    }
+
+    @Override
+    protected boolean isConditionalExpr() {
+      return true;
     }
   }
 
@@ -1925,14 +1952,7 @@ public class Expressionator
         return null;
       }
 
-      // FIXME - field/row validator -> if top-level operator is not "boolean", then do value comparison withe coercion
-      // FIXME, is this only true for non-numeric...?
-      // if(val.getType() != Value.Type.BOOLEAN) {
-      //   // a single value as a conditional expression seems to act like an
-      //   // implicit "="
-      //   // FIXME, what about row validators?
-      //   val = BuiltinOperators.equals(val, ctx.getThisColumnValue());
-      // }
+      // FIXME, access seems to type coerce all "fields" (including <this>), but not constants
 
       return val.getAsBoolean();
     }
