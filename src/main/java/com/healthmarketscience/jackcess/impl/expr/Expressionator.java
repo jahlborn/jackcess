@@ -421,7 +421,7 @@ public class Expressionator
       // a non-conditional expression for a FIELD_VALIDATOR treats the result
       // as an equality comparison with the field in question.  so, transform
       // the expression accordingly
-      expr = new ECompOp(CompOp.EQ, THIS_COL_VALUE, expr);
+      expr = new EImplicitCompOp(expr);
     }
 
     return (expr.isConstant() ?
@@ -1698,6 +1698,24 @@ public class Expressionator
     public Value eval(EvalContext ctx) {
       return ((CompOp)_op).eval(_left.eval(ctx), _right.eval(ctx));
     }
+  }
+
+  private static class EImplicitCompOp extends ECompOp
+  {
+    private EImplicitCompOp(Expr right) {
+      super(CompOp.EQ, THIS_COL_VALUE, right);
+    }
+
+    @Override
+    protected void toExprString(StringBuilder sb, boolean isDebug) {
+      // only output the full "implicit" comparison in debug mode
+      if(isDebug) {
+        super.toExprString(sb, isDebug);
+      } else {
+        // just output the explicit part of the expression
+        _right.toString(sb, isDebug);
+      } 
+    }    
   }
 
   private static class ELogicalOp extends EBaseBinaryOp

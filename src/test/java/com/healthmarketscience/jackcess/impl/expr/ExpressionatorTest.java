@@ -297,7 +297,13 @@ public class ExpressionatorTest extends TestCase
                                    String cleanStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null);
-    assertEquals(debugStr, expr.toDebugString());
+    String foundDebugStr = expr.toDebugString();
+    if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
+      assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " + 
+                   debugStr + "}", foundDebugStr);
+    } else {
+      assertEquals(debugStr, foundDebugStr);
+    }
     assertEquals(cleanStr, expr.toString());
   }
 
