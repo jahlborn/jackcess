@@ -348,13 +348,21 @@ public class PropertiesTest extends TestCase
   public void testCreateDbProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS) {
-      // TODO perhaps tweak putUserDefinedProperty to throw FeatureNotSupported for GENERIC_JET4 ...? 
-      if (ff != FileFormat.GENERIC_JET4) {
         File file = TestUtil.createTempFile(false);
-        Database db = new DatabaseBuilder(file)
-          .setFileFormat(ff)
-          .putUserDefinedProperty("testing", "123")
-          .create();
+        Database db = null;
+        try {
+          db = new DatabaseBuilder(file)
+            .setFileFormat(ff)
+            .putUserDefinedProperty("testing", "123")
+            .create();
+        } catch (UnsupportedOperationException uoe) {
+          if (ff == FileFormat.GENERIC_JET4) {
+            // exception was expected; skip the rest of this test 
+            break;
+          } else {
+            throw uoe;
+          }
+        }
   
         UUID u1 = UUID.randomUUID();
         UUID u2 = UUID.randomUUID();
@@ -393,7 +401,6 @@ public class PropertiesTest extends TestCase
                      c.getProperties().getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
         assertEquals("{" + u2.toString().toUpperCase() + "}", 
                      c.getProperties().getValue(PropertyMap.GUID_PROP));
-      }
     }
   }
 

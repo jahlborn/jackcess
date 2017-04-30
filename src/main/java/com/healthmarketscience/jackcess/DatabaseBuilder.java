@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
+import com.healthmarketscience.jackcess.Database.FileFormat;
 import com.healthmarketscience.jackcess.impl.CodecProvider;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
@@ -257,6 +258,11 @@ public class DatabaseBuilder
    * Creates a new Database using the configured information.
    */
   public Database create() throws IOException {
+    if (_fileFormat == FileFormat.GENERIC_JET4 && _userProps != null) {
+      throw new UnsupportedOperationException(
+          "Cannot create a GENERIC_JET4 file with user-defined properties");      
+    }
+    
     Database db = DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
                                       _charset, _timeZone);
     if(_dbProps != null) {
