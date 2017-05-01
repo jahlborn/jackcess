@@ -743,8 +743,10 @@ public class DatabaseTest extends TestCase
                         "MSysRelationships"));
       
       if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
-        assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
-        sysTables.add("MSysAccessObjects");
+        if (fileFormat != FileFormat.GENERIC_JET4) {
+          assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+          sysTables.add("MSysAccessObjects");
+        }
       } else {
         // v2003+ template files have no "MSysAccessObjects" table
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
