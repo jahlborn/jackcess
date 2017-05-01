@@ -111,7 +111,7 @@ public class DatabaseImpl implements Database
 
   static {
     addFileFormatDetails(FileFormat.V1997, null, JetFormat.VERSION_3);
-    addFileFormatDetails(FileFormat.GENERIC_JET4, "emptyJet4", JetFormat.VERSION_4);
+    addFileFormatDetails(FileFormat.GENERIC_JET4, null, JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2000, "empty2000", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2003, "empty2003", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
@@ -1951,7 +1951,7 @@ public class DatabaseImpl implements Database
    * Copies the given InputStream to the given channel using the most
    * efficient means possible.
    */
-  private static void transferFrom(FileChannel channel, InputStream in)
+  public static void transferFrom(FileChannel channel, InputStream in)
     throws IOException
   {
     ReadableByteChannel readChannel = Channels.newChannel(in);

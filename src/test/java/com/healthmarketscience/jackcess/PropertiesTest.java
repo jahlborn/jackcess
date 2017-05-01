@@ -355,12 +355,12 @@ public class PropertiesTest extends TestCase
             .setFileFormat(ff)
             .putUserDefinedProperty("testing", "123")
             .create();
-        } catch (UnsupportedOperationException uoe) {
+        } catch (java.io.IOException ioe) {
           if (ff == FileFormat.GENERIC_JET4) {
             // exception was expected; skip the rest of this test 
             break;
           } else {
-            throw uoe;
+            throw ioe;
           }
         }
   

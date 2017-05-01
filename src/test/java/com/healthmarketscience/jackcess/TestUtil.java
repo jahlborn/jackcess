@@ -121,9 +121,27 @@ public class TestUtil
                                  boolean inMem) 
     throws Exception 
   {
+    Database db = null;
     FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
-    return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
-      .setAutoSync(getTestAutoSync()).setChannel(channel).create();
+    if (fileFormat == FileFormat.GENERIC_JET4) {
+      InputStream inStream = TestUtil.class.getClassLoader().getResourceAsStream("emptyJet4.mdb");
+      File f = createTempFile(keep);
+      if (channel != null) {
+        DatabaseImpl.transferFrom(channel, inStream);
+      } else {
+        java.nio.file.Files.copy(
+            inStream, 
+            f.toPath(), 
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+      }
+      inStream.close();
+      db = new DatabaseBuilder(f)
+          .setAutoSync(getTestAutoSync()).setChannel(channel).open();
+    } else {
+      db = new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
+        .setAutoSync(getTestAutoSync()).setChannel(channel).create();
+    }
+    return db;
   }
 
 
