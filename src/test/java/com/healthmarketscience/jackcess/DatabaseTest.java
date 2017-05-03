@@ -742,7 +742,9 @@ public class DatabaseTest extends TestCase
           Arrays.asList("MSysObjects", "MSysQueries", "MSysACES",
                         "MSysRelationships"));
       
-      if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
+      if (fileFormat == FileFormat.GENERIC_JET4) {
+        assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+      } else if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
         assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
         sysTables.add("MSysAccessObjects");
       } else {

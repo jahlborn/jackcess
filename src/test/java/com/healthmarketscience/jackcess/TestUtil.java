@@ -41,6 +41,7 @@ import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import com.healthmarketscience.jackcess.impl.JetFormatTest.TestDB;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
@@ -122,8 +123,32 @@ public class TestUtil
     throws Exception 
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
+
+    if (fileFormat == FileFormat.GENERIC_JET4) {
+      // while we don't support creating GENERIC_JET4 as a jackcess feature,
+      // we do want to be able to test these types of dbs
+      InputStream inStream = null;
+      OutputStream outStream = null;
+      try {
+        inStream = TestUtil.class.getClassLoader()
+          .getResourceAsStream("emptyJet4.mdb");
+        File f = createTempFile(keep);
+        if (channel != null) {
+          JetFormatTest.transferFrom(channel, inStream);
+        } else {
+          ByteUtil.copy(inStream, outStream = new FileOutputStream(f));
+          outStream.close();
+        }
+        return new DatabaseBuilder(f)
+          .setAutoSync(getTestAutoSync()).setChannel(channel).open();
+      } finally {
+        ByteUtil.closeQuietly(inStream);
+        ByteUtil.closeQuietly(outStream);
+      }
+    }
+     
     return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
-      .setAutoSync(getTestAutoSync()).setChannel(channel).create();
+        .setAutoSync(getTestAutoSync()).setChannel(channel).create();
   }
 
 

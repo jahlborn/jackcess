@@ -1951,7 +1951,7 @@ public class DatabaseImpl implements Database
    * Copies the given InputStream to the given channel using the most
    * efficient means possible.
    */
-  private static void transferFrom(FileChannel channel, InputStream in)
+  static void transferFrom(FileChannel channel, InputStream in)
     throws IOException
   {
     ReadableByteChannel readChannel = Channels.newChannel(in);

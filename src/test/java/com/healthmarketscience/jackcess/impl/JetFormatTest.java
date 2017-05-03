@@ -1,6 +1,8 @@
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
 import java.util.ArrayList;
@@ -263,4 +265,9 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  public static void transferFrom(FileChannel channel, InputStream in)
+    throws IOException
+  {
+    DatabaseImpl.transferFrom(channel, in);
+  }
 }

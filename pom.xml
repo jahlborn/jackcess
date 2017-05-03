@@ -128,10 +128,6 @@
                 <value>log4j_test.properties</value>
               </property>
               <property>
-                <name>com.healthmarketscience.jackcess.bigIndex</name>
-                <value>${jackcess.bigIndex}</value>
-              </property>
-              <property>
                 <name>com.healthmarketscience.jackcess.testFormats</name>
                 <value>${jackcess.testFormats}</value>
               </property>
@@ -247,6 +243,7 @@
           <issueLinkTemplatePerSystem>
             <SourceForge2Features>http://sourceforge.net/p/jackcess/feature-requests/%ISSUE%</SourceForge2Features>
             <SourceForge2Patches>http://sourceforge.net/p/jackcess/patches/%ISSUE%</SourceForge2Patches>
+            <GitHubPullRequests>https://github.com/jahlborn/jackcess/pull/%ISSUE%</GitHubPullRequests>
           </issueLinkTemplatePerSystem>
         </configuration>
       </plugin>
@@ -312,8 +309,4 @@
       <url>scp://shell.sourceforge.net/home/project-web/jackcess/htdocs</url>
     </site>    
   </distributionManagement>
-  <properties>
-    <jackcess.bigIndex>true</jackcess.bigIndex>
-    <jackcess.testFormats>V1997,V2000,V2003,V2007,V2010</jackcess.testFormats>
-  </properties>
 </project>
