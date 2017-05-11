@@ -100,6 +100,18 @@ public abstract class CustomLinkResolver implements LinkResolver
     _defaultTempDir = defaultTempDir;
   }
 
+  protected FileFormat getDefaultFormat() {
+    return _defaultFormat;
+  }
+
+  protected boolean isDefaultInMemory() {
+    return _defaultInMemory;
+  }
+
+  protected File getDefaultTempDirectory() {
+    return _defaultTempDir;
+  }
+
   /**
    * Custom implementation is:
    * <pre>
@@ -108,8 +120,8 @@ public abstract class CustomLinkResolver implements LinkResolver
    *   
    *   if(customFile != null) {
    *     // this is a custom file, create and return relevant temp db
-   *     return createTempDb(customFile, _defaultFormat, _defaultInMemory, 
-   *                         _defaultTempDir);
+   *     return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
+   *                         getDefaultTempDirectory());
    *   }
    *   
    *   // not a custmom file, load using the default behavior
@@ -125,8 +137,8 @@ public abstract class CustomLinkResolver implements LinkResolver
   {
     Object customFile = loadCustomFile(linkerDb, linkeeFileName);
     if(customFile != null) {
-      return createTempDb(customFile, _defaultFormat, _defaultInMemory, 
-                          _defaultTempDir);
+      return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(), 
+                          getDefaultTempDirectory());
     }
     return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
   }
