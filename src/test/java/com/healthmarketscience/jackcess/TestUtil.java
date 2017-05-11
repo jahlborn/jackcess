@@ -85,7 +85,8 @@ public class TestUtil
   public static Database open(FileFormat fileFormat, File file, boolean inMem) 
     throws Exception 
   {
-    FileChannel channel = (inMem ? MemFileChannel.newChannel(file, "rw") 
+    FileChannel channel = (inMem ? MemFileChannel.newChannel(
+                               file, DatabaseImpl.RW_CHANNEL_MODE) 
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(getTestAutoSync()).setChannel(channel).open();
@@ -134,7 +135,7 @@ public class TestUtil
           .getResourceAsStream("emptyJet4.mdb");
         File f = createTempFile(keep);
         if (channel != null) {
-          JetFormatTest.transferFrom(channel, inStream);
+          JetFormatTest.transferDbFrom(channel, inStream);
         } else {
           ByteUtil.copy(inStream, outStream = new FileOutputStream(f));
           outStream.close();

@@ -265,9 +265,9 @@ public class JetFormatTest extends TestCase {
     }
   }
 
-  public static void transferFrom(FileChannel channel, InputStream in)
+  public static void transferDbFrom(FileChannel channel, InputStream in)
     throws IOException
   {
-    DatabaseImpl.transferFrom(channel, in);
+    DatabaseImpl.transferDbFrom(channel, in);
   }
 }

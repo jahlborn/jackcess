@@ -18,6 +18,11 @@
               issue="3">
         Allow inserting negative auto number fields, thanks to Gord Thompson.
       </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="36">
+        Add CustomLinkResolver which facilitates loading linked tables from
+        files which are not access databases.
+      </action>
     </release>
     <release version="2.1.6" date="2016-11-29">
       <action dev="jahlborn" type="update" system="SourceForge2Features"
