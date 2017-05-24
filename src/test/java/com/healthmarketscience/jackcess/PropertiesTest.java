@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.DatabaseTest.*;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
@@ -349,6 +348,12 @@ public class PropertiesTest extends TestCase
   public void testCreateDbProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS) {
+
+      if(ff == FileFormat.GENERIC_JET4) {
+        // weirdo format, no properties
+        continue;
+      }
+      
       File file = TestUtil.createTempFile(false);
       Database db = new DatabaseBuilder(file)
         .setFileFormat(ff)

@@ -242,12 +242,7 @@ public class AutoNumberTest extends TestCase
 
     assertEquals(13, ((TableImpl)table).getLastLongAutoNumber());
 
-    try {
-      table.addRow(-10, "uh-uh");
-      fail("IOException should have been thrown");
-    } catch(IOException e) {
-      // success
-    }
+    table.addRow(-10, "non-positives are now allowed");
 
     row = table.addRow(Column.AUTO_NUMBER, "row14");
     assertEquals(14, ((Integer)row[0]).intValue());
@@ -262,23 +257,18 @@ public class AutoNumberTest extends TestCase
 
     assertEquals(45, ((TableImpl)table).getLastLongAutoNumber());
 
-    row13.put("a", -1);
-
-    try {
-      table.updateRow(row13);
-      fail("IOException should have been thrown");
-    } catch(IOException e) {
-      // success
-    }
+    row13.put("a", -1);  // non-positives are now allowed
+    table.updateRow(row13);
 
     assertEquals(45, ((TableImpl)table).getLastLongAutoNumber());
 
     row13.put("a", 55);
 
-    table.setAllowAutoNumberInsert(null);
+    // reset to db-level policy (which in this case is "false")
+    table.setAllowAutoNumberInsert(null);  
 
-    row13 = table.updateRow(row13);
-    assertEquals(45, row13.get("a"));
+    row13 = table.updateRow(row13);  // no change, as confirmed by...
+    assertEquals(-1, row13.get("a"));
 
     assertEquals(45, ((TableImpl)table).getLastLongAutoNumber());
     

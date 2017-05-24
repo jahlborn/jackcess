@@ -2015,7 +2015,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       throws IOException
     {
       int inAutoNum = toNumber(inRowValue).intValue();
-      if(inAutoNum <= INVALID_AUTO_NUMBER) {
+      if(inAutoNum <= INVALID_AUTO_NUMBER && !getTable().isAllowAutoNumberInsert()) {
         throw new IOException(withErrorContext(
                 "Invalid auto number value " + inAutoNum));
       }

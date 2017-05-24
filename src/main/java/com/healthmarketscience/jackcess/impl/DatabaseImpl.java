@@ -455,10 +455,10 @@ public class DatabaseImpl implements Database
     boolean success = false;
     try {
       channel.truncate(0);
-      transferFrom(channel, getResourceAsStream(details.getEmptyFilePath()));
+      transferDbFrom(channel, getResourceAsStream(details.getEmptyFilePath()));
       channel.force(true);
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
-                                 fileFormat, charset, timeZone, null);
+                                         fileFormat, charset, timeZone, null);
       success = true;
       return db;
     } finally {
@@ -509,8 +509,8 @@ public class DatabaseImpl implements Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
   protected DatabaseImpl(File file, FileChannel channel, boolean closeChannel,
-                     boolean autoSync, FileFormat fileFormat, Charset charset,
-                     TimeZone timeZone, CodecProvider provider)
+                         boolean autoSync, FileFormat fileFormat, Charset charset,
+                         TimeZone timeZone, CodecProvider provider)
     throws IOException
   {
     _file = file;
@@ -984,7 +984,7 @@ public class DatabaseImpl implements Database
    * @param includeSystemTables whether to consider returning a system table
    * @return The table, or null if it doesn't exist
    */
-  private TableImpl getTable(String name, boolean includeSystemTables) 
+  protected TableImpl getTable(String name, boolean includeSystemTables) 
     throws IOException 
   {
     TableInfo tableInfo = getTableInfo(name, includeSystemTables);
@@ -1961,10 +1961,10 @@ public class DatabaseImpl implements Database
   }
   
   /**
-   * Copies the given InputStream to the given channel using the most
+   * Copies the given db InputStream to the given channel using the most
    * efficient means possible.
    */
-  private static void transferFrom(FileChannel channel, InputStream in)
+  protected static void transferDbFrom(FileChannel channel, InputStream in)
     throws IOException
   {
     ReadableByteChannel readChannel = Channels.newChannel(in);
@@ -2004,7 +2004,7 @@ public class DatabaseImpl implements Database
     return pwdMask;
   }
 
-  static InputStream getResourceAsStream(String resourceName)
+  protected static InputStream getResourceAsStream(String resourceName)
     throws IOException
   {
     InputStream stream = DatabaseImpl.class.getClassLoader()
