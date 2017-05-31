@@ -387,9 +387,20 @@ public abstract class QueryImpl implements Query
                                  int objectId)
   {
     // remove other object flags before testing for query type
-    int typeFlag = objectFlag & OBJECT_FLAG_MASK;
+    int objTypeFlag = objectFlag & OBJECT_FLAG_MASK;
+
+    if(objTypeFlag == 0) {
+      // sometimes the query rows tell a different story
+      short rowTypeFlag = getShortValue(getQueryType(rows), objTypeFlag);
+      Type rowType = TYPE_MAP.get(rowTypeFlag);
+      if((rowType != null) && (rowType.getObjectFlag() != objTypeFlag)) {
+        // use row type instead of object flag type
+        objTypeFlag = rowType.getObjectFlag();
+      }
+    }
+
     try {
-      switch(typeFlag) {
+      switch(objTypeFlag) {
       case SELECT_QUERY_OBJECT_FLAG:
         return new SelectQueryImpl(name, rows, objectId, objectFlag);
       case MAKE_TABLE_QUERY_OBJECT_FLAG:
@@ -411,7 +422,7 @@ public abstract class QueryImpl implements Query
       default:
         // unknown querytype
         throw new IllegalStateException(withErrorContext(
-                "unknown query object flag " + typeFlag, name));
+                "unknown query object flag " + objTypeFlag, name));
       }
     } catch(IllegalStateException e) {
       LOG.warn(withErrorContext("Failed parsing query", name), e);
@@ -421,9 +432,9 @@ public abstract class QueryImpl implements Query
     return new UnknownQueryImpl(name, rows, objectId, objectFlag);
   }
 
-  private Short getQueryType(List<Row> rows)
+  private static Short getQueryType(List<Row> rows)
   {
-    return getUniqueRow(getRowsByAttribute(rows, TYPE_ATTRIBUTE)).flag;
+    return getFirstRowByAttribute(rows, TYPE_ATTRIBUTE).flag;
   }
 
   private static List<Row> getRowsByAttribute(List<Row> rows, Byte attribute) {
@@ -434,6 +445,15 @@ public abstract class QueryImpl implements Query
       }
     }
     return result;
+  }
+
+  private static Row getFirstRowByAttribute(List<Row> rows, Byte attribute) {
+    for(Row row : rows) {
+      if(attribute.equals(row.attribute)) {
+        return row;
+      }
+    }
+    return EMPTY_ROW;
   }
 
   protected Row getUniqueRow(List<Row> rows) {

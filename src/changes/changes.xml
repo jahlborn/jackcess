@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.8" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="142">
+        Fix parsing of certain internal-use queries (such as those used as the
+        data source for the fields in a form).
+      </action>
+    </release>
     <release version="2.1.7" date="2017-05-17">
       <action dev="jahlborn" type="update">
         Implement support for partial index lookups.  Efficient IndexCursor
