@@ -60,6 +60,10 @@ public class RelationshipCreator extends DBMutator
   {
     super(database);
   }
+  
+  public String getName() {
+    return _name;
+  }
 
   public TableImpl getPrimaryTable() {
     return _primaryTable;
@@ -89,6 +93,7 @@ public class RelationshipCreator extends DBMutator
     throws IOException 
   {
     _relationship = relationship;
+    _name = relationship.getName();
     
     validate();
 
