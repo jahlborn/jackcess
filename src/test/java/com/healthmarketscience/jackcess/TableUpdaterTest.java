@@ -44,7 +44,7 @@ public class TableUpdaterTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      doTestUpdating(db, false, true);
+      doTestUpdating(db, false, true, null);
  
       db.close();
     }    
@@ -54,7 +54,7 @@ public class TableUpdaterTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      doTestUpdating(db, true, true);
+      doTestUpdating(db, true, true, null);
  
       db.close();
     }    
@@ -64,13 +64,23 @@ public class TableUpdaterTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      doTestUpdating(db, false, false);
+      doTestUpdating(db, false, false, null);
  
       db.close();
     }    
   }
 
-  private void doTestUpdating(Database db, boolean oneToOne, boolean enforce) 
+  public void testTableUpdatingNamedRelationship() throws Exception {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      doTestUpdating(db, false, true, "FKnun3jvv47l9kyl74h85y8a0if");
+ 
+      db.close();
+    }    
+  }
+
+  private void doTestUpdating(Database db, boolean oneToOne, boolean enforce, String relationshipName) 
     throws Exception
   {
     Table t1 = new TableBuilder("TestTable")
@@ -111,10 +121,18 @@ public class TableUpdaterTest extends TestCase
       rb.setReferentialIntegrity()
         .setCascadeDeletes();
     }
+    
+    if (relationshipName != null) {
+      rb.setName(relationshipName);
+    }
 
     Relationship rel = rb.toRelationship(db);
 
-    assertEquals("TestTableTestTable2", rel.getName());
+    if (relationshipName == null) {
+      assertEquals("TestTableTestTable2", rel.getName());
+    } else {
+      assertEquals(relationshipName, rel.getName());
+    }
     assertSame(t1, rel.getFromTable());
     assertEquals(Arrays.asList(t1.getColumn("id")), rel.getFromColumns());
     assertSame(t2, rel.getToTable());
