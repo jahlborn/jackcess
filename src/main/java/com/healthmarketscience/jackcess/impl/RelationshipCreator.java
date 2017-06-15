@@ -170,6 +170,11 @@ public class RelationshipCreator extends DBMutator
           "Two valid tables are required in relationship"));
     }
 
+    if(_name != null) {
+      DatabaseImpl.validateIdentifierName(
+          _name, _primaryTable.getFormat().MAX_INDEX_NAME_LENGTH, "relationship");
+    }
+
     _primaryCols = getColumns(_primaryTable, _relationship.getFromColumns());
     _secondaryCols = getColumns(_secondaryTable, _relationship.getToColumns());
     
