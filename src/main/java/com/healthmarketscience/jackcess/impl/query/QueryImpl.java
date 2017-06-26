@@ -267,7 +267,7 @@ public abstract class QueryImpl implements Query
     return result;
   }
 
-  private Join getJoinExpr(String table, List<Join> joinExprs)
+  private static Join getJoinExpr(String table, List<Join> joinExprs)
   {
     for(Iterator<Join> iter = joinExprs.iterator(); iter.hasNext(); ) {
       Join joinExpr = iter.next();
@@ -276,8 +276,9 @@ public abstract class QueryImpl implements Query
         return joinExpr;
       }
     }
-    throw new IllegalStateException(withErrorContext(
-            "Cannot find join table " + table));
+    // just use the table name as is
+    return new Join(table, toOptionalQuotedExpr(new StringBuilder(), 
+                                                table, true).toString());
   }
 
   private Collection<List<Row>> combineJoins(List<Row> joins)

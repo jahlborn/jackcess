@@ -408,12 +408,9 @@ public class QueryTest extends TestCase
 
     addRows(query, newRow(JOIN_ATTRIBUTE, "(Table1.id = Table3Val.id)", 1, "BogusTable", "Table3Val"));
 
-    try {
-      query.toSQLString();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
+    assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
+                           "FROM BogusTable INNER JOIN ((Table1 INNER JOIN Table2 AS [Another Table] ON (Table1.id = [Another Table].id)) LEFT JOIN [Select val from Table3].val AS Table3Val ON (Table1.id = Table3Val.id)) ON (Table1.id = Table3Val.id);"),
+                 query.toSQLString());
 
     removeRows(query, JOIN_ATTRIBUTE);
   }
