@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.8" date="TBD">
+    <release version="2.1.8" date="2017-06-25">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="142">
         Fix parsing of certain internal-use queries (such as those used as the
         data source for the fields in a form).
