@@ -196,7 +196,7 @@ public class QueryTest extends TestCase
       expectedQueries.put(
           "SelectQuery", multiline(
               "SELECT DISTINCT Table1.*, Table2.col1, Table2.col2, Table3.col3",
-              "FROM (Table1 LEFT JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col1) AND (Table3.col1 = Table2.col2)",
+              "FROM (Table1 LEFT JOIN Table3 ON Table1.col1 = Table3.col1) INNER JOIN Table2 ON (Table3.col1 = Table2.col2) AND (Table3.col1 = Table2.col1)",
               "WHERE (((Table2.col2)=\"foo\" Or (Table2.col2) In (\"buzz\",\"bazz\")))",
               "ORDER BY Table2.col1;"));
       expectedQueries.put(
@@ -464,6 +464,118 @@ public class QueryTest extends TestCase
                  query.toSQLString());    
   }
 
+  public void testComplexJoins() throws Exception
+  {
+    SelectQuery query = (SelectQuery)newQuery(
+        Query.Type.SELECT, new Row[0]);
+    setFlag(query, 1);
+
+    for(int i = 1; i <= 10; ++i) {
+      addRows(query, newRow(TABLE_ATTRIBUTE, null, "Table" + i, null));
+    }
+
+    addJoinRows(query, 1, 2, 1,
+                2, 3, 1,
+                3, 4, 1);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table5, Table6, Table7, Table8, Table9, Table10, ((Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN Table3 ON Table2.f3 = Table3.f3) INNER JOIN Table4 ON Table3.f6 = Table4.f6;"),
+                 query.toSQLString());
+
+    addJoinRows(query, 1, 2, 1,
+                2, 1, 1);
+    
+    assertEquals(multiline("SELECT *",
+                           "FROM Table3, Table4, Table5, Table6, Table7, Table8, Table9, Table10, Table1 INNER JOIN Table2 ON (Table2.f3 = Table1.f3) AND (Table1.f0 = Table2.f0);"),
+                 query.toSQLString());
+
+    addJoinRows(query, 1, 2, 1,
+                2, 1, 2);
+
+    try {
+      query.toSQLString();
+      fail("IllegalStateException should have been thrown");
+    } catch(IllegalStateException e) {
+      // success
+    }
+    
+    addJoinRows(query, 1, 2, 1,
+                3, 4, 1,
+                5, 6, 1,
+                7, 8, 1,
+                2, 3, 1);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table9, Table10, Table5 INNER JOIN Table6 ON Table5.f6 = Table6.f6, Table7 INNER JOIN Table8 ON Table7.f9 = Table8.f9, (Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN (Table3 INNER JOIN Table4 ON Table3.f3 = Table4.f3) ON Table2.f12 = Table3.f12;"),
+                 query.toSQLString());
+
+    addJoinRows(query, 1, 2, 1,
+                3, 4, 1,
+                5, 6, 1,
+                7, 8, 1,
+                2, 3, 1,
+                5, 8, 1);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table9, Table10, (Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN (Table3 INNER JOIN Table4 ON Table3.f3 = Table4.f3) ON Table2.f12 = Table3.f12, (Table5 INNER JOIN Table6 ON Table5.f6 = Table6.f6) INNER JOIN (Table7 INNER JOIN Table8 ON Table7.f9 = Table8.f9) ON Table5.f15 = Table8.f15;"),
+                 query.toSQLString());
+
+    addJoinRows(query, 1, 2, 1,
+                1, 3, 1,
+                6, 3, 1,
+                1, 9, 2,
+                10, 9, 3,
+                7, 8, 3,
+                1, 8, 2,
+                1, 4, 2,
+                5, 4, 3);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table5 RIGHT JOIN (((Table10 RIGHT JOIN ((Table6 INNER JOIN ((Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN Table3 ON Table1.f3 = Table3.f3) ON Table6.f6 = Table3.f6) LEFT JOIN Table9 ON Table1.f9 = Table9.f9) ON Table10.f12 = Table9.f12) LEFT JOIN (Table7 RIGHT JOIN Table8 ON Table7.f15 = Table8.f15) ON Table1.f18 = Table8.f18) LEFT JOIN Table4 ON Table1.f21 = Table4.f21) ON Table5.f24 = Table4.f24;"),
+                 query.toSQLString());
+
+    addJoinRows(query, 1, 2, 1,
+                1, 3, 1,
+                1, 9, 2,
+                1, 8, 2,
+                1, 4, 2,
+                6, 3, 1,
+                5, 4, 3,
+                7, 8, 3,
+                10, 9, 3);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table10 RIGHT JOIN (Table7 RIGHT JOIN (Table5 RIGHT JOIN (Table6 INNER JOIN (((((Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN Table3 ON Table1.f3 = Table3.f3) LEFT JOIN Table9 ON Table1.f6 = Table9.f6) LEFT JOIN Table8 ON Table1.f9 = Table8.f9) LEFT JOIN Table4 ON Table1.f12 = Table4.f12) ON Table6.f15 = Table3.f15) ON Table5.f18 = Table4.f18) ON Table7.f21 = Table8.f21) ON Table10.f24 = Table9.f24;"),
+                 query.toSQLString());
+
+
+    removeRows(query, TABLE_ATTRIBUTE);
+
+    addJoinRows(query, 1, 2, 1,
+                2, 3, 1,
+                2, 4, 1,
+                1, 4, 1,
+                5, 3, 1);
+
+    assertEquals(multiline("SELECT *",
+                           "FROM Table5 INNER JOIN (((Table1 INNER JOIN Table2 ON Table1.f0 = Table2.f0) INNER JOIN Table3 ON Table2.f3 = Table3.f3) INNER JOIN Table4 ON (Table1.f9 = Table4.f9) AND (Table2.f6 = Table4.f6)) ON Table5.f12 = Table3.f12;"),
+                 query.toSQLString());
+  }
+
+  private static void addJoinRows(SelectQuery query, int... joins)
+  {
+    removeRows(query, JOIN_ATTRIBUTE);
+    for(int i = 0; i < joins.length; i += 3) {
+      int from = joins[i + 0];
+      int to = joins[i + 1];
+      int type = joins[i + 2];
+
+      String tf = "Table" + from;
+      String tt = "Table" + to;
+      String joinExpr = tf + ".f" + i + " = " + tt + ".f" + i;
+      addRows(query, newRow(JOIN_ATTRIBUTE, joinExpr, type, tf, tt));
+    }
+  }
 
   private static Query newQuery(Query.Type type, Row... rows)
   {
