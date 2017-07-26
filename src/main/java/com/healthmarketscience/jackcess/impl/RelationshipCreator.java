@@ -60,6 +60,10 @@ public class RelationshipCreator extends DBMutator
   {
     super(database);
   }
+  
+  public String getName() {
+    return _name;
+  }
 
   public TableImpl getPrimaryTable() {
     return _primaryTable;
@@ -89,6 +93,7 @@ public class RelationshipCreator extends DBMutator
     throws IOException 
   {
     _relationship = relationship;
+    _name = relationship.getName();
     
     validate();
 
@@ -163,6 +168,11 @@ public class RelationshipCreator extends DBMutator
     if((_primaryTable == null) || (_secondaryTable == null)) {
       throw new IllegalArgumentException(withErrorContext(
           "Two valid tables are required in relationship"));
+    }
+
+    if(_name != null) {
+      DatabaseImpl.validateIdentifierName(
+          _name, _primaryTable.getFormat().MAX_INDEX_NAME_LENGTH, "relationship");
     }
 
     _primaryCols = getColumns(_primaryTable, _relationship.getFromColumns());

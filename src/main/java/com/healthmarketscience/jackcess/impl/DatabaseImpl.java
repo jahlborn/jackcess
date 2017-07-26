@@ -1250,12 +1250,15 @@ public class DatabaseImpl implements Database
     // - the total name is limited to (max - 3)
     int maxIdLen = getFormat().MAX_INDEX_NAME_LENGTH;
     int limit = (maxIdLen / 2) - 3;
-    String origName = creator.getPrimaryTable().getName();
-    if(origName.length() > limit) {
-      origName = origName.substring(0, limit);
+    String origName = creator.getName();
+    if (origName == null) {
+      origName = creator.getPrimaryTable().getName();
+      if(origName.length() > limit) {
+        origName = origName.substring(0, limit);
+      }
+      origName += creator.getSecondaryTable().getName();
     }
     limit = maxIdLen - 3;
-    origName += creator.getSecondaryTable().getName();
     if(origName.length() > limit) {
       origName = origName.substring(0, limit);
     }

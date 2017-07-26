@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.query.Query;
 import org.apache.commons.lang.SystemUtils;
 
 /**
@@ -48,7 +49,7 @@ public class QueryFormat
   // dbQAction = 240
 
   // mask which removes superfluous flags from object flags
-  static final int OBJECT_FLAG_MASK = 0XF0;
+  static final int OBJECT_FLAG_MASK = 0xF0;
 
   public static final String COL_ATTRIBUTE = "Attribute";
   public static final String COL_EXPRESSION = "Expression";
@@ -128,6 +129,16 @@ public class QueryFormat
     JOIN_TYPE_MAP.put((short)1, " INNER JOIN ");
     JOIN_TYPE_MAP.put((short)2, " LEFT JOIN ");
     JOIN_TYPE_MAP.put((short)3, " RIGHT JOIN ");
+  }
+
+  public static final Map<Short,Query.Type> TYPE_MAP = 
+    new HashMap<Short,Query.Type>();
+  static {
+    for(Query.Type type : Query.Type.values()) {
+      if(type != Query.Type.UNKNOWN) {
+        TYPE_MAP.put(type.getValue(), type);
+      }
+    }
   }
 
 }

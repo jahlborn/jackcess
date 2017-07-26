@@ -57,7 +57,8 @@ public class RelationshipBuilder
   private String _fromTable;
   private String _toTable;
   private List<String> _fromCols = new ArrayList<String>();
-  private List<String> _toCols = new ArrayList<String>(); 
+  private List<String> _toCols = new ArrayList<String>();
+  private String _name = null;
 
   public RelationshipBuilder(Table fromTable, Table toTable) {
     this(fromTable.getName(), toTable.getName());
@@ -142,6 +143,16 @@ public class RelationshipBuilder
     }
     return this;
   }
+  
+  /**
+   * Sets a specific name for this relationship.
+   * 
+   * Default = null, meaning that the standard Access naming convention will be used. 
+   */
+  public RelationshipBuilder setName(String relationshipName) {
+    _name = relationshipName;
+    return this;
+  }
 
   public boolean hasReferentialIntegrity() {
     return !hasFlag(RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG);
@@ -165,6 +176,10 @@ public class RelationshipBuilder
 
   public List<String> getToColumns() {
     return _toCols;
+  }
+  
+  public String getName() {
+    return _name;
   }
   
   /**

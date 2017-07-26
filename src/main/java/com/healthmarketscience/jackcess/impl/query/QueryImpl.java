@@ -17,12 +17,9 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.query;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
@@ -193,7 +190,8 @@ public abstract class QueryImpl implements Query
 
   protected List<String> getFromTables() 
   {
-    List<Join> joinExprs = new ArrayList<Join>();
+    // grab the list of query tables
+    List<TableSource> tableExprs = new ArrayList<TableSource>();
     for(Row table : getTableRows()) {
       StringBuilder builder = new StringBuilder();
 
@@ -206,100 +204,72 @@ public abstract class QueryImpl implements Query
       toAlias(builder, table.name2);
 
       String key = ((table.name2 != null) ? table.name2 : table.name1);
-      joinExprs.add(new Join(key, builder.toString()));
+      tableExprs.add(new SimpleTable(key, builder.toString()));
     }
 
-
+    // combine the tables with any query joins
     List<Row> joins = getJoinRows();
-    if(!joins.isEmpty()) {
+    for(Row joinRow : joins) {
+        
+      String fromTable = joinRow.name1;
+      String toTable = joinRow.name2;
 
-      // combine any multi-column joins
-      Collection<List<Row>> comboJoins = combineJoins(joins);
-      
-      for(List<Row> comboJoin : comboJoins) {
+      TableSource fromTs = null;
+      TableSource toTs = null;
 
-        Row join = comboJoin.get(0);
-        String joinExpr = join.expression;
+      // combine existing join expressions containing the target tables
+      for(Iterator<TableSource> joinIter = tableExprs.iterator(); 
+          (joinIter.hasNext() && ((fromTs == null) || (toTs == null))); ) {
+        TableSource ts = joinIter.next();
 
-        if(comboJoin.size() > 1) {
+        if((fromTs == null) && ts.containsTable(fromTable)) {
+          fromTs = ts;
 
-          // combine all the join expressions with "AND"
-          AppendableList<String> comboExprs = new AppendableList<String>() {
-            private static final long serialVersionUID = 0L;
-            @Override
-            protected String getSeparator() {
-              return ") AND (";
-            }
-          };
-          for(Row tmpJoin : comboJoin) {
-            comboExprs.add(tmpJoin.expression);
+          // special case adding expr to existing join
+          if((toTs == null) && ts.containsTable(toTable)) {
+            toTs = ts;
+            break;
           }
 
-          joinExpr = new StringBuilder().append("(")
-            .append(comboExprs).append(")").toString();
+          joinIter.remove();
+
+        } else if((toTs == null) && ts.containsTable(toTable)) {
+
+          toTs = ts;
+          joinIter.remove();
         }
-
-        String fromTable = join.name1;
-        String toTable = join.name2;
-      
-        Join fromExpr = getJoinExpr(fromTable, joinExprs);
-        Join toExpr = getJoinExpr(toTable, joinExprs);
-        String joinType = JOIN_TYPE_MAP.get(join.flag);
-        if(joinType == null) {
-          throw new IllegalStateException(withErrorContext(
-                "Unknown join type " + join.flag));
-        }
-
-        String expr = new StringBuilder().append(fromExpr)
-          .append(joinType).append(toExpr).append(" ON ")
-          .append(joinExpr).toString();
-
-        fromExpr.join(toExpr, expr);
-        joinExprs.add(fromExpr);
       }
+
+      if(fromTs == null) {
+        fromTs = new SimpleTable(fromTable);
+      }
+      if(toTs == null) {
+        toTs = new SimpleTable(toTable);
+      }
+
+      if(fromTs == toTs) {
+
+        if(fromTs.sameJoin(joinRow.flag, joinRow.expression)) {
+          // easy-peasy, we just added the join expression to existing join,
+          // nothing more to do
+          continue;
+        }
+
+        throw new IllegalStateException(withErrorContext(
+                "Inconsistent join types for " + fromTable + " and " + toTable));
+      }
+
+      // new join expression
+      tableExprs.add(new Join(fromTs, toTs, joinRow.flag, joinRow.expression));
     }
 
+    // convert join objects to SQL strings
     List<String> result = new AppendableList<String>();
-    for(Join joinExpr : joinExprs) {
-      result.add(joinExpr.expression);
+    for(TableSource ts : tableExprs) {
+      result.add(ts.toString());
     }
 
     return result;
-  }
-
-  private Join getJoinExpr(String table, List<Join> joinExprs)
-  {
-    for(Iterator<Join> iter = joinExprs.iterator(); iter.hasNext(); ) {
-      Join joinExpr = iter.next();
-      if(joinExpr.tables.contains(table)) {
-        iter.remove();
-        return joinExpr;
-      }
-    }
-    throw new IllegalStateException(withErrorContext(
-            "Cannot find join table " + table));
-  }
-
-  private Collection<List<Row>> combineJoins(List<Row> joins)
-  {
-    // combine joins with the same to/from tables
-    Map<List<String>,List<Row>> comboJoinMap = 
-      new LinkedHashMap<List<String>,List<Row>>();
-    for(Row join : joins) {
-      List<String> key = Arrays.asList(join.name1, join.name2);
-      List<Row> comboJoins = comboJoinMap.get(key);
-      if(comboJoins == null) {
-        comboJoins = new ArrayList<Row>();
-        comboJoinMap.put(key, comboJoins);
-      } else {
-        if(comboJoins.get(0).flag != (short)join.flag) {
-          throw new IllegalStateException(withErrorContext(
-              "Mismatched join flags for combo joins"));
-        }
-      }
-      comboJoins.add(join);
-    }
-    return comboJoinMap.values();
   }
 
   protected String getFromRemoteDbPath() 
@@ -387,9 +357,20 @@ public abstract class QueryImpl implements Query
                                  int objectId)
   {
     // remove other object flags before testing for query type
-    int typeFlag = objectFlag & OBJECT_FLAG_MASK;
+    int objTypeFlag = objectFlag & OBJECT_FLAG_MASK;
+
+    if(objTypeFlag == 0) {
+      // sometimes the query rows tell a different story
+      short rowTypeFlag = getShortValue(getQueryType(rows), objTypeFlag);
+      Type rowType = TYPE_MAP.get(rowTypeFlag);
+      if((rowType != null) && (rowType.getObjectFlag() != objTypeFlag)) {
+        // use row type instead of object flag type
+        objTypeFlag = rowType.getObjectFlag();
+      }
+    }
+
     try {
-      switch(typeFlag) {
+      switch(objTypeFlag) {
       case SELECT_QUERY_OBJECT_FLAG:
         return new SelectQueryImpl(name, rows, objectId, objectFlag);
       case MAKE_TABLE_QUERY_OBJECT_FLAG:
@@ -411,7 +392,7 @@ public abstract class QueryImpl implements Query
       default:
         // unknown querytype
         throw new IllegalStateException(withErrorContext(
-                "unknown query object flag " + typeFlag, name));
+                "unknown query object flag " + objTypeFlag, name));
       }
     } catch(IllegalStateException e) {
       LOG.warn(withErrorContext("Failed parsing query", name), e);
@@ -421,9 +402,9 @@ public abstract class QueryImpl implements Query
     return new UnknownQueryImpl(name, rows, objectId, objectFlag);
   }
 
-  private Short getQueryType(List<Row> rows)
+  private static Short getQueryType(List<Row> rows)
   {
-    return getUniqueRow(getRowsByAttribute(rows, TYPE_ATTRIBUTE)).flag;
+    return getFirstRowByAttribute(rows, TYPE_ATTRIBUTE).flag;
   }
 
   private static List<Row> getRowsByAttribute(List<Row> rows, Byte attribute) {
@@ -434,6 +415,15 @@ public abstract class QueryImpl implements Query
       }
     }
     return result;
+  }
+
+  private static Row getFirstRowByAttribute(List<Row> rows, Byte attribute) {
+    for(Row row : rows) {
+      if(attribute.equals(row.attribute)) {
+        return row;
+      }
+    }
+    return EMPTY_ROW;
   }
 
   protected Row getUniqueRow(List<Row> rows) {
@@ -708,27 +698,127 @@ public abstract class QueryImpl implements Query
     }
   }
 
-  private static final class Join
+  /**
+   * Base type of something which provides table data in a query
+   */
+  private static abstract class TableSource
   {
-    public final List<String> tables = new ArrayList<String>();
-    public boolean isJoin;
-    public String expression;
-
-    private Join(String table, String expr) {
-      tables.add(table);
-      expression = expr;
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      toString(sb, true);
+      return sb.toString();
     }
 
-    public void join(Join other, String newExpr) {
-      tables.addAll(other.tables);
-      isJoin = true;
-      expression = newExpr;
+    protected abstract void toString(StringBuilder sb, boolean isTopLevel);
+
+    public abstract boolean containsTable(String table);
+
+    public abstract boolean sameJoin(short type, String on);
+  }
+
+  /**
+   * Table data provided by a single table expression.
+   */
+  private static final class SimpleTable extends TableSource
+  {
+    private final String _tableName;
+    private final String _tableExpr;
+
+    private SimpleTable(String tableName) {
+      this(tableName, toOptionalQuotedExpr(
+               new StringBuilder(), tableName, true).toString());
+    }
+
+    private SimpleTable(String tableName, String tableExpr) {
+      _tableName = tableName;
+      _tableExpr = tableExpr;
     }
 
     @Override
-    public String toString() {
-      return (isJoin ? ("(" + expression + ")") : expression);
+    protected void toString(StringBuilder sb, boolean isTopLevel) {
+      sb.append(_tableExpr);
+    }
+
+    @Override
+    public boolean containsTable(String table) {
+      return _tableName.equalsIgnoreCase(table);
+    }
+
+    @Override
+    public boolean sameJoin(short type, String on) {
+      return false;
     }
   }
 
+  /**
+   * Table data provided by a join expression.
+   */
+  private final class Join extends TableSource
+  {
+    private final TableSource _from;
+    private final TableSource _to;
+    private final short _jType;
+    // combine all the join expressions with "AND"
+    private final List<String> _on = new AppendableList<String>() {
+      private static final long serialVersionUID = 0L;
+      @Override
+      protected String getSeparator() {
+        return ") AND (";
+      }
+    };
+
+    private Join(TableSource from, TableSource to, short type, String on) {
+      _from = from;
+      _to = to;
+      _jType = type;
+      _on.add(on);
+    }
+
+    @Override
+    protected void toString(StringBuilder sb, boolean isTopLevel) {
+      String joinType = JOIN_TYPE_MAP.get(_jType);
+      if(joinType == null) {
+        throw new IllegalStateException(withErrorContext(
+                                            "Unknown join type " + _jType));
+      }
+
+      if(!isTopLevel) {
+        sb.append("(");
+      }
+
+      _from.toString(sb, false);
+      sb.append(joinType);
+      _to.toString(sb, false);
+      sb.append(" ON ");
+
+      boolean multiOnExpr = (_on.size() > 1);
+      if(multiOnExpr) {
+        sb.append("(");
+      }
+      sb.append(_on);
+      if(multiOnExpr) {
+        sb.append(")");
+      }
+
+      if(!isTopLevel) {
+        sb.append(")");
+      }
+    }
+
+    @Override
+    public boolean containsTable(String table) {
+      return _from.containsTable(table) || _to.containsTable(table);
+    }
+
+    @Override
+    public boolean sameJoin(short type, String on) {
+      if(_jType == type) {
+        // note, AND conditions are added in _reverse_ order
+        _on.add(0, on);
+        return true;
+      }
+      return false;
+    }
+  }
 }
