@@ -51,6 +51,7 @@ public class BuiltinOperators
   public static final Value TRUE_VAL = new LongValue(-1L);
   public static final Value FALSE_VAL = new LongValue(0L);
   public static final Value EMPTY_STR_VAL = new StringValue("");
+  public static final Value ZERO_VAL = FALSE_VAL;
 
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
