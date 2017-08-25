@@ -30,7 +30,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import junit.framework.TestCase;
-import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang3.SystemUtils;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**

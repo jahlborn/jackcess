@@ -29,9 +29,9 @@ import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
 import junit.framework.TestCase;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
-import static org.apache.commons.lang.SystemUtils.LINE_SEPARATOR;
+import static org.apache.commons.lang3.SystemUtils.LINE_SEPARATOR;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;

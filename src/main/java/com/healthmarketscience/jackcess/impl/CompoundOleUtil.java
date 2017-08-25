@@ -32,7 +32,7 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.OleUtil.*;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.poi.poifs.filesystem.DirectoryEntry;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
@@ -87,7 +87,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
    * @throws IOException if some other io error occurs
    */
   public static DocumentEntry getDocumentEntry(String entryName,
-                                               DirectoryEntry dir) 
+                                               DirectoryEntry dir)
     throws IOException 
   {
     // split entry name into individual components and decode them

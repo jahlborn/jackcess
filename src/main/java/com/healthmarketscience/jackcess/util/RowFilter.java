@@ -22,7 +22,7 @@ import java.util.NoSuchElementException;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
-import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang3.ObjectUtils;
 
 
 /**

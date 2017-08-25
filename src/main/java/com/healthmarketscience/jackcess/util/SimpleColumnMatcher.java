@@ -23,7 +23,7 @@ import java.util.Arrays;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * Simple concrete implementation of ColumnMatcher which tests for equality.
@@ -71,7 +71,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
    */
   private static boolean equals(Object o1, Object o2)
   {
-    return (ObjectUtils.equals(o1, o2) || 
+    return (ObjectUtils.equals(o1, o2) ||
             ((o1 instanceof byte[]) && (o2 instanceof byte[]) &&
              Arrays.equals((byte[])o1, (byte[])o2)));
   }

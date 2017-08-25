@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.query.Query;
-import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang3.SystemUtils;
 
 /**
  * Constants used by the query data parsing.

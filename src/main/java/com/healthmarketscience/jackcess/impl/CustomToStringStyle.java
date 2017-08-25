@@ -21,16 +21,16 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.builder.StandardToStringStyle;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Custom ToStringStyle for use with ToStringBuilder.
  *
  * @author James Ahlborn
  */
-public class CustomToStringStyle extends StandardToStringStyle 
+public class CustomToStringStyle extends StandardToStringStyle
 {
   private static final long serialVersionUID = 0L;
 
@@ -184,7 +184,7 @@ public class CustomToStringStyle extends StandardToStringStyle
   private static void appendDetail(StringBuffer buffer, ByteBuffer bb) {
     int len = bb.remaining();
     buffer.append("(").append(len).append(") ");
-    buffer.append(ByteUtil.toHexString(bb, bb.position(), 
+    buffer.append(ByteUtil.toHexString(bb, bb.position(),
                                        Math.min(len, MAX_BYTE_DETAIL_LEN)));
     if(len > MAX_BYTE_DETAIL_LEN) {
       buffer.append(" ...");
