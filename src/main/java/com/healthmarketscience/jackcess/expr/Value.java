@@ -34,7 +34,6 @@ public interface Value
     }
 
     public boolean isIntegral() {
-      // note when BOOLEAN is converted to number, it is integral
       return (this == LONG);
     }
 

@@ -595,6 +595,10 @@ public class BuiltinOperators
     return new StringValue(s);
   }
 
+  public static Value toValue(int i) {
+    return new LongValue((long)i);
+  }
+
   public static Value toValue(Long s) {
     return new LongValue(s);
   }

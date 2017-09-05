@@ -383,16 +383,24 @@ public class TestUtil
   {
     // FIXME should really be using commons io FileUtils here, but don't want
     // to add dep for one simple test method
-    byte[] buf = new byte[1024];
     OutputStream ostream = new FileOutputStream(dstFile);
     InputStream istream = new FileInputStream(srcFile);
     try {
-      int numBytes = 0;
-      while((numBytes = istream.read(buf)) >= 0) {
-        ostream.write(buf, 0, numBytes);
-      }
+      copyStream(istream, ostream);
     } finally {
       ostream.close();
+    }
+  }
+
+  static void copyStream(InputStream istream, OutputStream ostream)
+    throws IOException
+  {
+    // FIXME should really be using commons io FileUtils here, but don't want
+    // to add dep for one simple test method
+    byte[] buf = new byte[1024];
+    int numBytes = 0;
+    while((numBytes = istream.read(buf)) >= 0) {
+      ostream.write(buf, 0, numBytes);
     }
   }
 

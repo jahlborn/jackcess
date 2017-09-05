@@ -58,7 +58,7 @@ public class Expressionator
 
   
   public enum Type {
-    DEFAULT_VALUE, FIELD_VALIDATOR, RECORD_VALIDATOR;
+    DEFAULT_VALUE, EXPRESSION, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
 
   public interface ParseContext {
@@ -1908,7 +1908,8 @@ public class Expressionator
     public Object eval(EvalContext ctx) {
       switch(_type) {
       case DEFAULT_VALUE:
-        return evalDefault(ctx);
+      case EXPRESSION:
+        return evalValue(ctx);
       case FIELD_VALIDATOR:
       case RECORD_VALIDATOR:
         return evalCondition(ctx);
@@ -1930,7 +1931,7 @@ public class Expressionator
       return _expr.toString();
     }
 
-    private Object evalDefault(EvalContext ctx) {
+    private Object evalValue(EvalContext ctx) {
       Value val = _expr.eval(ctx);
 
       if(val.isNull()) {
