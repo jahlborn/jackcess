@@ -120,27 +120,16 @@ class ExpressionTokenizer
 
         case IS_COMP_FLAG:
 
-          switch(exprType) {
-          case DEFAULT_VALUE:
-
-            // special case
-            if((c == EQUALS_CHAR) && (buf.prevPos() == 0)) {
-              // a leading equals sign indicates how a default value should be
-              // evaluated
-              tokens.add(new Token(TokenType.OP, String.valueOf(c)));
-              continue;
-            }
-            // def values can't have cond at top level
-            throw new IllegalArgumentException(
-                exprType + " cannot have top-level conditional " + buf);
-
-          case FIELD_VALIDATOR:
-          case RECORD_VALIDATOR:
-
-            tokens.add(new Token(TokenType.OP, parseCompOp(c, buf)));
-            break;
+          // special case for default values
+          if((exprType == Type.DEFAULT_VALUE) && (c == EQUALS_CHAR) && 
+             (buf.prevPos() == 0)) {
+            // a leading equals sign indicates how a default value should be
+            // evaluated
+            tokens.add(new Token(TokenType.OP, String.valueOf(c)));
+            continue;
           }
-
+          
+          tokens.add(new Token(TokenType.OP, parseCompOp(c, buf)));
           break;
 
         case IS_DELIM_FLAG:

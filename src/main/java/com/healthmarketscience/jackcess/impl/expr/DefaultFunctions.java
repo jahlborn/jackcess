@@ -239,7 +239,7 @@ public class DefaultFunctions
         return BuiltinOperators.ZERO_VAL;
       }
       long lv = param1.getAsLong();
-      return BuiltinOperators.toValue(Long.toHexString(lv));
+      return BuiltinOperators.toValue(Long.toHexString(lv).toUpperCase());
     }
   });
 
@@ -533,7 +533,7 @@ public class DefaultFunctions
     }
   });
 
-  public static final Function LTRIM = registerFunc(new Func1NullIsNull("LTrim") {
+  public static final Function LTRIM = registerStringFunc(new Func1NullIsNull("LTrim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
@@ -541,7 +541,7 @@ public class DefaultFunctions
     }
   });
 
-  public static final Function RTRIM = registerFunc(new Func1NullIsNull("RTrim") {
+  public static final Function RTRIM = registerStringFunc(new Func1NullIsNull("RTrim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
@@ -549,7 +549,7 @@ public class DefaultFunctions
     }
   });
 
-  public static final Function TRIM = registerFunc(new Func1NullIsNull("Trim") {
+  public static final Function TRIM = registerStringFunc(new Func1NullIsNull("Trim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
@@ -597,7 +597,7 @@ public class DefaultFunctions
     }
   });
 
-  public static final Function STRREVERSE = registerStringFunc(new Func1("StrReverse") {
+  public static final Function STRREVERSE = registerFunc(new Func1("StrReverse") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();

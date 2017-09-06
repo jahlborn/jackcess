@@ -307,7 +307,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(cleanStr, expr.toString());
   }
 
-  private static Object eval(String exprStr) {
+  static Object eval(String exprStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
     return expr.eval(new TestEvalContext(null));
@@ -342,7 +342,7 @@ public class ExpressionatorTest extends TestCase
     }
 
     public Function getExpressionFunction(String name) {
-      return null;
+      return DefaultFunctions.getFunction(name);
     }
   }
 
