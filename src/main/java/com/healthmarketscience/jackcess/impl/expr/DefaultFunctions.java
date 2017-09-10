@@ -295,7 +295,7 @@ public class DefaultFunctions
   public static final Function CBYTE = registerFunc(new Func1("CByte") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Long lv = param1.getAsLong();
+      long lv = roundToLong(param1);
       if((lv < 0) || (lv > 255)) {
         throw new IllegalStateException("Byte code '" + lv + "' out of range ");
       }
@@ -307,7 +307,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();
-      bd.setScale(4, RoundingMode.HALF_EVEN);
+      bd = bd.setScale(4, RoundingMode.HALF_EVEN);
       return BuiltinOperators.toValue(bd);
     }
   });
@@ -341,8 +341,7 @@ public class DefaultFunctions
   public static final Function CINT = registerFunc(new Func1("CInt") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      // FIXME, fix rounding for this and clng
-      Long lv = param1.getAsLong();
+      long lv = roundToLong(param1);
       if((lv < Short.MIN_VALUE) || (lv > Short.MAX_VALUE)) {
         throw new IllegalStateException("Int value '" + lv + "' out of range ");
       }
@@ -353,7 +352,7 @@ public class DefaultFunctions
   public static final Function CLNG = registerFunc(new Func1("CLng") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Long lv = param1.getAsLong();
+      long lv = roundToLong(param1);
       if((lv < Integer.MIN_VALUE) || (lv > Integer.MAX_VALUE)) {
         throw new IllegalStateException("Long value '" + lv + "' out of range ");
       }
@@ -368,7 +367,14 @@ public class DefaultFunctions
       if((db < Float.MIN_VALUE) || (db > Float.MAX_VALUE)) {
         throw new IllegalStateException("Single value '" + db + "' out of range ");
       }
-      return BuiltinOperators.toValue(db);
+      return BuiltinOperators.toValue((double)db.floatValue());
+    }
+  });
+
+  public static final Function CSTR = registerFunc(new Func1("CStr") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(param1.getAsString());
     }
   });
 
@@ -647,6 +653,14 @@ public class DefaultFunctions
       // vbDatabaseCompare -> unsupported
       throw new IllegalStateException("Unsupported compare type " + cmpType);
     } 
+  }
+
+  private static long roundToLong(Value param) {
+    if(param.getType().isIntegral()) {
+      return param.getAsLong();
+    }
+    return param.getAsBigDecimal().setScale(0, RoundingMode.HALF_EVEN)
+      .longValue();
   }
 
   // https://www.techonthenet.com/access/functions/

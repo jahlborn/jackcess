@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -49,6 +50,22 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("f", eval("=Chr(102)"));
     assertEquals("\u263A", eval("=ChrW(9786)"));
     assertEquals("263A", eval("=Hex(9786)"));
+
+    assertEquals("blah", eval("=Nz(\"blah\")"));
+    assertEquals("", eval("=Nz(Null)"));
+    assertEquals("blah", eval("=Nz(\"blah\",\"FOO\")"));
+    assertEquals("FOO", eval("=Nz(Null,\"FOO\")"));
+
+    assertEquals("23072", eval("=Oct(9786)"));
+    assertEquals(" 9786", eval("=Str(9786)"));
+    assertEquals("-42", eval("=Str(-42)"));
+
+    assertEquals(-1L, eval("=CBool(\"1\")"));
+    assertEquals(13L, eval("=CByte(\"13\")"));
+    assertEquals(14L, eval("=CByte(\"13.7\")"));
+    assertEquals(new BigDecimal("57.1235"), eval("=CCur(\"57.12346\")"));
+    assertEquals(new Double("57.12345"), eval("=CDbl(\"57.12345\")"));
+    
   }
 
 }
