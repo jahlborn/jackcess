@@ -378,7 +378,7 @@ public class DefaultFunctions
     }
   });
 
-  // FIXME, CSTR, CVAR
+  // FIXME, CVAR
 
   public static final Function INSTR = registerFunc(new FuncVar("InStr", 2, 4) {
     @Override
@@ -495,7 +495,7 @@ public class DefaultFunctions
         return param1;
       }
       String str = param1.getAsString();
-      int len = (int)Math.max(str.length(), param2.getAsLong());
+      int len = (int)Math.min(str.length(), param2.getAsLong());
       return BuiltinOperators.toValue(str.substring(0, len));
     }
   });
@@ -508,7 +508,7 @@ public class DefaultFunctions
       }
       String str = param1.getAsString();
       int strLen = str.length();
-      int len = (int)Math.max(strLen, param2.getAsLong());
+      int len = (int)Math.min(strLen, param2.getAsLong());
       return BuiltinOperators.toValue(str.substring(strLen - len, strLen));
     }
   });

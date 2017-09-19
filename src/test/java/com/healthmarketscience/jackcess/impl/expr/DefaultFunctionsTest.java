@@ -65,7 +65,28 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals(14L, eval("=CByte(\"13.7\")"));
     assertEquals(new BigDecimal("57.1235"), eval("=CCur(\"57.12346\")"));
     assertEquals(new Double("57.12345"), eval("=CDbl(\"57.12345\")"));
+    assertEquals(new BigDecimal("57.123456789"), eval("=CDec(\"57.123456789\")"));
+    assertEquals(513L, eval("=CInt(\"513\")"));
+    assertEquals(514L, eval("=CInt(\"513.7\")"));
+    assertEquals(345513L, eval("=CLng(\"345513\")"));
+    assertEquals(345514L, eval("=CLng(\"345513.7\")"));
+    assertEquals(new Float("57.12345").doubleValue(),
+                 eval("=CSng(\"57.12345\")"));
+    assertEquals("9786", eval("=CStr(9786)"));
+    assertEquals("-42", eval("=CStr(-42)"));
     
+    // FIXME, instr, instrrev
+
+    assertEquals("FOOO", eval("=UCase(\"fOoO\")"));
+    assertEquals("fooo", eval("=LCase(\"fOoO\")"));
+    
+    assertEquals("bl", eval("=Left(\"blah\", 2)"));
+    assertEquals("", eval("=Left(\"blah\", 0)"));
+    assertEquals("blah", eval("=Left(\"blah\", 17)"));
+
+    assertEquals("ah", eval("=Right(\"blah\", 2)"));
+    assertEquals("", eval("=Right(\"blah\", 0)"));
+    assertEquals("blah", eval("=Right(\"blah\", 17)"));
   }
 
 }
