@@ -57,10 +57,6 @@ public class DefaultNumberFunctions
   public static final Function ATAN = registerFunc(new Func1("Atan") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-      }
       return BuiltinOperators.toValue(Math.atan(param1.getAsDouble()));
     }
   });
@@ -68,10 +64,6 @@ public class DefaultNumberFunctions
   public static final Function COS = registerFunc(new Func1("Cos") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-      }
       return BuiltinOperators.toValue(Math.cos(param1.getAsDouble()));
     }
   });
@@ -79,10 +71,6 @@ public class DefaultNumberFunctions
   public static final Function EXP = registerFunc(new Func1("Exp") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-      }
       return BuiltinOperators.toValue(Math.exp(param1.getAsDouble()));
     }
   });
@@ -90,11 +78,7 @@ public class DefaultNumberFunctions
   public static final Function FIX = registerFunc(new Func1NullIsNull("Fix") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-      }
-      if(type.isIntegral()) {
+      if(param1.getType().isIntegral()) {
         return param1;
       }
       return BuiltinOperators.toValue(param1.getAsDouble().longValue());
@@ -104,14 +88,17 @@ public class DefaultNumberFunctions
   public static final Function INT = registerFunc(new Func1NullIsNull("Int") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-      }
-      if(type.isIntegral()) {
+      if(param1.getType().isIntegral()) {
         return param1;
       }
       return BuiltinOperators.toValue((long)Math.floor(param1.getAsDouble()));
+    }
+  });
+
+  public static final Function LOG = registerFunc(new Func1("Log") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(Math.log(param1.getAsDouble()));
     }
   });
 
@@ -168,6 +155,20 @@ public class DefaultNumberFunctions
         throw new IllegalStateException("Invalid value '" + dv + "'");
       }
       return BuiltinOperators.toValue(Math.sqrt(dv));
+    }
+  });
+
+  public static final Function SIN = registerFunc(new Func1("Sin") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(Math.sin(param1.getAsDouble()));
+    }
+  });
+
+  public static final Function TAN = registerFunc(new Func1("Tan") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(Math.tan(param1.getAsDouble()));
     }
   });
 
