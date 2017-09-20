@@ -603,6 +603,10 @@ public class BuiltinOperators
     return new LongValue(s);
   }
 
+  public static Value toValue(float f) {
+    return new DoubleValue((double)f);
+  }
+
   public static Value toValue(Double s) {
     return new DoubleValue(s);
   }

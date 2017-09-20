@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
@@ -349,6 +350,9 @@ public class ExpressionatorTest extends TestCase
   private static final class TestEvalContext implements EvalContext
   {
     private final Value _thisVal;
+    private Random _defRnd;
+    private Random _rnd;
+    private long _rndSeed;
 
     private TestEvalContext(Value thisVal) {
       _thisVal = thisVal;
@@ -379,5 +383,19 @@ public class ExpressionatorTest extends TestCase
                              String colName) {
       throw new UnsupportedOperationException();
     }
+
+    public Random getRandom(Long seed) {
+      if(seed == null) {
+        if(_defRnd == null) {
+          _defRnd = new Random(System.currentTimeMillis());
+        }
+        return _defRnd;
+      }
+      if((_rnd == null) || (seed != _rndSeed)) {
+        _rndSeed = seed;
+        _rnd = new Random(_rndSeed);
+      }
+      return _rnd;
+    } 
   }
 }
