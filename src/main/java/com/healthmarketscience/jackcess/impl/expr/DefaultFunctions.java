@@ -18,12 +18,14 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  *
@@ -41,12 +43,13 @@ public class DefaultFunctions
     // load all default functions
     DefaultTextFunctions.init();
     DefaultNumberFunctions.init();
+    DefaultDateFunctions.init();
   }
   
   private DefaultFunctions() {}
 
   public static Function getFunction(String name) {
-    return FUNCS.get(name.toLowerCase());
+    return FUNCS.get(DatabaseImpl.toLookupName(name));
   }
 
   public static abstract class BaseFunction implements Function
@@ -82,12 +85,19 @@ public class DefaultFunctions
         String range = ((_minParams == _maxParams) ? "" + _minParams :
                         _minParams + " to " + _maxParams);
         throw new IllegalArgumentException(
-            this + ": invalid number of parameters " +
+            "Invalid number of parameters " +
             num + " passed, expected " + range);
       }
     }
 
-    // FIXME, provide context for exceptions thrown
+    protected IllegalStateException invalidFunctionCall(
+        Throwable t, Value[] params)
+    {
+      String paramStr = Arrays.toString(params);
+      String msg = "Invalid function call {" + _name + "(" +
+        paramStr.substring(1, paramStr.length() - 1) + ")}";
+      return new IllegalStateException(msg, t);
+    }
     
     @Override
     public String toString() {
@@ -102,8 +112,12 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      return eval0(ctx);
+      try {
+        validateNumParams(params);
+        return eval0(ctx);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
+      }
     }
 
     protected abstract Value eval0(EvalContext ctx);
@@ -116,8 +130,12 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      return eval1(ctx, params[0]);
+      try {
+        validateNumParams(params);
+        return eval1(ctx, params[0]);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
+      }
     }
 
     protected abstract Value eval1(EvalContext ctx, Value param);
@@ -130,12 +148,16 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      Value param1 = params[0];
-      if(param1.isNull()) {
-        return param1;
+      try {
+        validateNumParams(params);
+        Value param1 = params[0];
+        if(param1.isNull()) {
+          return param1;
+        }
+        return eval1(ctx, param1);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
       }
-      return eval1(ctx, param1);
     }
 
     protected abstract Value eval1(EvalContext ctx, Value param);
@@ -148,8 +170,12 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      return eval2(ctx, params[0], params[1]);
+      try {
+        validateNumParams(params);
+        return eval2(ctx, params[0], params[1]);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
+      }
     }
 
     protected abstract Value eval2(EvalContext ctx, Value param1, Value param2);
@@ -162,8 +188,12 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      return eval3(ctx, params[0], params[1], params[2]);
+      try {
+        validateNumParams(params);
+        return eval3(ctx, params[0], params[1], params[2]);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
+      }
     }
 
     protected abstract Value eval3(EvalContext ctx, 
@@ -177,13 +207,18 @@ public class DefaultFunctions
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
-      validateNumParams(params);
-      return evalVar(ctx, params);
+      try {
+        validateNumParams(params);
+        return evalVar(ctx, params);
+      } catch(Exception e) {
+        throw invalidFunctionCall(e, params);
+      }
     }
 
     protected abstract Value evalVar(EvalContext ctx, Value[] params);
   }
 
+  
   public static final Function IIF = registerFunc(new Func3("IIf") {
     @Override
     protected Value eval3(EvalContext ctx, 
@@ -262,15 +297,15 @@ public class DefaultFunctions
     }
   });
 
-  // public static final Function CDATE = registerFunc(new Func1("CDate") {
-  //   @Override
-  //   protected Value eval1(EvalContext ctx, Value param1) {
-  //   FIXME
-  //     BigDecimal bd = param1.getAsBigDecimal();
-  //     bd.setScale(4, DEFAULT_ROUND_MODE);
-  //     return BuiltinOperators.toValue(bd);
-  //   }
-  // });
+  public static final Function CDATE = registerFunc(new Func1("CDate") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return DefaultDateFunctions.nonNullToDateValue(ctx, param1);
+    }
+  });
+  static {
+    registerFunc("CVDate", CDATE);
+  }
 
   public static final Function CDBL = registerFunc(new Func1("CDbl") {
     @Override
@@ -328,7 +363,28 @@ public class DefaultFunctions
     }
   });
 
-  // FIXME, CVAR
+  public static final Function CVAR = registerFunc(new Func1("CVar") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return param1;
+    }
+  });
+
+  public static final Function ISNULL = registerFunc(new Func1("IsNull") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(param1.isNull());
+    }
+  });
+
+  public static final Function ISDATE = registerFunc(new Func1("IsDate") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      return BuiltinOperators.toValue(
+          !param1.isNull() &&
+          (DefaultDateFunctions.nonNullToDateValue(ctx, param1) != null));
+    }
+  });
 
 
   private static long roundToLong(Value param) {
@@ -343,25 +399,22 @@ public class DefaultFunctions
   // https://support.office.com/en-us/article/Access-Functions-by-category-b8b136c3-2716-4d39-94a2-658ce330ed83
 
   static Function registerFunc(Function func) {
-    return registerFunc(false, func);
+    registerFunc(func.getName(), func);
+    return func;
   }
 
   static Function registerStringFunc(Function func) {
-    return registerFunc(true, func);
+    // for our purposes the non-variant versions are the same function
+    // (e.g. "Foo" and "Foo$")
+    registerFunc(func.getName(), func);
+    registerFunc(func.getName() + NON_VAR_SUFFIX, func);
+    return func;
   }
 
-  private static Function registerFunc(boolean includeNonVar, Function func) {
-    String fname = func.getName().toLowerCase();
-    if(FUNCS.put(fname, func) != null) {
-      throw new IllegalStateException("Duplicate function " + func);
+  private static void registerFunc(String fname, Function func) {
+    String lookupFname = DatabaseImpl.toLookupName(fname);
+    if(FUNCS.put(lookupFname, func) != null) {
+      throw new IllegalStateException("Duplicate function " + fname);
     }
-    if(includeNonVar) {
-      // for our purposes the non-variant versions are the same function
-      fname += NON_VAR_SUFFIX;
-      if(FUNCS.put(fname, func) != null) {
-        throw new IllegalStateException("Duplicate function " + func);
-      }
-    }
-    return func;
   }
 }

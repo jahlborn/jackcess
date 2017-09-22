@@ -39,18 +39,25 @@ public class DefaultNumberFunctions
   public static final Function ABS = registerFunc(new Func1NullIsNull("Abs") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value.Type type = param1.getType();
-      if(!type.isNumeric()) {
-        // FIXME how to handle text/date?
-        // FIXME, cast to number, date as date?
-      }
-      if(type.isIntegral()) {
+      Value.Type mathType = param1.getType();
+
+      switch(mathType) {
+      case DATE:
+      case TIME:
+      case DATE_TIME:
+        // dates/times get converted to date doubles for arithmetic
+        double result = Math.abs(param1.getAsDouble());
+        return BuiltinOperators.toDateValue(ctx, mathType, result, param1, null);
+      case LONG:
         return BuiltinOperators.toValue(Math.abs(param1.getAsLong()));
-      }
-      if(type.getPreferredFPType() == Value.Type.DOUBLE) {
+      case DOUBLE:
         return BuiltinOperators.toValue(Math.abs(param1.getAsDouble()));
+      case STRING:
+      case BIG_DEC:
+        return BuiltinOperators.toValue(param1.getAsBigDecimal().abs());
+      default:
+        throw new RuntimeException("Unexpected type " + mathType);
       }
-      return BuiltinOperators.toValue(param1.getAsBigDecimal().abs());
     }
   });
 

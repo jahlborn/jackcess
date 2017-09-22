@@ -88,7 +88,6 @@ public class BuiltinOperators
     Value.Type mathType = param1.getType();
 
     switch(mathType) {
-    // case STRING: break; unsupported
     case DATE:
     case TIME:
     case DATE_TIME:
@@ -99,6 +98,7 @@ public class BuiltinOperators
       return toValue(-param1.getAsLong());
     case DOUBLE:
       return toValue(-param1.getAsDouble());
+    case STRING:
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().negate());
     default:
@@ -599,12 +599,20 @@ public class BuiltinOperators
     return new LongValue((long)i);
   }
 
+  public static Value toValue(long s) {
+    return new LongValue(s);
+  }
+
   public static Value toValue(Long s) {
     return new LongValue(s);
   }
 
   public static Value toValue(float f) {
     return new DoubleValue((double)f);
+  }
+
+  public static Value toValue(double s) {
+    return new DoubleValue(s);
   }
 
   public static Value toValue(Double s) {
@@ -619,8 +627,21 @@ public class BuiltinOperators
     return new BigDecimalValue(s);
   }
 
-  private static Value toDateValue(EvalContext ctx, Value.Type type, double v, 
-                                   Value param1, Value param2)
+  public static Value toValue(Value.Type type, Date d, DateFormat fmt) {
+    switch(type) {
+    case DATE:
+      return new DateValue(d, fmt);
+    case TIME:
+      return new TimeValue(d, fmt);
+    case DATE_TIME:
+      return new DateTimeValue(d, fmt);
+    default:
+      throw new RuntimeException("Unexpected date/time type " + type);
+    }
+  }
+  
+  static Value toDateValue(EvalContext ctx, Value.Type type, double v, 
+                           Value param1, Value param2)
   {
     DateFormat fmt = null;
     if((param1 instanceof BaseDateValue) && (param1.getType() == type)) {
@@ -628,6 +649,15 @@ public class BuiltinOperators
     } else if((param2 instanceof BaseDateValue) && (param2.getType() == type)) {
       fmt = ((BaseDateValue)param2).getFormat();
     } else {
+      fmt = getDateFormatForType(ctx, type);
+    }
+
+    Date d = new Date(ColumnImpl.fromDateDouble(v, fmt.getCalendar()));
+
+    return toValue(type, d, fmt);
+  }
+
+  static DateFormat getDateFormatForType(EvalContext ctx, Value.Type type) {
       String fmtStr = null;
       switch(type) {
       case DATE:
@@ -640,23 +670,9 @@ public class BuiltinOperators
         fmtStr = ctx.getTemporalConfig().getDefaultDateTimeFormat();
         break;
       default:
-        throw new RuntimeException("Unexpected type " + type);
+        throw new RuntimeException("Unexpected date/time type " + type);
       }
-      fmt = ctx.createDateFormat(fmtStr);
-    }
-
-    Date d = new Date(ColumnImpl.fromDateDouble(v, fmt.getCalendar()));
-
-    switch(type) {
-    case DATE:
-      return new DateValue(d, fmt);
-    case TIME:
-      return new TimeValue(d, fmt);
-    case DATE_TIME:
-      return new DateTimeValue(d, fmt);
-    default:
-      throw new RuntimeException("Unexpected type " + type);
-    }
+      return ctx.createDateFormat(fmtStr);
   }
 
   private static Value.Type getMathTypePrecedence(

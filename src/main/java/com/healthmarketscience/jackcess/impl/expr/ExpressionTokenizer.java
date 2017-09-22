@@ -315,7 +315,7 @@ class ExpressionTokenizer
     
     if(hasTime) {
       int strLen = dateStr.length();
-      hasTime = ((strLen >= AMPM_SUFFIX_LEN) &&
+      hasAmPm = ((strLen >= AMPM_SUFFIX_LEN) &&
                  (dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
                                         AM_SUFFIX, 0, AMPM_SUFFIX_LEN) ||
                   dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
