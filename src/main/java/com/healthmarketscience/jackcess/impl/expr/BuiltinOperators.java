@@ -17,7 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
@@ -35,6 +35,9 @@ public class BuiltinOperators
 {
   private static final String DIV_BY_ZERO = "/ by zero";
 
+  private static final double MIN_INT = Integer.MIN_VALUE;
+  private static final double MAX_INT = Integer.MAX_VALUE;
+  
   public static final Value NULL_VAL = new BaseValue() {
     @Override public boolean isNull() {
       return true;
@@ -48,11 +51,13 @@ public class BuiltinOperators
   };
   // access seems to like -1 for true and 0 for false (boolean values are
   // basically an illusion)
-  public static final Value TRUE_VAL = new LongValue(-1L);
-  public static final Value FALSE_VAL = new LongValue(0L);
+  public static final Value TRUE_VAL = new LongValue(-1);
+  public static final Value FALSE_VAL = new LongValue(0);
   public static final Value EMPTY_STR_VAL = new StringValue("");
   public static final Value ZERO_VAL = FALSE_VAL;
 
+  public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
+  
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
 
@@ -95,7 +100,7 @@ public class BuiltinOperators
       double result = -param1.getAsDouble();
       return toDateValue(ctx, mathType, result, param1, null);
     case LONG:
-      return toValue(-param1.getAsLong());
+      return toValue(-param1.getAsLongInt());
     case DOUBLE:
       return toValue(-param1.getAsDouble());
     case STRING:
@@ -126,7 +131,7 @@ public class BuiltinOperators
       double result = param1.getAsDouble() + param2.getAsDouble();
       return toDateValue(ctx, mathType, result, param1, param2);
     case LONG:
-      return toValue(param1.getAsLong() + param2.getAsLong());
+      return toValue(param1.getAsLongInt() + param2.getAsLongInt());
     case DOUBLE:
       return toValue(param1.getAsDouble() + param2.getAsDouble());
     case BIG_DEC:
@@ -154,7 +159,7 @@ public class BuiltinOperators
       double result = param1.getAsDouble() - param2.getAsDouble();
       return toDateValue(ctx, mathType, result, param1, param2);
     case LONG:
-      return toValue(param1.getAsLong() - param2.getAsLong());
+      return toValue(param1.getAsLongInt() - param2.getAsLongInt());
     case DOUBLE:
       return toValue(param1.getAsDouble() - param2.getAsDouble());
     case BIG_DEC:
@@ -179,7 +184,7 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      return toValue(param1.getAsLong() * param2.getAsLong());
+      return toValue(param1.getAsLongInt() * param2.getAsLongInt());
     case DOUBLE:
       return toValue(param1.getAsDouble() * param2.getAsDouble());
     case BIG_DEC:
@@ -204,8 +209,8 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      long lp1 = param1.getAsLong();
-      long lp2 = param2.getAsLong();
+      int lp1 = param1.getAsLongInt();
+      int lp2 = param2.getAsLongInt();
       if((lp1 % lp2) == 0) {
         return toValue(lp1 / lp2);
       }
@@ -223,7 +228,6 @@ public class BuiltinOperators
     }
   }
 
-  @SuppressWarnings("fallthrough")
   public static Value intDivide(Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
@@ -232,25 +236,10 @@ public class BuiltinOperators
 
     Value.Type mathType = getMathTypePrecedence(param1, param2, 
                                                 CoercionType.GENERAL);
-
-    boolean wasDouble = false;
-    switch(mathType) {
-    // case STRING: break; unsupported
-    // case DATE: break; promoted to double
-    // case TIME: break; promoted to double
-    // case DATE_TIME: break; promoted to double
-    case LONG:
-      return toValue(param1.getAsLong() / param2.getAsLong());
-    case DOUBLE:
-      wasDouble = true;
-      // fallthrough
-    case BIG_DEC:
-      BigInteger result = getAsBigInteger(param1).divide(
-          getAsBigInteger(param2));
-      return (wasDouble ? toValue(result.longValue()) : toValue(result));
-    default:
+    if(mathType == Value.Type.STRING) {
       throw new RuntimeException("Unexpected type " + mathType);
     }
+    return toValue(param1.getAsLongInt() / param2.getAsLongInt());
   }
 
   public static Value exp(Value param1, Value param2) {
@@ -267,13 +256,12 @@ public class BuiltinOperators
 
     // attempt to convert integral types back to integrals if possible
     if((mathType == Value.Type.LONG) && isIntegral(result)) {
-      return toValue((long)result);
+      return toValue((int)result);
     }
 
     return toValue(result);
   }
 
-  @SuppressWarnings("fallthrough")
   public static Value mod(Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
@@ -283,33 +271,10 @@ public class BuiltinOperators
     Value.Type mathType = getMathTypePrecedence(param1, param2, 
                                                 CoercionType.GENERAL);
 
-    boolean wasDouble = false;
-    switch(mathType) {
-    // case STRING: break; unsupported
-    // case DATE: break; promoted to double
-    // case TIME: break; promoted to double
-    // case DATE_TIME: break; promoted to double
-    case LONG:
-      return toValue(param1.getAsLong() % param2.getAsLong());
-    case DOUBLE:
-      wasDouble = true;
-      // fallthrough
-    case BIG_DEC:
-      BigInteger bi1 = getAsBigInteger(param1);
-      BigInteger bi2 = getAsBigInteger(param2).abs();
-      if(bi2.signum() == 0) {
-        throw new ArithmeticException(DIV_BY_ZERO);
-      }
-      BigInteger result = bi1.mod(bi2);
-      // BigInteger.mod differs from % when using negative values, need to
-      // make them consistent
-      if((bi1.signum() == -1) && (result.signum() == 1)) {
-        result = result.subtract(bi2);
-      }
-      return (wasDouble ? toValue(result.longValue()) : toValue(result));
-    default:
+    if(mathType == Value.Type.STRING) {
       throw new RuntimeException("Unexpected type " + mathType);
     }
+    return toValue(param1.getAsLongInt() % param2.getAsLongInt());
   }
 
   public static Value concat(Value param1, Value param2) {
@@ -577,7 +542,7 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      return param1.getAsLong().compareTo(param2.getAsLong());
+      return param1.getAsLongInt().compareTo(param2.getAsLongInt());
     case DOUBLE:
       return param1.getAsDouble().compareTo(param2.getAsDouble());
     case BIG_DEC:
@@ -596,15 +561,11 @@ public class BuiltinOperators
   }
 
   public static Value toValue(int i) {
-    return new LongValue((long)i);
+    return new LongValue(i);
   }
 
-  public static Value toValue(long s) {
-    return new LongValue(s);
-  }
-
-  public static Value toValue(Long s) {
-    return new LongValue(s);
+  public static Value toValue(Integer i) {
+    return new LongValue(i);
   }
 
   public static Value toValue(float f) {
@@ -619,14 +580,15 @@ public class BuiltinOperators
     return new DoubleValue(s);
   }
 
-  public static Value toValue(BigInteger s) {
-    return toValue(new BigDecimal(s));
-  }
-
   public static Value toValue(BigDecimal s) {
     return new BigDecimalValue(s);
   }
 
+  public static Value toValue(Value.Type type, double dd, DateFormat fmt) {
+    return toValue(type, new Date(ColumnImpl.fromDateDouble(dd, fmt.getCalendar())),
+                   fmt);
+  }
+  
   public static Value toValue(Value.Type type, Date d, DateFormat fmt) {
     switch(type) {
     case DATE:
@@ -770,10 +732,9 @@ public class BuiltinOperators
   }
 
   static boolean isIntegral(double d) {
-    return ((d == Math.rint(d)) && !Double.isInfinite(d) && !Double.isNaN(d));
+    double id = Math.rint(d);
+    return ((d == id) && (d >= MIN_INT) && (d <= MAX_INT) &&
+            !Double.isInfinite(d) && !Double.isNaN(d));
   }
 
-  private static BigInteger getAsBigInteger(Value v) {
-    return v.getAsBigDecimal().toBigInteger();
-  }
 }

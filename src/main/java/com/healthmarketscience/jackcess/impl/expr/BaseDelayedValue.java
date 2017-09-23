@@ -64,8 +64,8 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().getAsDateTime(ctx);
   }
 
-  public Long getAsLong() {
-    return getDelegate().getAsLong();
+  public Integer getAsLongInt() {
+    return getDelegate().getAsLongInt();
   }
 
   public Double getAsDouble() {

@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +36,6 @@ public class DefaultFunctions
     new HashMap<String,Function>();
 
   private static final char NON_VAR_SUFFIX = '$';
-  static final RoundingMode DEFAULT_ROUND_MODE = RoundingMode.HALF_EVEN;
   
   static {
     // load all default functions
@@ -57,11 +55,6 @@ public class DefaultFunctions
     private final String _name;
     private final int _minParams;
     private final int _maxParams;
-
-    protected BaseFunction(String name)
-    {
-      this(name, 0, Integer.MAX_VALUE);
-    }
 
     protected BaseFunction(String name, int minParams, int maxParams)
     {
@@ -109,6 +102,12 @@ public class DefaultFunctions
   {
     protected Func0(String name) {
       super(name, 0, 0);
+    }
+
+    @Override
+    public boolean isPure() {
+      // 0-arg functions are usually not pure
+      return false;
     }
 
     public final Value eval(EvalContext ctx, Value... params) {
@@ -202,6 +201,10 @@ public class DefaultFunctions
 
   public static abstract class FuncVar extends BaseFunction
   {
+    protected FuncVar(String name) {
+      super(name, 0, Integer.MAX_VALUE);
+    }
+
     protected FuncVar(String name, int minParams, int maxParams) {
       super(name, minParams, maxParams);
     }
@@ -235,8 +238,8 @@ public class DefaultFunctions
          (param1.getAsString().length() == 0)) {
         return BuiltinOperators.ZERO_VAL;
       }
-      long lv = param1.getAsLong();
-      return BuiltinOperators.toValue(Long.toHexString(lv).toUpperCase());
+      int lv = param1.getAsLongInt();
+      return BuiltinOperators.toValue(Integer.toHexString(lv).toUpperCase());
     }
   });
 
@@ -257,6 +260,33 @@ public class DefaultFunctions
     }
   });
 
+  public static final Function CHOOSE = registerFunc(new FuncVar("Choose", 1, Integer.MAX_VALUE) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      int idx = param1.getAsLongInt();
+      if((idx < 1) || (idx >= params.length)) {
+        return BuiltinOperators.NULL_VAL;
+      }
+      return params[idx];
+    }
+  });
+  
+  public static final Function SWITCH = registerFunc(new FuncVar("Switch") {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      if((params.length % 2) != 0) {
+        throw new IllegalStateException("Odd number of parameters");
+      }
+      for(int i = 0; i < params.length; i+=2) {
+        if(params[i].getAsBoolean()) {
+          return params[i + 1];
+        }
+      }
+      return BuiltinOperators.NULL_VAL;
+    }
+  });
+  
   public static final Function OCT = registerStringFunc(new Func1NullIsNull("Oct") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -264,8 +294,8 @@ public class DefaultFunctions
          (param1.getAsString().length() == 0)) {
         return BuiltinOperators.ZERO_VAL;
       }
-      long lv = param1.getAsLong();
-      return BuiltinOperators.toValue(Long.toOctalString(lv));
+      int lv = param1.getAsLongInt();
+      return BuiltinOperators.toValue(Integer.toOctalString(lv));
     }
   });
   
@@ -280,7 +310,7 @@ public class DefaultFunctions
   public static final Function CBYTE = registerFunc(new Func1("CByte") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      long lv = roundToLong(param1);
+      int lv = param1.getAsLongInt();
       if((lv < 0) || (lv > 255)) {
         throw new IllegalStateException("Byte code '" + lv + "' out of range ");
       }
@@ -292,7 +322,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();
-      bd = bd.setScale(4, DEFAULT_ROUND_MODE);
+      bd = bd.setScale(4, BuiltinOperators.ROUND_MODE);
       return BuiltinOperators.toValue(bd);
     }
   });
@@ -326,7 +356,7 @@ public class DefaultFunctions
   public static final Function CINT = registerFunc(new Func1("CInt") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      long lv = roundToLong(param1);
+      int lv = param1.getAsLongInt();
       if((lv < Short.MIN_VALUE) || (lv > Short.MAX_VALUE)) {
         throw new IllegalStateException("Int value '" + lv + "' out of range ");
       }
@@ -337,10 +367,7 @@ public class DefaultFunctions
   public static final Function CLNG = registerFunc(new Func1("CLng") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      long lv = roundToLong(param1);
-      if((lv < Integer.MIN_VALUE) || (lv > Integer.MAX_VALUE)) {
-        throw new IllegalStateException("Long value '" + lv + "' out of range ");
-      }
+      int lv = param1.getAsLongInt();
       return BuiltinOperators.toValue(lv);
     }
   });
@@ -386,14 +413,79 @@ public class DefaultFunctions
     }
   });
 
-
-  private static long roundToLong(Value param) {
-    if(param.getType().isIntegral()) {
-      return param.getAsLong();
+  public static final Function VARTYPE = registerFunc(new Func1("VarType") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      Value.Type type = param1.getType();
+      int vType = 0;
+      switch(type) {
+      case NULL:
+        // vbNull
+        vType = 1;
+        break;
+      case STRING:
+        // vbString
+        vType = 8;
+        break;
+      case DATE:
+      case TIME:
+      case DATE_TIME:
+        // vbDate
+        vType = 7;
+        break;
+      case LONG:
+        // vbLong
+        vType = 3;
+        break;
+      case DOUBLE:
+        // vbDouble
+        vType = 5;
+        break;
+      case BIG_DEC:
+        // vbDecimal
+        vType = 14;
+        break;        
+      default:
+        throw new RuntimeException("Unknown type " + type);
+      }
+      return BuiltinOperators.toValue(vType);
     }
-    return param.getAsBigDecimal().setScale(0, DEFAULT_ROUND_MODE)
-      .longValue();
-  }
+  });
+
+  public static final Function TYPENAME = registerFunc(new Func1("TypeName") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      Value.Type type = param1.getType();
+      String tName = null;
+      switch(type) {
+      case NULL:
+        tName = "Null";
+        break;
+      case STRING:
+        tName = "String";
+        break;
+      case DATE:
+      case TIME:
+      case DATE_TIME:
+        tName = "Date";
+        break;
+      case LONG:
+        tName = "Long";
+        break;
+      case DOUBLE:
+        tName = "Double";
+        break;
+      case BIG_DEC:
+        tName = "Decimal";
+        break;        
+      default:
+        throw new RuntimeException("Unknown type " + type);
+      }
+      return BuiltinOperators.toValue(tName);
+    }
+  });
+
+  
 
   // https://www.techonthenet.com/access/functions/
   // https://support.office.com/en-us/article/Access-Functions-by-category-b8b136c3-2716-4d39-94a2-658ce330ed83

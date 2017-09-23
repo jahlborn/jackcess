@@ -67,8 +67,8 @@ public abstract class BaseDateValue extends BaseValue
   }
 
   @Override
-  public Long getAsLong() {
-    return getNumber().longValue();
+  public Integer getAsLongInt() {
+    return roundToLongInt();
   }
 
   @Override

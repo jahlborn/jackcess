@@ -38,6 +38,13 @@ public class DefaultDateFunctions
   private static final double MIN_DATE = -657434.0d;
   // max, valid, recognizable date: December 31, 9999 A.D. 23:59:59
   private static final double MAX_DATE = 2958465.999988426d;
+
+  private static final long SECONDS_PER_DAY = 24L * 60L * 60L;
+  private static final double DSECONDS_PER_DAY = SECONDS_PER_DAY;
+
+  private static final long SECONDS_PER_HOUR = 60L * 60L;
+  private static final long SECONDS_PER_MINUTE = 60L;
+  private static final long MILLIS_PER_SECOND = 1000L;
   
   private DefaultDateFunctions() {}
 
@@ -47,48 +54,80 @@ public class DefaultDateFunctions
 
   public static final Function DATE = registerFunc(new Func0("Date") {
     @Override
-    public boolean isPure() {
-      return false;
-    }
-    @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat df = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
-      double dd = ColumnImpl.toDateDouble(System.currentTimeMillis(), df.getCalendar());
-      // the integral part of the date/time double is the date value.  discard
-      // the fractional portion
-      dd = ((long)dd);
-      return BuiltinOperators.toValue(Value.Type.DATE, new Date(), df);
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
+      double dd = dateOnly(currentTimeDouble(fmt));
+      return BuiltinOperators.toValue(Value.Type.DATE, dd, fmt);
     }
   });
 
+  public static final Function DATEVALUE = registerFunc(new Func1NullIsNull("DateValue") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      Value dv = nonNullToDateValue(ctx, param1);
+      if(dv.getType() == Value.Type.DATE) {
+        return dv;
+      }
+      double dd = dateOnly(dv.getAsDouble());
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
+      return BuiltinOperators.toValue(Value.Type.DATE, dd, fmt);
+    }
+  });
+    
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
-    public boolean isPure() {
-      return false;
-    }
-    @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat df = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE_TIME);
-      return BuiltinOperators.toValue(Value.Type.DATE_TIME, new Date(), df);
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE_TIME);
+      return BuiltinOperators.toValue(Value.Type.DATE_TIME, new Date(), fmt);
     }
   });
 
   public static final Function TIME = registerFunc(new Func0("Time") {
     @Override
-    public boolean isPure() {
-      return false;
-    }
-    @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat df = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
-      double dd = ColumnImpl.toDateDouble(System.currentTimeMillis(), df.getCalendar());
-      // the fractional part of the date/time double is the time value.  discard
-      // the integral portion
-      dd = Math.IEEEremainder(dd, 1.0d);
-      return BuiltinOperators.toValue(Value.Type.TIME, new Date(), df);
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      double dd = timeOnly(currentTimeDouble(fmt));
+      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
     }
   });
 
+  public static final Function TIMEVALUE = registerFunc(new Func1NullIsNull("TimeValue") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      Value dv = nonNullToDateValue(ctx, param1);
+      if(dv.getType() == Value.Type.TIME) {
+        return dv;
+      }
+      double dd = timeOnly(dv.getAsDouble());
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
+    }
+  });
+  
+  public static final Function TIMER = registerFunc(new Func0("Timer") {
+    @Override
+    protected Value eval0(EvalContext ctx) {
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      double dd = timeOnly(currentTimeDouble(fmt)) * DSECONDS_PER_DAY;
+      return BuiltinOperators.toValue(dd);
+    }
+  });
+
+  public static final Function TIMESERIAL = registerFunc(new Func3("TimeSerial") {
+    @Override
+    protected Value eval3(EvalContext ctx, Value param1, Value param2, Value param3) {
+      int hours = param1.getAsLongInt();
+      int minutes = param2.getAsLongInt();
+      int seconds = param3.getAsLongInt();
+
+      long totalSeconds = (hours * SECONDS_PER_HOUR) +
+        (minutes * SECONDS_PER_MINUTE) + seconds;
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      double dd = totalSeconds / DSECONDS_PER_DAY;
+      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
+    }
+  });
+  
   public static final Function HOUR = registerFunc(new Func1NullIsNull("Hour") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -168,11 +207,7 @@ public class DefaultDateFunctions
       throw new IllegalStateException("Invalid date/time expression '" + param + "'");
     }
 
-    Calendar cal = 
-      ((param instanceof BaseDateValue) ?
-       ((BaseDateValue)param).getFormat().getCalendar() :
-       BuiltinOperators.getDateFormatForType(ctx, param.getType()).getCalendar());
-
+    Calendar cal = getDateValueFormat(ctx, param).getCalendar();
     cal.setTime(param.getAsDateTime(ctx));
     return cal;
   }
@@ -206,13 +241,34 @@ public class DefaultDateFunctions
       return null;
     }
 
-    boolean hasDate = (((long)dd) != 0L);
-    boolean hasTime = (Math.IEEEremainder(dd, 1.0d) != 0.0d);
+    boolean hasDate = (dateOnly(dd) != 0.0d);
+    boolean hasTime = (timeOnly(dd) != 0.0d);
 
     Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
                        Value.Type.TIME);
-    DateFormat df = BuiltinOperators.getDateFormatForType(ctx, type);
-    Date d = new Date(ColumnImpl.fromDateDouble(dd, df.getCalendar()));
-    return BuiltinOperators.toValue(type, d, df);
+    DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, type);
+    return BuiltinOperators.toValue(type, dd, fmt);
+  }
+
+  private static DateFormat getDateValueFormat(EvalContext ctx, Value param) {
+    return ((param instanceof BaseDateValue) ?
+            ((BaseDateValue)param).getFormat() :
+       BuiltinOperators.getDateFormatForType(ctx, param.getType()));
+  }
+  
+  private static double dateOnly(double dd) {
+    // the integral part of the date/time double is the date value.  discard
+    // the fractional portion
+    return (long)dd;
+  }
+  
+  private static double timeOnly(double dd) {
+    // the fractional part of the date/time double is the time value.  discard
+    // the integral portion and convert to seconds
+    return new BigDecimal(dd).remainder(BigDecimal.ONE).doubleValue();
+  }
+
+  private static double currentTimeDouble(DateFormat fmt) {
+    return ColumnImpl.toDateDouble(System.currentTimeMillis(), fmt.getCalendar());
   }
 }

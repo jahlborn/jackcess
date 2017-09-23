@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Random;
@@ -131,7 +132,7 @@ public class ExpressionatorTest extends TestCase
 
   public void testSimpleMathExpressions() throws Exception
   {
-    for(long i = -10L; i <= 10L; ++i) {
+    for(int i = -10; i <= 10; ++i) {
       assertEquals(-i, eval("=-(" + i + ")"));
     }
 
@@ -139,8 +140,8 @@ public class ExpressionatorTest extends TestCase
       assertEquals(-i, eval("=-(" + i + ")"));
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
         assertEquals((i + j), eval("=" + i + " + " + j));
       }
     }
@@ -151,8 +152,8 @@ public class ExpressionatorTest extends TestCase
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
         assertEquals((i - j), eval("=" + i + " - " + j));
       }
     }
@@ -163,8 +164,8 @@ public class ExpressionatorTest extends TestCase
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
         assertEquals((i * j), eval("=" + i + " * " + j));
       }
     }
@@ -175,8 +176,8 @@ public class ExpressionatorTest extends TestCase
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
         if(j == 0L) {
           evalFail("=" + i + " \\ " + j, ArithmeticException.class);
         } else {
@@ -187,17 +188,18 @@ public class ExpressionatorTest extends TestCase
 
     for(double i : DBLS) {
       for(double j : DBLS) {
-        if((long)j == 0L) {
+        if(roundToLongInt(j) == 0) {
           evalFail("=" + i + " \\ " + j, ArithmeticException.class);
         } else {
-          assertEquals(((long)i / (long)j), eval("=" + i + " \\ " + j));
+          assertEquals((roundToLongInt(i) / roundToLongInt(j)),
+                       eval("=" + i + " \\ " + j));
         }
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
-        if(j == 0L) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
+        if(j == 0) {
           evalFail("=" + i + " Mod " + j, ArithmeticException.class);
         } else {
           assertEquals((i % j), eval("=" + i + " Mod " + j));
@@ -207,22 +209,23 @@ public class ExpressionatorTest extends TestCase
 
     for(double i : DBLS) {
       for(double j : DBLS) {
-        if((long)j == 0L) {
+        if(roundToLongInt(j) == 0) {
           evalFail("=" + i + " Mod " + j, ArithmeticException.class);
         } else {
-          assertEquals(((long)i % (long)j), eval("=" + i + " Mod " + j));
+          assertEquals((roundToLongInt(i) % roundToLongInt(j)),
+                       eval("=" + i + " Mod " + j));
         }
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
-        if(j == 0L) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
+        if(j == 0) {
           evalFail("=" + i + " / " + j, ArithmeticException.class);
         } else {
           double result = (double)i / (double)j;
-          if((long)result == result) {
-            assertEquals((long)result, eval("=" + i + " / " + j));
+          if((int)result == result) {
+            assertEquals((int)result, eval("=" + i + " / " + j));
           } else {
             assertEquals(result, eval("=" + i + " / " + j));
           }
@@ -240,11 +243,11 @@ public class ExpressionatorTest extends TestCase
       }
     }
 
-    for(long i = -10L; i <= 10L; ++i) {
-      for(long j = -10L; j <= 10L; ++j) {
+    for(int i = -10; i <= 10; ++i) {
+      for(int j = -10; j <= 10; ++j) {
         double result = Math.pow(i, j);
-        if((long)result == result) {
-          assertEquals((long)result, eval("=" + i + " ^ " + j));
+        if((int)result == result) {
+          assertEquals((int)result, eval("=" + i + " ^ " + j));
         } else {
           assertEquals(result, eval("=" + i + " ^ " + j));
         }
@@ -261,8 +264,8 @@ public class ExpressionatorTest extends TestCase
     assertEquals("12foo", eval("=12 + \"foo\""));
     assertEquals("foo12", eval("=\"foo\" + 12"));
 
-    assertEquals(37L, eval("=\"25\" + 12"));
-    assertEquals(37L, eval("=12 + \"25\""));
+    assertEquals(37, eval("=\"25\" + 12"));
+    assertEquals(37, eval("=12 + \"25\""));
 
     evalFail(("=12 - \"foo\""), RuntimeException.class);
     evalFail(("=\"foo\" - 12"), RuntimeException.class);
@@ -273,7 +276,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals("25foo12", eval("=\"25foo\" + 12"));
 
     assertEquals(new Date(1485579600000L), eval("=#1/1/2017# + 27"));
-    assertEquals(128208L, eval("=#1/1/2017# * 3"));
+    assertEquals(128208, eval("=#1/1/2017# * 3"));
   }
 
   public void testLikeExpression() throws Exception
@@ -331,6 +334,11 @@ public class ExpressionatorTest extends TestCase
     return (Boolean)expr.eval(new TestEvalContext(BuiltinOperators.toValue(thisVal)));
   }
 
+  static int roundToLongInt(double d) {
+    return new BigDecimal(d).setScale(0, BuiltinOperators.ROUND_MODE)
+      .intValueExact();
+  }
+  
   private static final class TestParseContext implements Expressionator.ParseContext
   {
     public TemporalConfig getTemporalConfig() {
@@ -384,7 +392,7 @@ public class ExpressionatorTest extends TestCase
       throw new UnsupportedOperationException();
     }
 
-    public Random getRandom(Long seed) {
+    public Random getRandom(Integer seed) {
       if(seed == null) {
         if(_defRnd == null) {
           _defRnd = new Random(System.currentTimeMillis());

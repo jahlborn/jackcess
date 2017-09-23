@@ -1280,7 +1280,7 @@ public class Expressionator
     case DATE_TIME:
       return new DateTimeValue((Date)value, sdf);
     case LONG:
-      return new LongValue((Long)value);
+      return new LongValue((Integer)value);
     case DOUBLE:
       return new DoubleValue((Double)value);
     case BIG_DEC:
@@ -1953,7 +1953,7 @@ public class Expressionator
       case DATE_TIME:
         return val.getAsDateTime(ctx);
       case LONG:
-        return val.getAsLong();
+        return val.getAsLongInt();
       case DOUBLE:
         return val.getAsDouble();
       case BIG_DEC:

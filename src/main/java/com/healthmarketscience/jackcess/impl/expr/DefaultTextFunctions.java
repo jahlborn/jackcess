@@ -44,7 +44,7 @@ public class DefaultTextFunctions
       if(len == 0) {
         throw new IllegalStateException("No characters in string");
       } 
-      long lv = str.charAt(0);
+      int lv = str.charAt(0);
       if((lv < 0) || (lv > 255)) {
         throw new IllegalStateException("Character code '" + lv +
                                         "' out of range ");
@@ -61,7 +61,7 @@ public class DefaultTextFunctions
       if(len == 0) {
         throw new IllegalStateException("No characters in string");
       } 
-      long lv = str.charAt(0);
+      int lv = str.charAt(0);
       return BuiltinOperators.toValue(lv);
     }
   });
@@ -69,12 +69,12 @@ public class DefaultTextFunctions
   public static final Function CHR = registerStringFunc(new Func1("Chr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      long lv = param1.getAsLong();
+      int lv = param1.getAsLongInt();
       if((lv < 0) || (lv > 255)) {
         throw new IllegalStateException("Character code '" + lv +
                                         "' out of range ");
       }
-      char[] cs = Character.toChars((int)lv);
+      char[] cs = Character.toChars(lv);
       return BuiltinOperators.toValue(new String(cs));
     }
   });
@@ -82,8 +82,8 @@ public class DefaultTextFunctions
   public static final Function CHRW = registerStringFunc(new Func1("ChrW") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      long lv = param1.getAsLong();
-      char[] cs = Character.toChars((int)lv);
+      int lv = param1.getAsLongInt();
+      char[] cs = Character.toChars(lv);
       return BuiltinOperators.toValue(new String(cs));
     }
   });
@@ -107,7 +107,7 @@ public class DefaultTextFunctions
       int start = 0;
       if(params.length > 2) {
         // 1 based offsets
-        start = params[0].getAsLong().intValue() - 1;
+        start = params[0].getAsLongInt() - 1;
         ++idx;
       }
       Value param1 = params[idx++];
@@ -169,7 +169,7 @@ public class DefaultTextFunctions
         return BuiltinOperators.toValue(start + 1);
       }
       if(params.length > 2) {
-        start = params[2].getAsLong().intValue();
+        start = params[2].getAsLongInt();
         if(start == -1) {
           start = s1Len;
         } 
@@ -215,7 +215,7 @@ public class DefaultTextFunctions
         return param1;
       }
       String str = param1.getAsString();
-      int len = (int)Math.min(str.length(), param2.getAsLong());
+      int len = Math.min(str.length(), param2.getAsLongInt());
       return BuiltinOperators.toValue(str.substring(0, len));
     }
   });
@@ -228,7 +228,7 @@ public class DefaultTextFunctions
       }
       String str = param1.getAsString();
       int strLen = str.length();
-      int len = (int)Math.min(strLen, param2.getAsLong());
+      int len = Math.min(strLen, param2.getAsLongInt());
       return BuiltinOperators.toValue(str.substring(strLen - len, strLen));
     }
   });
@@ -243,9 +243,9 @@ public class DefaultTextFunctions
       String str = param1.getAsString();
       int strLen = str.length();
       // 1 based offsets
-      int start = (int)Math.max(strLen, params[1].getAsLong() - 1);
+      int start = Math.max(strLen, params[1].getAsLongInt() - 1);
       int len = Math.max(
-          ((params.length > 2) ? params[2].getAsLong().intValue() : strLen),
+          ((params.length > 2) ? params[2].getAsLongInt() : strLen),
           (strLen - start));
       return BuiltinOperators.toValue(str.substring(start, start + len));
     }
@@ -286,7 +286,7 @@ public class DefaultTextFunctions
   public static final Function SPACE = registerStringFunc(new Func1("Space") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLong().intValue();
+      int lv = param1.getAsLongInt();
       return BuiltinOperators.toValue(nchars(lv, ' '));
     }
   });
@@ -317,7 +317,7 @@ public class DefaultTextFunctions
       if(param1.isNull() || param2.isNull()) {
         return BuiltinOperators.NULL_VAL;
       }
-      int lv = param1.getAsLong().intValue();
+      int lv = param1.getAsLongInt();
       char c = (char)(param2.getAsString().charAt(0) % 256);
       return BuiltinOperators.toValue(nchars(lv, c));
     }
@@ -359,7 +359,7 @@ public class DefaultTextFunctions
   }
 
   private static boolean doIgnoreCase(Value paramCmp) {
-    int cmpType = paramCmp.getAsLong().intValue();
+    int cmpType = paramCmp.getAsLongInt();
     switch(cmpType) {
     case -1:
       // vbUseCompareOption -> default is binary

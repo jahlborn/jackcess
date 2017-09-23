@@ -49,7 +49,7 @@ public class DefaultNumberFunctions
         double result = Math.abs(param1.getAsDouble());
         return BuiltinOperators.toDateValue(ctx, mathType, result, param1, null);
       case LONG:
-        return BuiltinOperators.toValue(Math.abs(param1.getAsLong()));
+        return BuiltinOperators.toValue(Math.abs(param1.getAsLongInt()));
       case DOUBLE:
         return BuiltinOperators.toValue(Math.abs(param1.getAsDouble()));
       case STRING:
@@ -88,7 +88,7 @@ public class DefaultNumberFunctions
       if(param1.getType().isIntegral()) {
         return param1;
       }
-      return BuiltinOperators.toValue(param1.getAsDouble().longValue());
+      return BuiltinOperators.toValue(param1.getAsDouble().intValue());
     }
   });
 
@@ -98,7 +98,7 @@ public class DefaultNumberFunctions
       if(param1.getType().isIntegral()) {
         return param1;
       }
-      return BuiltinOperators.toValue((long)Math.floor(param1.getAsDouble()));
+      return BuiltinOperators.toValue((int)Math.floor(param1.getAsDouble()));
     }
   });
 
@@ -116,7 +116,7 @@ public class DefaultNumberFunctions
     }
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      Long seed = ((params.length > 0) ? params[0].getAsLong() : null);
+      Integer seed = ((params.length > 0) ? params[0].getAsLongInt() : null);
       return BuiltinOperators.toValue(ctx.getRandom(seed).nextFloat());
     }
   });
@@ -133,9 +133,10 @@ public class DefaultNumberFunctions
       }
       int scale = 0;
       if(params.length > 1) {
-        scale = params[1].getAsLong().intValue();
+        scale = params[1].getAsLongInt();
       }
-      BigDecimal bd = param1.getAsBigDecimal().setScale(scale, DEFAULT_ROUND_MODE);
+      BigDecimal bd = param1.getAsBigDecimal()
+        .setScale(scale, BuiltinOperators.ROUND_MODE);
       return BuiltinOperators.toValue(bd);
     }
   });
@@ -145,7 +146,7 @@ public class DefaultNumberFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int signum = 0;
       if(param1.getType().isIntegral()) {
-        long lv = param1.getAsLong();
+        int lv = param1.getAsLongInt();
         signum = ((lv > 0) ? 1 : ((lv < 0) ? -1 : 0));
       } else {
         signum = param1.getAsBigDecimal().signum();

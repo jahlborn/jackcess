@@ -394,7 +394,7 @@ class ExpressionTokenizer
         // what number type to use here?
         Object num = (isFp ? 
                       (Number)Double.valueOf(numStr) : 
-                      (Number)Long.valueOf(numStr));
+                      (Number)Integer.valueOf(numStr));
         foundNum = true;
         return new Token(TokenType.LITERAL, num, numStr, 
                          (isFp ? Value.Type.DOUBLE : Value.Type.LONG));

@@ -73,7 +73,7 @@ public interface Value
 
   public Date getAsDateTime(EvalContext ctx);
 
-  public Long getAsLong();
+  public Integer getAsLongInt();
 
   public Double getAsDouble();
 

@@ -24,9 +24,9 @@ import java.math.BigDecimal;
  */
 public class LongValue extends BaseNumericValue
 {
-  private final Long _val;
+  private final Integer _val;
 
-  public LongValue(Long val) 
+  public LongValue(Integer val) 
   {
     _val = val;
   }
@@ -50,7 +50,7 @@ public class LongValue extends BaseNumericValue
   }
 
   @Override
-  public Long getAsLong() {
+  public Integer getAsLongInt() {
     return _val;
   }
 

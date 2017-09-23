@@ -45,8 +45,8 @@ public class DefaultFunctionsTest extends TestCase
   {
     assertEquals("foo", eval("=IIf(10 > 1, \"foo\", \"bar\")"));
     assertEquals("bar", eval("=IIf(10 < 1, \"foo\", \"bar\")"));
-    assertEquals(102L, eval("=Asc(\"foo\")"));
-    assertEquals(9786L, eval("=AscW(\"\u263A\")"));
+    assertEquals(102, eval("=Asc(\"foo\")"));
+    assertEquals(9786, eval("=AscW(\"\u263A\")"));
     assertEquals("f", eval("=Chr(102)"));
     assertEquals("\u263A", eval("=ChrW(9786)"));
     assertEquals("263A", eval("=Hex(9786)"));
@@ -60,16 +60,16 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals(" 9786", eval("=Str(9786)"));
     assertEquals("-42", eval("=Str(-42)"));
 
-    assertEquals(-1L, eval("=CBool(\"1\")"));
-    assertEquals(13L, eval("=CByte(\"13\")"));
-    assertEquals(14L, eval("=CByte(\"13.7\")"));
+    assertEquals(-1, eval("=CBool(\"1\")"));
+    assertEquals(13, eval("=CByte(\"13\")"));
+    assertEquals(14, eval("=CByte(\"13.7\")"));
     assertEquals(new BigDecimal("57.1235"), eval("=CCur(\"57.12346\")"));
     assertEquals(new Double("57.12345"), eval("=CDbl(\"57.12345\")"));
     assertEquals(new BigDecimal("57.123456789"), eval("=CDec(\"57.123456789\")"));
-    assertEquals(513L, eval("=CInt(\"513\")"));
-    assertEquals(514L, eval("=CInt(\"513.7\")"));
-    assertEquals(345513L, eval("=CLng(\"345513\")"));
-    assertEquals(345514L, eval("=CLng(\"345513.7\")"));
+    assertEquals(513, eval("=CInt(\"513\")"));
+    assertEquals(514, eval("=CInt(\"513.7\")"));
+    assertEquals(345513, eval("=CLng(\"345513\")"));
+    assertEquals(345514, eval("=CLng(\"345513.7\")"));
     assertEquals(new Float("57.12345").doubleValue(),
                  eval("=CSng(\"57.12345\")"));
     assertEquals("9786", eval("=CStr(9786)"));

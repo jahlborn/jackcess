@@ -44,7 +44,7 @@ public abstract class BaseValue implements Value
     throw invalidConversion(Value.Type.DATE_TIME);
   }
 
-  public Long getAsLong() {
+  public Integer getAsLongInt() {
     throw invalidConversion(Value.Type.LONG);
   }
 
@@ -61,6 +61,11 @@ public abstract class BaseValue implements Value
         getType() + " value cannot be converted to " + newType);
   }
 
+  protected Integer roundToLongInt() {
+    return getAsBigDecimal().setScale(0, BuiltinOperators.ROUND_MODE)
+      .intValueExact();
+  }
+  
   @Override
   public String toString() {
     return "Value[" + getType() + "] '" + get() + "'";
