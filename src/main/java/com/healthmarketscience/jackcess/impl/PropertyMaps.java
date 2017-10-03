@@ -213,12 +213,18 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         }
       }
 
+      if(propNames.isEmpty()) {
+        return null;
+      }
+
       // write the full set of property names
       writeBlock(null, propNames, PROPERTY_NAME_LIST, bab);
 
       // write all the map values
       for(PropertyMapImpl propMap : maps) {
-        writeBlock(propMap, propNames, propMap.getType(), bab);
+        if(!propMap.isEmpty()) {
+          writeBlock(propMap, propNames, propMap.getType(), bab);
+        }
       }
       
       return bab.toArray();

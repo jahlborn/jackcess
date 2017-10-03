@@ -8,6 +8,9 @@
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="141">
         Handle more advanced query join constructs.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="144">
+        Fix writing of property maps without any properties.
+      </action>
     </release>
     <release version="2.1.8" date="2017-06-25">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="142">
