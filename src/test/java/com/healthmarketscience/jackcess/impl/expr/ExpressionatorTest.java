@@ -52,7 +52,9 @@ public class ExpressionatorTest extends TestCase
     
     validateExpr("13", "<ELiteralValue>{13}");
 
-    validateExpr("-42", "<ELiteralValue>{-42}");
+    validateExpr("-42", "<EUnaryOp>{- <ELiteralValue>{42}}");
+
+    validateExpr("(+37)", "<EParen>{(<EUnaryOp>{+ <ELiteralValue>{37}})}");
 
     doTestSimpleBinOp("EBinaryOp", "+", "-", "*", "/", "\\", "^", "&", "Mod");
     doTestSimpleBinOp("ECompOp", "<", "<=", ">", ">=", "=", "<>");
@@ -136,8 +138,16 @@ public class ExpressionatorTest extends TestCase
       assertEquals(-i, eval("=-(" + i + ")"));
     }
 
+    for(int i = -10; i <= 10; ++i) {
+      assertEquals(i, eval("=+(" + i + ")"));
+    }
+
     for(double i : DBLS) {
       assertEquals(-i, eval("=-(" + i + ")"));
+    }
+
+    for(double i : DBLS) {
+      assertEquals(i, eval("=+(" + i + ")"));
     }
 
     for(int i = -10; i <= 10; ++i) {
@@ -254,7 +264,10 @@ public class ExpressionatorTest extends TestCase
       }
     }
 
-
+    assertEquals(37, eval("=30+7"));
+    assertEquals(23, eval("=30+-7"));
+    assertEquals(23, eval("=30-+7"));
+    assertEquals(23, eval("=30-7"));
   }
 
   public void testTypeCoercion() throws Exception

@@ -111,10 +111,35 @@ public class Expressionator
       @Override public Value eval(EvalContext ctx, Value param1) {
         return BuiltinOperators.negate(ctx, param1);
       }
+      @Override public UnaryOp getUnaryNumOp() {
+        return UnaryOp.NEG_NUM;
+      }
+    },
+    POS("+", false) {
+      @Override public Value eval(EvalContext ctx, Value param1) {
+        // basically a no-op
+        return param1;
+      }
+      @Override public UnaryOp getUnaryNumOp() {
+        return UnaryOp.POS_NUM;
+      }
     },
     NOT("Not", true) {
       @Override public Value eval(EvalContext ctx, Value param1) {
         return BuiltinOperators.not(param1);
+      }
+    },
+    // when a '-' immediately precedes a number, it needs "highest" precedence
+    NEG_NUM("-", false) {
+      @Override public Value eval(EvalContext ctx, Value param1) {
+        return BuiltinOperators.negate(ctx, param1);
+      }
+    },
+    // when a '+' immediately precedes a number, it needs "highest" precedence
+    POS_NUM("+", false) {
+      @Override public Value eval(EvalContext ctx, Value param1) {
+        // basically a no-op
+        return param1;
       }
     };
 
@@ -133,6 +158,10 @@ public class Expressionator
     @Override
     public String toString() {
       return _str;
+    }
+
+    public UnaryOp getUnaryNumOp() {
+      return null;
     }
 
     public abstract Value eval(EvalContext ctx, Value param1);
@@ -341,8 +370,9 @@ public class Expressionator
 
   private static final Map<OpType, Integer> PRECENDENCE = 
     buildPrecedenceMap(
+        new OpType[]{UnaryOp.NEG_NUM, UnaryOp.POS_NUM},
         new OpType[]{BinaryOp.EXP},
-        new OpType[]{UnaryOp.NEG},
+        new OpType[]{UnaryOp.NEG, UnaryOp.POS},
         new OpType[]{BinaryOp.MULT, BinaryOp.DIV},
         new OpType[]{BinaryOp.INT_DIV},
         new OpType[]{BinaryOp.MOD},
@@ -714,10 +744,11 @@ public class Expressionator
 
   private static void parseOperatorExpression(Token t, TokBuf buf) {
 
-    // most ops are two argument except that '-' could be negation
+    // most ops are two argument except that '-' could be negation, "+" could
+    // be pos-ation
     if(buf.hasPendingExpr()) {
       parseBinaryOpExpression(t, buf);
-    } else if(isOp(t, "-")) {
+    } else if(isEitherOp(t, "-", "+")) {
       parseUnaryOpExpression(t, buf);
     } else {
       throw new IllegalArgumentException(
@@ -736,6 +767,18 @@ public class Expressionator
 
   private static void parseUnaryOpExpression(Token firstTok, TokBuf buf) {
     UnaryOp op = getOpType(firstTok, UnaryOp.class);
+
+    UnaryOp numOp = op.getUnaryNumOp();
+    if(numOp != null) {
+      // if this operator is immediately preceding a number, it has a higher
+      // precedence
+      Token nextTok = buf.peekNext();
+      if((nextTok != null) && (nextTok.getType() == TokenType.LITERAL) &&
+         nextTok.getValueType().isNumeric()) {
+        op = numOp;
+      }
+    }
+
     Expr val = parseExpression(buf, true);
 
     buf.setPendingExpr(new EUnaryOp(op, val));
@@ -933,6 +976,12 @@ public class Expressionator
   private static boolean isOp(Token t, String opStr) {
     return ((t != null) && (t.getType() == TokenType.OP) && 
             opStr.equalsIgnoreCase(t.getValueStr()));
+  }
+
+  private static boolean isEitherOp(Token t, String opStr1, String opStr2) {
+    return ((t != null) && (t.getType() == TokenType.OP) && 
+            (opStr1.equalsIgnoreCase(t.getValueStr()) ||
+             opStr2.equalsIgnoreCase(t.getValueStr())));
   }
 
   private static boolean isDelim(Token t, String opStr) {

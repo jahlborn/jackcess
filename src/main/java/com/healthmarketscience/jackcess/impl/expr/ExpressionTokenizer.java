@@ -107,13 +107,6 @@ class ExpressionTokenizer
         switch(charFlag) {
         case IS_OP_FLAG:
 
-          // special case '-' for negative number
-          Token numLit = maybeParseNumberLiteral(c, buf);
-          if(numLit != null) {
-            tokens.add(numLit);
-            continue;
-          }
-          
           // all simple operator chars are single character operators
           tokens.add(new Token(TokenType.OP, String.valueOf(c)));
           break;
