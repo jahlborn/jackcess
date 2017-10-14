@@ -263,11 +263,22 @@ public class ExpressionatorTest extends TestCase
         }
       }
     }
+  }
 
+  public void testTrickyMathExpressions() throws Exception
+  {
     assertEquals(37, eval("=30+7"));
     assertEquals(23, eval("=30+-7"));
     assertEquals(23, eval("=30-+7"));
+    assertEquals(37, eval("=30--7"));
     assertEquals(23, eval("=30-7"));
+
+    assertEquals(100, eval("=-10^2"));
+    assertEquals(-100, eval("=-(10)^2"));
+    assertEquals(-100, eval("=-\"10\"^2"));
+
+    assertEquals(99d, eval("=-10E-1+10e+1"));
+    assertEquals(-101d, eval("=-10E-1-10e+1"));
   }
 
   public void testTypeCoercion() throws Exception
