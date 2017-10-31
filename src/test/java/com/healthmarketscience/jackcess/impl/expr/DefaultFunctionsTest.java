@@ -87,6 +87,42 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("ah", eval("=Right(\"blah\", 2)"));
     assertEquals("", eval("=Right(\"blah\", 0)"));
     assertEquals("blah", eval("=Right(\"blah\", 17)"));
+
+  }
+
+
+  public void testFinancialFuncs() throws Exception
+  {
+    assertEquals("-9.578594039813165", 
+                 eval("=CStr(NPer(0.12/12,-100,-1000))"));
+    assertEquals("-9.488095005505832", 
+                 eval("=CStr(NPer(0.12/12,-100,-1000,0,1))"));
+    assertEquals("60.08212285376166", 
+                 eval("=CStr(NPer(0.12/12,-100,-1000,10000))"));
+    assertEquals("59.673865674294554", 
+                 eval("=CStr(NPer(0.12/12,-100,-1000,10000,1))"));
+    assertEquals("69.66071689357483", 
+                 eval("=CStr(NPer(0.12/12,-100,0,10000))"));
+    assertEquals("69.16196067980039", 
+                 eval("=CStr(NPer(0.12/12,-100,0,10000,1))"));
+
+    assertEquals("8166.966985640913", 
+                 eval("=CStr(FV(0.12/12,60,-100))"));
+    assertEquals("8248.636655497321", 
+                 eval("=CStr(FV(0.12/12,60,-100,0,1))"));
+    assertEquals("6350.270287076823", 
+                 eval("=CStr(FV(0.12/12,60,-100,1000))"));
+    assertEquals("6431.939956933231", 
+                 eval("=CStr(FV(0.12/12,60,-100,1000,1))"));
+
+    assertEquals("4495.503840622403", 
+                 eval("=CStr(PV(0.12/12,60,-100))"));
+    assertEquals("4540.458879028627", 
+                 eval("=CStr(PV(0.12/12,60,-100,0,1))"));
+    assertEquals("-1008.992318755193", 
+                 eval("=CStr(PV(0.12/12,60,-100,10000))"));
+    assertEquals("-964.0372803489684", 
+                 eval("=CStr(PV(0.12/12,60,-100,10000,1))"));
   }
 
 }

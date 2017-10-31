@@ -42,6 +42,7 @@ public class DefaultFunctions
     DefaultTextFunctions.init();
     DefaultNumberFunctions.init();
     DefaultDateFunctions.init();
+    DefaultFinancialFunctions.init();
   }
   
   private DefaultFunctions() {}

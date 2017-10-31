@@ -180,6 +180,7 @@ public class DefaultNumberFunctions
     }
   });
 
+
   // public static final Function Val = registerFunc(new Func1("Val") {
   //   @Override
   //   protected Value eval1(EvalContext ctx, Value param1) {
