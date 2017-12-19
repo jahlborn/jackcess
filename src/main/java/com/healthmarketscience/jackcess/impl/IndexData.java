@@ -1528,6 +1528,7 @@ public class IndexData {
     case LONG:
     case MONEY:
     case COMPLEX_TYPE:
+    case BIG_INT:
       return new IntegerColumnDescriptor(col, flags);
     case FLOAT:
     case DOUBLE:

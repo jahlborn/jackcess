@@ -53,7 +53,8 @@ public class ComplexColumnSupport
 
   private static final Set<DataType> MULTI_VALUE_TYPES = EnumSet.of(
       DataType.BYTE, DataType.INT, DataType.LONG, DataType.FLOAT,
-      DataType.DOUBLE, DataType.GUID, DataType.NUMERIC, DataType.TEXT);
+      DataType.DOUBLE, DataType.GUID, DataType.NUMERIC, DataType.TEXT,
+      DataType.BIG_INT);
 
 
   /**

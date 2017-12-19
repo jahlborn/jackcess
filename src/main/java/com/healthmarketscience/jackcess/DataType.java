@@ -152,6 +152,13 @@ public enum DataType {
    */
   COMPLEX_TYPE((byte) 0x12, null, 4),    
   /**
+   * Corresponds to a java {@link Long}.  Accepts any {@link Number} (using
+   * {@link Number#longValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#BIGINT}.
+   */
+  BIG_INT((byte) 0x13, null, 8),
+  /**
    * Dummy type for a fixed length type which is not currently supported.
    * Handled like a fixed length {@link #BINARY}.
    */

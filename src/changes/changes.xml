@@ -4,6 +4,13 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.10" date="TBD">
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="37">
+        Add full support for access 2016 databases including the new "Large
+        Number" (aka Bigint) data type.
+      </action>
+    </release>
     <release version="2.1.9" date="2017-10-09">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="141">
         Handle more advanced query join constructs.

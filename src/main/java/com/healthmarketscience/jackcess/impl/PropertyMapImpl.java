@@ -204,6 +204,8 @@ public class PropertyMapImpl implements PropertyMap
           type = DataType.SHORT_DATE_TIME;
         } else if(value instanceof byte[]) {
           type = DataType.OLE;
+        } else if(value instanceof Long) {
+          type = DataType.BIG_INT;
         } else {
           throw new IllegalArgumentException(
               "Could not determine type for property " + name +
