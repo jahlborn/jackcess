@@ -5,11 +5,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
@@ -263,6 +265,30 @@ public class JetFormatTest extends TestCase {
         db.close();
       }
     }
+  }
+
+  public void testSqlTypes() throws Exception {
+    
+    JetFormat v2000 = JetFormat.VERSION_4;
+    for(DataType dt : DataType.values()) {
+      if(v2000.isSupportedDataType(dt)) {
+        Integer sqlType = null;
+        try {
+          sqlType = dt.getSQLType();
+        } catch(SQLException ignored) {}
+
+        if(sqlType != null) {
+          assertEquals(dt, DataType.fromSQLType(sqlType));
+        }
+      }
+    }
+
+    assertEquals(DataType.LONG, DataType.fromSQLType(java.sql.Types.BIGINT));
+    assertEquals(DataType.BIG_INT, DataType.fromSQLType(
+                     java.sql.Types.BIGINT, 0, Database.FileFormat.V2016));
+    assertEquals(java.sql.Types.BIGINT, DataType.BIG_INT.getSQLType());
+    assertEquals(DataType.MEMO, DataType.fromSQLType(
+                     java.sql.Types.VARCHAR, 1000));
   }
 
   public static void transferDbFrom(FileChannel channel, InputStream in)
