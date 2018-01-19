@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.10" date="TBD">
+    <release version="2.1.10" date="2018-01-18">
       <action dev="jahlborn" type="update" system="SourceForge2Features"
               issue="37">
         Add full support for access 2016 databases including the new "Large
