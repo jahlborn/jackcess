@@ -313,7 +313,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
 
         int valLen = bbBlock.getShort();        
         int endPos = bbBlock.position() + valLen - 2;
-        byte flag = bbBlock.get();
+        boolean isDdl = (bbBlock.get() != 0);
         DataType dataType = DataType.fromByte(bbBlock.get());
         int nameIdx = bbBlock.getShort();
         int dataSize = bbBlock.getShort();
@@ -324,7 +324,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
         byte[] data = ByteUtil.getBytes(bbBlock, dataSize);
         Object value = col.read(data);
 
-        map.put(propName, dataType, flag, value);
+        map.put(propName, dataType, value, isDdl);
 
         bbBlock.position(endPos);
       }
@@ -359,7 +359,8 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
             int valStartPos = bab.position();
             bab.reserveShort();
 
-            bab.put(prop.getFlag());
+            byte ddlFlag = (byte)(prop.isDdl() ? 1 : 0);
+            bab.put(ddlFlag);
             bab.put(prop.getType().getValue());
             bab.putShort((short)nameIdx);
 

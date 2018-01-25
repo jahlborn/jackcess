@@ -79,16 +79,20 @@ public class MultiValueColumnPropertyMap implements PropertyMap
   }
 
   public Property put(String name, Object value) {
-    return put(name, null, value);
+    return put(name, null, value, false);
   }
 
   public Property put(String name, DataType type, Object value) {
+    return put(name, type, value, false);
+  }
+
+  public Property put(String name, DataType type, Object value, boolean isDdl) {
     // the only property which seems to go in the "primary" is the "multi
     // value" property
     if(isPrimaryKey(name)) {
-      return _primary.put(name, DataType.BOOLEAN, value);
+      return _primary.put(name, DataType.BOOLEAN, value, true);
     }
-    return _complex.put(name, value);
+    return _complex.put(name, type, value, isDdl);
   }
 
   public void putAll(Iterable<? extends Property> props) {

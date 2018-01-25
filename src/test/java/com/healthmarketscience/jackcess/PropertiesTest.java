@@ -68,13 +68,15 @@ public class PropertiesTest extends TestCase
     assertSame(colMap, maps.get("TESTCOL"));
     assertEquals("testcol", colMap.getName());
 
-    defMap.put("foo", DataType.TEXT, (byte)0, "bar");
-    defMap.put("baz", DataType.LONG, (byte)1, 13);
+    defMap.put("foo", DataType.TEXT, "bar", false);
+    defMap.put("baz", DataType.LONG, 13, true);
 
     assertFalse(defMap.isEmpty());
     assertEquals(2, defMap.getSize());
+    assertFalse(defMap.get("foo").isDdl());
+    assertTrue(defMap.get("baz").isDdl());
 
-    colMap.put("buzz", DataType.BOOLEAN, (byte)0, Boolean.TRUE);
+    colMap.put("buzz", DataType.BOOLEAN, Boolean.TRUE, true);
 
     assertFalse(colMap.isEmpty());
     assertEquals(1, colMap.getSize());
