@@ -9,6 +9,9 @@
         Expose the "ddl" attribute on properties.  Set the attribute
         appropriately for known builtin properties.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="146">
+        Set ddl flag even if property type is explicitly provided.
+      </action>
     </release>
     <release version="2.1.10" date="2018-01-18">
       <action dev="jahlborn" type="update" system="SourceForge2Features"

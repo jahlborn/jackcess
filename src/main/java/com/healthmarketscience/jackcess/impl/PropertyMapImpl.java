@@ -176,41 +176,39 @@ public class PropertyMapImpl implements PropertyMap
   
   public static Property createProperty(String name, DataType type, 
                                         Object value, boolean isDdl) {
-    if(type == null) {
-      
-      // attempt to get the default type for this property
-      PropDef pd = DEFAULT_TYPES.get(name);
+    // see if this is a builtin property that we already understand
+    PropDef pd = DEFAULT_TYPES.get(name);
 
-      if(pd != null) {
-        type = pd._type;
-        isDdl |= pd._isDdl;
+    if(pd != null) {
+      // update according to the default info
+      type = ((type == null) ? pd._type : type);
+      isDdl |= pd._isDdl;
+    } else if(type == null) {
+      // choose the type based on the value
+      if(value instanceof String) {
+        type = DataType.TEXT;
+      } else if(value instanceof Boolean) {
+        type = DataType.BOOLEAN;
+      } else if(value instanceof Byte) {
+        type = DataType.BYTE;
+      } else if(value instanceof Short) {
+        type = DataType.INT;
+      } else if(value instanceof Integer) {
+        type = DataType.LONG;
+      } else if(value instanceof Float) {
+        type = DataType.FLOAT;
+      } else if(value instanceof Double) {
+        type = DataType.DOUBLE;
+      } else if(value instanceof Date) {
+        type = DataType.SHORT_DATE_TIME;
+      } else if(value instanceof byte[]) {
+        type = DataType.OLE;
+      } else if(value instanceof Long) {
+        type = DataType.BIG_INT;
       } else {
-        // choose the type based on the value
-        if(value instanceof String) {
-          type = DataType.TEXT;
-        } else if(value instanceof Boolean) {
-          type = DataType.BOOLEAN;
-        } else if(value instanceof Byte) {
-          type = DataType.BYTE;
-        } else if(value instanceof Short) {
-          type = DataType.INT;
-        } else if(value instanceof Integer) {
-          type = DataType.LONG;
-        } else if(value instanceof Float) {
-          type = DataType.FLOAT;
-        } else if(value instanceof Double) {
-          type = DataType.DOUBLE;
-        } else if(value instanceof Date) {
-          type = DataType.SHORT_DATE_TIME;
-        } else if(value instanceof byte[]) {
-          type = DataType.OLE;
-        } else if(value instanceof Long) {
-          type = DataType.BIG_INT;
-        } else {
-          throw new IllegalArgumentException(
-              "Could not determine type for property " + name +
-              " with value " + value);
-        }
+        throw new IllegalArgumentException(
+            "Could not determine type for property " + name +
+            " with value " + value);
       }
     }
     
