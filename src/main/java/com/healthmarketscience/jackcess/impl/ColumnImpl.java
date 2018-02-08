@@ -632,6 +632,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return data;
     case COMPLEX_TYPE:
       return new ComplexValueForeignKeyImpl(this, buffer.getInt());
+    case BIG_INT:
+      return Long.valueOf(buffer.getLong());
     default:
       throw new IOException(withErrorContext("Unrecognized data type: " + _type));
     }
@@ -1163,6 +1165,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case UNKNOWN_11:
     case COMPLEX_TYPE:
       buffer.putInt(toNumber(obj).intValue());
+      break;
+    case BIG_INT:
+      buffer.putLong(toNumber(obj).longValue());
       break;
     case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
@@ -1876,6 +1881,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case COMPLEX_TYPE:
       // leave alone for now?
       return value;
+    case BIG_INT:
+      return ((value instanceof Long) ? value : 
+              toNumber(value, db).longValue());
     default:
       // some variation of binary data
       return toByteArray(value);

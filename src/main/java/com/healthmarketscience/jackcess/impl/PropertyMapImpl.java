@@ -33,28 +33,28 @@ import com.healthmarketscience.jackcess.PropertyMap;
  */
 public class PropertyMapImpl implements PropertyMap
 {
-  private static final Map<String,DataType> DEFAULT_TYPES =
-    new HashMap<String,DataType>();
+  private static final Map<String,PropDef> DEFAULT_TYPES =
+    new HashMap<String,PropDef>();
 
   static {
-    DEFAULT_TYPES.put(ACCESS_VERSION_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(TITLE_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(AUTHOR_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(COMPANY_PROP, DataType.TEXT);
+    DEFAULT_TYPES.put(ACCESS_VERSION_PROP, new PropDef(DataType.TEXT, false));
+    DEFAULT_TYPES.put(TITLE_PROP, new PropDef(DataType.TEXT, false));
+    DEFAULT_TYPES.put(AUTHOR_PROP, new PropDef(DataType.TEXT, false));
+    DEFAULT_TYPES.put(COMPANY_PROP, new PropDef(DataType.TEXT, false));
 
-    DEFAULT_TYPES.put(DEFAULT_VALUE_PROP, DataType.MEMO);
-    DEFAULT_TYPES.put(REQUIRED_PROP, DataType.BOOLEAN);
-    DEFAULT_TYPES.put(ALLOW_ZERO_LEN_PROP, DataType.BOOLEAN);
-    DEFAULT_TYPES.put(DECIMAL_PLACES_PROP, DataType.BYTE);
-    DEFAULT_TYPES.put(FORMAT_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(INPUT_MASK_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(CAPTION_PROP, DataType.MEMO);
-    DEFAULT_TYPES.put(VALIDATION_RULE_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(VALIDATION_TEXT_PROP, DataType.TEXT);
-    DEFAULT_TYPES.put(GUID_PROP, DataType.BINARY);
-    DEFAULT_TYPES.put(DESCRIPTION_PROP, DataType.MEMO);
-    DEFAULT_TYPES.put(RESULT_TYPE_PROP, DataType.BYTE);
-    DEFAULT_TYPES.put(EXPRESSION_PROP, DataType.MEMO);
+    DEFAULT_TYPES.put(DEFAULT_VALUE_PROP, new PropDef(DataType.MEMO, true));
+    DEFAULT_TYPES.put(REQUIRED_PROP, new PropDef(DataType.BOOLEAN, true));
+    DEFAULT_TYPES.put(ALLOW_ZERO_LEN_PROP, new PropDef(DataType.BOOLEAN, true));
+    DEFAULT_TYPES.put(DECIMAL_PLACES_PROP, new PropDef(DataType.BYTE, true));
+    DEFAULT_TYPES.put(FORMAT_PROP, new PropDef(DataType.TEXT, true));
+    DEFAULT_TYPES.put(INPUT_MASK_PROP, new PropDef(DataType.TEXT, true));
+    DEFAULT_TYPES.put(CAPTION_PROP, new PropDef(DataType.MEMO, false));
+    DEFAULT_TYPES.put(VALIDATION_RULE_PROP, new PropDef(DataType.TEXT, true));
+    DEFAULT_TYPES.put(VALIDATION_TEXT_PROP, new PropDef(DataType.TEXT, true));
+    DEFAULT_TYPES.put(GUID_PROP, new PropDef(DataType.BINARY, true));
+    DEFAULT_TYPES.put(DESCRIPTION_PROP, new PropDef(DataType.MEMO, false));
+    DEFAULT_TYPES.put(RESULT_TYPE_PROP, new PropDef(DataType.BYTE, true));
+    DEFAULT_TYPES.put(EXPRESSION_PROP, new PropDef(DataType.MEMO, true));
   }
 
   private final String _mapName;
@@ -107,11 +107,11 @@ public class PropertyMapImpl implements PropertyMap
   }
 
   public PropertyImpl put(String name, Object value) {
-    return put(name, null, (byte)0, value);
+    return put(name, null, value, false);
   }
 
   public PropertyImpl put(String name, DataType type, Object value) {
-    return put(name, type, (byte)0, value);
+    return put(name, type, value, false);
   }
 
   public void putAll(Iterable<? extends Property> props) {
@@ -125,18 +125,15 @@ public class PropertyMapImpl implements PropertyMap
   }  
   
   public PropertyImpl put(Property prop) {
-    byte flag = 0;
-    if(prop instanceof PropertyImpl) {
-      flag = ((PropertyImpl)prop).getFlag();
-    }
-    return put(prop.getName(), prop.getType(), flag, prop.getValue());
+    return put(prop.getName(), prop.getType(), prop.getValue(), prop.isDdl());
   }
 
   /**
    * Puts a property into this map with the given information.
    */
-  public PropertyImpl put(String name, DataType type, byte flag, Object value) {
-    PropertyImpl prop = (PropertyImpl)createProperty(name, type, flag, value);
+  public PropertyImpl put(String name, DataType type, Object value, 
+                          boolean isDdl) {
+    PropertyImpl prop = (PropertyImpl)createProperty(name, type, value, isDdl);
     _props.put(DatabaseImpl.toLookupName(name), prop);
     return prop;
   }
@@ -174,47 +171,50 @@ public class PropertyMapImpl implements PropertyMap
   }
 
   public static Property createProperty(String name, DataType type, Object value) {
-    return createProperty(name, type, (byte)0, value);
+    return createProperty(name, type, value, false);
   }
   
-  public static Property createProperty(String name, DataType type, byte flag,
-                                        Object value) {
-    if(type == null) {
-      
-      // attempt to get the default type for this property
-      type = DEFAULT_TYPES.get(name);
+  public static Property createProperty(String name, DataType type, 
+                                        Object value, boolean isDdl) {
+    // see if this is a builtin property that we already understand
+    PropDef pd = DEFAULT_TYPES.get(name);
 
-      if(type == null) {
-        // choose the type based on the value
-        if(value instanceof String) {
-          type = DataType.TEXT;
-        } else if(value instanceof Boolean) {
-          type = DataType.BOOLEAN;
-        } else if(value instanceof Byte) {
-          type = DataType.BYTE;
-        } else if(value instanceof Short) {
-          type = DataType.INT;
-        } else if(value instanceof Integer) {
-          type = DataType.LONG;
-        } else if(value instanceof Float) {
-          type = DataType.FLOAT;
-        } else if(value instanceof Double) {
-          type = DataType.DOUBLE;
-        } else if(value instanceof Date) {
-          type = DataType.SHORT_DATE_TIME;
-        } else if(value instanceof byte[]) {
-          type = DataType.OLE;
-        } else {
-          throw new IllegalArgumentException(
-              "Could not determine type for property " + name +
-              " with value " + value);
-        }
+    if(pd != null) {
+      // update according to the default info
+      type = ((type == null) ? pd._type : type);
+      isDdl |= pd._isDdl;
+    } else if(type == null) {
+      // choose the type based on the value
+      if(value instanceof String) {
+        type = DataType.TEXT;
+      } else if(value instanceof Boolean) {
+        type = DataType.BOOLEAN;
+      } else if(value instanceof Byte) {
+        type = DataType.BYTE;
+      } else if(value instanceof Short) {
+        type = DataType.INT;
+      } else if(value instanceof Integer) {
+        type = DataType.LONG;
+      } else if(value instanceof Float) {
+        type = DataType.FLOAT;
+      } else if(value instanceof Double) {
+        type = DataType.DOUBLE;
+      } else if(value instanceof Date) {
+        type = DataType.SHORT_DATE_TIME;
+      } else if(value instanceof byte[]) {
+        type = DataType.OLE;
+      } else if(value instanceof Long) {
+        type = DataType.BIG_INT;
+      } else {
+        throw new IllegalArgumentException(
+            "Could not determine type for property " + name +
+            " with value " + value);
       }
     }
     
-    return new PropertyImpl(name, type, flag, value);
+    return new PropertyImpl(name, type, value, isDdl);
   }
-  
+
   /**
    * Info about a property defined in a PropertyMap.
    */ 
@@ -222,13 +222,14 @@ public class PropertyMapImpl implements PropertyMap
   {
     private final String _name;
     private final DataType _type;
-    private final byte _flag;
+    private final boolean _ddl;
     private Object _value;
 
-    private PropertyImpl(String name, DataType type, byte flag, Object value) {
+    private PropertyImpl(String name, DataType type, Object value,
+                         boolean ddl) {
       _name = name;
       _type = type;
-      _flag = flag;
+      _ddl = ddl;
       _value = value;
     }
 
@@ -248,8 +249,8 @@ public class PropertyMapImpl implements PropertyMap
       _value = newValue;
     }
 
-    public byte getFlag() {
-      return _flag;
+    public boolean isDdl() {
+      return _ddl;
     }
 
     @Override
@@ -258,8 +259,21 @@ public class PropertyMapImpl implements PropertyMap
       if(val instanceof byte[]) {
         val = ByteUtil.toHexString((byte[])val);
       }
-      return getName() + "[" + getType() + ":" + _flag + "]=" + val;
+      return getName() + "[" + getType() + (_ddl ? ":ddl" : "") + "]=" + val;
     }
   }
 
+  /**
+   * Helper for holding info about default properties
+   */
+  private static final class PropDef
+  {
+    private final DataType _type;
+    private final boolean _isDdl;
+
+    private PropDef(DataType type, boolean isDdl) {
+      _type = type;
+      _isDdl = isDdl;
+    }
+  }
 }

@@ -16,7 +16,7 @@
     <faq id="formats">
       <question>What Access formats does it support?</question>
       <answer>
-        <p>Jackcess supports Access database versions 2000-2013 read/write and
+        <p>Jackcess supports Access database versions 2000-2016 read/write and
            Access 97 read-only.</p>
       </answer>
     </faq>

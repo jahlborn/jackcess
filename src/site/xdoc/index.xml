@@ -10,7 +10,7 @@
     <section name="Jackcess">
       <p>
         Jackcess is a pure Java library for reading from and writing to MS
-        Access databases (currently supporting versions 2000-2013).  It is part of the <a href="http://openhms.sourceforge.net/">OpenHMS</a> project from <a href="http://www.healthmarketscience.com/">Health Market Science, Inc.</a>.  It is not an application.  There is no GUI.  It's a
+        Access databases (currently supporting versions 2000-2016).  It is part of the <a href="http://openhms.sourceforge.net/">OpenHMS</a> project from <a href="http://www.healthmarketscience.com/">Health Market Science, Inc.</a>.  It is not an application.  There is no GUI.  It's a
         library, intended for other developers to use to build Java
         applications.  Jackcess is licensed under the
         <a href="http://www.apache.org/licenses/LICENSE-2.0.txt">Apache License</a> (as of version 2.1.0).

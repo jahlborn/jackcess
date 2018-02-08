@@ -97,6 +97,16 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public Property put(String name, DataType type, Object value);
 
   /**
+   * Creates a new (or updates an existing) property in the map.
+   * <p/>
+   * Note, this change will not be persisted until the {@link #save} method
+   * has been called.
+   *
+   * @return the newly created (or updated) property
+   */
+  public Property put(String name, DataType type, Object value, boolean isDdl);
+
+  /**
    * Puts all the given properties into this map.
    *
    * @param props the properties to put into this map ({@code null} is
@@ -124,6 +134,14 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
     public String getName();
 
     public DataType getType();
+
+    /**
+     * Whether or not this property is a DDL object.  If {@code true}, users
+     * can't change or delete the property in access without the dbSecWriteDef
+     * permission.  Additionally, certain properties must be flagged correctly
+     * or the access engine may not recognize them correctly.
+     */
+    public boolean isDdl();
 
     public Object getValue();
 

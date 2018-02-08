@@ -26,7 +26,7 @@ import java.nio.ByteOrder;
  * Utility code for dealing with calculated columns.
  * <p/>
  * These are the currently possible calculated types: FLOAT, DOUBLE, INT,
- * LONG, GUID, SHORT_DATE_TIME, MONEY, BOOLEAN, NUMERIC, TEXT, MEMO.
+ * LONG, BIG_INT, GUID, SHORT_DATE_TIME, MONEY, BOOLEAN, NUMERIC, TEXT, MEMO.
  *
  * @author James Ahlborn
  */
