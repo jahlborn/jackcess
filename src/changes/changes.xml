@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.11" date="TBD">
+    <release version="2.1.11" date="2018-03-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="145">
         Expose the "ddl" attribute on properties.  Set the attribute
         appropriately for known builtin properties.
