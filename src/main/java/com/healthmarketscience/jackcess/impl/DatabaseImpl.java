@@ -39,7 +39,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -266,13 +265,7 @@ public class DatabaseImpl implements Database
    * MAX_CACHED_LOOKUP_TABLES).
    */
   private final Map<String, TableInfo> _tableLookup =
-    new LinkedHashMap<String, TableInfo>() {
-    private static final long serialVersionUID = 0L;
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<String, TableInfo> e) {
-      return(size() > MAX_CACHED_LOOKUP_TABLES);
-    }
-  };
+    new SimpleCache<String,TableInfo>(MAX_CACHED_LOOKUP_TABLES);
   /** set of table names as stored in the mdb file, created on demand */
   private Set<String> _tableNames;
   /** Reads and writes database pages */

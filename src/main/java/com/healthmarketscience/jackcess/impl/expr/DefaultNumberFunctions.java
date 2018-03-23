@@ -117,7 +117,7 @@ public class DefaultNumberFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Integer seed = ((params.length > 0) ? params[0].getAsLongInt() : null);
-      return BuiltinOperators.toValue(ctx.getRandom(seed).nextFloat());
+      return BuiltinOperators.toValue(ctx.getRandom(seed));
     }
   });
 

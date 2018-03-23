@@ -36,5 +36,5 @@ public interface EvalContext
   public Value getRowValue(String collectionName, String objName,
                            String colName);
 
-  public Random getRandom(Integer seed);
+  public float getRandom(Integer seed);
 }
