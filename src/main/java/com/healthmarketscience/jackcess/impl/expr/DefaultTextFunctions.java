@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
@@ -42,11 +43,11 @@ public class DefaultTextFunctions
       String str = param1.getAsString();
       int len = str.length();
       if(len == 0) {
-        throw new IllegalStateException("No characters in string");
+        throw new EvalException("No characters in string");
       } 
       int lv = str.charAt(0);
       if((lv < 0) || (lv > 255)) {
-        throw new IllegalStateException("Character code '" + lv +
+        throw new EvalException("Character code '" + lv +
                                         "' out of range ");
       }
       return BuiltinOperators.toValue(lv);
@@ -59,7 +60,7 @@ public class DefaultTextFunctions
       String str = param1.getAsString();
       int len = str.length();
       if(len == 0) {
-        throw new IllegalStateException("No characters in string");
+        throw new EvalException("No characters in string");
       } 
       int lv = str.charAt(0);
       return BuiltinOperators.toValue(lv);
@@ -71,7 +72,7 @@ public class DefaultTextFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
       if((lv < 0) || (lv > 255)) {
-        throw new IllegalStateException("Character code '" + lv +
+        throw new EvalException("Character code '" + lv +
                                         "' out of range ");
       }
       char[] cs = Character.toChars(lv);
@@ -371,7 +372,7 @@ public class DefaultTextFunctions
       return true;
     default:
       // vbDatabaseCompare -> unsupported
-      throw new IllegalStateException("Unsupported compare type " + cmpType);
+      throw new EvalException("Unsupported compare type " + cmpType);
     } 
   }
 

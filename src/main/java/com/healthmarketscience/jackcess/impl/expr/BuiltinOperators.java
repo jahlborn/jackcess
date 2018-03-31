@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
@@ -107,7 +108,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().negate());
     default:
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
   }
 
@@ -137,7 +138,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().add(param2.getAsBigDecimal()));
     default:
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
   }
 
@@ -165,7 +166,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().subtract(param2.getAsBigDecimal()));
     default:
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
   }
 
@@ -190,7 +191,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().multiply(param2.getAsBigDecimal()));
     default:
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
   }
 
@@ -224,7 +225,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().divide(param2.getAsBigDecimal()));
     default:
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
   }
 
@@ -237,7 +238,7 @@ public class BuiltinOperators
     Value.Type mathType = getMathTypePrecedence(param1, param2, 
                                                 CoercionType.GENERAL);
     if(mathType == Value.Type.STRING) {
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
     return toValue(param1.getAsLongInt() / param2.getAsLongInt());
   }
@@ -272,7 +273,7 @@ public class BuiltinOperators
                                                 CoercionType.GENERAL);
 
     if(mathType == Value.Type.STRING) {
-      throw new RuntimeException("Unexpected type " + mathType);
+      throw new EvalException("Unexpected type " + mathType);
     }
     return toValue(param1.getAsLongInt() % param2.getAsLongInt());
   }
@@ -535,7 +536,7 @@ public class BuiltinOperators
     case STRING:
       // string comparison is only valid if _both_ params are strings
       if(param1.getType() != param2.getType()) {
-        throw new RuntimeException("Unexpected type " + compareType);
+        throw new EvalException("Unexpected type " + compareType);
       }
       return param1.getAsString().compareToIgnoreCase(param2.getAsString());
     // case DATE: break; promoted to double
@@ -548,7 +549,7 @@ public class BuiltinOperators
     case BIG_DEC:
       return param1.getAsBigDecimal().compareTo(param2.getAsBigDecimal());
     default:
-      throw new RuntimeException("Unexpected type " + compareType);
+      throw new EvalException("Unexpected type " + compareType);
     }
   }
 
@@ -598,7 +599,7 @@ public class BuiltinOperators
     case DATE_TIME:
       return new DateTimeValue(d, fmt);
     default:
-      throw new RuntimeException("Unexpected date/time type " + type);
+      throw new EvalException("Unexpected date/time type " + type);
     }
   }
   
@@ -632,7 +633,7 @@ public class BuiltinOperators
         fmtStr = ctx.getTemporalConfig().getDefaultDateTimeFormat();
         break;
       default:
-        throw new RuntimeException("Unexpected date/time type " + type);
+        throw new EvalException("Unexpected date/time type " + type);
       }
       return ctx.createDateFormat(fmtStr);
   }

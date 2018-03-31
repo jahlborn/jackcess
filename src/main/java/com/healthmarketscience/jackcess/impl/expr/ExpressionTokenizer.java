@@ -18,7 +18,6 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.text.DateFormat;
 import java.text.FieldPosition;
-import java.text.ParseException;
 import java.text.ParsePosition;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -34,6 +33,7 @@ import java.util.TimeZone;
 import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.ParseException;
 
 
 /**
@@ -152,7 +152,7 @@ class ExpressionTokenizer
             tokens.add(new Token(TokenType.OBJ_NAME, parseObjNameString(buf)));
             break;
           default:
-            throw new IllegalArgumentException(
+            throw new ParseException(
                 "Invalid leading quote character " + c + " " + buf);
           }
 
@@ -258,8 +258,8 @@ class ExpressionTokenizer
     }
 
     if(!complete) {
-      throw new IllegalArgumentException("Missing closing '" + QUOTED_STR_CHAR + 
-                                         "' for quoted string " + buf);
+      throw new ParseException("Missing closing '" + QUOTED_STR_CHAR + 
+                               "' for quoted string " + buf);
     }
 
     return sb.toString();
@@ -282,16 +282,16 @@ class ExpressionTokenizer
         break;
       } else if((startChar != null) &&
                 (startChar == c)) {
-        throw new IllegalArgumentException("Missing closing '" + endChar +
-                                           "' for quoted string " + buf);
+        throw new ParseException("Missing closing '" + endChar +
+                                 "' for quoted string " + buf);
       }
 
       sb.append(c);
     }
 
     if(!complete) {
-      throw new IllegalArgumentException("Missing closing '" + endChar +
-                                         "' for quoted string " + buf);
+      throw new ParseException("Missing closing '" + endChar +
+                               "' for quoted string " + buf);
     }
 
     return sb.toString();
@@ -327,15 +327,15 @@ class ExpressionTokenizer
       sdf = (hasAmPm ? buf.getTimeFormat12() : buf.getTimeFormat24());
       valType = Value.Type.TIME;
     } else {
-      throw new IllegalArgumentException("Invalid date time literal " + dateStr +
-                                         " " + buf);
+      throw new ParseException("Invalid date time literal " + dateStr +
+                               " " + buf);
     }
 
     try {
       return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType,
                        sdf);
-    } catch(ParseException pe) {
-      throw new IllegalArgumentException(       
+    } catch(java.text.ParseException pe) {
+      throw new ParseException(       
           "Invalid date time literal " + dateStr + " " + buf, pe);
     }
   }
@@ -392,7 +392,7 @@ class ExpressionTokenizer
         return new Token(TokenType.LITERAL, num, numStr, 
                          (isFp ? Value.Type.DOUBLE : Value.Type.LONG));
       } catch(NumberFormatException ne) {
-        throw new IllegalArgumentException(
+        throw new ParseException(
             "Invalid number literal " + numStr + " " + buf, ne);
       }
       
@@ -536,7 +536,7 @@ class ExpressionTokenizer
             DateFormat df = _ctx.createDateFormat(BASE_DATE_FMT);
             baseDate = getDateFormat().format(df.parse(baseDate));
           } catch(Exception e) {
-            throw new IllegalStateException("Could not parse base date", e);
+            throw new ParseException("Could not parse base date", e);
           }
         }
         _baseDate = baseDate + " ";

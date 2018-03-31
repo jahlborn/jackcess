@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
@@ -204,7 +205,7 @@ public class DefaultDateFunctions
     param = nonNullToDateValue(ctx, param);
     if(param == null) {
       // not a date/time
-      throw new IllegalStateException("Invalid date/time expression '" + param + "'");
+      throw new EvalException("Invalid date/time expression '" + param + "'");
     }
 
     Calendar cal = getDateValueFormat(ctx, param).getCalendar();

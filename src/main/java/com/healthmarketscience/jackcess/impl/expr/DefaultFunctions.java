@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
@@ -78,7 +79,7 @@ public class DefaultFunctions
       if((num < _minParams) || (num > _maxParams)) {
         String range = ((_minParams == _maxParams) ? "" + _minParams :
                         _minParams + " to " + _maxParams);
-        throw new IllegalArgumentException(
+        throw new EvalException(
             "Invalid number of parameters " +
             num + " passed, expected " + range);
       }
@@ -311,7 +312,7 @@ public class DefaultFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       if((params.length % 2) != 0) {
-        throw new IllegalStateException("Odd number of parameters");
+        throw new EvalException("Odd number of parameters");
       }
       for(int i = 0; i < params.length; i+=2) {
         if(params[i].getAsBoolean()) {
@@ -347,7 +348,7 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
       if((lv < 0) || (lv > 255)) {
-        throw new IllegalStateException("Byte code '" + lv + "' out of range ");
+        throw new EvalException("Byte code '" + lv + "' out of range ");
       }
       return BuiltinOperators.toValue(lv);
     }
@@ -393,7 +394,7 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
       if((lv < Short.MIN_VALUE) || (lv > Short.MAX_VALUE)) {
-        throw new IllegalStateException("Int value '" + lv + "' out of range ");
+        throw new EvalException("Int value '" + lv + "' out of range ");
       }
       return BuiltinOperators.toValue(lv);
     }
@@ -412,7 +413,7 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       Double dv = param1.getAsDouble();
       if((dv < Float.MIN_VALUE) || (dv > Float.MAX_VALUE)) {
-        throw new IllegalStateException("Single value '" + dv + "' out of range ");
+        throw new EvalException("Single value '" + dv + "' out of range ");
       }
       return BuiltinOperators.toValue(dv.floatValue());
     }
@@ -481,7 +482,7 @@ public class DefaultFunctions
         vType = 14;
         break;        
       default:
-        throw new RuntimeException("Unknown type " + type);
+        throw new EvalException("Unknown type " + type);
       }
       return BuiltinOperators.toValue(vType);
     }
@@ -514,7 +515,7 @@ public class DefaultFunctions
         tName = "Decimal";
         break;        
       default:
-        throw new RuntimeException("Unknown type " + type);
+        throw new EvalException("Unknown type " + type);
       }
       return BuiltinOperators.toValue(tName);
     }

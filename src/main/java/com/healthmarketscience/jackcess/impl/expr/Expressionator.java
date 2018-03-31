@@ -39,6 +39,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
@@ -506,7 +507,7 @@ public class Expressionator
         WordType wordType = getWordType(t);
         if(wordType == null) {
           // shouldn't happen
-          throw new RuntimeException("Invalid operator " + t);
+          throw new ParseException("Invalid operator " + t);
         }
 
         // this can only be an OP or a COMP (those are the only words that the
@@ -522,7 +523,7 @@ public class Expressionator
           break;
 
         default:
-          throw new RuntimeException("Unexpected OP word type " + wordType);
+          throw new ParseException("Unexpected OP word type " + wordType);
         }
         
         break;
@@ -580,7 +581,7 @@ public class Expressionator
             break;
 
           default:
-            throw new RuntimeException("Unexpected STRING word type "
+            throw new ParseException("Unexpected STRING word type "
                                        + wordType);
           }
         }
@@ -592,7 +593,7 @@ public class Expressionator
         break;
         
       default:
-        throw new RuntimeException("unknown token type " + t);
+        throw new ParseException("unknown token type " + t);
       }
 
       if(singleExpr && buf.hasPendingExpr()) {
@@ -602,7 +603,7 @@ public class Expressionator
 
     Expr expr = buf.takePendingExpr();
     if(expr == null) {
-      throw new IllegalArgumentException("No expression found? " + buf);
+      throw new ParseException("No expression found? " + buf);
     }
 
     return expr;
@@ -641,7 +642,7 @@ public class Expressionator
     }
 
     if(atSep || (objNames.size() > 3)) {
-      throw new IllegalArgumentException("Invalid object reference " + buf);
+      throw new ParseException("Invalid object reference " + buf);
     }
 
     // names are in reverse order
@@ -657,7 +658,7 @@ public class Expressionator
     // the only "top-level" delim we expect to find is open paren, and
     // there shouldn't be any pending expression
     if(!isDelim(firstTok, OPEN_PAREN) || buf.hasPendingExpr()) {
-      throw new IllegalArgumentException("Unexpected delimiter " + 
+      throw new ParseException("Unexpected delimiter " + 
                                          firstTok.getValue() + " " + buf);
     }
 
@@ -683,7 +684,7 @@ public class Expressionator
       String funcName = firstTok.getValueStr();
       Function func = buf.getFunction(funcName);
       if(func == null) {
-        throw new IllegalArgumentException("Could not find function '" + 
+        throw new ParseException("Could not find function '" + 
                                            funcName + "' " + buf);
       }
       buf.setPendingExpr(new EFunc(func, params));
@@ -738,7 +739,7 @@ public class Expressionator
       }
     }
 
-    throw new IllegalArgumentException("Missing closing '" + CLOSE_PAREN
+    throw new ParseException("Missing closing '" + CLOSE_PAREN
                                        + " " + buf);
   }
 
@@ -751,7 +752,7 @@ public class Expressionator
     } else if(isEitherOp(t, "-", "+")) {
       parseUnaryOpExpression(t, buf);
     } else {
-      throw new IllegalArgumentException(
+      throw new ParseException(
           "Missing left expression for binary operator " + t.getValue() + 
           " " + buf);
     }
@@ -792,7 +793,7 @@ public class Expressionator
         // the current field value for the left value
         buf.setPendingExpr(THIS_COL_VALUE);
       } else {
-        throw new IllegalArgumentException(
+        throw new ParseException(
             "Missing left expression for comparison operator " + 
             firstTok.getValue() + " " + buf);
       }
@@ -808,7 +809,7 @@ public class Expressionator
   private static void parseLogicalOpExpression(Token firstTok, TokBuf buf) {
 
     if(!buf.hasPendingExpr()) {
-      throw new IllegalArgumentException(
+      throw new ParseException(
           "Missing left expression for logical operator " + 
           firstTok.getValue() + " " + buf);
     }
@@ -836,7 +837,7 @@ public class Expressionator
         // the current field value for the left value
         buf.setPendingExpr(THIS_COL_VALUE);
       } else {
-        throw new IllegalArgumentException(
+        throw new ParseException(
             "Missing left expression for comparison operator " + 
             specOp + " " + buf);
       }
@@ -855,7 +856,7 @@ public class Expressionator
       Token t = buf.next();
       if((t.getType() != TokenType.LITERAL) || 
          (t.getValueType() != Value.Type.STRING)) {
-        throw new IllegalArgumentException("Missing Like pattern " + buf);
+        throw new ParseException("Missing Like pattern " + buf);
       }
       String patternStr = t.getValueStr();
       specOpExpr = new ELikeOp(specOp, expr, patternStr);
@@ -875,7 +876,7 @@ public class Expressionator
 
         if(tmpT == null) {
           // ran out of expression?
-          throw new IllegalArgumentException(
+          throw new ParseException(
               "Missing 'And' for 'Between' expression " + buf);
         }
 
@@ -903,7 +904,7 @@ public class Expressionator
         t = buf.next();
       }
       if(!isDelim(t, OPEN_PAREN)) {
-        throw new IllegalArgumentException("Malformed In expression " + buf);
+        throw new ParseException("Malformed In expression " + buf);
       }
 
       List<Expr> exprs = findParenExprs(buf, true);
@@ -911,7 +912,7 @@ public class Expressionator
       break;
 
     default:
-      throw new RuntimeException("Unexpected special op " + specOp);
+      throw new ParseException("Unexpected special op " + specOp);
     }
 
     buf.setPendingExpr(specOpExpr);
@@ -950,7 +951,7 @@ public class Expressionator
       return SpecOp.NOT;
     }
 
-    throw new IllegalArgumentException(
+    throw new ParseException(
         "Malformed special operator " + opStr + " " + buf);
   }
 
@@ -963,7 +964,7 @@ public class Expressionator
     } else if("null".equalsIgnoreCase(firstTok.getValueStr())) {
       constExpr = NULL_VALUE;
     } else {
-      throw new RuntimeException("Unexpected CONST word "
+      throw new ParseException("Unexpected CONST word "
                                  + firstTok.getValue());
     }
     buf.setPendingExpr(constExpr);
@@ -1011,7 +1012,7 @@ public class Expressionator
         return op;
       }
     }
-    throw new IllegalArgumentException("Unexpected op string " + t.getValueStr());
+    throw new ParseException("Unexpected op string " + t.getValueStr());
   }
 
   private static final class TokBuf
@@ -1097,7 +1098,7 @@ public class Expressionator
 
     public Token next() {
       if(!hasNext()) {
-        throw new IllegalArgumentException(
+        throw new ParseException(
             "Unexpected end of expression " + this);
       }
       return _tokens.get(_pos++);
@@ -1113,7 +1114,7 @@ public class Expressionator
 
     public void setPendingExpr(Expr expr) {
       if(_pendingExpr != null) {
-        throw new IllegalArgumentException(
+        throw new ParseException(
             "Found multiple expressions with no operator " + this);
       }
       _pendingExpr = expr.resolveOrderOfOperations();
@@ -1335,7 +1336,7 @@ public class Expressionator
     case BIG_DEC:
       return new BigDecimalValue((BigDecimal)value);
     default:
-      throw new RuntimeException("unexpected literal type " + valType);
+      throw new ParseException("unexpected literal type " + valType);
     } 
   }
 
@@ -1963,7 +1964,7 @@ public class Expressionator
       case RECORD_VALIDATOR:
         return evalCondition(ctx);
       default:
-        throw new RuntimeException("unexpected expression type " + _type);
+        throw new ParseException("unexpected expression type " + _type);
       }
     }
 
@@ -2008,8 +2009,7 @@ public class Expressionator
       case BIG_DEC:
         return val.getAsBigDecimal();
       default:
-        throw new IllegalStateException("unexpected result type " + 
-                                        ctx.getResultType());
+        throw new IllegalStateException("unexpected result type " + resultType);
       }
     }
 

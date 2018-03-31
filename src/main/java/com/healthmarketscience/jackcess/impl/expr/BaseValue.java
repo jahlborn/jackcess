@@ -21,6 +21,7 @@ import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 
 /**
  *
@@ -56,8 +57,8 @@ public abstract class BaseValue implements Value
     throw invalidConversion(Value.Type.BIG_DEC);
   }
 
-  private UnsupportedOperationException invalidConversion(Value.Type newType) {
-    return new UnsupportedOperationException(
+  private EvalException invalidConversion(Value.Type newType) {
+    return new EvalException(
         getType() + " value cannot be converted to " + newType);
   }
 

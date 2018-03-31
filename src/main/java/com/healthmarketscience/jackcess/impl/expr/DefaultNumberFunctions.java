@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
@@ -56,7 +57,7 @@ public class DefaultNumberFunctions
       case BIG_DEC:
         return BuiltinOperators.toValue(param1.getAsBigDecimal().abs());
       default:
-        throw new RuntimeException("Unexpected type " + mathType);
+        throw new EvalException("Unexpected type " + mathType);
       }
     }
   });
@@ -160,7 +161,7 @@ public class DefaultNumberFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       double dv = param1.getAsDouble();
       if(dv < 0.0d) {
-        throw new IllegalStateException("Invalid value '" + dv + "'");
+        throw new EvalException("Invalid value '" + dv + "'");
       }
       return BuiltinOperators.toValue(Math.sqrt(dv));
     }

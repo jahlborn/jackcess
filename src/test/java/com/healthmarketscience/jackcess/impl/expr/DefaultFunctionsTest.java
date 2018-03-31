@@ -17,16 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
-import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.TestUtil;
-import com.healthmarketscience.jackcess.expr.EvalContext;
-import com.healthmarketscience.jackcess.expr.Expression;
-import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.TemporalConfig;
-import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 
@@ -64,8 +56,8 @@ public class DefaultFunctionsTest extends TestCase
 
     try {
       eval("=Str$(Null)");
-      fail("UnsupportedOperationException should have been thrown");
-    } catch(UnsupportedOperationException expected) {
+      fail("EvalException should have been thrown");
+    } catch(EvalException expected) {
       // success
     }
 
