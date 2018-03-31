@@ -66,7 +66,7 @@ public class DefaultTextFunctions
     }
   });
 
-  public static final Function CHR = registerStringFunc(new Func1("Chr") {
+  public static final Function CHR = registerStringFunc(new Func1NullIsNull("Chr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
@@ -79,7 +79,7 @@ public class DefaultTextFunctions
     }
   });
 
-  public static final Function CHRW = registerStringFunc(new Func1("ChrW") {
+  public static final Function CHRW = registerStringFunc(new Func1NullIsNull("ChrW") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
@@ -88,7 +88,7 @@ public class DefaultTextFunctions
     }
   });
 
-  public static final Function STR = registerStringFunc(new Func1("Str") {
+  public static final Function STR = registerStringFunc(new Func1NullIsNull("Str") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();

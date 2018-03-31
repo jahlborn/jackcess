@@ -59,6 +59,15 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("23072", eval("=Oct(9786)"));
     assertEquals(" 9786", eval("=Str(9786)"));
     assertEquals("-42", eval("=Str(-42)"));
+    assertEquals("-42", eval("=Str$(-42)"));
+    assertNull(eval("=Str(Null)"));
+
+    try {
+      eval("=Str$(Null)");
+      fail("UnsupportedOperationException should have been thrown");
+    } catch(UnsupportedOperationException expected) {
+      // success
+    }
 
     assertEquals(-1, eval("=CBool(\"1\")"));
     assertEquals(13, eval("=CByte(\"13\")"));

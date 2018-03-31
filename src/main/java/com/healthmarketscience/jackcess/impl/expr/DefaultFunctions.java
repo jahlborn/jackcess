@@ -222,6 +222,40 @@ public class DefaultFunctions
     protected abstract Value evalVar(EvalContext ctx, Value[] params);
   }
 
+  public static class StringFuncWrapper implements Function
+  {
+    private final String _name;
+    private final Function _delegate;
+
+    public StringFuncWrapper(Function delegate) {
+      _delegate = delegate;
+      _name = _delegate.getName() + NON_VAR_SUFFIX;
+    }
+
+    public String getName() {
+      return _name;
+    }
+
+    public boolean isPure() {
+      return _delegate.isPure();
+    }
+
+    public Value eval(EvalContext ctx, Value... params) {
+      Value result = _delegate.eval(ctx, params);
+      if(result.isNull()) {
+        // non-variant version does not do null-propagation, so force
+        // exception to be thrown here
+        result.getAsString();
+      }
+      return result;
+    }
+
+    @Override
+    public String toString() {
+      return getName() + "()";
+    }
+  }
+
   
   public static final Function IIF = registerFunc(new Func3("IIf") {
     @Override
@@ -497,10 +531,8 @@ public class DefaultFunctions
   }
 
   static Function registerStringFunc(Function func) {
-    // for our purposes the non-variant versions are the same function
-    // (e.g. "Foo" and "Foo$")
     registerFunc(func.getName(), func);
-    registerFunc(func.getName() + NON_VAR_SUFFIX, func);
+    registerFunc(new StringFuncWrapper(func));
     return func;
   }
 
