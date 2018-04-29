@@ -44,6 +44,7 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.InvalidValueException;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
@@ -62,9 +63,9 @@ import org.apache.commons.logging.LogFactory;
  * @usage _intermediate_class_
  */
 public class ColumnImpl implements Column, Comparable<ColumnImpl> {
-  
+
   protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
-  
+
   /**
    * Placeholder object for adding rows which indicates that the caller wants
    * the RowId of the new row.  Must be added as an extra value at the end of
@@ -88,31 +89,31 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
     25569L * MILLISECONDS_PER_DAY;
-  
+
   /**
    * mask for the fixed len bit
    * @usage _advanced_field_
    */
   public static final byte FIXED_LEN_FLAG_MASK = (byte)0x01;
-  
+
   /**
    * mask for the auto number bit
    * @usage _advanced_field_
    */
   public static final byte AUTO_NUMBER_FLAG_MASK = (byte)0x04;
-  
+
   /**
    * mask for the auto number guid bit
    * @usage _advanced_field_
    */
   public static final byte AUTO_NUMBER_GUID_FLAG_MASK = (byte)0x40;
-  
+
   /**
    * mask for the hyperlink bit (on memo types)
    * @usage _advanced_field_
    */
   public static final byte HYPERLINK_FLAG_MASK = (byte)0x80;
-  
+
   /**
    * mask for the "is updatable" field bit
    * @usage _advanced_field_
@@ -141,7 +142,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * the "general" text sort order, latest version (access 2010+)
    * @usage _intermediate_field_
    */
-  public static final SortOrder GENERAL_SORT_ORDER = 
+  public static final SortOrder GENERAL_SORT_ORDER =
     new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)1);
 
   /** pattern matching textual guid strings (allows for optional surrounding
@@ -149,7 +150,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private static final Pattern GUID_PATTERN = Pattern.compile("\\s*[{]?([\\p{XDigit}]{8})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{4})-([\\p{XDigit}]{12})[}]?\\s*");
 
   /** header used to indicate unicode text compression */
-  private static final byte[] TEXT_COMPRESSION_HEADER = 
+  private static final byte[] TEXT_COMPRESSION_HEADER =
   { (byte)0xFF, (byte)0XFE };
   private static final char MIN_COMPRESS_CHAR = 1;
   private static final char MAX_COMPRESS_CHAR = 0xFF;
@@ -185,10 +186,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /** the auto number generator for this column (if autonumber column) */
   private final AutoNumberGenerator _autoNumberGenerator;
   /** properties for this column, if any */
-  private PropertyMap _props;  
+  private PropertyMap _props;
   /** Validator for writing new values */
   private ColumnValidator _validator = SimpleColumnValidator.INSTANCE;
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -213,7 +214,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _fixedDataOffset = fixedOffset;
     _varLenTableIndex = varLenIndex;
   }
-    
+
   /**
    * Read a column definition in from a buffer
    * @usage _advanced_method_
@@ -225,19 +226,19 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     _name = args.name;
     _displayIndex = args.displayIndex;
     _type = args.type;
-    
+
     _columnNumber = args.buffer.getShort(
         args.offset + getFormat().OFFSET_COLUMN_NUMBER);
     _columnLength = args.buffer.getShort(
         args.offset + getFormat().OFFSET_COLUMN_LENGTH);
-    
+
     _variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
-    _autoNumber = ((args.flags & 
+    _autoNumber = ((args.flags &
                     (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
     _calculated = ((args.extFlags & CALCULATED_EXT_FLAG_MASK) != 0);
-    
+
     _autoNumberGenerator = createAutoNumberGenerator();
-    
+
     if(_variableLength) {
       _varLenTableIndex = args.buffer.getShort(
           args.offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
@@ -248,7 +249,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       _varLenTableIndex = 0;
     }
   }
-  
+
   /**
    * Creates the appropriate ColumnImpl class and reads a column definition in
    * from a buffer
@@ -273,7 +274,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         colType = resultType;
       }
     }
-    
+
     try {
       args.type = DataType.fromByte(colType);
     } catch(IOException e) {
@@ -288,7 +289,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(calculated) {
       return CalculatedColumnUtil.create(args);
     }
-    
+
     switch(args.type) {
     case TEXT:
       return new TextColumnImpl(args);
@@ -306,7 +307,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(args.type.isLongValue()) {
       return new LongValueColumnImpl(args);
     }
-    
+
     return new ColumnImpl(args);
   }
 
@@ -320,7 +321,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   void collectUsageMapPages(Collection<Integer> pages) {
     // base does nothing
   }
-    
+
   /**
    * Secondary column initialization after the table is fully loaded.
    */
@@ -332,10 +333,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _table;
   }
 
-  public DatabaseImpl getDatabase() {       
+  public DatabaseImpl getDatabase() {
     return getTable().getDatabase();
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -349,15 +350,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public PageChannel getPageChannel() {
     return getDatabase().getPageChannel();
   }
-  
+
   public String getName() {
     return _name;
   }
-  
+
   public boolean isVariableLength() {
     return _variableLength;
   }
-  
+
   public boolean isAutoNumber() {
     return _autoNumber;
   }
@@ -379,7 +380,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public void setColumnIndex(int newColumnIndex) {
     _columnIndex = newColumnIndex;
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -390,11 +391,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public DataType getType() {
     return _type;
   }
-  
+
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
   }
-  
+
   public boolean isCompressedUnicode() {
     return false;
   }
@@ -402,7 +403,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public byte getPrecision() {
     return (byte)getType().getDefaultPrecision();
   }
-  
+
   public byte getScale() {
     return (byte)getType().getDefaultScale();
   }
@@ -432,14 +433,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public boolean isCalculated() {
     return _calculated;
   }
-  
+
   /**
    * @usage _advanced_method_
    */
   public int getVarLenTableIndex() {
     return _varLenTableIndex;
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -458,7 +459,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public boolean isAppendOnly() {
     return (getVersionHistoryColumn() != null);
   }
-  
+
   public ColumnImpl getVersionHistoryColumn() {
     return null;
   }
@@ -481,17 +482,55 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public boolean isHyperlink() {
     return false;
   }
-  
+
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return null;
   }
 
-  public ColumnValidator getColumnValidator() {
-    return _validator;
+  void initColumnValidator() throws IOException {
+    // first initialize any "external" (user-defined) validator
+    setColumnValidator(null);
+
+    // next, initialize any "internal" (property defined) validators
+    initPropertiesValidator();
   }
-  
+
+  void initPropertiesValidator() throws IOException {
+
+    PropertyMap props = getProperties();
+
+    // if the "required" property is enabled, add appropriate validator
+    boolean required = (Boolean)props.getValue(PropertyMap.REQUIRED_PROP,
+                                               Boolean.FALSE);
+    if(required) {
+      _validator = new RequiredColValidator(_validator);
+    }
+
+    // if the "allow zero len" property is disabled (textual columns only),
+    // add appropriate validator
+    boolean allowZeroLen =
+      !getType().isTextual() ||
+      (Boolean)props.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP,
+                              Boolean.TRUE);
+    if(!allowZeroLen) {
+      _validator = new NoZeroLenColValidator(_validator);
+    }
+  }
+
+  void propertiesUpdated() throws IOException {
+    // discard any existing internal validators and re-compute them
+    _validator = getColumnValidator();
+    initPropertiesValidator();
+  }
+
+  public ColumnValidator getColumnValidator() {
+    // unwrap any "internal" validator
+    return ((_validator instanceof InternalColumnValidator) ?
+            ((InternalColumnValidator)_validator).getExternal() : _validator);
+  }
+
   public void setColumnValidator(ColumnValidator newValidator) {
-    
+
     if(isAutoNumber()) {
       // cannot set autonumber validator (autonumber values are controlled
       // internally)
@@ -502,7 +541,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // just leave default validator instance alone
       return;
     }
-    
+
     if(newValidator == null) {
       newValidator = getDatabase().getColumnValidatorFactory()
         .createValidator(this);
@@ -510,13 +549,19 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         newValidator = SimpleColumnValidator.INSTANCE;
       }
     }
-    _validator = newValidator;
+
+    // handle delegation if "internal" validator in use
+    if(_validator instanceof InternalColumnValidator) {
+      ((InternalColumnValidator)_validator).setExternal(newValidator);
+    } else {
+      _validator = newValidator;
+    }
   }
-  
+
   byte getOriginalDataType() {
     return _type.getValue();
   }
-  
+
   private AutoNumberGenerator createAutoNumberGenerator() {
     if(!_autoNumber || (_type == null)) {
       return null;
@@ -550,21 +595,21 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return _props;
   }
-  
+
   public Object setRowValue(Object[] rowArray, Object value) {
     rowArray[_columnIndex] = value;
     return value;
   }
-  
+
   public Object setRowValue(Map<String,Object> rowMap, Object value) {
     rowMap.put(_name, value);
     return value;
   }
-  
+
   public Object getRowValue(Object[] rowArray) {
     return rowArray[_columnIndex];
   }
-  
+
   public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }
@@ -572,7 +617,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public boolean storeInNullMask() {
     return (getType() == DataType.BOOLEAN);
   }
-  
+
   public boolean writeToNullMask(Object value) {
     return toBooleanValue(value);
   }
@@ -590,14 +635,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public Object read(byte[] data) throws IOException {
     return read(data, PageChannel.DEFAULT_BYTE_ORDER);
   }
-  
+
   /**
    * Deserialize a raw byte value for this column into an Object
    * @param data The raw byte value
    * @param order Byte order in which the raw value is stored
    * @return The deserialized Object
    * @usage _advanced_method_
-   */  
+   */
   public Object read(byte[] data, ByteOrder order) throws IOException {
     ByteBuffer buffer = ByteBuffer.wrap(data).order(order);
 
@@ -641,10 +686,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   /**
    * Decodes "Currency" values.
-   * 
+   *
    * @param buffer Column value that points to currency data
    * @return BigDecimal representing the monetary value
-   * @throws IOException if the value cannot be parsed 
+   * @throws IOException if the value cannot be parsed
    */
   private BigDecimal readCurrencyValue(ByteBuffer buffer)
     throws IOException
@@ -652,7 +697,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(buffer.remaining() != 8) {
       throw new IOException(withErrorContext("Invalid money value"));
     }
-    
+
     return new BigDecimal(BigInteger.valueOf(buffer.getLong(0)), 4);
   }
 
@@ -670,7 +715,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // adjust scale (will cause the an ArithmeticException if number has too
       // many decimal places)
       decVal = decVal.setScale(4);
-    
+
       // now, remove scale and convert to long (this will throw if the value is
       // too big)
       buffer.putLong(decVal.movePointRight(4).longValueExact());
@@ -738,11 +783,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
       // check precision
       if(decVal.precision() > getPrecision()) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
             "Numeric value is too big for specified precision "
             + getPrecision() + ": " + decVal));
       }
-    
+
       // convert to unscaled BigInteger, big-endian bytes
       byte[] intValBytes = toUnscaledByteArray(
           decVal, getType().getFixedSize() - 1);
@@ -770,11 +815,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         // with unsigned values, so we can drop the extra leading 0
         intValBytes = ByteUtil.copyOf(intValBytes, 1, maxByteLen);
       } else {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                                   "Too many bytes for valid BigInteger?"));
       }
     } else if(intValBytes.length < maxByteLen) {
-      intValBytes = ByteUtil.copyOf(intValBytes, 0, maxByteLen, 
+      intValBytes = ByteUtil.copyOf(intValBytes, 0, maxByteLen,
                                     (maxByteLen - intValBytes.length));
     }
     return intValBytes;
@@ -791,7 +836,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     long time = fromDateDouble(Double.longBitsToDouble(dateBits));
     return new DateExt(time, dateBits);
   }
-  
+
   /**
    * Returns a java long time value converted from an access date double.
    * @usage _advanced_method_
@@ -829,7 +874,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // _not_ the time distance from zero (as one would expect with "normal"
     // numbers).  therefore, we need to do a little number logic to convert
     // the absolute time fraction into a normal distance from zero number.
-    long timePart = Math.round((Math.abs(value) % 1.0) * 
+    long timePart = Math.round((Math.abs(value) % 1.0) *
                                (double)MILLISECONDS_PER_DAY);
 
     long time = datePart + timePart;
@@ -845,13 +890,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(value == null) {
       buffer.putDouble(0d);
     } else if(value instanceof DateExt) {
-      
+
       // this is a Date value previously read from readDateValue().  use the
       // original bits to store the value so we don't lose any precision
       buffer.putLong(((DateExt)value).getDateBits());
-      
+
     } else {
-      
+
       buffer.putDouble(toDateDouble(value));
     }
   }
@@ -908,7 +953,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * @return an appropriate Date long value for the given object
    */
-  private static long toDateLong(Object value) 
+  private static long toDateLong(Object value)
   {
     return ((value instanceof Date) ?
             ((Date)value).getTime() :
@@ -925,8 +970,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     c.setTimeInMillis(time);
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
-  }  
-  
+  }
+
   /**
    * Gets the timezone offset from local time to UTC for the given time
    * (including DST).
@@ -939,8 +984,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // apply the zone offset first to get us closer to the original time
     c.setTimeInMillis(time - c.get(Calendar.ZONE_OFFSET));
     return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
-  }  
-  
+  }
+
   /**
    * Decodes a GUID value.
    */
@@ -985,7 +1030,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     Matcher m = GUID_PATTERN.matcher(toCharSequence(value));
     if(!m.matches()) {
-      throw new IOException(withErrorContext("Invalid GUID: " + value));
+      throw new InvalidValueException(
+          withErrorContext("Invalid GUID: " + value));
     }
 
     ByteBuffer origBuffer = null;
@@ -1002,7 +1048,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     ByteUtil.writeHexString(buffer, m.group(3));
     ByteUtil.writeHexString(buffer, m.group(4));
     ByteUtil.writeHexString(buffer, m.group(5));
-      
+
     if(tmpBuf != null) {
       // the first 3 guid components are integer components which need to
       // respect endianness, so swap 4-byte int, 2-byte int, 2-byte int
@@ -1027,7 +1073,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public Object validate(Object obj) throws IOException {
     return _validator.validate(this, obj);
   }
-  
+
   /**
    * Serialize an Object into a raw byte value for this column in little
    * endian order
@@ -1040,7 +1086,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     return write(obj, remainingRowLength, PageChannel.DEFAULT_BYTE_ORDER);
   }
-  
+
   /**
    * Serialize an Object into a raw byte value for this column
    * @param obj Object to serialize
@@ -1059,14 +1105,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return writeRealData(obj, remainingRowLength, order);
   }
 
-  protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+  protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                      ByteOrder order)
     throws IOException
   {
     if(!isVariableLength() || !getType().isVariableLength()) {
       return writeFixedLengthField(obj, order);
     }
-      
+
     // this is an "inline" var length field
     switch(getType()) {
     case NUMERIC:
@@ -1080,7 +1126,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case TEXT:
       return encodeTextValue(
           obj, 0, getLengthInUnits(), false).order(order);
-        
+
     case BINARY:
     case UNKNOWN_0D:
     case UNSUPPORTED_VARLEN:
@@ -1172,7 +1218,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
       if(bytes.length != getLength()) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                                   "Invalid fixed size binary data, size "
                                   + getLength() + ", got " + bytes.length));
       }
@@ -1184,7 +1230,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return buffer;
   }
-  
+
   /**
    * Decodes a compressed or uncompressed text value.
    */
@@ -1198,7 +1244,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
                             (data[1] == TEXT_COMPRESSION_HEADER[1]));
 
     if(isCompressed) {
-        
+
       // this is a whacky compression combo that switches back and forth
       // between compressed/uncompressed using a 0x00 byte (starting in
       // compressed mode)
@@ -1216,7 +1262,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
           inCompressedMode = !inCompressedMode;
           ++dataEnd;
           dataStart = dataEnd;
-            
+
         } else {
           ++dataEnd;
         }
@@ -1225,9 +1271,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       decodeTextSegment(data, dataStart, dataEnd, inCompressedMode, textBuf);
 
       return textBuf.toString();
-        
+
     }
-      
+
     return decodeUncompressedText(data, getCharset());
   }
 
@@ -1236,7 +1282,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * given status of the segment (compressed/uncompressed).
    */
   private void decodeTextSegment(byte[] data, int dataStart, int dataEnd,
-                                 boolean inCompressedMode, 
+                                 boolean inCompressedMode,
                                  StringBuilder textBuf)
   {
     if(dataEnd <= dataStart) {
@@ -1251,7 +1297,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       for(int i = dataStart; i < dataEnd; ++i) {
         tmpData[tmpIdx] = data[i];
         tmpIdx += 2;
-      } 
+      }
       data = tmpData;
       dataStart = 0;
       dataLength = data.length;
@@ -1269,7 +1315,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       byte[] textBytes, int startPos, int length, Charset charset)
   {
     return charset.decode(ByteBuffer.wrap(textBytes, startPos, length));
-  }  
+  }
 
   /**
    * Encodes a text value, possibly compressing.
@@ -1280,23 +1326,23 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     CharSequence text = toCharSequence(obj);
     if((text.length() > maxChars) || (text.length() < minChars)) {
-      throw new IOException(withErrorContext(
+      throw new InvalidValueException(withErrorContext(
                             "Text is wrong length for " + getType() +
                             " column, max " + maxChars
                             + ", min " + minChars + ", got " + text.length()));
     }
-    
+
     // may only compress if column type allows it
     if(!forceUncompressed && isCompressedUnicode() &&
        (text.length() <= getFormat().MAX_COMPRESSED_UNICODE_SIZE) &&
        isUnicodeCompressible(text)) {
 
-      byte[] encodedChars = new byte[TEXT_COMPRESSION_HEADER.length + 
+      byte[] encodedChars = new byte[TEXT_COMPRESSION_HEADER.length +
                                      text.length()];
       encodedChars[0] = TEXT_COMPRESSION_HEADER[0];
       encodedChars[1] = TEXT_COMPRESSION_HEADER[1];
       for(int i = 0; i < text.length(); ++i) {
-        encodedChars[i + TEXT_COMPRESSION_HEADER.length] = 
+        encodedChars[i + TEXT_COMPRESSION_HEADER.length] =
           (byte)text.charAt(i);
       }
       return ByteBuffer.wrap(encodedChars);
@@ -1353,7 +1399,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return flags;
   }
-  
+
   @Override
   public String toString() {
     ToStringBuilder sb = CustomToStringStyle.builder(this)
@@ -1363,7 +1409,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
               " (" + _type + ")")
       .append("number", _columnNumber)
       .append("length", _columnLength)
-      .append("variableLength", _variableLength);       
+      .append("variableLength", _variableLength);
     if(_calculated) {
       sb.append("calculated", _calculated);
     }
@@ -1375,10 +1421,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
       if(isAppendOnly()) {
         sb.append("appendOnly", isAppendOnly());
-      } 
+      }
       if(isHyperlink()) {
         sb.append("hyperlink", isHyperlink());
-      } 
+      }
     }
     if(_type.getHasScalePrecision()) {
       sb.append("precision", getPrecision())
@@ -1392,14 +1438,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return sb.toString();
   }
-  
+
   /**
    * @param textBytes bytes of text to decode
    * @param charset relevant charset
    * @return the decoded string
    * @usage _advanced_method_
    */
-  public static String decodeUncompressedText(byte[] textBytes, 
+  public static String decodeUncompressedText(byte[] textBytes,
                                               Charset charset)
   {
     return decodeUncompressedText(textBytes, 0, textBytes.length, charset)
@@ -1415,12 +1461,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public static ByteBuffer encodeUncompressedText(CharSequence text,
                                                   Charset charset)
   {
-    CharBuffer cb = ((text instanceof CharBuffer) ? 
+    CharBuffer cb = ((text instanceof CharBuffer) ?
                      (CharBuffer)text : CharBuffer.wrap(text));
     return charset.encode(cb);
   }
 
-  
+
   /**
    * Orders Columns by column number.
    * @usage _general_method_
@@ -1434,7 +1480,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return 0;
     }
   }
-  
+
   /**
    * @param columns A list of columns in a table definition
    * @return The number of variable length columns found in the list
@@ -1513,7 +1559,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return Double.valueOf(value.toString());
   }
-  
+
   /**
    * @return an appropriate CharSequence representation of the given object.
    * @usage _advanced_method_
@@ -1599,7 +1645,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // Access considers 0 as "false"
       if(obj instanceof BigDecimal) {
         return (((BigDecimal)obj).compareTo(BigDecimal.ZERO) != 0);
-      } 
+      }
       if(obj instanceof BigInteger) {
         return (((BigInteger)obj).compareTo(BigInteger.ZERO) != 0);
       }
@@ -1607,7 +1653,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
     return Boolean.parseBoolean(obj.toString());
   }
-  
+
   /**
    * Swaps the bytes of the given numeric in place.
    */
@@ -1670,7 +1716,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   protected static void writeDefinition(
-      TableMutator mutator, ColumnBuilder col, ByteBuffer buffer) 
+      TableMutator mutator, ColumnBuilder col, ByteBuffer buffer)
     throws IOException
   {
     TableMutator.ColumnOffsets colOffsets = mutator.getColumnOffsets();
@@ -1727,9 +1773,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       short length = col.getLength();
       if(col.isCalculated()) {
         // calced columns have additional value overhead
-        if(!col.getType().isVariableLength() || 
+        if(!col.getType().isVariableLength() ||
            col.getType().getHasScalePrecision()) {
-          length = CalculatedColumnUtil.CALC_FIXED_FIELD_LEN; 
+          length = CalculatedColumnUtil.CALC_FIXED_FIELD_LEN;
         } else {
           length += CalculatedColumnUtil.CALC_EXTRA_DATA_LEN;
         }
@@ -1757,7 +1803,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     TableMutator.ColumnState colState = creator.getColumnState(lvalCol);
 
     buffer.putShort(lvalCol.getColumnNumber());
-      
+
     // owned pages umap (both are on same page)
     buffer.put(colState.getUmapOwnedRowNumber());
     ByteUtil.put3ByteInt(buffer, colState.getUmapPageNumber());
@@ -1782,7 +1828,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // probably a file we wrote, before handling sort order
       return format.DEFAULT_SORT_ORDER;
     }
-    
+
     if(value == GENERAL_SORT_ORDER_VALUE) {
       if(version == GENERAL_LEGACY_SORT_ORDER.getVersion()) {
         return GENERAL_LEGACY_SORT_ORDER;
@@ -1812,7 +1858,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     int extFlagsOffset = format.OFFSET_COLUMN_EXT_FLAGS;
     return ((extFlagsOffset >= 0) ? buffer.get(offset + extFlagsOffset) : 0);
   }
-  
+
   /**
    * Writes the sort order info to the given buffer at the current position.
    */
@@ -1821,7 +1867,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(sortOrder == null) {
       sortOrder = format.DEFAULT_SORT_ORDER;
     }
-    buffer.putShort(sortOrder.getValue());      
+    buffer.putShort(sortOrder.getValue());
     if(format.SIZE_SORT_ORDER == 4) {
       buffer.put((byte)0x00); // unknown
       buffer.put(sortOrder.getVersion());
@@ -1855,18 +1901,18 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case BYTE:
       return ((value instanceof Byte) ? value : toNumber(value, db).byteValue());
     case INT:
-      return ((value instanceof Short) ? value : 
+      return ((value instanceof Short) ? value :
               toNumber(value, db).shortValue());
     case LONG:
-      return ((value instanceof Integer) ? value : 
+      return ((value instanceof Integer) ? value :
               toNumber(value, db).intValue());
     case MONEY:
       return toBigDecimal(value, db);
     case FLOAT:
-      return ((value instanceof Float) ? value : 
+      return ((value instanceof Float) ? value :
               toNumber(value, db).floatValue());
     case DOUBLE:
-      return ((value instanceof Double) ? value : 
+      return ((value instanceof Double) ? value :
               toNumber(value, db).doubleValue());
     case SHORT_DATE_TIME:
       return ((value instanceof DateExt) ? value :
@@ -1874,7 +1920,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     case TEXT:
     case MEMO:
     case GUID:
-      return ((value instanceof String) ? value : 
+      return ((value instanceof String) ? value :
               toCharSequence(value).toString());
     case NUMERIC:
       return toBigDecimal(value, db);
@@ -1882,7 +1928,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       // leave alone for now?
       return value;
     case BIG_INT:
-      return ((value instanceof Long) ? value : 
+      return ((value instanceof Long) ? value :
               toNumber(value, db).longValue());
     default:
       // some variation of binary data
@@ -1896,7 +1942,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   private static String withErrorContext(
       String msg, DatabaseImpl db, String tableName, String colName) {
-    return msg + " (Db=" + db.getName() + ";Table=" + tableName + ";Column=" + 
+    return msg + " (Db=" + db.getName() + ";Table=" + tableName + ";Column=" +
       colName + ")";
   }
 
@@ -1919,7 +1965,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     public long getDateBits() {
       return _dateBits;
     }
-    
+
     private Object writeReplace() throws ObjectStreamException {
       // if we are going to serialize this Date, convert it back to a normal
       // Date (in case it is restored outside of the context of jackcess)
@@ -1987,14 +2033,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
      * "lost" for the table.</i>
      */
     public abstract Object handleInsert(
-        TableImpl.WriteRowState writeRowState, Object inRowValue) 
+        TableImpl.WriteRowState writeRowState, Object inRowValue)
       throws IOException;
 
     /**
      * Restores a previous autonumber generated by this generator.
      */
     public abstract void restoreLast(Object last);
-    
+
     /**
      * Returns the type of values generated by this generator.
      */
@@ -2019,12 +2065,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     @Override
     public Object handleInsert(TableImpl.WriteRowState writeRowState,
-                               Object inRowValue) 
+                               Object inRowValue)
       throws IOException
     {
       int inAutoNum = toNumber(inRowValue).intValue();
-      if(inAutoNum <= INVALID_AUTO_NUMBER && !getTable().isAllowAutoNumberInsert()) {
-        throw new IOException(withErrorContext(
+      if(inAutoNum <= INVALID_AUTO_NUMBER &&
+         !getTable().isAllowAutoNumberInsert()) {
+        throw new InvalidValueException(withErrorContext(
                 "Invalid auto number value " + inAutoNum));
       }
       // the table stores the last long autonumber used
@@ -2038,7 +2085,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         getTable().restoreLastLongAutoNumber((Integer)last);
       }
     }
-    
+
     @Override
     public DataType getType() {
       return DataType.LONG;
@@ -2065,7 +2112,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     @Override
     public Object handleInsert(TableImpl.WriteRowState writeRowState,
-                               Object inRowValue) 
+                               Object inRowValue)
       throws IOException
     {
       _lastAutoNumber = toCharSequence(inRowValue);
@@ -2076,7 +2123,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     public void restoreLast(Object last) {
       _lastAutoNumber = null;
     }
-    
+
     @Override
     public DataType getType() {
       return DataType.GUID;
@@ -2102,13 +2149,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
         nextComplexAutoNum = getTable().getNextComplexTypeAutoNumber();
         writeRowState.setComplexAutoNumber(nextComplexAutoNum);
       }
-      return new ComplexValueForeignKeyImpl(ColumnImpl.this, 
+      return new ComplexValueForeignKeyImpl(ColumnImpl.this,
                                             nextComplexAutoNum);
     }
 
     @Override
     public Object handleInsert(TableImpl.WriteRowState writeRowState,
-                               Object inRowValue) 
+                               Object inRowValue)
       throws IOException
     {
       ComplexValueForeignKey inComplexFK = null;
@@ -2120,12 +2167,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
 
       if(inComplexFK.getColumn() != ColumnImpl.this) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                 "Wrong column for complex value foreign key, found " +
                 inComplexFK.getColumn().getName()));
       }
       if(inComplexFK.get() < 1) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                 "Invalid complex value foreign key value " + inComplexFK.get()));
       }
       // same value is shared across all ComplexType values in a row
@@ -2133,7 +2180,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       if(prevRowValue <= INVALID_AUTO_NUMBER) {
         writeRowState.setComplexAutoNumber(inComplexFK.get());
       } else if(prevRowValue != inComplexFK.get()) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                 "Inconsistent complex value foreign key values: found " +
                 prevRowValue + ", given " + inComplexFK));
       }
@@ -2151,21 +2198,21 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
             ((ComplexValueForeignKey)last).get());
       }
     }
-    
+
     @Override
     public DataType getType() {
       return DataType.COMPLEX_TYPE;
     }
   }
-  
+
   private final class UnsupportedAutoNumberGenerator extends AutoNumberGenerator
   {
     private final DataType _genType;
-    
+
     private UnsupportedAutoNumberGenerator(DataType genType) {
       _genType = genType;
     }
-    
+
     @Override
     public Object getLast() {
       return null;
@@ -2186,14 +2233,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     public void restoreLast(Object last) {
       throw new UnsupportedOperationException();
     }
-    
+
     @Override
     public DataType getType() {
       return _genType;
     }
   }
 
-  
+
   /**
    * Information about the sort order (collation) for a textual column.
    * @usage _intermediate_class_
@@ -2202,7 +2249,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   {
     private final short _value;
     private final byte _version;
-    
+
     public SortOrder(short value, byte version) {
       _value = value;
       _version = version;
@@ -2259,10 +2306,58 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       this.offset = offset;
       this.name = name;
       this.displayIndex = displayIndex;
-      
+
       this.colType = buffer.get(offset + table.getFormat().OFFSET_COLUMN_TYPE);
       this.flags = buffer.get(offset + table.getFormat().OFFSET_COLUMN_FLAGS);
       this.extFlags = readExtraFlags(buffer, offset, table.getFormat());
+    }
+  }
+
+  /**
+   * "Internal" column validator for columns with the "required" property
+   * enabled.
+   */
+  private static final class RequiredColValidator extends InternalColumnValidator
+  {
+    private RequiredColValidator(ColumnValidator delegate) {
+      super(delegate);
+    }
+
+    @Override
+    protected Object internalValidate(Column col, Object val)
+      throws IOException
+    {
+      if(val == null) {
+        throw new InvalidValueException(
+            ((ColumnImpl)col).withErrorContext(
+                "Missing value for required column"));
+      }
+      return val;
+    }
+  }
+
+  /**
+   * "Internal" column validator for text columns with the "allow zero len"
+   * property disabled.
+   */
+  private static final class NoZeroLenColValidator extends InternalColumnValidator
+  {
+    private NoZeroLenColValidator(ColumnValidator delegate) {
+      super(delegate);
+    }
+
+    @Override
+    protected Object internalValidate(Column col, Object val)
+      throws IOException
+    {
+      CharSequence valStr = ColumnImpl.toCharSequence(val);
+      // oddly enough null is allowed for non-zero len strings
+      if((valStr != null) && valStr.length() == 0) {
+        throw new InvalidValueException(
+            ((ColumnImpl)col).withErrorContext(
+                "Zero length string is not allowed"));
+      }
+      return valStr;
     }
   }
 }

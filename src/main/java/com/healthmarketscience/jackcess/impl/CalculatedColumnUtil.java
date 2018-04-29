@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import com.healthmarketscience.jackcess.InvalidValueException;
+
 
 /**
  * Utility code for dealing with calculated columns.
@@ -30,7 +32,7 @@ import java.nio.ByteOrder;
  *
  * @author James Ahlborn
  */
-class CalculatedColumnUtil 
+class CalculatedColumnUtil
 {
   // offset to the int which specifies the length of the actual data
   private static final int CALC_DATA_LEN_OFFSET = 16;
@@ -51,12 +53,12 @@ class CalculatedColumnUtil
   /**
    * Creates the appropriate ColumnImpl class for a calculated column and
    * reads a column definition in from a buffer
-   * 
+   *
    * @param args column construction info
    * @usage _advanced_method_
    */
   static ColumnImpl create(ColumnImpl.InitArgs args) throws IOException
-  {    
+  {
     switch(args.type) {
     case BOOLEAN:
       return new CalcBooleanColImpl(args);
@@ -71,7 +73,7 @@ class CalculatedColumnUtil
     if(args.type.getHasScalePrecision()) {
       return new CalcNumericColImpl(args);
     }
-    
+
     return new CalcColImpl(args);
   }
 
@@ -82,7 +84,7 @@ class CalculatedColumnUtil
     if(data.length < CALC_DATA_OFFSET) {
       return data;
     }
-    
+
     ByteBuffer buffer = PageChannel.wrap(data);
     buffer.position(CALC_DATA_LEN_OFFSET);
     int dataLen = buffer.getInt();
@@ -109,7 +111,7 @@ class CalculatedColumnUtil
    */
   private static byte[] wrapCalculatedValue(byte[] data) {
     int dataLen = data.length;
-    data = ByteUtil.copyOf(data, 0, dataLen + CALC_EXTRA_DATA_LEN, 
+    data = ByteUtil.copyOf(data, 0, dataLen + CALC_EXTRA_DATA_LEN,
                            CALC_DATA_OFFSET);
     PageChannel.wrap(data).putInt(CALC_DATA_LEN_OFFSET, dataLen);
     return data;
@@ -126,7 +128,7 @@ class CalculatedColumnUtil
     buffer.position(CALC_DATA_OFFSET);
     return buffer;
   }
-  
+
 
   /**
    * General calculated column implementation.
@@ -148,7 +150,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+    protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                        ByteOrder order)
       throws IOException
     {
@@ -185,7 +187,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+    protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                        ByteOrder order)
       throws IOException
     {
@@ -216,7 +218,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+    protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                        ByteOrder order)
       throws IOException
     {
@@ -249,12 +251,12 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected ByteBuffer writeLongValue(byte[] value, int remainingRowLength) 
+    protected ByteBuffer writeLongValue(byte[] value, int remainingRowLength)
       throws IOException
     {
       return super.writeLongValue(
           wrapCalculatedValue(value), remainingRowLength);
-    }    
+    }
   }
 
   /**
@@ -282,7 +284,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected ByteBuffer writeRealData(Object obj, int remainingRowLength, 
+    protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                        ByteOrder order)
       throws IOException
     {
@@ -337,14 +339,14 @@ class CalculatedColumnUtil
           decVal = decVal.setScale(maxScale);
         }
         int scale = decVal.scale();
-        
+
         // check precision
         if(decVal.precision() > getType().getMaxPrecision()) {
-          throw new IOException(withErrorContext(
+          throw new InvalidValueException(withErrorContext(
               "Numeric value is too big for specified precision "
               + getType().getMaxPrecision() + ": " + decVal));
         }
-    
+
         // convert to unscaled BigInteger, big-endian bytes
         byte[] intValBytes = toUnscaledByteArray(decVal, dataLen - 4);
 

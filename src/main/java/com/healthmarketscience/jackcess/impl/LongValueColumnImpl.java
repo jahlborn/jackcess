@@ -17,19 +17,19 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
 
+import com.healthmarketscience.jackcess.InvalidValueException;
 
 /**
  * ColumnImpl subclass which is used for long value data types.
- * 
+ *
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class LongValueColumnImpl extends ColumnImpl 
+class LongValueColumnImpl extends ColumnImpl
 {
   /**
    * Long value (LVAL) type that indicates that the value is stored on the
@@ -60,12 +60,12 @@ class LongValueColumnImpl extends ColumnImpl
   {
     super(args);
   }
-    
+
   @Override
   public int getOwnedPageCount() {
     return ((_lvalBufferH == null) ? 0 : _lvalBufferH.getOwnedPageCount());
   }
-  
+
   @Override
   void setUsageMaps(UsageMap ownedPages, UsageMap freeSpacePages) {
     _lvalBufferH = new UmapLongValueBufferHolder(ownedPages, freeSpacePages);
@@ -75,7 +75,7 @@ class LongValueColumnImpl extends ColumnImpl
   void collectUsageMapPages(Collection<Integer> pages) {
     _lvalBufferH.collectUsageMapPages(pages);
   }
-  
+
   @Override
   void postTableLoadInit() throws IOException {
     if(_lvalBufferH == null) {
@@ -104,7 +104,7 @@ class LongValueColumnImpl extends ColumnImpl
     default:
       throw new RuntimeException(withErrorContext(
               "unexpected var length, long value type: " + getType()));
-    }    
+    }
   }
 
   @Override
@@ -122,12 +122,12 @@ class LongValueColumnImpl extends ColumnImpl
     default:
       throw new RuntimeException(withErrorContext(
               "unexpected var length, long value type: " + getType()));
-    }    
+    }
 
     // create long value buffer
     return writeLongValue(toByteArray(obj), remainingRowLength);
-  }  
-  
+  }
+
   /**
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
@@ -152,7 +152,7 @@ class LongValueColumnImpl extends ColumnImpl
       if(rowLen < length) {
         // warn the caller, but return whatever we can
         LOG.warn(withErrorContext(
-                "Value may be truncated: expected length " + 
+                "Value may be truncated: expected length " +
                 length + " found " + rowLen));
         rtn = new byte[rowLen];
       }
@@ -172,7 +172,7 @@ class LongValueColumnImpl extends ColumnImpl
       int rowNum = ByteUtil.getUnsignedByte(def);
       int pageNum = ByteUtil.get3ByteInt(def, def.position());
       ByteBuffer lvalPage = getPageChannel().createPageBuffer();
-      
+
       switch (type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
         {
@@ -185,16 +185,16 @@ class LongValueColumnImpl extends ColumnImpl
           if(rowLen < length) {
             // warn the caller, but return whatever we can
             LOG.warn(withErrorContext(
-                    "Value may be truncated: expected length " + 
+                    "Value may be truncated: expected length " +
                     length + " found " + rowLen));
             rtn = new byte[rowLen];
           }
-        
+
           lvalPage.position(rowStart);
           lvalPage.get(rtn);
         }
         break;
-        
+
       case LONG_VALUE_TYPE_OTHER_PAGES:
 
         ByteBuffer rtnBuf = ByteBuffer.wrap(rtn);
@@ -205,7 +205,7 @@ class LongValueColumnImpl extends ColumnImpl
 
           short rowStart = TableImpl.findRowStart(lvalPage, rowNum, getFormat());
           short rowEnd = TableImpl.findRowEnd(lvalPage, rowNum, getFormat());
-          
+
           // read next page information
           lvalPage.position(rowStart);
           rowNum = ByteUtil.getUnsignedByte(lvalPage);
@@ -218,22 +218,22 @@ class LongValueColumnImpl extends ColumnImpl
             chunkLength = remainingLen;
           }
           remainingLen -= chunkLength;
-          
+
           lvalPage.limit(rowEnd);
           rtnBuf.put(lvalPage);
         }
-        
+
         break;
-        
+
       default:
         throw new IOException(withErrorContext(
                 "Unrecognized long value type: " + type));
       }
     }
-    
+
     return rtn;
   }
-  
+
   /**
    * @param lvalDefinition Column value that points to an LVAL record
    * @return The LVAL data
@@ -259,11 +259,11 @@ class LongValueColumnImpl extends ColumnImpl
    *         value (unless written to other pages)
    * @usage _advanced_method_
    */
-  protected ByteBuffer writeLongValue(byte[] value, int remainingRowLength) 
+  protected ByteBuffer writeLongValue(byte[] value, int remainingRowLength)
     throws IOException
   {
     if(value.length > getType().getMaxSize()) {
-      throw new IOException(withErrorContext(
+      throw new InvalidValueException(withErrorContext(
               "value too big for column, max " +
               getType().getMaxSize() + ", got " + value.length));
     }
@@ -292,11 +292,11 @@ class LongValueColumnImpl extends ColumnImpl
       def.putInt(0);  //Unknown
       def.put(value);
     } else {
-      
+
       ByteBuffer lvalPage = null;
       int firstLvalPageNum = PageChannel.INVALID_PAGE_NUMBER;
       byte firstLvalRow = 0;
-      
+
       // write other page(s)
       switch(type) {
       case LONG_VALUE_TYPE_OTHER_PAGE:
@@ -335,7 +335,7 @@ class LongValueColumnImpl extends ColumnImpl
             nextLvalPage = _lvalBufferH.getLongValuePage(
                 (remainingLen - chunkLength) + 4);
             nextLvalPageNum = _lvalBufferH.getPageNumber();
-            nextLvalRowNum = TableImpl.getRowsOnDataPage(nextLvalPage, 
+            nextLvalRowNum = TableImpl.getRowsOnDataPage(nextLvalPage,
                                                          getFormat());
           } else {
             nextLvalPage = null;
@@ -345,7 +345,7 @@ class LongValueColumnImpl extends ColumnImpl
 
           // add row to this page
           TableImpl.addDataPageRow(lvalPage, chunkLength + 4, getFormat(), 0);
-          
+
           // write next page info
           lvalPage.put((byte)nextLvalRowNum); // row number
           ByteUtil.put3ByteInt(lvalPage, nextLvalPageNum); // page number
@@ -373,9 +373,9 @@ class LongValueColumnImpl extends ColumnImpl
       def.put(firstLvalRow);
       ByteUtil.put3ByteInt(def, firstLvalPageNum);
       def.putInt(0);  //Unknown
-      
+
     }
-      
+
     def.flip();
     return def;
   }
@@ -499,10 +499,10 @@ class LongValueColumnImpl extends ColumnImpl
     @Override
     protected ByteBuffer findNewPage(int dataLength) throws IOException {
 
-      // grab last owned page and check for free space.  
-      ByteBuffer newPage = TableImpl.findFreeRowSpace(      
+      // grab last owned page and check for free space.
+      ByteBuffer newPage = TableImpl.findFreeRowSpace(
           _ownedPages, _freeSpacePages, _longValueBufferH);
-      
+
       if(newPage != null) {
         if(TableImpl.rowFitsOnDataPage(dataLength, newPage, getFormat())) {
           return newPage;
