@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2016 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.expr;
+package com.healthmarketscience.jackcess.impl;
 
-import java.util.Collection;
+
+
 
 /**
  *
  * @author James Ahlborn
  */
-public interface Expression 
+public abstract class ColEvalContext extends BaseEvalContext
 {
-  public Object eval(EvalContext ctx);
+  private final ColumnImpl _col;
 
-  public String toDebugString();
+  public ColEvalContext(ColumnImpl col) {
+    super(col.getDatabase().getEvalContext());
+    _col = col;
+  }
 
-  public boolean isConstant();
+  protected ColumnImpl getCol() {
+    return _col;
+  }
 
-  public void collectIdentifiers(Collection<Identifier> identifiers);
+  @Override
+  protected String withErrorContext(String msg) {
+    return _col.withErrorContext(msg);
+  }
 }

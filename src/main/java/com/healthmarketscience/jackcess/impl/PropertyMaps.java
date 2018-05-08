@@ -125,6 +125,12 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       .toString();
   }
 
+  public static String getTrimmedStringProperty(
+      PropertyMap props, String propName)
+  {
+    return DatabaseImpl.trimToNull((String)props.getValue(propName));
+  }
+
   /**
    * Utility class for reading/writing property blocks.
    */

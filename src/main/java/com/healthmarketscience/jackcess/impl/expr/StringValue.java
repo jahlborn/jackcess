@@ -29,7 +29,7 @@ public class StringValue extends BaseValue
   private final String _val;
   private Object _num;
 
-  public StringValue(String val) 
+  public StringValue(String val)
   {
     _val = val;
   }
@@ -79,9 +79,9 @@ public class StringValue extends BaseValue
         return (BigDecimal)_num;
       } catch(NumberFormatException nfe) {
         _num = NOT_A_NUMBER;
-        throw nfe;
+        // fall through to throw...
       }
     }
-    throw new NumberFormatException();
+    throw new NumberFormatException("Invalid number '" + _val + "'");
   }
 }

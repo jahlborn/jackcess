@@ -44,6 +44,7 @@ class ExpressionTokenizer
 {
   private static final int EOF = -1;
   private static final char QUOTED_STR_CHAR = '"';
+  private static final char SINGLE_QUOTED_STR_CHAR = '\'';
   private static final char OBJ_NAME_START_CHAR = '[';
   private static final char OBJ_NAME_END_CHAR = ']';
   private static final char DATE_LIT_QUOTE_CHAR = '#';
@@ -75,7 +76,7 @@ class ExpressionTokenizer
     setCharFlag(IS_COMP_FLAG, '<', '>', '=');
     setCharFlag(IS_DELIM_FLAG, '.', '!', ',', '(', ')');
     setCharFlag(IS_SPACE_FLAG, ' ', '\n', '\r', '\t');
-    setCharFlag(IS_QUOTE_FLAG, '"', '#', '[', ']');
+    setCharFlag(IS_QUOTE_FLAG, '"', '#', '[', ']', '\'');
   }
 
   /**
@@ -142,11 +143,12 @@ class ExpressionTokenizer
 
           switch(c) {
           case QUOTED_STR_CHAR:
-            tokens.add(new Token(TokenType.LITERAL, null, parseQuotedString(buf),
-                                 Value.Type.STRING));
+          case SINGLE_QUOTED_STR_CHAR:
+            tokens.add(new Token(TokenType.LITERAL, null, 
+                                 parseQuotedString(buf, c), Value.Type.STRING));
             break;
           case DATE_LIT_QUOTE_CHAR:
-            tokens.add(parseDateLiteralString(buf));
+            tokens.add(parseDateLiteral(buf));
             break;
           case OBJ_NAME_START_CHAR:
             tokens.add(new Token(TokenType.OBJ_NAME, parseObjNameString(buf)));
@@ -237,40 +239,21 @@ class ExpressionTokenizer
     return sb.toString();
   }
 
-  private static String parseQuotedString(ExprBuf buf) {
-    StringBuilder sb = buf.getScratchBuffer();
-
-    boolean complete = false;
-    while(buf.hasNext()) {
-      char c = buf.next();
-      if(c == QUOTED_STR_CHAR) {
-        int nc = buf.peekNext();
-        if(nc == QUOTED_STR_CHAR) {
-          sb.append(QUOTED_STR_CHAR);
-          buf.next();
-        } else {
-          complete = true;
-          break;
-        }
-      }
-
-      sb.append(c);
-    }
-
-    if(!complete) {
-      throw new ParseException("Missing closing '" + QUOTED_STR_CHAR + 
-                               "' for quoted string " + buf);
-    }
-
-    return sb.toString();
+  private static String parseQuotedString(ExprBuf buf, char quoteChar) {
+    return parseStringUntil(buf, quoteChar, null, true);
   }
 
   private static String parseObjNameString(ExprBuf buf) {
-    return parseStringUntil(buf, OBJ_NAME_END_CHAR, OBJ_NAME_START_CHAR);
+    return parseStringUntil(buf, OBJ_NAME_END_CHAR, OBJ_NAME_START_CHAR, false);
+  }
+
+  private static String parseDateLiteralString(ExprBuf buf) {
+    return parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null, false);
   }
 
   private static String parseStringUntil(ExprBuf buf, char endChar, 
-                                         Character startChar) 
+                                         Character startChar,
+                                         boolean allowDoubledEscape) 
   {
     StringBuilder sb = buf.getScratchBuffer();
 
@@ -278,8 +261,13 @@ class ExpressionTokenizer
     while(buf.hasNext()) {
       char c = buf.next();
       if(c == endChar) {
-        complete = true;
-        break;
+        if(allowDoubledEscape && (buf.peekNext() == endChar)) {
+          sb.append(endChar);
+          buf.next();
+        } else {
+          complete = true;
+          break;
+        }
       } else if((startChar != null) &&
                 (startChar == c)) {
         throw new ParseException("Missing closing '" + endChar +
@@ -297,10 +285,10 @@ class ExpressionTokenizer
     return sb.toString();
   }
 
-  private static Token parseDateLiteralString(ExprBuf buf) 
+  private static Token parseDateLiteral(ExprBuf buf) 
   {
     TemporalConfig cfg = buf.getTemporalConfig();
-    String dateStr = parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null);
+    String dateStr = parseDateLiteralString(buf);
     
     boolean hasDate = (dateStr.indexOf(cfg.getDateSeparator()) >= 0);
     boolean hasTime = (dateStr.indexOf(cfg.getTimeSeparator()) >= 0);

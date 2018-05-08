@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
@@ -38,8 +39,9 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
-import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.ParseException;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
@@ -615,7 +617,9 @@ public class Expressionator
     // object identifiers can be formatted like:
     //     "[Collection name]![Object name].[Property name]"
     // However, in practice, they only ever seem to be (at most) two levels
-    // and only use '.'.
+    // and only use '.'.  Apparently '!' is actually a special late-bind
+    // operator (not sure it makes a difference for this code?), see:
+    // http://bytecomb.com/the-bang-exclamation-operator-in-vba/
     Deque<String> objNames = new LinkedList<String>();
     objNames.add(firstTok.getValueStr());
 
@@ -641,17 +645,21 @@ public class Expressionator
       break;
     }
 
-    if(atSep || (objNames.size() > 3)) {
+    int numNames = objNames.size();
+    if(atSep || (numNames > 3)) {
       throw new ParseException("Invalid object reference " + buf);
     }
 
     // names are in reverse order
-    String fieldName = objNames.poll();
+    String propName = null;
+    if(numNames == 3) {
+      propName = objNames.poll();
+    }
     String objName = objNames.poll();
     String collectionName = objNames.poll();
 
     buf.setPendingExpr(
-        new EObjValue(collectionName, objName, fieldName));
+        new EObjValue(new Identifier(collectionName, objName, propName)));
   }
   
   private static void parseDelimExpression(Token firstTok, TokBuf buf) {
@@ -1387,7 +1395,7 @@ public class Expressionator
     protected boolean isConditionalExpr() {
       return false;
     }
-    
+
     protected void toString(StringBuilder sb, boolean isDebug) {
       if(isDebug) {
         sb.append("<").append(getClass().getSimpleName()).append(">{");
@@ -1458,6 +1466,8 @@ public class Expressionator
 
     public abstract Value eval(EvalContext ctx);
 
+    public abstract void collectIdentifiers(Collection<Identifier> identifiers);
+    
     protected abstract void toExprString(StringBuilder sb, boolean isDebug);
   }
 
@@ -1481,6 +1491,11 @@ public class Expressionator
       return _val;
     }
 
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      // none
+    }
+    
     @Override 
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       sb.append(_str);
@@ -1496,6 +1511,10 @@ public class Expressionator
     @Override 
     public Value eval(EvalContext ctx) {
       return ctx.getThisColumnValue();
+    }
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      // none
     }
     @Override 
     protected void toExprString(StringBuilder sb, boolean isDebug) {
@@ -1523,6 +1542,11 @@ public class Expressionator
     }
 
     @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      // none
+    }
+
+    @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       if(_val.getType() == Value.Type.STRING) {
         literalStrToString((String)_val.get(), sb);
@@ -1536,15 +1560,10 @@ public class Expressionator
 
   private static final class EObjValue extends Expr
   {
-    private final String _collectionName;
-    private final String _objName;
-    private final String _fieldName;
+    private final Identifier _identifier;
 
-
-    private EObjValue(String collectionName, String objName, String fieldName) {
-      _collectionName = collectionName;
-      _objName = objName;
-      _fieldName = fieldName;
+    private EObjValue(Identifier identifier) {
+      _identifier = identifier;
     }
 
     @Override
@@ -1554,18 +1573,17 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return ctx.getRowValue(_collectionName, _objName, _fieldName);
+      return ctx.getIdentifierValue(_identifier);
+    }
+
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      identifiers.add(_identifier);
     }
 
     @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
-      if(_collectionName != null) {
-        sb.append("[").append(_collectionName).append("].");
-      }
-      if(_objName != null) {
-        sb.append("[").append(_objName).append("].");
-      }
-      sb.append("[").append(_fieldName).append("]");
+      sb.append(_identifier);
     }
   }
 
@@ -1590,6 +1608,11 @@ public class Expressionator
     @Override
     public Value eval(EvalContext ctx) {
       return _expr.eval(ctx);
+    }
+
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      _expr.collectIdentifiers(identifiers);
     }
 
     @Override
@@ -1618,6 +1641,13 @@ public class Expressionator
     @Override
     public Value eval(EvalContext ctx) {
       return _func.eval(ctx, exprListToValues(_params, ctx));
+    }
+
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      for(Expr param : _params) {
+        param.collectIdentifiers(identifiers);
+      }
     }
 
     @Override
@@ -1671,6 +1701,12 @@ public class Expressionator
     }
 
     @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      _left.collectIdentifiers(identifiers);
+      _right.collectIdentifiers(identifiers);
+    }
+
+    @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       _left.toString(sb, isDebug);
       sb.append(" ").append(_op).append(" ");
@@ -1721,6 +1757,11 @@ public class Expressionator
     @Override
     public Value eval(EvalContext ctx) {
       return ((UnaryOp)_op).eval(ctx, _expr.eval(ctx));
+    }
+
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      _expr.collectIdentifiers(identifiers);
     }
 
     @Override
@@ -1813,6 +1854,11 @@ public class Expressionator
     }
 
     @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      _expr.collectIdentifiers(identifiers);
+    }
+
+    @Override
     protected boolean isConditionalExpr() {
       return true;
     }
@@ -1891,6 +1937,13 @@ public class Expressionator
     }
 
     @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      for(Expr expr : _exprs) {
+        expr.collectIdentifiers(identifiers);
+      }
+    }
+
+    @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       _expr.toString(sb, isDebug);
       sb.append(" ").append(_op).append(" (");
@@ -1930,6 +1983,13 @@ public class Expressionator
       return _op.eval(_expr.eval(ctx), 
                       new DelayedValue(_startRangeExpr, ctx),
                       new DelayedValue(_endRangeExpr, ctx));
+    }
+
+    @Override
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      super.collectIdentifiers(identifiers);
+      _startRangeExpr.collectIdentifiers(identifiers);
+      _endRangeExpr.collectIdentifiers(identifiers);
     }
 
     @Override
@@ -1974,6 +2034,10 @@ public class Expressionator
 
     public boolean isConstant() {
       return _expr.isConstant();
+    }
+
+    public void collectIdentifiers(Collection<Identifier> identifiers) {
+      _expr.collectIdentifiers(identifiers);
     }
 
     @Override

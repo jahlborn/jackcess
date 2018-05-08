@@ -189,6 +189,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private PropertyMap _props;
   /** Validator for writing new values */
   private ColumnValidator _validator = SimpleColumnValidator.INSTANCE;
+  /** default value generator */
+  private ColDefaultValueEvalContext _defValue;
 
   /**
    * @usage _advanced_method_
@@ -492,10 +494,38 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     setColumnValidator(null);
 
     // next, initialize any "internal" (property defined) validators
-    initPropertiesValidator();
+    reloadPropertiesValidators();
   }
 
-  void initPropertiesValidator() throws IOException {
+  void reloadPropertiesValidators() throws IOException {
+
+    if(isAutoNumber()) {
+      // none of the props stuff applies to autonumber columns
+      return;
+    }
+
+    if(isCalculated()) {
+
+      CalcColEvalContext calcCol = null;
+
+      if(getDatabase().isEvaluateExpressions()) {
+
+        // init calc col expression evaluator
+        PropertyMap props = getProperties();
+        String calcExpr = (String)props.getValue(PropertyMap.EXPRESSION_PROP);
+        calcCol = new CalcColEvalContext(this).setExpr(calcExpr);
+      }
+
+      setCalcColEvalContext(calcCol);
+
+      // none of the remaining props stuff applies to calculated columns
+      return;
+    }
+
+    // discard any existing internal validators and re-compute them
+    // (essentially unwrap the external validator)
+    _validator = getColumnValidator();
+    _defValue = null;
 
     PropertyMap props = getProperties();
 
@@ -515,12 +545,34 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(!allowZeroLen) {
       _validator = new NoZeroLenColValidator(_validator);
     }
+
+    // only check for props based exprs if this is enabled
+    if(!getDatabase().isEvaluateExpressions()) {
+      return;
+    }
+
+    String exprStr = PropertyMaps.getTrimmedStringProperty(
+        props, PropertyMap.VALIDATION_RULE_PROP);
+
+    if(exprStr != null) {
+      String helpStr = PropertyMaps.getTrimmedStringProperty(
+          props, PropertyMap.VALIDATION_TEXT_PROP);
+
+      _validator = new ColValidatorEvalContext(this)
+        .setExpr(exprStr, helpStr)
+        .toColumnValidator(_validator);
+    }
+
+    String defValueStr = PropertyMaps.getTrimmedStringProperty(
+        props, PropertyMap.DEFAULT_VALUE_PROP);
+    if(defValueStr != null) {
+      _defValue = new ColDefaultValueEvalContext(this)
+        .setExpr(defValueStr);
+    }
   }
 
   void propertiesUpdated() throws IOException {
-    // discard any existing internal validators and re-compute them
-    _validator = getColumnValidator();
-    initPropertiesValidator();
+    reloadPropertiesValidators();
   }
 
   public ColumnValidator getColumnValidator() {
@@ -1067,11 +1119,29 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   /**
+   * Returns a default value for this column
+   */
+  public Object generateDefaultValue() throws IOException {
+    return ((_defValue != null) ? _defValue.eval() : null);
+  }
+
+  /**
    * Passes the given obj through the currently configured validator for this
    * column and returns the result.
    */
   public Object validate(Object obj) throws IOException {
     return _validator.validate(this, obj);
+  }
+
+  /**
+   * Returns the context used to manage calculated column values.
+   */
+  protected CalcColEvalContext getCalculationContext() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+    throw new UnsupportedOperationException();
   }
 
   /**
@@ -1411,7 +1481,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       .append("length", _columnLength)
       .append("variableLength", _variableLength);
     if(_calculated) {
-      sb.append("calculated", _calculated);
+      sb.append("calculated", _calculated)
+        .append("expression",
+                CustomToStringStyle.ignoreNull(getCalculationContext()));
     }
     if(_type.isTextual()) {
       sb.append("compressedUnicode", isCompressedUnicode())
@@ -1433,9 +1505,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(_autoNumber) {
       sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
-    if(getComplexInfo() != null) {
-      sb.append("complexInfo", getComplexInfo());
-    }
+    sb.append("complexInfo", CustomToStringStyle.ignoreNull(getComplexInfo()))
+      .append("validator", CustomToStringStyle.ignoreNull(
+                  ((_validator != SimpleColumnValidator.INSTANCE) ?
+                   _validator : null)))
+      .append("defaultValue", CustomToStringStyle.ignoreNull(_defValue));
     return sb.toString();
   }
 
@@ -2334,6 +2408,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       }
       return val;
     }
+
+    @Override
+    protected void appendToString(StringBuilder sb) {
+      sb.append("required=true");
+    }
   }
 
   /**
@@ -2358,6 +2437,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
                 "Zero length string is not allowed"));
       }
       return valStr;
+    }
+
+    @Override
+    protected void appendToString(StringBuilder sb) {
+      sb.append("allowZeroLength=false");
     }
   }
 }

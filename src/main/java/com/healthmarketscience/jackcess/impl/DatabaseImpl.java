@@ -63,6 +63,7 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.TableMetaData;
+import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
@@ -306,6 +307,8 @@ public class DatabaseImpl implements Database
   private boolean _enforceForeignKeys;
   /** whether or not auto numbers can be directly inserted by the user */
   private boolean _allowAutoNumInsert;
+  /** whether or not to evaluate expressions */
+  private boolean _evaluateExpressions;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables */
@@ -331,6 +334,8 @@ public class DatabaseImpl implements Database
     FKEnforcer.initSharedState();
   /** Calendar for use interpreting dates/times in Columns */
   private Calendar _calendar;
+  /** shared context for evaluating expressions */
+  private DBEvalContext _evalCtx;
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
@@ -514,6 +519,7 @@ public class DatabaseImpl implements Database
     _columnOrder = getDefaultColumnOrder();
     _enforceForeignKeys = getDefaultEnforceForeignKeys();
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
+    _evaluateExpressions = getDefaultEvaluateExpressions();
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
@@ -686,6 +692,16 @@ public class DatabaseImpl implements Database
     _allowAutoNumInsert = allowAutoNumInsert;
   }
 
+  public boolean isEvaluateExpressions() {
+    return _evaluateExpressions;
+  }
+
+  public void setEvaluateExpressions(Boolean evaluateExpressions) {
+    if(evaluateExpressions == null) {
+      evaluateExpressions = getDefaultEvaluateExpressions();
+    }
+    _evaluateExpressions = evaluateExpressions;
+  }
 
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
@@ -714,6 +730,20 @@ public class DatabaseImpl implements Database
           Calendar.getInstance(_timeZone));
     }
     return _calendar;
+  }
+
+  public EvalConfig getEvalConfig() {
+    return getEvalContext();
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  DBEvalContext getEvalContext() {
+    if(_evalCtx == null) {
+      _evalCtx = new DBEvalContext(this);
+    }
+    return _evalCtx;
   }
 
   /**
@@ -1796,6 +1826,18 @@ public class DatabaseImpl implements Database
     return((name == null) || (name.trim().length() == 0));
   }
 
+  /**
+   * Returns the given string trimmed, or {@code null} if the string is {@code
+   * null} or empty.
+   */
+  public static String trimToNull(String str) {
+    if(str == null) {
+      return null;
+    }
+    str = str.trim();
+    return((str.length() > 0) ? str : null);
+  }
+
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this);
@@ -1952,6 +1994,21 @@ public class DatabaseImpl implements Database
   public static boolean getDefaultAllowAutoNumberInsert()
   {
     String prop = System.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
+    if(prop != null) {
+      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
+    }
+    return false;
+  }
+
+  /**
+   * Returns the default enable expression evaluation policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#ENABLE_EXPRESSION_EVALUATION_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultEvaluateExpressions()
+  {
+    String prop = System.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
     if(prop != null) {
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }

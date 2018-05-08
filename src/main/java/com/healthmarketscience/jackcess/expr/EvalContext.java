@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.text.SimpleDateFormat;
-import java.util.Random;
 
 /**
  *
@@ -25,16 +24,15 @@ import java.util.Random;
  */
 public interface EvalContext 
 {
-  public Value.Type getResultType();
-
   public TemporalConfig getTemporalConfig();
 
   public SimpleDateFormat createDateFormat(String formatStr);
 
+  public float getRandom(Integer seed);
+
+  public Value.Type getResultType();
+
   public Value getThisColumnValue();
 
-  public Value getRowValue(String collectionName, String objName,
-                           String colName);
-
-  public float getRandom(Integer seed);
+  public Value getIdentifierValue(Identifier identifier);
 }

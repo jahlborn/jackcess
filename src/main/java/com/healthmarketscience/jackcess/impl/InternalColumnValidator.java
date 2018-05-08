@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
+import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
 
 /**
  * Base class for ColumnValidator instances handling "internal" validation
@@ -31,7 +32,7 @@ abstract class InternalColumnValidator implements ColumnValidator
 {
   private ColumnValidator _delegate;
 
-  protected InternalColumnValidator(ColumnValidator delegate) 
+  protected InternalColumnValidator(ColumnValidator delegate)
   {
     _delegate = delegate;
   }
@@ -57,6 +58,24 @@ abstract class InternalColumnValidator implements ColumnValidator
     return internalValidate(col, val);
   }
 
-  protected abstract Object internalValidate(Column col, Object val) 
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder().append("{");
+    if(_delegate instanceof InternalColumnValidator) {
+      ((InternalColumnValidator)_delegate).appendToString(sb);
+    } else if(_delegate != SimpleColumnValidator.INSTANCE) {
+      sb.append("custom=").append(_delegate);
+    }
+    if(sb.length() > 1) {
+      sb.append(";");
+    }
+    appendToString(sb);
+    sb.append("}");
+    return sb.toString();
+  }
+
+  protected abstract void appendToString(StringBuilder sb);
+
+  protected abstract Object internalValidate(Column col, Object val)
     throws IOException;
 }

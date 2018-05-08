@@ -32,13 +32,13 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  *
  * @author James Ahlborn
  */
-public class BuiltinOperators 
+public class BuiltinOperators
 {
   private static final String DIV_BY_ZERO = "/ by zero";
 
   private static final double MIN_INT = Integer.MIN_VALUE;
   private static final double MAX_INT = Integer.MAX_VALUE;
-  
+
   public static final Value NULL_VAL = new BaseValue() {
     @Override public boolean isNull() {
       return true;
@@ -58,7 +58,7 @@ public class BuiltinOperators
   public static final Value ZERO_VAL = FALSE_VAL;
 
   public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
-  
+
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
 
@@ -118,11 +118,11 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.SIMPLE);
 
     switch(mathType) {
-    case STRING: 
+    case STRING:
       // string '+' is a null-propagation (handled above) concat
       return nonNullConcat(param1, param2);
     case DATE:
@@ -148,7 +148,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.SIMPLE);
 
     switch(mathType) {
@@ -176,7 +176,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
 
     switch(mathType) {
@@ -201,7 +201,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
 
     switch(mathType) {
@@ -235,7 +235,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
     if(mathType == Value.Type.STRING) {
       throw new EvalException("Unexpected type " + mathType);
@@ -249,7 +249,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
 
     // jdk only supports general pow() as doubles, let's go with that
@@ -269,7 +269,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2, 
+    Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
 
     if(mathType == Value.Type.STRING) {
@@ -301,7 +301,7 @@ public class BuiltinOperators
       // null propagation
       return NULL_VAL;
     }
-    
+
     return toValue(!param1.getAsBoolean());
   }
 
@@ -462,7 +462,7 @@ public class BuiltinOperators
       // null propagation
       return NULL_VAL;
     }
-    
+
     return toValue(pattern.matcher(param1.getAsString()).matches());
   }
 
@@ -515,7 +515,7 @@ public class BuiltinOperators
     return not(in(param1, params));
   }
 
-  
+
   private static boolean anyParamIsNull(Value param1, Value param2) {
     return (param1.isNull() || param2.isNull());
   }
@@ -529,7 +529,7 @@ public class BuiltinOperators
       Value param1, Value param2)
   {
     // note that comparison does not do string to num coercion
-    Value.Type compareType = getMathTypePrecedence(param1, param2, 
+    Value.Type compareType = getMathTypePrecedence(param1, param2,
                                                    CoercionType.COMPARE);
 
     switch(compareType) {
@@ -589,7 +589,11 @@ public class BuiltinOperators
     return toValue(type, new Date(ColumnImpl.fromDateDouble(dd, fmt.getCalendar())),
                    fmt);
   }
-  
+
+  public static Value toValue(EvalContext ctx, Value.Type type, Date d) {
+    return toValue(type, d, getDateFormatForType(ctx, type));
+  }
+
   public static Value toValue(Value.Type type, Date d, DateFormat fmt) {
     switch(type) {
     case DATE:
@@ -602,8 +606,8 @@ public class BuiltinOperators
       throw new EvalException("Unexpected date/time type " + type);
     }
   }
-  
-  static Value toDateValue(EvalContext ctx, Value.Type type, double v, 
+
+  static Value toDateValue(EvalContext ctx, Value.Type type, double v,
                            Value param1, Value param2)
   {
     DateFormat fmt = null;
@@ -675,15 +679,18 @@ public class BuiltinOperators
     if(cType._preferTemporal &&
        (t1.isTemporal() || t2.isTemporal())) {
       return (t1.isTemporal() ?
-              (t2.isTemporal() ? 
+              (t2.isTemporal() ?
                // for mixed temporal types, always go to date/time
                Value.Type.DATE_TIME : t1) :
               t2);
     }
 
-    t1 = t1.getPreferredNumericType();
-    t2 = t2.getPreferredNumericType();
+    return getPreferredNumericType(t1.getPreferredNumericType(),
+                                   t2.getPreferredNumericType());
+  }
 
+  private static Value.Type getPreferredNumericType(Value.Type t1, Value.Type t2)
+  {
     // if both types are integral, choose "largest"
     if(t1.isIntegral() && t2.isIntegral()) {
       return max(t1, t2);
@@ -719,7 +726,14 @@ public class BuiltinOperators
 
     try {
       // see if string can be coerced to a number
-      strParam.getAsBigDecimal();
+      BigDecimal num = strParam.getAsBigDecimal();
+      if(prefType.isNumeric()) {
+        // re-evaluate the numeric type choice based on the type of the parsed
+        // number
+        Value.Type numType = ((num.stripTrailingZeros().scale() > 0) ?
+                              Value.Type.BIG_DEC : Value.Type.LONG);
+        prefType = getPreferredNumericType(numType, prefType);
+      }
       return prefType;
     } catch(NumberFormatException ignored) {
       // not a number

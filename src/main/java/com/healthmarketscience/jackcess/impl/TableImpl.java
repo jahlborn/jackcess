@@ -49,8 +49,10 @@ import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -134,6 +136,8 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
   /** List of autonumber columns in this table, ordered by column number */
   private final List<ColumnImpl> _autoNumColumns = new ArrayList<ColumnImpl>(1);
+  /** handler for calculated columns */
+  private final CalcColEvaluator _calcColEval = new CalcColEvaluator();
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
   private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
@@ -179,6 +183,8 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private Boolean _allowAutoNumInsert;
   /** foreign-key enforcer for this table */
   private final FKEnforcer _fkEnforcer;
+  /** table validator if any (and enabled) */
+  private RowValidatorEvalContext _rowValidator;
 
   /** default cursor for iterating through the table, kept here for basic
       table traversal */
@@ -281,11 +287,36 @@ public class TableImpl implements Table, PropertyMaps.Owner
     _fkEnforcer = new FKEnforcer(this);
 
     if(!isSystem()) {
-      // after fully constructed, allow column validator to be configured (but
-      // only for user tables)
+      // after fully constructed, allow column/row validators to be configured
+      // (but only for user tables)
       for(ColumnImpl col : _columns) {
         col.initColumnValidator();
       }
+
+      reloadRowValidator();
+    }
+  }
+
+  private void reloadRowValidator() throws IOException {
+
+    // reset table row validator before proceeding
+    _rowValidator = null;
+
+    if(!getDatabase().isEvaluateExpressions()) {
+      return;
+    }
+
+    PropertyMap props = getProperties();
+
+    String exprStr = PropertyMaps.getTrimmedStringProperty(
+        props, PropertyMap.VALIDATION_RULE_PROP);
+
+    if(exprStr != null) {
+      String helpStr = PropertyMaps.getTrimmedStringProperty(
+          props, PropertyMap.VALIDATION_TEXT_PROP);
+
+      _rowValidator = new RowValidatorEvalContext(this)
+        .setExpr(exprStr, helpStr);
     }
   }
 
@@ -444,9 +475,16 @@ public class TableImpl implements Table, PropertyMaps.Owner
   }
 
   public void propertiesUpdated() throws IOException {
+    // propagate update to columns
     for(ColumnImpl col : _columns) {
       col.propertiesUpdated();
     }
+
+    reloadRowValidator();
+
+    // calculated columns will need to be re-sorted (their expressions may
+    // have changed when their properties were updated)
+    _calcColEval.reSort();
   }
 
   public List<IndexImpl> getIndexes() {
@@ -1290,6 +1328,9 @@ public class TableImpl implements Table, PropertyMaps.Owner
     if(newCol.isAutoNumber()) {
       _autoNumColumns.add(newCol);
     }
+    if(newCol.isCalculated()) {
+      _calcColEval.add(newCol);
+    }
 
     if(umapPos >= 0) {
       // read column usage map
@@ -1925,6 +1966,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     Collections.sort(_columns);
     initAutoNumberColumns();
+    initCalculatedColumns();
 
     // setup the data index for the columns
     int colIdx = 0;
@@ -2187,14 +2229,27 @@ public class TableImpl implements Table, PropertyMaps.Owner
           // handle various value massaging activities
           for(ColumnImpl column : _columns) {
             if(!column.isAutoNumber()) {
+              Object val = column.getRowValue(row);
+              if(val == null) {
+                val = column.generateDefaultValue();
+              }
               // pass input value through column validator
-              column.setRowValue(row, column.validate(column.getRowValue(row)));
+              column.setRowValue(row, column.validate(val));
             }
           }
 
           // fill in autonumbers
           handleAutoNumbersForAdd(row, writeRowState);
           ++autoNumAssignCount;
+
+          // need to assign calculated values after all the other fields are
+          // filled in but before final validation
+          _calcColEval.calculate(row);
+
+          // run row validation if enabled
+          if(_rowValidator != null) {
+            _rowValidator.validate(row);
+          }
 
           // write the row of data to a temporary buffer
           ByteBuffer rowData = createRow(
@@ -2440,6 +2495,15 @@ public class TableImpl implements Table, PropertyMaps.Owner
       // fill in autonumbers
       handleAutoNumbersForUpdate(row, rowBuffer, rowState);
 
+      // need to assign calculated values after all the other fields are
+      // filled in but before final validation
+      _calcColEval.calculate(row);
+
+      // run row validation if enabled
+      if(_rowValidator != null) {
+        _rowValidator.validate(row);
+      }
+
       // generate new row bytes
       ByteBuffer newRowData = createRow(
           row, _writeRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
@@ -2661,6 +2725,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return dataPage;
   }
 
+  // exposed for unit tests
   protected ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
     throws IOException
   {
@@ -2984,6 +3049,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       .append("columnCount", _columns.size())
       .append("indexCount(data)", _indexCount)
       .append("logicalIndexCount", _logicalIndexCount)
+      .append("validator", CustomToStringStyle.ignoreNull(_rowValidator))
       .append("columns", _columns)
       .append("indexes", _indexes)
       .append("ownedPages", _ownedPages)
@@ -3164,6 +3230,20 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  private void initCalculatedColumns() {
+    for(ColumnImpl c : _columns) {
+      if(c.isCalculated()) {
+        _calcColEval.add(c);
+      }
+    }
+  }
+
+  boolean isThisTable(Identifier identifier) {
+    String collectionName = identifier.getCollectionName();
+    return ((collectionName == null) ||
+            collectionName.equalsIgnoreCase(getName()));
+  }
+
   /**
    * Returns {@code true} if a row of the given size will fit on the given
    * data page, {@code false} otherwise.
@@ -3190,7 +3270,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return copy;
   }
 
-  private String withErrorContext(String msg) {
+  String withErrorContext(String msg) {
     return withErrorContext(msg, getDatabase(), getName());
   }
 
@@ -3493,4 +3573,73 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  /**
+   * Utility for managing calculated columns.  Calculated columns need to be
+   * evaluated in dependency order.
+   */
+  private class CalcColEvaluator
+  {
+    /** List of calculated columns in this table, ordered by calculation
+        dependency */
+    private final List<ColumnImpl> _calcColumns = new ArrayList<ColumnImpl>(1);
+    private boolean _sorted;
+
+    public void add(ColumnImpl col) {
+      if(!getDatabase().isEvaluateExpressions()) {
+        return;
+      }
+      _calcColumns.add(col);
+      // whenever we add new columns, we need to re-sort
+      _sorted = false;
+    }
+
+    public void reSort() {
+      // mark columns for re-sort on next use
+      _sorted = false;
+    }
+
+    public void calculate(Object[] row) throws IOException {
+      if(!_sorted) {
+        sortColumnsByDeps();
+        _sorted = true;
+      }
+
+      for(ColumnImpl col : _calcColumns) {
+        Object rowValue = col.getCalculationContext().eval(row);
+        col.setRowValue(row, rowValue);
+      }
+    }
+
+    private void sortColumnsByDeps() {
+
+      // a topological sort sorts nodes where A -> B such that A ends up in
+      // the list before B (assuming that we are working with a DAG).  In our
+      // case, we return "descendent" info as Field1 -> Field2 (where Field1
+      // uses Field2 in its calculation).  This means that in order to
+      // correctly calculate Field1, we need to calculate Field2 first, and
+      // hence essentially need the reverse topo sort (a list where Field2
+      // comes before Field1).
+      (new TopoSorter<ColumnImpl>(_calcColumns, TopoSorter.REVERSE) {
+        @Override
+        protected void getDescendents(ColumnImpl from,
+                                      List<ColumnImpl> descendents) {
+
+          Set<Identifier> identifiers = new LinkedHashSet<Identifier>();
+          from.getCalculationContext().collectIdentifiers(identifiers);
+
+          for(Identifier identifier : identifiers) {
+            if(isThisTable(identifier)) {
+              String colName = identifier.getObjectName();
+              for(ColumnImpl calcCol : _calcColumns) {
+                // we only care if the identifier is another calc field
+                if(calcCol.getName().equalsIgnoreCase(colName)) {
+                  descendents.add(calcCol);
+                }
+              }
+            }
+          }
+        }
+      }).sort();
+    }
+  }
 }

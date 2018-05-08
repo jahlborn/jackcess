@@ -23,9 +23,9 @@ import java.io.IOException;
  *
  * @author James Ahlborn
  */
-public class JackcessException extends IOException 
+public class JackcessException extends IOException
 {
-  private static final long serialVersionUID = 20131123L;  
+  private static final long serialVersionUID = 20131123L;
 
   public JackcessException(String message) {
     super(message);

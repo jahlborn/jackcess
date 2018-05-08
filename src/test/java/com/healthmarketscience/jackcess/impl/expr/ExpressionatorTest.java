@@ -25,6 +25,7 @@ import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import junit.framework.TestCase;
@@ -82,6 +83,9 @@ public class ExpressionatorTest extends TestCase
     validateExpr("IIf(\"A\",42,False)", "<EFunc>{IIf(<ELiteralValue>{\"A\"},<ELiteralValue>{42},<EConstValue>{False})}");
 
     validateExpr("\"A\" Like \"a*b\"", "<ELikeOp>{<ELiteralValue>{\"A\"} Like \"a*b\"(a.*b)}");
+
+    validateExpr("' \"A\" '", "<ELiteralValue>{\" \"\"A\"\" \"}",
+                 "\" \"\"A\"\" \"");
   }
 
   private static void doTestSimpleBinOp(String opName, String... ops) throws Exception
@@ -408,8 +412,7 @@ public class ExpressionatorTest extends TestCase
       return _thisVal;
     }
 
-    public Value getRowValue(String collectionName, String objName,
-                             String colName) {
+    public Value getIdentifierValue(Identifier identifier) {
       throw new UnsupportedOperationException();
     }
 

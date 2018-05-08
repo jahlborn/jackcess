@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2016 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
-import java.util.Collection;
-
 /**
  *
  * @author James Ahlborn
  */
-public interface Expression 
+public interface EvalConfig 
 {
-  public Object eval(EvalContext ctx);
+  public TemporalConfig getTemporalConfig();
 
-  public String toDebugString();
+  public void setTemporalConfig(TemporalConfig temporal);
 
-  public boolean isConstant();
+  public void putCustomExpressionFunction(Function func);
 
-  public void collectIdentifiers(Collection<Identifier> identifiers);
+  public Function getCustomExpressionFunction(String name);
 }

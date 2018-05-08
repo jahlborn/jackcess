@@ -135,8 +135,20 @@ class CalculatedColumnUtil
    */
   private static class CalcColImpl extends ColumnImpl
   {
+    private CalcColEvalContext _calcCol;
+
     CalcColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected CalcColEvalContext getCalculationContext() {
+      return _calcCol;
+    }
+
+    @Override
+    protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+      _calcCol = calcCol;
     }
 
     @Override
@@ -167,8 +179,20 @@ class CalculatedColumnUtil
    */
   private static class CalcBooleanColImpl extends ColumnImpl
   {
+    private CalcColEvalContext _calcCol;
+
     CalcBooleanColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected CalcColEvalContext getCalculationContext() {
+      return _calcCol;
+    }
+
+    @Override
+    protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+      _calcCol = calcCol;
     }
 
     @Override
@@ -201,8 +225,20 @@ class CalculatedColumnUtil
    */
   private static class CalcTextColImpl extends TextColumnImpl
   {
+    private CalcColEvalContext _calcCol;
+
     CalcTextColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected CalcColEvalContext getCalculationContext() {
+      return _calcCol;
+    }
+
+    @Override
+    protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+      _calcCol = calcCol;
     }
 
     @Override
@@ -232,8 +268,20 @@ class CalculatedColumnUtil
    */
   private static class CalcMemoColImpl extends MemoColumnImpl
   {
+    private CalcColEvalContext _calcCol;
+
     CalcMemoColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected CalcColEvalContext getCalculationContext() {
+      return _calcCol;
+    }
+
+    @Override
+    protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+      _calcCol = calcCol;
     }
 
     @Override
@@ -264,8 +312,20 @@ class CalculatedColumnUtil
    */
   private static class CalcNumericColImpl extends NumericColumnImpl
   {
+    private CalcColEvalContext _calcCol;
+
     CalcNumericColImpl(InitArgs args) throws IOException {
       super(args);
+    }
+
+    @Override
+    protected CalcColEvalContext getCalculationContext() {
+      return _calcCol;
+    }
+
+    @Override
+    protected void setCalcColEvalContext(CalcColEvalContext calcCol) {
+      _calcCol = calcCol;
     }
 
     @Override

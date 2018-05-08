@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2016 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.expr;
+package com.healthmarketscience.jackcess.impl;
 
-import java.util.Collection;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.expr.Expressionator;
 
 /**
  *
  * @author James Ahlborn
  */
-public interface Expression 
+public class ColDefaultValueEvalContext extends ColEvalContext 
 {
-  public Object eval(EvalContext ctx);
+  public ColDefaultValueEvalContext(ColumnImpl col) {
+    super(col);
+  }
 
-  public String toDebugString();
+  ColDefaultValueEvalContext setExpr(String exprStr) {
+    setExpr(Expressionator.Type.DEFAULT_VALUE, exprStr);
+    return this;
+  }
 
-  public boolean isConstant();
-
-  public void collectIdentifiers(Collection<Identifier> identifiers);
+  @Override
+  public Value.Type getResultType() {
+    return toValueType(getCol().getType());
+  }
 }
