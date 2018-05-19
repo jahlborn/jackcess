@@ -24,6 +24,7 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
@@ -31,13 +32,13 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  *
  * @author James Ahlborn
  */
-public class DefaultFunctions 
+public class DefaultFunctions
 {
-  private static final Map<String,Function> FUNCS = 
+  private static final Map<String,Function> FUNCS =
     new HashMap<String,Function>();
 
   private static final char NON_VAR_SUFFIX = '$';
-  
+
   static {
     // load all default functions
     DefaultTextFunctions.init();
@@ -45,7 +46,13 @@ public class DefaultFunctions
     DefaultDateFunctions.init();
     DefaultFinancialFunctions.init();
   }
-  
+
+  public static final FunctionLookup LOOKUP = new FunctionLookup() {
+    public Function getFunction(String name) {
+      return DefaultFunctions.getFunction(name);
+    }
+  };
+
   private DefaultFunctions() {}
 
   public static Function getFunction(String name) {
@@ -93,7 +100,7 @@ public class DefaultFunctions
         paramStr.substring(1, paramStr.length() - 1) + ")}";
       return new IllegalStateException(msg, t);
     }
-    
+
     @Override
     public String toString() {
       return getName() + "()";
@@ -197,7 +204,7 @@ public class DefaultFunctions
       }
     }
 
-    protected abstract Value eval3(EvalContext ctx, 
+    protected abstract Value eval3(EvalContext ctx,
                                    Value param1, Value param2, Value param3);
   }
 
@@ -257,10 +264,10 @@ public class DefaultFunctions
     }
   }
 
-  
+
   public static final Function IIF = registerFunc(new Func3("IIf") {
     @Override
-    protected Value eval3(EvalContext ctx, 
+    protected Value eval3(EvalContext ctx,
                           Value param1, Value param2, Value param3) {
       // null is false
       return ((!param1.isNull() && param1.getAsBoolean()) ? param2 : param3);
@@ -307,7 +314,7 @@ public class DefaultFunctions
       return params[idx];
     }
   });
-  
+
   public static final Function SWITCH = registerFunc(new FuncVar("Switch") {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
@@ -322,7 +329,7 @@ public class DefaultFunctions
       return BuiltinOperators.NULL_VAL;
     }
   });
-  
+
   public static final Function OCT = registerStringFunc(new Func1NullIsNull("Oct") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -334,7 +341,7 @@ public class DefaultFunctions
       return BuiltinOperators.toValue(Integer.toOctalString(lv));
     }
   });
-  
+
   public static final Function CBOOL = registerFunc(new Func1("CBool") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -480,7 +487,7 @@ public class DefaultFunctions
       case BIG_DEC:
         // vbDecimal
         vType = 14;
-        break;        
+        break;
       default:
         throw new EvalException("Unknown type " + type);
       }
@@ -513,7 +520,7 @@ public class DefaultFunctions
         break;
       case BIG_DEC:
         tName = "Decimal";
-        break;        
+        break;
       default:
         throw new EvalException("Unknown type " + type);
       }
@@ -521,7 +528,7 @@ public class DefaultFunctions
     }
   });
 
-  
+
 
   // https://www.techonthenet.com/access/functions/
   // https://support.office.com/en-us/article/Access-Functions-by-category-b8b136c3-2716-4d39-94a2-658ce330ed83

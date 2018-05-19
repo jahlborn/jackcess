@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.Map;
+import javax.script.Bindings;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.JackcessException;
@@ -95,6 +96,18 @@ public abstract class BaseEvalContext implements EvalContext
 
   public Value getIdentifierValue(Identifier identifier) {
     throw new UnsupportedOperationException();
+  }
+
+  public Bindings getBindings() {
+    return _dbCtx.getBindings();
+  }
+
+  public Object get(String key) {
+    return _dbCtx.getBindings().get(key);
+  }
+
+  public void put(String key, Object value) {
+    _dbCtx.getBindings().put(key, value);
   }
 
   public Object eval() throws IOException {

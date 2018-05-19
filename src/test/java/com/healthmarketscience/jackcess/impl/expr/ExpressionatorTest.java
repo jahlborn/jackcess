@@ -19,6 +19,8 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import javax.script.Bindings;
+import javax.script.SimpleBindings;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
@@ -34,7 +36,7 @@ import junit.framework.TestCase;
  *
  * @author James Ahlborn
  */
-public class ExpressionatorTest extends TestCase 
+public class ExpressionatorTest extends TestCase
 {
   private static final double[] DBLS = {
     -10.3d,-9.0d,-8.234d,-7.11111d,-6.99999d,-5.5d,-4.0d,-3.4159265d,-2.84d,
@@ -49,7 +51,7 @@ public class ExpressionatorTest extends TestCase
   public void testParseSimpleExprs() throws Exception
   {
     validateExpr("\"A\"", "<ELiteralValue>{\"A\"}");
-    
+
     validateExpr("13", "<ELiteralValue>{13}");
 
     validateExpr("-42", "<EUnaryOp>{- <ELiteralValue>{42}}");
@@ -91,7 +93,7 @@ public class ExpressionatorTest extends TestCase
   private static void doTestSimpleBinOp(String opName, String... ops) throws Exception
   {
     for(String op : ops) {
-      validateExpr("\"A\" " + op + " \"B\"", 
+      validateExpr("\"A\" " + op + " \"B\"",
                    "<" + opName + ">{<ELiteralValue>{\"A\"} " + op +
                    " <ELiteralValue>{\"B\"}}");
     }
@@ -99,37 +101,37 @@ public class ExpressionatorTest extends TestCase
 
   public void testOrderOfOperations() throws Exception
   {
-    validateExpr("\"A\" Eqv \"B\"", 
+    validateExpr("\"A\" Eqv \"B\"",
                  "<ELogicalOp>{<ELiteralValue>{\"A\"} Eqv <ELiteralValue>{\"B\"}}");
 
-    validateExpr("\"A\" Eqv \"B\" Xor \"C\"", 
+    validateExpr("\"A\" Eqv \"B\" Xor \"C\"",
                  "<ELogicalOp>{<ELiteralValue>{\"A\"} Eqv <ELogicalOp>{<ELiteralValue>{\"B\"} Xor <ELiteralValue>{\"C\"}}}");
 
-    validateExpr("\"A\" Eqv \"B\" Xor \"C\" Or \"D\"", 
+    validateExpr("\"A\" Eqv \"B\" Xor \"C\" Or \"D\"",
                  "<ELogicalOp>{<ELiteralValue>{\"A\"} Eqv <ELogicalOp>{<ELiteralValue>{\"B\"} Xor <ELogicalOp>{<ELiteralValue>{\"C\"} Or <ELiteralValue>{\"D\"}}}}");
 
-    validateExpr("\"A\" Eqv \"B\" Xor \"C\" Or \"D\" And \"E\"", 
+    validateExpr("\"A\" Eqv \"B\" Xor \"C\" Or \"D\" And \"E\"",
                  "<ELogicalOp>{<ELiteralValue>{\"A\"} Eqv <ELogicalOp>{<ELiteralValue>{\"B\"} Xor <ELogicalOp>{<ELiteralValue>{\"C\"} Or <ELogicalOp>{<ELiteralValue>{\"D\"} And <ELiteralValue>{\"E\"}}}}}");
 
-    validateExpr("\"A\" Or \"B\" Or \"C\"", 
+    validateExpr("\"A\" Or \"B\" Or \"C\"",
                  "<ELogicalOp>{<ELogicalOp>{<ELiteralValue>{\"A\"} Or <ELiteralValue>{\"B\"}} Or <ELiteralValue>{\"C\"}}");
 
-    validateExpr("\"A\" & \"B\" Is Null", 
+    validateExpr("\"A\" & \"B\" Is Null",
                  "<ENullOp>{<EBinaryOp>{<ELiteralValue>{\"A\"} & <ELiteralValue>{\"B\"}} Is Null}");
 
-    validateExpr("\"A\" Or \"B\" Is Null", 
+    validateExpr("\"A\" Or \"B\" Is Null",
                  "<ELogicalOp>{<ELiteralValue>{\"A\"} Or <ENullOp>{<ELiteralValue>{\"B\"} Is Null}}");
 
-    validateExpr("Not \"A\" & \"B\"", 
+    validateExpr("Not \"A\" & \"B\"",
                  "<EUnaryOp>{Not <EBinaryOp>{<ELiteralValue>{\"A\"} & <ELiteralValue>{\"B\"}}}");
 
-    validateExpr("Not \"A\" Or \"B\"", 
+    validateExpr("Not \"A\" Or \"B\"",
                  "<ELogicalOp>{<EUnaryOp>{Not <ELiteralValue>{\"A\"}} Or <ELiteralValue>{\"B\"}}");
 
-    validateExpr("\"A\" + \"B\" Not Between 37 - 15 And 52 / 4", 
+    validateExpr("\"A\" + \"B\" Not Between 37 - 15 And 52 / 4",
                  "<EBetweenOp>{<EBinaryOp>{<ELiteralValue>{\"A\"} + <ELiteralValue>{\"B\"}} Not Between <EBinaryOp>{<ELiteralValue>{37} - <ELiteralValue>{15}} And <EBinaryOp>{<ELiteralValue>{52} / <ELiteralValue>{4}}}");
 
-    validateExpr("\"A\" + (\"B\" Not Between 37 - 15 And 52) / 4", 
+    validateExpr("\"A\" + (\"B\" Not Between 37 - 15 And 52) / 4",
                  "<EBinaryOp>{<ELiteralValue>{\"A\"} + <EBinaryOp>{<EParen>{(<EBetweenOp>{<ELiteralValue>{\"B\"} Not Between <EBinaryOp>{<ELiteralValue>{37} - <ELiteralValue>{15}} And <ELiteralValue>{52}})} / <ELiteralValue>{4}}}");
 
 
@@ -324,13 +326,13 @@ public class ExpressionatorTest extends TestCase
     validateExpr(exprStr, debugStr, exprStr);
   }
 
-  private static void validateExpr(String exprStr, String debugStr, 
+  private static void validateExpr(String exprStr, String debugStr,
                                    String cleanStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null);
     String foundDebugStr = expr.toDebugString();
     if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
-      assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " + 
+      assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " +
                    debugStr + "}", foundDebugStr);
     } else {
       assertEquals(debugStr, foundDebugStr);
@@ -365,7 +367,7 @@ public class ExpressionatorTest extends TestCase
     return new BigDecimal(d).setScale(0, BuiltinOperators.ROUND_MODE)
       .intValueExact();
   }
-  
+
   private static final class TestParseContext implements Expressionator.ParseContext
   {
     public TemporalConfig getTemporalConfig() {
@@ -386,6 +388,7 @@ public class ExpressionatorTest extends TestCase
   {
     private final Value _thisVal;
     private final RandomContext _rndCtx = new RandomContext();
+    private final Bindings _bindings = new SimpleBindings();
 
     private TestEvalContext(Value thisVal) {
       _thisVal = thisVal;
@@ -418,6 +421,18 @@ public class ExpressionatorTest extends TestCase
 
     public float getRandom(Integer seed) {
       return _rndCtx.getRandom(seed);
-    } 
+    }
+
+    public Bindings getBindings() {
+      return _bindings;
+    }
+
+    public Object get(String key) {
+      return _bindings.get(key);
+    }
+
+    public void put(String key, Object value) {
+      _bindings.put(key, value);
+    }
   }
 }

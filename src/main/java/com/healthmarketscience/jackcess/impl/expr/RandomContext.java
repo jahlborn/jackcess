@@ -26,7 +26,7 @@ import java.util.Random;
  *
  * @author James Ahlborn
  */
-public class RandomContext 
+public class RandomContext
 {
   private Source _defRnd;
   private Map<Integer,Source> _rnds;
@@ -34,7 +34,7 @@ public class RandomContext
   // returned yet
   private float _lastVal = 1.953125E-02f;
 
-  public RandomContext() 
+  public RandomContext()
   {
   }
 
@@ -85,7 +85,7 @@ public class RandomContext
   }
 
   private static Random createRandom(long seed) {
-    // FIXME, support SecureRandom?
+    // TODO, support SecureRandom?
     return new Random(seed);
   }
 

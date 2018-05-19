@@ -451,9 +451,18 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert);
 
-  // FIXME, docme
+  /**
+   * Gets the current expression evaluation policy.  Expression evaluation is
+   * currently an experimental feature, and is therefore disabled by default.
+   */
   public boolean isEvaluateExpressions();
 
+  /**
+   * Sets the current expression evaluation policy.  Expression evaluation is
+   * currently an experimental feature, and is therefore disabled by default.
+   * If {@code null}, resets to the default value.
+   * @usage _intermediate_method_
+   */
   public void setEvaluateExpressions(Boolean evaluateExpressions);
 
   /**

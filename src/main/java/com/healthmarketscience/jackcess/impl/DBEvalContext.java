@@ -18,9 +18,12 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.text.SimpleDateFormat;
 import java.util.Map;
+import javax.script.Bindings;
+import javax.script.SimpleBindings;
 
 import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
@@ -35,11 +38,13 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   private static final int MAX_CACHE_SIZE = 10;
 
   private final DatabaseImpl _db;
+  private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
   private Map<String,SimpleDateFormat> _sdfs;
   private TemporalConfig _temporal;
   private final RandomContext _rndCtx = new RandomContext();
+  private Bindings _bindings = new SimpleBindings();
 
-  public DBEvalContext(DatabaseImpl db) 
+  public DBEvalContext(DatabaseImpl db)
   {
     _db = db;
   }
@@ -56,13 +61,20 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     _temporal = temporal;
   }
 
-  public void putCustomExpressionFunction(Function func) {
-    // FIXME writeme
+  public FunctionLookup getFunctionLookup() {
+    return _funcs;
   }
 
-  public Function getCustomExpressionFunction(String name) {
-    // FIXME writeme
-    return null;
+  public void setFunctionLookup(FunctionLookup lookup) {
+    _funcs = lookup;
+  }
+
+  public Bindings getBindings() {
+    return _bindings;
+  }
+
+  public void setBindings(Bindings bindings) {
+    _bindings = bindings;
   }
 
   public SimpleDateFormat createDateFormat(String formatStr) {
@@ -82,7 +94,6 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   }
 
   public Function getExpressionFunction(String name) {
-    // FIXME, support custom function context?
-    return DefaultFunctions.getFunction(name);
+    return _funcs.getFunction(name);
   }
 }

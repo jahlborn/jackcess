@@ -17,12 +17,13 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.text.SimpleDateFormat;
+import javax.script.Bindings;
 
 /**
  *
  * @author James Ahlborn
  */
-public interface EvalContext 
+public interface EvalContext
 {
   public TemporalConfig getTemporalConfig();
 
@@ -35,4 +36,10 @@ public interface EvalContext
   public Value getThisColumnValue();
 
   public Value getIdentifierValue(Identifier identifier);
+
+  public Bindings getBindings();
+
+  public Object get(String key);
+
+  public void put(String key, Object value);
 }

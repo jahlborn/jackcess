@@ -16,23 +16,11 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
-import javax.script.Bindings;
-
 /**
  *
  * @author James Ahlborn
  */
-public interface EvalConfig
+public interface FunctionLookup
 {
-  public TemporalConfig getTemporalConfig();
-
-  public void setTemporalConfig(TemporalConfig temporal);
-
-  public FunctionLookup getFunctionLookup();
-
-  public void setFunctionLookup(FunctionLookup lookup);
-
-  public Bindings getBindings();
-
-  public void setBindings(Bindings bindings);
+  public Function getFunction(String name);
 }
