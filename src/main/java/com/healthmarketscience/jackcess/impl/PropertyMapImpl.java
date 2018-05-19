@@ -55,11 +55,15 @@ public class PropertyMapImpl implements PropertyMap
     DEFAULT_TYPES.put(DESCRIPTION_PROP, new PropDef(DataType.MEMO, false));
     DEFAULT_TYPES.put(RESULT_TYPE_PROP, new PropDef(DataType.BYTE, true));
     DEFAULT_TYPES.put(EXPRESSION_PROP, new PropDef(DataType.MEMO, true));
+    DEFAULT_TYPES.put(DISPLAY_CONTROL_PROP, new PropDef(DataType.INT, false));
+    DEFAULT_TYPES.put(TEXT_FORMAT_PROP, new PropDef(DataType.BYTE, false));
+    DEFAULT_TYPES.put(IME_MODE_PROP, new PropDef(DataType.BYTE, false));
+    DEFAULT_TYPES.put(IME_SENTENCE_MODE_PROP, new PropDef(DataType.BYTE, false));
   }
 
   private final String _mapName;
   private final short _mapType;
-  private final Map<String,Property> _props = 
+  private final Map<String,Property> _props =
     new LinkedHashMap<String,Property>();
   private final PropertyMaps _owner;
 
@@ -122,8 +126,8 @@ public class PropertyMapImpl implements PropertyMap
     for(Property prop : props) {
       put(prop);
     }
-  }  
-  
+  }
+
   public PropertyImpl put(Property prop) {
     return put(prop.getName(), prop.getType(), prop.getValue(), prop.isDdl());
   }
@@ -131,7 +135,7 @@ public class PropertyMapImpl implements PropertyMap
   /**
    * Puts a property into this map with the given information.
    */
-  public PropertyImpl put(String name, DataType type, Object value, 
+  public PropertyImpl put(String name, DataType type, Object value,
                           boolean isDdl) {
     PropertyImpl prop = (PropertyImpl)createProperty(name, type, value, isDdl);
     _props.put(DatabaseImpl.toLookupName(name), prop);
@@ -153,7 +157,7 @@ public class PropertyMapImpl implements PropertyMap
   @Override
   public String toString() {
     return toString(this);
-  }      
+  }
 
   public static String toString(PropertyMap map) {
     StringBuilder sb = new StringBuilder();
@@ -173,11 +177,16 @@ public class PropertyMapImpl implements PropertyMap
   public static Property createProperty(String name, DataType type, Object value) {
     return createProperty(name, type, value, false);
   }
-  
-  public static Property createProperty(String name, DataType type, 
+
+  public static Property createProperty(String name, DataType type,
                                         Object value, boolean isDdl) {
     // see if this is a builtin property that we already understand
     PropDef pd = DEFAULT_TYPES.get(name);
+
+    if(value instanceof PropertyMap.EnumValue) {
+      // convert custom enum to stored value
+      value = ((PropertyMap.EnumValue)value).getValue();
+    }
 
     if(pd != null) {
       // update according to the default info
@@ -211,13 +220,13 @@ public class PropertyMapImpl implements PropertyMap
             " with value " + value);
       }
     }
-    
+
     return new PropertyImpl(name, type, value, isDdl);
   }
 
   /**
    * Info about a property defined in a PropertyMap.
-   */ 
+   */
   static final class PropertyImpl implements PropertyMap.Property
   {
     private final String _name;

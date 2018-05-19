@@ -59,10 +59,10 @@ public class PropertiesTest extends TestCase
     assertTrue(colMap.isEmpty());
     assertEquals(0, colMap.getSize());
     assertFalse(colMap.iterator().hasNext());
-    
+
     assertFalse(maps.isEmpty());
     assertEquals(2, maps.getSize());
-    
+
     assertSame(defMap, maps.get(PropertyMaps.DEFAULT_NAME));
     assertEquals(PropertyMaps.DEFAULT_NAME, defMap.getName());
     assertSame(colMap, maps.get("TESTCOL"));
@@ -97,7 +97,7 @@ public class PropertiesTest extends TestCase
       }
     }
 
-    assertEquals(Arrays.asList(defMap.get("foo"), defMap.get("baz"), 
+    assertEquals(Arrays.asList(defMap.get("foo"), defMap.get("baz"),
                                colMap.get("buzz")), props);
   }
 
@@ -106,16 +106,16 @@ public class PropertiesTest extends TestCase
     PropertyMaps maps = new PropertyMaps(10, null, null);
     PropertyMap defMap = maps.getDefault();
 
-    assertEquals(DataType.TEXT, 
+    assertEquals(DataType.TEXT,
                  defMap.put(PropertyMap.FORMAT_PROP, null).getType());
-    assertEquals(DataType.BOOLEAN, 
+    assertEquals(DataType.BOOLEAN,
                  defMap.put(PropertyMap.REQUIRED_PROP, null).getType());
 
-    assertEquals(DataType.TEXT, 
+    assertEquals(DataType.TEXT,
                  defMap.put("strprop", "this is a string").getType());
-    assertEquals(DataType.BOOLEAN, 
+    assertEquals(DataType.BOOLEAN,
                  defMap.put("boolprop", true).getType());
-    assertEquals(DataType.LONG, 
+    assertEquals(DataType.LONG,
                  defMap.put("intprop", 37).getType());
   }
 
@@ -127,22 +127,22 @@ public class PropertiesTest extends TestCase
       Database db = open(testDb);
 
       TableImpl t = (TableImpl)db.getTable("Table1");
-      assertEquals(t.getTableDefPageNumber(), 
+      assertEquals(t.getTableDefPageNumber(),
                    t.getPropertyMaps().getObjectId());
       PropertyMap tProps = t.getProperties();
       assertEquals(PropertyMaps.DEFAULT_NAME, tProps.getName());
       int expectedNumProps = 3;
       if(db.getFileFormat() != Database.FileFormat.V1997) {
-        assertEquals("{5A29A676-1145-4D1A-AE47-9F5415CDF2F1}", 
+        assertEquals("{5A29A676-1145-4D1A-AE47-9F5415CDF2F1}",
                      tProps.getValue(PropertyMap.GUID_PROP));
         if(nameMapBytes == null) {
           nameMapBytes = (byte[])tProps.getValue("NameMap");
         } else {
-          assertTrue(Arrays.equals(nameMapBytes, 
+          assertTrue(Arrays.equals(nameMapBytes,
                                    (byte[])tProps.getValue("NameMap")));
         }
         expectedNumProps += 2;
-      }  
+      }
       assertEquals(expectedNumProps, tProps.getSize());
       assertEquals((byte)0, tProps.getValue("Orientation"));
       assertEquals(Boolean.FALSE, tProps.getValue("OrderByOn"));
@@ -152,7 +152,7 @@ public class PropertiesTest extends TestCase
       assertEquals("A", colProps.getName());
       expectedNumProps = 9;
       if(db.getFileFormat() != Database.FileFormat.V1997) {
-        assertEquals("{E9EDD90C-CE55-4151-ABE1-A1ACE1007515}", 
+        assertEquals("{E9EDD90C-CE55-4151-ABE1-A1ACE1007515}",
                      colProps.getValue(PropertyMap.GUID_PROP));
         ++expectedNumProps;
       }
@@ -160,9 +160,9 @@ public class PropertiesTest extends TestCase
       assertEquals((short)-1, colProps.getValue("ColumnWidth"));
       assertEquals((short)0, colProps.getValue("ColumnOrder"));
       assertEquals(Boolean.FALSE, colProps.getValue("ColumnHidden"));
-      assertEquals(Boolean.FALSE, 
+      assertEquals(Boolean.FALSE,
                    colProps.getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals(Boolean.FALSE, 
+      assertEquals(Boolean.FALSE,
                    colProps.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
       assertEquals((short)109, colProps.getValue("DisplayControl"));
       assertEquals(Boolean.TRUE, colProps.getValue("UnicodeCompression"));
@@ -251,12 +251,12 @@ public class PropertiesTest extends TestCase
 
         checkProperties(propMap, propMap2);
       }
-      
+
       assertFalse(iter.hasNext());
       assertFalse(iter2.hasNext());
 
       db.close();
-    }    
+    }
   }
 
   public void testModifyProperties() throws Exception
@@ -333,7 +333,7 @@ public class PropertiesTest extends TestCase
 
       assertTrue((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
       assertEquals("42", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
-      assertNull(dProps.getValue("DisplayControl"));      
+      assertNull(dProps.getValue("DisplayControl"));
 
       cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, false);
       fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("0");
@@ -355,7 +355,7 @@ public class PropertiesTest extends TestCase
         // weirdo format, no properties
         continue;
       }
-      
+
       File file = TestUtil.createTempFile(false);
       Database db = new DatabaseBuilder(file)
         .setFileFormat(ff)
@@ -380,16 +380,16 @@ public class PropertiesTest extends TestCase
       db.close();
 
       db = new DatabaseBuilder(file).open();
-      
+
       assertEquals("123", db.getUserDefinedProperties().getValue("testing"));
 
       t = db.getTable("Test");
 
-      assertEquals(Boolean.TRUE, 
+      assertEquals(Boolean.TRUE,
                    t.getProperties().getValue("awesome_table"));
 
       Column c = t.getColumn("id");
-      assertEquals(Boolean.TRUE, 
+      assertEquals(Boolean.TRUE,
                    c.getProperties().getValue(PropertyMap.REQUIRED_PROP));
       assertEquals("{" + u1.toString().toUpperCase() + "}",
                    c.getProperties().getValue(PropertyMap.GUID_PROP));
@@ -397,13 +397,26 @@ public class PropertiesTest extends TestCase
       c = t.getColumn("data");
       assertEquals(Boolean.FALSE,
                    c.getProperties().getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
-      assertEquals("{" + u2.toString().toUpperCase() + "}", 
+      assertEquals("{" + u2.toString().toUpperCase() + "}",
                    c.getProperties().getValue(PropertyMap.GUID_PROP));
 
     }
   }
 
-  private static void checkProperties(PropertyMap propMap1, 
+  public void testEnumValues() throws Exception
+  {
+    PropertyMaps maps = new PropertyMaps(10, null, null);
+
+    PropertyMapImpl colMap = maps.get("testcol");
+
+    colMap.put(PropertyMap.DISPLAY_CONTROL_PROP,
+               PropertyMap.DisplayControl.TEXT_BOX);
+
+    assertEquals(PropertyMap.DisplayControl.TEXT_BOX.getValue(),
+                 colMap.getValue(PropertyMap.DISPLAY_CONTROL_PROP));
+  }
+
+  private static void checkProperties(PropertyMap propMap1,
                                       PropertyMap propMap2)
   {
     assertEquals(propMap1.getSize(), propMap2.getSize());

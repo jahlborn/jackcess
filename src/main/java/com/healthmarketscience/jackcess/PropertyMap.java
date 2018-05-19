@@ -47,6 +47,10 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
   public static final String ALLOW_MULTI_VALUE_PROP = "AllowMultipleValues";
   public static final String ROW_SOURCE_TYPE_PROP = "RowSourceType";
   public static final String ROW_SOURCE_PROP = "RowSource";
+  public static final String DISPLAY_CONTROL_PROP = "DisplayControl";
+  public static final String TEXT_FORMAT_PROP = "TextFormat";
+  public static final String IME_MODE_PROP = "IMEMode";
+  public static final String IME_SENTENCE_MODE_PROP = "IMESentenceMode";
 
 
   public String getName();
@@ -113,7 +117,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
    *              tolerated and ignored).
    */
   public void putAll(Iterable<? extends Property> props);
-  
+
   /**
    * Removes the property with the given name
    *
@@ -128,8 +132,8 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
 
   /**
    * Info about a property defined in a PropertyMap.
-   */ 
-  public interface Property 
+   */
+  public interface Property
   {
     public String getName();
 
@@ -153,4 +157,144 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
      */
     public void setValue(Object newValue);
   }
+
+  /**
+   * Interface for enums which can be used as property values.
+   */
+  public interface EnumValue
+  {
+    /**
+     * @return the property value which should be stored in the db
+     */
+    public Object getValue();
+  }
+
+  /**
+   * Enum value constants for the DisplayControl property
+   */
+  public enum DisplayControl implements EnumValue
+  {
+    BOUND_OBJECT_FRAME(108),
+    CHECK_BOX(106),
+    COMBO_BOX(111),
+    COMMAND_BUTTON(104),
+    CUSTOM_CONTROL(119),
+    EMPTY_CELL(127),
+    IMAGE(103),
+    LABEL(100),
+    LINE(102),
+    LIST_BOX(110),
+    NAVIGATION_BUTTON(130),
+    NAVIGATION_CONTROL(129),
+    OBJECT_FRAME(114),
+    OPTION_BUTTON(105),
+    OPTION_GROUP(107),
+    PAGE(124),
+    PAGE_BREAK(118),
+    RECTANGLE(101),
+    SUB_FORM(112),
+    TAB_CTL(123),
+    TEXT_BOX(109),
+    TOGGLE_BUTTON(122),
+    WEB_BROWSER(128);
+
+    private final Short _value;
+
+    private DisplayControl(int value) {
+      _value = (short)value;
+    }
+
+    public Short getValue() {
+      return _value;
+    }
+
+    @Override
+    public String toString() {
+      return name() + "[" + _value + "]";
+    }
+  }
+
+  /**
+   * Enum value constants for the TextFormat property
+   */
+  public enum TextFormat implements EnumValue
+  {
+    HTMLRICHTEXT(1),
+    PLAIN(0);
+
+    private final Byte _value;
+
+    private TextFormat(int value) {
+      _value = (byte)value;
+    }
+
+    public Byte getValue() {
+      return _value;
+    }
+
+    @Override
+    public String toString() {
+      return name() + "[" + _value + "]";
+    }
+  }
+
+  /**
+   * Enum value constants for the IMEMode property
+   */
+  public enum IMEMode implements EnumValue
+  {
+    NOCONTROL(0),
+    ON(1),
+    OFF(2),
+    DISABLE(3),
+    HIRAGANA(4),
+    KATAKANA(5),
+    KATAKANAHALF(6),
+    ALPHAFULL(7),
+    ALPHA(8),
+    HANGULFULL(9),
+    HANGUL(10);
+
+    private final Byte _value;
+
+    private IMEMode(int value) {
+      _value = (byte)value;
+    }
+
+    public Byte getValue() {
+      return _value;
+    }
+
+    @Override
+    public String toString() {
+      return name() + "[" + _value + "]";
+    }
+  }
+
+  /**
+   * Enum value constants for the IMESentenceMode property
+   */
+  public enum IMESentenceMode implements EnumValue
+  {
+    NORMAL(0),
+    PLURAL(1),
+    SPEAKING(2),
+    NONE(3);
+
+    private final Byte _value;
+
+    private IMESentenceMode(int value) {
+      _value = (byte)value;
+    }
+
+    public Byte getValue() {
+      return _value;
+    }
+
+    @Override
+    public String toString() {
+      return name() + "[" + _value + "]";
+    }
+  }
+
 }
