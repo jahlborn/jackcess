@@ -4,6 +4,15 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.1.12" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add some additional property keys and relevant enums for values.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="147">
+        Create new usage map correctly when adding an index to an existing
+        table.
+      </action>
+    </release>
     <release version="2.1.11" date="2018-03-04">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="145">
         Expose the "ddl" attribute on properties.  Set the attribute
@@ -144,7 +153,7 @@
         system property), per-database, and per-table.
       </action>
     </release>
-    <release version="2.1.0" date="2015-04-16" 
+    <release version="2.1.0" date="2015-04-16"
              description="Relicense to Apache License">
       <action dev="jahlborn" type="add">
         OpenHMS relicenses to Apache License, 2.0!
@@ -264,7 +273,7 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
-      <action dev="jahlborn" type="add" system="SourceForge2Features" 
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
               issue="16">
         Add support for modifying PropertyMaps.
       </action>
@@ -284,7 +293,7 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
-    </release>    
+    </release>
     <release version="1.2.14.2" date="2013-08-25">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="96">
         Fix reading of Properties with multiple value blocks.
@@ -811,7 +820,7 @@
         characters (and other situations where tables could not be opened in
         Access).  Remove hack which forced every table name to have uppercase
         first character.
-      </action>      
+      </action>
       <action dev="jahlborn" type="update">
         Clean up compressed text handling.
       </action>

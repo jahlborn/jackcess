@@ -1679,11 +1679,17 @@ public class TableImpl implements Table, PropertyMaps.Owner
       umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
       umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
 
+      int dataOffset = rowStart + 1;
       if(firstUsedPage != null) {
         // fill in the first used page of the usage map
-        umapBuf.putInt(rowStart + 1, firstUsedPage);
-        umapBuf.put(rowStart + 5, (byte)1);
+        umapBuf.putInt(dataOffset, firstUsedPage);
+        dataOffset += 4;
+        umapBuf.put(dataOffset, (byte)1);
+        dataOffset++;
       }
+
+      // zero remaining row data
+      ByteUtil.clearRange(umapBuf, dataOffset, (rowStart + umapRowLength));
 
       rowStart -= umapRowLength;
       ++umapRowNum;

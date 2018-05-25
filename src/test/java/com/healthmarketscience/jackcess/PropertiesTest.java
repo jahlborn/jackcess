@@ -516,6 +516,19 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  public void testEnumValues() throws Exception
+  {
+    PropertyMaps maps = new PropertyMaps(10, null, null, null);
+
+    PropertyMapImpl colMap = maps.get("testcol");
+
+    colMap.put(PropertyMap.DISPLAY_CONTROL_PROP,
+               PropertyMap.DisplayControl.TEXT_BOX);
+
+    assertEquals(PropertyMap.DisplayControl.TEXT_BOX.getValue(),
+                 colMap.getValue(PropertyMap.DISPLAY_CONTROL_PROP));
+  }
+
   private static void checkProperties(PropertyMap propMap1,
                                       PropertyMap propMap2)
   {
