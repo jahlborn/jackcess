@@ -37,6 +37,7 @@ import java.util.regex.PatternSyntaxException;
 
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Identifier;
@@ -51,7 +52,7 @@ import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
  *
  * @author James Ahlborn
  */
-public class Expressionator 
+public class Expressionator
 {
 
   // Useful links:
@@ -59,7 +60,7 @@ public class Expressionator
   // - examples: https://support.office.com/en-us/article/Examples-of-expressions-d3901e11-c04e-4649-b40b-8b6ec5aed41f
   // - validation rule usage: https://support.office.com/en-us/article/Restrict-data-input-by-using-a-validation-rule-6c0b2ce1-76fa-4be0-8ae9-038b52652320
 
-  
+
   public enum Type {
     DEFAULT_VALUE, EXPRESSION, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
@@ -92,7 +93,7 @@ public class Expressionator
   private static final String CLOSE_PAREN = ")";
   private static final String FUNC_PARAM_SEP = ",";
 
-  private static final Map<String,WordType> WORD_TYPES = 
+  private static final Map<String,WordType> WORD_TYPES =
     new HashMap<String,WordType>();
 
   static {
@@ -175,12 +176,12 @@ public class Expressionator
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.add(ctx, param1, param2);
       }
-    }, 
+    },
     MINUS("-") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.subtract(ctx, param1, param2);
       }
-    }, 
+    },
     MULT("*") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.multiply(param1, param2);
@@ -190,7 +191,7 @@ public class Expressionator
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.divide(param1, param2);
       }
-    }, 
+    },
     INT_DIV("\\") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.intDivide(param1, param2);
@@ -200,12 +201,12 @@ public class Expressionator
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.exp(param1, param2);
       }
-    }, 
+    },
     CONCAT("&") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.concat(param1, param2);
       }
-    }, 
+    },
     MOD("Mod") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
         return BuiltinOperators.mod(param1, param2);
@@ -231,7 +232,7 @@ public class Expressionator
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.lessThan(param1, param2);
       }
-    }, 
+    },
     LTE("<=") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.lessThanEq(param1, param2);
@@ -241,17 +242,17 @@ public class Expressionator
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.greaterThan(param1, param2);
       }
-    }, 
+    },
     GTE(">=") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.greaterThanEq(param1, param2);
       }
-    }, 
+    },
     EQ("=") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.equals(param1, param2);
       }
-    }, 
+    },
     NE("<>") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.notEquals(param1, param2);
@@ -277,17 +278,17 @@ public class Expressionator
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.and(param1, param2);
       }
-    }, 
+    },
     OR("Or") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.or(param1, param2);
       }
-    }, 
+    },
     EQV("Eqv") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.eqv(param1, param2);
       }
-    }, 
+    },
     XOR("Xor") {
       @Override public Value eval(Value param1, Value param2) {
         return BuiltinOperators.xor(param1, param2);
@@ -320,37 +321,37 @@ public class Expressionator
       @Override public Value eval(Value param1, Object param2, Object param3) {
         throw new UnsupportedOperationException();
       }
-    }, 
+    },
     IS_NULL("Is Null") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.isNull(param1);
       }
-    }, 
+    },
     IS_NOT_NULL("Is Not Null") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.isNotNull(param1);
       }
-    }, 
+    },
     LIKE("Like") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.like(param1, (Pattern)param2);
       }
-    }, 
+    },
     BETWEEN("Between") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.between(param1, (Value)param2, (Value)param3);
       }
-    }, 
+    },
     NOT_BETWEEN("Not Between") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.notBetween(param1, (Value)param2, (Value)param3);
       }
-    }, 
+    },
     IN("In") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.in(param1, (Value[])param2);
       }
-    }, 
+    },
     NOT_IN("Not In") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.notIn(param1, (Value[])param2);
@@ -371,7 +372,7 @@ public class Expressionator
     public abstract Value eval(Value param1, Object param2, Object param3);
   }
 
-  private static final Map<OpType, Integer> PRECENDENCE = 
+  private static final Map<OpType, Integer> PRECENDENCE =
     buildPrecedenceMap(
         new OpType[]{UnaryOp.NEG_NUM, UnaryOp.POS_NUM},
         new OpType[]{BinaryOp.EXP},
@@ -381,7 +382,7 @@ public class Expressionator
         new OpType[]{BinaryOp.MOD},
         new OpType[]{BinaryOp.PLUS, BinaryOp.MINUS},
         new OpType[]{BinaryOp.CONCAT},
-        new OpType[]{CompOp.LT, CompOp.GT, CompOp.NE, CompOp.LTE, CompOp.GTE, 
+        new OpType[]{CompOp.LT, CompOp.GT, CompOp.NE, CompOp.LTE, CompOp.GTE,
                      CompOp.EQ, SpecOp.LIKE, SpecOp.IS_NULL, SpecOp.IS_NOT_NULL},
         new OpType[]{UnaryOp.NOT},
         new OpType[]{LogOp.AND},
@@ -389,7 +390,7 @@ public class Expressionator
         new OpType[]{LogOp.XOR},
         new OpType[]{LogOp.EQV},
         new OpType[]{LogOp.IMP},
-        new OpType[]{SpecOp.IN, SpecOp.NOT_IN, SpecOp.BETWEEN, 
+        new OpType[]{SpecOp.IN, SpecOp.NOT_IN, SpecOp.BETWEEN,
                      SpecOp.NOT_BETWEEN});
 
   private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<Character>(
@@ -406,13 +407,13 @@ public class Expressionator
   private static final Expr FALSE_VALUE = new EConstValue(
       BuiltinOperators.FALSE_VAL, "False");
 
-  private Expressionator() 
+  private Expressionator()
   {
   }
 
-  static String testTokenize(Type exprType, String exprStr, 
+  static String testTokenize(Type exprType, String exprStr,
                              ParseContext context) {
-    
+
     if(context == null) {
       context = DEFAULT_PARSE_CONTEXT;
     }
@@ -427,7 +428,7 @@ public class Expressionator
     return tokens.toString();
   }
 
-  public static Expression parse(Type exprType, String exprStr, 
+  public static Expression parse(Type exprType, String exprStr,
                                  ParseContext context) {
 
     if(context == null) {
@@ -487,7 +488,7 @@ public class Expressionator
     return tokens;
   }
 
-  private static Expr parseExpression(TokBuf buf, boolean singleExpr)     
+  private static Expr parseExpression(TokBuf buf, boolean singleExpr)
   {
     while(buf.hasNext()) {
       Token t = buf.next();
@@ -499,11 +500,11 @@ public class Expressionator
         break;
 
       case LITERAL:
-        
+
         buf.setPendingExpr(new ELiteralValue(t.getValueType(), t.getValue(),
                                              t.getDateFormat()));
         break;
-        
+
       case OP:
 
         WordType wordType = getWordType(t);
@@ -527,14 +528,14 @@ public class Expressionator
         default:
           throw new ParseException("Unexpected OP word type " + wordType);
         }
-        
+
         break;
 
       case DELIM:
 
         parseDelimExpression(t, buf);
         break;
-        
+
       case STRING:
 
         // see if it's a special word?
@@ -551,12 +552,12 @@ public class Expressionator
               parseObjectRefExpression(t, buf);
 
             } else {
-              
+
               // FIXME maybe bare obj name, maybe string literal?
               throw new UnsupportedOperationException("FIXME");
             }
           }
-          
+
         } else {
 
           // this could be anything but COMP or DELIM (all COMPs would be
@@ -566,7 +567,7 @@ public class Expressionator
 
             parseOperatorExpression(t, buf);
             break;
-            
+
           case LOG_OP:
 
             parseLogicalOpExpression(t, buf);
@@ -589,11 +590,11 @@ public class Expressionator
         }
 
         break;
-        
+
       case SPACE:
         // top-level space is irrelevant (and we strip them anyway)
         break;
-        
+
       default:
         throw new ParseException("unknown token type " + t);
       }
@@ -631,7 +632,7 @@ public class Expressionator
           buf.next();
           atSep = true;
           continue;
-        } 
+        }
       } else {
         if((t.getType() == TokenType.OBJ_NAME) ||
            (t.getType() == TokenType.STRING)) {
@@ -661,12 +662,12 @@ public class Expressionator
     buf.setPendingExpr(
         new EObjValue(new Identifier(collectionName, objName, propName)));
   }
-  
+
   private static void parseDelimExpression(Token firstTok, TokBuf buf) {
     // the only "top-level" delim we expect to find is open paren, and
     // there shouldn't be any pending expression
     if(!isDelim(firstTok, OPEN_PAREN) || buf.hasPendingExpr()) {
-      throw new ParseException("Unexpected delimiter " + 
+      throw new ParseException("Unexpected delimiter " +
                                          firstTok.getValue() + " " + buf);
     }
 
@@ -686,13 +687,13 @@ public class Expressionator
         // not a function call
         return false;
       }
-        
+
       buf.next();
       List<Expr> params = findParenExprs(buf, true);
       String funcName = firstTok.getValueStr();
       Function func = buf.getFunction(funcName);
       if(func == null) {
-        throw new ParseException("Could not find function '" + 
+        throw new ParseException("Could not find function '" +
                                            funcName + "' " + buf);
       }
       buf.setPendingExpr(new EFunc(func, params));
@@ -761,7 +762,7 @@ public class Expressionator
       parseUnaryOpExpression(t, buf);
     } else {
       throw new ParseException(
-          "Missing left expression for binary operator " + t.getValue() + 
+          "Missing left expression for binary operator " + t.getValue() +
           " " + buf);
     }
   }
@@ -802,7 +803,7 @@ public class Expressionator
         buf.setPendingExpr(THIS_COL_VALUE);
       } else {
         throw new ParseException(
-            "Missing left expression for comparison operator " + 
+            "Missing left expression for comparison operator " +
             firstTok.getValue() + " " + buf);
       }
     }
@@ -818,7 +819,7 @@ public class Expressionator
 
     if(!buf.hasPendingExpr()) {
       throw new ParseException(
-          "Missing left expression for logical operator " + 
+          "Missing left expression for logical operator " +
           firstTok.getValue() + " " + buf);
     }
 
@@ -830,7 +831,7 @@ public class Expressionator
   }
 
   private static void parseSpecOpExpression(Token firstTok, TokBuf buf) {
-    
+
     SpecOp specOp = getSpecialOperator(firstTok, buf);
 
     if(specOp == SpecOp.NOT) {
@@ -846,7 +847,7 @@ public class Expressionator
         buf.setPendingExpr(THIS_COL_VALUE);
       } else {
         throw new ParseException(
-            "Missing left expression for comparison operator " + 
+            "Missing left expression for comparison operator " +
             specOp + " " + buf);
       }
     }
@@ -862,7 +863,7 @@ public class Expressionator
 
     case LIKE:
       Token t = buf.next();
-      if((t.getType() != TokenType.LITERAL) || 
+      if((t.getType() != TokenType.LITERAL) ||
          (t.getValueType() != Value.Type.STRING)) {
         throw new ParseException("Missing Like pattern " + buf);
       }
@@ -872,7 +873,7 @@ public class Expressionator
 
     case BETWEEN:
     case NOT_BETWEEN:
-      
+
       // the "rest" of a between expression is of the form "X And Y".  we are
       // going to speculatively parse forward until we find the "And"
       // operator.
@@ -983,23 +984,23 @@ public class Expressionator
   }
 
   private static boolean isOp(Token t, String opStr) {
-    return ((t != null) && (t.getType() == TokenType.OP) && 
+    return ((t != null) && (t.getType() == TokenType.OP) &&
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
   private static boolean isEitherOp(Token t, String opStr1, String opStr2) {
-    return ((t != null) && (t.getType() == TokenType.OP) && 
+    return ((t != null) && (t.getType() == TokenType.OP) &&
             (opStr1.equalsIgnoreCase(t.getValueStr()) ||
              opStr2.equalsIgnoreCase(t.getValueStr())));
   }
 
   private static boolean isDelim(Token t, String opStr) {
-    return ((t != null) && (t.getType() == TokenType.DELIM) && 
+    return ((t != null) && (t.getType() == TokenType.DELIM) &&
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
   private static boolean isString(Token t, String opStr) {
-    return ((t != null) && (t.getType() == TokenType.STRING) && 
+    return ((t != null) && (t.getType() == TokenType.STRING) &&
             opStr.equalsIgnoreCase(t.getValueStr()));
   }
 
@@ -1043,7 +1044,7 @@ public class Expressionator
            parent._context);
     }
 
-    private TokBuf(Type exprType, boolean simpleExpr, List<Token> tokens, 
+    private TokBuf(Type exprType, boolean simpleExpr, List<Token> tokens,
                    TokBuf parent, int parentOff, ParseContext context) {
       _exprType = exprType;
       _tokens = tokens;
@@ -1126,7 +1127,7 @@ public class Expressionator
             "Found multiple expressions with no operator " + this);
       }
       _pendingExpr = expr.resolveOrderOfOperations();
-    } 
+    }
 
     public void restorePendingExpr(Expr expr) {
       // this is an expression which was previously set, so no need to re-resolve
@@ -1158,10 +1159,10 @@ public class Expressionator
     public Function getFunction(String funcName) {
       return _context.getExpressionFunction(funcName);
     }
-    
+
     @Override
     public String toString() {
-      
+
       Map.Entry<Integer,List<Token>> e = getTopPos();
 
       // TODO actually format expression?
@@ -1184,7 +1185,7 @@ public class Expressionator
       }
 
       return sb.toString();
-    } 
+    }
   }
 
   private static boolean isHigherPrecendence(OpType op1, OpType op2) {
@@ -1290,7 +1291,7 @@ public class Expressionator
           if(pattern.charAt(j) == ']') {
             endPos = j;
             break;
-          } 
+          }
         }
 
         // access treats invalid expression like "unmatchable"
@@ -1299,12 +1300,12 @@ public class Expressionator
         }
 
         String charClass = pattern.substring(startPos, endPos);
-        
+
         if((charClass.length() > 0) && (charClass.charAt(0) == '!')) {
           // this is a negated char class
           charClass = '^' + charClass.substring(1);
         }
-        
+
         sb.append('[').append(charClass).append(']');
         i += (endPos - startPos) + 1;
 
@@ -1318,14 +1319,14 @@ public class Expressionator
 
     try {
       return Pattern.compile(sb.toString(),
-                             Pattern.CASE_INSENSITIVE | Pattern.DOTALL | 
+                             Pattern.CASE_INSENSITIVE | Pattern.DOTALL |
                              Pattern.UNICODE_CASE);
     } catch(PatternSyntaxException ignored) {
       return UNMATCHABLE_REGEX;
-    } 
+    }
   }
 
-  private static Value toLiteralValue(Value.Type valType, Object value, 
+  private static Value toLiteralValue(Value.Type valType, Object value,
                                       DateFormat sdf)
   {
     switch(valType) {
@@ -1345,7 +1346,7 @@ public class Expressionator
       return new BigDecimalValue((BigDecimal)value);
     default:
       throw new ParseException("unexpected literal type " + valType);
-    } 
+    }
   }
 
   private interface LeftAssocExpr {
@@ -1375,7 +1376,7 @@ public class Expressionator
       return _expr.eval(_ctx);
     }
   }
-  
+
 
   private static abstract class Expr
   {
@@ -1385,7 +1386,7 @@ public class Expressionator
       toString(sb, false);
       return sb.toString();
     }
-    
+
     public String toDebugString() {
       StringBuilder sb = new StringBuilder();
       toString(sb, true);
@@ -1430,9 +1431,9 @@ public class Expressionator
       if(thisLeft instanceof RightAssocExpr) {
 
         RightAssocExpr leftOp = (RightAssocExpr)thisLeft;
-        
+
         // target: <left>{A op1 <this>{B op2 <right>{C}}}
-        
+
         thisExpr.setLeft(leftOp.getRight());
 
         // give the new version of this expression an opportunity to further
@@ -1448,7 +1449,7 @@ public class Expressionator
         // incorrect).  note, we only need to check precedence against "this",
         // as all other precedence has been resolved in previous parsing
         // rounds.
-        if((leftOp.getRight() == this) && 
+        if((leftOp.getRight() == this) &&
            !isHigherPrecendence(thisExpr.getOp(), leftOp.getOp())) {
 
           // doh, "this" is lower (or the same) precedence, restore the
@@ -1461,13 +1462,13 @@ public class Expressionator
 
       return outerExpr;
     }
-    
+
     public abstract boolean isConstant();
 
     public abstract Value eval(EvalContext ctx);
 
     public abstract void collectIdentifiers(Collection<Identifier> identifiers);
-    
+
     protected abstract void toExprString(StringBuilder sb, boolean isDebug);
   }
 
@@ -1486,7 +1487,7 @@ public class Expressionator
       return true;
     }
 
-    @Override 
+    @Override
     public Value eval(EvalContext ctx) {
       return _val;
     }
@@ -1495,8 +1496,8 @@ public class Expressionator
     public void collectIdentifiers(Collection<Identifier> identifiers) {
       // none
     }
-    
-    @Override 
+
+    @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       sb.append(_str);
     }
@@ -1504,11 +1505,11 @@ public class Expressionator
 
   private static final class EThisValue extends Expr
   {
-    @Override 
+    @Override
     public boolean isConstant() {
       return false;
     }
-    @Override 
+    @Override
     public Value eval(EvalContext ctx) {
       return ctx.getThisColumnValue();
     }
@@ -1516,7 +1517,7 @@ public class Expressionator
     public void collectIdentifiers(Collection<Identifier> identifiers) {
       // none
     }
-    @Override 
+    @Override
     protected void toExprString(StringBuilder sb, boolean isDebug) {
       sb.append("<THIS_COL>");
     }
@@ -1657,7 +1658,7 @@ public class Expressionator
       if(!_params.isEmpty()) {
         exprListToString(_params, ",", sb, isDebug);
       }
-      
+
       sb.append(")");
     }
   }
@@ -1679,7 +1680,7 @@ public class Expressionator
     public boolean isConstant() {
       return areConstant(_left, _right);
     }
-    
+
     public OpType getOp() {
       return _op;
     }
@@ -1711,7 +1712,7 @@ public class Expressionator
       _left.toString(sb, isDebug);
       sb.append(" ").append(_op).append(" ");
       _right.toString(sb, isDebug);
-    }    
+    }
   }
 
   private static class EBinaryOp extends EBaseBinaryOp
@@ -1772,7 +1773,7 @@ public class Expressionator
       }
       _expr.toString(sb, isDebug);
     }
-  } 
+  }
 
   private static class ECompOp extends EBaseBinaryOp
   {
@@ -1805,8 +1806,8 @@ public class Expressionator
       } else {
         // just output the explicit part of the expression
         _right.toString(sb, isDebug);
-      } 
-    }    
+      }
+    }
   }
 
   private static class ELogicalOp extends EBaseBinaryOp
@@ -1817,13 +1818,13 @@ public class Expressionator
 
     @Override
     public Value eval(final EvalContext ctx) {
-      
+
       // logical operations do short circuit evaluation, so we need to delay
       // computing results until necessary
       return ((LogOp)_op).eval(new DelayedValue(_left, ctx),
                                new DelayedValue(_right, ctx));
     }
-  } 
+  }
 
   private static abstract class ESpecOp extends Expr
     implements LeftAssocExpr
@@ -1896,7 +1897,7 @@ public class Expressionator
     {
       if(_pattern == null) {
         _pattern = likePatternToRegex(_patternStr);
-      } 
+      }
       return _pattern;
     }
 
@@ -1932,7 +1933,7 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx), 
+      return _op.eval(_expr.eval(ctx),
                       exprListToDelayedValues(_exprs, ctx), null);
     }
 
@@ -1980,7 +1981,7 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx), 
+      return _op.eval(_expr.eval(ctx),
                       new DelayedValue(_startRangeExpr, ctx),
                       new DelayedValue(_endRangeExpr, ctx));
     }
@@ -2081,7 +2082,8 @@ public class Expressionator
       Value val = _expr.eval(ctx);
 
       if(val.isNull()) {
-        return null;
+        // null can't be coerced to a boolean
+        throw new EvalException("Condition evaluated to Null");
       }
 
       // FIXME, access seems to type coerce all "fields" (including <this>), but not constants
@@ -2100,7 +2102,7 @@ public class Expressionator
 
     private MemoizedExprWrapper(Type type, Expr expr) {
       super(type, expr);
-    } 
+    }
 
     @Override
     public Object eval(EvalContext ctx) {

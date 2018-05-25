@@ -70,7 +70,6 @@ public class ColValidatorEvalContext extends ColEvalContext
     try {
       _val = val;
       Boolean result = (Boolean)eval();
-      // FIXME how to handle null?
       if(!result) {
         String msg = ((_helpStr != null) ? _helpStr :
                       "Invalid column value '" + val + "'");

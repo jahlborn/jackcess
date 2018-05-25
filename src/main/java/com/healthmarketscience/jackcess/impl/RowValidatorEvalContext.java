@@ -50,7 +50,6 @@ public class RowValidatorEvalContext extends RowEvalContext
     try {
       setRow(row);
       Boolean result = (Boolean)eval();
-      // FIXME how to handle null?
       if(!result) {
         String msg = ((_helpStr != null) ? _helpStr : "Invalid row");
         throw new InvalidValueException(withErrorContext(msg));
