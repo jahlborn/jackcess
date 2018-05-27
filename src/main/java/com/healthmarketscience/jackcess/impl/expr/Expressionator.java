@@ -1331,7 +1331,7 @@ public class Expressionator
   {
     switch(valType) {
     case STRING:
-      return new StringValue((String)value);
+      return BuiltinOperators.toValue((String)value);
     case DATE:
       return new DateValue((Date)value, sdf);
     case TIME:
@@ -1339,11 +1339,11 @@ public class Expressionator
     case DATE_TIME:
       return new DateTimeValue((Date)value, sdf);
     case LONG:
-      return new LongValue((Integer)value);
+      return BuiltinOperators.toValue((Integer)value);
     case DOUBLE:
-      return new DoubleValue((Double)value);
+      return BuiltinOperators.toValue((Double)value);
     case BIG_DEC:
-      return new BigDecimalValue((BigDecimal)value);
+      return BuiltinOperators.toValue((BigDecimal)value);
     default:
       throw new ParseException("unexpected literal type " + valType);
     }

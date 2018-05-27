@@ -148,11 +148,11 @@ public class ExpressionatorTest extends TestCase
     }
 
     for(double i : DBLS) {
-      assertEquals(-i, eval("=-(" + i + ")"));
+      assertEquals(toBD(-i), eval("=-(" + i + ")"));
     }
 
     for(double i : DBLS) {
-      assertEquals(i, eval("=+(" + i + ")"));
+      assertEquals(toBD(i), eval("=+(" + i + ")"));
     }
 
     for(int i = -10; i <= 10; ++i) {
@@ -163,7 +163,7 @@ public class ExpressionatorTest extends TestCase
 
     for(double i : DBLS) {
       for(double j : DBLS) {
-        assertEquals((i + j), eval("=" + i + " + " + j));
+        assertEquals(toBD(toBD(i).add(toBD(j))), eval("=" + i + " + " + j));
       }
     }
 
@@ -175,7 +175,7 @@ public class ExpressionatorTest extends TestCase
 
     for(double i : DBLS) {
       for(double j : DBLS) {
-        assertEquals((i - j), eval("=" + i + " - " + j));
+        assertEquals(toBD(toBD(i).subtract(toBD(j))), eval("=" + i + " - " + j));
       }
     }
 
@@ -187,7 +187,7 @@ public class ExpressionatorTest extends TestCase
 
     for(double i : DBLS) {
       for(double j : DBLS) {
-        assertEquals((i * j), eval("=" + i + " * " + j));
+        assertEquals(toBD(toBD(i).multiply(toBD(j))), eval("=" + i + " * " + j));
       }
     }
 
@@ -253,7 +253,8 @@ public class ExpressionatorTest extends TestCase
         if(j == 0.0d) {
           evalFail("=" + i + " / " + j, ArithmeticException.class);
         } else {
-          assertEquals((i / j), eval("=" + i + " / " + j));
+          assertEquals(toBD(BuiltinOperators.divide(toBD(i), toBD(j))),
+                       eval("=" + i + " / " + j));
         }
       }
     }
@@ -282,8 +283,8 @@ public class ExpressionatorTest extends TestCase
     assertEquals(-100, eval("=-(10)^2"));
     assertEquals(-100, eval("=-\"10\"^2"));
 
-    assertEquals(99d, eval("=-10E-1+10e+1"));
-    assertEquals(-101d, eval("=-10E-1-10e+1"));
+    assertEquals(toBD(99d), eval("=-10E-1+10e+1"));
+    assertEquals(toBD(-101d), eval("=-10E-1-10e+1"));
   }
 
   public void testTypeCoercion() throws Exception
@@ -366,6 +367,14 @@ public class ExpressionatorTest extends TestCase
   static int roundToLongInt(double d) {
     return new BigDecimal(d).setScale(0, BuiltinOperators.ROUND_MODE)
       .intValueExact();
+  }
+
+  static BigDecimal toBD(double d) {
+    return toBD(new BigDecimal("" + d));
+  }
+
+  static BigDecimal toBD(BigDecimal bd) {
+    return BuiltinOperators.normalize(bd);
   }
 
   private static final class TestParseContext implements Expressionator.ParseContext

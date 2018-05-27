@@ -58,6 +58,7 @@ public class BuiltinOperators
   public static final Value ZERO_VAL = FALSE_VAL;
 
   public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
+  private static final int MAX_NUMERIC_SCALE = 28;
 
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
@@ -223,7 +224,7 @@ public class BuiltinOperators
       }
       return toValue(param1.getAsDouble() / d2);
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().divide(param2.getAsBigDecimal()));
+      return toValue(divide(param1.getAsBigDecimal(), param2.getAsBigDecimal()));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -582,12 +583,12 @@ public class BuiltinOperators
   }
 
   public static Value toValue(BigDecimal s) {
-    return new BigDecimalValue(s);
+    return new BigDecimalValue(normalize(s));
   }
 
   public static Value toValue(Value.Type type, double dd, DateFormat fmt) {
-    return toValue(type, new Date(ColumnImpl.fromDateDouble(dd, fmt.getCalendar())),
-                   fmt);
+    return toValue(type, new Date(ColumnImpl.fromDateDouble(
+                                      dd, fmt.getCalendar())), fmt);
   }
 
   public static Value toValue(EvalContext ctx, Value.Type type, Date d) {
@@ -730,7 +731,7 @@ public class BuiltinOperators
       if(prefType.isNumeric()) {
         // re-evaluate the numeric type choice based on the type of the parsed
         // number
-        Value.Type numType = ((num.stripTrailingZeros().scale() > 0) ?
+        Value.Type numType = ((num.scale() > 0) ?
                               Value.Type.BIG_DEC : Value.Type.LONG);
         prefType = getPreferredNumericType(numType, prefType);
       }
@@ -746,10 +747,31 @@ public class BuiltinOperators
     return ((t1.compareTo(t2) > 0) ? t1 : t2);
   }
 
+  static BigDecimal divide(BigDecimal num, BigDecimal denom) {
+    return num.divide(denom, MAX_NUMERIC_SCALE, ROUND_MODE);
+  }
+
   static boolean isIntegral(double d) {
     double id = Math.rint(d);
     return ((d == id) && (d >= MIN_INT) && (d <= MAX_INT) &&
             !Double.isInfinite(d) && !Double.isNaN(d));
   }
 
+  /**
+   * Converts the given BigDecimal to the minimal scale >= 0;
+   */
+  static BigDecimal normalize(BigDecimal bd) {
+    if(bd.scale() == 0) {
+      return bd;
+    }
+    // handle a bug in the jdk which doesn't strip zero values
+    if(bd.compareTo(BigDecimal.ZERO) == 0) {
+      return BigDecimal.ZERO;
+    }
+    bd = bd.stripTrailingZeros();
+    if(bd.scale() < 0) {
+      bd = bd.setScale(0);
+    }
+    return bd;
+  }
 }

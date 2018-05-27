@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.FieldPosition;
 import java.text.ParsePosition;
@@ -40,7 +41,7 @@ import com.healthmarketscience.jackcess.expr.ParseException;
  *
  * @author James Ahlborn
  */
-class ExpressionTokenizer 
+class ExpressionTokenizer
 {
   private static final int EOF = -1;
   private static final char QUOTED_STR_CHAR = '"';
@@ -100,10 +101,10 @@ class ExpressionTokenizer
 
     while(buf.hasNext()) {
       char c = buf.next();
-      
+
       byte charFlag = getCharFlag(c);
       if(charFlag != 0) {
-        
+
         // what could it be?
         switch(charFlag) {
         case IS_OP_FLAG:
@@ -115,14 +116,14 @@ class ExpressionTokenizer
         case IS_COMP_FLAG:
 
           // special case for default values
-          if((exprType == Type.DEFAULT_VALUE) && (c == EQUALS_CHAR) && 
+          if((exprType == Type.DEFAULT_VALUE) && (c == EQUALS_CHAR) &&
              (buf.prevPos() == 0)) {
             // a leading equals sign indicates how a default value should be
             // evaluated
             tokens.add(new Token(TokenType.OP, String.valueOf(c)));
             continue;
           }
-          
+
           tokens.add(new Token(TokenType.OP, parseCompOp(c, buf)));
           break;
 
@@ -144,7 +145,7 @@ class ExpressionTokenizer
           switch(c) {
           case QUOTED_STR_CHAR:
           case SINGLE_QUOTED_STR_CHAR:
-            tokens.add(new Token(TokenType.LITERAL, null, 
+            tokens.add(new Token(TokenType.LITERAL, null,
                                  parseQuotedString(buf, c), Value.Type.STRING));
             break;
           case DATE_LIT_QUOTE_CHAR:
@@ -211,12 +212,12 @@ class ExpressionTokenizer
 
   private static void consumeWhitespace(ExprBuf buf) {
     int c = EOF;
-    while(((c = buf.peekNext()) != EOF) && 
+    while(((c = buf.peekNext()) != EOF) &&
           hasFlag(getCharFlag((char)c), IS_SPACE_FLAG)) {
         buf.next();
     }
   }
-  
+
   private static String parseBareString(char firstChar, ExprBuf buf,
                                         Type exprType) {
     StringBuilder sb = buf.getScratchBuffer().append(firstChar);
@@ -235,7 +236,7 @@ class ExpressionTokenizer
       }
       sb.append(c);
     }
-    
+
     return sb.toString();
   }
 
@@ -251,9 +252,9 @@ class ExpressionTokenizer
     return parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null, false);
   }
 
-  private static String parseStringUntil(ExprBuf buf, char endChar, 
+  private static String parseStringUntil(ExprBuf buf, char endChar,
                                          Character startChar,
-                                         boolean allowDoubledEscape) 
+                                         boolean allowDoubledEscape)
   {
     StringBuilder sb = buf.getScratchBuffer();
 
@@ -285,21 +286,21 @@ class ExpressionTokenizer
     return sb.toString();
   }
 
-  private static Token parseDateLiteral(ExprBuf buf) 
+  private static Token parseDateLiteral(ExprBuf buf)
   {
     TemporalConfig cfg = buf.getTemporalConfig();
     String dateStr = parseDateLiteralString(buf);
-    
+
     boolean hasDate = (dateStr.indexOf(cfg.getDateSeparator()) >= 0);
     boolean hasTime = (dateStr.indexOf(cfg.getTimeSeparator()) >= 0);
     boolean hasAmPm = false;
-    
+
     if(hasTime) {
       int strLen = dateStr.length();
       hasAmPm = ((strLen >= AMPM_SUFFIX_LEN) &&
-                 (dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
+                 (dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN,
                                         AM_SUFFIX, 0, AMPM_SUFFIX_LEN) ||
-                  dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN, 
+                  dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN,
                                         PM_SUFFIX, 0, AMPM_SUFFIX_LEN)));
     }
 
@@ -323,7 +324,7 @@ class ExpressionTokenizer
       return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType,
                        sdf);
     } catch(java.text.ParseException pe) {
-      throw new ParseException(       
+      throw new ParseException(
           "Invalid date time literal " + dateStr + " " + buf, pe);
     }
   }
@@ -372,18 +373,32 @@ class ExpressionTokenizer
 
       String numStr = sb.toString();
       try {
-        // what number type to use here?
-        Object num = (isFp ? 
-                      (Number)Double.valueOf(numStr) : 
-                      (Number)Integer.valueOf(numStr));
+        Number num = null;
+        Value.Type numType = null;
+
+        if(!isFp) {
+          try {
+            // try to parse as int.  if that fails, fall back to BigDecimal
+            // (this will handle the case of int overflow)
+            num = Integer.valueOf(numStr);
+            numType = Value.Type.LONG;
+          } catch(NumberFormatException ne) {
+            // fallback to decimal
+          }
+        }
+
+        if(num == null) {
+          num = new BigDecimal(numStr);
+          numType = Value.Type.BIG_DEC;
+        }
+
         foundNum = true;
-        return new Token(TokenType.LITERAL, num, numStr, 
-                         (isFp ? Value.Type.DOUBLE : Value.Type.LONG));
+        return new Token(TokenType.LITERAL, num, numStr, numType);
       } catch(NumberFormatException ne) {
         throw new ParseException(
             "Invalid number literal " + numStr + " " + buf, ne);
       }
-      
+
     } finally {
       if(!foundNum) {
         buf.reset(startPos);
@@ -421,7 +436,7 @@ class ExpressionTokenizer
     private DateFormat _dateTimeFmt24;
     private String _baseDate;
     private final StringBuilder _scratch = new StringBuilder();
-    
+
     private ExprBuf(String str, ParseContext ctx) {
       _str = str;
       _ctx = ctx;
@@ -609,7 +624,7 @@ class ExpressionTokenizer
     private final DateFormat _fmtDelegate;
     private final String _baseDate;
 
-    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate, 
+    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate,
                        String baseDate)
     {
       _parseDelegate = parseDelegate;
