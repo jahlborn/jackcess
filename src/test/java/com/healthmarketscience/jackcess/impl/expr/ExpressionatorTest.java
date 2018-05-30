@@ -324,6 +324,17 @@ public class ExpressionatorTest extends TestCase
     assertFalse(evalCondition("Like \"[abc*\"", ""));
   }
 
+  public void testLiteralDefaultValue() throws Exception
+  {
+    assertEquals("-28.0 blah ", eval("=CDbl(9)-37 & \" blah \"",
+                                     Value.Type.STRING));
+    assertEquals("CDbl(9)-37 & \" blah \"",
+                 eval("CDbl(9)-37 & \" blah \"", Value.Type.STRING));
+
+    assertEquals(-28d, eval("=CDbl(9)-37", Value.Type.DOUBLE));
+    assertEquals(-28d, eval("CDbl(9)-37", Value.Type.DOUBLE));
+  }
+
   private static void validateExpr(String exprStr, String debugStr) {
     validateExpr(exprStr, debugStr, exprStr);
   }
@@ -331,7 +342,7 @@ public class ExpressionatorTest extends TestCase
   private static void validateExpr(String exprStr, String debugStr,
                                    String cleanStr) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, null);
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, null);
     String foundDebugStr = expr.toDebugString();
     if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
       assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " +
@@ -343,14 +354,22 @@ public class ExpressionatorTest extends TestCase
   }
 
   static Object eval(String exprStr) {
+    return eval(exprStr, null);
+  }
+
+  static Object eval(String exprStr, Value.Type resultType) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
+        Expressionator.Type.DEFAULT_VALUE, exprStr, resultType,
+        new TestParseContext());
     return expr.eval(new TestEvalContext(null));
   }
 
-  private static void evalFail(String exprStr, Class<? extends Exception> failure) {
+  private static void evalFail(
+      String exprStr, Class<? extends Exception> failure)
+  {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, new TestParseContext());
+        Expressionator.Type.DEFAULT_VALUE, exprStr, null,
+        new TestParseContext());
     try {
       expr.eval(new TestEvalContext(null));
       fail(failure + " should have been thrown");
@@ -361,7 +380,7 @@ public class ExpressionatorTest extends TestCase
 
   private static Boolean evalCondition(String exprStr, String thisVal) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, new TestParseContext());
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, new TestParseContext());
     return (Boolean)expr.eval(new TestEvalContext(BuiltinOperators.toValue(thisVal)));
   }
 

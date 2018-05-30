@@ -44,7 +44,7 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 class ExpressionTokenizer
 {
   private static final int EOF = -1;
-  private static final char QUOTED_STR_CHAR = '"';
+  static final char QUOTED_STR_CHAR = '"';
   private static final char SINGLE_QUOTED_STR_CHAR = '\'';
   private static final char OBJ_NAME_START_CHAR = '[';
   private static final char OBJ_NAME_END_CHAR = ']';

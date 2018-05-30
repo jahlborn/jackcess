@@ -407,40 +407,17 @@ public class Expressionator
   private static final Expr FALSE_VALUE = new EConstValue(
       BuiltinOperators.FALSE_VAL, "False");
 
-  private Expressionator()
-  {
-  }
 
-  static String testTokenize(Type exprType, String exprStr,
-                             ParseContext context) {
-
-    if(context == null) {
-      context = DEFAULT_PARSE_CONTEXT;
-    }
-    List<Token> tokens = trimSpaces(
-        ExpressionTokenizer.tokenize(exprType, exprStr, context));
-
-    if(tokens == null) {
-      // FIXME, NULL_EXPR?
-      return null;
-    }
-
-    return tokens.toString();
-  }
+  private Expressionator() {}
 
   public static Expression parse(Type exprType, String exprStr,
+                                 Value.Type resultType,
                                  ParseContext context) {
 
     if(context == null) {
       context = DEFAULT_PARSE_CONTEXT;
     }
 
-    // FIXME,restrictions:
-    // - default value only accepts simple exprs, otherwise becomes literal text
-    // - def val cannot refer to any columns
-    // - field validation cannot refer to other columns
-    // - record validation cannot refer to outside columns
-
     List<Token> tokens = trimSpaces(
         ExpressionTokenizer.tokenize(exprType, exprStr, context));
 
@@ -449,20 +426,44 @@ public class Expressionator
       return null;
     }
 
-    Expr expr = parseExpression(new TokBuf(exprType, tokens, context), false);
+    TokBuf buf = new TokBuf(exprType, tokens, context);
 
-    if((exprType == Type.FIELD_VALIDATOR) && !expr.isConditionalExpr()) {
-      // a non-conditional expression for a FIELD_VALIDATOR treats the result
-      // as an equality comparison with the field in question.  so, transform
-      // the expression accordingly
-      expr = new EImplicitCompOp(expr);
+    if(isLiteralDefaultValue(buf, resultType, exprStr)) {
+
+      // this is handled as a literal string value, not an expression.  no
+      // need to memo-ize cause it's a simple literal value
+      return new ExprWrapper(
+          new ELiteralValue(Value.Type.STRING, exprStr, null), resultType);
     }
 
-    return (expr.isConstant() ?
-       // for now, just cache at top-level for speed (could in theory cache
-       // intermediate values?)
-       new MemoizedExprWrapper(exprType, expr) :
-       new ExprWrapper(exprType, expr));
+    // normal expression handling
+    Expr expr = parseExpression(buf, false);
+
+      if((exprType == Type.FIELD_VALIDATOR) && !expr.isConditionalExpr()) {
+        // a non-conditional expression for a FIELD_VALIDATOR treats the result
+        // as an equality comparison with the field in question.  so, transform
+        // the expression accordingly
+        expr = new EImplicitCompOp(expr);
+      }
+
+    switch(exprType) {
+    case DEFAULT_VALUE:
+    case EXPRESSION:
+      return (expr.isConstant() ?
+              // for now, just cache at top-level for speed (could in theory
+              // cache intermediate values?)
+              new MemoizedExprWrapper(expr, resultType) :
+              new ExprWrapper(expr, resultType));
+    case FIELD_VALIDATOR:
+    case RECORD_VALIDATOR:
+      return (expr.isConstant() ?
+              // for now, just cache at top-level for speed (could in theory
+              // cache intermediate values?)
+              new MemoizedCondExprWrapper(expr) :
+              new CondExprWrapper(expr));
+    default:
+      throw new ParseException("unexpected expression type " + exprType);
+    }
   }
 
   private static List<Token> trimSpaces(List<Token> tokens) {
@@ -1033,57 +1034,26 @@ public class Expressionator
     private final ParseContext _context;
     private int _pos;
     private Expr _pendingExpr;
-    private final boolean _simpleExpr;
 
     private TokBuf(Type exprType, List<Token> tokens, ParseContext context) {
-      this(exprType, false, tokens, null, 0, context);
+      this(exprType, tokens, null, 0, context);
     }
 
     private TokBuf(List<Token> tokens, TokBuf parent, int parentOff) {
-      this(parent._exprType, parent._simpleExpr, tokens, parent, parentOff,
-           parent._context);
+      this(parent._exprType, tokens, parent, parentOff, parent._context);
     }
 
-    private TokBuf(Type exprType, boolean simpleExpr, List<Token> tokens,
-                   TokBuf parent, int parentOff, ParseContext context) {
+    private TokBuf(Type exprType, List<Token> tokens, TokBuf parent,
+                   int parentOff, ParseContext context) {
       _exprType = exprType;
       _tokens = tokens;
       _parent = parent;
       _parentOff = parentOff;
       _context = context;
-      if(parent == null) {
-        // "top-level" expression, determine if it is a simple expression or not
-        simpleExpr = isSimpleExpression();
-      }
-      _simpleExpr = simpleExpr;
-    }
-
-    private boolean isSimpleExpression() {
-      if(_exprType != Type.DEFAULT_VALUE) {
-        return false;
-      }
-
-      // a leading "=" indicates "full" expression handling for a DEFAULT_VALUE
-      Token t = peekNext();
-      if(isOp(t, "=")) {
-        next();
-        return false;
-      }
-
-      // this is a "simple" DEFAULT_VALUE
-      return true;
     }
 
     public Type getExprType() {
       return _exprType;
-    }
-
-    public boolean isSimpleExpr() {
-      return _simpleExpr;
-    }
-
-    public boolean isTopLevel() {
-      return (_parent == null);
     }
 
     public int curPos() {
@@ -1347,6 +1317,29 @@ public class Expressionator
     default:
       throw new ParseException("unexpected literal type " + valType);
     }
+  }
+
+  private static boolean isLiteralDefaultValue(
+      TokBuf buf, Value.Type resultType, String exprStr) {
+
+    // if a default value expression does not start with an '=' and is used in
+    // a string context, then it is taken as a literal value unless it starts
+    // with a " char
+
+    if(buf.getExprType() != Type.DEFAULT_VALUE) {
+      return false;
+    }
+
+    // a leading "=" indicates "full" expression handling for a DEFAULT_VALUE
+    // (consume this value once we detect it)
+    if(isOp(buf.peekNext(), "=")) {
+      buf.next();
+      return false;
+    }
+
+    return((resultType == Value.Type.STRING) &&
+           ((exprStr.length() == 0) ||
+            (exprStr.charAt(0) != ExpressionTokenizer.QUOTED_STR_CHAR)));
   }
 
   private interface LeftAssocExpr {
@@ -2004,29 +1997,14 @@ public class Expressionator
   }
 
   /**
-   * Expression wrapper for an Expr which caches the result of evaluation.
+   * Base Expression wrapper for an Expr.
    */
-  private static class ExprWrapper implements Expression
+  private static abstract class BaseExprWrapper implements Expression
   {
-    private final Type _type;
     private final Expr _expr;
 
-    private ExprWrapper(Type type, Expr expr) {
-      _type = type;
+    private BaseExprWrapper(Expr expr) {
       _expr = expr;
-    }
-
-    public Object eval(EvalContext ctx) {
-      switch(_type) {
-      case DEFAULT_VALUE:
-      case EXPRESSION:
-        return evalValue(ctx);
-      case FIELD_VALIDATOR:
-      case RECORD_VALIDATOR:
-        return evalCondition(ctx);
-      default:
-        throw new ParseException("unexpected expression type " + _type);
-      }
     }
 
     public String toDebugString() {
@@ -2046,14 +2024,13 @@ public class Expressionator
       return _expr.toString();
     }
 
-    private Object evalValue(EvalContext ctx) {
+    protected Object evalValue(Value.Type resultType, EvalContext ctx) {
       Value val = _expr.eval(ctx);
 
       if(val.isNull()) {
         return null;
       }
 
-      Value.Type resultType = ctx.getResultType();
       if(resultType == null) {
         // return as "native" type
         return val.get();
@@ -2078,7 +2055,7 @@ public class Expressionator
       }
     }
 
-    private Boolean evalCondition(EvalContext ctx) {
+    protected Boolean evalCondition(EvalContext ctx) {
       Value val = _expr.eval(ctx);
 
       if(val.isNull()) {
@@ -2093,6 +2070,38 @@ public class Expressionator
   }
 
   /**
+   * Expression wrapper for an Expr which returns a value.
+   */
+  private static class ExprWrapper extends BaseExprWrapper
+  {
+    private final Value.Type _resultType;
+
+    private ExprWrapper(Expr expr, Value.Type resultType) {
+      super(expr);
+      _resultType = resultType;
+    }
+
+    public Object eval(EvalContext ctx) {
+      return evalValue(_resultType, ctx);
+    }
+  }
+
+  /**
+   * Expression wrapper for an Expr which returns a Boolean from a conditional
+   * expression.
+   */
+  private static class CondExprWrapper extends BaseExprWrapper
+  {
+    private CondExprWrapper(Expr expr) {
+      super(expr);
+    }
+
+    public Object eval(EvalContext ctx) {
+      return evalCondition(ctx);
+    }
+  }
+
+  /**
    * Expression wrapper for a <i>pure</i> Expr which caches the result of
    * evaluation.
    */
@@ -2100,8 +2109,29 @@ public class Expressionator
   {
     private Object _val;
 
-    private MemoizedExprWrapper(Type type, Expr expr) {
-      super(type, expr);
+    private MemoizedExprWrapper(Expr expr, Value.Type resultType) {
+      super(expr, resultType);
+    }
+
+    @Override
+    public Object eval(EvalContext ctx) {
+      if(_val == null) {
+        _val = super.eval(ctx);
+      }
+      return _val;
+    }
+  }
+
+  /**
+   * Expression wrapper for a <i>pure</i> conditional Expr which caches the
+   * result of evaluation.
+   */
+  private static final class MemoizedCondExprWrapper extends CondExprWrapper
+  {
+    private Object _val;
+
+    private MemoizedCondExprWrapper(Expr expr) {
+      super(expr);
     }
 
     @Override

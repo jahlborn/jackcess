@@ -87,7 +87,7 @@ public abstract class BaseEvalContext implements EvalContext
   }
 
   public Value.Type getResultType() {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   public Value getThisColumnValue() {
@@ -181,7 +181,8 @@ public abstract class BaseEvalContext implements EvalContext
 
     private Expression getExpr() {
       // when the expression is parsed we replace the raw version
-      Expression expr = Expressionator.parse(_exprType, _exprStr, _dbCtx);
+      Expression expr = Expressionator.parse(
+          _exprType, _exprStr, getResultType(), _dbCtx);
       _expr = expr;
       return expr;
     }

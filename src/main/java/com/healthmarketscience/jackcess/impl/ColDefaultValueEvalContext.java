@@ -23,7 +23,7 @@ import com.healthmarketscience.jackcess.impl.expr.Expressionator;
  *
  * @author James Ahlborn
  */
-public class ColDefaultValueEvalContext extends ColEvalContext 
+public class ColDefaultValueEvalContext extends ColEvalContext
 {
   public ColDefaultValueEvalContext(ColumnImpl col) {
     super(col);
