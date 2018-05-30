@@ -422,8 +422,7 @@ public class Expressionator
         ExpressionTokenizer.tokenize(exprType, exprStr, context));
 
     if(tokens == null) {
-      // FIXME, NULL_EXPR?
-      return null;
+      throw new ParseException("null/empty expression");
     }
 
     TokBuf buf = new TokBuf(exprType, tokens, context);
@@ -2062,8 +2061,6 @@ public class Expressionator
         // null can't be coerced to a boolean
         throw new EvalException("Condition evaluated to Null");
       }
-
-      // FIXME, access seems to type coerce all "fields" (including <this>), but not constants
 
       return val.getAsBoolean();
     }
