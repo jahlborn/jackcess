@@ -281,7 +281,8 @@ public class ExpressionatorTest extends TestCase
 
     assertEquals(100, eval("=-10^2"));
     assertEquals(-100, eval("=-(10)^2"));
-    assertEquals(-100, eval("=-\"10\"^2"));
+    assertEquals(-100d, eval("=-\"10\"^2"));
+    assertEquals(toBD(-98.9d), eval("=1.1+(-\"10\"^2)"));
 
     assertEquals(toBD(99d), eval("=-10E-1+10e+1"));
     assertEquals(toBD(-101d), eval("=-10E-1-10e+1"));
@@ -294,8 +295,8 @@ public class ExpressionatorTest extends TestCase
     assertEquals("12foo", eval("=12 + \"foo\""));
     assertEquals("foo12", eval("=\"foo\" + 12"));
 
-    assertEquals(37, eval("=\"25\" + 12"));
-    assertEquals(37, eval("=12 + \"25\""));
+    assertEquals(37d, eval("=\"25\" + 12"));
+    assertEquals(37d, eval("=12 + \"25\""));
 
     evalFail(("=12 - \"foo\""), RuntimeException.class);
     evalFail(("=\"foo\" - 12"), RuntimeException.class);

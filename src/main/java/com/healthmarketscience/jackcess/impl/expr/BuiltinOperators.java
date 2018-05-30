@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.util.Date;
@@ -58,7 +59,8 @@ public class BuiltinOperators
   public static final Value ZERO_VAL = FALSE_VAL;
 
   public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
-  private static final int MAX_NUMERIC_SCALE = 28;
+  public static final MathContext MATH_CONTEXT =
+    new MathContext(28, ROUND_MODE);
 
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
@@ -107,7 +109,7 @@ public class BuiltinOperators
       return toValue(-param1.getAsDouble());
     case STRING:
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().negate());
+      return toValue(param1.getAsBigDecimal().negate(MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -137,7 +139,8 @@ public class BuiltinOperators
     case DOUBLE:
       return toValue(param1.getAsDouble() + param2.getAsDouble());
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().add(param2.getAsBigDecimal()));
+      return toValue(param1.getAsBigDecimal().add(
+                         param2.getAsBigDecimal(), MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -165,7 +168,8 @@ public class BuiltinOperators
     case DOUBLE:
       return toValue(param1.getAsDouble() - param2.getAsDouble());
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().subtract(param2.getAsBigDecimal()));
+      return toValue(param1.getAsBigDecimal().subtract(
+                         param2.getAsBigDecimal(), MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -190,7 +194,8 @@ public class BuiltinOperators
     case DOUBLE:
       return toValue(param1.getAsDouble() * param2.getAsDouble());
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().multiply(param2.getAsBigDecimal()));
+      return toValue(param1.getAsBigDecimal().multiply(
+                         param2.getAsBigDecimal(), MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -252,6 +257,18 @@ public class BuiltinOperators
 
     Value.Type mathType = getMathTypePrecedence(param1, param2,
                                                 CoercionType.GENERAL);
+
+    if(mathType == Value.Type.BIG_DEC) {
+      // see if we can handle the limited options supported for BigDecimal
+      // (must be a positive int exponent)
+      try {
+        BigDecimal result = param1.getAsBigDecimal().pow(
+            param2.getAsBigDecimal().intValueExact(), MATH_CONTEXT);
+        return toValue(result);
+      } catch(ArithmeticException ae) {
+        // fall back to general handling via doubles...
+      }
+    }
 
     // jdk only supports general pow() as doubles, let's go with that
     double result = Math.pow(param1.getAsDouble(), param2.getAsDouble());
@@ -727,13 +744,12 @@ public class BuiltinOperators
 
     try {
       // see if string can be coerced to a number
-      BigDecimal num = strParam.getAsBigDecimal();
+      strParam.getAsBigDecimal();
       if(prefType.isNumeric()) {
-        // re-evaluate the numeric type choice based on the type of the parsed
-        // number
-        Value.Type numType = ((num.scale() > 0) ?
-                              Value.Type.BIG_DEC : Value.Type.LONG);
-        prefType = getPreferredNumericType(numType, prefType);
+        // seems like when strings are coerced to numbers, they are usually
+        // doubles, unless the current context is decimal
+        prefType = ((prefType == Value.Type.BIG_DEC) ?
+                    Value.Type.BIG_DEC : Value.Type.DOUBLE);
       }
       return prefType;
     } catch(NumberFormatException ignored) {
@@ -748,7 +764,7 @@ public class BuiltinOperators
   }
 
   static BigDecimal divide(BigDecimal num, BigDecimal denom) {
-    return num.divide(denom, MAX_NUMERIC_SCALE, ROUND_MODE);
+    return num.divide(denom, MATH_CONTEXT);
   }
 
   static boolean isIntegral(double d) {

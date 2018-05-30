@@ -28,7 +28,7 @@ import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
  *
  * @author James Ahlborn
  */
-public class DefaultNumberFunctions 
+public class DefaultNumberFunctions
 {
 
   private DefaultNumberFunctions() {}
@@ -36,7 +36,7 @@ public class DefaultNumberFunctions
   static void init() {
     // dummy method to ensure this class is loaded
   }
-  
+
   public static final Function ABS = registerFunc(new Func1NullIsNull("Abs") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -55,7 +55,8 @@ public class DefaultNumberFunctions
         return BuiltinOperators.toValue(Math.abs(param1.getAsDouble()));
       case STRING:
       case BIG_DEC:
-        return BuiltinOperators.toValue(param1.getAsBigDecimal().abs());
+        return BuiltinOperators.toValue(param1.getAsBigDecimal().abs(
+                                            BuiltinOperators.MATH_CONTEXT));
       default:
         throw new EvalException("Unexpected type " + mathType);
       }
