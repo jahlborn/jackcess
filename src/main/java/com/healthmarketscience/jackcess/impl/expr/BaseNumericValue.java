@@ -26,16 +26,11 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  *
  * @author James Ahlborn
  */
-public abstract class BaseNumericValue extends BaseValue 
+public abstract class BaseNumericValue extends BaseValue
 {
 
-  protected BaseNumericValue() 
+  protected BaseNumericValue()
   {
-  }
-
-  @Override
-  public String getAsString() {
-    return getNumber().toString();
   }
 
   @Override
@@ -51,7 +46,7 @@ public abstract class BaseNumericValue extends BaseValue
   @Override
   public Date getAsDateTime(EvalContext ctx) {
     double d = getNumber().doubleValue();
-    
+
     SimpleDateFormat sdf = ctx.createDateFormat(
         ctx.getTemporalConfig().getDefaultDateTimeFormat());
     return new Date(ColumnImpl.fromDateDouble(d, sdf.getCalendar()));

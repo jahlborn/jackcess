@@ -26,7 +26,7 @@ public class LongValue extends BaseNumericValue
 {
   private final Integer _val;
 
-  public LongValue(Integer val) 
+  public LongValue(Integer val)
   {
     _val = val;
   }
@@ -57,5 +57,10 @@ public class LongValue extends BaseNumericValue
   @Override
   public BigDecimal getAsBigDecimal() {
     return BigDecimal.valueOf(_val);
+  }
+
+  @Override
+  public String getAsString() {
+    return _val.toString();
   }
 }

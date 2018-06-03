@@ -22,6 +22,7 @@ import java.util.Date;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
  *
@@ -63,10 +64,10 @@ public abstract class BaseValue implements Value
   }
 
   protected Integer roundToLongInt() {
-    return getAsBigDecimal().setScale(0, BuiltinOperators.ROUND_MODE)
+    return getAsBigDecimal().setScale(0, NumberFormatter.ROUND_MODE)
       .intValueExact();
   }
-  
+
   @Override
   public String toString() {
     return "Value[" + getType() + "] '" + get() + "'";

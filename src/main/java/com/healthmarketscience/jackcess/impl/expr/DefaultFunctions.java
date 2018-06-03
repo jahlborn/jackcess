@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
  *
@@ -365,7 +366,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();
-      bd = bd.setScale(4, BuiltinOperators.ROUND_MODE);
+      bd = bd.setScale(4, NumberFormatter.ROUND_MODE);
       return BuiltinOperators.toValue(bd);
     }
   });

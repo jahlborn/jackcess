@@ -17,8 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.regex.Pattern;
@@ -27,6 +25,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 
 /**
@@ -58,9 +57,6 @@ public class BuiltinOperators
   public static final Value EMPTY_STR_VAL = new StringValue("");
   public static final Value ZERO_VAL = FALSE_VAL;
 
-  public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
-  public static final MathContext MATH_CONTEXT =
-    new MathContext(28, ROUND_MODE);
 
   private enum CoercionType {
     SIMPLE(true, true), GENERAL(false, true), COMPARE(false, false);
@@ -109,7 +105,8 @@ public class BuiltinOperators
       return toValue(-param1.getAsDouble());
     case STRING:
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().negate(MATH_CONTEXT));
+      return toValue(param1.getAsBigDecimal().negate(
+                         NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -140,7 +137,8 @@ public class BuiltinOperators
       return toValue(param1.getAsDouble() + param2.getAsDouble());
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().add(
-                         param2.getAsBigDecimal(), MATH_CONTEXT));
+                         param2.getAsBigDecimal(),
+                         NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -169,7 +167,8 @@ public class BuiltinOperators
       return toValue(param1.getAsDouble() - param2.getAsDouble());
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().subtract(
-                         param2.getAsBigDecimal(), MATH_CONTEXT));
+                         param2.getAsBigDecimal(),
+                         NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -195,7 +194,8 @@ public class BuiltinOperators
       return toValue(param1.getAsDouble() * param2.getAsDouble());
     case BIG_DEC:
       return toValue(param1.getAsBigDecimal().multiply(
-                         param2.getAsBigDecimal(), MATH_CONTEXT));
+                         param2.getAsBigDecimal(),
+                         NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
@@ -263,7 +263,8 @@ public class BuiltinOperators
       // (must be a positive int exponent)
       try {
         BigDecimal result = param1.getAsBigDecimal().pow(
-            param2.getAsBigDecimal().intValueExact(), MATH_CONTEXT);
+            param2.getAsBigDecimal().intValueExact(),
+            NumberFormatter.DEC_MATH_CONTEXT);
         return toValue(result);
       } catch(ArithmeticException ae) {
         // fall back to general handling via doubles...
@@ -764,7 +765,7 @@ public class BuiltinOperators
   }
 
   static BigDecimal divide(BigDecimal num, BigDecimal denom) {
-    return num.divide(denom, MATH_CONTEXT);
+    return num.divide(denom, NumberFormatter.DEC_MATH_CONTEXT);
   }
 
   static boolean isIntegral(double d) {

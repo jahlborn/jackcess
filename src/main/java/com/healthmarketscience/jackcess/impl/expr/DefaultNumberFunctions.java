@@ -22,6 +22,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 
 /**
@@ -56,7 +57,7 @@ public class DefaultNumberFunctions
       case STRING:
       case BIG_DEC:
         return BuiltinOperators.toValue(param1.getAsBigDecimal().abs(
-                                            BuiltinOperators.MATH_CONTEXT));
+                                            NumberFormatter.DEC_MATH_CONTEXT));
       default:
         throw new EvalException("Unexpected type " + mathType);
       }
@@ -138,7 +139,7 @@ public class DefaultNumberFunctions
         scale = params[1].getAsLongInt();
       }
       BigDecimal bd = param1.getAsBigDecimal()
-        .setScale(scale, BuiltinOperators.ROUND_MODE);
+        .setScale(scale, NumberFormatter.ROUND_MODE);
       return BuiltinOperators.toValue(bd);
     }
   });

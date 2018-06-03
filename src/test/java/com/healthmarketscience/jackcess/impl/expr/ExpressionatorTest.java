@@ -30,6 +30,7 @@ import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import junit.framework.TestCase;
 
 /**
@@ -326,7 +327,7 @@ public class ExpressionatorTest extends TestCase
 
   public void testLiteralDefaultValue() throws Exception
   {
-    assertEquals("-28.0 blah ", eval("=CDbl(9)-37 & \" blah \"",
+    assertEquals("-28 blah ", eval("=CDbl(9)-37 & \" blah \"",
                                      Value.Type.STRING));
     assertEquals("CDbl(9)-37 & \" blah \"",
                  eval("CDbl(9)-37 & \" blah \"", Value.Type.STRING));
@@ -385,12 +386,12 @@ public class ExpressionatorTest extends TestCase
   }
 
   static int roundToLongInt(double d) {
-    return new BigDecimal(d).setScale(0, BuiltinOperators.ROUND_MODE)
+    return new BigDecimal(d).setScale(0, NumberFormatter.ROUND_MODE)
       .intValueExact();
   }
 
   static BigDecimal toBD(double d) {
-    return toBD(new BigDecimal("" + d));
+    return toBD(BigDecimal.valueOf(d));
   }
 
   static BigDecimal toBD(BigDecimal bd) {

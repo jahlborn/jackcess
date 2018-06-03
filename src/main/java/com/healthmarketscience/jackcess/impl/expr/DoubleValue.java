@@ -18,6 +18,8 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 
+import com.healthmarketscience.jackcess.impl.NumberFormatter;
+
 /**
  *
  * @author James Ahlborn
@@ -26,7 +28,7 @@ public class DoubleValue extends BaseNumericValue
 {
   private final Double _val;
 
-  public DoubleValue(Double val) 
+  public DoubleValue(Double val)
   {
     _val = val;
   }
@@ -57,5 +59,10 @@ public class DoubleValue extends BaseNumericValue
   @Override
   public BigDecimal getAsBigDecimal() {
     return BigDecimal.valueOf(_val);
+  }
+
+  @Override
+  public String getAsString() {
+    return NumberFormatter.format(_val);
   }
 }
