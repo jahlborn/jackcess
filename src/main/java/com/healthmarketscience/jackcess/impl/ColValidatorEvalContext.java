@@ -20,6 +20,8 @@ import java.io.IOException;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.InvalidValueException;
+import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
@@ -64,6 +66,16 @@ public class ColValidatorEvalContext extends ColEvalContext
   @Override
   public Value getThisColumnValue() {
     return toValue(_val, getCol().getType());
+  }
+
+  @Override
+  public Value getIdentifierValue(Identifier identifier) {
+    // col validators can only get "this" column, but they can refer to it by
+    // name
+    if(!getCol().isThisColumn(identifier)) {
+      throw new EvalException("Cannot access other fields for " + identifier);
+    }
+    return getThisColumnValue();
   }
 
   private Object validate(Column col, Object val) throws IOException {

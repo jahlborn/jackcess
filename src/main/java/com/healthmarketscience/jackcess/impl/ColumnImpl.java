@@ -50,6 +50,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
@@ -2012,6 +2013,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   String withErrorContext(String msg) {
     return withErrorContext(msg, getDatabase(), getTable().getName(), getName());
+  }
+
+  boolean isThisColumn(Identifier identifier) {
+    return(getTable().isThisTable(identifier) &&
+           identifier.getObjectName().equalsIgnoreCase(getName()));
   }
 
   private static String withErrorContext(
