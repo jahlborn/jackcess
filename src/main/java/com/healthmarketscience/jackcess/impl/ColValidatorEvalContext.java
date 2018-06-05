@@ -87,7 +87,7 @@ public class ColValidatorEvalContext extends ColEvalContext
                       "Invalid column value '" + val + "'");
         throw new InvalidValueException(withErrorContext(msg));
       }
-      return result;
+      return val;
     } finally {
       reset();
     }

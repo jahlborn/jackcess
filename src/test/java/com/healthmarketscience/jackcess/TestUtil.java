@@ -53,12 +53,12 @@ import org.junit.Assert;
  *
  * @author James Ahlborn
  */
-public class TestUtil 
+public class TestUtil
 {
   public static final TimeZone TEST_TZ =
     TimeZone.getTimeZone("America/New_York");
-  
-  private static final ThreadLocal<Boolean> _autoSync =         
+
+  private static final ThreadLocal<Boolean> _autoSync =
     new ThreadLocal<Boolean>();
 
   private TestUtil() {}
@@ -76,22 +76,22 @@ public class TestUtil
     return ((autoSync != null) ? autoSync : Database.DEFAULT_AUTO_SYNC);
   }
 
-  public static Database open(FileFormat fileFormat, File file) 
-    throws Exception 
+  public static Database open(FileFormat fileFormat, File file)
+    throws Exception
   {
     return open(fileFormat, file, false);
   }
 
-  public static Database open(FileFormat fileFormat, File file, boolean inMem) 
-    throws Exception 
+  public static Database open(FileFormat fileFormat, File file, boolean inMem)
+    throws Exception
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel(
-                               file, DatabaseImpl.RW_CHANNEL_MODE) 
+                               file, DatabaseImpl.RW_CHANNEL_MODE)
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(getTestAutoSync()).setChannel(channel).open();
-    Assert.assertEquals("Wrong JetFormat.", 
-                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(), 
+    Assert.assertEquals("Wrong JetFormat.",
+                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
                  ((DatabaseImpl)db).getFormat());
     Assert.assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
@@ -109,8 +109,8 @@ public class TestUtil
     return create(fileFormat, false);
   }
 
-  public static Database create(FileFormat fileFormat, boolean keep) 
-    throws Exception 
+  public static Database create(FileFormat fileFormat, boolean keep)
+    throws Exception
   {
     return create(fileFormat, keep, false);
   }
@@ -119,9 +119,9 @@ public class TestUtil
     return create(fileFormat, false, true);
   }
 
-  private static Database create(FileFormat fileFormat, boolean keep, 
-                                 boolean inMem) 
-    throws Exception 
+  private static Database create(FileFormat fileFormat, boolean keep,
+                                 boolean inMem)
+    throws Exception
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
 
@@ -147,7 +147,7 @@ public class TestUtil
         ByteUtil.closeQuietly(outStream);
       }
     }
-     
+
     return new DatabaseBuilder(createTempFile(keep)).setFileFormat(fileFormat)
         .setAutoSync(getTestAutoSync()).setChannel(channel).create();
   }
@@ -176,7 +176,7 @@ public class TestUtil
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
     Database db = new DatabaseBuilder(tmp).setAutoSync(getTestAutoSync()).open();
-    Assert.assertEquals("Wrong JetFormat.", 
+    Assert.assertEquals("Wrong JetFormat.",
                  DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
                  ((DatabaseImpl)db).getFormat());
     Assert.assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
@@ -192,7 +192,7 @@ public class TestUtil
   public static Object[] createTestRow() {
     return createTestRow("Tim");
   }
-  
+
   static Map<String,Object> createTestRowMap(String col1Val) {
     return createExpectedRow("A", col1Val, "B", "R", "C", "McCune",
                              "D", 1234, "E", (byte) 0xad, "F", 555.66d,
@@ -220,7 +220,7 @@ public class TestUtil
   static String createNonAsciiString(int len) {
     return createString(len, '\u0CC0');
   }
-    
+
   private static String createString(int len, char firstChar) {
     StringBuilder builder = new StringBuilder(len);
     for(int i = 0; i < len; ++i) {
@@ -235,7 +235,7 @@ public class TestUtil
     Assert.assertEquals(expectedRowCount, countRows(table));
     Assert.assertEquals(expectedRowCount, table.getRowCount());
   }
-  
+
   public static int countRows(Table table) throws Exception {
     int rtn = 0;
     for(Map<String, Object> row : CursorBuilder.createCursor(table)) {
@@ -245,15 +245,15 @@ public class TestUtil
   }
 
   public static void assertTable(
-      List<? extends Map<String, Object>> expectedTable, 
+      List<? extends Map<String, Object>> expectedTable,
       Table table)
     throws IOException
   {
     assertCursor(expectedTable, CursorBuilder.createCursor(table));
   }
-  
+
   public static void assertCursor(
-      List<? extends Map<String, Object>> expectedTable, 
+      List<? extends Map<String, Object>> expectedTable,
       Cursor cursor)
   {
     List<Map<String, Object>> foundTable =
@@ -264,9 +264,9 @@ public class TestUtil
     Assert.assertEquals(expectedTable.size(), foundTable.size());
     for(int i = 0; i < expectedTable.size(); ++i) {
       Assert.assertEquals(expectedTable.get(i), foundTable.get(i));
-    } 
+    }
   }
-  
+
   public static RowImpl createExpectedRow(Object... rowElements) {
     RowImpl row = new RowImpl((RowIdImpl)null);
     for(int i = 0; i < rowElements.length; i += 2) {
@@ -274,12 +274,12 @@ public class TestUtil
               rowElements[i + 1]);
     }
     return row;
-  }    
+  }
 
   public static List<Row> createExpectedTable(Row... rows) {
     return Arrays.<Row>asList(rows);
-  }    
-  
+  }
+
   public static void dumpDatabase(Database mdb) throws Exception {
     dumpDatabase(mdb, false);
   }
@@ -313,7 +313,7 @@ public class TestUtil
     for(Index index : table.getIndexes()) {
       ((IndexImpl)index).initialize();
     }
-    
+
     writer.println("TABLE: " + table.getName());
     List<String> colNames = new ArrayList<String>();
     for(Column col : table.getColumns()) {
@@ -377,7 +377,7 @@ public class TestUtil
                                "), found " + foundTime + " (" + found + ")");
     }
   }
-  
+
   static void copyFile(File srcFile, File dstFile)
     throws IOException
   {
@@ -424,7 +424,7 @@ public class TestUtil
     val = f.get(val);
     ((Map<?,?>)val).clear();
   }
-  
+
   public static byte[] toByteArray(File file)
     throws IOException
   {

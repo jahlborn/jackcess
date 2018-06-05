@@ -2017,7 +2017,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   boolean isThisColumn(Identifier identifier) {
     return(getTable().isThisTable(identifier) &&
-           identifier.getObjectName().equalsIgnoreCase(getName()));
+           getName().equalsIgnoreCase(identifier.getObjectName()));
   }
 
   private static String withErrorContext(
