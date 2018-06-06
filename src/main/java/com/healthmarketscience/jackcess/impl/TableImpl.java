@@ -2148,7 +2148,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     addRow(rowValues);
 
-    returnRowValues(row, rowValues, _autoNumColumns);
+    returnRowValues(row, rowValues, _columns);
     return row;
   }
 
@@ -2168,12 +2168,10 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     addRows(rowValuesList);
 
-    if(!_autoNumColumns.isEmpty()) {
-      for(int i = 0; i < rowValuesList.size(); ++i) {
-        Map<String,Object> row = rows.get(i);
-        Object[] rowValues = rowValuesList.get(i);
-        returnRowValues(row, rowValues, _autoNumColumns);
-      }
+    for(int i = 0; i < rowValuesList.size(); ++i) {
+      Map<String,Object> row = rows.get(i);
+      Object[] rowValues = rowValuesList.get(i);
+      returnRowValues(row, rowValues, _columns);
     }
     return rows;
   }
