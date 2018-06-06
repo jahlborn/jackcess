@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 
+import java.math.BigDecimal;
+
 import junit.framework.TestCase;
 
 
@@ -83,5 +85,22 @@ public class NumberFormatterTest extends TestCase
     assertEquals("1.#INF", NumberFormatter.format(Float.POSITIVE_INFINITY));
     assertEquals("-1.#INF", NumberFormatter.format(Float.NEGATIVE_INFINITY));
     assertEquals("1.#QNAN", NumberFormatter.format(Float.NaN));
+  }
+
+  public void testDecimalFormat() throws Exception
+  {
+    assertEquals("9874539485972.2342342234234", NumberFormatter.format(new BigDecimal("9874539485972.2342342234234")));
+    assertEquals("9874539485972.234234223423468", NumberFormatter.format(new BigDecimal("9874539485972.2342342234234678")));
+    assertEquals("-9874539485972.234234223423468", NumberFormatter.format(new BigDecimal("-9874539485972.2342342234234678")));
+    assertEquals("9.874539485972234234223423468E+31", NumberFormatter.format(new BigDecimal("98745394859722342342234234678000")));
+    assertEquals("9.874539485972234234223423468E+31", NumberFormatter.format(new BigDecimal("98745394859722342342234234678000")));
+    assertEquals("-9.874539485972234234223423468E+31", NumberFormatter.format(new BigDecimal("-98745394859722342342234234678000")));
+    assertEquals("300", NumberFormatter.format(new BigDecimal("300.0")));
+    assertEquals("-300", NumberFormatter.format(new BigDecimal("-300.000")));
+    assertEquals("0.3", NumberFormatter.format(new BigDecimal("0.3")));
+    assertEquals("0.1", NumberFormatter.format(new BigDecimal("0.1000")));
+    assertEquals("0.0000000000023423428930458", NumberFormatter.format(new BigDecimal("0.0000000000023423428930458")));
+    assertEquals("2.3423428930458389038451E-12", NumberFormatter.format(new BigDecimal("0.0000000000023423428930458389038451")));
+    assertEquals("2.342342893045838903845134766E-12", NumberFormatter.format(new BigDecimal("0.0000000000023423428930458389038451347656")));
   }
 }
