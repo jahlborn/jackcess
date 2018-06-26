@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,28 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.expr;
 
-import java.io.IOException;
 
 /**
- * Base class for specific exceptions thrown by Jackcess.
+ * Base class for exceptions thrown during expression evaluation.
  *
  * @author James Ahlborn
  */
-public class JackcessException extends IOException
+public class EvalException extends IllegalStateException
 {
-  private static final long serialVersionUID = 20131123L;
+  private static final long serialVersionUID = 20180330L;
 
-  public JackcessException(String message) {
+  public EvalException(String message) {
     super(message);
   }
 
-  public JackcessException(Throwable cause) {
+  public EvalException(Throwable cause) {
     super(cause);
   }
 
-  public JackcessException(String message, Throwable cause) {
+  public EvalException(String message, Throwable cause) {
     super(message, cause);
   }
 }

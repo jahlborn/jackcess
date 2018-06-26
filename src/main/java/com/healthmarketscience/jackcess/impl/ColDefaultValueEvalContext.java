@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,28 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.expr.Expressionator;
 
 /**
- * Base class for specific exceptions thrown by Jackcess.
  *
  * @author James Ahlborn
  */
-public class JackcessException extends IOException
+public class ColDefaultValueEvalContext extends ColEvalContext
 {
-  private static final long serialVersionUID = 20131123L;
-
-  public JackcessException(String message) {
-    super(message);
+  public ColDefaultValueEvalContext(ColumnImpl col) {
+    super(col);
   }
 
-  public JackcessException(Throwable cause) {
-    super(cause);
+  ColDefaultValueEvalContext setExpr(String exprStr) {
+    setExpr(Expressionator.Type.DEFAULT_VALUE, exprStr);
+    return this;
   }
 
-  public JackcessException(String message, Throwable cause) {
-    super(message, cause);
+  @Override
+  public Value.Type getResultType() {
+    return toValueType(getCol().getType());
   }
 }

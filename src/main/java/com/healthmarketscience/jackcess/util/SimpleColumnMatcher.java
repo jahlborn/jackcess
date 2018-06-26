@@ -23,6 +23,7 @@ import java.util.Arrays;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import org.apache.commons.lang.ObjectUtils;
 
 /**
@@ -54,8 +55,9 @@ public class SimpleColumnMatcher implements ColumnMatcher {
       // values and try again
       DataType dataType = table.getColumn(columnName).getType();
       try {
-        Object internalV1 = ColumnImpl.toInternalValue(dataType, value1);
-        Object internalV2 = ColumnImpl.toInternalValue(dataType, value2);
+        DatabaseImpl db = (DatabaseImpl)table.getDatabase();
+        Object internalV1 = ColumnImpl.toInternalValue(dataType, value1, db);
+        Object internalV2 = ColumnImpl.toInternalValue(dataType, value2, db);
         
         return equals(internalV1, internalV2);
       } catch(IOException e) {

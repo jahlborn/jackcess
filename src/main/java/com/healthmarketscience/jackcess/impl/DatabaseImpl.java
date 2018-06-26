@@ -28,6 +28,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -38,7 +39,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -63,6 +63,7 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.TableMetaData;
+import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
@@ -83,7 +84,7 @@ import org.apache.commons.logging.LogFactory;
  * @usage _intermediate_class_
  */
 public class DatabaseImpl implements Database
-{  
+{
   private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
   /** this is the default "userId" used if we cannot find existing info.  this
@@ -94,11 +95,11 @@ public class DatabaseImpl implements Database
   /** the default value for the resource path used to load classpath
    *  resources.
    */
-  public static final String DEFAULT_RESOURCE_PATH = 
+  public static final String DEFAULT_RESOURCE_PATH =
     "com/healthmarketscience/jackcess/";
 
   /** the resource path to be used when loading classpath resources */
-  static final String RESOURCE_PATH = 
+  static final String RESOURCE_PATH =
     System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
 
   /** whether or not this jvm has "broken" nio support */
@@ -119,7 +120,7 @@ public class DatabaseImpl implements Database
     addFileFormatDetails(FileFormat.V2016, "empty2016", JetFormat.VERSION_16);
     addFileFormatDetails(FileFormat.MSISAM, null, JetFormat.VERSION_MSISAM);
   }
-  
+
   /** System catalog always lives on page 2 */
   private static final int PAGE_SYSTEM_CATALOG = 2;
   /** Name of the system catalog */
@@ -155,7 +156,7 @@ public class DatabaseImpl implements Database
   private static final String REL_COL_FROM_TABLE = "szReferencedObject";
   /** Relationship table column name of the relationship */
   private static final String REL_COL_NAME = "szRelationship";
-  
+
   /** System catalog column name of the page on which system object definitions
       are stored */
   private static final String CAT_COL_ID = "Id";
@@ -192,7 +193,7 @@ public class DatabaseImpl implements Database
   /** this object is hidden */
   public static final int HIDDEN_OBJECT_FLAG = 0x08;
   /** all flags which seem to indicate some type of system object */
-  static final int SYSTEM_OBJECT_FLAGS = 
+  static final int SYSTEM_OBJECT_FLAGS =
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
 
   /** read-only channel access mode */
@@ -238,17 +239,17 @@ public class DatabaseImpl implements Database
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID));
   /** the columns to read when finding table details */
   private static Collection<String> SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID, 
-                                      CAT_COL_FLAGS, CAT_COL_PARENT_ID, 
+    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
+                                      CAT_COL_FLAGS, CAT_COL_PARENT_ID,
                                       CAT_COL_DATABASE, CAT_COL_FOREIGN_NAME));
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
 
   /** regex matching characters which are invalid in identifier names */
-  private static final Pattern INVALID_IDENTIFIER_CHARS = 
+  private static final Pattern INVALID_IDENTIFIER_CHARS =
     Pattern.compile("[\\p{Cntrl}.!`\\]\\[]");
-  
+
   /** the File of the database */
   private final File _file;
   /** the simple name of the database */
@@ -265,13 +266,7 @@ public class DatabaseImpl implements Database
    * MAX_CACHED_LOOKUP_TABLES).
    */
   private final Map<String, TableInfo> _tableLookup =
-    new LinkedHashMap<String, TableInfo>() {
-    private static final long serialVersionUID = 0L;
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<String, TableInfo> e) {
-      return(size() > MAX_CACHED_LOOKUP_TABLES);
-    }
-  };
+    new SimpleCache<String,TableInfo>(MAX_CACHED_LOOKUP_TABLES);
   /** set of table names as stored in the mdb file, created on demand */
   private Set<String> _tableNames;
   /** Reads and writes database pages */
@@ -312,6 +307,8 @@ public class DatabaseImpl implements Database
   private boolean _enforceForeignKeys;
   /** whether or not auto numbers can be directly inserted by the user */
   private boolean _allowAutoNumInsert;
+  /** whether or not to evaluate expressions */
+  private boolean _evaluateExpressions;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables */
@@ -337,6 +334,8 @@ public class DatabaseImpl implements Database
     FKEnforcer.initSharedState();
   /** Calendar for use interpreting dates/times in Columns */
   private Calendar _calendar;
+  /** shared context for evaluating expressions */
+  private DBEvalContext _evalCtx;
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
@@ -363,14 +362,14 @@ public class DatabaseImpl implements Database
    */
   public static DatabaseImpl open(
       File mdbFile, boolean readOnly, FileChannel channel,
-      boolean autoSync, Charset charset, TimeZone timeZone, 
+      boolean autoSync, Charset charset, TimeZone timeZone,
       CodecProvider provider)
     throws IOException
   {
     boolean closeChannel = false;
     if(channel == null) {
       if(!mdbFile.exists() || !mdbFile.canRead()) {
-        throw new FileNotFoundException("given file does not exist: " + 
+        throw new FileNotFoundException("given file does not exist: " +
                                         mdbFile);
       }
 
@@ -410,7 +409,7 @@ public class DatabaseImpl implements Database
       }
     }
   }
-  
+
   /**
    * Create a new Database for the given fileFormat
    * @param fileFormat version of new database.
@@ -431,18 +430,18 @@ public class DatabaseImpl implements Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @usage _advanced_method_
    */
-  public static DatabaseImpl create(FileFormat fileFormat, File mdbFile, 
+  public static DatabaseImpl create(FileFormat fileFormat, File mdbFile,
                                     FileChannel channel, boolean autoSync,
                                     Charset charset, TimeZone timeZone)
     throws IOException
   {
     FileFormatDetails details = getFileFormatDetails(fileFormat);
     if (details.getFormat().READ_ONLY) {
-      throw new IOException("File format " + fileFormat +       
+      throw new IOException("File format " + fileFormat +
                             " does not support writing for " + mdbFile);
     }
     if(details.getEmptyFilePath() == null) {
-      throw new IOException("File format " + fileFormat +       
+      throw new IOException("File format " + fileFormat +
                             " does not support file creation for " + mdbFile);
     }
 
@@ -457,7 +456,7 @@ public class DatabaseImpl implements Database
       channel.truncate(0);
       transferDbFrom(channel, getResourceAsStream(details.getEmptyFilePath()));
       channel.force(true);
-      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync, 
+      DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
                                          fileFormat, charset, timeZone, null);
       success = true;
       return db;
@@ -488,10 +487,10 @@ public class DatabaseImpl implements Database
     final String mode = (readOnly ? RO_CHANNEL_MODE : RW_CHANNEL_MODE);
     return new RandomAccessFile(mdbFile, mode).getChannel();
   }
-  
+
   /**
    * Create a new database by reading it in from a FileChannel.
-   * @param file the File to which the channel is connected 
+   * @param file the File to which the channel is connected
    * @param channel File channel of the database.  This needs to be a
    *    FileChannel instead of a ReadableByteChannel because we need to
    *    randomly jump around to various points in the file.
@@ -520,6 +519,7 @@ public class DatabaseImpl implements Database
     _columnOrder = getDefaultColumnOrder();
     _enforceForeignKeys = getDefaultEnforceForeignKeys();
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
+    _evaluateExpressions = getDefaultEvaluateExpressions();
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
@@ -555,7 +555,7 @@ public class DatabaseImpl implements Database
   public JetFormat getFormat() {
     return _format;
   }
-  
+
   /**
    * @return The system catalog table
    * @usage _advanced_method_
@@ -563,7 +563,7 @@ public class DatabaseImpl implements Database
   public TableImpl getSystemCatalog() {
     return _systemCatalog;
   }
-  
+
   /**
    * @return The system Access Control Entries table (loaded on demand)
    * @usage _advanced_method_
@@ -592,7 +592,7 @@ public class DatabaseImpl implements Database
 
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
-  }    
+  }
 
   public LinkResolver getLinkResolver() {
     return((_linkResolver != null) ? _linkResolver : LinkResolver.DEFAULT);
@@ -600,10 +600,10 @@ public class DatabaseImpl implements Database
 
   public void setLinkResolver(LinkResolver newLinkResolver) {
     _linkResolver = newLinkResolver;
-  }    
+  }
 
   public Map<String,Database> getLinkedDatabases() {
-    return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() : 
+    return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() :
             Collections.unmodifiableMap(_linkedDbs));
   }
 
@@ -625,7 +625,7 @@ public class DatabaseImpl implements Database
     // but, the local table name may not match the remote table name, so we
     // need to do a search if the common case fails
     return _tableFinder.isLinkedTable(table);
-  }  
+  }
 
   private boolean matchesLinkedTable(Table table, String linkedTableName,
                                      String linkedDbName) {
@@ -633,7 +633,7 @@ public class DatabaseImpl implements Database
             (_linkedDbs != null) &&
             (_linkedDbs.get(linkedDbName) == table.getDatabase()));
   }
-  
+
   public TimeZone getTimeZone() {
     return _timeZone;
   }
@@ -645,7 +645,7 @@ public class DatabaseImpl implements Database
     _timeZone = newTimeZone;
     // clear cached calendar when timezone is changed
     _calendar = null;
-  }    
+  }
 
   public Charset getCharset()
   {
@@ -692,6 +692,16 @@ public class DatabaseImpl implements Database
     _allowAutoNumInsert = allowAutoNumInsert;
   }
 
+  public boolean isEvaluateExpressions() {
+    return _evaluateExpressions;
+  }
+
+  public void setEvaluateExpressions(Boolean evaluateExpressions) {
+    if(evaluateExpressions == null) {
+      evaluateExpressions = getDefaultEvaluateExpressions();
+    }
+    _evaluateExpressions = evaluateExpressions;
+  }
 
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
@@ -703,7 +713,7 @@ public class DatabaseImpl implements Database
     }
     _validatorFactory = newFactory;
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -720,6 +730,32 @@ public class DatabaseImpl implements Database
           Calendar.getInstance(_timeZone));
     }
     return _calendar;
+  }
+
+  public EvalConfig getEvalConfig() {
+    return getEvalContext();
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  DBEvalContext getEvalContext() {
+    if(_evalCtx == null) {
+      _evalCtx = new DBEvalContext(this);
+    }
+    return _evalCtx;
+  }
+
+  /**
+   * Returns a SimpleDateFormat for the given format string which is
+   * configured with a compatible Calendar instance (see
+   * {@link DatabaseBuilder#toCompatibleCalendar}) and this database's
+   * {@link TimeZone}.
+   */
+  public SimpleDateFormat createDateFormat(String formatStr) {
+    SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
+    sdf.setTimeZone(getTimeZone());
+    return sdf;
   }
 
   /**
@@ -755,9 +791,9 @@ public class DatabaseImpl implements Database
           // no access version, fall back to "generic"
           accessVersion = null;
         }
-        
+
         _fileFormat = possibleFileFormats.get(accessVersion);
-        
+
         if(_fileFormat == null) {
           throw new IllegalStateException(withErrorContext(
                   "Could not determine FileFormat"));
@@ -796,7 +832,7 @@ public class DatabaseImpl implements Database
     // just need one shared buffer
     _buffer = buffer;
   }
-  
+
   /**
    * @return the currently configured database default language sort order for
    *         textual columns
@@ -837,7 +873,7 @@ public class DatabaseImpl implements Database
       releaseSharedBuffer(buffer);
     }
   }
-  
+
   /**
    * @return a PropertyMaps instance decoded from the given bytes (always
    *         returns non-{@code null} result).
@@ -845,11 +881,11 @@ public class DatabaseImpl implements Database
    */
   public PropertyMaps readProperties(byte[] propsBytes, int objectId,
                                      RowIdImpl rowId)
-    throws IOException 
+    throws IOException
   {
-    return getPropsHandler().read(propsBytes, objectId, rowId);
+    return getPropsHandler().read(propsBytes, objectId, rowId, null);
   }
-  
+
   /**
    * Read the system catalog
    */
@@ -876,10 +912,10 @@ public class DatabaseImpl implements Database
             .toCursor());
     }
 
-    _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+    _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID,
                                                SYSTEM_OBJECT_NAME_TABLES);
 
-    if(_tableParentId == null) {  
+    if(_tableParentId == null) {
       throw new IOException(withErrorContext(
               "Did not find required parent table id"));
     }
@@ -889,7 +925,7 @@ public class DatabaseImpl implements Database
           "Finished reading system catalog.  Tables: " + getTableNames()));
     }
   }
-  
+
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
       _tableNames = getTableNames(true, false, true);
@@ -932,14 +968,14 @@ public class DatabaseImpl implements Database
   public TableIterableBuilder newIterable() {
     return new TableIterableBuilder(this);
   }
-  
+
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
 
   public TableMetaData getTableMetaData(String name) throws IOException {
     return getTableInfo(name, true);
-  }  
+  }
 
   /**
    * @param tableDefPageNumber the page number of a table definition
@@ -953,7 +989,7 @@ public class DatabaseImpl implements Database
     if(table != null) {
       return table;
     }
-    
+
     // lookup table info from system catalog
     Row objectRow = _tableFinder.getObjectRow(
         tableDefPageNumber, SYSTEM_CATALOG_COLUMNS);
@@ -972,19 +1008,19 @@ public class DatabaseImpl implements Database
    * @param includeSystemTables whether to consider returning a system table
    * @return The table, or null if it doesn't exist
    */
-  protected TableImpl getTable(String name, boolean includeSystemTables) 
-    throws IOException 
+  protected TableImpl getTable(String name, boolean includeSystemTables)
+    throws IOException
   {
     TableInfo tableInfo = getTableInfo(name, includeSystemTables);
-    return ((tableInfo != null) ? 
+    return ((tableInfo != null) ?
             getTable(tableInfo, includeSystemTables) : null);
   }
 
-  private TableInfo getTableInfo(String name, boolean includeSystemTables) 
-    throws IOException 
+  private TableInfo getTableInfo(String name, boolean includeSystemTables)
+    throws IOException
   {
     TableInfo tableInfo = lookupTable(name);
-    
+
     if ((tableInfo == null) || (tableInfo.pageNumber == null)) {
       return null;
     }
@@ -995,8 +1031,8 @@ public class DatabaseImpl implements Database
     return tableInfo;
   }
 
-  private TableImpl getTable(TableInfo tableInfo, boolean includeSystemTables) 
-    throws IOException 
+  private TableImpl getTable(TableInfo tableInfo, boolean includeSystemTables)
+    throws IOException
   {
     if(tableInfo.isLinked()) {
 
@@ -1011,15 +1047,15 @@ public class DatabaseImpl implements Database
         linkedDb = getLinkResolver().resolveLinkedDatabase(this, linkedDbName);
         _linkedDbs.put(linkedDbName, linkedDb);
       }
-      
-      return ((DatabaseImpl)linkedDb).getTable(linkedTableName, 
+
+      return ((DatabaseImpl)linkedDb).getTable(linkedTableName,
                                                includeSystemTables);
     }
 
     return readTable(tableInfo.tableName, tableInfo.pageNumber,
                      tableInfo.flags);
   }
-  
+
   /**
    * Create a new table in this database
    * @param name Name of the table to create
@@ -1051,28 +1087,28 @@ public class DatabaseImpl implements Database
       .toTable(this);
   }
 
-  public void createLinkedTable(String name, String linkedDbName, 
+  public void createLinkedTable(String name, String linkedDbName,
                                 String linkedTableName)
     throws IOException
   {
     if(lookupTable(name) != null) {
       throw new IllegalArgumentException(withErrorContext(
-          "Cannot create linked table with name of existing table '" + name +   
+          "Cannot create linked table with name of existing table '" + name +
           "'"));
     }
 
     validateIdentifierName(name, getFormat().MAX_TABLE_NAME_LENGTH, "table");
-    validateName(linkedDbName, DataType.MEMO.getMaxSize(), 
+    validateName(linkedDbName, DataType.MEMO.getMaxSize(),
                  "linked database");
-    validateIdentifierName(linkedTableName, getFormat().MAX_TABLE_NAME_LENGTH, 
+    validateIdentifierName(linkedTableName, getFormat().MAX_TABLE_NAME_LENGTH,
                            "linked table");
 
     getPageChannel().startWrite();
     try {
-      
+
       int linkedTableId = _tableFinder.getNextFreeSyntheticId();
 
-      addNewTable(name, linkedTableId, TYPE_LINKED_TABLE, linkedDbName, 
+      addNewTable(name, linkedTableId, TYPE_LINKED_TABLE, linkedDbName,
                   linkedTableName);
 
     } finally {
@@ -1083,16 +1119,16 @@ public class DatabaseImpl implements Database
   /**
    * Adds a newly created table to the relevant internal database structures.
    */
-  void addNewTable(String name, int tdefPageNumber, Short type, 
-                   String linkedDbName, String linkedTableName) 
-    throws IOException 
+  void addNewTable(String name, int tdefPageNumber, Short type,
+                   String linkedDbName, String linkedTableName)
+    throws IOException
   {
     //Add this table to our internal list.
     addTable(name, Integer.valueOf(tdefPageNumber), type, linkedDbName,
              linkedTableName);
-    
+
     //Add this table to system tables
-    addToSystemCatalog(name, tdefPageNumber, type, linkedDbName, 
+    addToSystemCatalog(name, tdefPageNumber, type, linkedDbName,
                        linkedTableName, _tableParentId);
     addToAccessControlEntries(tdefPageNumber, _tableParentId, _newTableSIDs);
   }
@@ -1120,7 +1156,7 @@ public class DatabaseImpl implements Database
       table1 = table2;
       table2 = tmp;
     }
-      
+
     return getRelationshipsImpl(table1, table2, true);
   }
 
@@ -1134,25 +1170,25 @@ public class DatabaseImpl implements Database
     // all tables
     return getRelationshipsImpl((TableImpl)table, null, true);
   }
-      
+
   public List<Relationship> getRelationships()
     throws IOException
   {
     return getRelationshipsImpl(null, null, false);
   }
-      
+
   public List<Relationship> getSystemRelationships()
     throws IOException
   {
     return getRelationshipsImpl(null, null, true);
   }
-      
+
   private List<Relationship> getRelationshipsImpl(
       TableImpl table1, TableImpl table2, boolean includeSystemTables)
     throws IOException
   {
     initRelationships();
-    
+
     List<Relationship> relationships = new ArrayList<Relationship>();
 
     if(table1 != null) {
@@ -1168,15 +1204,15 @@ public class DatabaseImpl implements Database
       collectRelationships(new CursorBuilder(_relationships).toCursor(),
                            null, null, relationships, includeSystemTables);
     }
-    
+
     return relationships;
   }
 
-  RelationshipImpl writeRelationship(RelationshipCreator creator) 
+  RelationshipImpl writeRelationship(RelationshipCreator creator)
     throws IOException
   {
     initRelationships();
-    
+
     String name = createRelationshipName(creator);
     RelationshipImpl newRel = creator.createRelationshipImpl(name);
 
@@ -1206,13 +1242,13 @@ public class DatabaseImpl implements Database
 
     getPageChannel().startWrite();
     try {
-      
+
       int relObjId = _tableFinder.getNextFreeSyntheticId();
       _relationships.addRows(rows);
       addToSystemCatalog(name, relObjId, TYPE_RELATIONSHIP, null, null,
                          _relParentId);
       addToAccessControlEntries(relObjId, _relParentId, _newRelSIDs);
-      
+
     } finally {
       getPageChannel().finishWrite();
     }
@@ -1224,14 +1260,14 @@ public class DatabaseImpl implements Database
     // the relationships table does not get loaded until first accessed
     if(_relationships == null) {
       // need the parent id of the relationships objects
-      _relParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+      _relParentId = _tableFinder.findObjectId(DB_PARENT_ID,
                                                SYSTEM_OBJECT_NAME_RELATIONSHIPS);
       _relationships = getRequiredSystemTable(TABLE_SYSTEM_RELATIONSHIPS);
     }
   }
 
   private String createRelationshipName(RelationshipCreator creator)
-    throws IOException 
+    throws IOException
   {
     // ensure that the final identifier name does not get too long
     // - the primary name is limited to ((max / 2) - 3)
@@ -1253,7 +1289,7 @@ public class DatabaseImpl implements Database
 
     // now ensure name is unique
     Set<String> names = new HashSet<String>();
-    
+
     // collect the names of all relationships for uniqueness check
     for(Row row :
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
@@ -1270,7 +1306,7 @@ public class DatabaseImpl implements Database
       // check those names as well
       for(Index idx : creator.getSecondaryTable().getIndexes()) {
         names.add(toLookupName(idx.getName()));
-      } 
+      }
     }
 
     String baseName = toLookupName(origName);
@@ -1282,7 +1318,7 @@ public class DatabaseImpl implements Database
 
     return ((i == 0) ? origName : (origName + i));
   }
-  
+
   public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
@@ -1292,7 +1328,7 @@ public class DatabaseImpl implements Database
 
     // find all the queries from the system catalog
     List<Row> queryInfo = new ArrayList<Row>();
-    Map<Integer,List<QueryImpl.Row>> queryRowMap = 
+    Map<Integer,List<QueryImpl.Row>> queryRowMap =
       new HashMap<Integer,List<QueryImpl.Row>>();
     for(Row row :
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
@@ -1340,10 +1376,10 @@ public class DatabaseImpl implements Database
   private TableImpl getRequiredSystemTable(String tableName) throws IOException
   {
     TableImpl table = getSystemTable(tableName);
-    if(table == null) { 
+    if(table == null) {
       throw new IOException(withErrorContext(
               "Could not find system table " + tableName));
-    } 
+    }
     return table;
   }
 
@@ -1372,26 +1408,21 @@ public class DatabaseImpl implements Database
    * @return the PropertyMaps for the object with the given id
    * @usage _advanced_method_
    */
-  public PropertyMaps getPropertiesForObject(int objectId)
+  public PropertyMaps getPropertiesForObject(
+      int objectId, PropertyMaps.Owner owner)
     throws IOException
   {
-    Row objectRow = _tableFinder.getObjectRow(
-        objectId, SYSTEM_CATALOG_PROPS_COLUMNS);
-    byte[] propsBytes = null;
-    RowIdImpl rowId = null;
-    if(objectRow != null) {
-      propsBytes = objectRow.getBytes(CAT_COL_PROPS);
-      rowId = (RowIdImpl)objectRow.getId();
-    }
-    return readProperties(propsBytes, objectId, rowId);
+    return readProperties(
+        objectId, _tableFinder.getObjectRow(
+            objectId, SYSTEM_CATALOG_PROPS_COLUMNS), owner);
   }
 
   private Integer getDbParentId() throws IOException {
     if(_dbParentId == null) {
       // need the parent id of the databases objects
-      _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID, 
+      _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID,
                                               SYSTEM_OBJECT_NAME_DATABASES);
-      if(_dbParentId == null) {  
+      if(_dbParentId == null) {
         throw new IOException(withErrorContext(
                 "Did not find required parent db id"));
       }
@@ -1412,7 +1443,7 @@ public class DatabaseImpl implements Database
       if(msysDbRow != null) {
         owner = msysDbRow.getBytes(CAT_COL_OWNER);
       }
-      _newObjOwner = (((owner != null) && (owner.length > 0)) ? 
+      _newObjOwner = (((owner != null) && (owner.length > 0)) ?
                       owner : SYS_DEFAULT_SID);
     }
     return _newObjOwner;
@@ -1424,17 +1455,23 @@ public class DatabaseImpl implements Database
   private PropertyMaps getPropertiesForDbObject(String dbName)
     throws IOException
   {
-    Row objectRow = _tableFinder.getObjectRow(
-        getDbParentId(), dbName, SYSTEM_CATALOG_PROPS_COLUMNS);
+    return readProperties(
+        -1, _tableFinder.getObjectRow(
+            getDbParentId(), dbName, SYSTEM_CATALOG_PROPS_COLUMNS), null);
+  }
+
+  private PropertyMaps readProperties(int objectId, Row objectRow,
+                                      PropertyMaps.Owner owner)
+    throws IOException
+  {
     byte[] propsBytes = null;
-    int objectId = -1;
     RowIdImpl rowId = null;
     if(objectRow != null) {
       propsBytes = objectRow.getBytes(CAT_COL_PROPS);
       objectId = objectRow.getInt(CAT_COL_ID);
       rowId = (RowIdImpl)objectRow.getId();
     }
-    return readProperties(propsBytes, objectId, rowId);
+    return getPropsHandler().read(propsBytes, objectId, rowId, owner);
   }
 
   public String getDatabasePassword() throws IOException
@@ -1456,7 +1493,7 @@ public class DatabaseImpl implements Database
           pwdBytes[i] ^= pwdMask[i % pwdMask.length];
         }
       }
-    
+
       boolean hasPassword = false;
       for(int i = 0; i < pwdBytes.length; ++i) {
         if(pwdBytes[i] != 0) {
@@ -1498,14 +1535,14 @@ public class DatabaseImpl implements Database
     for(Row row : cursor) {
       String fromName = row.getString(REL_COL_FROM_TABLE);
       String toName = row.getString(REL_COL_TO_TABLE);
-      
-      if(((fromTableName == null) || 
+
+      if(((fromTableName == null) ||
           fromTableName.equalsIgnoreCase(fromName)) &&
-         ((toTableName == null) || 
+         ((toTableName == null) ||
           toTableName.equalsIgnoreCase(toName))) {
 
         String relName = row.getString(REL_COL_NAME);
-        
+
         // found more info for a relationship.  see if we already have some
         // info for this relationship
         Relationship rel = null;
@@ -1552,15 +1589,15 @@ public class DatabaseImpl implements Database
         rel.getFromColumns().set(colIdx, fromCol);
         rel.getToColumns().set(colIdx, toCol);
       }
-    }    
+    }
   }
-  
+
   /**
    * Add a new table to the system catalog
    * @param name Table name
    * @param objectId id of the new object
    */
-  private void addToSystemCatalog(String name, int objectId, Short type, 
+  private void addToSystemCatalog(String name, int objectId, Short type,
                                   String linkedDbName, String linkedTableName,
                                   Integer parentId)
     throws IOException
@@ -1601,8 +1638,8 @@ public class DatabaseImpl implements Database
    * Adds a new object to the system's access control entries
    */
   private void addToAccessControlEntries(
-      Integer objectId, Integer parentId, List<byte[]> sids) 
-    throws IOException 
+      Integer objectId, Integer parentId, List<byte[]> sids)
+    throws IOException
   {
     if(sids.isEmpty()) {
       collectNewObjectSIDs(parentId, sids);
@@ -1624,20 +1661,20 @@ public class DatabaseImpl implements Database
       sidCol.setRowValue(aceRow, sid);
       aceRows.add(aceRow);
     }
-    acEntries.addRows(aceRows);  
+    acEntries.addRows(aceRows);
   }
 
   /**
    * Find collection of SIDs for the given parent id.
    */
-  private void collectNewObjectSIDs(Integer parentId, List<byte[]> sids) 
+  private void collectNewObjectSIDs(Integer parentId, List<byte[]> sids)
     throws IOException
   {
     // search for ACEs matching the given parentId.  use the index on the
     // objectId column if found (should be there)
     Cursor cursor = createCursorWithOptionalIndex(
         getAccessControlEntries(), ACE_COL_OBJECT_ID, parentId);
-    
+
     for(Row row : cursor) {
       Integer objId = row.getInt(ACE_COL_OBJECT_ID);
       if(parentId.equals(objId)) {
@@ -1662,7 +1699,7 @@ public class DatabaseImpl implements Database
     if(table != null) {
       return table;
     }
-    
+
     ByteBuffer buffer = takeSharedBuffer();
     try {
       // need to load table from db
@@ -1697,12 +1734,12 @@ public class DatabaseImpl implements Database
       if(LOG.isDebugEnabled()) {
         LOG.debug(withErrorContext(
             "Could not find expected index on table " + table.getName()));
-      } 
+      }
     }
     // use table scan instead
     return CursorImpl.createCursor(table);
   }
-  
+
   public void flush() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1711,7 +1748,7 @@ public class DatabaseImpl implements Database
     }
     _pageChannel.flush();
   }
-  
+
   public void close() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1729,7 +1766,7 @@ public class DatabaseImpl implements Database
               "Cannot create table with name of existing table '" + name + "'"));
     }
   }
-  
+
   /**
    * Validates an identifier name.
    *
@@ -1741,7 +1778,7 @@ public class DatabaseImpl implements Database
    * <li>Can't begin with leading spaces.</li>
    * <li>Can't include control characters (ASCII values 0 through 31).</li>
    * </ul>
-   * 
+   *
    * @usage _advanced_method_
    */
   public static void validateIdentifierName(String name,
@@ -1788,7 +1825,19 @@ public class DatabaseImpl implements Database
   public static boolean isBlank(String name) {
     return((name == null) || (name.trim().length() == 0));
   }
-  
+
+  /**
+   * Returns the given string trimmed, or {@code null} if the string is {@code
+   * null} or empty.
+   */
+  public static String trimToNull(String str) {
+    if(str == null) {
+      return null;
+    }
+    str = str.trim();
+    return((str.length() > 0) ? str : null);
+  }
+
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this);
@@ -1797,11 +1846,11 @@ public class DatabaseImpl implements Database
   /**
    * Adds a table to the _tableLookup and resets the _tableNames set
    */
-  private void addTable(String tableName, Integer pageNumber, Short type, 
+  private void addTable(String tableName, Integer pageNumber, Short type,
                         String linkedDbName, String linkedTableName)
   {
     _tableLookup.put(toLookupName(tableName),
-                     createTableInfo(tableName, pageNumber, 0, type, 
+                     createTableInfo(tableName, pageNumber, 0, type,
                                      linkedDbName, linkedTableName));
     // clear this, will be created next time needed
     _tableNames = null;
@@ -1811,7 +1860,7 @@ public class DatabaseImpl implements Database
    * Creates a TableInfo instance appropriate for the given table data.
    */
   private static TableInfo createTableInfo(
-      String tableName, Integer pageNumber, int flags, Short type, 
+      String tableName, Integer pageNumber, int flags, Short type,
       String linkedDbName, String linkedTableName)
   {
     if(TYPE_LINKED_TABLE.equals(type)) {
@@ -1877,7 +1926,7 @@ public class DatabaseImpl implements Database
     // use system default
     return TimeZone.getDefault();
   }
-  
+
   /**
    * Returns the default Charset for the given JetFormat.  This may or may not
    * be platform specific, depending on the format, but can be overridden
@@ -1900,7 +1949,7 @@ public class DatabaseImpl implements Database
     // use format default
     return format.CHARSET;
   }
-  
+
   /**
    * Returns the default Table.ColumnOrder.  This defaults to
    * {@link Database#DEFAULT_COLUMN_ORDER}, but can be overridden using the system
@@ -1920,7 +1969,7 @@ public class DatabaseImpl implements Database
     // use default order
     return DEFAULT_COLUMN_ORDER;
   }
-  
+
   /**
    * Returns the default enforce foreign-keys policy.  This defaults to
    * {@code true}, but can be overridden using the system
@@ -1935,7 +1984,7 @@ public class DatabaseImpl implements Database
     }
     return true;
   }
-  
+
   /**
    * Returns the default allow auto number insert policy.  This defaults to
    * {@code false}, but can be overridden using the system
@@ -1950,7 +1999,22 @@ public class DatabaseImpl implements Database
     }
     return false;
   }
-  
+
+  /**
+   * Returns the default enable expression evaluation policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#ENABLE_EXPRESSION_EVALUATION_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultEvaluateExpressions()
+  {
+    String prop = System.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
+    if(prop != null) {
+      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
+    }
+    return false;
+  }
+
   /**
    * Copies the given db InputStream to the given channel using the most
    * efficient means possible.
@@ -1961,7 +2025,7 @@ public class DatabaseImpl implements Database
     ReadableByteChannel readChannel = Channels.newChannel(in);
     if(!BROKEN_NIO) {
       // sane implementation
-      channel.transferFrom(readChannel, 0, MAX_EMPTYDB_SIZE);    
+      channel.transferFrom(readChannel, 0, MAX_EMPTYDB_SIZE);
     } else {
       // do things the hard way for broken vms
       ByteBuffer bb = ByteBuffer.allocate(8096);
@@ -2000,12 +2064,12 @@ public class DatabaseImpl implements Database
   {
     InputStream stream = DatabaseImpl.class.getClassLoader()
       .getResourceAsStream(resourceName);
-    
+
     if(stream == null) {
-      
+
       stream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(resourceName);
-      
+
       if(stream == null) {
         throw new IOException("Could not load jackcess resource " +
                               resourceName);
@@ -2026,8 +2090,8 @@ public class DatabaseImpl implements Database
   private static void addFileFormatDetails(
       FileFormat fileFormat, String emptyFileName, JetFormat format)
   {
-    String emptyFile = 
-      ((emptyFileName != null) ? 
+    String emptyFile =
+      ((emptyFileName != null) ?
        RESOURCE_PATH + emptyFileName + fileFormat.getFileExtension() : null);
     FILE_FORMAT_DETAILS.put(fileFormat, new FileFormatDetails(emptyFile, format));
   }
@@ -2035,7 +2099,7 @@ public class DatabaseImpl implements Database
   private static String getName(File file) {
     if(file == null) {
       return "<UNKNOWN.DB>";
-    } 
+    }
     return file.getName();
   }
 
@@ -2065,14 +2129,14 @@ public class DatabaseImpl implements Database
     public String getName() {
       return tableName;
     }
-    
+
     public boolean isLinked() {
       return false;
     }
 
     public boolean isSystem() {
       return isSystemObject(flags);
-    } 
+    }
 
     public String getLinkedTableName() {
       return null;
@@ -2110,8 +2174,8 @@ public class DatabaseImpl implements Database
     private final String linkedDbName;
     private final String linkedTableName;
 
-    private LinkedTableInfo(Integer newPageNumber, String newTableName, 
-                            int newFlags, String newLinkedDbName, 
+    private LinkedTableInfo(Integer newPageNumber, String newTableName,
+                            int newFlags, String newLinkedDbName,
                             String newLinkedTableName) {
       super(newPageNumber, newTableName, newFlags);
       linkedDbName = newLinkedDbName;
@@ -2170,11 +2234,11 @@ public class DatabaseImpl implements Database
    */
   private abstract class TableFinder
   {
-    public Integer findObjectId(Integer parentId, String name) 
-      throws IOException 
+    public Integer findObjectId(Integer parentId, String name)
+      throws IOException
     {
       Cursor cur = findRow(parentId, name);
-      if(cur == null) {  
+      if(cur == null) {
         return null;
       }
       ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
@@ -2182,8 +2246,8 @@ public class DatabaseImpl implements Database
     }
 
     public Row getObjectRow(Integer parentId, String name,
-                            Collection<String> columns) 
-      throws IOException 
+                            Collection<String> columns)
+      throws IOException
     {
       Cursor cur = findRow(parentId, name);
       return ((cur != null) ? cur.getCurrentRow(columns) : null);
@@ -2240,7 +2304,7 @@ public class DatabaseImpl implements Database
         if(TYPE_LINKED_TABLE.equals(type) &&
            matchesLinkedTable(table, linkedTableName, linkedDbName)) {
           return true;
-        } 
+        }
       }
       return false;
     }
@@ -2248,7 +2312,7 @@ public class DatabaseImpl implements Database
     protected abstract Cursor findRow(Integer parentId, String name)
       throws IOException;
 
-    protected abstract Cursor findRow(Integer objectId) 
+    protected abstract Cursor findRow(Integer objectId)
       throws IOException;
 
     protected abstract Cursor getTableNamesCursor() throws IOException;
@@ -2281,7 +2345,7 @@ public class DatabaseImpl implements Database
     private DefaultTableFinder(IndexCursor systemCatalogCursor) {
       _systemCatalogCursor = systemCatalogCursor;
     }
-    
+
     private void initIdCursor() throws IOException {
       if(_systemCatalogIdCursor == null) {
         _systemCatalogIdCursor = _systemCatalog.newCursor()
@@ -2291,15 +2355,15 @@ public class DatabaseImpl implements Database
     }
 
     @Override
-    protected Cursor findRow(Integer parentId, String name) 
-      throws IOException 
+    protected Cursor findRow(Integer parentId, String name)
+      throws IOException
     {
       return (_systemCatalogCursor.findFirstRowByEntry(parentId, name) ?
               _systemCatalogCursor : null);
     }
 
     @Override
-    protected Cursor findRow(Integer objectId) throws IOException 
+    protected Cursor findRow(Integer objectId) throws IOException
     {
       initIdCursor();
       return (_systemCatalogIdCursor.findFirstRowByEntry(objectId) ?
@@ -2330,7 +2394,7 @@ public class DatabaseImpl implements Database
       return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
                              linkedTableName);
     }
-    
+
     @Override
     protected Cursor getTableNamesCursor() throws IOException {
       return _systemCatalogCursor.getIndex().newCursor()
@@ -2354,7 +2418,7 @@ public class DatabaseImpl implements Database
       return (Integer)_systemCatalogIdCursor.getCurrentRowValue(idCol);
     }
   }
-  
+
   /**
    * Fallback table lookup handler, using catalog table scans.
    */
@@ -2367,18 +2431,18 @@ public class DatabaseImpl implements Database
     }
 
     @Override
-    protected Cursor findRow(Integer parentId, String name) 
-      throws IOException 
+    protected Cursor findRow(Integer parentId, String name)
+      throws IOException
     {
       Map<String,Object> rowPat = new HashMap<String,Object>();
-      rowPat.put(CAT_COL_PARENT_ID, parentId);  
+      rowPat.put(CAT_COL_PARENT_ID, parentId);
       rowPat.put(CAT_COL_NAME, name);
       return (_systemCatalogCursor.findFirstRow(rowPat) ?
               _systemCatalogCursor : null);
     }
 
     @Override
-    protected Cursor findRow(Integer objectId) throws IOException 
+    protected Cursor findRow(Integer objectId) throws IOException
     {
       ColumnImpl idCol = _systemCatalog.getColumn(CAT_COL_ID);
       return (_systemCatalogCursor.findFirstRow(idCol, objectId) ?
@@ -2417,7 +2481,7 @@ public class DatabaseImpl implements Database
 
       return null;
     }
-    
+
     @Override
     protected Cursor getTableNamesCursor() throws IOException {
       return _systemCatalogCursor;
@@ -2447,7 +2511,7 @@ public class DatabaseImpl implements Database
   {
     private final Integer _pageNumber;
 
-    private WeakTableReference(Integer pageNumber, TableImpl table, 
+    private WeakTableReference(Integer pageNumber, TableImpl table,
                                ReferenceQueue<TableImpl> queue) {
       super(table, queue);
       _pageNumber = pageNumber;
@@ -2463,9 +2527,9 @@ public class DatabaseImpl implements Database
    */
   private static final class TableCache
   {
-    private final Map<Integer,WeakTableReference> _tables = 
+    private final Map<Integer,WeakTableReference> _tables =
       new HashMap<Integer,WeakTableReference>();
-    private final ReferenceQueue<TableImpl> _queue = 
+    private final ReferenceQueue<TableImpl> _queue =
       new ReferenceQueue<TableImpl>();
 
     public TableImpl get(Integer pageNumber) {
@@ -2475,7 +2539,7 @@ public class DatabaseImpl implements Database
 
     public TableImpl put(TableImpl table) {
       purgeOldRefs();
-  
+
       Integer pageNumber = table.getTableDefPageNumber();
       WeakTableReference ref = new WeakTableReference(
           pageNumber, table, _queue);

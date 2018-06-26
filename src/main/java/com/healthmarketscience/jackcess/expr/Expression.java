@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 James Ahlborn
+Copyright (c) 2016 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,28 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess;
+package com.healthmarketscience.jackcess.expr;
 
-import java.io.IOException;
+import java.util.Collection;
 
 /**
- * Base class for specific exceptions thrown by Jackcess.
  *
  * @author James Ahlborn
  */
-public class JackcessException extends IOException
+public interface Expression 
 {
-  private static final long serialVersionUID = 20131123L;
+  public Object eval(EvalContext ctx);
 
-  public JackcessException(String message) {
-    super(message);
-  }
+  public String toDebugString();
 
-  public JackcessException(Throwable cause) {
-    super(cause);
-  }
+  public boolean isConstant();
 
-  public JackcessException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  public void collectIdentifiers(Collection<Identifier> identifiers);
 }

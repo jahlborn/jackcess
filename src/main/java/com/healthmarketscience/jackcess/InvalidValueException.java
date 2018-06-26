@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 James Ahlborn
+Copyright (c) 2018 James Ahlborn
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,26 +16,17 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import java.io.IOException;
-
 /**
- * Base class for specific exceptions thrown by Jackcess.
+ * JackcessException which indicates that an invalid column value was provided
+ * in a database update.
  *
  * @author James Ahlborn
  */
-public class JackcessException extends IOException
+public class InvalidValueException extends JackcessException
 {
-  private static final long serialVersionUID = 20131123L;
+  private static final long serialVersionUID = 20180428L;
 
-  public JackcessException(String message) {
-    super(message);
-  }
-
-  public JackcessException(Throwable cause) {
-    super(cause);
-  }
-
-  public JackcessException(String message, Throwable cause) {
-    super(message, cause);
+  public InvalidValueException(String msg) {
+    super(msg);
   }
 }
