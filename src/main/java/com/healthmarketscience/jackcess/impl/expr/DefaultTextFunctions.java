@@ -28,7 +28,7 @@ import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
  *
  * @author James Ahlborn
  */
-public class DefaultTextFunctions 
+public class DefaultTextFunctions
 {
 
   private DefaultTextFunctions() {}
@@ -36,7 +36,7 @@ public class DefaultTextFunctions
   static void init() {
     // dummy method to ensure this class is loaded
   }
-  
+
   public static final Function ASC = registerFunc(new Func1("Asc") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -44,7 +44,7 @@ public class DefaultTextFunctions
       int len = str.length();
       if(len == 0) {
         throw new EvalException("No characters in string");
-      } 
+      }
       int lv = str.charAt(0);
       if((lv < 0) || (lv > 255)) {
         throw new EvalException("Character code '" + lv +
@@ -61,7 +61,7 @@ public class DefaultTextFunctions
       int len = str.length();
       if(len == 0) {
         throw new EvalException("No characters in string");
-      } 
+      }
       int lv = str.charAt(0);
       return BuiltinOperators.toValue(lv);
     }
@@ -139,7 +139,7 @@ public class DefaultTextFunctions
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
           // 1 based offsets
           return BuiltinOperators.toValue(start + 1);
-        } 
+        }
         ++start;
       }
       return BuiltinOperators.ZERO_VAL;
@@ -173,7 +173,7 @@ public class DefaultTextFunctions
         start = params[2].getAsLongInt();
         if(start == -1) {
           start = s1Len;
-        } 
+        }
         // 1 based offsets
         --start;
       }
@@ -181,12 +181,12 @@ public class DefaultTextFunctions
       if(params.length > 3) {
         ignoreCase = doIgnoreCase(params[3]);
       }
-      start = Math.min(s1Len - s2Len, start);
+      start = Math.min(s1Len - s2Len, start - s2Len + 1);
       while(start >= 0) {
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
           // 1 based offsets
           return BuiltinOperators.toValue(start + 1);
-        } 
+        }
         --start;
       }
       return BuiltinOperators.ZERO_VAL;
@@ -306,7 +306,7 @@ public class DefaultTextFunctions
       if(params.length > 2) {
         ignoreCase = doIgnoreCase(params[2]);
       }
-      int cmp = (ignoreCase ? 
+      int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
       return BuiltinOperators.toValue(cmp);
     }
@@ -333,7 +333,7 @@ public class DefaultTextFunctions
     }
   });
 
-  
+
   private static String nchars(int num, char c) {
     StringBuilder sb = new StringBuilder(num);
     for(int i = 0; i < num; ++i) {
@@ -350,7 +350,7 @@ public class DefaultTextFunctions
       while((start < end) && (str.charAt(start) == ' ')) {
         ++start;
       }
-    } 
+    }
     if(doRight) {
       while((start < end) && (str.charAt(end - 1) == ' ')) {
         --end;
@@ -373,8 +373,8 @@ public class DefaultTextFunctions
     default:
       // vbDatabaseCompare -> unsupported
       throw new EvalException("Unsupported compare type " + cmpType);
-    } 
+    }
   }
 
-  
+
 }

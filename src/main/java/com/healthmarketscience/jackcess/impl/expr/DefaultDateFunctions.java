@@ -33,7 +33,7 @@ import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
  *
  * @author James Ahlborn
  */
-public class DefaultDateFunctions 
+public class DefaultDateFunctions
 {
   // min, valid, recognizable date: January 1, 100 A.D. 00:00:00
   private static final double MIN_DATE = -657434.0d;
@@ -46,7 +46,7 @@ public class DefaultDateFunctions
   private static final long SECONDS_PER_HOUR = 60L * 60L;
   private static final long SECONDS_PER_MINUTE = 60L;
   private static final long MILLIS_PER_SECOND = 1000L;
-  
+
   private DefaultDateFunctions() {}
 
   static void init() {
@@ -74,7 +74,7 @@ public class DefaultDateFunctions
       return BuiltinOperators.toValue(Value.Type.DATE, dd, fmt);
     }
   });
-    
+
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
@@ -104,7 +104,7 @@ public class DefaultDateFunctions
       return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
     }
   });
-  
+
   public static final Function TIMER = registerFunc(new Func0("Timer") {
     @Override
     protected Value eval0(EvalContext ctx) {
@@ -128,7 +128,7 @@ public class DefaultDateFunctions
       return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
     }
   });
-  
+
   public static final Function HOUR = registerFunc(new Func1NullIsNull("Hour") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -187,20 +187,21 @@ public class DefaultDateFunctions
         return null;
       }
       int day = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
-      // FIXME handle first day of week
-      // if(params.length > 1) {
-      //   int firstDay = params[1].getAsLong();
-      // }
+      if(params.length > 1) {
+        // TODO handle first day of week
+        //   int firstDay = params[1].getAsLong();
+        throw new UnsupportedOperationException();
+      }
       return BuiltinOperators.toValue(day);
     }
   });
 
-  
+
   private static int nonNullToCalendarField(EvalContext ctx, Value param,
                                             int field) {
     return nonNullToCalendar(ctx, param).get(field);
   }
-  
+
   private static Calendar nonNullToCalendar(EvalContext ctx, Value param) {
     param = nonNullToDateValue(ctx, param);
     if(param == null) {
@@ -212,7 +213,7 @@ public class DefaultDateFunctions
     cal.setTime(param.getAsDateTime(ctx));
     return cal;
   }
-  
+
   static Value nonNullToDateValue(EvalContext ctx, Value param) {
     Value.Type type = param.getType();
     if(type.isTemporal()) {
@@ -256,13 +257,13 @@ public class DefaultDateFunctions
             ((BaseDateValue)param).getFormat() :
        BuiltinOperators.getDateFormatForType(ctx, param.getType()));
   }
-  
+
   private static double dateOnly(double dd) {
     // the integral part of the date/time double is the date value.  discard
     // the fractional portion
     return (long)dd;
   }
-  
+
   private static double timeOnly(double dd) {
     // the fractional part of the date/time double is the time value.  discard
     // the integral portion and convert to seconds

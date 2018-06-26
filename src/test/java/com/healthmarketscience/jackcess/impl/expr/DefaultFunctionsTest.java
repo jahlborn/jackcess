@@ -76,7 +76,31 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("9786", eval("=CStr(9786)"));
     assertEquals("-42", eval("=CStr(-42)"));
 
-    // FIXME, instr, instrrev
+    assertEquals(2, eval("=InStr('AFOOBAR', 'FOO')"));
+    assertEquals(2, eval("=InStr('AFOOBAR', 'foo')"));
+    assertEquals(2, eval("=InStr(1, 'AFOOBAR', 'foo')"));
+    assertEquals(0, eval("=InStr(1, 'AFOOBAR', 'foo', 0)"));
+    assertEquals(2, eval("=InStr(1, 'AFOOBAR', 'foo', 1)"));
+    assertEquals(2, eval("=InStr(1, 'AFOOBAR', 'FOO', 0)"));
+    assertEquals(2, eval("=InStr(2, 'AFOOBAR', 'FOO')"));
+    assertEquals(0, eval("=InStr(3, 'AFOOBAR', 'FOO')"));
+    assertEquals(0, eval("=InStr(17, 'AFOOBAR', 'FOO')"));
+    assertEquals(2, eval("=InStr(1, 'AFOOBARFOOBAR', 'FOO')"));
+    assertEquals(8, eval("=InStr(3, 'AFOOBARFOOBAR', 'FOO')"));
+    assertNull(eval("=InStr(3, Null, 'FOO')"));
+
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'FOO')"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'foo')"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'foo', -1)"));
+    assertEquals(0, eval("=InStrRev('AFOOBAR', 'foo', -1, 0)"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'foo', -1, 1)"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'FOO', -1, 0)"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'FOO', 4)"));
+    assertEquals(0, eval("=InStrRev('AFOOBAR', 'FOO', 3)"));
+    assertEquals(2, eval("=InStrRev('AFOOBAR', 'FOO', 17)"));
+    assertEquals(2, eval("=InStrRev('AFOOBARFOOBAR', 'FOO', 9)"));
+    assertEquals(8, eval("=InStrRev('AFOOBARFOOBAR', 'FOO', 10)"));
+    assertNull(eval("=InStrRev(Null, 'FOO', 3)"));
 
     assertEquals("FOOO", eval("=UCase(\"fOoO\")"));
     assertEquals("fooo", eval("=LCase(\"fOoO\")"));
