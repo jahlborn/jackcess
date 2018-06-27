@@ -82,7 +82,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
       _sdfs = new SimpleCache<String,SimpleDateFormat>(MAX_CACHE_SIZE);
     }
     SimpleDateFormat sdf = _sdfs.get(formatStr);
-    if(formatStr == null) {
+    if(sdf == null) {
       sdf = _db.createDateFormat(formatStr);
       _sdfs.put(formatStr, sdf);
     }

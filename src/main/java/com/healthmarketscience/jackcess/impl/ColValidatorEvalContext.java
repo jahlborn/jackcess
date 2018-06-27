@@ -50,7 +50,7 @@ public class ColValidatorEvalContext extends ColEvalContext
       @Override
       protected Object internalValidate(Column col, Object val)
         throws IOException {
-        return ColValidatorEvalContext.this.validate(col, val);
+        return ColValidatorEvalContext.this.validate(val);
       }
       @Override
       protected void appendToString(StringBuilder sb) {
@@ -78,7 +78,7 @@ public class ColValidatorEvalContext extends ColEvalContext
     return getThisColumnValue();
   }
 
-  private Object validate(Column col, Object val) throws IOException {
+  private Object validate(Object val) throws IOException {
     try {
       _val = val;
       Boolean result = (Boolean)eval();

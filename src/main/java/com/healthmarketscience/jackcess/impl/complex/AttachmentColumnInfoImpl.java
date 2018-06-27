@@ -54,7 +54,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
 {
   /** some file formats which may not be worth re-compressing */
   private static final Set<String> COMPRESSED_FORMATS = new HashSet<String>(
-      Arrays.asList("jpg", "zip", "gz", "bz2", "z", "7z", "cab", "rar", 
+      Arrays.asList("jpg", "zip", "gz", "bz2", "z", "7z", "cab", "rar",
                     "mp3", "mpg"));
 
   private static final String FILE_NAME_COL_NAME = "FileName";
@@ -73,7 +73,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   private final Column _fileDataCol;
   private final Column _fileTimeStampCol;
   private final Column _fileFlagsCol;
-  
+
   public AttachmentColumnInfoImpl(Column column, int complexId,
                                   Table typeObjTable, Table flatTable)
     throws IOException
@@ -119,7 +119,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         // ignore
       }
     }
-    
+
     _fileUrlCol = fileUrlCol;
     _fileNameCol = fileNameCol;
     _fileTypeCol = fileTypeCol;
@@ -131,7 +131,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   public Column getFileUrlColumn() {
     return _fileUrlCol;
   }
-  
+
   public Column getFileNameColumn() {
     return _fileNameCol;
   }
@@ -139,19 +139,19 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   public Column getFileTypeColumn() {
     return _fileTypeCol;
   }
-  
+
   public Column getFileDataColumn() {
     return _fileDataCol;
   }
-  
+
   public Column getFileTimeStampColumn() {
     return _fileTimeStampCol;
   }
-  
+
   public Column getFileFlagsColumn() {
     return _fileFlagsCol;
-  }  
-  
+  }
+
   @Override
   public ComplexDataType getType()
   {
@@ -168,14 +168,14 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     Integer flags = (Integer)getFileFlagsColumn().getRowValue(rawValue);
     Date ts = (Date)getFileTimeStampColumn().getRowValue(rawValue);
     byte[] data = (byte[])getFileDataColumn().getRowValue(rawValue);
-    
+
     return new AttachmentImpl(id, complexValueFk, url, name, type, null,
                               ts, flags, data);
   }
 
   @Override
-  protected Object[] asRow(Object[] row, Attachment attachment) 
-    throws IOException 
+  protected Object[] asRow(Object[] row, Attachment attachment)
+    throws IOException
   {
     super.asRow(row, attachment);
     getFileUrlColumn().setRowValue(row, attachment.getFileUrl());
@@ -190,7 +190,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   public static Attachment newAttachment(byte[] data) {
     return newAttachment(INVALID_FK, data);
   }
-  
+
   public static Attachment newAttachment(ComplexValueForeignKey complexValueFk,
                                          byte[] data) {
     return newAttachment(complexValueFk, null, null, null, data, null, null);
@@ -203,7 +203,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     return newAttachment(INVALID_FK, url, name, type, data,
                          timeStamp, flags);
   }
-  
+
   public static Attachment newAttachment(
       ComplexValueForeignKey complexValueFk, String url, String name,
       String type, byte[] data, Date timeStamp, Integer flags)
@@ -215,30 +215,30 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   public static Attachment newEncodedAttachment(byte[] encodedData) {
     return newEncodedAttachment(INVALID_FK, encodedData);
   }
-    
+
   public static Attachment newEncodedAttachment(
       ComplexValueForeignKey complexValueFk, byte[] encodedData) {
     return newEncodedAttachment(complexValueFk, null, null, null, encodedData,
                                 null, null);
   }
- 
+
   public static Attachment newEncodedAttachment(
       String url, String name, String type, byte[] encodedData,
       Date timeStamp, Integer flags)
   {
-    return newEncodedAttachment(INVALID_FK, url, name, type, 
+    return newEncodedAttachment(INVALID_FK, url, name, type,
                                 encodedData, timeStamp, flags);
   }
-   
+
   public static Attachment newEncodedAttachment(
       ComplexValueForeignKey complexValueFk, String url, String name,
       String type, byte[] encodedData, Date timeStamp, Integer flags)
   {
     return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
                               null, timeStamp, flags, encodedData);
-  } 
+  }
 
-  
+
   private static class AttachmentImpl extends ComplexValueImpl
     implements Attachment
   {
@@ -263,7 +263,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       _flags = flags;
       _encodedData = encodedData;
     }
-    
+
     public byte[] getFileData() throws IOException {
       if((_data == null) && (_encodedData != null)) {
         _data = decodeData();
@@ -295,7 +295,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     public void setFileName(String fileName) {
       _name = fileName;
     }
-  
+
     public String getFileUrl() {
       return _url;
     }
@@ -303,7 +303,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     public void setFileUrl(String fileUrl) {
       _url = fileUrl;
     }
-  
+
     public String getFileType() {
       return _type;
     }
@@ -311,7 +311,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     public void setFileType(String fileType) {
       _type = fileType;
     }
-  
+
     public Date getFileTimeStamp() {
       return _timeStamp;
     }
@@ -319,23 +319,23 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
     public void setFileTimeStamp(Date fileTimeStamp) {
       _timeStamp = fileTimeStamp;
     }
-  
+
     public Integer getFileFlags() {
       return _flags;
     }
 
     public void setFileFlags(Integer fileFlags) {
       _flags = fileFlags;
-    }  
+    }
 
     public void update() throws IOException {
       getComplexValueForeignKey().updateAttachment(this);
     }
-    
+
     public void delete() throws IOException {
       getComplexValueForeignKey().deleteAttachment(this);
     }
-    
+
     @Override
     public String toString() {
 
@@ -345,12 +345,12 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       } catch(IOException e) {
         dataStr = e.toString();
       }
-      
+
       return "Attachment(" + getComplexValueForeignKey() + "," + getId() +
         ") " + getFileUrl() + ", " + getFileName() + ", " + getFileType()
         + ", " + getFileTimeStamp() + ", " + getFileFlags()  + ", " +
         dataStr;
-    } 
+    }
 
     /**
      * Decodes the raw attachment file data to get the _actual_ content.
@@ -361,7 +361,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         // nothing we can do
         throw new IOException("Unknown encoded attachment data format");
       }
-  
+
       // read initial header info
       ByteBuffer bb = PageChannel.wrap(_encodedData);
       int typeFlag = bb.getInt();
@@ -391,7 +391,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
         byte[] tmpBytes = new byte[4];
         contentStream.readFully(tmpBytes);
         int headerLen = PageChannel.wrap(tmpBytes).getInt();
-        contentStream.skipBytes(headerLen - 4);
+        ByteUtil.skipFully(contentStream, headerLen - 4);
 
         // calculate actual data length and read it (note, header length
         // includes the bytes for the length)

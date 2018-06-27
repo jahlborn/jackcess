@@ -45,7 +45,6 @@ public class DefaultDateFunctions
 
   private static final long SECONDS_PER_HOUR = 60L * 60L;
   private static final long SECONDS_PER_MINUTE = 60L;
-  private static final long MILLIS_PER_SECOND = 1000L;
 
   private DefaultDateFunctions() {}
 
@@ -203,10 +202,12 @@ public class DefaultDateFunctions
   }
 
   private static Calendar nonNullToCalendar(EvalContext ctx, Value param) {
+    Value origParam = param;
     param = nonNullToDateValue(ctx, param);
     if(param == null) {
       // not a date/time
-      throw new EvalException("Invalid date/time expression '" + param + "'");
+      throw new EvalException("Invalid date/time expression '" +
+                              origParam + "'");
     }
 
     Calendar cal = getDateValueFormat(ctx, param).getCalendar();
