@@ -39,6 +39,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
@@ -67,7 +68,7 @@ public class Expressionator
   public interface ParseContext {
     public TemporalConfig getTemporalConfig();
     public SimpleDateFormat createDateFormat(String formatStr);
-    public Function getExpressionFunction(String name);
+    public FunctionLookup getFunctionLookup();
   }
 
   private enum WordType {
@@ -1109,7 +1110,7 @@ public class Expressionator
     }
 
     public Function getFunction(String funcName) {
-      return _context.getExpressionFunction(funcName);
+      return _context.getFunctionLookup().getFunction(funcName);
     }
 
     @Override

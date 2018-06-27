@@ -92,8 +92,4 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   public float getRandom(Integer seed) {
     return _rndCtx.getRandom(seed);
   }
-
-  public Function getExpressionFunction(String name) {
-    return _funcs.getFunction(name);
-  }
 }

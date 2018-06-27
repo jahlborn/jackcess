@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -410,9 +411,8 @@ public class ExpressionatorTest extends TestCase
       sdf.setTimeZone(TestUtil.TEST_TZ);
       return sdf;
     }
-
-    public Function getExpressionFunction(String name) {
-      return DefaultFunctions.LOOKUP.getFunction(name);
+    public FunctionLookup getFunctionLookup() {
+      return DefaultFunctions.LOOKUP;
     }
   }
 
