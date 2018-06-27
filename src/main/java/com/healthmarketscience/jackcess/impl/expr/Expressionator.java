@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Expression;
@@ -70,18 +69,6 @@ public class Expressionator
     public SimpleDateFormat createDateFormat(String formatStr);
     public Function getExpressionFunction(String name);
   }
-
-  public static final ParseContext DEFAULT_PARSE_CONTEXT = new ParseContext() {
-    public TemporalConfig getTemporalConfig() {
-      return TemporalConfig.US_TEMPORAL_CONFIG;
-    }
-    public SimpleDateFormat createDateFormat(String formatStr) {
-      return DatabaseBuilder.createDateFormat(formatStr);
-    }
-    public Function getExpressionFunction(String name) {
-      return DefaultFunctions.getFunction(name);
-    }
-  };
 
   private enum WordType {
     OP, COMP, LOG_OP, CONST, SPEC_OP_PREFIX, DELIM;
@@ -413,10 +400,6 @@ public class Expressionator
   public static Expression parse(Type exprType, String exprStr,
                                  Value.Type resultType,
                                  ParseContext context) {
-
-    if(context == null) {
-      context = DEFAULT_PARSE_CONTEXT;
-    }
 
     List<Token> tokens = trimSpaces(
         ExpressionTokenizer.tokenize(exprType, exprStr, context));

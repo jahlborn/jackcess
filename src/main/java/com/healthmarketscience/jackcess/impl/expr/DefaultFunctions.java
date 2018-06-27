@@ -50,15 +50,12 @@ public class DefaultFunctions
 
   public static final FunctionLookup LOOKUP = new FunctionLookup() {
     public Function getFunction(String name) {
-      return DefaultFunctions.getFunction(name);
+      return FUNCS.get(DatabaseImpl.toLookupName(name));
     }
   };
 
   private DefaultFunctions() {}
 
-  public static Function getFunction(String name) {
-    return FUNCS.get(DatabaseImpl.toLookupName(name));
-  }
 
   public static abstract class BaseFunction implements Function
   {

@@ -343,7 +343,8 @@ public class ExpressionatorTest extends TestCase
   private static void validateExpr(String exprStr, String debugStr,
                                    String cleanStr) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, null);
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null,
+        new TestParseContext());
     String foundDebugStr = expr.toDebugString();
     if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
       assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " +
@@ -381,7 +382,8 @@ public class ExpressionatorTest extends TestCase
 
   private static Boolean evalCondition(String exprStr, String thisVal) {
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, new TestParseContext());
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null,
+        new TestParseContext());
     return (Boolean)expr.eval(new TestEvalContext(BuiltinOperators.toValue(thisVal)));
   }
 
@@ -410,7 +412,7 @@ public class ExpressionatorTest extends TestCase
     }
 
     public Function getExpressionFunction(String name) {
-      return DefaultFunctions.getFunction(name);
+      return DefaultFunctions.LOOKUP.getFunction(name);
     }
   }
 
