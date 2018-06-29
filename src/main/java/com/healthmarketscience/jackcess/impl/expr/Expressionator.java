@@ -923,6 +923,7 @@ public class Expressionator
         buf.next();
         t = buf.peekNext();
         if(isString(t, "null")) {
+          buf.next();
           return SpecOp.IS_NOT_NULL;
         }
       }

@@ -45,6 +45,9 @@ public class ExpressionatorTest extends TestCase
     -1.0000002d,-1.0d,-0.0002013d,0.0d, 0.9234d,1.0d,1.954d,2.200032d,3.001d,
     4.9321d,5.0d,6.66666d,7.396d,8.1d,9.20456200d,10.325d};
 
+  private static final int TRUE_NUM = -1;
+  private static final int FALSE_NUM = 0;
+
   public ExpressionatorTest(String name) {
     super(name);
   }
@@ -273,6 +276,36 @@ public class ExpressionatorTest extends TestCase
     }
   }
 
+  public void testComparison() throws Exception
+  {
+    assertEquals(TRUE_NUM, eval("='blah'<'fuzz'"));
+    assertEquals(FALSE_NUM, eval("=23>56"));
+    assertEquals(TRUE_NUM, eval("=13.2<=45.8"));
+    assertEquals(FALSE_NUM, eval("='blah'='fuzz'"));
+    assertEquals(TRUE_NUM, eval("='blah'<>'fuzz'"));
+    assertEquals(TRUE_NUM, eval("=CDbl(13.2)<=CDbl(45.8)"));
+
+    assertEquals(FALSE_NUM, eval("='blah' Is Null"));
+    assertEquals(TRUE_NUM, eval("='blah' Is Not Null"));
+
+    assertEquals(TRUE_NUM, eval("='blah' Between 'a' And 'z'"));
+    assertEquals(FALSE_NUM, eval("='blah' Not Between 'a' And 'z'"));
+
+    assertEquals(TRUE_NUM, eval("='blah' In ('foo','bar','blah')"));
+    assertEquals(FALSE_NUM, eval("='blah' Not In ('foo','bar','blah')"));
+
+    assertEquals(TRUE_NUM, eval("=True Xor False"));
+    assertEquals(TRUE_NUM, eval("=True Or False"));
+    assertEquals(FALSE_NUM, eval("=True Imp False"));
+    assertEquals(FALSE_NUM, eval("=True Eqv False"));
+    assertEquals(TRUE_NUM, eval("=Not(True Eqv False)"));
+  }
+
+  public void testDateArith() throws Exception
+  {
+    assertEquals(new Date(1041508800000L), eval("=#01/02/2003# + #7:00:00#"));
+  }
+
   public void testTrickyMathExpressions() throws Exception
   {
     assertEquals(37, eval("=30+7"));
@@ -323,6 +356,8 @@ public class ExpressionatorTest extends TestCase
                  "<THIS_COL> Like \"[abc*\"");
     assertFalse(evalCondition("Like \"[abc*\"", "afcd"));
     assertFalse(evalCondition("Like \"[abc*\"", "fcd"));
+    // FIXME, does access support "not like"
+    //assertTrue(evalCondition("Not Like \"[abc*\"", "fcd"));
     assertFalse(evalCondition("Like \"[abc*\"", ""));
   }
 
