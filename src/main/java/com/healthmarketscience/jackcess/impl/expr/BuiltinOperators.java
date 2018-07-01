@@ -485,6 +485,10 @@ public class BuiltinOperators
     return toValue(pattern.matcher(param1.getAsString()).matches());
   }
 
+  public static Value notLike(Value param1, Pattern pattern) {
+    return not(like(param1, pattern));
+  }
+
   public static Value between(Value param1, Value param2, Value param3) {
     // null propagate any param.  uses short circuit eval of params
     if(anyParamIsNull(param1, param2, param3)) {

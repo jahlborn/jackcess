@@ -325,6 +325,11 @@ public class Expressionator
         return BuiltinOperators.like(param1, (Pattern)param2);
       }
     },
+    NOT_LIKE("Not Like") {
+      @Override public Value eval(Value param1, Object param2, Object param3) {
+        return BuiltinOperators.notLike(param1, (Pattern)param2);
+      }
+    },
     BETWEEN("Between") {
       @Override public Value eval(Value param1, Object param2, Object param3) {
         return BuiltinOperators.between(param1, (Value)param2, (Value)param3);
@@ -371,7 +376,8 @@ public class Expressionator
         new OpType[]{BinaryOp.PLUS, BinaryOp.MINUS},
         new OpType[]{BinaryOp.CONCAT},
         new OpType[]{CompOp.LT, CompOp.GT, CompOp.NE, CompOp.LTE, CompOp.GTE,
-                     CompOp.EQ, SpecOp.LIKE, SpecOp.IS_NULL, SpecOp.IS_NOT_NULL},
+                     CompOp.EQ, SpecOp.LIKE, SpecOp.NOT_LIKE,
+                     SpecOp.IS_NULL, SpecOp.IS_NOT_NULL},
         new OpType[]{UnaryOp.NOT},
         new OpType[]{LogOp.AND},
         new OpType[]{LogOp.OR},
@@ -846,6 +852,7 @@ public class Expressionator
       break;
 
     case LIKE:
+    case NOT_LIKE:
       Token t = buf.next();
       if((t.getType() != TokenType.LITERAL) ||
          (t.getValueType() != Value.Type.STRING)) {
@@ -941,6 +948,9 @@ public class Expressionator
       } else if(isString(t, "in")) {
         buf.next();
         return SpecOp.NOT_IN;
+      } else if(isString(t, "like")) {
+        buf.next();
+        return SpecOp.NOT_LIKE;
       }
       return SpecOp.NOT;
     }

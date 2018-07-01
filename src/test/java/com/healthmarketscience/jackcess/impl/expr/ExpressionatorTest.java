@@ -280,6 +280,7 @@ public class ExpressionatorTest extends TestCase
   {
     assertEquals(TRUE_NUM, eval("='blah'<'fuzz'"));
     assertEquals(FALSE_NUM, eval("=23>56"));
+    assertEquals(FALSE_NUM, eval("=23>=56"));
     assertEquals(TRUE_NUM, eval("=13.2<=45.8"));
     assertEquals(FALSE_NUM, eval("='blah'='fuzz'"));
     assertEquals(TRUE_NUM, eval("='blah'<>'fuzz'"));
@@ -288,7 +289,11 @@ public class ExpressionatorTest extends TestCase
     assertEquals(FALSE_NUM, eval("='blah' Is Null"));
     assertEquals(TRUE_NUM, eval("='blah' Is Not Null"));
 
+    assertEquals(TRUE_NUM, eval("=Null Is Null"));
+    assertEquals(FALSE_NUM, eval("=Null Is Not Null"));
+
     assertEquals(TRUE_NUM, eval("='blah' Between 'a' And 'z'"));
+    assertEquals(TRUE_NUM, eval("='blah' Between 'z' And 'a'"));
     assertEquals(FALSE_NUM, eval("='blah' Not Between 'a' And 'z'"));
 
     assertEquals(TRUE_NUM, eval("='blah' In ('foo','bar','blah')"));
@@ -296,6 +301,7 @@ public class ExpressionatorTest extends TestCase
 
     assertEquals(TRUE_NUM, eval("=True Xor False"));
     assertEquals(TRUE_NUM, eval("=True Or False"));
+    assertEquals(TRUE_NUM, eval("=False Or True"));
     assertEquals(FALSE_NUM, eval("=True Imp False"));
     assertEquals(FALSE_NUM, eval("=True Eqv False"));
     assertEquals(TRUE_NUM, eval("=Not(True Eqv False)"));
@@ -304,6 +310,45 @@ public class ExpressionatorTest extends TestCase
   public void testDateArith() throws Exception
   {
     assertEquals(new Date(1041508800000L), eval("=#01/02/2003# + #7:00:00#"));
+    assertEquals(new Date(1041458400000L), eval("=#01/02/2003# - #7:00:00#"));
+    assertEquals(new Date(1044680400000L), eval("=#01/02/2003# + '37'"));
+    assertEquals(new Date(1044680400000L), eval("='37' + #01/02/2003#"));
+    assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00#"));
+  }
+
+  public void testNull() throws Exception
+  {
+    assertNull(eval("=37 + Null"));
+    assertNull(eval("=37 - Null"));
+    assertNull(eval("=37 / Null"));
+    assertNull(eval("=37 * Null"));
+    assertNull(eval("=37 ^ Null"));
+    assertEquals("37", eval("=37 & Null"));
+    assertEquals("37", eval("=Null & 37"));
+    assertNull(eval("=37 Mod Null"));
+    assertNull(eval("=37 \\ Null"));
+    assertNull(eval("=-(Null)"));
+    assertNull(eval("=+(Null)"));
+    assertNull(eval("=Not Null"));
+    assertEquals(TRUE_NUM, eval("=37 Or Null"));
+    assertNull(eval("=Null Or 37"));
+    assertNull(eval("=37 And Null"));
+    assertNull(eval("=Null And 37"));
+    assertNull(eval("=37 Xor Null"));
+    assertNull(eval("=37 Imp Null"));
+    assertNull(eval("=Null Imp Null"));
+    assertEquals(TRUE_NUM, eval("=Null Imp 37"));
+    assertNull(eval("=37 Eqv Null"));
+    assertNull(eval("=37 < Null"));
+    assertNull(eval("=37 > Null"));
+    assertNull(eval("=37 = Null"));
+    assertNull(eval("=37 <> Null"));
+    assertNull(eval("=37 <= Null"));
+    assertNull(eval("=37 >= Null"));
+
+    assertNull(eval("=37 Between Null And 54"));
+    assertEquals(FALSE_NUM, eval("=37 In (23, Null, 45)"));
+    assertNull(eval("=Null In (23, Null, 45)"));
   }
 
   public void testTrickyMathExpressions() throws Exception
@@ -356,8 +401,7 @@ public class ExpressionatorTest extends TestCase
                  "<THIS_COL> Like \"[abc*\"");
     assertFalse(evalCondition("Like \"[abc*\"", "afcd"));
     assertFalse(evalCondition("Like \"[abc*\"", "fcd"));
-    // FIXME, does access support "not like"
-    //assertTrue(evalCondition("Not Like \"[abc*\"", "fcd"));
+    assertTrue(evalCondition("Not Like \"[abc*\"", "fcd"));
     assertFalse(evalCondition("Like \"[abc*\"", ""));
   }
 
