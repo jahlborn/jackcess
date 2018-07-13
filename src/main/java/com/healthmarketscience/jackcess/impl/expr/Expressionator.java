@@ -88,13 +88,19 @@ public class Expressionator
     setWordType(WordType.OP, "+", "-", "*", "/", "\\", "^", "&", "mod");
     setWordType(WordType.COMP, "<", "<=", ">", ">=", "=", "<>");
     setWordType(WordType.LOG_OP, "and", "or", "eqv", "xor", "imp");
-    setWordType(WordType.CONST, "true", "false", "null");
+    setWordType(WordType.CONST, "true", "false", "null", "on", "off",
+                "yes", "no");
     setWordType(WordType.SPEC_OP_PREFIX, "is", "like", "between", "in", "not");
     // "X is null", "X is not null", "X like P", "X between A and B",
     // "X not between A and B", "X in (A, B, C...)", "X not in (A, B, C...)",
     // "not X"
     setWordType(WordType.DELIM, ".", "!", ",", "(", ")");
   }
+
+  private static final Collection<String> TRUE_STRS =
+    Arrays.asList("true", "yes", "on");
+  private static final Collection<String> FALSE_STRS =
+    Arrays.asList("false", "no", "off");
 
   private interface OpType {}
 
@@ -961,11 +967,12 @@ public class Expressionator
 
   private static void parseConstExpression(Token firstTok, TokBuf buf) {
     Expr constExpr = null;
-    if("true".equalsIgnoreCase(firstTok.getValueStr())) {
+    String tokStr = firstTok.getValueStr().toLowerCase();
+    if(TRUE_STRS.contains(tokStr)) {
       constExpr = TRUE_VALUE;
-    } else if("false".equalsIgnoreCase(firstTok.getValueStr())) {
+    } else if(FALSE_STRS.contains(tokStr)) {
       constExpr = FALSE_VALUE;
-    } else if("null".equalsIgnoreCase(firstTok.getValueStr())) {
+    } else if("null".equals(tokStr)) {
       constExpr = NULL_VALUE;
     } else {
       throw new ParseException("Unexpected CONST word "
