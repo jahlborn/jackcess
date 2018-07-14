@@ -162,7 +162,7 @@ public abstract class BaseEvalContext implements EvalContext
     }
   }
 
-  protected static Value.Type toValueType(DataType dType) {
+  public static Value.Type toValueType(DataType dType) {
     Value.Type type = TYPE_MAP.get(dType);
     return ((type == null) ? Value.Type.STRING : type);
   }

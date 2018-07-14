@@ -434,12 +434,12 @@ public class Expressionator
     // normal expression handling
     Expr expr = parseExpression(buf, false);
 
-      if((exprType == Type.FIELD_VALIDATOR) && !expr.isConditionalExpr()) {
-        // a non-conditional expression for a FIELD_VALIDATOR treats the result
-        // as an equality comparison with the field in question.  so, transform
-        // the expression accordingly
-        expr = new EImplicitCompOp(expr);
-      }
+    if((exprType == Type.FIELD_VALIDATOR) && !expr.isValidationExpr()) {
+      // a non-validation expression for a FIELD_VALIDATOR treats the result
+      // as an equality comparison with the field in question.  so, transform
+      // the expression accordingly
+      expr = new EImplicitCompOp(expr);
+    }
 
     switch(exprType) {
     case DEFAULT_VALUE:
@@ -1387,7 +1387,7 @@ public class Expressionator
       return sb.toString();
     }
 
-    protected boolean isConditionalExpr() {
+    protected boolean isValidationExpr() {
       return false;
     }
 
@@ -1596,8 +1596,8 @@ public class Expressionator
     }
 
     @Override
-    protected boolean isConditionalExpr() {
-      return _expr.isConditionalExpr();
+    protected boolean isValidationExpr() {
+      return _expr.isValidationExpr();
     }
 
     @Override
@@ -1776,7 +1776,7 @@ public class Expressionator
     }
 
     @Override
-    protected boolean isConditionalExpr() {
+    protected boolean isValidationExpr() {
       return true;
     }
 
@@ -1808,6 +1808,11 @@ public class Expressionator
   {
     private ELogicalOp(LogOp op, Expr left, Expr right) {
       super(op, left, right);
+    }
+
+    @Override
+    protected boolean isValidationExpr() {
+      return true;
     }
 
     @Override
@@ -1854,7 +1859,7 @@ public class Expressionator
     }
 
     @Override
-    protected boolean isConditionalExpr() {
+    protected boolean isValidationExpr() {
       return true;
     }
   }

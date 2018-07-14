@@ -16,21 +16,24 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
+import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
-import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.BaseEvalContext;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import junit.framework.TestCase;
 
@@ -93,6 +96,8 @@ public class ExpressionatorTest extends TestCase
 
     validateExpr("' \"A\" '", "<ELiteralValue>{\" \"\"A\"\" \"}",
                  "\" \"\"A\"\" \"");
+
+    validateExpr("<=1 And >=0", "<ELogicalOp>{<ECompOp>{<EThisValue>{<THIS_COL>} <= <ELiteralValue>{1}} And <ECompOp>{<EThisValue>{<THIS_COL>} >= <ELiteralValue>{0}}}", "<THIS_COL> <= 1 And <THIS_COL> >= 0");
   }
 
   private static void doTestSimpleBinOp(String opName, String... ops) throws Exception
@@ -416,6 +421,47 @@ public class ExpressionatorTest extends TestCase
     assertEquals(-28d, eval("CDbl(9)-37", Value.Type.DOUBLE));
   }
 
+  public void testParseSomeExprs() throws Exception
+  {
+    BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"));
+
+    TestContext tc = new TestContext() {
+      @Override
+      public Value getThisColumnValue() {
+        return BuiltinOperators.toValue(23.0);
+      }
+
+      @Override
+      public Value getIdentifierValue(Identifier identifier) {
+        return BuiltinOperators.toValue(23.0);
+      }
+    };
+
+    String line = null;
+    while((line = br.readLine()) != null) {
+      line = line.trim();
+      if(line.isEmpty()) {
+        continue;
+      }
+
+      String[] parts = line.split(";", 3);
+      Expressionator.Type type = Expressionator.Type.valueOf(parts[0]);
+      DataType dType =
+        (("null".equals(parts[1])) ? null : DataType.valueOf(parts[1]));
+      String exprStr = parts[2];
+
+      Value.Type resultType = ((dType != null) ?
+                               BaseEvalContext.toValueType(dType) : null);
+
+      Expression expr = Expressionator.parse(
+          type, exprStr, resultType, tc);
+
+      expr.eval(tc);
+    }
+
+    br.close();
+  }
+
   private static void validateExpr(String exprStr, String debugStr) {
     validateExpr(exprStr, debugStr, exprStr);
   }
@@ -424,7 +470,7 @@ public class ExpressionatorTest extends TestCase
                                    String cleanStr) {
     Expression expr = Expressionator.parse(
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null,
-        new TestParseContext());
+        new TestContext());
     String foundDebugStr = expr.toDebugString();
     if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
       assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " +
@@ -440,20 +486,20 @@ public class ExpressionatorTest extends TestCase
   }
 
   static Object eval(String exprStr, Value.Type resultType) {
+    TestContext tc = new TestContext();
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, resultType,
-        new TestParseContext());
-    return expr.eval(new TestEvalContext(null));
+        Expressionator.Type.DEFAULT_VALUE, exprStr, resultType, tc);
+    return expr.eval(tc);
   }
 
   private static void evalFail(
       String exprStr, Class<? extends Exception> failure)
   {
+    TestContext tc = new TestContext();
     Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, null,
-        new TestParseContext());
+        Expressionator.Type.DEFAULT_VALUE, exprStr, null, tc);
     try {
-      expr.eval(new TestEvalContext(null));
+      expr.eval(tc);
       fail(failure + " should have been thrown");
     } catch(Exception e) {
       assertTrue(failure.isInstance(e));
@@ -461,10 +507,10 @@ public class ExpressionatorTest extends TestCase
   }
 
   private static Boolean evalCondition(String exprStr, String thisVal) {
+    TestContext tc = new TestContext(BuiltinOperators.toValue(thisVal));
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, null,
-        new TestParseContext());
-    return (Boolean)expr.eval(new TestEvalContext(BuiltinOperators.toValue(thisVal)));
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, tc);
+    return (Boolean)expr.eval(tc);
   }
 
   static int roundToLongInt(double d) {
@@ -480,28 +526,18 @@ public class ExpressionatorTest extends TestCase
     return BuiltinOperators.normalize(bd);
   }
 
-  private static final class TestParseContext implements Expressionator.ParseContext
-  {
-    public TemporalConfig getTemporalConfig() {
-      return TemporalConfig.US_TEMPORAL_CONFIG;
-    }
-    public SimpleDateFormat createDateFormat(String formatStr) {
-      SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
-      sdf.setTimeZone(TestUtil.TEST_TZ);
-      return sdf;
-    }
-    public FunctionLookup getFunctionLookup() {
-      return DefaultFunctions.LOOKUP;
-    }
-  }
-
-  private static final class TestEvalContext implements EvalContext
+  private static class TestContext
+    implements Expressionator.ParseContext, EvalContext
   {
     private final Value _thisVal;
     private final RandomContext _rndCtx = new RandomContext();
     private final Bindings _bindings = new SimpleBindings();
 
-    private TestEvalContext(Value thisVal) {
+    private TestContext() {
+      this(null);
+    }
+
+    private TestContext(Value thisVal) {
       _thisVal = thisVal;
     }
 
@@ -517,6 +553,10 @@ public class ExpressionatorTest extends TestCase
       SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
       sdf.setTimeZone(TestUtil.TEST_TZ);
       return sdf;
+    }
+
+    public FunctionLookup getFunctionLookup() {
+      return DefaultFunctions.LOOKUP;
     }
 
     public Value getThisColumnValue() {
