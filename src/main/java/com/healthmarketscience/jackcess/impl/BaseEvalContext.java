@@ -195,6 +195,10 @@ public abstract class BaseEvalContext implements EvalContext
       return "<raw>{" + _exprStr + "}";
     }
 
+    public String toRawString() {
+      return _exprStr;
+    }
+
     public boolean isConstant() {
       return getExpr().isConstant();
     }

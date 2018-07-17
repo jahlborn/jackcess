@@ -31,6 +31,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
+import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.BaseEvalContext;
@@ -462,6 +463,35 @@ public class ExpressionatorTest extends TestCase
     br.close();
   }
 
+  public void testInvalidExpressions() throws Exception
+  {
+    doTestEvalFail("", "empty");
+    doTestEvalFail("=", "found?");
+    doTestEvalFail("=(34 + 5", "closing");
+    doTestEvalFail("=(34 + )", "found?");
+    doTestEvalFail("=(34 + [A].[B].[C].[D])", "object reference");
+    doTestEvalFail("=34 + 5,", "delimiter");
+    doTestEvalFail("=Foo()", "find function");
+    doTestEvalFail("=(/37)", "left expression");
+    doTestEvalFail("=(>37)", "left expression");
+    doTestEvalFail("=(And 37)", "left expression");
+    doTestEvalFail("=37 In 42", "'In' expression");
+    doTestEvalFail("=37 Between 42", "'Between' expression");
+    doTestEvalFail("=(3 + 5) Rnd()", "multiple expressions");
+    // doTestEvalFail("=Blah", "");
+  }
+
+  private static void doTestEvalFail(String exprStr, String msgStr) {
+    try {
+      eval(exprStr);
+      fail("ParseException should have been thrown");
+    } catch(ParseException pe) {
+      // success
+      System.out.println("FOO " + pe);
+      assertTrue(pe.getMessage().contains(msgStr));
+    }
+  }
+
   private static void validateExpr(String exprStr, String debugStr) {
     validateExpr(exprStr, debugStr, exprStr);
   }
@@ -479,6 +509,7 @@ public class ExpressionatorTest extends TestCase
       assertEquals(debugStr, foundDebugStr);
     }
     assertEquals(cleanStr, expr.toString());
+    assertEquals(exprStr, expr.toRawString());
   }
 
   static Object eval(String exprStr) {

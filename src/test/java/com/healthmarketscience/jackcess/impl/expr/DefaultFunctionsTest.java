@@ -33,6 +33,8 @@ public class DefaultFunctionsTest extends TestCase
     super(name);
   }
 
+  // FIXME, test more number/string functions
+
   public void testFuncs() throws Exception
   {
     assertEquals("foo", eval("=IIf(10 > 1, \"foo\", \"bar\")"));

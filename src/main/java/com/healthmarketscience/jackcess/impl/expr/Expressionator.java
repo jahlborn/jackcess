@@ -427,7 +427,7 @@ public class Expressionator
 
       // this is handled as a literal string value, not an expression.  no
       // need to memo-ize cause it's a simple literal value
-      return new ExprWrapper(
+      return new ExprWrapper(exprStr,
           new ELiteralValue(Value.Type.STRING, exprStr, null), resultType);
     }
 
@@ -447,15 +447,15 @@ public class Expressionator
       return (expr.isConstant() ?
               // for now, just cache at top-level for speed (could in theory
               // cache intermediate values?)
-              new MemoizedExprWrapper(expr, resultType) :
-              new ExprWrapper(expr, resultType));
+              new MemoizedExprWrapper(exprStr, expr, resultType) :
+              new ExprWrapper(exprStr, expr, resultType));
     case FIELD_VALIDATOR:
     case RECORD_VALIDATOR:
       return (expr.isConstant() ?
               // for now, just cache at top-level for speed (could in theory
               // cache intermediate values?)
-              new MemoizedCondExprWrapper(expr) :
-              new CondExprWrapper(expr));
+              new MemoizedCondExprWrapper(exprStr, expr) :
+              new CondExprWrapper(exprStr, expr));
     default:
       throw new ParseException("unexpected expression type " + exprType);
     }
@@ -910,7 +910,7 @@ public class Expressionator
         t = buf.next();
       }
       if(!isDelim(t, OPEN_PAREN)) {
-        throw new ParseException("Malformed In expression " + buf);
+        throw new ParseException("Malformed 'In' expression " + buf);
       }
 
       List<Expr> exprs = findParenExprs(buf, true);
@@ -2007,14 +2007,20 @@ public class Expressionator
    */
   private static abstract class BaseExprWrapper implements Expression
   {
+    private final String _rawExprStr;
     private final Expr _expr;
 
-    private BaseExprWrapper(Expr expr) {
+    private BaseExprWrapper(String rawExprStr, Expr expr) {
+      _rawExprStr = rawExprStr;
       _expr = expr;
     }
 
     public String toDebugString() {
       return _expr.toDebugString();
+    }
+
+    public String toRawString() {
+      return _rawExprStr;
     }
 
     public boolean isConstant() {
@@ -2080,8 +2086,8 @@ public class Expressionator
   {
     private final Value.Type _resultType;
 
-    private ExprWrapper(Expr expr, Value.Type resultType) {
-      super(expr);
+    private ExprWrapper(String rawExprStr, Expr expr, Value.Type resultType) {
+      super(rawExprStr, expr);
       _resultType = resultType;
     }
 
@@ -2096,8 +2102,8 @@ public class Expressionator
    */
   private static class CondExprWrapper extends BaseExprWrapper
   {
-    private CondExprWrapper(Expr expr) {
-      super(expr);
+    private CondExprWrapper(String rawExprStr, Expr expr) {
+      super(rawExprStr, expr);
     }
 
     public Object eval(EvalContext ctx) {
@@ -2113,8 +2119,9 @@ public class Expressionator
   {
     private Object _val;
 
-    private MemoizedExprWrapper(Expr expr, Value.Type resultType) {
-      super(expr, resultType);
+    private MemoizedExprWrapper(String rawExprStr, Expr expr,
+                                Value.Type resultType) {
+      super(rawExprStr, expr, resultType);
     }
 
     @Override
@@ -2134,8 +2141,8 @@ public class Expressionator
   {
     private Object _val;
 
-    private MemoizedCondExprWrapper(Expr expr) {
-      super(expr);
+    private MemoizedCondExprWrapper(String rawExprStr, Expr expr) {
+      super(rawExprStr, expr);
     }
 
     @Override

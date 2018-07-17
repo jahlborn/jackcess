@@ -22,11 +22,13 @@ import java.util.Collection;
  *
  * @author James Ahlborn
  */
-public interface Expression 
+public interface Expression
 {
   public Object eval(EvalContext ctx);
 
   public String toDebugString();
+
+  public String toRawString();
 
   public boolean isConstant();
 
