@@ -80,6 +80,8 @@ class ExpressionTokenizer
     setCharFlag(IS_QUOTE_FLAG, '"', '#', '[', ']', '\'');
   }
 
+  private ExpressionTokenizer() {}
+
   /**
    * Tokenizes an expression string of the given type and (optionally) in the
    * context of the relevant database.
