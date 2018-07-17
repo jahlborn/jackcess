@@ -90,13 +90,13 @@ public class DefaultFunctions
       }
     }
 
-    protected IllegalStateException invalidFunctionCall(
+    protected EvalException invalidFunctionCall(
         Throwable t, Value[] params)
     {
       String paramStr = Arrays.toString(params);
       String msg = "Invalid function call {" + _name + "(" +
         paramStr.substring(1, paramStr.length() - 1) + ")}";
-      return new IllegalStateException(msg, t);
+      return new EvalException(msg, t);
     }
 
     @Override

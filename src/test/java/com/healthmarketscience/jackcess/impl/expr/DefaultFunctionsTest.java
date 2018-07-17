@@ -78,6 +78,23 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("9786", eval("=CStr(9786)"));
     assertEquals("-42", eval("=CStr(-42)"));
 
+    assertEquals(-1, eval("=IsNull(Null)"));
+    assertEquals(-1, eval("=IsDate(#01/02/2003#)"));
+
+    assertEquals(1, eval("=VarType(Null)"));
+    assertEquals(8, eval("=VarType('blah')"));
+    assertEquals(7, eval("=VarType(#01/02/2003#)"));
+    assertEquals(3, eval("=VarType(42)"));
+    assertEquals(5, eval("=VarType(CDbl(42))"));
+    assertEquals(14, eval("=VarType(42.3)"));
+
+    assertEquals("Null", eval("=TypeName(Null)"));
+    assertEquals("String", eval("=TypeName('blah')"));
+    assertEquals("Date", eval("=TypeName(#01/02/2003#)"));
+    assertEquals("Long", eval("=TypeName(42)"));
+    assertEquals("Double", eval("=TypeName(CDbl(42))"));
+    assertEquals("Decimal", eval("=TypeName(42.3)"));
+
     assertEquals(2, eval("=InStr('AFOOBAR', 'FOO')"));
     assertEquals(2, eval("=InStr('AFOOBAR', 'foo')"));
     assertEquals(2, eval("=InStr(1, 'AFOOBAR', 'foo')"));
@@ -110,11 +127,48 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("bl", eval("=Left(\"blah\", 2)"));
     assertEquals("", eval("=Left(\"blah\", 0)"));
     assertEquals("blah", eval("=Left(\"blah\", 17)"));
+    assertEquals("la", eval("=Mid(\"blah\", 2, 2)"));
 
     assertEquals("ah", eval("=Right(\"blah\", 2)"));
     assertEquals("", eval("=Right(\"blah\", 0)"));
     assertEquals("blah", eval("=Right(\"blah\", 17)"));
 
+    assertEquals("blah  ", eval("=LTrim(\"  blah  \")"));
+    assertEquals("  blah", eval("=RTrim(\"  blah  \")"));
+    assertEquals("blah", eval("=Trim(\"  blah  \")"));
+    assertEquals("   ", eval("=Space(3)"));
+    assertEquals("ddd", eval("=String(3,'d')"));
+
+    assertEquals(1, eval("=StrComp('FOO', 'bar')"));
+    assertEquals(-1, eval("=StrComp('bar', 'FOO')"));
+    assertEquals(0, eval("=StrComp('FOO', 'foo')"));
+    assertEquals(-1, eval("=StrComp('FOO', 'bar', 0)"));
+    assertEquals(1, eval("=StrComp('bar', 'FOO', 0)"));
+    assertEquals(-1, eval("=StrComp('FOO', 'foo', 0)"));
+
+    assertEquals("halb", eval("=StrReverse('blah')"));
+
+    assertEquals("foo", eval("=Choose(1,'foo','bar','blah')"));
+    assertEquals(null, eval("=Choose(-1,'foo','bar','blah')"));
+    assertEquals("blah", eval("=Choose(3,'foo','bar','blah')"));
+
+    assertEquals(null, eval("=Switch(False,'foo', False, 'bar', False, 'blah')"));
+    assertEquals("bar", eval("=Switch(False,'foo', True, 'bar', True, 'blah')"));
+    assertEquals("blah", eval("=Switch(False,'foo', False, 'bar', True, 'blah')"));
+
+    try {
+      eval("=StrReverse('blah', 1)");
+      fail("EvalException should have been thrown");
+    } catch(EvalException e) {
+      assertTrue(e.getMessage().contains("Invalid function call"));
+    }
+
+    try {
+      eval("=StrReverse()");
+      fail("EvalException should have been thrown");
+    } catch(EvalException e) {
+      assertTrue(e.getMessage().contains("Invalid function call"));
+    }
   }
 
 

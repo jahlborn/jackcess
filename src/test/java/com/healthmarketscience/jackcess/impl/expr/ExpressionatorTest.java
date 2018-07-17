@@ -478,7 +478,6 @@ public class ExpressionatorTest extends TestCase
     doTestEvalFail("=37 In 42", "'In' expression");
     doTestEvalFail("=37 Between 42", "'Between' expression");
     doTestEvalFail("=(3 + 5) Rnd()", "multiple expressions");
-    // doTestEvalFail("=Blah", "");
   }
 
   private static void doTestEvalFail(String exprStr, String msgStr) {
@@ -487,7 +486,6 @@ public class ExpressionatorTest extends TestCase
       fail("ParseException should have been thrown");
     } catch(ParseException pe) {
       // success
-      System.out.println("FOO " + pe);
       assertTrue(pe.getMessage().contains(msgStr));
     }
   }

@@ -244,8 +244,8 @@ public class DefaultTextFunctions
       String str = param1.getAsString();
       int strLen = str.length();
       // 1 based offsets
-      int start = Math.max(strLen, params[1].getAsLongInt() - 1);
-      int len = Math.max(
+      int start = Math.min(strLen, params[1].getAsLongInt() - 1);
+      int len = Math.min(
           ((params.length > 2) ? params[2].getAsLongInt() : strLen),
           (strLen - start));
       return BuiltinOperators.toValue(str.substring(start, start + len));
@@ -308,6 +308,8 @@ public class DefaultTextFunctions
       }
       int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
+      // stupid java doesn't return 1, -1, 0...
+      cmp = ((cmp < 0) ? -1 : ((cmp > 0) ? 1 : 0));
       return BuiltinOperators.toValue(cmp);
     }
   });
