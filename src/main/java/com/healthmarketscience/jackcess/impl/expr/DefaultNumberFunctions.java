@@ -147,14 +147,15 @@ public class DefaultNumberFunctions
   public static final Function SGN = registerFunc(new Func1NullIsNull("Sgn") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int signum = 0;
+      int val = 0;
       if(param1.getType().isIntegral()) {
-        int lv = param1.getAsLongInt();
-        signum = ((lv > 0) ? 1 : ((lv < 0) ? -1 : 0));
+        val = param1.getAsLongInt();
       } else {
-        signum = param1.getAsBigDecimal().signum();
+        val = param1.getAsBigDecimal().signum();
       }
-      return BuiltinOperators.toValue(signum);
+      return ((val > 0) ? BuiltinOperators.ONE_VAL :
+              ((val < 0) ? BuiltinOperators.NEG_ONE_VAL :
+               BuiltinOperators.ZERO_VAL));
     }
   });
 

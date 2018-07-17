@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
+import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
 
 /**
  *
@@ -171,6 +172,46 @@ public class DefaultFunctionsTest extends TestCase
     }
   }
 
+  public void testNumberFuncs() throws Exception
+  {
+    assertEquals(1, eval("=Abs(1)"));
+    assertEquals(1, eval("=Abs(-1)"));
+    assertEquals(toBD(1.1), eval("=Abs(-1.1)"));
+
+    assertEquals(Math.atan(0.2), eval("=Atan(0.2)"));
+    assertEquals(Math.sin(0.2), eval("=Sin(0.2)"));
+    assertEquals(Math.tan(0.2), eval("=Tan(0.2)"));
+    assertEquals(Math.cos(0.2), eval("=Cos(0.2)"));
+
+    assertEquals(Math.exp(0.2), eval("=Exp(0.2)"));
+    assertEquals(Math.log(0.2), eval("=Log(0.2)"));
+    assertEquals(Math.sqrt(4.3), eval("=Sqr(4.3)"));
+
+    assertEquals(3, eval("=Fix(3.5)"));
+    assertEquals(4, eval("=Fix(4)"));
+    assertEquals(-3, eval("=Fix(-3.5)"));
+    assertEquals(-4, eval("=Fix(-4)"));
+
+    assertEquals(1, eval("=Sgn(3.5)"));
+    assertEquals(1, eval("=Sgn(4)"));
+    assertEquals(-1, eval("=Sgn(-3.5)"));
+    assertEquals(-1, eval("=Sgn(-4)"));
+
+    assertEquals(3, eval("=Int(3.5)"));
+    assertEquals(4, eval("=Int(4)"));
+    assertEquals(-4, eval("=Int(-3.5)"));
+    assertEquals(-4, eval("=Int(-4)"));
+
+    assertEquals(toBD(4), eval("=Round(3.7)"));
+    assertEquals(4, eval("=Round(4)"));
+    assertEquals(toBD(-4), eval("=Round(-3.7)"));
+    assertEquals(-4, eval("=Round(-4)"));
+
+    assertEquals(toBD(3.73), eval("=Round(3.7345, 2)"));
+    assertEquals(4, eval("=Round(4, 2)"));
+    assertEquals(toBD(-3.73), eval("=Round(-3.7345, 2)"));
+    assertEquals(-4, eval("=Round(-4, 2)"));
+  }
 
   public void testFinancialFuncs() throws Exception
   {

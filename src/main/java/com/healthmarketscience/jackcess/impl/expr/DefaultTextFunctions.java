@@ -309,8 +309,9 @@ public class DefaultTextFunctions
       int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
       // stupid java doesn't return 1, -1, 0...
-      cmp = ((cmp < 0) ? -1 : ((cmp > 0) ? 1 : 0));
-      return BuiltinOperators.toValue(cmp);
+      return ((cmp < 0) ? BuiltinOperators.NEG_ONE_VAL :
+              ((cmp > 0) ? BuiltinOperators.ONE_VAL :
+               BuiltinOperators.ZERO_VAL));
     }
   });
 
