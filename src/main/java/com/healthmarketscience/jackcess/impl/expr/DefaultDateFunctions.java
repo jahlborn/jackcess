@@ -155,9 +155,8 @@ public class DefaultDateFunctions
   public static final Function YEAR = registerFunc(new Func1NullIsNull("Year") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      // convert from 0 based to 1 based value
       return BuiltinOperators.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.YEAR) + 1);
+          nonNullToCalendarField(ctx, param1, Calendar.YEAR));
     }
   });
 
@@ -186,11 +185,21 @@ public class DefaultDateFunctions
         return null;
       }
       int day = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
+
+      // vbSunday (default)
+      int firstDay = 1;
       if(params.length > 1) {
-        // TODO handle first day of week
-        //   int firstDay = params[1].getAsLong();
-        throw new UnsupportedOperationException();
+        firstDay = params[1].getAsLongInt();
+        if(firstDay == 0) {
+          // 0 == vbUseSystem, so we will use the default "sunday"
+          firstDay = 1;
+        }
       }
+
+      // shift all the values to 0 based to calculate the correct value, then
+      // back to 1 based to return the result
+      day = (((day - 1) - (firstDay - 1) + 7) % 7) + 1;
+
       return BuiltinOperators.toValue(day);
     }
   });

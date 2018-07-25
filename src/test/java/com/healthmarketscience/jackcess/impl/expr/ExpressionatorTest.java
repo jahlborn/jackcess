@@ -315,11 +315,11 @@ public class ExpressionatorTest extends TestCase
 
   public void testDateArith() throws Exception
   {
-    assertEquals(new Date(1041508800000L), eval("=#01/02/2003# + #7:00:00#"));
-    assertEquals(new Date(1041458400000L), eval("=#01/02/2003# - #7:00:00#"));
+    assertEquals(new Date(1041508800000L), eval("=#01/02/2003# + #7:00:00 AM#"));
+    assertEquals(new Date(1041458400000L), eval("=#01/02/2003# - #7:00:00 AM#"));
     assertEquals(new Date(1044680400000L), eval("=#01/02/2003# + '37'"));
     assertEquals(new Date(1044680400000L), eval("='37' + #01/02/2003#"));
-    assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00#"));
+    assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00 AM#"));
   }
 
   public void testNull() throws Exception
