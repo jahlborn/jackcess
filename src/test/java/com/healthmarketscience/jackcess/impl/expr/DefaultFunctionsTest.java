@@ -216,7 +216,7 @@ public class DefaultFunctionsTest extends TestCase
   public void testDateFuncs() throws Exception
   {
     assertEquals("1/2/2003", eval("=CStr(DateValue(#01/02/2003 7:00:00 AM#))"));
-    assertEquals("07:00:00 AM", eval("=CStr(TimeValue(#01/02/2003 7:00:00 AM#))"));
+    assertEquals("7:00:00 AM", eval("=CStr(TimeValue(#01/02/2003 7:00:00 AM#))"));
 
     assertEquals(2003, eval("=Year(#01/02/2003 7:00:00 AM#)"));
     assertEquals(1, eval("=Month(#01/02/2003 7:00:00 AM#)"));
@@ -233,7 +233,10 @@ public class DefaultFunctionsTest extends TestCase
     assertTrue(((String)eval("=CStr(Date())"))
                  .matches("\\d{1,2}/\\d{1,2}/\\d{4}"));
     assertTrue(((String)eval("=CStr(Time())"))
-               .matches("\\d{1,2}:\\d{1,2}:\\d{2} (AM|PM)"));
+               .matches("\\d{1,2}:\\d{2}:\\d{2} (AM|PM)"));
+
+    assertEquals("3:57:34 AM", eval("=CStr(TimeSerial(3,57,34))"));
+    assertEquals("3:57:34 PM", eval("=CStr(TimeSerial(15,57,34))"));
   }
 
   public void testFinancialFuncs() throws Exception

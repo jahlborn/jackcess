@@ -20,11 +20,11 @@ package com.healthmarketscience.jackcess.expr;
  *
  * @author James Ahlborn
  */
-public class TemporalConfig 
+public class TemporalConfig
 {
   public static final String US_DATE_FORMAT = "M/d/yyyy";
-  public static final String US_TIME_FORMAT_12 = "hh:mm:ss a";
-  public static final String US_TIME_FORMAT_24 = "HH:mm:ss";
+  public static final String US_TIME_FORMAT_12 = "h:mm:ss a";
+  public static final String US_TIME_FORMAT_24 = "H:mm:ss";
 
   public static final TemporalConfig US_TEMPORAL_CONFIG = new TemporalConfig(
       US_DATE_FORMAT, US_TIME_FORMAT_12, US_TIME_FORMAT_24, '/', ':');
@@ -37,8 +37,8 @@ public class TemporalConfig
   private final String _dateTimeFormat12;
   private final String _dateTimeFormat24;
 
-  public TemporalConfig(String dateFormat, String timeFormat12, 
-                        String timeFormat24, char dateSeparator, 
+  public TemporalConfig(String dateFormat, String timeFormat12,
+                        String timeFormat24, char dateSeparator,
                         char timeSeparator)
   {
     _dateFormat = dateFormat;

@@ -17,7 +17,17 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.util.List;
+import javax.script.Bindings;
+import javax.script.SimpleBindings;
 
+import com.healthmarketscience.jackcess.expr.EvalConfig;
+import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.FunctionLookup;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.expr.BuiltinOperators;
+import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
@@ -259,6 +269,62 @@ public class PropertyExpressionTest extends TestCase
     }
   }
 
+  public static void testCustomEvalConfig() throws Exception
+  {
+    TemporalConfig tempConf = new TemporalConfig("yyyy/M/d",
+                                                 "hh.mm.ss a",
+                                                 "HH.mm.ss", '/', '.');
+
+    FunctionLookup lookup = new FunctionLookup() {
+      public Function getFunction(String name) {
+        if("FooFunc".equalsIgnoreCase(name)) {
+          return FOO;
+        }
+        return DefaultFunctions.LOOKUP.getFunction(name);
+      }
+    };
+
+    Bindings bindings = new SimpleBindings();
+    bindings.put("someKey", "someVal");
+
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = create(fileFormat);
+
+      EvalConfig ec = db.getEvalConfig();
+      ec.setTemporalConfig(tempConf);
+      ec.setFunctionLookup(lookup);
+      ec.setBindings(bindings);
+
+      db.setEvaluateExpressions(true);
+
+      Table t = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT)
+                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                "=FooFunc()"))
+        .addColumn(new ColumnBuilder("data2", DataType.TEXT)
+                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                "=Date()"))
+        .addColumn(new ColumnBuilder("data3", DataType.TEXT)
+                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                "=Time()"))
+        .toTable(db);
+
+      t.addRow(Column.AUTO_NUMBER, null, null);
+
+      Row row = t.iterator().next();
+
+      assertEquals(1, row.get("id"));
+      assertEquals("FOO_someVal", row.get("data1"));
+      assertTrue(((String)row.get("data2"))
+                 .matches("\\d{4}/\\d{1,2}/\\d{1,2}"));
+      assertTrue(((String)row.get("data3"))
+                 .matches("\\d{2}.\\d{2}.\\d{2} (AM|PM)"));
+
+      db.close();
+    }
+  }
+
   private static void setProp(Table t, String colName, String propName,
                               String propVal) throws Exception {
       PropertyMap props = t.getColumn(colName).getProperties();
@@ -280,4 +346,14 @@ public class PropertyExpressionTest extends TestCase
       }
       props.save();
   }
+
+  private static final Function FOO = new DefaultFunctions.Func0("FooFunc") {
+    @Override
+    public boolean isPure() { return false; }
+    @Override
+    protected Value eval0(EvalContext ctx) {
+      Object val = ctx.get("someKey");
+      return BuiltinOperators.toValue("FOO_" + val);
+    }
+  };
 }
