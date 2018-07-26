@@ -237,6 +237,15 @@ public class DefaultFunctionsTest extends TestCase
 
     assertEquals("3:57:34 AM", eval("=CStr(TimeSerial(3,57,34))"));
     assertEquals("3:57:34 PM", eval("=CStr(TimeSerial(15,57,34))"));
+    assertEquals("5:45:00 AM", eval("=CStr(TimeSerial(6,-15,0))"));
+    assertEquals("12:00:00 AM", eval("=CStr(TimeSerial(0,0,0))"));
+    assertEquals("2:00:00 PM", eval("=CStr(TimeSerial(-10,0,0))"));
+    assertEquals("6:00:00 AM", eval("=CStr(TimeSerial(30,0,0))"));
+
+    assertEquals("2/12/1969", eval("=CStr(DateSerial(69,2,12))"));
+    assertEquals("2/12/2010", eval("=CStr(DateSerial(10,2,12))"));
+    assertEquals("7/12/2013", eval("=CStr(DateSerial(2014,-5,12))"));
+    assertEquals("8/7/2013", eval("=CStr(DateSerial(2014,-5,38))"));
   }
 
   public void testFinancialFuncs() throws Exception

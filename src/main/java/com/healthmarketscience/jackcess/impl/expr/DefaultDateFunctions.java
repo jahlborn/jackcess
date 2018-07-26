@@ -74,6 +74,31 @@ public class DefaultDateFunctions
     }
   });
 
+  public static final Function DATESERIAL = registerFunc(new Func3("DateSerial") {
+    @Override
+    protected Value eval3(EvalContext ctx, Value param1, Value param2, Value param3) {
+      int year = param1.getAsLongInt();
+      int month = param2.getAsLongInt();
+      int day = param3.getAsLongInt();
+
+      // "default" two digit year handling
+      if(year < 100) {
+        year += ((year <= 29) ? 2000 : 1900);
+      }
+
+      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
+      Calendar cal = fmt.getCalendar();
+      cal.clear();
+
+      cal.set(Calendar.YEAR, year);
+      // convert to 0 based value
+      cal.set(Calendar.MONTH, month - 1);
+      cal.set(Calendar.DAY_OF_MONTH, day);
+
+      return BuiltinOperators.toValue(Value.Type.DATE, cal.getTime(), fmt);
+    }
+  });
+
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
@@ -122,6 +147,14 @@ public class DefaultDateFunctions
 
       long totalSeconds = (hours * SECONDS_PER_HOUR) +
         (minutes * SECONDS_PER_MINUTE) + seconds;
+      if(totalSeconds < 0L) {
+        do {
+          totalSeconds += SECONDS_PER_DAY;
+        } while(totalSeconds < 0L);
+      } else if(totalSeconds > SECONDS_PER_DAY) {
+        totalSeconds %= SECONDS_PER_DAY;
+      }
+
       DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
       double dd = totalSeconds / DSECONDS_PER_DAY;
       return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
