@@ -10,6 +10,6 @@ use to build Java applications. Jackcess is licensed under the Apache License
 Please note that the GitHub repository is a mirror of the main project
 repository which is hosted on SourceForge:
 
-Homepage: http://jackcess.sourceforge.net/
+Homepage: https://jackcess.sourceforge.io/
 
 Project: https://sourceforge.net/projects/jackcess/

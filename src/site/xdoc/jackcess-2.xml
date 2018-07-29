@@ -142,7 +142,7 @@
 
         <h4>Working with Jackcess Encrypt</h4>
         <p>
-          If you are using the <a href="http://jackcessencrypt.sourceforge.net/">Jackcess Encrypt</a> project, then you will need to
+          If you are using the <a href="https://jackcessencrypt.sourceforge.io/">Jackcess Encrypt</a> project, then you will need to
           use a version compatible with the relevant Jackess API.
           Fortunately, the major versions match, so it's pretty simple:
         </p>
