@@ -28,6 +28,7 @@ import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
+import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
 /**
  *

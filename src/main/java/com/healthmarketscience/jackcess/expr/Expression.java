@@ -19,6 +19,14 @@ package com.healthmarketscience.jackcess.expr;
 import java.util.Collection;
 
 /**
+ * FIXME, doc me and my friend
+ *
+ * An Expression is an executable handle to an Access expression.  While the
+ * expression framework is implemented as separate from the core database
+ * functionality, most usage of Expressions will happen indirectly within the
+ * context of normal database operations.  Thus, most users will not ever
+ * directly interact with an Expression instance.  That said, Expressions may
+ * be executed independently of a Database instance if desired.
  *
  * @author James Ahlborn
  */

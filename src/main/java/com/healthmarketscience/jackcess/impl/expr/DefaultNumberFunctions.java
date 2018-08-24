@@ -24,6 +24,7 @@ import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
+import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
 /**
  *
@@ -185,7 +186,7 @@ public class DefaultNumberFunctions
   });
 
 
-  // public static final Function Val = registerFunc(new Func1("Val") {
+  // public static final Function VAL = registerFunc(new Func1("Val") {
   //   @Override
   //   protected Value eval1(EvalContext ctx, Value param1) {
   //     // FIXME, maybe leverage ExpressionTokenizer.maybeParseNumberLiteral (note, leading - or + is valid, exponent form is valid)

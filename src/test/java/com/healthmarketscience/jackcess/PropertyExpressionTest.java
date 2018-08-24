@@ -28,6 +28,7 @@ import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.BuiltinOperators;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
+import com.healthmarketscience.jackcess.impl.expr.FunctionSupport;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
@@ -347,7 +348,7 @@ public class PropertyExpressionTest extends TestCase
       props.save();
   }
 
-  private static final Function FOO = new DefaultFunctions.Func0("FooFunc") {
+  private static final Function FOO = new FunctionSupport.Func0("FooFunc") {
     @Override
     public boolean isPure() { return false; }
     @Override
