@@ -17,10 +17,17 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 /**
+ * A FunctionLookup provides a source for {@link Function} instances used
+ * during expression evaluation.
  *
  * @author James Ahlborn
  */
 public interface FunctionLookup
 {
+  /**
+   * @return the function for the given function name, or {@code null} if none
+   *         exists.  Note that Access function names are treated in a case
+   *         insensitive manner.
+   */
   public Function getFunction(String name);
 }

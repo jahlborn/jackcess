@@ -19,14 +19,22 @@ package com.healthmarketscience.jackcess.expr;
 import org.apache.commons.lang.ObjectUtils;
 
 /**
+ * identifies a database entity (e.g. the name of a database field).  An
+ * Identify must have an object name, but the collection name and property
+ * name are optional.
  *
  * @author James Ahlborn
  */
-public class Identifier 
+public class Identifier
 {
   private final String _collectionName;
   private final String _objectName;
   private final String _propertyName;
+
+  public Identifier(String objectName)
+  {
+    this(null, objectName, null);
+  }
 
   public Identifier(String collectionName, String objectName, String propertyName)
   {
@@ -35,17 +43,17 @@ public class Identifier
     _propertyName = propertyName;
   }
 
-  public String getCollectionName() 
+  public String getCollectionName()
   {
     return _collectionName;
   }
 
-  public String getObjectName() 
+  public String getObjectName()
   {
     return _objectName;
   }
 
-  public String getPropertyName() 
+  public String getPropertyName()
   {
     return _propertyName;
   }
@@ -62,7 +70,7 @@ public class Identifier
     }
 
     Identifier oi = (Identifier)o;
-    
+
     return (ObjectUtils.equals(_objectName, oi._objectName) &&
             ObjectUtils.equals(_collectionName, oi._collectionName) &&
             ObjectUtils.equals(_propertyName, oi._propertyName));

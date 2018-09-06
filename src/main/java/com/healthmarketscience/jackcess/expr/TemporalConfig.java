@@ -17,6 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 /**
+ * A TemporalConfig encapsulates date/time formatting options for expression
+ * evaluation.  The default {@link #US_TEMPORAL_CONFIG} instance provides US
+ * specific locale configuration.  Databases which have been built for other
+ * locales can utilize custom implementations of TemporalConfig in order to
+ * evaluate expressions correctly.
  *
  * @author James Ahlborn
  */
@@ -26,6 +31,7 @@ public class TemporalConfig
   public static final String US_TIME_FORMAT_12 = "h:mm:ss a";
   public static final String US_TIME_FORMAT_24 = "H:mm:ss";
 
+  /** default implementation which is configured for the US locale */
   public static final TemporalConfig US_TEMPORAL_CONFIG = new TemporalConfig(
       US_DATE_FORMAT, US_TIME_FORMAT_12, US_TIME_FORMAT_24, '/', ':');
 
@@ -37,6 +43,24 @@ public class TemporalConfig
   private final String _dateTimeFormat12;
   private final String _dateTimeFormat24;
 
+  /**
+   * Instantiates a new TemporalConfig with the given configuration.  Note
+   * that the date/time format variants will be created by concatenating the
+   * relevant date and time formats, separated by a single space, e.g. "<date>
+   * <time>".
+   *
+   * @param dateFormat the date (no time) format
+   * @param timeFormat12 the 12 hour time format
+   * @param timeFormat24 the 24 hour time format
+   * @param dateSeparator the primary separator used to separate elements in
+   *                      the date format.  this is used to identify the
+   *                      components of date/time string.
+   * @param timeSeparator the primary separator used to separate elements in
+   *                      the time format (both 12 hour and 24 hour).  this is
+   *                      used to identify the components of a date/time
+   *                      string.  This value should differ from the
+   *                      dateSeparator.
+   */
   public TemporalConfig(String dateFormat, String timeFormat12,
                         String timeFormat24, char dateSeparator,
                         char timeSeparator)

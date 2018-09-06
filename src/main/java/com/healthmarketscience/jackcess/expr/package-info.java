@@ -19,10 +19,16 @@ limitations under the License.
  * the 2.2.0 release).  This functionality is currently disabled by default
  * but can be globally enabled via the system property
  * "com.healthmarketscience.jackcess.enableExpressionEvaluation" or
- * selectively enabled on a per database basis using {@link com.healthmarketscience.jackcess.Database#setEvaluateExpressions(Boolean)}.  Expressions can be used in a
- * number of different places within an Access database.
- *<p/>
- * When enabled, Jackcess supports the following usage:
+ * selectively enabled on a per database basis using {@link com.healthmarketscience.jackcess.Database#setEvaluateExpressions(Boolean)}.
+ * <p/>
+ * The expression evaluation engine implementation does its best to follow all
+ * the warts and idiosyncracies of Access expression evaluation (both those
+ * that are documented as well as those discovered through experimentation).
+ * These include such things as value conversions, "Null" handling, rounding
+ * rules, and implicit interpretations of expression in certain contexts.
+ * <p/>
+ * Expressions can be used in a number of different places within an Access
+ * database.  When enabled, Jackcess supports the following usage:
  * <ul>
  *   <li><b>Default Values:</b> When a row is added which has a
  *       {@code null} value for a field which has a default value
@@ -48,18 +54,36 @@ limitations under the License.
  * <h2>Supporting Classes</h2>
  * <p/>
  * The classes in this package make up the public api for expression handling
- * in Jackcess.  They geneerally fall into two categoreies:
+ * in Jackcess.  They generally fall into two categories:
  * <p/>
  * <h3>General Use Classes</h3>
  * <p/>
  * <ul>
+ * <li>{@link EvalConfig} allows for customization of the expression
+ *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
+ * <li>{@link TemporalConfig} encapsulates date/time formatting options for
+ *     expression evaluation.</li>
+ * <li>{@link FunctionLookup} provides a source for {@link Function} instances
+ *     used during expression evaluation.</li>
+ * <li>{@link EvalException} wrapper exception thrown for failures which occur
+ *     during expression evaluation.</li>
+ * <li>{@link ParseException} wrapper exception thrown for failures which
+ *     occur during expression parsing.</li>
  * </ul>
  * <p/>
  * <h3>Advanced Use Classes</h3>
  * <p/>
  * <ul>
+ * <li>{@link EvalContext} encapsulates all shared state for expression
+ *     parsing and evaluation.</li>
+ * <li>{@link Expression} provides an executable handle to an actual
+ *     Access expression.</li>
+ * <li>{@link Function} provides an invokable handle to external functionality
+ *     to an expression.</li>
+ * <li>{@link Identifier} identifies a database entity (e.g. the name of a
+ *     database field).</li>
+ * <li>{@link Value} represents a typed primitive value.</li>
  * </ul>
- * <p/>
  * <p/>
  * <h2>Function Support</h2>
  * <p/>

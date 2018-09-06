@@ -20,11 +20,17 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
+ * Wrapper for a typed primitive value used within the expression evaluation
+ * engine.  Note that the "Null" value is represented by an actual Value
+ * instance with the type of {@link Type#NULL}.  Also note that all the
+ * conversion methods will throw an {@link EvalException} if the conversion is
+ * not supported for the current value.
  *
  * @author James Ahlborn
  */
-public interface Value 
+public interface Value
 {
+  /** the types supported within the expression evaluation engine */
   public enum Type
   {
     NULL, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_DEC;
@@ -60,22 +66,49 @@ public interface Value
     }
   }
 
-
+  /**
+   * @return the type of this value
+   */
   public Type getType();
 
+  /**
+   * @return the raw primitive value
+   */
   public Object get();
 
+  /**
+   * @return {@code true} if this value represents a "Null" value,
+   *         {@code false} otherwise.
+   */
   public boolean isNull();
 
+  /**
+   * @return this primitive value converted to a boolean
+   */
   public boolean getAsBoolean();
 
+  /**
+   * @return this primitive value converted to a String
+   */
   public String getAsString();
 
+  /**
+   * @return this primitive value converted to a Date
+   */
   public Date getAsDateTime(EvalContext ctx);
 
+  /**
+   * @return this primitive value converted (rounded) to an int
+   */
   public Integer getAsLongInt();
 
+  /**
+   * @return this primitive value converted (rounded) to a double
+   */
   public Double getAsDouble();
 
+  /**
+   * @return this primitive value converted to a BigDecimal
+   */
   public BigDecimal getAsBigDecimal();
 }
