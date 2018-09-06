@@ -59,30 +59,30 @@ limitations under the License.
  * <h3>General Use Classes</h3>
  * <p/>
  * <ul>
- * <li>{@link EvalConfig} allows for customization of the expression
+ * <li>{@link com.healthmarketscience.jackcess.expr.EvalConfig} allows for customization of the expression
  *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
- * <li>{@link TemporalConfig} encapsulates date/time formatting options for
+ * <li>{@link com.healthmarketscience.jackcess.expr.TemporalConfig} encapsulates date/time formatting options for
  *     expression evaluation.</li>
- * <li>{@link FunctionLookup} provides a source for {@link Function} instances
+ * <li>{@link com.healthmarketscience.jackcess.expr.FunctionLookup} provides a source for {@link com.healthmarketscience.jackcess.expr.Function} instances
  *     used during expression evaluation.</li>
- * <li>{@link EvalException} wrapper exception thrown for failures which occur
+ * <li>{@link com.healthmarketscience.jackcess.expr.EvalException} wrapper exception thrown for failures which occur
  *     during expression evaluation.</li>
- * <li>{@link ParseException} wrapper exception thrown for failures which
+ * <li>{@link com.healthmarketscience.jackcess.expr.ParseException} wrapper exception thrown for failures which
  *     occur during expression parsing.</li>
  * </ul>
  * <p/>
  * <h3>Advanced Use Classes</h3>
  * <p/>
  * <ul>
- * <li>{@link EvalContext} encapsulates all shared state for expression
+ * <li>{@link com.healthmarketscience.jackcess.expr.EvalContext} encapsulates all shared state for expression
  *     parsing and evaluation.</li>
- * <li>{@link Expression} provides an executable handle to an actual
+ * <li>{@link com.healthmarketscience.jackcess.expr.Expression} provides an executable handle to an actual
  *     Access expression.</li>
- * <li>{@link Function} provides an invokable handle to external functionality
+ * <li>{@link com.healthmarketscience.jackcess.expr.Function} provides an invokable handle to external functionality
  *     to an expression.</li>
- * <li>{@link Identifier} identifies a database entity (e.g. the name of a
+ * <li>{@link com.healthmarketscience.jackcess.expr.Identifier} identifies a database entity (e.g. the name of a
  *     database field).</li>
- * <li>{@link Value} represents a typed primitive value.</li>
+ * <li>{@link com.healthmarketscience.jackcess.expr.Value} represents a typed primitive value.</li>
  * </ul>
  * <p/>
  * <h2>Function Support</h2>
@@ -104,10 +104,10 @@ limitations under the License.
  * <tr class="TableRowColor"><td>FormatNumber</td><td></td></tr>
  * <tr class="TableRowColor"><td>FormatPercent</td><td></td></tr>
  * <tr class="TableRowColor"><td>GUIDFromString</td><td></td></tr>
- * <tr class="TableRowColor"><td>Hex($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Hex[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Nz</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Oct($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Str($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Oct[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Str[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StringFromGUID</td><td></td></tr>
  * <tr class="TableRowColor"><td>Val</td><td></td></tr>
  * <tr class="TableRowColor"><td>CBool</td><td>Y</td></tr>
@@ -173,10 +173,6 @@ limitations under the License.
  *
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
- * <tr class="TableRowColor"><td>Environ</td><td></td></tr>
- * <tr class="TableRowColor"><td>GetAllSettings</td><td></td></tr>
- * <tr class="TableRowColor"><td>GetSetting</td><td></td></tr>
- * <tr class="TableRowColor"><td>IsArray</td><td></td></tr>
  * <tr class="TableRowColor"><td>IsDate</td><td>Partial</td></tr>
  * <tr class="TableRowColor"><td>IsEmpty</td><td></td></tr>
  * <tr class="TableRowColor"><td>IsError</td><td></td></tr>
@@ -212,7 +208,6 @@ limitations under the License.
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Choose</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>DoEvents</td><td></td></tr>
  * <tr class="TableRowColor"><td>IIf</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Switch</td><td>Y</td></tr>
  * </table>
@@ -224,21 +219,21 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Format</td><td></td></tr>
  * <tr class="TableRowColor"><td>InStr</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStrRev</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>LCase($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Left($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>LCase[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Left[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Len</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>LTrim($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>RTrim($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Trim($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Mid($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>LTrim[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>RTrim[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Trim[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Mid[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Replace</td><td></td></tr>
- * <tr class="TableRowColor"><td>Right($)</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Space($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Right[$]</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>Space[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrComp</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrConv</td><td></td></tr>
- * <tr class="TableRowColor"><td>String($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>String[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrReverse</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>UCase($)</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>UCase[$]</td><td>Y</td></tr>
  * </table>
  *
  *

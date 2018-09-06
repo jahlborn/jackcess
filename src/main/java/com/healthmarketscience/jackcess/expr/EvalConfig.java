@@ -20,8 +20,10 @@ import javax.script.Bindings;
 import com.healthmarketscience.jackcess.Database;
 
 /**
- * The EvalContext allows for customization of the expression evaluation
+ * The EvalConfig allows for customization of the expression evaluation
  * context for a given {@link Database} instance.
+ *
+ * @see com.healthmarketscience.jackcess.expr expression package docs
  *
  * @author James Ahlborn
  */
@@ -47,7 +49,7 @@ public interface EvalConfig
   /**
    * Sets the {@link Function} provider to use during expression evaluation.
    * The Functions supported by the default FunctionLookup are documented in
-   * {@link com.healthmarketscience.jackcess#expr}.  Custom Functions can be
+   * {@link com.healthmarketscience.jackcess.expr}.  Custom Functions can be
    * implemented and provided to the expression evaluation engine by installing
    * a custom FunctionLookup instance (which would presumably wrap and
    * delegate to the default FunctionLookup instance for any default
