@@ -51,7 +51,7 @@ public class DefaultTextFunctions
         throw new EvalException("Character code '" + lv +
                                         "' out of range ");
       }
-      return BuiltinOperators.toValue(lv);
+      return ValueSupport.toValue(lv);
     }
   });
 
@@ -64,7 +64,7 @@ public class DefaultTextFunctions
         throw new EvalException("No characters in string");
       }
       int lv = str.charAt(0);
-      return BuiltinOperators.toValue(lv);
+      return ValueSupport.toValue(lv);
     }
   });
 
@@ -77,7 +77,7 @@ public class DefaultTextFunctions
                                         "' out of range ");
       }
       char[] cs = Character.toChars(lv);
-      return BuiltinOperators.toValue(new String(cs));
+      return ValueSupport.toValue(new String(cs));
     }
   });
 
@@ -86,7 +86,7 @@ public class DefaultTextFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
       char[] cs = Character.toChars(lv);
-      return BuiltinOperators.toValue(new String(cs));
+      return ValueSupport.toValue(new String(cs));
     }
   });
 
@@ -98,7 +98,7 @@ public class DefaultTextFunctions
       if(bd.compareTo(BigDecimal.ZERO) >= 0) {
         str = " " + str;
       }
-      return BuiltinOperators.toValue(str);
+      return ValueSupport.toValue(str);
     }
   });
 
@@ -119,7 +119,7 @@ public class DefaultTextFunctions
       String s1 = param1.getAsString();
       int s1Len = s1.length();
       if(s1Len == 0) {
-        return BuiltinOperators.ZERO_VAL;
+        return ValueSupport.ZERO_VAL;
       }
       Value param2 = params[idx++];
       if(param2.isNull()) {
@@ -129,7 +129,7 @@ public class DefaultTextFunctions
       int s2Len = s2.length();
       if(s2Len == 0) {
         // 1 based offsets
-        return BuiltinOperators.toValue(start + 1);
+        return ValueSupport.toValue(start + 1);
       }
       boolean ignoreCase = true;
       if(params.length > 3) {
@@ -139,11 +139,11 @@ public class DefaultTextFunctions
       while(start < end) {
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
           // 1 based offsets
-          return BuiltinOperators.toValue(start + 1);
+          return ValueSupport.toValue(start + 1);
         }
         ++start;
       }
-      return BuiltinOperators.ZERO_VAL;
+      return ValueSupport.ZERO_VAL;
     }
   });
 
@@ -157,7 +157,7 @@ public class DefaultTextFunctions
       String s1 = param1.getAsString();
       int s1Len = s1.length();
       if(s1Len == 0) {
-        return BuiltinOperators.ZERO_VAL;
+        return ValueSupport.ZERO_VAL;
       }
       Value param2 = params[1];
       if(param2.isNull()) {
@@ -168,7 +168,7 @@ public class DefaultTextFunctions
       int start = s1Len - 1;
       if(s2Len == 0) {
         // 1 based offsets
-        return BuiltinOperators.toValue(start + 1);
+        return ValueSupport.toValue(start + 1);
       }
       if(params.length > 2) {
         start = params[2].getAsLongInt();
@@ -186,11 +186,11 @@ public class DefaultTextFunctions
       while(start >= 0) {
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
           // 1 based offsets
-          return BuiltinOperators.toValue(start + 1);
+          return ValueSupport.toValue(start + 1);
         }
         --start;
       }
-      return BuiltinOperators.ZERO_VAL;
+      return ValueSupport.ZERO_VAL;
     }
   });
 
@@ -198,7 +198,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(str.toLowerCase());
+      return ValueSupport.toValue(str.toLowerCase());
     }
   });
 
@@ -206,7 +206,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(str.toUpperCase());
+      return ValueSupport.toValue(str.toUpperCase());
     }
   });
 
@@ -218,7 +218,7 @@ public class DefaultTextFunctions
       }
       String str = param1.getAsString();
       int len = Math.min(str.length(), param2.getAsLongInt());
-      return BuiltinOperators.toValue(str.substring(0, len));
+      return ValueSupport.toValue(str.substring(0, len));
     }
   });
 
@@ -231,7 +231,7 @@ public class DefaultTextFunctions
       String str = param1.getAsString();
       int strLen = str.length();
       int len = Math.min(strLen, param2.getAsLongInt());
-      return BuiltinOperators.toValue(str.substring(strLen - len, strLen));
+      return ValueSupport.toValue(str.substring(strLen - len, strLen));
     }
   });
 
@@ -249,7 +249,7 @@ public class DefaultTextFunctions
       int len = Math.min(
           ((params.length > 2) ? params[2].getAsLongInt() : strLen),
           (strLen - start));
-      return BuiltinOperators.toValue(str.substring(start, start + len));
+      return ValueSupport.toValue(str.substring(start, start + len));
     }
   });
 
@@ -257,7 +257,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(str.length());
+      return ValueSupport.toValue(str.length());
     }
   });
 
@@ -265,7 +265,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(trim(str, true, false));
+      return ValueSupport.toValue(trim(str, true, false));
     }
   });
 
@@ -273,7 +273,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(trim(str, false, true));
+      return ValueSupport.toValue(trim(str, false, true));
     }
   });
 
@@ -281,7 +281,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(trim(str, true, true));
+      return ValueSupport.toValue(trim(str, true, true));
     }
   });
 
@@ -289,7 +289,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
-      return BuiltinOperators.toValue(nchars(lv, ' '));
+      return ValueSupport.toValue(nchars(lv, ' '));
     }
   });
 
@@ -299,7 +299,7 @@ public class DefaultTextFunctions
       Value param1 = params[0];
       Value param2 = params[1];
       if(param1.isNull() || param2.isNull()) {
-        return BuiltinOperators.NULL_VAL;
+        return ValueSupport.NULL_VAL;
       }
       String s1 = param1.getAsString();
       String s2 = param2.getAsString();
@@ -310,9 +310,9 @@ public class DefaultTextFunctions
       int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
       // stupid java doesn't return 1, -1, 0...
-      return ((cmp < 0) ? BuiltinOperators.NEG_ONE_VAL :
-              ((cmp > 0) ? BuiltinOperators.ONE_VAL :
-               BuiltinOperators.ZERO_VAL));
+      return ((cmp < 0) ? ValueSupport.NEG_ONE_VAL :
+              ((cmp > 0) ? ValueSupport.ONE_VAL :
+               ValueSupport.ZERO_VAL));
     }
   });
 
@@ -320,11 +320,11 @@ public class DefaultTextFunctions
     @Override
     protected Value eval2(EvalContext ctx, Value param1, Value param2) {
       if(param1.isNull() || param2.isNull()) {
-        return BuiltinOperators.NULL_VAL;
+        return ValueSupport.NULL_VAL;
       }
       int lv = param1.getAsLongInt();
       char c = (char)(param2.getAsString().charAt(0) % 256);
-      return BuiltinOperators.toValue(nchars(lv, c));
+      return ValueSupport.toValue(nchars(lv, c));
     }
   });
 
@@ -332,7 +332,7 @@ public class DefaultTextFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       String str = param1.getAsString();
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           new StringBuilder(str).reverse().toString());
     }
   });

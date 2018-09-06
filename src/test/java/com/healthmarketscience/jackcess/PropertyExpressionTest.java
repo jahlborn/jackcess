@@ -26,9 +26,9 @@ import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.impl.expr.BuiltinOperators;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.FunctionSupport;
+import com.healthmarketscience.jackcess.impl.expr.ValueSupport;
 import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
@@ -354,7 +354,7 @@ public class PropertyExpressionTest extends TestCase
     @Override
     protected Value eval0(EvalContext ctx) {
       Object val = ctx.get("someKey");
-      return BuiltinOperators.toValue("FOO_" + val);
+      return ValueSupport.toValue("FOO_" + val);
     }
   };
 }

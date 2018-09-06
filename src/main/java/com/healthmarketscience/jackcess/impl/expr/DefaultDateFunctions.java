@@ -56,9 +56,9 @@ public class DefaultDateFunctions
   public static final Function DATE = registerFunc(new Func0("Date") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
       double dd = dateOnly(currentTimeDouble(fmt));
-      return BuiltinOperators.toValue(Value.Type.DATE, dd, fmt);
+      return ValueSupport.toValue(Value.Type.DATE, dd, fmt);
     }
   });
 
@@ -70,8 +70,8 @@ public class DefaultDateFunctions
         return dv;
       }
       double dd = dateOnly(dv.getAsDouble());
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
-      return BuiltinOperators.toValue(Value.Type.DATE, dd, fmt);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
+      return ValueSupport.toValue(Value.Type.DATE, dd, fmt);
     }
   });
 
@@ -87,7 +87,7 @@ public class DefaultDateFunctions
         year += ((year <= 29) ? 2000 : 1900);
       }
 
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
       Calendar cal = fmt.getCalendar();
       cal.clear();
 
@@ -96,24 +96,24 @@ public class DefaultDateFunctions
       cal.set(Calendar.MONTH, month - 1);
       cal.set(Calendar.DAY_OF_MONTH, day);
 
-      return BuiltinOperators.toValue(Value.Type.DATE, cal.getTime(), fmt);
+      return ValueSupport.toValue(Value.Type.DATE, cal.getTime(), fmt);
     }
   });
 
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.DATE_TIME);
-      return BuiltinOperators.toValue(Value.Type.DATE_TIME, new Date(), fmt);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE_TIME);
+      return ValueSupport.toValue(Value.Type.DATE_TIME, new Date(), fmt);
     }
   });
 
   public static final Function TIME = registerFunc(new Func0("Time") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
       double dd = timeOnly(currentTimeDouble(fmt));
-      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
+      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
     }
   });
 
@@ -125,17 +125,17 @@ public class DefaultDateFunctions
         return dv;
       }
       double dd = timeOnly(dv.getAsDouble());
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
-      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
+      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
     }
   });
 
   public static final Function TIMER = registerFunc(new Func0("Timer") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
       double dd = timeOnly(currentTimeDouble(fmt)) * DSECONDS_PER_DAY;
-      return BuiltinOperators.toValue(dd);
+      return ValueSupport.toValue(dd);
     }
   });
 
@@ -156,16 +156,16 @@ public class DefaultDateFunctions
         totalSeconds %= SECONDS_PER_DAY;
       }
 
-      DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, Value.Type.TIME);
+      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
       double dd = totalSeconds / DSECONDS_PER_DAY;
-      return BuiltinOperators.toValue(Value.Type.TIME, dd, fmt);
+      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
     }
   });
 
   public static final Function HOUR = registerFunc(new Func1NullIsNull("Hour") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.HOUR_OF_DAY));
     }
   });
@@ -173,7 +173,7 @@ public class DefaultDateFunctions
   public static final Function MINUTE = registerFunc(new Func1NullIsNull("Minute") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.MINUTE));
     }
   });
@@ -181,7 +181,7 @@ public class DefaultDateFunctions
   public static final Function SECOND = registerFunc(new Func1NullIsNull("Second") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.SECOND));
     }
   });
@@ -189,7 +189,7 @@ public class DefaultDateFunctions
   public static final Function YEAR = registerFunc(new Func1NullIsNull("Year") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.YEAR));
     }
   });
@@ -198,7 +198,7 @@ public class DefaultDateFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       // convert from 0 based to 1 based value
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.MONTH) + 1);
     }
   });
@@ -206,7 +206,7 @@ public class DefaultDateFunctions
   public static final Function DAY = registerFunc(new Func1NullIsNull("Day") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_MONTH));
     }
   });
@@ -234,7 +234,7 @@ public class DefaultDateFunctions
       // back to 1 based to return the result
       day = (((day - 1) - (firstDay - 1) + 7) % 7) + 1;
 
-      return BuiltinOperators.toValue(day);
+      return ValueSupport.toValue(day);
     }
   });
 
@@ -292,14 +292,14 @@ public class DefaultDateFunctions
 
     Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
                        Value.Type.TIME);
-    DateFormat fmt = BuiltinOperators.getDateFormatForType(ctx, type);
-    return BuiltinOperators.toValue(type, dd, fmt);
+    DateFormat fmt = ValueSupport.getDateFormatForType(ctx, type);
+    return ValueSupport.toValue(type, dd, fmt);
   }
 
   private static DateFormat getDateValueFormat(EvalContext ctx, Value param) {
     return ((param instanceof BaseDateValue) ?
             ((BaseDateValue)param).getFormat() :
-       BuiltinOperators.getDateFormatForType(ctx, param.getType()));
+       ValueSupport.getDateFormatForType(ctx, param.getType()));
   }
 
   private static double dateOnly(double dd) {

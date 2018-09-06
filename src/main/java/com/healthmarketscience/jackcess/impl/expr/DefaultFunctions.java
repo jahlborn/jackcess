@@ -69,10 +69,10 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       if((param1.getType() == Value.Type.STRING) &&
          (param1.getAsString().length() == 0)) {
-        return BuiltinOperators.ZERO_VAL;
+        return ValueSupport.ZERO_VAL;
       }
       int lv = param1.getAsLongInt();
-      return BuiltinOperators.toValue(Integer.toHexString(lv).toUpperCase());
+      return ValueSupport.toValue(Integer.toHexString(lv).toUpperCase());
     }
   });
 
@@ -89,7 +89,7 @@ public class DefaultFunctions
       Value.Type resultType = ctx.getResultType();
       return (((resultType == null) ||
                (resultType == Value.Type.STRING)) ?
-              BuiltinOperators.EMPTY_STR_VAL : BuiltinOperators.ZERO_VAL);
+              ValueSupport.EMPTY_STR_VAL : ValueSupport.ZERO_VAL);
     }
   });
 
@@ -99,7 +99,7 @@ public class DefaultFunctions
       Value param1 = params[0];
       int idx = param1.getAsLongInt();
       if((idx < 1) || (idx >= params.length)) {
-        return BuiltinOperators.NULL_VAL;
+        return ValueSupport.NULL_VAL;
       }
       return params[idx];
     }
@@ -116,7 +116,7 @@ public class DefaultFunctions
           return params[i + 1];
         }
       }
-      return BuiltinOperators.NULL_VAL;
+      return ValueSupport.NULL_VAL;
     }
   });
 
@@ -125,10 +125,10 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       if((param1.getType() == Value.Type.STRING) &&
          (param1.getAsString().length() == 0)) {
-        return BuiltinOperators.ZERO_VAL;
+        return ValueSupport.ZERO_VAL;
       }
       int lv = param1.getAsLongInt();
-      return BuiltinOperators.toValue(Integer.toOctalString(lv));
+      return ValueSupport.toValue(Integer.toOctalString(lv));
     }
   });
 
@@ -136,7 +136,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       boolean b = param1.getAsBoolean();
-      return BuiltinOperators.toValue(b);
+      return ValueSupport.toValue(b);
     }
   });
 
@@ -147,7 +147,7 @@ public class DefaultFunctions
       if((lv < 0) || (lv > 255)) {
         throw new EvalException("Byte code '" + lv + "' out of range ");
       }
-      return BuiltinOperators.toValue(lv);
+      return ValueSupport.toValue(lv);
     }
   });
 
@@ -156,7 +156,7 @@ public class DefaultFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();
       bd = bd.setScale(4, NumberFormatter.ROUND_MODE);
-      return BuiltinOperators.toValue(bd);
+      return ValueSupport.toValue(bd);
     }
   });
 
@@ -174,7 +174,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       Double dv = param1.getAsDouble();
-      return BuiltinOperators.toValue(dv);
+      return ValueSupport.toValue(dv);
     }
   });
 
@@ -182,7 +182,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       BigDecimal bd = param1.getAsBigDecimal();
-      return BuiltinOperators.toValue(bd);
+      return ValueSupport.toValue(bd);
     }
   });
 
@@ -193,7 +193,7 @@ public class DefaultFunctions
       if((lv < Short.MIN_VALUE) || (lv > Short.MAX_VALUE)) {
         throw new EvalException("Int value '" + lv + "' out of range ");
       }
-      return BuiltinOperators.toValue(lv);
+      return ValueSupport.toValue(lv);
     }
   });
 
@@ -201,7 +201,7 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       int lv = param1.getAsLongInt();
-      return BuiltinOperators.toValue(lv);
+      return ValueSupport.toValue(lv);
     }
   });
 
@@ -212,14 +212,14 @@ public class DefaultFunctions
       if((dv < Float.MIN_VALUE) || (dv > Float.MAX_VALUE)) {
         throw new EvalException("Single value '" + dv + "' out of range ");
       }
-      return BuiltinOperators.toValue(dv.floatValue());
+      return ValueSupport.toValue(dv.floatValue());
     }
   });
 
   public static final Function CSTR = registerFunc(new Func1("CStr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(param1.getAsString());
+      return ValueSupport.toValue(param1.getAsString());
     }
   });
 
@@ -233,14 +233,14 @@ public class DefaultFunctions
   public static final Function ISNULL = registerFunc(new Func1("IsNull") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(param1.isNull());
+      return ValueSupport.toValue(param1.isNull());
     }
   });
 
   public static final Function ISDATE = registerFunc(new Func1("IsDate") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return BuiltinOperators.toValue(
+      return ValueSupport.toValue(
           !param1.isNull() &&
           (DefaultDateFunctions.nonNullToDateValue(ctx, param1) != null));
     }
@@ -281,7 +281,7 @@ public class DefaultFunctions
       default:
         throw new EvalException("Unknown type " + type);
       }
-      return BuiltinOperators.toValue(vType);
+      return ValueSupport.toValue(vType);
     }
   });
 
@@ -314,7 +314,7 @@ public class DefaultFunctions
       default:
         throw new EvalException("Unknown type " + type);
       }
-      return BuiltinOperators.toValue(tName);
+      return ValueSupport.toValue(tName);
     }
   });
 

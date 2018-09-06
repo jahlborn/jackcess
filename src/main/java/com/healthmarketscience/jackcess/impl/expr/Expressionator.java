@@ -401,11 +401,11 @@ public class Expressionator
   private static final Expr THIS_COL_VALUE = new EThisValue();
 
   private static final Expr NULL_VALUE = new EConstValue(
-      BuiltinOperators.NULL_VAL, "Null");
+      ValueSupport.NULL_VAL, "Null");
   private static final Expr TRUE_VALUE = new EConstValue(
-      BuiltinOperators.TRUE_VAL, "True");
+      ValueSupport.TRUE_VAL, "True");
   private static final Expr FALSE_VALUE = new EConstValue(
-      BuiltinOperators.FALSE_VAL, "False");
+      ValueSupport.FALSE_VAL, "False");
 
 
   private Expressionator() {}
@@ -1302,7 +1302,7 @@ public class Expressionator
   {
     switch(valType) {
     case STRING:
-      return BuiltinOperators.toValue((String)value);
+      return ValueSupport.toValue((String)value);
     case DATE:
       return new DateValue((Date)value, sdf);
     case TIME:
@@ -1310,11 +1310,11 @@ public class Expressionator
     case DATE_TIME:
       return new DateTimeValue((Date)value, sdf);
     case LONG:
-      return BuiltinOperators.toValue((Integer)value);
+      return ValueSupport.toValue((Integer)value);
     case DOUBLE:
-      return BuiltinOperators.toValue((Double)value);
+      return ValueSupport.toValue((Double)value);
     case BIG_DEC:
-      return BuiltinOperators.toValue((BigDecimal)value);
+      return ValueSupport.toValue((BigDecimal)value);
     default:
       throw new ParseException("unexpected literal type " + valType);
     }

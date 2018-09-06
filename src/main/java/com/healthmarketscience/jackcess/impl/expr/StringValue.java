@@ -75,7 +75,7 @@ public class StringValue extends BaseValue
     if(_num == null) {
       // see if it is parseable as a number
       try {
-        _num = BuiltinOperators.normalize(new BigDecimal(_val));
+        _num = ValueSupport.normalize(new BigDecimal(_val));
         return (BigDecimal)_num;
       } catch(NumberFormatException nfe) {
         _num = NOT_A_NUMBER;

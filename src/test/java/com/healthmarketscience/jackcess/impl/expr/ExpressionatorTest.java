@@ -429,12 +429,12 @@ public class ExpressionatorTest extends TestCase
     TestContext tc = new TestContext() {
       @Override
       public Value getThisColumnValue() {
-        return BuiltinOperators.toValue(23.0);
+        return ValueSupport.toValue(23.0);
       }
 
       @Override
       public Value getIdentifierValue(Identifier identifier) {
-        return BuiltinOperators.toValue(23.0);
+        return ValueSupport.toValue(23.0);
       }
     };
 
@@ -536,7 +536,7 @@ public class ExpressionatorTest extends TestCase
   }
 
   private static Boolean evalCondition(String exprStr, String thisVal) {
-    TestContext tc = new TestContext(BuiltinOperators.toValue(thisVal));
+    TestContext tc = new TestContext(ValueSupport.toValue(thisVal));
     Expression expr = Expressionator.parse(
         Expressionator.Type.FIELD_VALIDATOR, exprStr, null, tc);
     return (Boolean)expr.eval(tc);
@@ -552,7 +552,7 @@ public class ExpressionatorTest extends TestCase
   }
 
   static BigDecimal toBD(BigDecimal bd) {
-    return BuiltinOperators.normalize(bd);
+    return ValueSupport.normalize(bd);
   }
 
   private static class TestContext

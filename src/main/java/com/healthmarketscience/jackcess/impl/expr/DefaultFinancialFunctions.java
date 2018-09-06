@@ -65,7 +65,7 @@ public class DefaultFinancialFunctions
         result += calculateAnnuityPaymentPeriods(rate, pmt, fv, pmtType);
       }
 
-      return BuiltinOperators.toValue(result);
+      return ValueSupport.toValue(result);
     }
   });
 
@@ -92,7 +92,7 @@ public class DefaultFinancialFunctions
 
       double result = calculateFutureValue(rate, nper, pmt, pmtType);
 
-      return BuiltinOperators.toValue(result);
+      return ValueSupport.toValue(result);
     }
   });
 
@@ -119,7 +119,7 @@ public class DefaultFinancialFunctions
 
       double result = calculatePresentValue(rate, nper, pmt, pmtType);
 
-      return BuiltinOperators.toValue(result);
+      return ValueSupport.toValue(result);
     }
   });
 
@@ -146,7 +146,7 @@ public class DefaultFinancialFunctions
         result += calculateAnnuityPayment(rate, nper, fv, pmtType);
       }
 
-      return BuiltinOperators.toValue(result);
+      return ValueSupport.toValue(result);
     }
   });
 
@@ -177,7 +177,7 @@ public class DefaultFinancialFunctions
 
   //     double result = calculateInterestPayment(pmt, rate, per, pv, pmtType);
 
-  //     return BuiltinOperators.toValue(result);
+  //     return ValueSupport.toValue(result);
   //   }
   // });
 
@@ -209,7 +209,7 @@ public class DefaultFinancialFunctions
   //     double result = pmt - calculateInterestPayment(pmt, rate, per, pv,
   //                                                    pmtType);
 
-  //     return BuiltinOperators.toValue(result);
+  //     return ValueSupport.toValue(result);
   //   }
   // });
 
@@ -255,7 +255,7 @@ public class DefaultFinancialFunctions
   //       cost -= result;
   //     }
 
-  //     return BuiltinOperators.toValue(result);
+  //     return ValueSupport.toValue(result);
   //   }
   // });
 
@@ -269,7 +269,7 @@ public class DefaultFinancialFunctions
 
   //     double result = calculateStraightLineDepreciation(cost, salvage, life);
 
-  //     return BuiltinOperators.toValue(result);
+  //     return ValueSupport.toValue(result);
   //   }
   // });
 
@@ -285,7 +285,7 @@ public class DefaultFinancialFunctions
   //     double result = calculateSumOfYearsDepreciation(
   //         cost, salvage, life, period);
 
-  //     return BuiltinOperators.toValue(result);
+  //     return ValueSupport.toValue(result);
   //   }
   // });
 

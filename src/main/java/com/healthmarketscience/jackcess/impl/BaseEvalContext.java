@@ -33,8 +33,8 @@ import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.impl.expr.BuiltinOperators;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
+import com.healthmarketscience.jackcess.impl.expr.ValueSupport;
 
 /**
  *
@@ -132,28 +132,28 @@ public abstract class BaseEvalContext implements EvalContext
     try {
       val = ColumnImpl.toInternalValue(dType, val, getDatabase());
       if(val == null) {
-        return BuiltinOperators.NULL_VAL;
+        return ValueSupport.NULL_VAL;
       }
 
       Value.Type vType = toValueType(dType);
       switch(vType) {
       case STRING:
-        return BuiltinOperators.toValue(val.toString());
+        return ValueSupport.toValue(val.toString());
       case DATE:
       case TIME:
       case DATE_TIME:
-        return BuiltinOperators.toValue(this, vType, (Date)val);
+        return ValueSupport.toValue(this, vType, (Date)val);
       case LONG:
         Integer i = ((val instanceof Integer) ? (Integer)val :
                      ((Number)val).intValue());
-        return BuiltinOperators.toValue(i);
+        return ValueSupport.toValue(i);
       case DOUBLE:
         Double d = ((val instanceof Double) ? (Double)val :
                     ((Number)val).doubleValue());
-        return BuiltinOperators.toValue(d);
+        return ValueSupport.toValue(d);
       case BIG_DEC:
         BigDecimal bd = ColumnImpl.toBigDecimal(val, getDatabase());
-        return BuiltinOperators.toValue(bd);
+        return ValueSupport.toValue(bd);
       default:
         throw new RuntimeException("Unexpected type " + vType);
       }
