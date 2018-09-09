@@ -4,6 +4,19 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.2.0" date="2018-09-08"
+             description="Add support for expression evaluation">
+      <action dev="jahlborn" type="update">
+        Implement support for optional expression evaluation.  When enabled,
+        expressions will be evaluated for default values, calculated fields,
+        field validators, and record validators.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="31">
+        Default values will now be respected when expression evaluation is
+        enabled (currently disabled by default).
+      </action>
+    </release>
     <release version="2.1.12" date="2018-06-25">
       <action dev="jahlborn" type="update">
         Add some additional property keys and relevant enums for values.
