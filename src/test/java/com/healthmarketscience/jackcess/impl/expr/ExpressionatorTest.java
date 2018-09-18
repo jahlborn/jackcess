@@ -383,6 +383,10 @@ public class ExpressionatorTest extends TestCase
 
     assertEquals(37d, eval("=\"25\" + 12"));
     assertEquals(37d, eval("=12 + \"25\""));
+    assertEquals(37d, eval("=\" 25 \" + 12"));
+    assertEquals(37d, eval("=\" &h1A \" + 11"));
+    assertEquals(37d, eval("=\" &h1a \" + 11"));
+    assertEquals(37d, eval("=\" &O32 \" + 11"));
 
     evalFail(("=12 - \"foo\""), RuntimeException.class);
     evalFail(("=\"foo\" - 12"), RuntimeException.class);

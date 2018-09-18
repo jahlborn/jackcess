@@ -80,7 +80,21 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("-42", eval("=CStr(-42)"));
 
     assertEquals(-1, eval("=IsNull(Null)"));
+    assertEquals(0, eval("=IsNull(13)"));
     assertEquals(-1, eval("=IsDate(#01/02/2003#)"));
+    assertEquals(0, eval("=IsDate('foo')"));
+
+    assertEquals(0, eval("=IsNumeric(Null)"));
+    assertEquals(0, eval("=IsNumeric('foo')"));
+    assertEquals(0, eval("=IsNumeric(#01/02/2003#)"));
+    assertEquals(-1, eval("=IsNumeric(37)"));
+    assertEquals(-1, eval("=IsNumeric(' 37 ')"));
+    assertEquals(-1, eval("=IsNumeric(' -37.5e2 ')"));
+    assertEquals(-1, eval("=IsNumeric(' &H37 ')"));
+    assertEquals(0, eval("=IsNumeric(' &H37foo ')"));
+    assertEquals(0, eval("=IsNumeric(' &o39 ')"));
+    assertEquals(-1, eval("=IsNumeric(' &o36 ')"));
+    assertEquals(0, eval("=IsNumeric(' &o36.1 ')"));
 
     assertEquals(1, eval("=VarType(Null)"));
     assertEquals(8, eval("=VarType('blah')"));

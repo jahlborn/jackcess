@@ -178,7 +178,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>IsError</td><td></td></tr>
  * <tr class="TableRowColor"><td>IsMissing</td><td></td></tr>
  * <tr class="TableRowColor"><td>IsNull</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>IsNumeric</td><td></td></tr>
+ * <tr class="TableRowColor"><td>IsNumeric</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>IsObject</td><td></td></tr>
  * <tr class="TableRowColor"><td>TypeName</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>VarType</td><td>Y</td></tr>
@@ -216,7 +216,7 @@ limitations under the License.
  *
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
- * <tr class="TableRowColor"><td>Format</td><td></td></tr>
+ * <tr class="TableRowColor"><td>Format[$]</td><td></td></tr>
  * <tr class="TableRowColor"><td>InStr</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStrRev</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>LCase[$]</td><td>Y</td></tr>

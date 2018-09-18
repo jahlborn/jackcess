@@ -246,6 +246,26 @@ public class DefaultFunctions
     }
   });
 
+  public static final Function ISNUMERIC = registerFunc(new Func1("IsNumeric") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
+      if(param1.getType().isNumeric()) {
+        return ValueSupport.TRUE_VAL;
+      }
+
+      if(param1.getType() == Value.Type.STRING) {
+        try {
+          param1.getAsBigDecimal();
+          return ValueSupport.TRUE_VAL;
+        } catch(NumberFormatException ignored) {
+          // fall through to FALSE_VAL
+        }
+      }
+
+      return ValueSupport.FALSE_VAL;
+    }
+  });
+
   public static final Function VARTYPE = registerFunc(new Func1("VarType") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {

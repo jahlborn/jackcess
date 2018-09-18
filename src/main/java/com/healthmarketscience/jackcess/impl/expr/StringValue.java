@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -25,6 +27,12 @@ import java.math.BigDecimal;
 public class StringValue extends BaseValue
 {
   private static final Object NOT_A_NUMBER = new Object();
+
+  private static final char NUMBER_BASE_PREFIX = '&';
+  private static final Pattern OCTAL_PAT =
+    Pattern.compile(NUMBER_BASE_PREFIX + "[oO][0-7]+");
+  private static final Pattern HEX_PAT =
+    Pattern.compile(NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
 
   private final String _val;
   private Object _num;
@@ -75,13 +83,36 @@ public class StringValue extends BaseValue
     if(_num == null) {
       // see if it is parseable as a number
       try {
-        _num = ValueSupport.normalize(new BigDecimal(_val));
-        return (BigDecimal)_num;
+        // ignore extraneous whitespace whitespace and handle "&[hH]" or
+        // "&[oO]" prefix (only supports integers)
+        String tmpVal = _val.trim();
+        if(tmpVal.length() > 0) {
+
+          if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
+            // parse using standard numeric support
+            _num = ValueSupport.normalize(new BigDecimal(tmpVal));
+            return (BigDecimal)_num;
+          }
+
+          // parse as hex/octal symbolic value
+          if(HEX_PAT.matcher(tmpVal).matches()) {
+            return parseIntegerString(tmpVal, 16);
+          } else if(OCTAL_PAT.matcher(tmpVal).matches()) {
+            return parseIntegerString(tmpVal, 8);
+          }
+
+          // fall through to NaN
+        }
       } catch(NumberFormatException nfe) {
-        _num = NOT_A_NUMBER;
-        // fall through to throw...
+        // fall through to NaN...
       }
+      _num = NOT_A_NUMBER;
     }
     throw new NumberFormatException("Invalid number '" + _val + "'");
+  }
+
+  private BigDecimal parseIntegerString(String tmpVal, int radix) {
+    _num = new BigDecimal(new BigInteger(tmpVal.substring(2), radix));
+    return (BigDecimal)_num;
   }
 }
