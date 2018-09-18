@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="2.2.1" date="TBD">
+      <action dev="jahlborn" type="update">
+        Implement IsNumeric function.  Add support for hex/oct integer
+        strings.
+      </action>
+    </release>
     <release version="2.2.0" date="2018-09-08"
              description="Add support for expression evaluation">
       <action dev="jahlborn" type="update">
