@@ -243,6 +243,12 @@ public class DefaultFunctionsTest extends TestCase
 
     assertEquals(7, eval("=Weekday(#11/22/2003#)"));
     assertEquals(3, eval("=Weekday(#11/22/2003#, 5)"));
+    assertEquals(1, eval("=Weekday(#11/22/2003#, 7)"));
+
+    assertEquals("Sunday", eval("=WeekdayName(1)"));
+    assertEquals("Sun", eval("=WeekdayName(1,True)"));
+    assertEquals("Tuesday", eval("=WeekdayName(1,False,3)"));
+    assertEquals("Thu", eval("=WeekdayName(3,True,3)"));
 
     assertTrue(((String)eval("=CStr(Date())"))
                  .matches("\\d{1,2}/\\d{1,2}/\\d{4}"));

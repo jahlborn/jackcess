@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
+import java.text.DateFormatSymbols;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -218,26 +219,40 @@ public class DefaultDateFunctions
       if(param1 == null) {
         return null;
       }
-      int day = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
+      int dayOfWeek = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
 
-      // vbSunday (default)
-      int firstDay = 1;
-      if(params.length > 1) {
-        firstDay = params[1].getAsLongInt();
-        if(firstDay == 0) {
-          // 0 == vbUseSystem, so we will use the default "sunday"
-          firstDay = 1;
-        }
-      }
+      int firstDay = getFirstDayParam(params, 1);
 
-      // shift all the values to 0 based to calculate the correct value, then
-      // back to 1 based to return the result
-      day = (((day - 1) - (firstDay - 1) + 7) % 7) + 1;
-
-      return ValueSupport.toValue(day);
+      return ValueSupport.toValue(dayOfWeekToWeekDay(dayOfWeek, firstDay));
     }
   });
 
+  public static final Function WEEKDAYNAME = registerFunc(new FuncVar("WeekdayName", 1, 3) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      if(param1 == null) {
+        return null;
+      }
+      int weekday = param1.getAsLongInt();
+
+      boolean abbreviate = false;
+      if(params.length > 1) {
+        abbreviate = params[1].getAsBoolean();
+      }
+
+      int firstDay = getFirstDayParam(params, 2);
+
+      int dayOfWeek = weekDayToDayOfWeek(weekday, firstDay);
+
+      DateFormatSymbols syms = ctx.createDateFormat(
+          ctx.getTemporalConfig().getDateFormat()).getDateFormatSymbols();
+      String[] weekdayNames = (abbreviate ?
+                               syms.getShortWeekdays() : syms.getWeekdays());
+      // note, the array is 1 based
+      return ValueSupport.toValue(weekdayNames[dayOfWeek]);
+    }
+  });
 
   private static int nonNullToCalendarField(EvalContext ctx, Value param,
                                             int field) {
@@ -290,7 +305,8 @@ public class DefaultDateFunctions
     boolean hasDate = (dateOnly(dd) != 0.0d);
     boolean hasTime = (timeOnly(dd) != 0.0d);
 
-    Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
+    Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME :
+                                  Value.Type.DATE) :
                        Value.Type.TIME);
     DateFormat fmt = ValueSupport.getDateFormatForType(ctx, type);
     return ValueSupport.toValue(type, dd, fmt);
@@ -316,5 +332,30 @@ public class DefaultDateFunctions
 
   private static double currentTimeDouble(DateFormat fmt) {
     return ColumnImpl.toDateDouble(System.currentTimeMillis(), fmt.getCalendar());
+  }
+
+  private static int dayOfWeekToWeekDay(int day, int firstDay) {
+    // shift all the values to 0 based to calculate the correct value, then
+    // back to 1 based to return the result
+    return (((day - 1) - (firstDay - 1) + 7) % 7) + 1;
+  }
+
+  private static int weekDayToDayOfWeek(int weekday, int firstDay) {
+    // shift all the values to 0 based to calculate the correct value, then
+    // back to 1 based to return the result
+    return (((firstDay - 1) + (weekday - 1)) % 7) + 1;
+  }
+
+  private static int getFirstDayParam(Value[] params, int idx) {
+    // vbSunday (default)
+    int firstDay = 1;
+    if(params.length > idx) {
+      firstDay = params[idx].getAsLongInt();
+      if(firstDay == 0) {
+        // 0 == vbUseSystem, so we will use the default "sunday"
+        firstDay = 1;
+      }
+    }
+    return firstDay;
   }
 }
