@@ -90,6 +90,7 @@ public class StringValue extends BaseValue
 
           if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
             // parse using standard numeric support
+            // FIXME, this should handle grouping separator, but needs ctx
             _num = ValueSupport.normalize(new BigDecimal(tmpVal));
             return (BigDecimal)_num;
           }

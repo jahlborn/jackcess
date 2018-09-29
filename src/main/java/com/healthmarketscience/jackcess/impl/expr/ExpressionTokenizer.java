@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +33,10 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
-import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.ParseException;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
+import com.healthmarketscience.jackcess.expr.Value;
 
 
 /**
@@ -290,9 +292,33 @@ class ExpressionTokenizer
 
   private static Token parseDateLiteral(ExprBuf buf)
   {
-    TemporalConfig cfg = buf.getTemporalConfig();
     String dateStr = parseDateLiteralString(buf);
 
+    TemporalConfig.Type type = determineDateType(
+        dateStr, buf.getContext());
+    if(type == null) {
+      throw new ParseException("Invalid date/time literal " + dateStr +
+                               " " + buf);
+    }
+
+    // note that although we may parse in the time "24" format, we will
+    // display as the default time format
+    DateFormat parseDf = buf.getDateTimeFormat(type);
+    DateFormat df = buf.getDateTimeFormat(type.getDefaultType());
+
+    try {
+      return new Token(TokenType.LITERAL, parseComplete(parseDf, dateStr),
+                       dateStr, type.getValueType(), df);
+    } catch(java.text.ParseException pe) {
+      throw new ParseException(
+          "Invalid date/time literal " + dateStr + " " + buf, pe);
+    }
+  }
+
+  static TemporalConfig.Type determineDateType(
+      String dateStr, LocaleContext ctx)
+  {
+    TemporalConfig cfg = ctx.getTemporalConfig();
     boolean hasDate = (dateStr.indexOf(cfg.getDateSeparator()) >= 0);
     boolean hasTime = (dateStr.indexOf(cfg.getTimeSeparator()) >= 0);
     boolean hasAmPm = false;
@@ -306,29 +332,65 @@ class ExpressionTokenizer
                                         PM_SUFFIX, 0, AMPM_SUFFIX_LEN)));
     }
 
-    DateFormat sdf = null;
-    Value.Type valType = null;
-    if(hasDate && hasTime) {
-      sdf = (hasAmPm ? buf.getDateTimeFormat12() : buf.getDateTimeFormat24());
-      valType = Value.Type.DATE_TIME;
-    } else if(hasDate) {
-      sdf = buf.getDateFormat();
-      valType = Value.Type.DATE;
+    if(hasDate) {
+      if(hasTime) {
+        return (hasAmPm ? TemporalConfig.Type.DATE_TIME_12 :
+                TemporalConfig.Type.DATE_TIME_24);
+      }
+      return TemporalConfig.Type.DATE;
     } else if(hasTime) {
-      sdf = (hasAmPm ? buf.getTimeFormat12() : buf.getTimeFormat24());
-      valType = Value.Type.TIME;
-    } else {
-      throw new ParseException("Invalid date time literal " + dateStr +
-                               " " + buf);
+      return (hasAmPm ? TemporalConfig.Type.TIME_12 :
+              TemporalConfig.Type.TIME_24);
+    }
+    return null;
+  }
+
+  static DateFormat createParseDateFormat(TemporalConfig.Type type,
+                                          LocaleContext ctx)
+  {
+    TemporalConfig cfg = ctx.getTemporalConfig();
+    DateFormat df = ctx.createDateFormat(cfg.getDateTimeFormat(type));
+
+    TemporalConfig.Type parseType = null;
+    switch(type) {
+    case TIME:
+      parseType = TemporalConfig.Type.DATE_TIME;
+      break;
+    case TIME_12:
+      parseType = TemporalConfig.Type.DATE_TIME_12;
+      break;
+    case TIME_24:
+      parseType = TemporalConfig.Type.DATE_TIME_24;
+      break;
+    default:
     }
 
-    try {
-      return new Token(TokenType.LITERAL, sdf.parse(dateStr), dateStr, valType,
-                       sdf);
-    } catch(java.text.ParseException pe) {
-      throw new ParseException(
-          "Invalid date time literal " + dateStr + " " + buf, pe);
+    if(parseType != null) {
+      // we need to use a special DateFormat impl which handles parsing
+      // separately from formatting
+      String baseDate = getBaseDatePrefix(ctx);
+      DateFormat parseDf = ctx.createDateFormat(
+          cfg.getDateTimeFormat(parseType));
+      df = new TimeFormat(parseDf, df, baseDate);
     }
+
+    return df;
+  }
+
+  private static String getBaseDatePrefix(LocaleContext ctx) {
+    String dateFmt = ctx.getTemporalConfig().getDateFormat();
+    String baseDate = BASE_DATE;
+    if(!BASE_DATE_FMT.equals(dateFmt)) {
+      try {
+        // need to reformat the base date to the relevant date format
+        DateFormat parseDf = ctx.createDateFormat(BASE_DATE_FMT);
+        DateFormat df = ctx.createDateFormat(dateFmt);
+        baseDate = df.format(parseComplete(parseDf, baseDate));
+      } catch(Exception e) {
+        throw new ParseException("Could not parse base date", e);
+      }
+    }
+    return baseDate + " ";
   }
 
   private static Token maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
@@ -426,17 +488,29 @@ class ExpressionTokenizer
     return new AbstractMap.SimpleImmutableEntry<K,V>(a, b);
   }
 
+  static Date parseComplete(DateFormat df, String str)
+    throws java.text.ParseException
+  {
+    // the java parsers will parse "successfully" even if there is leftover
+    // information.  we only want to consider a parse operation successful if
+    // it parses the entire string (ignoring surrounding whitespace)
+    str = str.trim();
+    ParsePosition pp = new ParsePosition(0);
+    Object d = df.parse(str, pp);
+    if(pp.getIndex() < str.length()) {
+      throw new java.text.ParseException("Failed parsing '" + str + "'",
+                                         pp.getIndex());
+    }
+    return (Date)d;
+  }
+
   private static final class ExprBuf
   {
     private final String _str;
     private final ParseContext _ctx;
     private int _pos;
-    private DateFormat _dateFmt;
-    private DateFormat _timeFmt12;
-    private DateFormat _dateTimeFmt12;
-    private DateFormat _timeFmt24;
-    private DateFormat _dateTimeFmt24;
-    private String _baseDate;
+    private final Map<TemporalConfig.Type,DateFormat> _dateTimeFmts =
+      new EnumMap<TemporalConfig.Type,DateFormat>(TemporalConfig.Type.class);
     private final StringBuilder _scratch = new StringBuilder();
 
     private ExprBuf(String str, ParseContext ctx) {
@@ -484,69 +558,17 @@ class ExpressionTokenizer
       return _scratch;
     }
 
-    public TemporalConfig getTemporalConfig() {
-      return _ctx.getTemporalConfig();
+    public ParseContext getContext() {
+      return _ctx;
     }
 
-    public DateFormat getDateFormat() {
-      if(_dateFmt == null) {
-        _dateFmt = _ctx.createDateFormat(getTemporalConfig().getDateFormat());
+    public DateFormat getDateTimeFormat(TemporalConfig.Type type) {
+      DateFormat df = _dateTimeFmts.get(type);
+      if(df == null) {
+        df = createParseDateFormat(type, _ctx);
+        _dateTimeFmts.put(type, df);
       }
-      return _dateFmt;
-    }
-
-    public DateFormat getTimeFormat12() {
-      if(_timeFmt12 == null) {
-        _timeFmt12 = new TimeFormat(
-            getDateTimeFormat12(), _ctx.createDateFormat(
-                getTemporalConfig().getTimeFormat12()),
-            getBaseDate());
-      }
-      return _timeFmt12;
-    }
-
-    public DateFormat getDateTimeFormat12() {
-      if(_dateTimeFmt12 == null) {
-        _dateTimeFmt12 = _ctx.createDateFormat(
-            getTemporalConfig().getDateTimeFormat12());
-      }
-      return _dateTimeFmt12;
-    }
-
-    public DateFormat getTimeFormat24() {
-      if(_timeFmt24 == null) {
-        _timeFmt24 = new TimeFormat(
-            getDateTimeFormat24(), _ctx.createDateFormat(
-                getTemporalConfig().getTimeFormat24()),
-            getBaseDate());
-      }
-      return _timeFmt24;
-    }
-
-    public DateFormat getDateTimeFormat24() {
-      if(_dateTimeFmt24 == null) {
-        _dateTimeFmt24 = _ctx.createDateFormat(
-            getTemporalConfig().getDateTimeFormat24());
-      }
-      return _dateTimeFmt24;
-    }
-
-    private String getBaseDate() {
-      if(_baseDate == null) {
-        String dateFmt = getTemporalConfig().getDateFormat();
-        String baseDate = BASE_DATE;
-        if(!BASE_DATE_FMT.equals(dateFmt)) {
-          try {
-            // need to reformat the base date to the relevant date format
-            DateFormat df = _ctx.createDateFormat(BASE_DATE_FMT);
-            baseDate = getDateFormat().format(df.parse(baseDate));
-          } catch(Exception e) {
-            throw new ParseException("Could not parse base date", e);
-          }
-        }
-        _baseDate = baseDate + " ";
-      }
-      return _baseDate;
+      return df;
     }
 
     @Override
@@ -618,6 +640,10 @@ class ExpressionTokenizer
     }
   }
 
+  /**
+   * Special date/time format which will parse time-only strings "correctly"
+   * according to how access handles time-only values.
+   */
   private static final class TimeFormat extends DateFormat
   {
     private static final long serialVersionUID = 0L;

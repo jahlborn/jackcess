@@ -16,7 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
@@ -86,6 +88,26 @@ public class PropertyExpressionTest extends TestCase
                 "data2", 42));
 
       assertTable(expectedRows, t);
+
+      setProp(t, "data2", PropertyMap.REQUIRED_PROP, true);
+
+      t.addRow(Column.AUTO_NUMBER, "blah", 13);
+      t.addRow(Column.AUTO_NUMBER, "blah", null);
+
+      expectedRows = new ArrayList<Row>(expectedRows);
+      expectedRows.add(
+          createExpectedRow(
+              "id", 4,
+              "data1", "blah",
+              "data2", 13));
+      expectedRows.add(
+          createExpectedRow(
+              "id", 5,
+              "data1", "blah",
+              "data2", 42));
+
+      assertTable(expectedRows, t);
+
 
       db.close();
     }
@@ -274,7 +296,8 @@ public class PropertyExpressionTest extends TestCase
   {
     TemporalConfig tempConf = new TemporalConfig("yyyy/M/d",
                                                  "hh.mm.ss a",
-                                                 "HH.mm.ss", '/', '.');
+                                                 "HH.mm.ss", '/', '.',
+                                                 Locale.US);
 
     FunctionLookup lookup = new FunctionLookup() {
       public Function getFunction(String name) {
@@ -327,7 +350,7 @@ public class PropertyExpressionTest extends TestCase
   }
 
   private static void setProp(Table t, String colName, String propName,
-                              String propVal) throws Exception {
+                              Object propVal) throws Exception {
       PropertyMap props = t.getColumn(colName).getProperties();
       if(propVal != null) {
         props.put(propName, propVal);

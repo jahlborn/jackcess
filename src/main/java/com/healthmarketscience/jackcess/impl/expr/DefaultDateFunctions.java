@@ -26,6 +26,7 @@ import java.util.Date;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
@@ -204,6 +205,27 @@ public class DefaultDateFunctions
     }
   });
 
+  public static final Function MONTHNAME = registerFunc(new FuncVar("MonthName", 1, 2) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      if(param1 == null) {
+        return null;
+      }
+      // convert from 1 based to 0 based value
+      int month = param1.getAsLongInt() - 1;
+
+      boolean abbreviate = getOptionalBooleanParam(params, 1);
+
+      DateFormatSymbols syms = ctx.createDateFormat(
+          ctx.getTemporalConfig().getDateFormat()).getDateFormatSymbols();
+      String[] monthNames = (abbreviate ?
+                             syms.getShortMonths() : syms.getMonths());
+      // note, the array is 1 based
+      return ValueSupport.toValue(monthNames[month]);
+    }
+  });
+
   public static final Function DAY = registerFunc(new Func1NullIsNull("Day") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -236,10 +258,7 @@ public class DefaultDateFunctions
       }
       int weekday = param1.getAsLongInt();
 
-      boolean abbreviate = false;
-      if(params.length > 1) {
-        abbreviate = params[1].getAsBoolean();
-      }
+      boolean abbreviate = getOptionalBooleanParam(params, 1);
 
       int firstDay = getFirstDayParam(params, 2);
 
@@ -280,14 +299,31 @@ public class DefaultDateFunctions
     }
 
     if(type == Value.Type.STRING) {
-      // see if we can coerce to date/time
 
-      // FIXME use ExpressionatorTokenizer to detect explicit date/time format
+      // see if we can coerce to date/time or double
+      String valStr = param.getAsString();
+      TemporalConfig.Type valTempType = ExpressionTokenizer.determineDateType(
+          valStr, ctx);
 
+      if(valTempType != null) {
+
+        try {
+          DateFormat parseDf = ExpressionTokenizer.createParseDateFormat(
+              valTempType, ctx);
+          Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
+          return ValueSupport.toValue(ctx, valTempType.getValueType(),
+                                      dateVal);
+        } catch(java.text.ParseException pe) {
+          // not a valid date string, not a date/time
+          return null;
+        }
+      }
+
+      // see if string can be coerced to number
       try {
         return numberToDateValue(ctx, param.getAsDouble());
       } catch(NumberFormatException ignored) {
-        // not a number
+        // not a number, not a date/time
         return null;
       }
     }
@@ -357,5 +393,12 @@ public class DefaultDateFunctions
       }
     }
     return firstDay;
+  }
+
+  private static boolean getOptionalBooleanParam(Value[] params, int idx) {
+    if(params.length > idx) {
+      return params[idx].getAsBoolean();
+    }
+    return false;
   }
 }

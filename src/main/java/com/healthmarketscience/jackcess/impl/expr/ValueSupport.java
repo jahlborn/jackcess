@@ -20,7 +20,7 @@ import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.util.Date;
 
-import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
@@ -90,7 +90,7 @@ public class ValueSupport
                                       dd, fmt.getCalendar())), fmt);
   }
 
-  public static Value toValue(EvalContext ctx, Value.Type type, Date d) {
+  public static Value toValue(LocaleContext ctx, Value.Type type, Date d) {
     return toValue(type, d, getDateFormatForType(ctx, type));
   }
 
@@ -107,7 +107,7 @@ public class ValueSupport
     }
   }
 
-  static Value toDateValue(EvalContext ctx, Value.Type type, double v,
+  static Value toDateValue(LocaleContext ctx, Value.Type type, double v,
                            Value param1, Value param2)
   {
     DateFormat fmt = null;
@@ -124,7 +124,7 @@ public class ValueSupport
     return toValue(type, d, fmt);
   }
 
-  static DateFormat getDateFormatForType(EvalContext ctx, Value.Type type) {
+  static DateFormat getDateFormatForType(LocaleContext ctx, Value.Type type) {
       String fmtStr = null;
       switch(type) {
       case DATE:

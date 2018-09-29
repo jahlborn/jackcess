@@ -138,7 +138,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Hour</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Minute</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Month</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>MonthName</td><td></td></tr>
+ * <tr class="TableRowColor"><td>MonthName</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Now</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Second</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Time</td><td>Y</td></tr>
@@ -146,7 +146,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>TimeSerial</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>TimeValue</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Weekday</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>WeekdayName</td><td></td></tr>
+ * <tr class="TableRowColor"><td>WeekdayName</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Year</td><td>Y</td></tr>
  * </table>
  *

@@ -232,9 +232,18 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("1/2/2003", eval("=CStr(DateValue(#01/02/2003 7:00:00 AM#))"));
     assertEquals("7:00:00 AM", eval("=CStr(TimeValue(#01/02/2003 7:00:00 AM#))"));
 
+    assertEquals("1:10:00 PM", eval("=CStr(#13:10:00#)"));
+
     assertEquals(2003, eval("=Year(#01/02/2003 7:00:00 AM#)"));
     assertEquals(1, eval("=Month(#01/02/2003 7:00:00 AM#)"));
     assertEquals(2, eval("=Day(#01/02/2003 7:00:00 AM#)"));
+
+    assertEquals(2003, eval("=Year('01/02/2003 7:00:00 AM')"));
+    assertEquals(1899, eval("=Year(#7:00:00 AM#)"));
+
+    assertEquals("January", eval("=MonthName(1)"));
+    assertEquals("Feb", eval("=MonthName(2,True)"));
+    assertEquals("March", eval("=MonthName(3,False)"));
 
     assertEquals(7, eval("=Hour(#01/02/2003 7:10:27 AM#)"));
     assertEquals(19, eval("=Hour(#01/02/2003 7:10:27 PM#)"));

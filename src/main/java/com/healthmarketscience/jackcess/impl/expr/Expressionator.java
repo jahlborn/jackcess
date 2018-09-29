@@ -41,6 +41,7 @@ import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -65,7 +66,7 @@ public class Expressionator
     DEFAULT_VALUE, EXPRESSION, FIELD_VALIDATOR, RECORD_VALIDATOR;
   }
 
-  public interface ParseContext {
+  public interface ParseContext extends LocaleContext {
     public TemporalConfig getTemporalConfig();
     public SimpleDateFormat createDateFormat(String formatStr);
     public FunctionLookup getFunctionLookup();
