@@ -57,7 +57,7 @@ class ExpressionTokenizer
   private static final String AM_SUFFIX = " am";
   private static final String PM_SUFFIX = " pm";
   // access times are based on this date (not the UTC base)
-  private static final String BASE_DATE = "12/30/1899 ";
+  private static final String BASE_DATE = "12/30/1899";
   private static final String BASE_DATE_FMT = "M/d/yyyy";
 
   private static final byte IS_OP_FLAG =     0x01;
@@ -303,12 +303,11 @@ class ExpressionTokenizer
 
     // note that although we may parse in the time "24" format, we will
     // display as the default time format
-    DateFormat parseDf = buf.getDateTimeFormat(type);
-    DateFormat df = buf.getDateTimeFormat(type.getDefaultType());
+    DateFormat parseDf = buf.getParseDateTimeFormat(type);
 
     try {
       return new Token(TokenType.LITERAL, parseComplete(parseDf, dateStr),
-                       dateStr, type.getValueType(), df);
+                       dateStr, type.getValueType());
     } catch(java.text.ParseException pe) {
       throw new ParseException(
           "Invalid date/time literal " + dateStr + " " + buf, pe);
@@ -345,36 +344,34 @@ class ExpressionTokenizer
     return null;
   }
 
-  static DateFormat createParseDateFormat(TemporalConfig.Type type,
-                                          LocaleContext ctx)
+  static DateFormat createParseDateTimeFormat(TemporalConfig.Type type,
+                                              LocaleContext ctx)
   {
-    TemporalConfig cfg = ctx.getTemporalConfig();
-    DateFormat df = ctx.createDateFormat(cfg.getDateTimeFormat(type));
-
-    TemporalConfig.Type parseType = null;
     switch(type) {
     case TIME:
-      parseType = TemporalConfig.Type.DATE_TIME;
-      break;
+      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME, ctx);
     case TIME_12:
-      parseType = TemporalConfig.Type.DATE_TIME_12;
-      break;
+      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME_12, ctx);
     case TIME_24:
-      parseType = TemporalConfig.Type.DATE_TIME_24;
-      break;
+      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME_24, ctx);
     default:
+      // use normal formatter
     }
 
-    if(parseType != null) {
-      // we need to use a special DateFormat impl which handles parsing
-      // separately from formatting
-      String baseDate = getBaseDatePrefix(ctx);
-      DateFormat parseDf = ctx.createDateFormat(
-          cfg.getDateTimeFormat(parseType));
-      df = new TimeFormat(parseDf, df, baseDate);
-    }
+    TemporalConfig cfg = ctx.getTemporalConfig();
+    return ctx.createDateFormat(cfg.getDateTimeFormat(type));
+  }
 
-    return df;
+  private static DateFormat createParseTimeFormat(TemporalConfig.Type parseType,
+                                                  LocaleContext ctx)
+  {
+    TemporalConfig cfg = ctx.getTemporalConfig();
+    // we need to use a special DateFormat impl which manipulates the parsed
+    // time-only value so it becomes the right Date value
+    String baseDate = getBaseDatePrefix(ctx);
+    DateFormat parseDf = ctx.createDateFormat(
+        cfg.getDateTimeFormat(parseType));
+    return new ParseTimeFormat(parseDf, baseDate);
   }
 
   private static String getBaseDatePrefix(LocaleContext ctx) {
@@ -562,10 +559,10 @@ class ExpressionTokenizer
       return _ctx;
     }
 
-    public DateFormat getDateTimeFormat(TemporalConfig.Type type) {
+    public DateFormat getParseDateTimeFormat(TemporalConfig.Type type) {
       DateFormat df = _dateTimeFmts.get(type);
       if(df == null) {
-        df = createParseDateFormat(type, _ctx);
+        df = createParseDateTimeFormat(type, _ctx);
         _dateTimeFmts.put(type, df);
       }
       return df;
@@ -584,27 +581,20 @@ class ExpressionTokenizer
     private final Object _val;
     private final String _valStr;
     private final Value.Type _valType;
-    private final DateFormat _sdf;
 
     private Token(TokenType type, String val) {
       this(type, val, val);
     }
 
     private Token(TokenType type, Object val, String valStr) {
-      this(type, val, valStr, null, null);
+      this(type, val, valStr, null);
     }
 
     private Token(TokenType type, Object val, String valStr, Value.Type valType) {
-      this(type, val, valStr, valType, null);
-    }
-
-    private Token(TokenType type, Object val, String valStr, Value.Type valType,
-                  DateFormat sdf) {
       _type = type;
       _val = ((val != null) ? val : valStr);
       _valStr = valStr;
       _valType = valType;
-      _sdf = sdf;
     }
 
     public TokenType getType() {
@@ -621,10 +611,6 @@ class ExpressionTokenizer
 
     public Value.Type getValueType() {
       return _valType;
-    }
-
-    public DateFormat getDateFormat() {
-      return _sdf;
     }
 
     @Override
@@ -644,25 +630,22 @@ class ExpressionTokenizer
    * Special date/time format which will parse time-only strings "correctly"
    * according to how access handles time-only values.
    */
-  private static final class TimeFormat extends DateFormat
+  private static final class ParseTimeFormat extends DateFormat
   {
     private static final long serialVersionUID = 0L;
 
     private final DateFormat _parseDelegate;
-    private final DateFormat _fmtDelegate;
     private final String _baseDate;
 
-    private TimeFormat(DateFormat parseDelegate, DateFormat fmtDelegate,
-                       String baseDate)
+    private ParseTimeFormat(DateFormat parseDelegate, String baseDate)
     {
       _parseDelegate = parseDelegate;
-      _fmtDelegate = fmtDelegate;
       _baseDate = baseDate;
     }
 
     @Override
     public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition fieldPosition) {
-      return _fmtDelegate.format(date, toAppendTo, fieldPosition);
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -674,12 +657,12 @@ class ExpressionTokenizer
 
     @Override
     public Calendar getCalendar() {
-      return _fmtDelegate.getCalendar();
+      return _parseDelegate.getCalendar();
     }
 
     @Override
     public TimeZone getTimeZone() {
-      return _fmtDelegate.getTimeZone();
+      return _parseDelegate.getTimeZone();
     }
   }
 

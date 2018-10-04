@@ -20,6 +20,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.expr.LocaleContext;
+import org.apache.commons.lang.CharUtils;
+import org.apache.commons.lang.StringUtils;
+
 /**
  *
  * @author James Ahlborn
@@ -51,32 +55,32 @@ public class StringValue extends BaseValue
   }
 
   @Override
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     // ms access seems to treat strings as "true"
     return true;
   }
 
   @Override
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     return _val;
   }
 
   @Override
-  public Integer getAsLongInt() {
-    return roundToLongInt();
+  public Integer getAsLongInt(LocaleContext ctx) {
+    return roundToLongInt(ctx);
   }
 
   @Override
-  public Double getAsDouble() {
-    return getNumber().doubleValue();
+  public Double getAsDouble(LocaleContext ctx) {
+    return getNumber(ctx).doubleValue();
   }
 
   @Override
-  public BigDecimal getAsBigDecimal() {
-    return getNumber();
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
+    return getNumber(ctx);
   }
 
-  protected BigDecimal getNumber() {
+  protected BigDecimal getNumber(LocaleContext ctx) {
     if(_num instanceof BigDecimal) {
       return (BigDecimal)_num;
     }
@@ -89,8 +93,11 @@ public class StringValue extends BaseValue
         if(tmpVal.length() > 0) {
 
           if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
-            // parse using standard numeric support
-            // FIXME, this should handle grouping separator, but needs ctx
+            // parse using standard numeric support, after discarding any
+            // grouping separators
+            char groupSepChar = ctx.getNumericConfig().getDecimalFormatSymbols()
+              .getGroupingSeparator();
+            tmpVal = StringUtils.remove(tmpVal, groupSepChar);
             _num = ValueSupport.normalize(new BigDecimal(tmpVal));
             return (BigDecimal)_num;
           }

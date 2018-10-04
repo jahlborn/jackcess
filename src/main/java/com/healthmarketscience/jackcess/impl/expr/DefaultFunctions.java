@@ -60,7 +60,7 @@ public class DefaultFunctions
     protected Value eval3(EvalContext ctx,
                           Value param1, Value param2, Value param3) {
       // null is false
-      return ((!param1.isNull() && param1.getAsBoolean()) ? param2 : param3);
+      return ((!param1.isNull() && param1.getAsBoolean(ctx)) ? param2 : param3);
     }
   });
 
@@ -68,10 +68,10 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       if((param1.getType() == Value.Type.STRING) &&
-         (param1.getAsString().length() == 0)) {
+         (param1.getAsString(ctx).length() == 0)) {
         return ValueSupport.ZERO_VAL;
       }
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       return ValueSupport.toValue(Integer.toHexString(lv).toUpperCase());
     }
   });
@@ -97,7 +97,7 @@ public class DefaultFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
-      int idx = param1.getAsLongInt();
+      int idx = param1.getAsLongInt(ctx);
       if((idx < 1) || (idx >= params.length)) {
         return ValueSupport.NULL_VAL;
       }
@@ -112,7 +112,7 @@ public class DefaultFunctions
         throw new EvalException("Odd number of parameters");
       }
       for(int i = 0; i < params.length; i+=2) {
-        if(params[i].getAsBoolean()) {
+        if(params[i].getAsBoolean(ctx)) {
           return params[i + 1];
         }
       }
@@ -124,10 +124,10 @@ public class DefaultFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       if((param1.getType() == Value.Type.STRING) &&
-         (param1.getAsString().length() == 0)) {
+         (param1.getAsString(ctx).length() == 0)) {
         return ValueSupport.ZERO_VAL;
       }
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       return ValueSupport.toValue(Integer.toOctalString(lv));
     }
   });
@@ -135,7 +135,7 @@ public class DefaultFunctions
   public static final Function CBOOL = registerFunc(new Func1("CBool") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      boolean b = param1.getAsBoolean();
+      boolean b = param1.getAsBoolean(ctx);
       return ValueSupport.toValue(b);
     }
   });
@@ -143,7 +143,7 @@ public class DefaultFunctions
   public static final Function CBYTE = registerFunc(new Func1("CByte") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       if((lv < 0) || (lv > 255)) {
         throw new EvalException("Byte code '" + lv + "' out of range ");
       }
@@ -154,7 +154,7 @@ public class DefaultFunctions
   public static final Function CCUR = registerFunc(new Func1("CCur") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      BigDecimal bd = param1.getAsBigDecimal();
+      BigDecimal bd = param1.getAsBigDecimal(ctx);
       bd = bd.setScale(4, NumberFormatter.ROUND_MODE);
       return ValueSupport.toValue(bd);
     }
@@ -173,7 +173,7 @@ public class DefaultFunctions
   public static final Function CDBL = registerFunc(new Func1("CDbl") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Double dv = param1.getAsDouble();
+      Double dv = param1.getAsDouble(ctx);
       return ValueSupport.toValue(dv);
     }
   });
@@ -181,7 +181,7 @@ public class DefaultFunctions
   public static final Function CDEC = registerFunc(new Func1("CDec") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      BigDecimal bd = param1.getAsBigDecimal();
+      BigDecimal bd = param1.getAsBigDecimal(ctx);
       return ValueSupport.toValue(bd);
     }
   });
@@ -189,7 +189,7 @@ public class DefaultFunctions
   public static final Function CINT = registerFunc(new Func1("CInt") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       if((lv < Short.MIN_VALUE) || (lv > Short.MAX_VALUE)) {
         throw new EvalException("Int value '" + lv + "' out of range ");
       }
@@ -200,7 +200,7 @@ public class DefaultFunctions
   public static final Function CLNG = registerFunc(new Func1("CLng") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       return ValueSupport.toValue(lv);
     }
   });
@@ -208,7 +208,7 @@ public class DefaultFunctions
   public static final Function CSNG = registerFunc(new Func1("CSng") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Double dv = param1.getAsDouble();
+      Double dv = param1.getAsDouble(ctx);
       if((dv < Float.MIN_VALUE) || (dv > Float.MAX_VALUE)) {
         throw new EvalException("Single value '" + dv + "' out of range ");
       }
@@ -219,7 +219,7 @@ public class DefaultFunctions
   public static final Function CSTR = registerFunc(new Func1("CStr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(param1.getAsString());
+      return ValueSupport.toValue(param1.getAsString(ctx));
     }
   });
 
@@ -255,7 +255,7 @@ public class DefaultFunctions
 
       if(param1.getType() == Value.Type.STRING) {
         try {
-          param1.getAsBigDecimal();
+          param1.getAsBigDecimal(ctx);
           return ValueSupport.TRUE_VAL;
         } catch(NumberFormatException ignored) {
           // fall through to FALSE_VAL

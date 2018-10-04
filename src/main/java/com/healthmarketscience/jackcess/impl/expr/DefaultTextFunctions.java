@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
@@ -41,7 +42,7 @@ public class DefaultTextFunctions
   public static final Function ASC = registerFunc(new Func1("Asc") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       int len = str.length();
       if(len == 0) {
         throw new EvalException("No characters in string");
@@ -58,7 +59,7 @@ public class DefaultTextFunctions
   public static final Function ASCW = registerFunc(new Func1("AscW") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       int len = str.length();
       if(len == 0) {
         throw new EvalException("No characters in string");
@@ -71,7 +72,7 @@ public class DefaultTextFunctions
   public static final Function CHR = registerStringFunc(new Func1NullIsNull("Chr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       if((lv < 0) || (lv > 255)) {
         throw new EvalException("Character code '" + lv +
                                         "' out of range ");
@@ -84,7 +85,7 @@ public class DefaultTextFunctions
   public static final Function CHRW = registerStringFunc(new Func1NullIsNull("ChrW") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       char[] cs = Character.toChars(lv);
       return ValueSupport.toValue(new String(cs));
     }
@@ -93,7 +94,7 @@ public class DefaultTextFunctions
   public static final Function STR = registerStringFunc(new Func1NullIsNull("Str") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      BigDecimal bd = param1.getAsBigDecimal();
+      BigDecimal bd = param1.getAsBigDecimal(ctx);
       String str = bd.toPlainString();
       if(bd.compareTo(BigDecimal.ZERO) >= 0) {
         str = " " + str;
@@ -109,14 +110,14 @@ public class DefaultTextFunctions
       int start = 0;
       if(params.length > 2) {
         // 1 based offsets
-        start = params[0].getAsLongInt() - 1;
+        start = params[0].getAsLongInt(ctx) - 1;
         ++idx;
       }
       Value param1 = params[idx++];
       if(param1.isNull()) {
         return param1;
       }
-      String s1 = param1.getAsString();
+      String s1 = param1.getAsString(ctx);
       int s1Len = s1.length();
       if(s1Len == 0) {
         return ValueSupport.ZERO_VAL;
@@ -125,7 +126,7 @@ public class DefaultTextFunctions
       if(param2.isNull()) {
         return param2;
       }
-      String s2 = param2.getAsString();
+      String s2 = param2.getAsString(ctx);
       int s2Len = s2.length();
       if(s2Len == 0) {
         // 1 based offsets
@@ -133,7 +134,7 @@ public class DefaultTextFunctions
       }
       boolean ignoreCase = true;
       if(params.length > 3) {
-        ignoreCase = doIgnoreCase(params[3]);
+        ignoreCase = doIgnoreCase(ctx, params[3]);
       }
       int end = s1Len - s2Len;
       while(start < end) {
@@ -154,7 +155,7 @@ public class DefaultTextFunctions
       if(param1.isNull()) {
         return param1;
       }
-      String s1 = param1.getAsString();
+      String s1 = param1.getAsString(ctx);
       int s1Len = s1.length();
       if(s1Len == 0) {
         return ValueSupport.ZERO_VAL;
@@ -163,7 +164,7 @@ public class DefaultTextFunctions
       if(param2.isNull()) {
         return param2;
       }
-      String s2 = param2.getAsString();
+      String s2 = param2.getAsString(ctx);
       int s2Len = s2.length();
       int start = s1Len - 1;
       if(s2Len == 0) {
@@ -171,7 +172,7 @@ public class DefaultTextFunctions
         return ValueSupport.toValue(start + 1);
       }
       if(params.length > 2) {
-        start = params[2].getAsLongInt();
+        start = params[2].getAsLongInt(ctx);
         if(start == -1) {
           start = s1Len;
         }
@@ -180,7 +181,7 @@ public class DefaultTextFunctions
       }
       boolean ignoreCase = true;
       if(params.length > 3) {
-        ignoreCase = doIgnoreCase(params[3]);
+        ignoreCase = doIgnoreCase(ctx, params[3]);
       }
       start = Math.min(s1Len - s2Len, start - s2Len + 1);
       while(start >= 0) {
@@ -197,7 +198,7 @@ public class DefaultTextFunctions
   public static final Function LCASE = registerStringFunc(new Func1NullIsNull("LCase") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(str.toLowerCase());
     }
   });
@@ -205,7 +206,7 @@ public class DefaultTextFunctions
   public static final Function UCASE = registerStringFunc(new Func1NullIsNull("UCase") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(str.toUpperCase());
     }
   });
@@ -216,8 +217,8 @@ public class DefaultTextFunctions
       if(param1.isNull()) {
         return param1;
       }
-      String str = param1.getAsString();
-      int len = Math.min(str.length(), param2.getAsLongInt());
+      String str = param1.getAsString(ctx);
+      int len = Math.min(str.length(), param2.getAsLongInt(ctx));
       return ValueSupport.toValue(str.substring(0, len));
     }
   });
@@ -228,9 +229,9 @@ public class DefaultTextFunctions
       if(param1.isNull()) {
         return param1;
       }
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       int strLen = str.length();
-      int len = Math.min(strLen, param2.getAsLongInt());
+      int len = Math.min(strLen, param2.getAsLongInt(ctx));
       return ValueSupport.toValue(str.substring(strLen - len, strLen));
     }
   });
@@ -242,12 +243,12 @@ public class DefaultTextFunctions
       if(param1.isNull()) {
         return param1;
       }
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       int strLen = str.length();
       // 1 based offsets
-      int start = Math.min(strLen, params[1].getAsLongInt() - 1);
+      int start = Math.min(strLen, params[1].getAsLongInt(ctx) - 1);
       int len = Math.min(
-          ((params.length > 2) ? params[2].getAsLongInt() : strLen),
+          ((params.length > 2) ? params[2].getAsLongInt(ctx) : strLen),
           (strLen - start));
       return ValueSupport.toValue(str.substring(start, start + len));
     }
@@ -256,7 +257,7 @@ public class DefaultTextFunctions
   public static final Function LEN = registerFunc(new Func1NullIsNull("Len") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(str.length());
     }
   });
@@ -264,7 +265,7 @@ public class DefaultTextFunctions
   public static final Function LTRIM = registerStringFunc(new Func1NullIsNull("LTrim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(trim(str, true, false));
     }
   });
@@ -272,7 +273,7 @@ public class DefaultTextFunctions
   public static final Function RTRIM = registerStringFunc(new Func1NullIsNull("RTrim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(trim(str, false, true));
     }
   });
@@ -280,7 +281,7 @@ public class DefaultTextFunctions
   public static final Function TRIM = registerStringFunc(new Func1NullIsNull("Trim") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(trim(str, true, true));
     }
   });
@@ -288,7 +289,7 @@ public class DefaultTextFunctions
   public static final Function SPACE = registerStringFunc(new Func1("Space") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      int lv = param1.getAsLongInt();
+      int lv = param1.getAsLongInt(ctx);
       return ValueSupport.toValue(nchars(lv, ' '));
     }
   });
@@ -301,11 +302,11 @@ public class DefaultTextFunctions
       if(param1.isNull() || param2.isNull()) {
         return ValueSupport.NULL_VAL;
       }
-      String s1 = param1.getAsString();
-      String s2 = param2.getAsString();
+      String s1 = param1.getAsString(ctx);
+      String s2 = param2.getAsString(ctx);
       boolean ignoreCase = true;
       if(params.length > 2) {
-        ignoreCase = doIgnoreCase(params[2]);
+        ignoreCase = doIgnoreCase(ctx, params[2]);
       }
       int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
@@ -322,8 +323,8 @@ public class DefaultTextFunctions
       if(param1.isNull() || param2.isNull()) {
         return ValueSupport.NULL_VAL;
       }
-      int lv = param1.getAsLongInt();
-      char c = (char)(param2.getAsString().charAt(0) % 256);
+      int lv = param1.getAsLongInt(ctx);
+      char c = (char)(param2.getAsString(ctx).charAt(0) % 256);
       return ValueSupport.toValue(nchars(lv, c));
     }
   });
@@ -331,7 +332,7 @@ public class DefaultTextFunctions
   public static final Function STRREVERSE = registerFunc(new Func1("StrReverse") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      String str = param1.getAsString();
+      String str = param1.getAsString(ctx);
       return ValueSupport.toValue(
           new StringBuilder(str).reverse().toString());
     }
@@ -363,8 +364,8 @@ public class DefaultTextFunctions
     return str.substring(start, end);
   }
 
-  private static boolean doIgnoreCase(Value paramCmp) {
-    int cmpType = paramCmp.getAsLongInt();
+  private static boolean doIgnoreCase(LocaleContext ctx, Value paramCmp) {
+    int cmpType = paramCmp.getAsLongInt(ctx);
     switch(cmpType) {
     case -1:
       // vbUseCompareOption -> default is binary

@@ -85,30 +85,30 @@ public interface Value
   /**
    * @return this primitive value converted to a boolean
    */
-  public boolean getAsBoolean();
+  public boolean getAsBoolean(LocaleContext ctx);
 
   /**
    * @return this primitive value converted to a String
    */
-  public String getAsString();
+  public String getAsString(LocaleContext ctx);
 
   /**
    * @return this primitive value converted to a Date
    */
-  public Date getAsDateTime(EvalContext ctx);
+  public Date getAsDateTime(LocaleContext ctx);
 
   /**
    * @return this primitive value converted (rounded) to an int
    */
-  public Integer getAsLongInt();
+  public Integer getAsLongInt(LocaleContext ctx);
 
   /**
    * @return this primitive value converted (rounded) to a double
    */
-  public Double getAsDouble();
+  public Double getAsDouble(LocaleContext ctx);
 
   /**
    * @return this primitive value converted to a BigDecimal
    */
-  public BigDecimal getAsBigDecimal();
+  public BigDecimal getAsBigDecimal(LocaleContext ctx);
 }

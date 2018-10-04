@@ -26,6 +26,7 @@ import java.util.Date;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
@@ -58,9 +59,8 @@ public class DefaultDateFunctions
   public static final Function DATE = registerFunc(new Func0("Date") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
-      double dd = dateOnly(currentTimeDouble(fmt));
-      return ValueSupport.toValue(Value.Type.DATE, dd, fmt);
+      double dd = dateOnly(currentTimeDouble(ctx));
+      return ValueSupport.toDateValue(ctx, Value.Type.DATE, dd);
     }
   });
 
@@ -71,26 +71,24 @@ public class DefaultDateFunctions
       if(dv.getType() == Value.Type.DATE) {
         return dv;
       }
-      double dd = dateOnly(dv.getAsDouble());
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
-      return ValueSupport.toValue(Value.Type.DATE, dd, fmt);
+      double dd = dateOnly(dv.getAsDouble(ctx));
+      return ValueSupport.toDateValue(ctx, Value.Type.DATE, dd);
     }
   });
 
   public static final Function DATESERIAL = registerFunc(new Func3("DateSerial") {
     @Override
     protected Value eval3(EvalContext ctx, Value param1, Value param2, Value param3) {
-      int year = param1.getAsLongInt();
-      int month = param2.getAsLongInt();
-      int day = param3.getAsLongInt();
+      int year = param1.getAsLongInt(ctx);
+      int month = param2.getAsLongInt(ctx);
+      int day = param3.getAsLongInt(ctx);
 
       // "default" two digit year handling
       if(year < 100) {
         year += ((year <= 29) ? 2000 : 1900);
       }
 
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE);
-      Calendar cal = fmt.getCalendar();
+      Calendar cal = ctx.getCalendar();
       cal.clear();
 
       cal.set(Calendar.YEAR, year);
@@ -98,24 +96,22 @@ public class DefaultDateFunctions
       cal.set(Calendar.MONTH, month - 1);
       cal.set(Calendar.DAY_OF_MONTH, day);
 
-      return ValueSupport.toValue(Value.Type.DATE, cal.getTime(), fmt);
+      return ValueSupport.toValue(Value.Type.DATE, cal.getTime());
     }
   });
 
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.DATE_TIME);
-      return ValueSupport.toValue(Value.Type.DATE_TIME, new Date(), fmt);
+      return ValueSupport.toValue(Value.Type.DATE_TIME, new Date());
     }
   });
 
   public static final Function TIME = registerFunc(new Func0("Time") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
-      double dd = timeOnly(currentTimeDouble(fmt));
-      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
+      double dd = timeOnly(currentTimeDouble(ctx));
+      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
     }
   });
 
@@ -126,17 +122,15 @@ public class DefaultDateFunctions
       if(dv.getType() == Value.Type.TIME) {
         return dv;
       }
-      double dd = timeOnly(dv.getAsDouble());
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
-      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
+      double dd = timeOnly(dv.getAsDouble(ctx));
+      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
     }
   });
 
   public static final Function TIMER = registerFunc(new Func0("Timer") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
-      double dd = timeOnly(currentTimeDouble(fmt)) * DSECONDS_PER_DAY;
+      double dd = timeOnly(currentTimeDouble(ctx)) * DSECONDS_PER_DAY;
       return ValueSupport.toValue(dd);
     }
   });
@@ -144,9 +138,9 @@ public class DefaultDateFunctions
   public static final Function TIMESERIAL = registerFunc(new Func3("TimeSerial") {
     @Override
     protected Value eval3(EvalContext ctx, Value param1, Value param2, Value param3) {
-      int hours = param1.getAsLongInt();
-      int minutes = param2.getAsLongInt();
-      int seconds = param3.getAsLongInt();
+      int hours = param1.getAsLongInt(ctx);
+      int minutes = param2.getAsLongInt(ctx);
+      int seconds = param3.getAsLongInt(ctx);
 
       long totalSeconds = (hours * SECONDS_PER_HOUR) +
         (minutes * SECONDS_PER_MINUTE) + seconds;
@@ -158,9 +152,8 @@ public class DefaultDateFunctions
         totalSeconds %= SECONDS_PER_DAY;
       }
 
-      DateFormat fmt = ValueSupport.getDateFormatForType(ctx, Value.Type.TIME);
       double dd = totalSeconds / DSECONDS_PER_DAY;
-      return ValueSupport.toValue(Value.Type.TIME, dd, fmt);
+      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
     }
   });
 
@@ -213,12 +206,11 @@ public class DefaultDateFunctions
         return null;
       }
       // convert from 1 based to 0 based value
-      int month = param1.getAsLongInt() - 1;
+      int month = param1.getAsLongInt(ctx) - 1;
 
-      boolean abbreviate = getOptionalBooleanParam(params, 1);
+      boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
 
-      DateFormatSymbols syms = ctx.createDateFormat(
-          ctx.getTemporalConfig().getDateFormat()).getDateFormatSymbols();
+      DateFormatSymbols syms = ctx.getTemporalConfig().getDateFormatSymbols();
       String[] monthNames = (abbreviate ?
                              syms.getShortMonths() : syms.getMonths());
       // note, the array is 1 based
@@ -243,7 +235,7 @@ public class DefaultDateFunctions
       }
       int dayOfWeek = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
 
-      int firstDay = getFirstDayParam(params, 1);
+      int firstDay = getFirstDayParam(ctx, params, 1);
 
       return ValueSupport.toValue(dayOfWeekToWeekDay(dayOfWeek, firstDay));
     }
@@ -256,16 +248,15 @@ public class DefaultDateFunctions
       if(param1 == null) {
         return null;
       }
-      int weekday = param1.getAsLongInt();
+      int weekday = param1.getAsLongInt(ctx);
 
-      boolean abbreviate = getOptionalBooleanParam(params, 1);
+      boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
 
-      int firstDay = getFirstDayParam(params, 2);
+      int firstDay = getFirstDayParam(ctx, params, 2);
 
       int dayOfWeek = weekDayToDayOfWeek(weekday, firstDay);
 
-      DateFormatSymbols syms = ctx.createDateFormat(
-          ctx.getTemporalConfig().getDateFormat()).getDateFormatSymbols();
+      DateFormatSymbols syms = ctx.getTemporalConfig().getDateFormatSymbols();
       String[] weekdayNames = (abbreviate ?
                                syms.getShortWeekdays() : syms.getWeekdays());
       // note, the array is 1 based
@@ -287,7 +278,7 @@ public class DefaultDateFunctions
                               origParam + "'");
     }
 
-    Calendar cal = getDateValueFormat(ctx, param).getCalendar();
+    Calendar cal = ctx.getCalendar();
     cal.setTime(param.getAsDateTime(ctx));
     return cal;
   }
@@ -301,18 +292,17 @@ public class DefaultDateFunctions
     if(type == Value.Type.STRING) {
 
       // see if we can coerce to date/time or double
-      String valStr = param.getAsString();
+      String valStr = param.getAsString(ctx);
       TemporalConfig.Type valTempType = ExpressionTokenizer.determineDateType(
           valStr, ctx);
 
       if(valTempType != null) {
 
         try {
-          DateFormat parseDf = ExpressionTokenizer.createParseDateFormat(
+          DateFormat parseDf = ExpressionTokenizer.createParseDateTimeFormat(
               valTempType, ctx);
           Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
-          return ValueSupport.toValue(ctx, valTempType.getValueType(),
-                                      dateVal);
+          return ValueSupport.toValue(valTempType.getValueType(), dateVal);
         } catch(java.text.ParseException pe) {
           // not a valid date string, not a date/time
           return null;
@@ -321,7 +311,7 @@ public class DefaultDateFunctions
 
       // see if string can be coerced to number
       try {
-        return numberToDateValue(ctx, param.getAsDouble());
+        return numberToDateValue(ctx, param.getAsDouble(ctx));
       } catch(NumberFormatException ignored) {
         // not a number, not a date/time
         return null;
@@ -329,7 +319,7 @@ public class DefaultDateFunctions
     }
 
     // must be a number
-    return numberToDateValue(ctx, param.getAsDouble());
+    return numberToDateValue(ctx, param.getAsDouble(ctx));
   }
 
   private static Value numberToDateValue(EvalContext ctx, double dd) {
@@ -344,14 +334,7 @@ public class DefaultDateFunctions
     Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME :
                                   Value.Type.DATE) :
                        Value.Type.TIME);
-    DateFormat fmt = ValueSupport.getDateFormatForType(ctx, type);
-    return ValueSupport.toValue(type, dd, fmt);
-  }
-
-  private static DateFormat getDateValueFormat(EvalContext ctx, Value param) {
-    return ((param instanceof BaseDateValue) ?
-            ((BaseDateValue)param).getFormat() :
-       ValueSupport.getDateFormatForType(ctx, param.getType()));
+    return ValueSupport.toDateValue(ctx, type, dd);
   }
 
   private static double dateOnly(double dd) {
@@ -366,8 +349,8 @@ public class DefaultDateFunctions
     return new BigDecimal(dd).remainder(BigDecimal.ONE).doubleValue();
   }
 
-  private static double currentTimeDouble(DateFormat fmt) {
-    return ColumnImpl.toDateDouble(System.currentTimeMillis(), fmt.getCalendar());
+  private static double currentTimeDouble(LocaleContext ctx) {
+    return ColumnImpl.toDateDouble(System.currentTimeMillis(), ctx.getCalendar());
   }
 
   private static int dayOfWeekToWeekDay(int day, int firstDay) {
@@ -382,11 +365,12 @@ public class DefaultDateFunctions
     return (((firstDay - 1) + (weekday - 1)) % 7) + 1;
   }
 
-  private static int getFirstDayParam(Value[] params, int idx) {
+  private static int getFirstDayParam(
+      LocaleContext ctx, Value[] params, int idx) {
     // vbSunday (default)
     int firstDay = 1;
     if(params.length > idx) {
-      firstDay = params[idx].getAsLongInt();
+      firstDay = params[idx].getAsLongInt(ctx);
       if(firstDay == 0) {
         // 0 == vbUseSystem, so we will use the default "sunday"
         firstDay = 1;
@@ -395,9 +379,10 @@ public class DefaultDateFunctions
     return firstDay;
   }
 
-  private static boolean getOptionalBooleanParam(Value[] params, int idx) {
+  private static boolean getOptionalBooleanParam(
+      LocaleContext ctx, Value[] params, int idx) {
     if(params.length > idx) {
-      return params[idx].getAsBoolean();
+      return params[idx].getAsBoolean(ctx);
     }
     return false;
   }

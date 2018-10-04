@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
@@ -47,17 +48,17 @@ public class BigDecimalValue extends BaseNumericValue
   }
 
   @Override
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     return (_val.compareTo(BigDecimal.ZERO) != 0L);
   }
 
   @Override
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     return NumberFormatter.format(_val);
   }
 
   @Override
-  public BigDecimal getAsBigDecimal() {
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
     return _val;
   }
 }

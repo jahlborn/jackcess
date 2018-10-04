@@ -20,8 +20,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
@@ -34,27 +34,27 @@ public abstract class BaseValue implements Value
     return(getType() == Type.NULL);
   }
 
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     throw invalidConversion(Value.Type.LONG);
   }
 
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     throw invalidConversion(Value.Type.STRING);
   }
 
-  public Date getAsDateTime(EvalContext ctx) {
+  public Date getAsDateTime(LocaleContext ctx) {
     throw invalidConversion(Value.Type.DATE_TIME);
   }
 
-  public Integer getAsLongInt() {
+  public Integer getAsLongInt(LocaleContext ctx) {
     throw invalidConversion(Value.Type.LONG);
   }
 
-  public Double getAsDouble() {
+  public Double getAsDouble(LocaleContext ctx) {
     throw invalidConversion(Value.Type.DOUBLE);
   }
 
-  public BigDecimal getAsBigDecimal() {
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
     throw invalidConversion(Value.Type.BIG_DEC);
   }
 
@@ -63,8 +63,8 @@ public abstract class BaseValue implements Value
         getType() + " value cannot be converted to " + newType);
   }
 
-  protected Integer roundToLongInt() {
-    return getAsBigDecimal().setScale(0, NumberFormatter.ROUND_MODE)
+  protected Integer roundToLongInt(LocaleContext ctx) {
+    return getAsBigDecimal(ctx).setScale(0, NumberFormatter.ROUND_MODE)
       .intValueExact();
   }
 

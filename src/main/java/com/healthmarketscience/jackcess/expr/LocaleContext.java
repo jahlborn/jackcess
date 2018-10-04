@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 /**
  * LocaleContext encapsulates all shared localization state for expression
@@ -38,4 +39,15 @@ public interface LocaleContext
    */
   public SimpleDateFormat createDateFormat(String formatStr);
 
+  /**
+   * @return an appropriately configured (i.e. TimeZone and other date/time
+   *         flags) Calendar.
+   */
+  public Calendar getCalendar();
+
+  /**
+   * @return the currently configured NumericConfig (from the
+   *         {@link EvalConfig})
+   */
+  public NumericConfig getNumericConfig();
 }

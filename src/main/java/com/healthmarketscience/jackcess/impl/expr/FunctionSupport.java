@@ -227,7 +227,7 @@ public class FunctionSupport
       if(result.isNull()) {
         // non-variant version does not do null-propagation, so force
         // exception to be thrown here
-        result.getAsString();
+        result.getAsString(ctx);
       }
       return result;
     }

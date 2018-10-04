@@ -85,46 +85,17 @@ public class ValueSupport
     return new BigDecimalValue(normalize(s));
   }
 
-  public static Value toValue(Value.Type type, double dd, DateFormat fmt) {
-    return toValue(type, new Date(ColumnImpl.fromDateDouble(
-                                      dd, fmt.getCalendar())), fmt);
-  }
-
-  public static Value toValue(LocaleContext ctx, Value.Type type, Date d) {
-    return toValue(type, d, getDateFormatForType(ctx, type));
-  }
-
-  public static Value toValue(Value.Type type, Date d, DateFormat fmt) {
-    switch(type) {
-    case DATE:
-      return new DateValue(d, fmt);
-    case TIME:
-      return new TimeValue(d, fmt);
-    case DATE_TIME:
-      return new DateTimeValue(d, fmt);
-    default:
-      throw new EvalException("Unexpected date/time type " + type);
-    }
-  }
-
-  static Value toDateValue(LocaleContext ctx, Value.Type type, double v,
-                           Value param1, Value param2)
+  public static Value toDateValue(LocaleContext ctx, Value.Type type, double dd)
   {
-    DateFormat fmt = null;
-    if((param1 instanceof BaseDateValue) && (param1.getType() == type)) {
-      fmt = ((BaseDateValue)param1).getFormat();
-    } else if((param2 instanceof BaseDateValue) && (param2.getType() == type)) {
-      fmt = ((BaseDateValue)param2).getFormat();
-    } else {
-      fmt = getDateFormatForType(ctx, type);
-    }
-
-    Date d = new Date(ColumnImpl.fromDateDouble(v, fmt.getCalendar()));
-
-    return toValue(type, d, fmt);
+    return toValue(type, new Date(
+                       ColumnImpl.fromDateDouble(dd, ctx.getCalendar())));
   }
 
-  static DateFormat getDateFormatForType(LocaleContext ctx, Value.Type type) {
+  public static Value toValue(Value.Type type, Date d) {
+    return new DateTimeValue(type, d);
+  }
+
+  public static DateFormat getDateFormatForType(LocaleContext ctx, Value.Type type) {
       String fmtStr = null;
       switch(type) {
       case DATE:

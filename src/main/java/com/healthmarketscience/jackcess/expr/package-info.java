@@ -63,6 +63,8 @@ limitations under the License.
  *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.TemporalConfig} encapsulates date/time formatting options for
  *     expression evaluation.</li>
+ * <li>{@link com.healthmarketscience.jackcess.expr.NumericConfig} encapsulates number formatting options for
+ *     expression evaluation.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.FunctionLookup} provides a source for {@link com.healthmarketscience.jackcess.expr.Function} instances
  *     used during expression evaluation.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalException} wrapper exception thrown for failures which occur

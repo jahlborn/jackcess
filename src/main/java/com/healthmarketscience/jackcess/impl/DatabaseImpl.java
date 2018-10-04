@@ -73,6 +73,7 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -643,8 +644,11 @@ public class DatabaseImpl implements Database
       newTimeZone = getDefaultTimeZone();
     }
     _timeZone = newTimeZone;
-    // clear cached calendar when timezone is changed
+    // clear cached calendar(s) when timezone is changed
     _calendar = null;
+    if(_evalCtx != null) {
+      _evalCtx.resetDateTimeConfig();
+    }
   }
 
   public Charset getCharset()
@@ -1823,7 +1827,7 @@ public class DatabaseImpl implements Database
    * space, {@code false} otherwise.
    */
   public static boolean isBlank(String name) {
-    return((name == null) || (name.trim().length() == 0));
+    return StringUtils.isBlank(name);
   }
 
   /**
@@ -1831,11 +1835,7 @@ public class DatabaseImpl implements Database
    * null} or empty.
    */
   public static String trimToNull(String str) {
-    if(str == null) {
-      return null;
-    }
-    str = str.trim();
-    return((str.length() > 0) ? str : null);
+    return StringUtils.trimToNull(str);
   }
 
   @Override

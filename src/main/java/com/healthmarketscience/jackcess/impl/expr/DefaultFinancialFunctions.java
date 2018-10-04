@@ -45,18 +45,18 @@ public class DefaultFinancialFunctions
   public static final Function NPER = registerFunc(new FuncVar("NPer", 3, 5) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      double rate = params[0].getAsDouble();
-      double pmt = params[1].getAsDouble();
-      double pv = params[2].getAsDouble();
+      double rate = params[0].getAsDouble(ctx);
+      double pmt = params[1].getAsDouble(ctx);
+      double pv = params[2].getAsDouble(ctx);
 
       double fv = 0d;
       if(params.length > 3) {
-        fv = params[3].getAsDouble();
+        fv = params[3].getAsDouble(ctx);
       }
 
       int pmtType = PMT_END_MNTH;
       if(params.length > 4) {
-        pmtType = params[4].getAsLongInt();
+        pmtType = params[4].getAsLongInt(ctx);
       }
 
       double result = calculateLoanPaymentPeriods(rate, pmt, pv, pmtType);
@@ -72,18 +72,18 @@ public class DefaultFinancialFunctions
   public static final Function FV = registerFunc(new FuncVar("FV", 3, 5) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      double rate = params[0].getAsDouble();
-      double nper = params[1].getAsDouble();
-      double pmt = params[2].getAsDouble();
+      double rate = params[0].getAsDouble(ctx);
+      double nper = params[1].getAsDouble(ctx);
+      double pmt = params[2].getAsDouble(ctx);
 
       double pv = 0d;
       if(params.length > 3) {
-        pv = params[3].getAsDouble();
+        pv = params[3].getAsDouble(ctx);
       }
 
       int pmtType = PMT_END_MNTH;
       if(params.length > 4) {
-        pmtType = params[4].getAsLongInt();
+        pmtType = params[4].getAsLongInt(ctx);
       }
 
       if(pv != 0d) {
@@ -99,18 +99,18 @@ public class DefaultFinancialFunctions
   public static final Function PV = registerFunc(new FuncVar("PV", 3, 5) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      double rate = params[0].getAsDouble();
-      double nper = params[1].getAsDouble();
-      double pmt = params[2].getAsDouble();
+      double rate = params[0].getAsDouble(ctx);
+      double nper = params[1].getAsDouble(ctx);
+      double pmt = params[2].getAsDouble(ctx);
 
       double fv = 0d;
       if(params.length > 3) {
-        fv = params[3].getAsDouble();
+        fv = params[3].getAsDouble(ctx);
       }
 
       int pmtType = PMT_END_MNTH;
       if(params.length > 4) {
-        pmtType = params[4].getAsLongInt();
+        pmtType = params[4].getAsLongInt(ctx);
       }
 
       if(fv != 0d) {
@@ -126,18 +126,18 @@ public class DefaultFinancialFunctions
   public static final Function PMT = registerFunc(new FuncVar("Pmt", 3, 5) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      double rate = params[0].getAsDouble();
-      double nper = params[1].getAsDouble();
-      double pv = params[2].getAsDouble();
+      double rate = params[0].getAsDouble(ctx);
+      double nper = params[1].getAsDouble(ctx);
+      double pv = params[2].getAsDouble(ctx);
 
       double fv = 0d;
       if(params.length > 3) {
-        fv = params[3].getAsDouble();
+        fv = params[3].getAsDouble(ctx);
       }
 
       int pmtType = PMT_END_MNTH;
       if(params.length > 4) {
-        pmtType = params[4].getAsLongInt();
+        pmtType = params[4].getAsLongInt(ctx);
       }
 
       double result = calculateLoanPayment(rate, nper, pv, pmtType);
@@ -154,19 +154,19 @@ public class DefaultFinancialFunctions
   // public static final Function IPMT = registerFunc(new FuncVar("IPmt", 4, 6) {
   //   @Override
   //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double rate = params[0].getAsDouble();
-  //     double per = params[1].getAsDouble();
-  //     double nper = params[2].getAsDouble();
-  //     double pv = params[3].getAsDouble();
+  //     double rate = params[0].getAsDouble(ctx);
+  //     double per = params[1].getAsDouble(ctx);
+  //     double nper = params[2].getAsDouble(ctx);
+  //     double pv = params[3].getAsDouble(ctx);
 
   //     double fv = 0d;
   //     if(params.length > 4) {
-  //       fv = params[4].getAsDouble();
+  //       fv = params[4].getAsDouble(ctx);
   //     }
 
   //     int pmtType = PMT_END_MNTH;
   //     if(params.length > 5) {
-  //       pmtType = params[5].getAsLongInt();
+  //       pmtType = params[5].getAsLongInt(ctx);
   //     }
 
   //     double pmt = calculateLoanPayment(rate, nper, pv, pmtType);
@@ -185,19 +185,19 @@ public class DefaultFinancialFunctions
   // public static final Function PPMT = registerFunc(new FuncVar("PPmt", 4, 6) {
   //   @Override
   //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double rate = params[0].getAsDouble();
-  //     double per = params[1].getAsDouble();
-  //     double nper = params[2].getAsDouble();
-  //     double pv = params[3].getAsDouble();
+  //     double rate = params[0].getAsDouble(ctx);
+  //     double per = params[1].getAsDouble(ctx);
+  //     double nper = params[2].getAsDouble(ctx);
+  //     double pv = params[3].getAsDouble(ctx);
 
   //     double fv = 0d;
   //     if(params.length > 4) {
-  //       fv = params[4].getAsDouble();
+  //       fv = params[4].getAsDouble(ctx);
   //     }
 
   //     int pmtType = PMT_END_MNTH;
   //     if(params.length > 5) {
-  //       pmtType = params[5].getAsLongInt();
+  //       pmtType = params[5].getAsLongInt(ctx);
   //     }
 
   //     double pmt = calculateLoanPayment(rate, nper, pv, pmtType);
@@ -217,14 +217,14 @@ public class DefaultFinancialFunctions
   // public static final Function DDB = registerFunc(new FuncVar("DDB", 4, 5) {
   //   @Override
   //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble();
-  //     double salvage = params[1].getAsDouble();
-  //     double life = params[2].getAsDouble();
-  //     double period = params[3].getAsDouble();
+  //     double cost = params[0].getAsDouble(ctx);
+  //     double salvage = params[1].getAsDouble(ctx);
+  //     double life = params[2].getAsDouble(ctx);
+  //     double period = params[3].getAsDouble(ctx);
 
   //     double factor = 2d;
   //     if(params.length > 4) {
-  //       factor = params[4].getAsDouble();
+  //       factor = params[4].getAsDouble(ctx);
   //     }
 
   //     double result = 0d;
@@ -263,9 +263,9 @@ public class DefaultFinancialFunctions
   // public static final Function SLN = registerFunc(new FuncVar("SLN", 3, 3) {
   //   @Override
   //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble();
-  //     double salvage = params[1].getAsDouble();
-  //     double life = params[2].getAsDouble();
+  //     double cost = params[0].getAsDouble(ctx);
+  //     double salvage = params[1].getAsDouble(ctx);
+  //     double life = params[2].getAsDouble(ctx);
 
   //     double result = calculateStraightLineDepreciation(cost, salvage, life);
 
@@ -277,10 +277,10 @@ public class DefaultFinancialFunctions
   // public static final Function SYD = registerFunc(new FuncVar("SYD", 4, 4) {
   //   @Override
   //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble();
-  //     double salvage = params[1].getAsDouble();
-  //     double life = params[2].getAsDouble();
-  //     double period = params[3].getAsDouble();
+  //     double cost = params[0].getAsDouble(ctx);
+  //     double salvage = params[1].getAsDouble(ctx);
+  //     double life = params[2].getAsDouble(ctx);
+  //     double period = params[3].getAsDouble(ctx);
 
   //     double result = calculateSumOfYearsDepreciation(
   //         cost, salvage, life, period);

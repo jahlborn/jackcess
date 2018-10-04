@@ -47,6 +47,7 @@ import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
+import org.apache.commons.lang.StringUtils;
 
 
 /**
@@ -125,7 +126,7 @@ public class Expressionator
     },
     NOT("Not", true) {
       @Override public Value eval(EvalContext ctx, Value param1) {
-        return BuiltinOperators.not(param1);
+        return BuiltinOperators.not(ctx, param1);
       }
     },
     // when a '-' immediately precedes a number, it needs "highest" precedence
@@ -179,32 +180,32 @@ public class Expressionator
     },
     MULT("*") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.multiply(param1, param2);
+        return BuiltinOperators.multiply(ctx, param1, param2);
       }
     },
     DIV("/") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.divide(param1, param2);
+        return BuiltinOperators.divide(ctx, param1, param2);
       }
     },
     INT_DIV("\\") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.intDivide(param1, param2);
+        return BuiltinOperators.intDivide(ctx, param1, param2);
       }
     },
     EXP("^") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.exp(param1, param2);
+        return BuiltinOperators.exp(ctx, param1, param2);
       }
     },
     CONCAT("&") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.concat(param1, param2);
+        return BuiltinOperators.concat(ctx, param1, param2);
       }
     },
     MOD("Mod") {
       @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
-        return BuiltinOperators.mod(param1, param2);
+        return BuiltinOperators.mod(ctx, param1, param2);
       }
     };
 
@@ -224,33 +225,33 @@ public class Expressionator
 
   private enum CompOp implements OpType {
     LT("<") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.lessThan(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.lessThan(ctx, param1, param2);
       }
     },
     LTE("<=") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.lessThanEq(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.lessThanEq(ctx, param1, param2);
       }
     },
     GT(">") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.greaterThan(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.greaterThan(ctx, param1, param2);
       }
     },
     GTE(">=") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.greaterThanEq(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.greaterThanEq(ctx, param1, param2);
       }
     },
     EQ("=") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.equals(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.equals(ctx, param1, param2);
       }
     },
     NE("<>") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.notEquals(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.notEquals(ctx, param1, param2);
       }
     };
 
@@ -265,33 +266,33 @@ public class Expressionator
       return _str;
     }
 
-    public abstract Value eval(Value param1, Value param2);
+    public abstract Value eval(EvalContext ctx, Value param1, Value param2);
   }
 
   private enum LogOp implements OpType {
     AND("And") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.and(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.and(ctx, param1, param2);
       }
     },
     OR("Or") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.or(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.or(ctx, param1, param2);
       }
     },
     EQV("Eqv") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.eqv(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.eqv(ctx, param1, param2);
       }
     },
     XOR("Xor") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.xor(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.xor(ctx, param1, param2);
       }
     },
     IMP("Imp") {
-      @Override public Value eval(Value param1, Value param2) {
-        return BuiltinOperators.imp(param1, param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Value param2) {
+        return BuiltinOperators.imp(ctx, param1, param2);
       }
     };
 
@@ -306,55 +307,55 @@ public class Expressionator
       return _str;
     }
 
-    public abstract Value eval(Value param1, Value param2);
+    public abstract Value eval(EvalContext ctx, Value param1, Value param2);
   }
 
   private enum SpecOp implements OpType {
     // note, "NOT" is not actually used as a special operation, always
     // replaced with UnaryOp.NOT
     NOT("Not") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
         throw new UnsupportedOperationException();
       }
     },
     IS_NULL("Is Null") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
         return BuiltinOperators.isNull(param1);
       }
     },
     IS_NOT_NULL("Is Not Null") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
         return BuiltinOperators.isNotNull(param1);
       }
     },
     LIKE("Like") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.like(param1, (Pattern)param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.like(ctx, param1, (Pattern)param2);
       }
     },
     NOT_LIKE("Not Like") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.notLike(param1, (Pattern)param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.notLike(ctx, param1, (Pattern)param2);
       }
     },
     BETWEEN("Between") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.between(param1, (Value)param2, (Value)param3);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.between(ctx, param1, (Value)param2, (Value)param3);
       }
     },
     NOT_BETWEEN("Not Between") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.notBetween(param1, (Value)param2, (Value)param3);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.notBetween(ctx, param1, (Value)param2, (Value)param3);
       }
     },
     IN("In") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.in(param1, (Value[])param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.in(ctx, param1, (Value[])param2);
       }
     },
     NOT_IN("Not In") {
-      @Override public Value eval(Value param1, Object param2, Object param3) {
-        return BuiltinOperators.notIn(param1, (Value[])param2);
+      @Override public Value eval(EvalContext ctx, Value param1, Object param2, Object param3) {
+        return BuiltinOperators.notIn(ctx, param1, (Value[])param2);
       }
     };
 
@@ -369,7 +370,7 @@ public class Expressionator
       return _str;
     }
 
-    public abstract Value eval(Value param1, Object param2, Object param3);
+    public abstract Value eval(EvalContext ctx, Value param1, Object param2, Object param3);
   }
 
   private static final Map<OpType, Integer> PRECENDENCE =
@@ -429,7 +430,7 @@ public class Expressionator
       // this is handled as a literal string value, not an expression.  no
       // need to memo-ize cause it's a simple literal value
       return new ExprWrapper(exprStr,
-          new ELiteralValue(Value.Type.STRING, exprStr, null), resultType);
+          new ELiteralValue(Value.Type.STRING, exprStr), resultType);
     }
 
     // normal expression handling
@@ -498,8 +499,7 @@ public class Expressionator
 
       case LITERAL:
 
-        buf.setPendingExpr(new ELiteralValue(t.getValueType(), t.getValue(),
-                                             t.getDateFormat()));
+        buf.setPendingExpr(new ELiteralValue(t.getValueType(), t.getValue()));
         break;
 
       case OP:
@@ -1027,13 +1027,25 @@ public class Expressionator
     throw new ParseException("Unexpected op string " + t.getValueStr());
   }
 
+  private static StringBuilder appendLeadingExpr(
+      Expr expr, LocaleContext ctx, StringBuilder sb, boolean isDebug)
+  {
+    int len = sb.length();
+    expr.toString(ctx, sb, isDebug);
+    if(sb.length() > len) {
+      // only add space if the leading expr added some text
+      sb.append(" ");
+    }
+    return sb;
+  }
+
   private static final class TokBuf
   {
     private final Type _exprType;
     private final List<Token> _tokens;
     private final TokBuf _parent;
     private final int _parentOff;
-    private final ParseContext _context;
+    private final ParseContext _ctx;
     private int _pos;
     private Expr _pendingExpr;
 
@@ -1042,7 +1054,7 @@ public class Expressionator
     }
 
     private TokBuf(List<Token> tokens, TokBuf parent, int parentOff) {
-      this(parent._exprType, tokens, parent, parentOff, parent._context);
+      this(parent._exprType, tokens, parent, parentOff, parent._ctx);
     }
 
     private TokBuf(Type exprType, List<Token> tokens, TokBuf parent,
@@ -1051,7 +1063,7 @@ public class Expressionator
       _tokens = tokens;
       _parent = parent;
       _parentOff = parentOff;
-      _context = context;
+      _ctx = context;
     }
 
     public Type getExprType() {
@@ -1129,7 +1141,7 @@ public class Expressionator
     }
 
     public Function getFunction(String funcName) {
-      return _context.getFunctionLookup().getFunction(funcName);
+      return _ctx.getFunctionLookup().getFunction(funcName);
     }
 
     @Override
@@ -1152,7 +1164,7 @@ public class Expressionator
       sb.append(")");
 
       if(_pendingExpr != null) {
-        sb.append(" [pending '").append(_pendingExpr.toDebugString())
+        sb.append(" [pending '").append(_pendingExpr.toDebugString(_ctx))
           .append("']");
       }
 
@@ -1184,12 +1196,13 @@ public class Expressionator
   }
 
   private static void exprListToString(
-      List<Expr> exprs, String sep, StringBuilder sb, boolean isDebug) {
+      List<Expr> exprs, String sep, LocaleContext ctx, StringBuilder sb,
+      boolean isDebug) {
     Iterator<Expr> iter = exprs.iterator();
-    iter.next().toString(sb, isDebug);
+    iter.next().toString(ctx, sb, isDebug);
     while(iter.hasNext()) {
       sb.append(sep);
-      iter.next().toString(sb, isDebug);
+      iter.next().toString(ctx, sb, isDebug);
     }
   }
 
@@ -1231,7 +1244,7 @@ public class Expressionator
 
   private static void literalStrToString(String str, StringBuilder sb) {
     sb.append("\"")
-      .append(str.replace("\"", "\"\""))
+      .append(StringUtils.replace(str, "\"", "\"\""))
       .append("\"");
   }
 
@@ -1298,18 +1311,14 @@ public class Expressionator
     }
   }
 
-  private static Value toLiteralValue(Value.Type valType, Object value,
-                                      DateFormat sdf)
-  {
+  private static Value toLiteralValue(Value.Type valType, Object value) {
     switch(valType) {
     case STRING:
       return ValueSupport.toValue((String)value);
     case DATE:
-      return new DateValue((Date)value, sdf);
     case TIME:
-      return new TimeValue((Date)value, sdf);
     case DATE_TIME:
-      return new DateTimeValue((Date)value, sdf);
+      return ValueSupport.toValue(valType, (Date)value);
     case LONG:
       return ValueSupport.toValue((Integer)value);
     case DOUBLE:
@@ -1375,31 +1384,28 @@ public class Expressionator
 
   private static abstract class Expr
   {
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      toString(sb, false);
-      return sb.toString();
+    public String toCleanString(LocaleContext ctx) {
+      return toString(ctx, new StringBuilder(), false).toString();
     }
 
-    public String toDebugString() {
-      StringBuilder sb = new StringBuilder();
-      toString(sb, true);
-      return sb.toString();
+    public String toDebugString(LocaleContext ctx) {
+      return toString(ctx, new StringBuilder(), true).toString();
     }
 
     protected boolean isValidationExpr() {
       return false;
     }
 
-    protected void toString(StringBuilder sb, boolean isDebug) {
+    protected StringBuilder toString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       if(isDebug) {
         sb.append("<").append(getClass().getSimpleName()).append(">{");
       }
-      toExprString(sb, isDebug);
+      toExprString(ctx, sb, isDebug);
       if(isDebug) {
         sb.append("}");
       }
+      return sb;
     }
 
     protected Expr resolveOrderOfOperations() {
@@ -1464,7 +1470,8 @@ public class Expressionator
 
     public abstract void collectIdentifiers(Collection<Identifier> identifiers);
 
-    protected abstract void toExprString(StringBuilder sb, boolean isDebug);
+    protected abstract void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug);
   }
 
   private static final class EConstValue extends Expr
@@ -1493,7 +1500,8 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       sb.append(_str);
     }
   }
@@ -1513,8 +1521,11 @@ public class Expressionator
       // none
     }
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      sb.append("<THIS_COL>");
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      if(isDebug) {
+        sb.append("<THIS_COL>");
+      }
     }
   }
 
@@ -1522,9 +1533,8 @@ public class Expressionator
   {
     private final Value _val;
 
-    private ELiteralValue(Value.Type valType, Object value,
-                          DateFormat sdf) {
-      _val = toLiteralValue(valType, value, sdf);
+    private ELiteralValue(Value.Type valType, Object value) {
+      _val = toLiteralValue(valType, value);
     }
 
     @Override
@@ -1543,11 +1553,12 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       if(_val.getType() == Value.Type.STRING) {
         literalStrToString((String)_val.get(), sb);
       } else if(_val.getType().isTemporal()) {
-        sb.append("#").append(_val.getAsString()).append("#");
+        sb.append("#").append(_val.getAsString(ctx)).append("#");
       } else {
         sb.append(_val.get());
       }
@@ -1578,7 +1589,8 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       sb.append(_identifier);
     }
   }
@@ -1612,9 +1624,10 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       sb.append("(");
-      _expr.toString(sb, isDebug);
+      _expr.toString(ctx, sb, isDebug);
       sb.append(")");
     }
   }
@@ -1647,11 +1660,12 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       sb.append(_func.getName()).append("(");
 
       if(!_params.isEmpty()) {
-        exprListToString(_params, ",", sb, isDebug);
+        exprListToString(_params, ",", ctx, sb, isDebug);
       }
 
       sb.append(")");
@@ -1703,10 +1717,11 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      _left.toString(sb, isDebug);
-      sb.append(" ").append(_op).append(" ");
-      _right.toString(sb, isDebug);
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      appendLeadingExpr(_left, ctx, sb, isDebug)
+        .append(_op).append(" ");
+      _right.toString(ctx, sb, isDebug);
     }
   }
 
@@ -1761,12 +1776,13 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       sb.append(_op);
       if(isDebug || ((UnaryOp)_op).needsSpace()) {
         sb.append(" ");
       }
-      _expr.toString(sb, isDebug);
+      _expr.toString(ctx, sb, isDebug);
     }
   }
 
@@ -1783,7 +1799,7 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return ((CompOp)_op).eval(_left.eval(ctx), _right.eval(ctx));
+      return ((CompOp)_op).eval(ctx, _left.eval(ctx), _right.eval(ctx));
     }
   }
 
@@ -1794,13 +1810,14 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
       // only output the full "implicit" comparison in debug mode
       if(isDebug) {
-        super.toExprString(sb, isDebug);
+        super.toExprString(ctx, sb, isDebug);
       } else {
         // just output the explicit part of the expression
-        _right.toString(sb, isDebug);
+        _right.toString(ctx, sb, isDebug);
       }
     }
   }
@@ -1821,7 +1838,7 @@ public class Expressionator
 
       // logical operations do short circuit evaluation, so we need to delay
       // computing results until necessary
-      return ((LogOp)_op).eval(new DelayedValue(_left, ctx),
+      return ((LogOp)_op).eval(ctx, new DelayedValue(_left, ctx),
                                new DelayedValue(_right, ctx));
     }
   }
@@ -1873,13 +1890,14 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx), null, null);
+      return _op.eval(ctx, _expr.eval(ctx), null, null);
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      _expr.toString(sb, isDebug);
-      sb.append(" ").append(_op);
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      appendLeadingExpr(_expr, ctx, sb, isDebug)
+        .append(_op);
     }
   }
 
@@ -1903,13 +1921,14 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx), getPattern(), null);
+      return _op.eval(ctx, _expr.eval(ctx), getPattern(), null);
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      _expr.toString(sb, isDebug);
-      sb.append(" ").append(_op).append(" ");
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      appendLeadingExpr(_expr, ctx, sb, isDebug)
+        .append(_op).append(" ");
       literalStrToString(_patternStr, sb);
       if(isDebug) {
         sb.append("(").append(getPattern()).append(")");
@@ -1933,7 +1952,7 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx),
+      return _op.eval(ctx, _expr.eval(ctx),
                       exprListToDelayedValues(_exprs, ctx), null);
     }
 
@@ -1945,10 +1964,11 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      _expr.toString(sb, isDebug);
-      sb.append(" ").append(_op).append(" (");
-      exprListToString(_exprs, ",", sb, isDebug);
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      appendLeadingExpr(_expr, ctx, sb, isDebug)
+        .append(_op).append(" (");
+      exprListToString(_exprs, ",", ctx, sb, isDebug);
       sb.append(")");
     }
   }
@@ -1981,7 +2001,7 @@ public class Expressionator
 
     @Override
     public Value eval(EvalContext ctx) {
-      return _op.eval(_expr.eval(ctx),
+      return _op.eval(ctx, _expr.eval(ctx),
                       new DelayedValue(_startRangeExpr, ctx),
                       new DelayedValue(_endRangeExpr, ctx));
     }
@@ -1994,12 +2014,13 @@ public class Expressionator
     }
 
     @Override
-    protected void toExprString(StringBuilder sb, boolean isDebug) {
-      _expr.toString(sb, isDebug);
-      sb.append(" ").append(_op).append(" ");
-      _startRangeExpr.toString(sb, isDebug);
+    protected void toExprString(
+        LocaleContext ctx, StringBuilder sb, boolean isDebug) {
+      appendLeadingExpr(_expr, ctx, sb, isDebug)
+        .append(_op).append(" ");
+      _startRangeExpr.toString(ctx, sb, isDebug);
       sb.append(" And ");
-      _endRangeExpr.toString(sb, isDebug);
+      _endRangeExpr.toString(ctx, sb, isDebug);
     }
   }
 
@@ -2016,12 +2037,16 @@ public class Expressionator
       _expr = expr;
     }
 
-    public String toDebugString() {
-      return _expr.toDebugString();
+    public String toDebugString(LocaleContext ctx) {
+      return _expr.toDebugString(ctx);
     }
 
     public String toRawString() {
       return _rawExprStr;
+    }
+
+    public String toCleanString(LocaleContext ctx) {
+      return _expr.toCleanString(ctx);
     }
 
     public boolean isConstant() {
@@ -2034,7 +2059,7 @@ public class Expressionator
 
     @Override
     public String toString() {
-      return _expr.toString();
+      return toRawString();
     }
 
     protected Object evalValue(Value.Type resultType, EvalContext ctx) {
@@ -2052,17 +2077,17 @@ public class Expressionator
       // FIXME possibly do some type coercion.  are there conversions here which don't work elsewhere? (string -> date, string -> number)?
       switch(resultType) {
       case STRING:
-        return val.getAsString();
+        return val.getAsString(ctx);
       case DATE:
       case TIME:
       case DATE_TIME:
         return val.getAsDateTime(ctx);
       case LONG:
-        return val.getAsLongInt();
+        return val.getAsLongInt(ctx);
       case DOUBLE:
-        return val.getAsDouble();
+        return val.getAsDouble(ctx);
       case BIG_DEC:
-        return val.getAsBigDecimal();
+        return val.getAsBigDecimal(ctx);
       default:
         throw new IllegalStateException("unexpected result type " + resultType);
       }
@@ -2076,7 +2101,7 @@ public class Expressionator
         throw new EvalException("Condition evaluated to Null");
       }
 
-      return val.getAsBoolean();
+      return val.getAsBoolean(ctx);
     }
   }
 
