@@ -322,6 +322,10 @@ public class ExpressionatorTest extends TestCase
     assertEquals(new Date(1044680400000L), eval("=#01/02/2003# + '37'"));
     assertEquals(new Date(1044680400000L), eval("='37' + #01/02/2003#"));
     assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00 AM#"));
+
+    assertEquals("2/8/2003", eval("=CStr(#01/02/2003# + '37')"));
+    assertEquals("9:24:00 AM", eval("=CStr(#7:00:00 AM# + 0.1)"));
+    assertEquals("1/2/2003 1:10:00 PM", eval("=CStr(#01/02/2003# + #13:10:00#)"));
   }
 
   public void testNull() throws Exception

@@ -161,6 +161,11 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals(1, eval("=StrComp('bar', 'FOO', 0)"));
     assertEquals(-1, eval("=StrComp('FOO', 'foo', 0)"));
 
+    assertEquals("FOO", eval("=StrConv('foo', 1)"));
+    assertEquals("foo", eval("=StrConv('foo', 2)"));
+    assertEquals("foo", eval("=StrConv('FOO', 2)"));
+    assertEquals("Foo Bar", eval("=StrConv('FOO bar', 3)"));
+
     assertEquals("halb", eval("=StrReverse('blah')"));
 
     assertEquals("foo", eval("=Choose(1,'foo','bar','blah')"));

@@ -96,21 +96,21 @@ public class ValueSupport
   }
 
   public static DateFormat getDateFormatForType(LocaleContext ctx, Value.Type type) {
-      String fmtStr = null;
-      switch(type) {
-      case DATE:
-        fmtStr = ctx.getTemporalConfig().getDefaultDateFormat();
-        break;
-      case TIME:
-        fmtStr = ctx.getTemporalConfig().getDefaultTimeFormat();
-        break;
-      case DATE_TIME:
-        fmtStr = ctx.getTemporalConfig().getDefaultDateTimeFormat();
-        break;
-      default:
-        throw new EvalException("Unexpected date/time type " + type);
-      }
-      return ctx.createDateFormat(fmtStr);
+    String fmtStr = null;
+    switch(type) {
+    case DATE:
+      fmtStr = ctx.getTemporalConfig().getDefaultDateFormat();
+      break;
+    case TIME:
+      fmtStr = ctx.getTemporalConfig().getDefaultTimeFormat();
+      break;
+    case DATE_TIME:
+      fmtStr = ctx.getTemporalConfig().getDefaultDateTimeFormat();
+      break;
+    default:
+      throw new EvalException("Unexpected date/time type " + type);
+    }
+    return ctx.createDateFormat(fmtStr);
   }
 
   /**

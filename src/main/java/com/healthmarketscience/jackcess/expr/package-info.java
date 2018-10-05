@@ -232,7 +232,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Right[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Space[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrComp</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>StrConv</td><td></td></tr>
+ * <tr class="TableRowColor"><td>StrConv[$]</td><td>Partial</td></tr>
  * <tr class="TableRowColor"><td>String[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrReverse</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>UCase[$]</td><td>Y</td></tr>

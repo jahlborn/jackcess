@@ -23,6 +23,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
+import org.apache.commons.lang.WordUtils;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
@@ -32,6 +33,9 @@ import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
  */
 public class DefaultTextFunctions
 {
+  // mask to separate the case conversion value (first two bits) from the char
+  // conversion value for the StrConv() function
+  private static final int STR_CONV_MASK = 0x03;
 
   private DefaultTextFunctions() {}
 
@@ -314,6 +318,50 @@ public class DefaultTextFunctions
       return ((cmp < 0) ? ValueSupport.NEG_ONE_VAL :
               ((cmp > 0) ? ValueSupport.ONE_VAL :
                ValueSupport.ZERO_VAL));
+    }
+  });
+
+  public static final Function STRCONV = registerStringFunc(new FuncVar("StrConv", 2, 3) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      String str = param1.getAsString(ctx);
+      int conversion = params[1].getAsLongInt(ctx);
+      // TODO, for now, ignore locale id...?
+      // int localeId = params[2];
+
+      int caseConv = STR_CONV_MASK & conversion;
+      int charConv = (~STR_CONV_MASK) & conversion;
+
+      switch(caseConv) {
+      case 1:
+        // vbUpperCase
+        str = str.toUpperCase();
+        break;
+      case 2:
+        // vbLowerCase
+        str = str.toLowerCase();
+        break;
+      case 3:
+        // vbProperCase
+        str = WordUtils.capitalize(str.toLowerCase());
+        break;
+      default:
+        // do nothing
+      }
+
+      if(charConv != 0) {
+          // 64 = vbUnicode, all java strings are already unicode,so nothing to do
+        if(charConv != 64) {
+          throw new EvalException("Unsupported character conversion " + charConv);
+        }
+      }
+
+      return ValueSupport.toValue(str);
     }
   });
 
