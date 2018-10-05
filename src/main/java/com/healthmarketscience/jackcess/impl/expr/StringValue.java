@@ -18,10 +18,10 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormatSymbols;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.expr.LocaleContext;
-import org.apache.commons.lang.CharUtils;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -37,6 +37,7 @@ public class StringValue extends BaseValue
     Pattern.compile(NUMBER_BASE_PREFIX + "[oO][0-7]+");
   private static final Pattern HEX_PAT =
     Pattern.compile(NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
+  private static final char CANON_DEC_SEP = '.';
 
   private final String _val;
   private Object _num;
@@ -93,11 +94,8 @@ public class StringValue extends BaseValue
         if(tmpVal.length() > 0) {
 
           if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
-            // parse using standard numeric support, after discarding any
-            // grouping separators
-            char groupSepChar = ctx.getNumericConfig().getDecimalFormatSymbols()
-              .getGroupingSeparator();
-            tmpVal = StringUtils.remove(tmpVal, groupSepChar);
+            // convert to standard numeric support for parsing
+            tmpVal = toCanonicalNumberFormat(ctx, tmpVal);
             _num = ValueSupport.normalize(new BigDecimal(tmpVal));
             return (BigDecimal)_num;
           }
@@ -122,5 +120,22 @@ public class StringValue extends BaseValue
   private BigDecimal parseIntegerString(String tmpVal, int radix) {
     _num = new BigDecimal(new BigInteger(tmpVal.substring(2), radix));
     return (BigDecimal)_num;
+  }
+
+  private static String toCanonicalNumberFormat(LocaleContext ctx, String tmpVal)
+  {
+    // convert to standard numeric format:
+    // - discard any grouping separators
+    // - convert decimal separator to '.'
+    DecimalFormatSymbols syms = ctx.getNumericConfig().getDecimalFormatSymbols();
+    char groupSepChar = syms.getGroupingSeparator();
+    tmpVal = StringUtils.remove(tmpVal, groupSepChar);
+
+    char decSepChar = syms.getDecimalSeparator();
+    if((decSepChar != CANON_DEC_SEP) && (tmpVal.indexOf(decSepChar) >= 0)) {
+      tmpVal = tmpVal.replace(decSepChar, CANON_DEC_SEP);
+    }
+
+    return tmpVal;
   }
 }
