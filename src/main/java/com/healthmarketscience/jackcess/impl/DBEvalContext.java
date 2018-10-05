@@ -23,7 +23,6 @@ import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
 import com.healthmarketscience.jackcess.expr.EvalConfig;
-import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
@@ -42,8 +41,8 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   private final DatabaseImpl _db;
   private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
   private Map<String,SimpleDateFormat> _sdfs;
-  private TemporalConfig _temporal;
-  private NumericConfig _numeric;
+  private TemporalConfig _temporal = TemporalConfig.US_TEMPORAL_CONFIG;
+  private NumericConfig _numeric = NumericConfig.US_NUMERIC_CONFIG;
   private final RandomContext _rndCtx = new RandomContext();
   private Bindings _bindings = new SimpleBindings();
 
