@@ -53,9 +53,6 @@ class ExpressionTokenizer
   private static final char DATE_LIT_QUOTE_CHAR = '#';
   private static final char EQUALS_CHAR = '=';
 
-  private static final int AMPM_SUFFIX_LEN = 3;
-  private static final String AM_SUFFIX = " am";
-  private static final String PM_SUFFIX = " pm";
   // access times are based on this date (not the UTC base)
   private static final String BASE_DATE = "12/30/1899";
   private static final String BASE_DATE_FMT = "M/d/yyyy";
@@ -323,12 +320,10 @@ class ExpressionTokenizer
     boolean hasAmPm = false;
 
     if(hasTime) {
-      int strLen = dateStr.length();
-      hasAmPm = ((strLen >= AMPM_SUFFIX_LEN) &&
-                 (dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN,
-                                        AM_SUFFIX, 0, AMPM_SUFFIX_LEN) ||
-                  dateStr.regionMatches(true, strLen - AMPM_SUFFIX_LEN,
-                                        PM_SUFFIX, 0, AMPM_SUFFIX_LEN)));
+      String[] amPmStrs = cfg.getDateFormatSymbols().getAmPmStrings();
+      String amStr = " " + amPmStrs[0];
+      String pmStr = " " + amPmStrs[1];
+      hasAmPm = (hasSuffix(dateStr, amStr) || hasSuffix(dateStr, pmStr));
     }
 
     if(hasDate) {
@@ -342,6 +337,14 @@ class ExpressionTokenizer
               TemporalConfig.Type.TIME_24);
     }
     return null;
+  }
+
+  private static boolean hasSuffix(String str, String suffStr) {
+    int strLen = str.length();
+    int suffStrLen = suffStr.length();
+    return ((strLen >= suffStrLen) &&
+            str.regionMatches(true, strLen - suffStrLen,
+                              suffStr, 0, suffStrLen));
   }
 
   static DateFormat createParseDateTimeFormat(TemporalConfig.Type type,
