@@ -413,8 +413,8 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CStr(Rate(3,200,-610,0,-20,0.1))"));
     assertEquals("7.70147248820175E-03",
                  eval("=CStr(Rate(4*12,-200,8000))"));
-    assertEquals("",
-                 eval("=CStr(Rate(60,93.22,5000,0.1/12))"));
+    assertEquals("-1.09802980531205",
+                 eval("=CStr(Rate(60,93.22,5000,0.1))"));
   }
 
 }
