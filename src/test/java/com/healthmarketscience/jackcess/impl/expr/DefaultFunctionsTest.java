@@ -284,17 +284,17 @@ public class DefaultFunctionsTest extends TestCase
 
   public void testFinancialFuncs() throws Exception
   {
-    assertEquals("-9.57859403981317",
+    assertEquals("-9.57859403981306",
                  eval("=CStr(NPer(0.12/12,-100,-1000))"));
-    assertEquals("-9.48809500550583",
+    assertEquals("-9.48809500550578",
                  eval("=CStr(NPer(0.12/12,-100,-1000,0,1))"));
-    assertEquals("60.0821228537617",
+    assertEquals("60.0821228537616",
                  eval("=CStr(NPer(0.12/12,-100,-1000,10000))"));
-    assertEquals("59.6738656742946",
+    assertEquals("59.6738656742947",
                  eval("=CStr(NPer(0.12/12,-100,-1000,10000,1))"));
-    assertEquals("69.6607168935748",
+    assertEquals("69.6607168935747",
                  eval("=CStr(NPer(0.12/12,-100,0,10000))"));
-    assertEquals("69.1619606798004",
+    assertEquals("69.1619606798005",
                  eval("=CStr(NPer(0.12/12,-100,0,10000,1))"));
 
     assertEquals("8166.96698564091",
@@ -312,7 +312,7 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CStr(PV(0.12/12,60,-100,0,1))"));
     assertEquals("-1008.99231875519",
                  eval("=CStr(PV(0.12/12,60,-100,10000))"));
-    assertEquals("-964.037280348968",
+    assertEquals("-964.03728034897",
                  eval("=CStr(PV(0.12/12,60,-100,10000,1))"));
 
     assertEquals("22.2444476849018",
@@ -327,61 +327,94 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CStr(Pmt(0.12/12,60,0,10000))"));
     assertEquals("-121.232155296057",
                  eval("=CStr(Pmt(0.12/12,60,0,10000,1))"));
+    assertEquals("22.2444476849018",
+                 eval("=CStr(Pmt(0.12/12,60,-1000))"));
 
-    // FIXME not working for all param combos
-    // assertEquals("10.0",
-    //              eval("=CStr(IPmt(0.12/12,1,60,-1000))"));
-    // assertEquals("5.904184782975672",
-    //              eval("=CStr(IPmt(0.12/12,30,60,-1000))"));
-    // 0
-    // assertEquals("",
-    //              eval("=CStr(IPmt(0.12/12,1,60,-1000,0,1))"));
-    // 5.84572750...
-    // assertEquals("5.845727507896704",
-    //              eval("=CStr(IPmt(0.12/12,30,60,-1000,0,1))"));
-    // 0
-    // assertEquals("",
-    //              eval("=CStr(IPmt(0.12/12,1,60,0,10000))"));
-    // 40.9581521702433
-    // assertEquals("40.95815217024329",
-    //              eval("=CStr(IPmt(0.12/12,30,60,0,10000))"));
-    // 0
-    // assertEquals("",
-    //              eval("=CStr(IPmt(0.12/12,1,60,0,10000,1))"));
-    // 40.552625911132
-    // assertEquals("40.55262591113197",
-    //              eval("=CStr(IPmt(0.12/12,30,60,0,10000,1))"));
-    // assertEquals("10.0",
-    //              eval("=CStr(IPmt(0.12/12,1,60,-1000,10000))"));
-    // assertEquals("46.862336953218964",
-    //              eval("=CStr(IPmt(0.12/12,30,60,-1000,10000))"));
-    // 0
-    // assertEquals("",
-    //              eval("=CStr(IPmt(0.12/12,1,60,-1000,10000,1))"));
-    // 46.3983534190287
-    // assertEquals("46.39835341902867",
-    //              eval("=CStr(IPmt(0.12/12,30,60,-1000,10000,1))"));
+    assertEquals("10",
+                 eval("=CStr(IPmt(0.12/12,1,60,-1000))"));
+    assertEquals("5.90418478297567",
+                 eval("=CStr(IPmt(0.12/12,30,60,-1000))"));
+    assertEquals("0",
+                 eval("=CStr(IPmt(0.12/12,1,60,-1000,0,1))"));
+    assertEquals("5.8457275078967",
+                 eval("=CStr(IPmt(0.12/12,30,60,-1000,0,1))"));
+    assertEquals("0",
+                 eval("=CStr(IPmt(0.12/12,1,60,0,10000))"));
+    assertEquals("40.9581521702433",
+                 eval("=CStr(IPmt(0.12/12,30,60,0,10000))"));
+    assertEquals("0",
+                 eval("=CStr(IPmt(0.12/12,1,60,0,10000,1))"));
+    assertEquals("40.552625911132",
+                 eval("=CStr(IPmt(0.12/12,30,60,0,10000,1))"));
+    assertEquals("10",
+                 eval("=CStr(IPmt(0.12/12,1,60,-1000,10000))"));
+    assertEquals("46.862336953219",
+                 eval("=CStr(IPmt(0.12/12,30,60,-1000,10000))"));
+    assertEquals("0",
+                 eval("=CStr(IPmt(0.12/12,1,60,-1000,10000,1))"));
+    assertEquals("46.3983534190287",
+                 eval("=CStr(IPmt(0.12/12,30,60,-1000,10000,1))"));
 
-    // FIXME, doesn't work for partial days
-    // assertEquals("1.3150684931506849",
-    //              eval("=CStr(DDB(2400,300,10*365,1))"));
-    // assertEquals("40.0",
-    //              eval("=CStr(DDB(2400,300,10*12,1))"));
-    // assertEquals("480.0",
-    //              eval("=CStr(DDB(2400,300,10,1))"));
-    // assertEquals("22.122547200000042",
-    //              eval("=CStr(DDB(2400,300,10,10))"));
-    // assertEquals("245.76",
-    //              eval("=CStr(DDB(2400,300,10,4))"));
-    // assertEquals("307.20000000000005",
-    //              eval("=CStr(DDB(2400,300,10,3))"));
-    // assertEquals("480.0",
-    //              eval("=CStr(DDB(2400,300,10,0.1))"));
-    // 274.768033075174
-    // assertEquals("",
-    //              eval("=CStr(DDB(2400,300,10,3.5))"));
+    assertEquals("12.2444476849018",
+                 eval("=CStr(PPmt(0.12/12,1,60,-1000))"));
+    assertEquals("16.3402629019261",
+                 eval("=CStr(PPmt(0.12/12,30,60,-1000))"));
+    assertEquals("22.0242056286156",
+                 eval("=CStr(PPmt(0.12/12,1,60,-1000,0,1))"));
+    assertEquals("16.1784781207189",
+                 eval("=CStr(PPmt(0.12/12,30,60,-1000,0,1))"));
+    assertEquals("-122.444476849018",
+                 eval("=CStr(PPmt(0.12/12,1,60,0,10000))"));
+    assertEquals("-163.402629019261",
+                 eval("=CStr(PPmt(0.12/12,30,60,0,10000))"));
+    assertEquals("-121.232155296057",
+                 eval("=CStr(PPmt(0.12/12,1,60,0,10000,1))"));
+    assertEquals("-161.784781207189",
+                 eval("=CStr(PPmt(0.12/12,30,60,0,10000,1))"));
+    assertEquals("-110.200029164116",
+                 eval("=CStr(PPmt(0.12/12,1,60,-1000,10000))"));
+    assertEquals("-147.062366117335",
+                 eval("=CStr(PPmt(0.12/12,30,60,-1000,10000))"));
+    assertEquals("-99.2079496674414",
+                 eval("=CStr(PPmt(0.12/12,1,60,-1000,10000,1))"));
+    assertEquals("-145.60630308647",
+                 eval("=CStr(PPmt(0.12/12,30,60,-1000,10000,1))"));
 
+    assertEquals("1.31506849315068",
+                 eval("=CStr(DDB(2400,300,10*365,1))"));
+    assertEquals("40",
+                 eval("=CStr(DDB(2400,300,10*12,1))"));
+    assertEquals("480",
+                 eval("=CStr(DDB(2400,300,10,1))"));
+    assertEquals("22.1225472000002",
+                 eval("=CStr(DDB(2400,300,10,10))"));
+    assertEquals("245.76",
+                 eval("=CStr(DDB(2400,300,10,4))"));
+    assertEquals("307.2",
+                 eval("=CStr(DDB(2400,300,10,3))"));
+    assertEquals("480",
+                 eval("=CStr(DDB(2400,300,10,0.1))"));
+    assertEquals("274.768033075174",
+                 eval("=CStr(DDB(2400,300,10,3.5))"));
 
+    assertEquals("2250",
+                 eval("=CStr(SLN(30000,7500,10))"));
+    assertEquals("1000",
+                 eval("=CStr(SLN(10000,5000,5))"));
+    assertEquals("1142.85714285714",
+                 eval("=CStr(SLN(8000,0,7))"));
+
+    assertEquals("4090.90909090909",
+                 eval("=CStr(SYD(30000,7500,10,1))"));
+    assertEquals("409.090909090909",
+                 eval("=CStr(SYD(30000,7500,10,10))"));
+
+    assertEquals("-1.63048347266756E-02",
+                 eval("=CStr(Rate(3,200,-610,0,-20,0.1))"));
+    assertEquals("7.70147248820175E-03",
+                 eval("=CStr(Rate(4*12,-200,8000))"));
+    assertEquals("",
+                 eval("=CStr(Rate(60,93.22,5000,0.1/12))"));
   }
 
 }

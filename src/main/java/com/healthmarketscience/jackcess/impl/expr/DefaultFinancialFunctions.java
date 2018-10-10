@@ -12,6 +12,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+NOTICE:
+Many of the financial functions have been originally copied from the Apache
+POI project (Apache Software Foundation) and the UCanAccess Project.  They
+have been then modified and adapted so that they are integrated with Jackcess,
+in a consistent manner.  The Apache POI and UCanAccess projects are licensed
+under Apache License, Version 2.0 http://www.apache.org/licenses/LICENSE-2.0.
+
 */
 
 package com.healthmarketscience.jackcess.impl.expr;
@@ -29,10 +37,20 @@ import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
  */
 public class DefaultFinancialFunctions
 {
+  // Useful Sources:
+  // https://brownmath.com/bsci/loan.htm
+  // http://financeformulas.net/Number-of-Periods-of-Annuity-from-Future-Value.html
+  // https://accountingexplained.com/capital/tvm/fv-annuity
+  // http://www.tvmcalcs.com/index.php/calculators/apps/excel_loan_amortization
+
+
   /** 0 - payment end of month (default) */
   private static final int PMT_END_MNTH = 0;
   /** 1 - payment start of month */
   private static final int PMT_BEG_MNTH = 1;
+
+  private static final int MAX_RATE_ITERATIONS = 20;
+  private static final double RATE_PRECISION = 0.0000001;// 1.0e-8
 
 
   private DefaultFinancialFunctions() {}
@@ -48,22 +66,10 @@ public class DefaultFinancialFunctions
       double rate = params[0].getAsDouble(ctx);
       double pmt = params[1].getAsDouble(ctx);
       double pv = params[2].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 3);
+      int pmtType = getPaymentType(ctx, params, 4);
 
-      double fv = 0d;
-      if(params.length > 3) {
-        fv = params[3].getAsDouble(ctx);
-      }
-
-      int pmtType = PMT_END_MNTH;
-      if(params.length > 4) {
-        pmtType = params[4].getAsLongInt(ctx);
-      }
-
-      double result = calculateLoanPaymentPeriods(rate, pmt, pv, pmtType);
-
-      if(fv != 0d) {
-        result += calculateAnnuityPaymentPeriods(rate, pmt, fv, pmtType);
-      }
+      double result = calculateLoanPaymentPeriods(rate, pmt, pv, fv, pmtType);
 
       return ValueSupport.toValue(result);
     }
@@ -75,22 +81,10 @@ public class DefaultFinancialFunctions
       double rate = params[0].getAsDouble(ctx);
       double nper = params[1].getAsDouble(ctx);
       double pmt = params[2].getAsDouble(ctx);
+      double pv = getOptionalDoubleParam(ctx, params, 3, 0d);
+      int pmtType = getPaymentType(ctx, params, 4);
 
-      double pv = 0d;
-      if(params.length > 3) {
-        pv = params[3].getAsDouble(ctx);
-      }
-
-      int pmtType = PMT_END_MNTH;
-      if(params.length > 4) {
-        pmtType = params[4].getAsLongInt(ctx);
-      }
-
-      if(pv != 0d) {
-        nper -= calculateLoanPaymentPeriods(rate, pmt, pv, pmtType);
-      }
-
-      double result = calculateFutureValue(rate, nper, pmt, pmtType);
+      double result = calculateFutureValue(rate, nper, pmt, pv, pmtType);
 
       return ValueSupport.toValue(result);
     }
@@ -102,22 +96,10 @@ public class DefaultFinancialFunctions
       double rate = params[0].getAsDouble(ctx);
       double nper = params[1].getAsDouble(ctx);
       double pmt = params[2].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 3);
+      int pmtType = getPaymentType(ctx, params, 4);
 
-      double fv = 0d;
-      if(params.length > 3) {
-        fv = params[3].getAsDouble(ctx);
-      }
-
-      int pmtType = PMT_END_MNTH;
-      if(params.length > 4) {
-        pmtType = params[4].getAsLongInt(ctx);
-      }
-
-      if(fv != 0d) {
-        nper -= calculateAnnuityPaymentPeriods(rate, pmt, fv, pmtType);
-      }
-
-      double result = calculatePresentValue(rate, nper, pmt, pmtType);
+      double result = calculatePresentValue(rate, nper, pmt, fv, pmtType);
 
       return ValueSupport.toValue(result);
     }
@@ -129,298 +111,186 @@ public class DefaultFinancialFunctions
       double rate = params[0].getAsDouble(ctx);
       double nper = params[1].getAsDouble(ctx);
       double pv = params[2].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 3);
+      int pmtType = getPaymentType(ctx, params, 4);
 
-      double fv = 0d;
-      if(params.length > 3) {
-        fv = params[3].getAsDouble(ctx);
-      }
-
-      int pmtType = PMT_END_MNTH;
-      if(params.length > 4) {
-        pmtType = params[4].getAsLongInt(ctx);
-      }
-
-      double result = calculateLoanPayment(rate, nper, pv, pmtType);
-
-      if(fv != 0d) {
-        result += calculateAnnuityPayment(rate, nper, fv, pmtType);
-      }
+      double result = calculateLoanPayment(rate, nper, pv, fv, pmtType);
 
       return ValueSupport.toValue(result);
     }
   });
 
-  // FIXME not working for all param combos
-  // public static final Function IPMT = registerFunc(new FuncVar("IPmt", 4, 6) {
-  //   @Override
-  //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double rate = params[0].getAsDouble(ctx);
-  //     double per = params[1].getAsDouble(ctx);
-  //     double nper = params[2].getAsDouble(ctx);
-  //     double pv = params[3].getAsDouble(ctx);
+  public static final Function IPMT = registerFunc(new FuncVar("IPmt", 4, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double rate = params[0].getAsDouble(ctx);
+      double per = params[1].getAsDouble(ctx);
+      double nper = params[2].getAsDouble(ctx);
+      double pv = params[3].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 4);
+      int pmtType = getPaymentType(ctx, params, 5);
 
-  //     double fv = 0d;
-  //     if(params.length > 4) {
-  //       fv = params[4].getAsDouble(ctx);
-  //     }
+      double result = calculateInterestPayment(rate, per, nper, pv, fv,
+                                                  pmtType);
 
-  //     int pmtType = PMT_END_MNTH;
-  //     if(params.length > 5) {
-  //       pmtType = params[5].getAsLongInt(ctx);
-  //     }
-
-  //     double pmt = calculateLoanPayment(rate, nper, pv, pmtType);
-
-  //     if(fv != 0d) {
-  //       pmt += calculateAnnuityPayment(rate, nper, fv, pmtType);
-  //     }
-
-  //     double result = calculateInterestPayment(pmt, rate, per, pv, pmtType);
-
-  //     return ValueSupport.toValue(result);
-  //   }
-  // });
-
-  // FIXME untested
-  // public static final Function PPMT = registerFunc(new FuncVar("PPmt", 4, 6) {
-  //   @Override
-  //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double rate = params[0].getAsDouble(ctx);
-  //     double per = params[1].getAsDouble(ctx);
-  //     double nper = params[2].getAsDouble(ctx);
-  //     double pv = params[3].getAsDouble(ctx);
-
-  //     double fv = 0d;
-  //     if(params.length > 4) {
-  //       fv = params[4].getAsDouble(ctx);
-  //     }
-
-  //     int pmtType = PMT_END_MNTH;
-  //     if(params.length > 5) {
-  //       pmtType = params[5].getAsLongInt(ctx);
-  //     }
-
-  //     double pmt = calculateLoanPayment(rate, nper, pv, pmtType);
-
-  //     if(fv != 0d) {
-  //       pmt += calculateAnnuityPayment(rate, nper, fv, pmtType);
-  //     }
-
-  //     double result = pmt - calculateInterestPayment(pmt, rate, per, pv,
-  //                                                    pmtType);
-
-  //     return ValueSupport.toValue(result);
-  //   }
-  // });
-
-  // FIXME, doesn't work for partial days
-  // public static final Function DDB = registerFunc(new FuncVar("DDB", 4, 5) {
-  //   @Override
-  //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble(ctx);
-  //     double salvage = params[1].getAsDouble(ctx);
-  //     double life = params[2].getAsDouble(ctx);
-  //     double period = params[3].getAsDouble(ctx);
-
-  //     double factor = 2d;
-  //     if(params.length > 4) {
-  //       factor = params[4].getAsDouble(ctx);
-  //     }
-
-  //     double result = 0d;
-
-  //     // fractional value always rounds up to one year
-  //     if(period < 1d) {
-  //       period = 1d;
-  //     }
-
-  //     // FIXME? apply partial period _first_
-  //     // double partPeriod = period % 1d;
-  //     // if(partPeriod != 0d) {
-  //     //   result = calculateDoubleDecliningBalance(
-  //     //       cost, salvage, life, factor) * partPeriod;
-  //     //   period -= partPeriod;
-  //     //   cost -= result;
-  //     // }
-  //     double prevResult = 0d;
-  //     while(period > 0d) {
-  //       prevResult = result;
-  //       double remPeriod = Math.min(period, 1d);
-  //       result = calculateDoubleDecliningBalance(
-  //           cost, salvage, life, factor);
-  //       if(remPeriod < 1d) {
-  //         result = (prevResult + result) / 2d;
-  //       }
-  //       period -= 1d;
-  //       cost -= result;
-  //     }
-
-  //     return ValueSupport.toValue(result);
-  //   }
-  // });
-
-  // FIXME, untested
-  // public static final Function SLN = registerFunc(new FuncVar("SLN", 3, 3) {
-  //   @Override
-  //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble(ctx);
-  //     double salvage = params[1].getAsDouble(ctx);
-  //     double life = params[2].getAsDouble(ctx);
-
-  //     double result = calculateStraightLineDepreciation(cost, salvage, life);
-
-  //     return ValueSupport.toValue(result);
-  //   }
-  // });
-
-  // FIXME, untested
-  // public static final Function SYD = registerFunc(new FuncVar("SYD", 4, 4) {
-  //   @Override
-  //   protected Value evalVar(EvalContext ctx, Value[] params) {
-  //     double cost = params[0].getAsDouble(ctx);
-  //     double salvage = params[1].getAsDouble(ctx);
-  //     double life = params[2].getAsDouble(ctx);
-  //     double period = params[3].getAsDouble(ctx);
-
-  //     double result = calculateSumOfYearsDepreciation(
-  //         cost, salvage, life, period);
-
-  //     return ValueSupport.toValue(result);
-  //   }
-  // });
-
-
-  private static double calculateLoanPaymentPeriods(
-      double rate, double pmt, double pv, int pmtType) {
-
-    // https://brownmath.com/bsci/loan.htm
-    // http://financeformulas.net/Number-of-Periods-of-Annuity-from-Present-Value.html
-
-    if(pmtType == PMT_BEG_MNTH) {
-      pv += pmt;
+      return ValueSupport.toValue(result);
     }
+  });
 
-    double v1 = Math.log(1d + (rate * pv / pmt));
+  public static final Function PPMT = registerFunc(new FuncVar("PPmt", 4, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double rate = params[0].getAsDouble(ctx);
+      double per = params[1].getAsDouble(ctx);
+      double nper = params[2].getAsDouble(ctx);
+      double pv = params[3].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 4);
+      int pmtType = getPaymentType(ctx, params, 5);
 
-    double v2 = Math.log(1d + rate);
+      double result = calculatePrincipalPayment(rate, per, nper, pv, fv,
+                                                   pmtType);
 
-    double result = -v1 / v2;
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result += 1d;
+      return ValueSupport.toValue(result);
     }
+  });
 
-    return result;
-  }
+  public static final Function DDB = registerFunc(new FuncVar("DDB", 4, 5) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double cost = params[0].getAsDouble(ctx);
+      double salvage = params[1].getAsDouble(ctx);
+      double life = params[2].getAsDouble(ctx);
+      double period = params[3].getAsDouble(ctx);
+      double factor = getOptionalDoubleParam(ctx, params, 4, 2d);
 
-  private static double calculateAnnuityPaymentPeriods(
-      double rate, double pmt, double fv, int pmtType) {
+      double result = calculateDoubleDecliningBalance(
+          cost, salvage, life, period, factor);
 
-    // https://brownmath.com/bsci/loan.htm
-    // http://financeformulas.net/Number-of-Periods-of-Annuity-from-Future-Value.html
-    // https://accountingexplained.com/capital/tvm/fv-annuity
-
-    if(pmtType == PMT_BEG_MNTH) {
-      fv *= (1d + rate);
+      return ValueSupport.toValue(result);
     }
+  });
 
-    double v1 = Math.log(1d - (rate * fv / pmt));
+  public static final Function SLN = registerFunc(new FuncVar("SLN", 3, 3) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double cost = params[0].getAsDouble(ctx);
+      double salvage = params[1].getAsDouble(ctx);
+      double life = params[2].getAsDouble(ctx);
 
-    double v2 = Math.log(1d + rate);
+      double result = calculateStraightLineDepreciation(cost, salvage, life);
 
-    double result = v1 / v2;
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result -= 1d;
+      return ValueSupport.toValue(result);
     }
+  });
 
-    return result;
-  }
+  public static final Function SYD = registerFunc(new FuncVar("SYD", 4, 4) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double cost = params[0].getAsDouble(ctx);
+      double salvage = params[1].getAsDouble(ctx);
+      double life = params[2].getAsDouble(ctx);
+      double period = params[3].getAsDouble(ctx);
+
+      double result = calculateSumOfYearsDepreciation(
+          cost, salvage, life, period);
+
+      return ValueSupport.toValue(result);
+    }
+  });
+
+  public static final Function Rate = registerFunc(new FuncVar("Rate", 3, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      double nper = params[0].getAsDouble(ctx);
+      double pmt = params[1].getAsDouble(ctx);
+      double pv = params[2].getAsDouble(ctx);
+      double fv = getFV(ctx, params, 3);
+      int pmtType = getPaymentType(ctx, params, 4);
+      double guess = getOptionalDoubleParam(ctx, params, 5, 0.1);
+
+      double result = calculateRate(nper, pmt, pv, fv, pmtType, guess);
+
+      return ValueSupport.toValue(result);
+    }
+  });
 
   private static double calculateFutureValue(
-      double rate, double nper, double pmt, int pmtType) {
-
-    double result = -pmt * ((Math.pow((1d + rate), nper) - 1d) / rate);
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result *= (1d + rate);
+      double rate, double nper, double pmt, double pv, int pmtType) {
+    if (rate == 0d) {
+      return -1 * (pv + (nper * pmt));
     }
+    double r1 = (pmtType == PMT_BEG_MNTH ? (rate + 1) : 1);
+    double p1 = Math.pow((rate + 1), nper);
+    return ((((1 - p1) * r1 * pmt) / rate) - (pv * p1));
 
-    return result;
   }
 
   private static double calculatePresentValue(
-      double rate, double nper, double pmt, int pmtType) {
-
-    if(pmtType == PMT_BEG_MNTH) {
-      nper -= 1d;
+      double rate, double nper, double pmt, double fv, int pmtType) {
+    if (rate == 0d) {
+      return -1 * ((nper * pmt) + fv);
     }
-
-    double result = -pmt * ((1d - Math.pow((1d + rate), -nper)) / rate);
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result -= pmt;
-    }
-
-    return result;
+    double r1 = (pmtType == PMT_BEG_MNTH ? (rate + 1) : 1);
+    double p1 = Math.pow((rate + 1), nper);
+    return ((((1 - p1) / rate) * r1 * pmt) - fv) / p1;
   }
 
   private static double calculateLoanPayment(
-      double rate, double nper, double pv, int pmtType) {
+      double rate, double nper, double pv, double fv, int pmtType) {
 
-    double result = -(rate * pv) / (1d - Math.pow((1d + rate), -nper));
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result /= (1d + rate);
+    if (rate == 0d) {
+      return -1*(fv + pv) / nper;
     }
-
-    return result;
+    double r1 = (pmtType == PMT_BEG_MNTH ? (rate + 1) : 1);
+    double p1 = Math.pow((rate + 1), nper);
+    return (fv + (pv * p1)) * rate / (r1 * (1 - p1));
   }
 
-  private static double calculateAnnuityPayment(
-      double rate, double nper, double fv, int pmtType) {
-
-    double result = -(fv * rate) / (Math.pow((1d + rate), nper) - 1d);
-
-    if(pmtType == PMT_BEG_MNTH) {
-      result /= (1d + rate);
-    }
-
-    return result;
-  }
 
   private static double calculateInterestPayment(
-      double pmt, double rate, double per, double pv, int pmtType) {
+      double rate, double per, double nper, double pv, double fv, int pmtType) {
 
-    // http://www.tvmcalcs.com/index.php/calculators/apps/excel_loan_amortization
-    // http://financeformulas.net/Remaining_Balance_Formula.html
-
-    double pvPer = per;
-    double fvPer = per;
-    if(pmtType == PMT_END_MNTH) {
-      pvPer -= 1d;
-      fvPer -= 1d;
-    } else {
-      pvPer -= 2d;
-      fvPer -= 1d;
+    if((per == 1d) && (pmtType == PMT_BEG_MNTH)) {
+      // no inerest for pmt at beginning of month of 1st period
+      return 0d;
     }
 
-    double remBalance = (pv * Math.pow((1d + rate), pvPer)) -
-      // FIXME, always use pmtType of 0?
-      calculateFutureValue(rate, fvPer, pmt, PMT_END_MNTH);
+    double pmt = calculateLoanPayment(rate, nper, pv, fv, pmtType);
+    double result = calculateFutureValue(
+        rate, per - 1, pmt, pv, pmtType) * rate;
 
-    double result = -(remBalance * rate);
-
+    if (pmtType == PMT_BEG_MNTH) {
+      result /= (1 + rate);
+    }
     return result;
   }
 
-  private static double calculateDoubleDecliningBalance(
-      double cost, double salvage, double life, double factor) {
+  private static double calculatePrincipalPayment(
+      double rate, double per, double nper, double pv, double fv, int pmtType) {
+    double pmt = calculateLoanPayment(rate, nper, pv, fv, pmtType);
+    double ipmt = calculateInterestPayment(rate, per, nper, pv, fv, pmtType);
+    return (pmt - ipmt);
+  }
 
-    double result1 = cost * (factor/life);
-    double result2 = cost - salvage;
+  public static double calculateDoubleDecliningBalance(
+      double cost, double salvage, double life, double period, double factor) {
+    if (cost < 0 || ((life == 2d) && (period > 1d))) {
+      return 0;
+    }
+    if (life < 2d || ((life == 2d) && (period <= 1d))) {
+      return (cost - salvage);
+    }
 
-    return Math.min(result1, result2);
+    double v1 = ((factor * cost) / life);
+    if (period <= 1d) {
+      return Math.min(v1, cost - salvage);
+    }
+
+    double v2 = (life - factor) / life;
+    double v3 = Math.max(salvage - (cost * Math.pow(v2, period)), 0);
+    double result = (v1 * Math.pow(v2, period - 1d)) - v3;
+
+    return Math.max(result, 0);
   }
 
   private static double calculateStraightLineDepreciation(
@@ -430,11 +300,79 @@ public class DefaultFinancialFunctions
 
   private static double calculateSumOfYearsDepreciation(
       double cost, double salvage, double life, double period) {
-
-    double sumOfYears = (period * (period + 1)) / 2d;
-    double result = ((cost - salvage) * ((life + 1 - period) / sumOfYears));
-
+    double result = ((cost - salvage) * (life - period + 1) * 2d) /
+      (life * (life + 1));
     return result;
   }
 
+  private static double calculateLoanPaymentPeriods(
+      double rate, double pmt, double pv, double fv, int pmtType) {
+
+    if (rate == 0d) {
+      return -1 * (fv + pv) / pmt;
+    }
+
+    double cr = ((pmtType == PMT_BEG_MNTH) ? (1 + rate) : 1) * pmt / rate;
+    double v1;
+    double v2;
+    if((cr - fv) < 0d) {
+      v1 = Math.log(fv - cr);
+      v2 = Math.log(-pv - cr);
+    } else {
+      v1 = Math.log(cr - fv);
+      v2 = Math.log(pv + cr);
+    }
+
+    return (v1 - v2) / Math.log(1 + rate);
+  }
+
+  public static double calculateRate(double nper, double pmt, double pv,
+                                     double fv, int pmtType, double guess) {
+    double y, f = 0;
+    double rate = guess;
+    if (Math.abs(rate) < RATE_PRECISION) {
+      y = pv * (1 + nper * rate) + pmt * (1 + rate * pmtType) * nper + fv;
+    } else {
+      f = Math.exp(nper * Math.log(1 + rate));
+      y = pv * f + pmt * (1 / rate + pmtType) * (f - 1) + fv;
+    }
+    double y0 = pv + pmt * nper + fv;
+    double y1 = pv * f + pmt * (1 / rate + pmtType) * (f - 1) + fv;
+
+    // find root by Newton secant method
+    int i = 0;
+    double x0 = 0.0;
+    double x1 = rate;
+    while ((Math.abs(y0 - y1) > RATE_PRECISION) && (i < MAX_RATE_ITERATIONS)) {
+      rate = (y1 * x0 - y0 * x1) / (y1 - y0);
+      x0 = x1;
+      x1 = rate;
+
+      if (Math.abs(rate) < RATE_PRECISION) {
+        y = pv * (1 + nper * rate) + pmt * (1 + rate * pmtType) * nper + fv;
+      } else {
+        f = Math.exp(nper * Math.log(1 + rate));
+        y = pv * f + pmt * (1 / rate + pmtType) * (f - 1) + fv;
+      }
+
+      y0 = y1;
+      y1 = y;
+      ++i;
+    }
+
+    return rate;
+  }
+
+  private static double getFV(EvalContext ctx, Value[] params, int idx) {
+    return getOptionalDoubleParam(ctx, params, idx, 0d);
+  }
+
+  private static int getPaymentType(EvalContext ctx, Value[] params, int idx) {
+    int pmtType = PMT_END_MNTH;
+    if(params.length > idx) {
+      pmtType = (params[idx].getAsLongInt(ctx) != PMT_END_MNTH) ?
+        PMT_BEG_MNTH : PMT_END_MNTH;
+    }
+    return pmtType;
+  }
 }

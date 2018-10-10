@@ -156,19 +156,16 @@ limitations under the License.
  *
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
- * <tr class="TableRowColor"><td>DDB</td><td></td></tr>
+ * <tr class="TableRowColor"><td>DDB</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>FV</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>IPmt</td><td></td></tr>
- * <tr class="TableRowColor"><td>IRR</td><td></td></tr>
- * <tr class="TableRowColor"><td>MIRR</td><td></td></tr>
+ * <tr class="TableRowColor"><td>IPmt</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>NPer</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>NPV</td><td></td></tr>
  * <tr class="TableRowColor"><td>Pmt</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>PPmt</td><td></td></tr>
+ * <tr class="TableRowColor"><td>PPmt</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>PV</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Rate</td><td></td></tr>
- * <tr class="TableRowColor"><td>SLN</td><td></td></tr>
- * <tr class="TableRowColor"><td>SYD</td><td></td></tr>
+ * <tr class="TableRowColor"><td>Rate</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>SLN</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>SYD</td><td>Y</td></tr>
  * </table>
  *
  * <h3>Inspection</h3>

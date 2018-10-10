@@ -378,12 +378,4 @@ public class DefaultDateFunctions
     }
     return firstDay;
   }
-
-  private static boolean getOptionalBooleanParam(
-      LocaleContext ctx, Value[] params, int idx) {
-    if(params.length > idx) {
-      return params[idx].getAsBoolean(ctx);
-    }
-    return false;
-  }
 }
