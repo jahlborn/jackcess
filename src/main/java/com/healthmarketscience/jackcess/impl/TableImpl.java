@@ -43,13 +43,16 @@ import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.InvalidValueException;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -57,18 +60,18 @@ import org.apache.commons.logging.LogFactory;
  * A single database table
  * <p>
  * Is not thread-safe.
- * 
+ *
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class TableImpl implements Table
-{  
+public class TableImpl implements Table, PropertyMaps.Owner
+{
   private static final Log LOG = LogFactory.getLog(TableImpl.class);
 
   private static final short OFFSET_MASK = (short)0x1FFF;
 
   private static final short DELETED_ROW_MASK = (short)0x8000;
-  
+
   private static final short OVERFLOW_ROW_MASK = (short)0x4000;
 
   static final int MAGIC_TABLE_NUMBER = 1625;
@@ -133,6 +136,8 @@ public class TableImpl implements Table
   private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
   /** List of autonumber columns in this table, ordered by column number */
   private final List<ColumnImpl> _autoNumColumns = new ArrayList<ColumnImpl>(1);
+  /** handler for calculated columns */
+  private final CalcColEvaluator _calcColEval = new CalcColEvaluator();
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
   private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
@@ -178,17 +183,19 @@ public class TableImpl implements Table
   private Boolean _allowAutoNumInsert;
   /** foreign-key enforcer for this table */
   private final FKEnforcer _fkEnforcer;
+  /** table validator if any (and enabled) */
+  private RowValidatorEvalContext _rowValidator;
 
   /** default cursor for iterating through the table, kept here for basic
       table traversal */
   private CursorImpl _defaultCursor;
-  
+
   /**
    * Only used by unit tests
    * @usage _advanced_method_
    */
-  protected TableImpl(boolean testing, List<ColumnImpl> columns) 
-    throws IOException 
+  protected TableImpl(boolean testing, List<ColumnImpl> columns)
+    throws IOException
   {
     if(!testing) {
       throw new IllegalArgumentException();
@@ -215,7 +222,7 @@ public class TableImpl implements Table
     _ownedPages = null;
     _freeSpacePages = null;
   }
-  
+
   /**
    * @param database database which owns this table
    * @param tableBuffer Buffer to read the table with
@@ -251,17 +258,17 @@ public class TableImpl implements Table
     _ownedPages = UsageMap.read(getDatabase(), tableBuffer);
     tableBuffer.position(getFormat().OFFSET_FREE_SPACE_PAGES);
     _freeSpacePages = UsageMap.read(getDatabase(), tableBuffer);
-    
+
     for (int i = 0; i < _indexCount; i++) {
       _indexDatas.add(IndexData.create(this, tableBuffer, i, getFormat()));
     }
-    
+
     readColumnDefinitions(tableBuffer, columnCount);
 
     readIndexDefinitions(tableBuffer);
 
     // read column usage map info
-    while((tableBuffer.remaining() >= 2) && 
+    while((tableBuffer.remaining() >= 2) &&
           readColumnUsageMaps(tableBuffer)) {
       // keep reading ...
     }
@@ -280,11 +287,36 @@ public class TableImpl implements Table
     _fkEnforcer = new FKEnforcer(this);
 
     if(!isSystem()) {
-      // after fully constructed, allow column validator to be configured (but
-      // only for user tables)
+      // after fully constructed, allow column/row validators to be configured
+      // (but only for user tables)
       for(ColumnImpl col : _columns) {
-        col.setColumnValidator(null);
+        col.initColumnValidator();
       }
+
+      reloadRowValidator();
+    }
+  }
+
+  private void reloadRowValidator() throws IOException {
+
+    // reset table row validator before proceeding
+    _rowValidator = null;
+
+    if(!getDatabase().isEvaluateExpressions()) {
+      return;
+    }
+
+    PropertyMap props = getProperties();
+
+    String exprStr = PropertyMaps.getTrimmedStringProperty(
+        props, PropertyMap.VALIDATION_RULE_PROP);
+
+    if(exprStr != null) {
+      String helpStr = PropertyMaps.getTrimmedStringProperty(
+          props, PropertyMap.VALIDATION_TEXT_PROP);
+
+      _rowValidator = new RowValidatorEvalContext(this)
+        .setExpr(exprStr, helpStr);
     }
   }
 
@@ -306,15 +338,15 @@ public class TableImpl implements Table
   public int getMaxColumnCount() {
     return _maxColumnCount;
   }
-  
+
   public int getColumnCount() {
     return _columns.size();
   }
-  
+
   public DatabaseImpl getDatabase() {
     return _database;
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -336,7 +368,7 @@ public class TableImpl implements Table
 
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _tableErrorHandler = newErrorHandler;
-  }    
+  }
 
   public int getTableDefPageNumber() {
     return _tableDefPageNumber;
@@ -395,7 +427,7 @@ public class TableImpl implements Table
 
     return count;
   }
-  
+
   protected TempPageHolder getLongValueBuffer() {
     return _longValueBufferH;
   }
@@ -413,7 +445,7 @@ public class TableImpl implements Table
     throw new IllegalArgumentException(withErrorContext(
             "Column with name " + name + " does not exist in this table"));
   }
-  
+
   public boolean hasColumn(String name) {
     for(ColumnImpl column : _columns) {
       if(column.getName().equalsIgnoreCase(name)) {
@@ -437,11 +469,24 @@ public class TableImpl implements Table
   public PropertyMaps getPropertyMaps() throws IOException {
     if(_propertyMaps == null) {
       _propertyMaps = getDatabase().getPropertiesForObject(
-          _tableDefPageNumber);
+          _tableDefPageNumber, this);
     }
     return _propertyMaps;
   }
-  
+
+  public void propertiesUpdated() throws IOException {
+    // propagate update to columns
+    for(ColumnImpl col : _columns) {
+      col.propertiesUpdated();
+    }
+
+    reloadRowValidator();
+
+    // calculated columns will need to be re-sorted (their expressions may
+    // have changed when their properties were updated)
+    _calcColEval.reSort();
+  }
+
   public List<IndexImpl> getIndexes() {
     return Collections.unmodifiableList(_indexes);
   }
@@ -465,7 +510,7 @@ public class TableImpl implements Table
     throw new IllegalArgumentException(withErrorContext(
             "No primary key index found"));
   }
-  
+
   public IndexImpl getForeignKeyIndex(Table otherTable) {
     for(IndexImpl index : _indexes) {
       if(index.isForeignKey() && (index.getReference() != null) &&
@@ -478,7 +523,7 @@ public class TableImpl implements Table
         "No foreign key reference to " +
         otherTable.getName() + " found"));
   }
-  
+
   /**
    * @return All of the IndexData on this table (unmodifiable List)
    * @usage _advanced_method_
@@ -499,12 +544,12 @@ public class TableImpl implements Table
     return _indexCount;
   }
 
-  public IndexImpl findIndexForColumns(Collection<String> searchColumns, 
+  public IndexImpl findIndexForColumns(Collection<String> searchColumns,
                                        IndexFeature feature) {
 
     IndexImpl partialIndex = null;
     for(IndexImpl index : _indexes) {
-      
+
       Collection<? extends Index.Column> indexColumns = index.getColumns();
       if(indexColumns.size() < searchColumns.size()) {
         continue;
@@ -525,14 +570,14 @@ public class TableImpl implements Table
       }
 
       if(searchMatches) {
-        
-        if(exactMatch && ((feature != IndexFeature.EXACT_UNIQUE_ONLY) || 
+
+        if(exactMatch && ((feature != IndexFeature.EXACT_UNIQUE_ONLY) ||
                           index.isUnique())) {
           return index;
         }
 
-        if(!exactMatch && (feature == IndexFeature.ANY_MATCH) && 
-           ((partialIndex == null) || 
+        if(!exactMatch && (feature == IndexFeature.ANY_MATCH) &&
+           ((partialIndex == null) ||
             (indexColumns.size() < partialIndex.getColumnCount()))) {
           // this is a better partial index match
           partialIndex = index;
@@ -542,7 +587,7 @@ public class TableImpl implements Table
 
     return partialIndex;
   }
-  
+
   List<ColumnImpl> getAutoNumberColumns() {
     return _autoNumColumns;
   }
@@ -557,7 +602,7 @@ public class TableImpl implements Table
   public CursorBuilder newCursor() {
     return new CursorBuilder(this);
   }
-  
+
   public void reset() {
     getDefaultCursor().reset();
   }
@@ -583,14 +628,14 @@ public class TableImpl implements Table
    * Delete the row for the given rowId.
    * @usage _advanced_method_
    */
-  public void deleteRow(RowState rowState, RowIdImpl rowId) 
-    throws IOException 
+  public void deleteRow(RowState rowState, RowIdImpl rowId)
+    throws IOException
   {
     requireValidRowId(rowId);
-    
+
     getPageChannel().startWrite();
     try {
-      
+
       // ensure that the relevant row state is up-to-date
       ByteBuffer rowBuffer = positionAtRowHeader(rowState, rowId);
 
@@ -599,7 +644,7 @@ public class TableImpl implements Table
         return;
       }
       requireNonDeletedRow(rowState, rowId);
-    
+
       // delete flag always gets set in the "header" row (even if data is on
       // overflow row)
       int pageNumber = rowState.getHeaderRowId().getPageNumber();
@@ -620,7 +665,7 @@ public class TableImpl implements Table
         rowValues = rowState.getRowCacheValues();
 
         // check foreign keys before proceeding w/ deletion
-        _fkEnforcer.deleteRow(rowValues);    
+        _fkEnforcer.deleteRow(rowValues);
 
         // move back to the header
         rowBuffer = positionAtRowHeader(rowState, rowId);
@@ -636,7 +681,7 @@ public class TableImpl implements Table
       for(IndexData indexData : _indexDatas) {
         indexData.deleteRow(rowValues, rowId);
       }
-    
+
       // make sure table def gets updated
       updateTableDefinition(-1);
 
@@ -644,11 +689,11 @@ public class TableImpl implements Table
       getPageChannel().finishWrite();
     }
   }
-  
+
   public Row getNextRow() throws IOException {
     return getDefaultCursor().getNextRow();
   }
-  
+
   /**
    * Reads a single column from the given row.
    * @usage _advanced_method_
@@ -662,11 +707,11 @@ public class TableImpl implements Table
           "Given column " + column + " is not from this table"));
     }
     requireValidRowId(rowId);
-    
+
     // position at correct row
     ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
     requireNonDeletedRow(rowState, rowId);
-    
+
     return getRowColumn(getFormat(), rowBuffer, column, rowState, null);
   }
 
@@ -711,7 +756,7 @@ public class TableImpl implements Table
     }
     return rtn;
   }
-  
+
   /**
    * Reads the column data from the given row buffer.  Leaves limit unchanged.
    * Caches the returned value in the rowState.
@@ -743,10 +788,10 @@ public class TableImpl implements Table
         // we already have it, use it
         return cachedValue;
       }
-      
+
       // reset position to row start
       rowBuffer.reset();
-    
+
       // locate the column data bytes
       int rowStart = rowBuffer.position();
       int colDataPos = 0;
@@ -757,9 +802,9 @@ public class TableImpl implements Table
         int dataStart = rowStart + format.OFFSET_COLUMN_FIXED_DATA_ROW_OFFSET;
         colDataPos = dataStart + column.getFixedDataOffset();
         colDataLen = column.getType().getFixedSize(column.getLength());
-      
+
       } else {
-        int varDataStart; 
+        int varDataStart;
         int varDataEnd;
 
         if(format.SIZE_ROW_VAR_COL_OFFSET == 2) {
@@ -799,13 +844,13 @@ public class TableImpl implements Table
       // to update the index on row deletion.  note, most of the returned
       // values are immutable, except for binary data (returned as byte[]),
       // but binary data shouldn't be indexed anyway.
-      return rowState.setRowCacheValue(column.getColumnIndex(), 
+      return rowState.setRowCacheValue(column.getColumnIndex(),
                                        column.read(columnData));
 
     } catch(Exception e) {
 
       // cache "raw" row value.  see note about caching above
-      rowState.setRowCacheValue(column.getColumnIndex(), 
+      rowState.setRowCacheValue(column.getColumnIndex(),
                                 ColumnImpl.rawDataWrapper(columnData));
 
       return rowState.handleRowError(column, columnData, e);
@@ -814,7 +859,7 @@ public class TableImpl implements Table
 
   private static short[] readJumpTableVarColOffsets(
       RowState rowState, ByteBuffer rowBuffer, int rowStart,
-      NullMask nullMask) 
+      NullMask nullMask)
   {
     short[] varColOffsets = rowState.getVarColOffsets();
     if(varColOffsets != null) {
@@ -824,14 +869,14 @@ public class TableImpl implements Table
     // calculate offsets using jump-table info
     int nullMaskSize = nullMask.byteSize();
     int rowEnd = rowStart + rowBuffer.remaining() - 1;
-    int numVarCols = ByteUtil.getUnsignedByte(rowBuffer, 
+    int numVarCols = ByteUtil.getUnsignedByte(rowBuffer,
                                               rowEnd - nullMaskSize);
     varColOffsets = new short[numVarCols + 1];
-	  
+
     int rowLen = rowEnd - rowStart + 1;
     int numJumps = (rowLen - 1) / MAX_BYTE;
     int colOffset = rowEnd - nullMaskSize - numJumps - 1;
-	  
+
     // If last jump is a dummy value, ignore it
     if(((colOffset - rowStart - numVarCols) / MAX_BYTE) < numJumps) {
       numJumps--;
@@ -840,17 +885,17 @@ public class TableImpl implements Table
     int jumpsUsed = 0;
     for(int i = 0; i < numVarCols + 1; i++) {
 
-      while((jumpsUsed < numJumps) && 
+      while((jumpsUsed < numJumps) &&
          (i == ByteUtil.getUnsignedByte(
               rowBuffer, rowEnd - nullMaskSize-jumpsUsed - 1))) {
         jumpsUsed++;
       }
-		  
+
       varColOffsets[i] = (short)
         (ByteUtil.getUnsignedByte(rowBuffer, colOffset - i)
          + (jumpsUsed * MAX_BYTE));
     }
-	  
+
     rowState.setVarColOffsets(varColOffsets);
     return varColOffsets;
   }
@@ -867,7 +912,7 @@ public class TableImpl implements Table
     // Number of columns in this row
     int columnCount = ByteUtil.getUnsignedVarInt(
         rowBuffer, getFormat().SIZE_ROW_COLUMN_COUNT);
-    
+
     // read null mask
     NullMask nullMask = new NullMask(columnCount);
     rowBuffer.position(rowBuffer.limit() - nullMask.byteSize());  //Null mask at end
@@ -880,11 +925,11 @@ public class TableImpl implements Table
    * Sets a new buffer to the correct row header page using the given rowState
    * according to the given rowId.  Deleted state is
    * determined, but overflow row pointers are not followed.
-   * 
+   *
    * @return a ByteBuffer of the relevant page, or null if row was invalid
    * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowHeader(RowState rowState, 
+  public static ByteBuffer positionAtRowHeader(RowState rowState,
                                                RowIdImpl rowId)
     throws IOException
   {
@@ -894,7 +939,7 @@ public class TableImpl implements Table
       // this task has already been accomplished
       return rowBuffer;
     }
-    
+
     if(!rowState.isValid()) {
       // this was an invalid page/row
       rowState.setStatus(RowStateStatus.AT_HEADER);
@@ -919,17 +964,17 @@ public class TableImpl implements Table
     rowState.setStatus(RowStateStatus.AT_HEADER);
     return rowBuffer;
   }
-  
+
   /**
    * Sets the position and limit in a new buffer using the given rowState
    * according to the given row number and row end, following overflow row
    * pointers as necessary.
-   * 
+   *
    * @return a ByteBuffer narrowed to the actual row data, or null if row was
    *         invalid or deleted
    * @usage _advanced_method_
    */
-  public static ByteBuffer positionAtRowData(RowState rowState, 
+  public static ByteBuffer positionAtRowData(RowState rowState,
                                              RowIdImpl rowId)
     throws IOException
   {
@@ -943,7 +988,7 @@ public class TableImpl implements Table
     ByteBuffer rowBuffer = rowState.getFinalPage();
     int rowNum = rowState.getFinalRowId().getRowNumber();
     JetFormat format = rowState.getTable().getFormat();
-    
+
     if(rowState.isAtFinalRow()) {
       // we've already found the final row data
       return PageChannel.narrowBuffer(
@@ -951,9 +996,9 @@ public class TableImpl implements Table
           findRowStart(rowBuffer, rowNum, format),
           findRowEnd(rowBuffer, rowNum, format));
     }
-    
+
     while(true) {
-      
+
       // note, we don't use findRowStart here cause we need the unmasked value
       short rowStart = rowBuffer.getShort(getRowStartOffset(rowNum, format));
       short rowEnd = findRowEnd(rowBuffer, rowNum, format);
@@ -972,7 +1017,7 @@ public class TableImpl implements Table
           throw new IOException(rowState.getTable().withErrorContext(
                                     "invalid overflow row info"));
         }
-      
+
         // Overflow page.  the "row" data in the current page points to
         // another page/row
         int overflowRowNum = ByteUtil.getUnsignedByte(rowBuffer, rowStart);
@@ -980,7 +1025,7 @@ public class TableImpl implements Table
         rowBuffer = rowState.setOverflowRow(
             new RowIdImpl(overflowPageNum, overflowRowNum));
         rowNum = overflowRowNum;
-      
+
       } else {
 
         rowState.setStatus(RowStateStatus.AT_FINAL);
@@ -1006,13 +1051,13 @@ public class TableImpl implements Table
     // next, determine how big the table def will be (in case it will be more
     // than one page)
     JetFormat format = creator.getFormat();
-    int idxDataLen = (creator.getIndexCount() * 
-                      (format.SIZE_INDEX_DEFINITION + 
-                       format.SIZE_INDEX_COLUMN_BLOCK)) + 
+    int idxDataLen = (creator.getIndexCount() *
+                      (format.SIZE_INDEX_DEFINITION +
+                       format.SIZE_INDEX_COLUMN_BLOCK)) +
       (creator.getLogicalIndexCount() * format.SIZE_INDEX_INFO_BLOCK);
     int colUmapLen = creator.getLongValueColumns().size() * 10;
     int totalTableDefSize = format.SIZE_TDEF_HEADER +
-      (format.SIZE_COLUMN_DEF_BLOCK * creator.getColumns().size()) + 
+      (format.SIZE_COLUMN_DEF_BLOCK * creator.getColumns().size()) +
       idxDataLen + colUmapLen + format.SIZE_TDEF_TRAILER;
 
     // total up the amount of space used by the column and index names (2
@@ -1020,11 +1065,11 @@ public class TableImpl implements Table
     for(ColumnBuilder col : creator.getColumns()) {
       totalTableDefSize += DBMutator.calculateNameLength(col.getName());
     }
-    
+
     for(IndexBuilder idx : creator.getIndexes()) {
       totalTableDefSize += DBMutator.calculateNameLength(idx.getName());
     }
-    
+
 
     // now, create the table definition
     ByteBuffer buffer = PageChannel.createBuffer(Math.max(totalTableDefSize,
@@ -1037,8 +1082,8 @@ public class TableImpl implements Table
     }
 
     // column definitions
-    ColumnImpl.writeDefinitions(creator, buffer); 
-    
+    ColumnImpl.writeDefinitions(creator, buffer);
+
     if(creator.hasIndexes()) {
       // index and index data definitions
       IndexData.writeDefinitions(creator, buffer);
@@ -1059,7 +1104,7 @@ public class TableImpl implements Table
   }
 
   private static void writeTableDefinitionBuffer(
-      ByteBuffer buffer, int tdefPageNumber, 
+      ByteBuffer buffer, int tdefPageNumber,
       TableMutator mutator, List<Integer> reservedPages)
     throws IOException
   {
@@ -1070,7 +1115,7 @@ public class TableImpl implements Table
 
     // write table buffer to database
     if(totalTableDefSize <= format.PAGE_SIZE) {
-      
+
       // easy case, fits on one page
 
       // overwrite page free space
@@ -1080,7 +1125,7 @@ public class TableImpl implements Table
       // Write the tdef page to disk.
       buffer.clear();
       pageChannel.writePage(buffer, tdefPageNumber);
-      
+
     } else {
 
       // need to split across multiple pages
@@ -1092,13 +1137,13 @@ public class TableImpl implements Table
 
         // reset for next write
         partialTdef.clear();
-        
+
         if(nextTdefPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
-          
+
           // this is the first page.  note, the first page already has the
           // page header, so no need to write it here
           nextTdefPageNumber = tdefPageNumber;
-          
+
         } else {
 
           // write page header
@@ -1130,9 +1175,9 @@ public class TableImpl implements Table
         // write partial page to disk
         pageChannel.writePage(partialTdef, curTdefPageNumber);
       }
-        
+
     }
-    
+
   }
 
   /**
@@ -1166,7 +1211,7 @@ public class TableImpl implements Table
     int umapPos = -1;
     boolean success = false;
     try {
-      
+
       ////
       // update various bits of the table def
       ByteUtil.forward(tableBuffer, 29);
@@ -1176,7 +1221,7 @@ public class TableImpl implements Table
       tableBuffer.putShort((short)(_columns.size() + 1));
 
       // move to end of column def blocks
-      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+      tableBuffer.position(format.SIZE_TDEF_HEADER +
                            (_indexCount * format.SIZE_INDEX_DEFINITION) +
                            (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
 
@@ -1193,9 +1238,9 @@ public class TableImpl implements Table
       } else {
         // find the fixed offset
         for(ColumnImpl col : _columns) {
-          if(!col.isVariableLength() && 
+          if(!col.isVariableLength() &&
              (col.getFixedDataOffset() >= fixedOffset)) {
-            fixedOffset = col.getFixedDataOffset() + 
+            fixedOffset = col.getFixedDataOffset() +
               col.getType().getFixedSize(col.getLength());
           }
         }
@@ -1224,7 +1269,7 @@ public class TableImpl implements Table
         colState.setUmapFreeRowNumber((byte)(rowNum + 1));
 
         // skip past index defs
-        ByteUtil.forward(tableBuffer, (_indexCount * 
+        ByteUtil.forward(tableBuffer, (_indexCount *
                                        format.SIZE_INDEX_COLUMN_BLOCK));
         ByteUtil.forward(tableBuffer,
                          (_logicalIndexCount * format.SIZE_INDEX_INFO_BLOCK));
@@ -1237,7 +1282,7 @@ public class TableImpl implements Table
             ByteUtil.forward(tableBuffer, -2);
             break;
           }
-        
+
           ByteUtil.forward(tableBuffer, 8);
 
           // keep reading ...
@@ -1260,7 +1305,7 @@ public class TableImpl implements Table
 
       ////
       // write updated table def back to the database
-      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator,
                                  mutator.getNextPages());
       success = true;
 
@@ -1283,6 +1328,9 @@ public class TableImpl implements Table
     if(newCol.isAutoNumber()) {
       _autoNumColumns.add(newCol);
     }
+    if(newCol.isCalculated()) {
+      _calcColEval.add(newCol);
+    }
 
     if(umapPos >= 0) {
       // read column usage map
@@ -1295,7 +1343,7 @@ public class TableImpl implements Table
     if(!isSystem()) {
       // after fully constructed, allow column validator to be configured (but
       // only for user tables)
-      newCol.setColumnValidator(null);
+      newCol.initColumnValidator();
     }
 
     // save any column properties
@@ -1321,7 +1369,7 @@ public class TableImpl implements Table
 
     ////
     // calculate how much more space we need in the table def
-    mutator.addTdefLen(format.SIZE_INDEX_DEFINITION + 
+    mutator.addTdefLen(format.SIZE_INDEX_DEFINITION +
                        format.SIZE_INDEX_COLUMN_BLOCK);
 
     ////
@@ -1332,14 +1380,14 @@ public class TableImpl implements Table
     IndexData newIdxData = null;
     boolean success = false;
     try {
-      
+
       ////
       // update various bits of the table def
       ByteUtil.forward(tableBuffer, 39);
       tableBuffer.putInt(_indexCount + 1);
 
       // move to end of index data def blocks
-      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+      tableBuffer.position(format.SIZE_TDEF_HEADER +
                            (_indexCount * format.SIZE_INDEX_DEFINITION));
 
       // write index row count definition (empty initially)
@@ -1347,12 +1395,12 @@ public class TableImpl implements Table
       IndexData.writeRowCountDefinitions(mutator, tableBuffer, 1);
 
       // skip columns and column names
-      ByteUtil.forward(tableBuffer, 
+      ByteUtil.forward(tableBuffer,
                        (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
       skipNames(tableBuffer, _columns.size());
 
       // move to end of current index datas
-      ByteUtil.forward(tableBuffer, (_indexCount * 
+      ByteUtil.forward(tableBuffer, (_indexCount *
                                      format.SIZE_INDEX_COLUMN_BLOCK));
 
       // allocate usage maps and root page
@@ -1380,7 +1428,7 @@ public class TableImpl implements Table
 
       ////
       // write updated table def back to the database
-      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator,
                                  mutator.getNextPages());
       success = true;
 
@@ -1397,7 +1445,7 @@ public class TableImpl implements Table
     for(IndexData.ColumnDescriptor iCol : newIdxData.getColumns()) {
       _indexColumns.add(iCol.getColumn());
     }
-    
+
     ++_indexCount;
     _indexDatas.add(newIdxData);
 
@@ -1425,7 +1473,7 @@ public class TableImpl implements Table
         col.setRowValue(rowVals, col.getRowValue(row));
       }
 
-      IndexData.commitAll(      
+      IndexData.commitAll(
           idxData.prepareAddRow(rowVals, (RowIdImpl)row.getId(), null));
     }
 
@@ -1456,26 +1504,26 @@ public class TableImpl implements Table
     IndexImpl newIdx = null;
     boolean success = false;
     try {
-      
+
       ////
       // update various bits of the table def
       ByteUtil.forward(tableBuffer, 35);
       tableBuffer.putInt(_logicalIndexCount + 1);
 
       // move to end of index data def blocks
-      tableBuffer.position(format.SIZE_TDEF_HEADER + 
+      tableBuffer.position(format.SIZE_TDEF_HEADER +
                            (_indexCount * format.SIZE_INDEX_DEFINITION));
 
       // skip columns and column names
-      ByteUtil.forward(tableBuffer, 
+      ByteUtil.forward(tableBuffer,
                        (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
       skipNames(tableBuffer, _columns.size());
 
       // move to end of current index datas
-      ByteUtil.forward(tableBuffer, (_indexCount * 
+      ByteUtil.forward(tableBuffer, (_indexCount *
                                      format.SIZE_INDEX_COLUMN_BLOCK));
       // move to end of current indexes
-      ByteUtil.forward(tableBuffer, (_logicalIndexCount * 
+      ByteUtil.forward(tableBuffer, (_logicalIndexCount *
                                      format.SIZE_INDEX_INFO_BLOCK));
 
       int idxDefPos = tableBuffer.position();
@@ -1494,10 +1542,10 @@ public class TableImpl implements Table
       tableBuffer.position(idxDefPos);
       newIdx = new IndexImpl(tableBuffer, _indexDatas, format);
       newIdx.setName(index.getName());
-    
+
       ////
       // write updated table def back to the database
-      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator, 
+      writeTableDefinitionBuffer(tableBuffer, _tableDefPageNumber, mutator,
                                  mutator.getNextPages());
       success = true;
 
@@ -1547,7 +1595,7 @@ public class TableImpl implements Table
   private static void skipNames(ByteBuffer tableBuffer, int count) {
     for(int i = 0; i < count; ++i) {
       ByteUtil.forward(tableBuffer, tableBuffer.getShort());
-    }    
+    }
   }
 
   private ByteBuffer loadCompleteTableDefinitionBufferForUpdate(
@@ -1616,7 +1664,7 @@ public class TableImpl implements Table
     }
 
     if(umapPageNumber == PageChannel.INVALID_PAGE_NUMBER) {
-      
+
       // didn't find any existing pages, need to create a new one
       umapPageNumber = pageChannel.allocateNewPage();
       freeSpace = format.DATA_PAGE_INITIAL_FREE_SPACE;
@@ -1631,20 +1679,26 @@ public class TableImpl implements Table
       umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
       umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
 
+      int dataOffset = rowStart + 1;
       if(firstUsedPage != null) {
         // fill in the first used page of the usage map
-        umapBuf.putInt(rowStart + 1, firstUsedPage);
-        umapBuf.put(rowStart + 5, (byte)1);
+        umapBuf.putInt(dataOffset, firstUsedPage);
+        dataOffset += 4;
+        umapBuf.put(dataOffset, (byte)1);
+        dataOffset++;
       }
 
-      rowStart -= umapRowLength;      
+      // zero remaining row data
+      ByteUtil.clearRange(umapBuf, dataOffset, (rowStart + umapRowLength));
+
+      rowStart -= umapRowLength;
       ++umapRowNum;
     }
 
     // finish the page
     freeSpace -= totalUmapSpaceUsage;
     umapBuf.putShort(format.OFFSET_FREE_SPACE, (short)freeSpace);
-    umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE, 
+    umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE,
                      (short)umapRowNum);
     pageChannel.writePage(umapBuf, umapPageNumber);
 
@@ -1663,8 +1717,8 @@ public class TableImpl implements Table
     for(ColumnImpl col : _columns) {
       col.collectUsageMapPages(pages);
     }
-  }    
-  
+  }
+
   /**
    * @param buffer Buffer to write to
    */
@@ -1708,7 +1762,7 @@ public class TableImpl implements Table
     buffer.put((byte) 0); //Unknown
     buffer.putInt(0);  //Next TDEF page pointer
   }
-  
+
   /**
    * Writes the given name into the given buffer in the format as expected by
    * {@link #readName}.
@@ -1719,7 +1773,7 @@ public class TableImpl implements Table
       buffer.putShort((short) encName.remaining());
       buffer.put(encName);
   }
-  
+
   /**
    * Create the usage map definition page buffer.  The "used pages" map is in
    * row 0, the "pages with free space" map is in row 1.  Index usage maps are
@@ -1744,7 +1798,7 @@ public class TableImpl implements Table
     int freeSpace = 0;
     int rowStart = 0;
     int umapRowNum = 0;
-    
+
     for(int i = 0; i < umapNum; ++i) {
 
       if(umapBuf == null) {
@@ -1767,7 +1821,7 @@ public class TableImpl implements Table
       }
 
       umapBuf.putShort(getRowStartOffset(umapRowNum, format), (short)rowStart);
-      
+
       if(i == 0) {
 
         // table "owned pages" map definition
@@ -1782,9 +1836,9 @@ public class TableImpl implements Table
 
         // index umap
         int indexIdx = i - 2;
-        TableMutator.IndexDataState idxDataState = 
+        TableMutator.IndexDataState idxDataState =
           creator.getIndexDataStates().get(indexIdx);
-        
+
         // allocate root page for the index
         int rootPageNumber = pageChannel.allocateNewPage();
 
@@ -1806,19 +1860,19 @@ public class TableImpl implements Table
         lvalColIdx /= 2;
 
         ColumnBuilder lvalCol = lvalCols.get(lvalColIdx);
-        TableMutator.ColumnState colState = 
+        TableMutator.ColumnState colState =
           creator.getColumnState(lvalCol);
 
         umapBuf.put(rowStart, UsageMap.MAP_TYPE_INLINE);
 
-        if((umapType == 1) && 
+        if((umapType == 1) &&
            (umapPageNumber != colState.getUmapPageNumber())) {
           // we want to force both usage maps for a column to be on the same
           // data page, so just discard the previous one we wrote
           --i;
           umapType = 0;
         }
-        
+
         if(umapType == 0) {
           // lval column "owned pages" usage map
           colState.setUmapOwnedRowNumber((byte)umapRowNum);
@@ -1836,7 +1890,7 @@ public class TableImpl implements Table
       if((freeSpace <= umapSpaceUsage) || (i == (umapNum - 1))) {
         // finish current page
         umapBuf.putShort(format.OFFSET_FREE_SPACE, (short)freeSpace);
-        umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE, 
+        umapBuf.putShort(format.OFFSET_NUM_ROWS_ON_DATA_PAGE,
                          (short)umapRowNum);
         pageChannel.writePage(umapBuf, umapPageNumber);
         umapBuf = null;
@@ -1853,7 +1907,7 @@ public class TableImpl implements Table
     umapBuf.putShort((short)freeSpace);  //Free space in page
     umapBuf.putInt(0); //Table definition
     umapBuf.putInt(0); //Unknown
-    umapBuf.putShort((short)0); //Number of records on this page    
+    umapBuf.putShort((short)0); //Number of records on this page
     return umapBuf;
   }
 
@@ -1882,14 +1936,14 @@ public class TableImpl implements Table
     }
     return tableBuffer;
   }
-    
+
   private ByteBuffer expandTableBuffer(ByteBuffer tableBuffer) {
       ByteBuffer newBuffer = PageChannel.createBuffer(
           tableBuffer.capacity() + getFormat().PAGE_SIZE - 8);
       newBuffer.put(tableBuffer);
       return newBuffer;
   }
-    
+
   private void readColumnDefinitions(ByteBuffer tableBuffer, short columnCount)
     throws IOException
   {
@@ -1901,8 +1955,8 @@ public class TableImpl implements Table
     List<String> colNames = new ArrayList<String>(columnCount);
     for (int i = 0; i < columnCount; i++) {
       colNames.add(readName(tableBuffer));
-    }    
-    
+    }
+
     int dispIndex = 0;
     for (int i = 0; i < columnCount; i++) {
       ColumnImpl column = ColumnImpl.create(this, tableBuffer,
@@ -1918,6 +1972,7 @@ public class TableImpl implements Table
 
     Collections.sort(_columns);
     initAutoNumberColumns();
+    initCalculatedColumns();
 
     // setup the data index for the columns
     int colIdx = 0;
@@ -1951,18 +2006,18 @@ public class TableImpl implements Table
     for (int i = 0; i < _logicalIndexCount; i++) {
       _indexes.get(i).setName(readName(tableBuffer));
     }
-    
+
     Collections.sort(_indexes);
   }
-  
-  private boolean readColumnUsageMaps(ByteBuffer tableBuffer) 
+
+  private boolean readColumnUsageMaps(ByteBuffer tableBuffer)
     throws IOException
   {
     short umapColNum = tableBuffer.getShort();
     if(umapColNum == IndexData.COLUMN_UNUSED) {
       return false;
     }
-      
+
     int pos = tableBuffer.position();
     UsageMap colOwnedPages = null;
     UsageMap colFreeSpacePages = null;
@@ -1974,10 +2029,10 @@ public class TableImpl implements Table
       colOwnedPages = null;
       colFreeSpacePages = null;
       tableBuffer.position(pos + 8);
-      LOG.warn(withErrorContext("Invalid column " + umapColNum + 
+      LOG.warn(withErrorContext("Invalid column " + umapColNum +
                                 " usage map definition: " + e));
     }
-      
+
     for(ColumnImpl col : _columns) {
       if(col.getColumnNumber() == umapColNum) {
         col.setUsageMaps(colOwnedPages, colFreeSpacePages);
@@ -2001,7 +2056,7 @@ public class TableImpl implements Table
     // possibly invalidate the add row buffer if a different data buffer is
     // being written (e.g. this happens during deleteRow)
     _addRowBufferH.possiblyInvalidate(pageNumber, pageBuffer);
-    
+
     // update modification count so any active RowStates can keep themselves
     // up-to-date
     ++_modCount;
@@ -2009,27 +2064,27 @@ public class TableImpl implements Table
 
   /**
    * Returns a name read from the buffer at the current position. The
-   * expected name format is the name length followed by the name 
+   * expected name format is the name length followed by the name
    * encoded using the {@link JetFormat#CHARSET}
    */
-  private String readName(ByteBuffer buffer) { 
+  private String readName(ByteBuffer buffer) {
     int nameLength = readNameLength(buffer);
     byte[] nameBytes = ByteUtil.getBytes(buffer, nameLength);
-    return ColumnImpl.decodeUncompressedText(nameBytes, 
+    return ColumnImpl.decodeUncompressedText(nameBytes,
                                          getDatabase().getCharset());
   }
-  
+
   /**
    * Returns a name length read from the buffer at the current position.
    */
-  private int readNameLength(ByteBuffer buffer) { 
+  private int readNameLength(ByteBuffer buffer) {
     return ByteUtil.getUnsignedVarInt(buffer, getFormat().SIZE_NAME_LENGTH);
   }
-  
+
   public Object[] asRow(Map<String,?> rowMap) {
     return asRow(rowMap, null, false);
   }
-  
+
   /**
    * Converts a map of columnName -> columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}, where the generated
@@ -2040,7 +2095,7 @@ public class TableImpl implements Table
   public Object[] asRowWithRowId(Map<String,?> rowMap) {
     return asRow(rowMap, null, true);
   }
-  
+
   public Object[] asUpdateRow(Map<String,?> rowMap) {
     return asRow(rowMap, Column.KEEP_VALUE, false);
   }
@@ -2057,7 +2112,7 @@ public class TableImpl implements Table
   /**
    * Converts a map of columnName -> columnValue to an array of row values.
    */
-  private Object[] asRow(Map<String,?> rowMap, Object defaultValue, 
+  private Object[] asRow(Map<String,?> rowMap, Object defaultValue,
                          boolean returnRowId)
   {
     int len = _columns.size();
@@ -2081,44 +2136,42 @@ public class TableImpl implements Table
     }
     return row;
   }
-  
+
   public Object[] addRow(Object... row) throws IOException {
     return addRows(Collections.singletonList(row), false).get(0);
   }
 
-  public <M extends Map<String,Object>> M addRowFromMap(M row) 
-    throws IOException 
+  public <M extends Map<String,Object>> M addRowFromMap(M row)
+    throws IOException
   {
     Object[] rowValues = asRow(row);
 
     addRow(rowValues);
 
-    returnRowValues(row, rowValues, _autoNumColumns);
+    returnRowValues(row, rowValues, _columns);
     return row;
   }
-    
-  public List<? extends Object[]> addRows(List<? extends Object[]> rows) 
-    throws IOException 
+
+  public List<? extends Object[]> addRows(List<? extends Object[]> rows)
+    throws IOException
   {
     return addRows(rows, true);
   }
-  
-  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows) 
-    throws IOException 
+
+  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows)
+    throws IOException
   {
     List<Object[]> rowValuesList = new ArrayList<Object[]>(rows.size());
     for(Map<String,Object> row : rows) {
       rowValuesList.add(asRow(row));
-    } 
+    }
 
     addRows(rowValuesList);
 
-    if(!_autoNumColumns.isEmpty()) {
-      for(int i = 0; i < rowValuesList.size(); ++i) {
-        Map<String,Object> row = rows.get(i);
-        Object[] rowValues = rowValuesList.get(i);
-        returnRowValues(row, rowValues, _autoNumColumns);
-      }
+    for(int i = 0; i < rowValuesList.size(); ++i) {
+      Map<String,Object> row = rows.get(i);
+      Object[] rowValues = rowValuesList.get(i);
+      returnRowValues(row, rowValues, _columns);
     }
     return rows;
   }
@@ -2146,12 +2199,12 @@ public class TableImpl implements Table
 
     getPageChannel().startWrite();
     try {
-    
+
       ByteBuffer dataPage = null;
       int pageNumber = PageChannel.INVALID_PAGE_NUMBER;
       int updateCount = 0;
       int autoNumAssignCount = 0;
-      WriteRowState writeRowState = 
+      WriteRowState writeRowState =
         (!_autoNumColumns.isEmpty() ? new WriteRowState() : null);
       try {
 
@@ -2179,23 +2232,36 @@ public class TableImpl implements Table
 
           // handle various value massaging activities
           for(ColumnImpl column : _columns) {
-            if(!column.isAutoNumber()) {              
+            if(!column.isAutoNumber()) {
+              Object val = column.getRowValue(row);
+              if(val == null) {
+                val = column.generateDefaultValue();
+              }
               // pass input value through column validator
-              column.setRowValue(row, column.validate(column.getRowValue(row)));
+              column.setRowValue(row, column.validate(val));
             }
           }
 
           // fill in autonumbers
           handleAutoNumbersForAdd(row, writeRowState);
           ++autoNumAssignCount;
-      
+
+          // need to assign calculated values after all the other fields are
+          // filled in but before final validation
+          _calcColEval.calculate(row);
+
+          // run row validation if enabled
+          if(_rowValidator != null) {
+            _rowValidator.validate(row);
+          }
+
           // write the row of data to a temporary buffer
           ByteBuffer rowData = createRow(
               row, _writeRowBufferH.getPageBuffer(getPageChannel()));
-      
+
           int rowSize = rowData.remaining();
           if (rowSize > getFormat().MAX_ROW_SIZE) {
-            throw new IOException(withErrorContext(
+            throw new InvalidValueException(withErrorContext(
                     "Row size " + rowSize + " is too large"));
           }
 
@@ -2237,7 +2303,7 @@ public class TableImpl implements Table
           dataPage.put(rowData);
 
           // return rowTd if desired
-          if((row.length > numCols) && 
+          if((row.length > numCols) &&
              (row[numCols] == ColumnImpl.RETURN_ROW_ID)) {
             row[numCols] = rowId;
           }
@@ -2246,7 +2312,7 @@ public class TableImpl implements Table
         }
 
         writeDataPage(dataPage, pageNumber);
-    
+
         // Update tdef page
         updateTableDefinition(rows.size());
 
@@ -2259,12 +2325,12 @@ public class TableImpl implements Table
           // recover them so we don't get ugly "holes"
           restoreAutoNumbersFromAdd(rows.get(autoNumAssignCount - 1));
         }
-        
+
         if(!isBatchWrite) {
           // just re-throw the original exception
           if(rowWriteFailure instanceof IOException) {
             throw (IOException)rowWriteFailure;
-          } 
+          }
           throw (RuntimeException)rowWriteFailure;
         }
 
@@ -2276,12 +2342,12 @@ public class TableImpl implements Table
           updateCount = 0;
 
         } else if(updateCount > 0) {
-          
+
           // attempt to flush the rows already written to disk
           try {
 
             writeDataPage(dataPage, pageNumber);
-    
+
             // Update tdef page
             updateTableDefinition(updateCount);
 
@@ -2291,7 +2357,7 @@ public class TableImpl implements Table
             // write failure).  we don't know the status of any rows at this
             // point (and the original failure is probably irrelevant)
             LOG.warn(withErrorContext(
-                    "Secondary row failure which preceded the write failure"), 
+                    "Secondary row failure which preceded the write failure"),
                      rowWriteFailure);
             updateCount = 0;
             rowWriteFailure = flushFailure;
@@ -2306,7 +2372,7 @@ public class TableImpl implements Table
     } finally {
       getPageChannel().finishWrite();
     }
-    
+
     return rows;
   }
 
@@ -2316,11 +2382,11 @@ public class TableImpl implements Table
         return true;
       }
       t = t.getCause();
-    } 
+    }
     // some other sort of exception which is not a write failure
     return false;
   }
-  
+
   public Row updateRow(Row row) throws IOException {
     return updateRowFromMap(
         getDefaultCursor().getRowState(), (RowIdImpl)row.getId(), row);
@@ -2344,8 +2410,8 @@ public class TableImpl implements Table
    * @throws IllegalStateException if the given row is not valid, or deleted.
    * @usage _intermediate_method_
    */
-  public void updateValue(Column column, RowId rowId, Object value) 
-    throws IOException 
+  public void updateValue(Column column, RowId rowId, Object value)
+    throws IOException
   {
     Object[] row = new Object[_columns.size()];
     Arrays.fill(row, Column.KEEP_VALUE);
@@ -2355,8 +2421,8 @@ public class TableImpl implements Table
   }
 
   public <M extends Map<String,Object>> M updateRowFromMap(
-      RowState rowState, RowIdImpl rowId, M row) 
-     throws IOException 
+      RowState rowState, RowIdImpl rowId, M row)
+     throws IOException
   {
     Object[] rowValues = updateRow(rowState, rowId, asUpdateRow(row));
     returnRowValues(row, rowValues, _columns);
@@ -2367,14 +2433,14 @@ public class TableImpl implements Table
    * Update the row for the given rowId.
    * @usage _advanced_method_
    */
-  public Object[] updateRow(RowState rowState, RowIdImpl rowId, Object... row) 
-    throws IOException 
+  public Object[] updateRow(RowState rowState, RowIdImpl rowId, Object... row)
+    throws IOException
   {
     requireValidRowId(rowId);
-    
+
     getPageChannel().startWrite();
     try {
-    
+
       // ensure that the relevant row state is up-to-date
       ByteBuffer rowBuffer = positionAtRowData(rowState, rowId);
       int oldRowSize = rowBuffer.remaining();
@@ -2390,7 +2456,7 @@ public class TableImpl implements Table
       // hang on to the raw values of var length columns we are "keeping".  this
       // will allow us to re-use pre-written var length data, which can save
       // space for things like long value columns.
-      Map<ColumnImpl,byte[]> keepRawVarValues = 
+      Map<ColumnImpl,byte[]> keepRawVarValues =
         (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
 
       // handle various value massaging activities
@@ -2403,11 +2469,11 @@ public class TableImpl implements Table
 
         Object rowValue = column.getRowValue(row);
         if(rowValue == Column.KEEP_VALUE) {
-            
+
           // fill in any "keep value" fields (restore old value)
           rowValue = getRowColumn(getFormat(), rowBuffer, column, rowState,
                                   keepRawVarValues);
-            
+
         } else {
 
           // set oldValue to something that could not possibly be a real value
@@ -2424,7 +2490,7 @@ public class TableImpl implements Table
           if(oldValue != rowValue) {
             // pass input value through column validator
             rowValue = column.validate(rowValue);
-          } 
+          }
         }
 
         column.setRowValue(row, rowValue);
@@ -2433,13 +2499,22 @@ public class TableImpl implements Table
       // fill in autonumbers
       handleAutoNumbersForUpdate(row, rowBuffer, rowState);
 
+      // need to assign calculated values after all the other fields are
+      // filled in but before final validation
+      _calcColEval.calculate(row);
+
+      // run row validation if enabled
+      if(_rowValidator != null) {
+        _rowValidator.validate(row);
+      }
+
       // generate new row bytes
       ByteBuffer newRowData = createRow(
           row, _writeRowBufferH.getPageBuffer(getPageChannel()), oldRowSize,
           keepRawVarValues);
 
       if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
-        throw new IOException(withErrorContext(
+        throw new InvalidValueException(withErrorContext(
                 "Row size " + newRowData.limit() + " is too large"));
       }
 
@@ -2455,7 +2530,7 @@ public class TableImpl implements Table
 
           // prepare index updates
           for(IndexData indexData : _indexDatas) {
-            idxChange = indexData.prepareUpdateRow(oldRowValues, rowId, row, 
+            idxChange = indexData.prepareUpdateRow(oldRowValues, rowId, row,
                                                    idxChange);
           }
 
@@ -2467,7 +2542,7 @@ public class TableImpl implements Table
           throw ce;
         }
       }
-    
+
       // see if we can squeeze the new row data into the existing row
       rowBuffer.reset();
       int rowSize = newRowData.remaining();
@@ -2487,11 +2562,11 @@ public class TableImpl implements Table
       } else {
 
         // bummer, need to find a new page for the data
-        dataPage = findFreeRowSpace(rowSize, null, 
+        dataPage = findFreeRowSpace(rowSize, null,
                                     PageChannel.INVALID_PAGE_NUMBER);
         pageNumber = _addRowBufferH.getPageNumber();
 
-        RowIdImpl headerRowId = rowState.getHeaderRowId();      
+        RowIdImpl headerRowId = rowState.getHeaderRowId();
         ByteBuffer headerPage = rowState.getHeaderPage();
         if(pageNumber == headerRowId.getPageNumber()) {
           // new row is on the same page as header row, share page
@@ -2535,8 +2610,8 @@ public class TableImpl implements Table
 
     return row;
   }
-   
-  private ByteBuffer findFreeRowSpace(int rowSize, ByteBuffer dataPage, 
+
+  private ByteBuffer findFreeRowSpace(int rowSize, ByteBuffer dataPage,
                                       int pageNumber)
     throws IOException
   {
@@ -2546,7 +2621,7 @@ public class TableImpl implements Table
     if(dataPage == null) {
 
       // find owned page w/ free space
-      dataPage = findFreeRowSpace(_ownedPages, _freeSpacePages, 
+      dataPage = findFreeRowSpace(_ownedPages, _freeSpacePages,
                                   _addRowBufferH);
 
       if(dataPage == null) {
@@ -2602,7 +2677,7 @@ public class TableImpl implements Table
 
     return null;
   }
-    
+
   /**
    * Updates the table definition after rows are modified.
    */
@@ -2611,7 +2686,7 @@ public class TableImpl implements Table
     // load table definition
     ByteBuffer tdefPage = _tableDefBufferH.setPage(getPageChannel(),
                                                    _tableDefPageNumber);
-    
+
     // make sure rowcount and autonumber are up-to-date
     _rowCount += rowCountInc;
     tdefPage.putInt(getFormat().OFFSET_NUM_ROWS, _rowCount);
@@ -2634,7 +2709,7 @@ public class TableImpl implements Table
     // write modified table definition
     getPageChannel().writePage(tdefPage, _tableDefPageNumber);
   }
-  
+
   /**
    * Create a new data page
    * @return Page number of the new page
@@ -2653,7 +2728,8 @@ public class TableImpl implements Table
     _freeSpacePages.addPageNumber(pageNumber);
     return dataPage;
   }
-  
+
+  // exposed for unit tests
   protected ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer)
     throws IOException
   {
@@ -2663,7 +2739,7 @@ public class TableImpl implements Table
 
   /**
    * Serialize a row of Objects into a byte buffer.
-   * 
+   *
    * @param rowArray row data, expected to be correct length for this table
    * @param buffer buffer to which to write the row data
    * @param minRowSize min size for result row
@@ -2672,13 +2748,13 @@ public class TableImpl implements Table
    * @return the given buffer, filled with the row data
    */
   private ByteBuffer createRow(Object[] rowArray, ByteBuffer buffer,
-                               int minRowSize, 
+                               int minRowSize,
                                Map<ColumnImpl,byte[]> rawVarValues)
     throws IOException
   {
     buffer.putShort(_maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
-    
+
     //Fixed length column data comes first
     int fixedDataStart = buffer.position();
     int fixedDataEnd = fixedDataStart;
@@ -2687,19 +2763,19 @@ public class TableImpl implements Table
       if(col.isVariableLength()) {
         continue;
       }
-        
+
       Object rowValue = col.getRowValue(rowArray);
 
       if (col.storeInNullMask()) {
-        
+
         if(col.writeToNullMask(rowValue)) {
           nullMask.markNotNull(col);
         }
         rowValue = null;
       }
-          
+
       if(rowValue != null) {
-        
+
         // we have a value to write
         nullMask.markNotNull(col);
 
@@ -2717,13 +2793,13 @@ public class TableImpl implements Table
       // keep track of the end of fixed data
       if(buffer.position() > fixedDataEnd) {
         fixedDataEnd = buffer.position();
-      }                  
-      
+      }
+
     }
 
     // reposition at end of fixed data
     buffer.position(fixedDataEnd);
-      
+
     // only need this info if this table contains any var length data
     if(_maxVarColumnCount > 0) {
 
@@ -2745,7 +2821,7 @@ public class TableImpl implements Table
           maxRowSize -= getFormat().SIZE_LONG_VALUE_DEF;
         }
       }
-      
+
       //Now write out variable length column data
       short[] varColumnOffsets = new short[_maxVarColumnCount];
       int varColumnOffsetsIndex = 0;
@@ -2758,7 +2834,7 @@ public class TableImpl implements Table
 
           byte[] rawValue = null;
           ByteBuffer varDataBuf = null;
-          if(((rawValue = rawVarValues.get(varCol)) != null) && 
+          if(((rawValue = rawVarValues.get(varCol)) != null) &&
              (rawValue.length <= maxRowSize)) {
             // save time and potentially db space, re-use raw value
             varDataBuf = ByteBuffer.wrap(rawValue);
@@ -2778,9 +2854,9 @@ public class TableImpl implements Table
           } catch(BufferOverflowException e) {
             // if the data is too big for the buffer, then we have gone over
             // the max row size
-            throw new IOException(withErrorContext(
+            throw new InvalidValueException(withErrorContext(
                     "Row size " + buffer.limit() + " is too large"));
-          } 
+          }
         }
 
         // we do a loop here so that we fill in offsets for deleted columns
@@ -2839,14 +2915,14 @@ public class TableImpl implements Table
       Object inRowValue = getInputAutoNumberRowValue(enableInsert, col, row);
 
       ColumnImpl.AutoNumberGenerator autoNumGen = col.getAutoNumberGenerator();
-      Object rowValue = ((inRowValue == null) ? 
+      Object rowValue = ((inRowValue == null) ?
                          autoNumGen.getNext(writeRowState) :
                          autoNumGen.handleInsert(writeRowState, inRowValue));
 
       col.setRowValue(row, rowValue);
     }
   }
-  
+
   /**
    * Fill in all autonumber column values for update.
    */
@@ -2866,7 +2942,7 @@ public class TableImpl implements Table
       // enabled)
       Object inRowValue = getInputAutoNumberRowValue(enableInsert, col, row);
 
-      Object rowValue = 
+      Object rowValue =
         ((inRowValue == null) ?
          getRowColumn(getFormat(), rowBuffer, col, rowState, null) :
          col.getAutoNumberGenerator().handleInsert(rowState, inRowValue));
@@ -2893,7 +2969,7 @@ public class TableImpl implements Table
     }
     return inRowValue;
   }
-  
+
   /**
    * Restores all autonumber column values from a failed add row.
    */
@@ -2946,7 +3022,7 @@ public class TableImpl implements Table
     // restores the last used auto number
     _lastLongAutoNumber = lastLongAutoNumber - 1;
   }
-  
+
   int getNextComplexTypeAutoNumber() {
     // note, the saved value is the last one handed out, so pre-increment
     return ++_lastComplexTypeAutoNumber;
@@ -2967,7 +3043,7 @@ public class TableImpl implements Table
     // restores the last used auto number
     _lastComplexTypeAutoNumber = lastComplexTypeAutoNumber - 1;
   }
-  
+
   @Override
   public String toString() {
     return CustomToStringStyle.builder(this)
@@ -2977,12 +3053,13 @@ public class TableImpl implements Table
       .append("columnCount", _columns.size())
       .append("indexCount(data)", _indexCount)
       .append("logicalIndexCount", _logicalIndexCount)
+      .append("validator", CustomToStringStyle.ignoreNull(_rowValidator))
       .append("columns", _columns)
       .append("indexes", _indexes)
       .append("ownedPages", _ownedPages)
       .toString();
   }
-  
+
   /**
    * @return A simple String representation of the entire table in
    *         tab-delimited format
@@ -2991,7 +3068,7 @@ public class TableImpl implements Table
   public String display() throws IOException {
     return display(Long.MAX_VALUE);
   }
-  
+
   /**
    * @param limit Maximum number of rows to display
    * @return A simple String representation of the entire table in
@@ -3014,11 +3091,11 @@ public class TableImpl implements Table
    */
   public static int addDataPageRow(ByteBuffer dataPage,
                                    int rowSize,
-                                   JetFormat format, 
+                                   JetFormat format,
                                    int rowFlags)
   {
     int rowSpaceUsage = getRowSpaceUsage(rowSize, format);
-    
+
     // Decrease free space record.
     short freeSpaceInPage = dataPage.getShort(format.OFFSET_FREE_SPACE);
     dataPage.putShort(format.OFFSET_FREE_SPACE, (short) (freeSpaceInPage -
@@ -3034,7 +3111,7 @@ public class TableImpl implements Table
     rowLocation -= rowSize;
 
     // write row position
-    dataPage.putShort(getRowStartOffset(rowCount, format), 
+    dataPage.putShort(getRowStartOffset(rowCount, format),
                       (short)(rowLocation | rowFlags));
 
     // set position for row data
@@ -3066,7 +3143,7 @@ public class TableImpl implements Table
               "Given rowId is invalid: " + rowId));
     }
   }
-  
+
   /**
    * @throws IllegalStateException if the given row is invalid or deleted
    */
@@ -3081,14 +3158,14 @@ public class TableImpl implements Table
           "Row is deleted: " + rowId));
     }
   }
-  
+
   /**
    * @usage _advanced_method_
    */
   public static boolean isDeletedRow(short rowStart) {
     return ((rowStart & DELETED_ROW_MASK) != 0);
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -3102,7 +3179,7 @@ public class TableImpl implements Table
   public static short cleanRowStart(short rowStart) {
     return (short)(rowStart & OFFSET_MASK);
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -3120,7 +3197,7 @@ public class TableImpl implements Table
   {
     return format.OFFSET_ROW_START + (format.SIZE_ROW_LOCATION * rowNum);
   }
-  
+
   /**
    * @usage _advanced_method_
    */
@@ -3157,6 +3234,20 @@ public class TableImpl implements Table
     }
   }
 
+  private void initCalculatedColumns() {
+    for(ColumnImpl c : _columns) {
+      if(c.isCalculated()) {
+        _calcColEval.add(c);
+      }
+    }
+  }
+
+  boolean isThisTable(Identifier identifier) {
+    String collectionName = identifier.getCollectionName();
+    return ((collectionName == null) ||
+            collectionName.equalsIgnoreCase(getName()));
+  }
+
   /**
    * Returns {@code true} if a row of the given size will fit on the given
    * data page, {@code false} otherwise.
@@ -3183,7 +3274,7 @@ public class TableImpl implements Table
     return copy;
   }
 
-  private String withErrorContext(String msg) {
+  String withErrorContext(String msg) {
     return withErrorContext(msg, getDatabase(), getName());
   }
 
@@ -3262,7 +3353,7 @@ public class TableImpl implements Table
     private ErrorHandler _errorHandler;
     /** cached variable column offsets for jump-table based rows */
     private short[] _varColOffsets;
-  
+
     private RowState(TempBufferHolder.Type headerType) {
       _headerRowBufferH = TempPageHolder.newHolder(headerType);
       _rowValues = new Object[TableImpl.this.getColumnCount()];
@@ -3281,7 +3372,7 @@ public class TableImpl implements Table
     public void setErrorHandler(ErrorHandler newErrorHandler) {
       _errorHandler = newErrorHandler;
     }
-    
+
     public void reset() {
       resetAutoNumber();
       _finalRowId = null;
@@ -3300,7 +3391,7 @@ public class TableImpl implements Table
     public boolean isUpToDate() {
       return(TableImpl.this._modCount == _lastModCount);
     }
-    
+
     private void checkForModification() {
       if(!isUpToDate()) {
         reset();
@@ -3314,7 +3405,7 @@ public class TableImpl implements Table
         _lastModCount = TableImpl.this._modCount;
       }
     }
-    
+
     private ByteBuffer getFinalPage()
       throws IOException
     {
@@ -3339,11 +3430,11 @@ public class TableImpl implements Table
     public boolean isValid() {
       return(_rowStatus.ordinal() >= RowStatus.VALID.ordinal());
     }
-    
+
     public boolean isDeleted() {
       return(_rowStatus == RowStatus.DELETED);
     }
-    
+
     public boolean isOverflow() {
       return(_rowStatus == RowStatus.OVERFLOW);
     }
@@ -3351,19 +3442,19 @@ public class TableImpl implements Table
     public boolean isHeaderPageNumberValid() {
       return(_rowStatus.ordinal() > RowStatus.INVALID_PAGE.ordinal());
     }
-    
+
     public boolean isHeaderRowNumberValid() {
       return(_rowStatus.ordinal() > RowStatus.INVALID_ROW.ordinal());
     }
-    
+
     private void setStatus(RowStateStatus status) {
       _status = status;
     }
-    
+
     public boolean isAtHeaderRow() {
       return(_status.ordinal() >= RowStateStatus.AT_HEADER.ordinal());
     }
-    
+
     public boolean isAtFinalRow() {
       return(_status.ordinal() >= RowStateStatus.AT_FINAL.ordinal());
     }
@@ -3380,7 +3471,7 @@ public class TableImpl implements Table
       // modified externally and therefore could return an incorrect value
       return(ColumnImpl.isImmutableValue(value) ? value : null);
     }
-    
+
     public Object[] getRowCacheValues() {
       return dupeRow(_rowValues, _rowValues.length);
     }
@@ -3399,7 +3490,7 @@ public class TableImpl implements Table
     private void setVarColOffsets(short[] varColOffsets) {
       _varColOffsets = varColOffsets;
     }
-    
+
     public RowIdImpl getHeaderRowId() {
       return _headerRowId;
     }
@@ -3407,7 +3498,7 @@ public class TableImpl implements Table
     public int getRowsOnHeaderPage() {
       return _rowsOnHeaderPage;
     }
-    
+
     private ByteBuffer getHeaderPage()
       throws IOException
     {
@@ -3436,11 +3527,11 @@ public class TableImpl implements Table
         setRowStatus(RowStatus.INVALID_PAGE);
         return null;
       }
-      
+
       _finalRowBuffer = _headerRowBufferH.setPage(getPageChannel(),
                                                   pageNumber);
       _rowsOnHeaderPage = getRowsOnDataPage(_finalRowBuffer, getFormat());
-      
+
       if((rowNumber < 0) || (rowNumber >= _rowsOnHeaderPage)) {
         setRowStatus(RowStatus.INVALID_ROW);
         return null;
@@ -3475,7 +3566,7 @@ public class TableImpl implements Table
     {
       return getErrorHandler().handleRowError(column, columnData,
                                               this, error);
-    }  
+    }
 
     @Override
     public String toString() {
@@ -3485,5 +3576,74 @@ public class TableImpl implements Table
         .toString();
     }
   }
-  
+
+  /**
+   * Utility for managing calculated columns.  Calculated columns need to be
+   * evaluated in dependency order.
+   */
+  private class CalcColEvaluator
+  {
+    /** List of calculated columns in this table, ordered by calculation
+        dependency */
+    private final List<ColumnImpl> _calcColumns = new ArrayList<ColumnImpl>(1);
+    private boolean _sorted;
+
+    public void add(ColumnImpl col) {
+      if(!getDatabase().isEvaluateExpressions()) {
+        return;
+      }
+      _calcColumns.add(col);
+      // whenever we add new columns, we need to re-sort
+      _sorted = false;
+    }
+
+    public void reSort() {
+      // mark columns for re-sort on next use
+      _sorted = false;
+    }
+
+    public void calculate(Object[] row) throws IOException {
+      if(!_sorted) {
+        sortColumnsByDeps();
+        _sorted = true;
+      }
+
+      for(ColumnImpl col : _calcColumns) {
+        Object rowValue = col.getCalculationContext().eval(row);
+        col.setRowValue(row, rowValue);
+      }
+    }
+
+    private void sortColumnsByDeps() {
+
+      // a topological sort sorts nodes where A -> B such that A ends up in
+      // the list before B (assuming that we are working with a DAG).  In our
+      // case, we return "descendent" info as Field1 -> Field2 (where Field1
+      // uses Field2 in its calculation).  This means that in order to
+      // correctly calculate Field1, we need to calculate Field2 first, and
+      // hence essentially need the reverse topo sort (a list where Field2
+      // comes before Field1).
+      (new TopoSorter<ColumnImpl>(_calcColumns, TopoSorter.REVERSE) {
+        @Override
+        protected void getDescendents(ColumnImpl from,
+                                      List<ColumnImpl> descendents) {
+
+          Set<Identifier> identifiers = new LinkedHashSet<Identifier>();
+          from.getCalculationContext().collectIdentifiers(identifiers);
+
+          for(Identifier identifier : identifiers) {
+            if(isThisTable(identifier)) {
+              String colName = identifier.getObjectName();
+              for(ColumnImpl calcCol : _calcColumns) {
+                // we only care if the identifier is another calc field
+                if(calcCol.getName().equalsIgnoreCase(colName)) {
+                  descendents.add(calcCol);
+                }
+              }
+            }
+          }
+        }
+      }).sort();
+    }
+  }
 }

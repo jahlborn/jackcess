@@ -41,14 +41,14 @@ import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
 /**
  * Utility code for working with OLE data which is in the compound storage
  * format.  This functionality relies on the optional POI library.
- * <p/> 
+ * <p/>
  * Note that all POI usage is restricted to this file so that the basic ole
  * support in OleUtil can be utilized without requiring POI.
  *
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
+public class CompoundOleUtil implements CompoundPackageFactory
 {
   private static final String ENTRY_NAME_CHARSET = "UTF-8";
   private static final String ENTRY_SEPARATOR = "/";
@@ -60,7 +60,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
     NPOIFSFileSystem.class.getName();
   }
 
-  public CompoundOleUtil() 
+  public CompoundOleUtil()
   {
   }
 
@@ -88,7 +88,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
    */
   public static DocumentEntry getDocumentEntry(String entryName,
                                                DirectoryEntry dir)
-    throws IOException 
+    throws IOException
   {
     // split entry name into individual components and decode them
     List<String> entryNames = new ArrayList<String>();
@@ -109,9 +109,9 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
         entry = (DocumentEntry)tmpEntry;
       } else {
         break;
-      }        
+      }
     }
-      
+
     if(entry == null) {
       throw new FileNotFoundException("Could not find document " + entryName);
     }
@@ -135,7 +135,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
     }
   }
 
-  private static final class CompoundContentImpl 
+  private static final class CompoundContentImpl
     extends EmbeddedPackageContentImpl
     implements CompoundContent
   {
@@ -143,10 +143,10 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
 
     private CompoundContentImpl(
         OleBlobImpl blob, String prettyName, String className,
-        String typeName, int position, int length) 
+        String typeName, int position, int length)
     {
       super(blob, prettyName, className, typeName, position, length);
-    }        
+    }
 
     public ContentType getType() {
       return ContentType.COMPOUND_STORAGE;
@@ -169,7 +169,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
     }
 
     public EntryImpl getEntry(String entryName) throws IOException {
-      return new EntryImpl(entryName, 
+      return new EntryImpl(entryName,
                            getDocumentEntry(entryName, getFileSystem().getRoot()));
     }
 
@@ -181,7 +181,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
       return getEntry(CONTENTS_ENTRY);
     }
 
-    private List<Entry> getEntries(List<Entry> entries, DirectoryEntry dir, 
+    private List<Entry> getEntries(List<Entry> entries, DirectoryEntry dir,
                                    String prefix) {
       for(org.apache.poi.poifs.filesystem.Entry entry : dir) {
         if (entry instanceof DirectoryEntry) {
@@ -210,10 +210,10 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
 
       try {
         sb.append("hasContentsEntry", hasContentsEntry());
-        sb.append("entries", getEntries(new ArrayList<Entry>(), 
+        sb.append("entries", getEntries(new ArrayList<Entry>(),
                                         getFileSystem().getRoot(),
                                         ENTRY_SEPARATOR));
-      } catch(IOException e) {  
+      } catch(IOException e) {
         sb.append("entries", "<" + e + ">");
       }
 
@@ -270,7 +270,7 @@ public class CompoundOleUtil implements OleUtil.CompoundPackageFactory
           .append("length", length())
           .toString();
       }
-    } 
+    }
   }
 
 }

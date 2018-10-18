@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.Closeable;
+import java.io.DataInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,14 +32,14 @@ import java.util.Arrays;
  * @author Tim McCune
  */
 public final class ByteUtil {
-  
+
   private static final String[] HEX_CHARS = new String[] {
       "0", "1", "2", "3", "4", "5", "6", "7",
       "8", "9", "A", "B", "C", "D", "E", "F"};
 
   private static final int NUM_BYTES_PER_BLOCK = 4;
   private static final int NUM_BYTES_PER_LINE = 24;
-      
+
   private ByteUtil() {}
 
   /**
@@ -46,26 +47,26 @@ public final class ByteUtil {
    * integer.
    * @param buffer buffer into which to insert the int
    * @param val Int to convert
-   */    
+   */
   public static void put3ByteInt(ByteBuffer buffer, int val)
   {
     put3ByteInt(buffer, val, buffer.order());
   }
-  
+
   /**
    * Put an integer into the given buffer at the given offset as a 3-byte
    * integer.
    * @param buffer buffer into which to insert the int
    * @param val Int to convert
    * @param order  the order to insert the bytes of the int
-   */    
+   */
   public static void put3ByteInt(ByteBuffer buffer, int val, ByteOrder order)
   {
     int pos = buffer.position();
     put3ByteInt(buffer, val, pos, order);
     buffer.position(pos + 3);
   }
-  
+
   /**
    * Put an integer into the given buffer at the given offset as a 3-byte
    * integer.
@@ -73,7 +74,7 @@ public final class ByteUtil {
    * @param val Int to convert
    * @param offset offset at which to insert the int
    * @param order  the order to insert the bytes of the int
-   */    
+   */
   public static void put3ByteInt(ByteBuffer buffer, int val, int offset,
                                  ByteOrder order) {
 
@@ -103,7 +104,7 @@ public final class ByteUtil {
    * @param order  the order of the bytes of the int
    * @return The int
    */
-  public static int get3ByteInt(ByteBuffer buffer, ByteOrder order) {  
+  public static int get3ByteInt(ByteBuffer buffer, ByteOrder order) {
     int pos = buffer.position();
     int rtn = get3ByteInt(buffer, pos, order);
     buffer.position(pos + 3);
@@ -119,7 +120,7 @@ public final class ByteUtil {
   public static int get3ByteInt(ByteBuffer buffer, int offset) {
     return get3ByteInt(buffer, offset, buffer.order());
   }
-  
+
   /**
    * Read a 3 byte int from a buffer
    * @param buffer Buffer containing the bytes
@@ -135,7 +136,7 @@ public final class ByteUtil {
       offInc = -1;
       offset += 2;
     }
-    
+
     int rtn = getUnsignedByte(buffer, offset);
     rtn += (getUnsignedByte(buffer, offset + (1 * offInc)) << 8);
     rtn += (getUnsignedByte(buffer, offset + (2 * offInc)) << 16);
@@ -160,10 +161,10 @@ public final class ByteUtil {
    * @param offset Offset at which to read the byte
    * @return The unsigned byte as an int
    */
-  public static int getUnsignedByte(ByteBuffer buffer, int offset) {  
+  public static int getUnsignedByte(ByteBuffer buffer, int offset) {
     return asUnsignedByte(buffer.get(offset));
   }
-  
+
   /**
    * Read an unsigned short from a buffer
    * @param buffer Buffer containing the short
@@ -182,11 +183,11 @@ public final class ByteUtil {
    * @param offset Offset at which to read the short
    * @return The unsigned short as an int
    */
-  public static int getUnsignedShort(ByteBuffer buffer, int offset) {  
+  public static int getUnsignedShort(ByteBuffer buffer, int offset) {
     return asUnsignedShort(buffer.getShort(offset));
   }
 
-  
+
   /**
    * @param buffer Buffer containing the bytes
    * @param order  the order of the bytes of the int
@@ -199,7 +200,7 @@ public final class ByteUtil {
     buffer.position(offset + 4);
     return rtn;
   }
-  
+
   /**
    * @param buffer Buffer containing the bytes
    * @param offset Offset at which to start reading the int
@@ -215,7 +216,7 @@ public final class ByteUtil {
       buffer.order(origOrder);
     }
   }
-  
+
   /**
    * Writes an int at the current position in the given buffer, using the
    * given ByteOrder
@@ -228,7 +229,7 @@ public final class ByteUtil {
     putInt(buffer, val, offset, order);
     buffer.position(offset + 4);
   }
-  
+
   /**
    * Writes an int at the given position in the given buffer, using the
    * given ByteOrder
@@ -266,8 +267,8 @@ public final class ByteUtil {
    * @param offset Offset at which to read the value
    * @return The unsigned int
    */
-  public static int getUnsignedVarInt(ByteBuffer buffer, int offset, 
-                                      int numBytes) {  
+  public static int getUnsignedVarInt(ByteBuffer buffer, int offset,
+                                      int numBytes) {
     switch(numBytes) {
     case 1:
       return getUnsignedByte(buffer, offset);
@@ -292,7 +293,7 @@ public final class ByteUtil {
   public static byte[] getBytes(ByteBuffer buffer, int len)
   {
       byte[] bytes = new byte[len];
-      buffer.get(bytes);    
+      buffer.get(bytes);
       return bytes;
   }
 
@@ -324,7 +325,7 @@ public final class ByteUtil {
     System.arraycopy(b2, 0, out, b1.length, b2.length);
     return out;
   }
-  
+
   /**
    * Sets all bits in the given remaining byte range to 0.
    */
@@ -354,7 +355,7 @@ public final class ByteUtil {
   {
     putRange(buffer, start, end, (byte)0xff);
   }
-  
+
   /**
    * Sets all bytes in the given byte range to the given byte value.
    */
@@ -412,7 +413,7 @@ public final class ByteUtil {
     Arrays.fill(buf, pos, pos + len, (byte)0);
     buffer.limit(limit + len);
   }
-  
+
   /**
    * Convert a byte buffer to a hexadecimal string for display
    * @param buffer Buffer to display, starting at offset 0
@@ -422,7 +423,7 @@ public final class ByteUtil {
   public static String toHexString(ByteBuffer buffer, int size) {
     return toHexString(buffer, 0, size);
   }
-  
+
   /**
    * Convert a byte array to a hexadecimal string for display
    * @param array byte array to display, starting at offset 0
@@ -431,7 +432,7 @@ public final class ByteUtil {
   public static String toHexString(byte[] array) {
     return toHexString(ByteBuffer.wrap(array), 0, array.length);
   }
-  
+
   /**
    * Convert a byte buffer to a hexadecimal string for display
    * @param buffer Buffer to display, starting at offset 0
@@ -441,7 +442,7 @@ public final class ByteUtil {
    */
   public static String toHexString(ByteBuffer buffer, int offset, int size) {
     return toHexString(buffer, offset, size, true);
-  }    
+  }
 
   /**
    * Convert a byte buffer to a hexadecimal string for display
@@ -453,10 +454,10 @@ public final class ByteUtil {
    */
   public static String toHexString(ByteBuffer buffer,
                                    int offset, int size, boolean formatted) {
-    
+
     int bufLen = size * 2;
     if(formatted) {
-      bufLen += size + 
+      bufLen += size +
         (7 * ((size + NUM_BYTES_PER_LINE - 1) / NUM_BYTES_PER_LINE));
     }
     StringBuilder rtn = new StringBuilder(bufLen);
@@ -481,7 +482,7 @@ public final class ByteUtil {
           rtn.append("\n");
 
         } else {
-          
+
           rtn.append(" ");
 
           if ((next % NUM_BYTES_PER_BLOCK) == 0) {
@@ -530,7 +531,7 @@ public final class ByteUtil {
    */
   public static void toHexFile(
       String fileName,
-      ByteBuffer buffer, 
+      ByteBuffer buffer,
       int offset, int size)
     throws IOException
   {
@@ -546,14 +547,14 @@ public final class ByteUtil {
   /**
    * @return the byte value converted to an unsigned int value
    */
-  public static int asUnsignedByte(byte b) { 
+  public static int asUnsignedByte(byte b) {
     return b & 0xFF;
   }
-  
+
   /**
    * @return the short value converted to an unsigned int value
    */
-  public static int asUnsignedShort(short s) { 
+  public static int asUnsignedShort(short s) {
     return s & 0xFFFF;
   }
 
@@ -637,7 +638,7 @@ public final class ByteUtil {
    * Returns a copy of the given array of the given length starting at the
    * given position.
    */
-  public static byte[] copyOf(byte[] arr, int offset, int newLength, 
+  public static byte[] copyOf(byte[] arr, int offset, int newLength,
                               int dstOffset)
   {
     byte[] newArr = new byte[newLength];
@@ -667,6 +668,18 @@ public final class ByteUtil {
         c.close();
       } catch(IOException ignored) {}
     }
+  }
+
+  /**
+   * Skips the given number of bytes in the given stream
+   */
+  public static void skipFully(DataInputStream din, int len)
+    throws IOException
+  {
+    do {
+      int skipped = din.skipBytes(len);
+      len -= skipped;
+    } while(len > 0);
   }
 
   /**

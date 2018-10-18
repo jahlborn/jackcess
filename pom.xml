@@ -1,16 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion> 
+  <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>1.1.8</version>
+    <version>1.1.10</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>2.1.9-SNAPSHOT</version>
-  <url>http://jackcess.sf.net</url>
+  <version>2.2.1-SNAPSHOT</version>
+  <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
     <developer>
@@ -103,7 +103,7 @@
   </contributors>
   <issueManagement>
     <system>SourceForge2</system>
-    <url>http://sourceforge.net/p/jackcess/bugs/</url>
+    <url>https://sourceforge.net/p/jackcess/bugs/</url>
   </issueManagement>
   <scm>
     <connection>scm:svn:svn://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</connection>
@@ -135,7 +135,7 @@
           </configuration>
         </plugin>
       </plugins>
-    </pluginManagement>    
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -149,9 +149,9 @@
           <execution>
             <id>bundle-manifest</id>
             <phase>process-classes</phase>
-            <goals>    
+            <goals>
               <goal>manifest</goal>
-            </goals>   
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -224,7 +224,7 @@
       <version>3.9</version>
       <optional>true</optional>
     </dependency>
-    
+
   </dependencies>
   <reporting>
     <plugins>
@@ -241,8 +241,8 @@
         <artifactId>maven-changes-plugin</artifactId>
         <configuration>
           <issueLinkTemplatePerSystem>
-            <SourceForge2Features>http://sourceforge.net/p/jackcess/feature-requests/%ISSUE%</SourceForge2Features>
-            <SourceForge2Patches>http://sourceforge.net/p/jackcess/patches/%ISSUE%</SourceForge2Patches>
+            <SourceForge2Features>https://sourceforge.net/p/jackcess/feature-requests/%ISSUE%</SourceForge2Features>
+            <SourceForge2Patches>https://sourceforge.net/p/jackcess/patches/%ISSUE%</SourceForge2Patches>
             <GitHubPullRequests>https://github.com/jahlborn/jackcess/pull/%ISSUE%</GitHubPullRequests>
           </issueLinkTemplatePerSystem>
         </configuration>
@@ -286,7 +286,7 @@
         <configuration>
           <excludeFilterFile>${basedir}/src/site/findbugs/exclude.xml</excludeFilterFile>
         </configuration>
-      </plugin>      
+      </plugin>
     </plugins>
   </reporting>
   <repositories>
@@ -307,6 +307,6 @@
     <site>
       <id>jackcess-build-site</id>
       <url>scp://shell.sourceforge.net/home/project-web/jackcess/htdocs</url>
-    </site>    
+    </site>
   </distributionManagement>
 </project>

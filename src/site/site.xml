@@ -12,12 +12,13 @@
   <body>
     <menu name="Jackcess">
       <item name="About" href="index.html"/>
-      <item name="Downloads" href="http://sourceforge.net/project/showfiles.php?group_id=134943"/>
-      <item name="SourceForge Project" href="http://sourceforge.net/projects/jackcess/"/>
+      <item name="Downloads" href="https://sourceforge.net/project/showfiles.php?group_id=134943"/>
+      <item name="SourceForge Project" href="https://sourceforge.net/projects/jackcess/"/>
       <item name="Cookbook" href="cookbook.html"/>
       <item name="Upgrading to Jackcess 2.x" href="jackcess-2.html"/>
       <item name="FAQ" href="faq.html"/>
-      <item name="Jackcess Encrypt" href="http://jackcessencrypt.sourceforge.net/"/>
+      <item name="Support" href="https://sourceforge.net/projects/jackcess/support"/>
+      <item name="Jackcess Encrypt" href="https://jackcessencrypt.sourceforge.io/"/>
       <item name="GitHub Mirror" href="https://github.com/jahlborn/jackcess"/>
     </menu>
 

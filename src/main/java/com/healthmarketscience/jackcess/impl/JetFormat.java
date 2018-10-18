@@ -54,10 +54,12 @@ public abstract class JetFormat {
   private static final byte CODE_VERSION_3 = 0x0;
   /** Version code for Jet version 4 */
   private static final byte CODE_VERSION_4 = 0x1;
-  /** Version code for Jet version 12 */
+  /** Version code for Jet version 12.0 */
   private static final byte CODE_VERSION_12 = 0x2;
-  /** Version code for Jet version 14 */
+  /** Version code for Jet version 14.0 */
   private static final byte CODE_VERSION_14 = 0x3;
+  /** Version code for Jet version 16.7 */
+  private static final byte CODE_VERSION_16 = 0x5;
 
   /** location of the engine name in the header */
   static final int OFFSET_ENGINE_NAME = 0x4;
@@ -121,6 +123,9 @@ public abstract class JetFormat {
     private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_14 = 
       Collections.singletonMap((String)null, Database.FileFormat.V2010);
 
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_16 = 
+      Collections.singletonMap((String)null, Database.FileFormat.V2016);
+
     private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_MSISAM = 
       Collections.singletonMap((String)null, Database.FileFormat.MSISAM);
 
@@ -138,16 +143,24 @@ public abstract class JetFormat {
                DataType.SHORT_DATE_TIME, DataType.MONEY, DataType.NUMERIC, 
                DataType.TEXT, DataType.MEMO);
 
+  /** calculated types supported in version 16 */
+  private static final Set<DataType> V16_CALC_TYPES = EnumSet.of(DataType.BIG_INT);
+  static {
+    V16_CALC_TYPES.addAll(V14_CALC_TYPES);
+  }
+
   /** the JetFormat constants for the Jet database version "3" */
   public static final JetFormat VERSION_3 = new Jet3Format();
   /** the JetFormat constants for the Jet database version "4" */
   public static final JetFormat VERSION_4 = new Jet4Format();
   /** the JetFormat constants for the MSISAM database */
   public static final JetFormat VERSION_MSISAM = new MSISAMFormat();
-  /** the JetFormat constants for the Jet database version "12" */
+  /** the JetFormat constants for the Jet database version "12.0" */
   public static final JetFormat VERSION_12 = new Jet12Format();
-  /** the JetFormat constants for the Jet database version "14" */
+  /** the JetFormat constants for the Jet database version "14.0" */
   public static final JetFormat VERSION_14 = new Jet14Format();
+  /** the JetFormat constants for the Jet database version "16.7" */
+  public static final JetFormat VERSION_16 = new Jet16Format();
 
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
@@ -289,6 +302,8 @@ public abstract class JetFormat {
       return VERSION_12;
     } else if (version == CODE_VERSION_14) {
       return VERSION_14;
+    } else if (version == CODE_VERSION_16) {
+      return VERSION_16;
     }
     throw new IOException("Unsupported " +
                           ((version < CODE_VERSION_3) ? "older" : "newer") +
@@ -738,7 +753,8 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return (type != DataType.COMPLEX_TYPE);
+      return ((type != DataType.COMPLEX_TYPE) &&
+              (type != DataType.BIG_INT));
     }
 
     @Override
@@ -971,7 +987,8 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return (type != DataType.COMPLEX_TYPE);
+      return ((type != DataType.COMPLEX_TYPE) &&
+              (type != DataType.BIG_INT));
     }
 
     @Override
@@ -1002,7 +1019,6 @@ public abstract class JetFormat {
       super("VERSION_12");
     }
 
-
     private Jet12Format(String name) {
       super(name);
     }
@@ -1028,7 +1044,7 @@ public abstract class JetFormat {
     
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return true;
+      return (type != DataType.BIG_INT);
     }
 
     @Override
@@ -1037,10 +1053,14 @@ public abstract class JetFormat {
     }
   }
 
-  private static final class Jet14Format extends Jet12Format {
-      private Jet14Format() {
-        super("VERSION_14");
-      }
+  private static class Jet14Format extends Jet12Format {
+    private Jet14Format() {
+      super("VERSION_14");
+    }
+
+    private Jet14Format(String name) {
+      super(name);
+    }
 
     @Override
     protected ColumnImpl.SortOrder defineDefaultSortOrder() {
@@ -1060,6 +1080,28 @@ public abstract class JetFormat {
     @Override
     public boolean isSupportedCalculatedDataType(DataType type) {
       return V14_CALC_TYPES.contains(type);
+    }
+  }
+
+  private static final class Jet16Format extends Jet14Format {
+
+    private Jet16Format() {
+      super("VERSION_16");
+    }
+    
+    @Override
+    public boolean isSupportedDataType(DataType type) {
+      return true;
+    }
+
+    @Override
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
+      return PossibleFileFormats.POSSIBLE_VERSION_16;
+    }
+
+    @Override
+    public boolean isSupportedCalculatedDataType(DataType type) {
+      return V16_CALC_TYPES.contains(type);
     }
   }
 

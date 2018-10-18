@@ -218,7 +218,7 @@ public class ImportTest extends TestCase
       Database db = create(fileFormat);
       ImportUtil.importResultSet((ResultSet)Proxy.newProxyInstance(
                        Thread.currentThread().getContextClassLoader(),
-                       new Class[]{ResultSet.class},
+                       new Class<?>[]{ResultSet.class},
                        rs), db, "Test1");
 
       Table t = db.getTable("Test1");
@@ -278,7 +278,7 @@ public class ImportTest extends TestCase
       if(methodName.equals("getMetaData")) {
         return Proxy.newProxyInstance(
             Thread.currentThread().getContextClassLoader(),
-            new Class[]{ResultSetMetaData.class},
+            new Class<?>[]{ResultSetMetaData.class},
             this);
       } else if(methodName.equals("next")) {
         return Boolean.FALSE;

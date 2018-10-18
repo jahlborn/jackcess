@@ -37,7 +37,8 @@ public class CustomToStringStyle extends StandardToStringStyle
   private static final String ML_FIELD_SEP = SystemUtils.LINE_SEPARATOR + "  ";
   private static final String IMPL_SUFFIX = "Impl";
   private static final int MAX_BYTE_DETAIL_LEN = 20;
-  
+  private static final Object IGNORE_ME = new Object();
+
   public static final CustomToStringStyle INSTANCE = new CustomToStringStyle() {
     private static final long serialVersionUID = 0L;
     {
@@ -59,7 +60,7 @@ public class CustomToStringStyle extends StandardToStringStyle
     }
   };
 
-  private CustomToStringStyle() {    
+  private CustomToStringStyle() {
   }
 
   public static ToStringBuilder builder(Object obj) {
@@ -68,6 +69,15 @@ public class CustomToStringStyle extends StandardToStringStyle
 
   public static ToStringBuilder valueBuilder(Object obj) {
     return new ToStringBuilder(obj, VALUE_INSTANCE);
+  }
+
+  @Override
+  public void append(StringBuffer buffer, String fieldName, Object value,
+                     Boolean fullDetail) {
+    if(value == IGNORE_ME) {
+      return;
+    }
+    super.append(buffer, fieldName, value, fullDetail);
   }
 
   @Override
@@ -84,7 +94,7 @@ public class CustomToStringStyle extends StandardToStringStyle
   protected String getShortClassName(Class clss) {
     String shortName = super.getShortClassName(clss);
     if(shortName.endsWith(IMPL_SUFFIX)) {
-      shortName = shortName.substring(0, 
+      shortName = shortName.substring(0,
                                       shortName.length() - IMPL_SUFFIX.length());
     }
     int idx = shortName.lastIndexOf('.');
@@ -95,7 +105,7 @@ public class CustomToStringStyle extends StandardToStringStyle
   }
 
   @Override
-  protected void appendDetail(StringBuffer buffer, String fieldName, 
+  protected void appendDetail(StringBuffer buffer, String fieldName,
                               Object value) {
     if(value instanceof ByteBuffer) {
       appendDetail(buffer, (ByteBuffer)value);
@@ -105,7 +115,7 @@ public class CustomToStringStyle extends StandardToStringStyle
   }
 
   @Override
-  protected void appendDetail(StringBuffer buffer, String fieldName, 
+  protected void appendDetail(StringBuffer buffer, String fieldName,
                               Collection value) {
     buffer.append("[");
 
@@ -167,18 +177,18 @@ public class CustomToStringStyle extends StandardToStringStyle
   }
 
   @Override
-  protected void appendDetail(StringBuffer buffer, String fieldName, 
+  protected void appendDetail(StringBuffer buffer, String fieldName,
                               byte[] array) {
     appendDetail(buffer, PageChannel.wrap(array));
   }
 
-  private void appendValueDetail(StringBuffer buffer, String fieldName, 
+  private void appendValueDetail(StringBuffer buffer, String fieldName,
                                  Object value) {
     if (value == null) {
       appendNullText(buffer, fieldName);
     } else {
       appendInternal(buffer, fieldName, value, true);
-    }    
+    }
   }
 
   private static void appendDetail(StringBuffer buffer, ByteBuffer bb) {
@@ -188,11 +198,15 @@ public class CustomToStringStyle extends StandardToStringStyle
                                        Math.min(len, MAX_BYTE_DETAIL_LEN)));
     if(len > MAX_BYTE_DETAIL_LEN) {
       buffer.append(" ...");
-    }      
+    }
   }
 
   private static String indent(Object obj) {
     return ((obj != null) ? obj.toString().replaceAll(
                 SystemUtils.LINE_SEPARATOR, ML_FIELD_SEP) : null);
+  }
+
+  public static Object ignoreNull(Object obj) {
+    return ((obj != null) ? obj : IGNORE_ME);
   }
 }

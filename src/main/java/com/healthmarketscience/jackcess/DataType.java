@@ -17,14 +17,15 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Date;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 
 /**
@@ -152,6 +153,13 @@ public enum DataType {
    */
   COMPLEX_TYPE((byte) 0x12, null, 4),    
   /**
+   * Corresponds to a java {@link Long}.  Accepts any {@link Number} (using
+   * {@link Number#longValue}), Boolean as 1 or 0, any Object converted to a
+   * String and parsed as Double, or {@code null}.  Equivalent to SQL
+   * {@link Types#BIGINT}.
+   */
+  BIG_INT((byte) 0x13, Types.BIGINT, 8),
+  /**
    * Dummy type for a fixed length type which is not currently supported.
    * Handled like a fixed length {@link #BINARY}.
    */
@@ -164,26 +172,26 @@ public enum DataType {
       1);
 
   /** Map of SQL types to Access data types */
-  private static final Map<Integer, DataType> SQL_TYPES =
-    new HashMap<Integer, DataType>();
+  private static final Map<Integer, DataType[]> SQL_TYPES =
+    new HashMap<Integer, DataType[]>();
   /** Alternate map of SQL types to Access data types */
   private static final Map<Integer, DataType> ALT_SQL_TYPES =
     new HashMap<Integer, DataType>();
   static {
     for (DataType type : DataType.values()) {
       if (type._sqlType != null) {
-        SQL_TYPES.put(type._sqlType, type);
+        SQL_TYPES.put(type._sqlType, new DataType[]{type});
       }
     }
-    SQL_TYPES.put(Types.BIT, BYTE);
-    SQL_TYPES.put(Types.BLOB, OLE);
-    SQL_TYPES.put(Types.CLOB, MEMO);
-    SQL_TYPES.put(Types.BIGINT, LONG);
-    SQL_TYPES.put(Types.CHAR, TEXT);
-    SQL_TYPES.put(Types.DATE, SHORT_DATE_TIME);
-    SQL_TYPES.put(Types.REAL, DOUBLE);
-    SQL_TYPES.put(Types.TIME, SHORT_DATE_TIME);
-    SQL_TYPES.put(Types.VARBINARY, BINARY);
+    SQL_TYPES.put(Types.BIT, new DataType[]{BYTE});
+    SQL_TYPES.put(Types.BLOB, new DataType[]{OLE});
+    SQL_TYPES.put(Types.CLOB, new DataType[]{MEMO});
+    SQL_TYPES.put(Types.BIGINT, new DataType[]{LONG, BIG_INT});
+    SQL_TYPES.put(Types.CHAR, new DataType[]{TEXT});
+    SQL_TYPES.put(Types.DATE, new DataType[]{SHORT_DATE_TIME});
+    SQL_TYPES.put(Types.REAL, new DataType[]{DOUBLE});
+    SQL_TYPES.put(Types.TIME, new DataType[]{SHORT_DATE_TIME});
+    SQL_TYPES.put(Types.VARBINARY, new DataType[]{BINARY});
 
     // the "alternate" types allow for larger values
     ALT_SQL_TYPES.put(Types.VARCHAR, MEMO);
@@ -451,15 +459,37 @@ public enum DataType {
   public static DataType fromSQLType(int sqlType)
     throws SQLException
   {
-    return fromSQLType(sqlType, 0);
+    return fromSQLType(sqlType, 0, null);
   }
   
   public static DataType fromSQLType(int sqlType, int lengthInUnits)
     throws SQLException
   {
-    DataType rtn = SQL_TYPES.get(sqlType);
-    if(rtn == null) {
+    return fromSQLType(sqlType, lengthInUnits, null);
+  }
+
+  public static DataType fromSQLType(int sqlType, int lengthInUnits,
+                                     Database.FileFormat fileFormat)
+    throws SQLException
+  {
+    DataType[] rtnArr = SQL_TYPES.get(sqlType);
+    if(rtnArr == null) {
       throw new SQLException("Unsupported SQL type: " + sqlType);
+    }
+    DataType rtn = rtnArr[0];
+    if((rtnArr.length > 1) && (fileFormat != null)) {
+      // there are multiple possibilities, ordered from lowest version to
+      // highest version supported.  go in opposite order to find the best
+      // type for this format
+      JetFormat format = DatabaseImpl.getFileFormatDetails(fileFormat)
+        .getFormat();
+      for(int i = rtnArr.length - 1; i >= 0; --i) {
+        DataType tmp = rtnArr[i];
+        if(format.isSupportedDataType(tmp)) {
+          rtn = tmp;
+          break;
+        }
+      }
     }
 
     // make sure size is reasonable
@@ -488,7 +518,7 @@ public enum DataType {
     try {
       java.lang.reflect.Field sqlTypeField = Types.class.getField(typeName);
       Integer value = (Integer)sqlTypeField.get(null);
-      SQL_TYPES.put(value, type);
+      SQL_TYPES.put(value, new DataType[]{type});
       if(altType != null) {
         ALT_SQL_TYPES.put(value, altType);
       }

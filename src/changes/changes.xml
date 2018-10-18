@@ -4,9 +4,56 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="2.1.9" date="TBD">
+    <release version="2.2.1" date="TBD">
+      <action dev="jahlborn" type="update">
+        Implement IsNumeric function.  Add support for hex/oct integer
+        strings.
+      </action>
+    </release>
+    <release version="2.2.0" date="2018-09-08"
+             description="Add support for expression evaluation">
+      <action dev="jahlborn" type="update">
+        Implement support for optional expression evaluation.  When enabled,
+        expressions will be evaluated for default values, calculated fields,
+        field validators, and record validators.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="31">
+        Default values will now be respected when expression evaluation is
+        enabled (currently disabled by default).
+      </action>
+    </release>
+    <release version="2.1.12" date="2018-06-25">
+      <action dev="jahlborn" type="update">
+        Add some additional property keys and relevant enums for values.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="147">
+        Create new usage map correctly when adding an index to an existing
+        table.
+      </action>
+    </release>
+    <release version="2.1.11" date="2018-03-04">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="145">
+        Expose the "ddl" attribute on properties.  Set the attribute
+        appropriately for known builtin properties.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="146">
+        Set ddl flag even if property type is explicitly provided.
+      </action>
+    </release>
+    <release version="2.1.10" date="2018-01-18">
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="37">
+        Add full support for access 2016 databases including the new "Large
+        Number" (aka Bigint) data type.
+      </action>
+    </release>
+    <release version="2.1.9" date="2017-10-09">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="141">
         Handle more advanced query join constructs.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="144">
+        Fix writing of property maps without any properties.
       </action>
     </release>
     <release version="2.1.8" date="2017-06-25">
@@ -125,7 +172,7 @@
         system property), per-database, and per-table.
       </action>
     </release>
-    <release version="2.1.0" date="2015-04-16" 
+    <release version="2.1.0" date="2015-04-16"
              description="Relicense to Apache License">
       <action dev="jahlborn" type="add">
         OpenHMS relicenses to Apache License, 2.0!
@@ -245,7 +292,7 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
-      <action dev="jahlborn" type="add" system="SourceForge2Features" 
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
               issue="16">
         Add support for modifying PropertyMaps.
       </action>
@@ -254,7 +301,7 @@
              description="Major API Revision">
       <action dev="jahlborn" type="update">
         Brand new API!  This release is not backwards compatible with 1.x
-        releases.  See Migration Guide at http://jackcess.sourceforge.net/jackcess-2.html
+        releases.  See Migration Guide at https://jackcess.sourceforge.io/jackcess-2.html
         for more details.
       </action>
     </release>
@@ -265,7 +312,7 @@
       <action dev="jahlborn" type="fix">
         Make reading long value columns more lenient (MEMO/OLE).
       </action>
-    </release>    
+    </release>
     <release version="1.2.14.2" date="2013-08-25">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="96">
         Fix reading of Properties with multiple value blocks.
@@ -459,7 +506,7 @@
       </action>
       <action dev="jahlborn" type="update" system="SourceForge" issue="3065010">
         Add support for plugging in implementations of various page
-        encoding/decoding algorithms.  See the &lt;a href="http://jackcessencrypt.sourceforge.net/"&gt;Jackcess Encrypt&lt;/a&gt;
+        encoding/decoding algorithms.  See the &lt;a href="https://jackcessencrypt.sourceforge.io/"&gt;Jackcess Encrypt&lt;/a&gt;
         project for a CodecProvider implementation which supports a few of the
         Access encodings.  (thanks to Vladimir Berezniker).
       </action>
@@ -792,7 +839,7 @@
         characters (and other situations where tables could not be opened in
         Access).  Remove hack which forced every table name to have uppercase
         first character.
-      </action>      
+      </action>
       <action dev="jahlborn" type="update">
         Clean up compressed text handling.
       </action>

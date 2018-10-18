@@ -94,7 +94,7 @@ public class ColumnBuilder {
    * Sets the type for the new column based on the given SQL type.
    */
   public ColumnBuilder setSQLType(int type) throws SQLException {
-    return setSQLType(type, 0);
+    return setSQLType(type, 0, null);
   }
   
   /**
@@ -104,7 +104,18 @@ public class ColumnBuilder {
   public ColumnBuilder setSQLType(int type, int lengthInUnits)
     throws SQLException
   {
-    return setType(DataType.fromSQLType(type, lengthInUnits));
+    return setSQLType(type, lengthInUnits, null);
+  }
+
+  /**
+   * Sets the type for the new column based on the given SQL type, target
+   * data length (in type specific units), and target FileFormat.
+   */
+  public ColumnBuilder setSQLType(int type, int lengthInUnits,
+                                  Database.FileFormat fileFormat)
+    throws SQLException
+  {
+    return setType(DataType.fromSQLType(type, lengthInUnits, fileFormat));
   }
 
   /**

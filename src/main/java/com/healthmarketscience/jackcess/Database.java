@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 
+import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
@@ -68,7 +69,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * the default sort order for table columns.
    * @usage _intermediate_field_
    */
-  public static final Table.ColumnOrder DEFAULT_COLUMN_ORDER = 
+  public static final Table.ColumnOrder DEFAULT_COLUMN_ORDER =
     Table.ColumnOrder.DATA;
 
   /** system property which can be used to set the default TimeZone used for
@@ -91,7 +92,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    *  if unspecified.
    * @usage _general_field_
    */
-  public static final String RESOURCE_PATH_PROPERTY = 
+  public static final String RESOURCE_PATH_PROPERTY =
     "com.healthmarketscience.jackcess.resourcePath";
 
   /** (boolean) system property which can be used to indicate that the current
@@ -99,7 +100,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    *  {@code FileChannel.transferFrom})
    * @usage _intermediate_field_
    */
-  public static final String BROKEN_NIO_PROPERTY = 
+  public static final String BROKEN_NIO_PROPERTY =
     "com.healthmarketscience.jackcess.brokenNio";
 
   /** system property which can be used to set the default sort order for
@@ -107,22 +108,29 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    *  values.
    * @usage _intermediate_field_
    */
-  public static final String COLUMN_ORDER_PROPERTY = 
+  public static final String COLUMN_ORDER_PROPERTY =
     "com.healthmarketscience.jackcess.columnOrder";
 
   /** system property which can be used to set the default enforcement of
    * foreign-key relationships.  Defaults to {@code true}.
    * @usage _general_field_
    */
-  public static final String FK_ENFORCE_PROPERTY = 
+  public static final String FK_ENFORCE_PROPERTY =
     "com.healthmarketscience.jackcess.enforceForeignKeys";
 
   /** system property which can be used to set the default allow auto number
    * insert policy.  Defaults to {@code false}.
    * @usage _general_field_
    */
-  public static final String ALLOW_AUTONUM_INSERT_PROPERTY = 
+  public static final String ALLOW_AUTONUM_INSERT_PROPERTY =
     "com.healthmarketscience.jackcess.allowAutoNumberInsert";
+
+  /** system property which can be used to enable expression evaluation
+   * (currently experimental).  Defaults to {@code false}.
+   * @usage _general_field_
+   */
+  public static final String ENABLE_EXPRESSION_EVALUATION_PROPERTY =
+    "com.healthmarketscience.jackcess.enableExpressionEvaluation";
 
   /**
    * Enum which indicates which version of Access created the database.
@@ -143,6 +151,8 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     V2007(".accdb"),
     /** A database which was created by MS Access 2010+ */
     V2010(".accdb"),
+    /** A database which was created by MS Access 2016+ */
+    V2016(".accdb"),
     /** A database which was created by MS Money */
     MSISAM(".mny");
 
@@ -158,7 +168,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     public String getFileExtension() { return _ext; }
 
     @Override
-    public String toString() { 
+    public String toString() {
       return name() + " [" + DatabaseImpl.getFileFormatDetails(this).getFormat() + "]";
     }
   }
@@ -199,7 +209,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * flexible iteration of Tables.
    */
   public TableIterableBuilder newIterable();
-  
+
   /**
    * @param name User table name (case-insensitive)
    * @return The Table, or null if it doesn't exist (or is a system table)
@@ -262,7 +272,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * occassional time when access to a system table is necessary.  Messing
    * with system tables can strip the paint off your house and give your whole
    * family a permanent, orange afro.  You have been warned.
-   * 
+   *
    * @param tableName Table name, may be a system table
    * @return The table, or {@code null} if it doesn't exist
    * @usage _intermediate_method_
@@ -358,14 +368,14 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public Map<String,Database> getLinkedDatabases();
 
-  
+
   /**
    * Returns {@code true} if this Database links to the given Table, {@code
    * false} otherwise.
    * @usage _general_method_
    */
   public boolean isLinkedTable(Table table) throws IOException;
-  
+
   /**
    * Gets currently configured TimeZone (always non-{@code null}).
    * @usage _intermediate_method_
@@ -428,7 +438,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * {@link #ALLOW_AUTONUM_INSERT_PROPERTY} system property).  Note that
    * <i>enabling this feature should be done with care</i> to reduce the
    * chances of screwing up the database.
-   * 
+   *
    * @usage _intermediate_method_
    */
   public boolean isAllowAutoNumberInsert();
@@ -440,6 +450,20 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _intermediate_method_
    */
   public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert);
+
+  /**
+   * Gets the current expression evaluation policy.  Expression evaluation is
+   * currently an experimental feature, and is therefore disabled by default.
+   */
+  public boolean isEvaluateExpressions();
+
+  /**
+   * Sets the current expression evaluation policy.  Expression evaluation is
+   * currently an experimental feature, and is therefore disabled by default.
+   * If {@code null}, resets to the default value.
+   * @usage _intermediate_method_
+   */
+  public void setEvaluateExpressions(Boolean evaluateExpressions);
 
   /**
    * Gets currently configured ColumnValidatorFactory (always non-{@code null}).
@@ -455,7 +479,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _intermediate_method_
    */
   public void setColumnValidatorFactory(ColumnValidatorFactory newFactory);
-  
+
   /**
    * Returns the FileFormat of this database (which may involve inspecting the
    * database itself).
@@ -464,4 +488,8 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public FileFormat getFileFormat() throws IOException;
 
+  /**
+   * Returns the EvalConfig for configuring expression evaluation.
+   */
+  public EvalConfig getEvalConfig();
 }
