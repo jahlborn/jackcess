@@ -64,6 +64,10 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().getAsDateTime(ctx);
   }
 
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    return getDelegate().getAsDateTimeValue(ctx);
+  }
+
   public Integer getAsLongInt(LocaleContext ctx) {
     return getDelegate().getAsLongInt(ctx);
   }

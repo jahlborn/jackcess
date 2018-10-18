@@ -130,7 +130,7 @@ public class DefaultNumberFunctions
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
       if(param1.isNull()) {
-        return null;
+        return ValueSupport.NULL_VAL;
       }
       if(param1.getType().isIntegral()) {
         return param1;

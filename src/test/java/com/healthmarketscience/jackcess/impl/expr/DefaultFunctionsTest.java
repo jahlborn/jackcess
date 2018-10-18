@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.util.Calendar;
+import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
 import junit.framework.TestCase;
@@ -33,8 +35,6 @@ public class DefaultFunctionsTest extends TestCase
   public DefaultFunctionsTest(String name) {
     super(name);
   }
-
-  // FIXME, test more number/string functions
 
   public void testFuncs() throws Exception
   {
@@ -78,15 +78,21 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CSng(\"57.12345\")"));
     assertEquals("9786", eval("=CStr(9786)"));
     assertEquals("-42", eval("=CStr(-42)"));
+    assertEquals(new Date(1041483600000L), eval("=CDate('01/02/2003')"));
+    assertEquals(new Date(1041508800000L), eval("=CDate('01/02/2003 7:00:00 AM')"));
+    assertEquals(new Date(-1948781520000L), eval("=CDate(3013.45)"));
+
 
     assertEquals(-1, eval("=IsNull(Null)"));
     assertEquals(0, eval("=IsNull(13)"));
     assertEquals(-1, eval("=IsDate(#01/02/2003#)"));
     assertEquals(0, eval("=IsDate('foo')"));
+    assertEquals(0, eval("=IsDate('200')"));
 
     assertEquals(0, eval("=IsNumeric(Null)"));
     assertEquals(0, eval("=IsNumeric('foo')"));
     assertEquals(0, eval("=IsNumeric(#01/02/2003#)"));
+    assertEquals(0, eval("=IsNumeric('01/02/2003')"));
     assertEquals(-1, eval("=IsNumeric(37)"));
     assertEquals(-1, eval("=IsNumeric(' 37 ')"));
     assertEquals(-1, eval("=IsNumeric(' -37.5e2 ')"));
@@ -245,6 +251,8 @@ public class DefaultFunctionsTest extends TestCase
 
     assertEquals(2003, eval("=Year('01/02/2003 7:00:00 AM')"));
     assertEquals(1899, eval("=Year(#7:00:00 AM#)"));
+    assertEquals(Calendar.getInstance().get(Calendar.YEAR),
+                 eval("=Year('01/02 7:00:00 AM')"));
 
     assertEquals("January", eval("=MonthName(1)"));
     assertEquals("Feb", eval("=MonthName(2,True)"));
@@ -280,6 +288,24 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("2/12/2010", eval("=CStr(DateSerial(10,2,12))"));
     assertEquals("7/12/2013", eval("=CStr(DateSerial(2014,-5,12))"));
     assertEquals("8/7/2013", eval("=CStr(DateSerial(2014,-5,38))"));
+
+    assertEquals(1, eval("=DatePart('ww',#01/03/2018#)"));
+    assertEquals(2, eval("=DatePart('ww',#01/03/2018#,4)"));
+    assertEquals(1, eval("=DatePart('ww',#01/03/2018#,5)"));
+    assertEquals(1, eval("=DatePart('ww',#01/03/2018#,4,3)"));
+    assertEquals(52, eval("=DatePart('ww',#01/03/2018#,5,3)"));
+    assertEquals(1, eval("=DatePart('ww',#01/03/2018#,4,2)"));
+    assertEquals(53, eval("=DatePart('ww',#01/03/2018#,5,2)"));
+    assertEquals(2003, eval("=DatePart('yyyy',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(4, eval("=DatePart('q',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(11, eval("=DatePart('m',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(326, eval("=DatePart('y',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(22, eval("=DatePart('d',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(7, eval("=DatePart('w',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(3, eval("=DatePart('w',#11/22/2003 5:45:13 AM#, 5)"));
+    assertEquals(5, eval("=DatePart('h',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(45, eval("=DatePart('n',#11/22/2003 5:45:13 AM#)"));
+    assertEquals(13, eval("=DatePart('s',#11/22/2003 5:45:13 AM#)"));
   }
 
   public void testFinancialFuncs() throws Exception

@@ -21,7 +21,9 @@ import java.math.BigInteger;
 import java.text.DecimalFormatSymbols;
 import java.util.regex.Pattern;
 
+import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.Value;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -81,6 +83,30 @@ public class StringValue extends BaseValue
     return getNumber(ctx);
   }
 
+  @Override
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    Value dateValue = DefaultDateFunctions.stringToDateValue(ctx, _val);
+
+    if(dateValue == null) {
+      // see if string can be coerced to number and then to value date (note,
+      // numberToDateValue may return null for out of range numbers)
+      try {
+        dateValue = DefaultDateFunctions.numberToDateValue(
+            ctx, getNumber(ctx).doubleValue());
+      } catch(EvalException ignored) {
+        // not a number, not a date/time
+      }
+
+      if(dateValue == null) {
+        throw invalidConversion(Type.DATE_TIME);
+      }
+    }
+
+    // TODO, for now, we can't cache the date value becuase it could be an
+    // "implicit" date which would need to be re-calculated on each call
+    return dateValue;
+  }
+
   protected BigDecimal getNumber(LocaleContext ctx) {
     if(_num instanceof BigDecimal) {
       return (BigDecimal)_num;
@@ -114,7 +140,7 @@ public class StringValue extends BaseValue
       }
       _num = NOT_A_NUMBER;
     }
-    throw new NumberFormatException("Invalid number '" + _val + "'");
+    throw invalidConversion(Type.DOUBLE);
   }
 
   private BigDecimal parseIntegerString(String tmpVal, int radix) {

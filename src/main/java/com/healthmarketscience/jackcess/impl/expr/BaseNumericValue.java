@@ -16,11 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.LocaleContext;
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.expr.Value;
 
 /**
  *
@@ -44,9 +42,13 @@ public abstract class BaseNumericValue extends BaseValue
   }
 
   @Override
-  public Date getAsDateTime(LocaleContext ctx) {
-    double d = getNumber().doubleValue();
-    return new Date(ColumnImpl.fromDateDouble(d, ctx.getCalendar()));
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    Value dateValue = DefaultDateFunctions.numberToDateValue(
+        ctx, getNumber().doubleValue());
+    if(dateValue == null) {
+      throw invalidConversion(Value.Type.DATE_TIME);
+    }
+    return dateValue;
   }
 
   protected abstract Number getNumber();

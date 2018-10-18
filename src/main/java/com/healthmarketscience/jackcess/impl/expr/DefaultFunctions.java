@@ -163,7 +163,7 @@ public class DefaultFunctions
   public static final Function CDATE = registerFunc(new Func1("CDate") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return DefaultDateFunctions.nonNullToDateValue(ctx, param1);
+      return param1.getAsDateTimeValue(ctx);
     }
   });
   static {
@@ -240,9 +240,21 @@ public class DefaultFunctions
   public static final Function ISDATE = registerFunc(new Func1("IsDate") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(
-          !param1.isNull() &&
-          (DefaultDateFunctions.nonNullToDateValue(ctx, param1) != null));
+      if(param1.getType().isTemporal()) {
+        return ValueSupport.TRUE_VAL;
+      }
+
+      // for the purposes of this method, a string literal should only
+      // return true if it is explicitly a date/time, not if it is just a
+      // number (even though casting a number string to a date/time works in
+      // general)
+      if((param1.getType() == Value.Type.STRING) &&
+         !stringIsNumeric(ctx, param1) &&
+         stringIsTemporal(ctx, param1)) {
+        return ValueSupport.TRUE_VAL;
+      }
+
+      return ValueSupport.FALSE_VAL;
     }
   });
 
@@ -253,13 +265,11 @@ public class DefaultFunctions
         return ValueSupport.TRUE_VAL;
       }
 
-      if(param1.getType() == Value.Type.STRING) {
-        try {
-          param1.getAsBigDecimal(ctx);
-          return ValueSupport.TRUE_VAL;
-        } catch(NumberFormatException ignored) {
-          // fall through to FALSE_VAL
-        }
+      // note, only a string can be considered numberic for this function,
+      // even though a date/time can be cast to a number in general
+      if((param1.getType() == Value.Type.STRING) &&
+         stringIsNumeric(ctx, param1)) {
+        return ValueSupport.TRUE_VAL;
       }
 
       return ValueSupport.FALSE_VAL;
@@ -338,7 +348,26 @@ public class DefaultFunctions
     }
   });
 
+  private static boolean stringIsNumeric(EvalContext ctx, Value param) {
+    try {
+      param.getAsBigDecimal(ctx);
+      return true;
+    } catch(EvalException ignored) {
+      // fall through to false
+    }
+    return false;
+  }
 
+  private static boolean stringIsTemporal(EvalContext ctx, Value param) {
+    try {
+      // see if we can coerce to date/time
+      param.getAsDateTimeValue(ctx);
+      return true;
+    } catch(EvalException ignored) {
+      // not a date/time
+    }
+    return false;
+  }
 
   // https://www.techonthenet.com/access/functions/
   // https://support.office.com/en-us/article/Access-Functions-by-category-b8b136c3-2716-4d39-94a2-658ce330ed83

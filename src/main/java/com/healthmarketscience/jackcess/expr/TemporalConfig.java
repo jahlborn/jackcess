@@ -31,12 +31,14 @@ import java.util.Locale;
 public class TemporalConfig
 {
   public static final String US_DATE_FORMAT = "M/d/yyyy";
+  public static final String US_DATE_IMPLICIT_YEAR_FORMAT = "M/d";
   public static final String US_TIME_FORMAT_12 = "h:mm:ss a";
   public static final String US_TIME_FORMAT_24 = "H:mm:ss";
 
   /** default implementation which is configured for the US locale */
   public static final TemporalConfig US_TEMPORAL_CONFIG = new TemporalConfig(
-      US_DATE_FORMAT, US_TIME_FORMAT_12, US_TIME_FORMAT_24, '/', ':', Locale.US);
+      US_DATE_FORMAT, US_DATE_IMPLICIT_YEAR_FORMAT,
+      US_TIME_FORMAT_12, US_TIME_FORMAT_24, '/', ':', Locale.US);
 
   public enum Type {
     DATE, TIME, DATE_TIME, TIME_12, TIME_24, DATE_TIME_12, DATE_TIME_24;
@@ -74,9 +76,37 @@ public class TemporalConfig
         throw new RuntimeException("invalid type " + this);
       }
     }
+
+    public boolean includesDate() {
+      switch(this) {
+      case DATE:
+      case DATE_TIME:
+      case DATE_TIME_12:
+      case DATE_TIME_24:
+        return true;
+      default:
+        return false;
+      }
+    }
+
+    public boolean includesTime() {
+      return (this != DATE);
+    }
+
+    public boolean isTimeOnly() {
+      switch(this) {
+      case TIME:
+      case TIME_12:
+      case TIME_24:
+        return true;
+      default:
+        return false;
+      }
+    }
   }
 
   private final String _dateFormat;
+  private final String _dateImplicitYearFormat;
   private final String _timeFormat12;
   private final String _timeFormat24;
   private final char _dateSeparator;
@@ -92,6 +122,7 @@ public class TemporalConfig
    * <time>".
    *
    * @param dateFormat the date (no time) format
+   * @param dateImplicitYearFormat the date (no time) with no year format
    * @param timeFormat12 the 12 hour time format
    * @param timeFormat24 the 24 hour time format
    * @param dateSeparator the primary separator used to separate elements in
@@ -103,11 +134,12 @@ public class TemporalConfig
    *                      string.  This value should differ from the
    *                      dateSeparator.
    */
-  public TemporalConfig(String dateFormat, String timeFormat12,
-                        String timeFormat24, char dateSeparator,
-                        char timeSeparator, Locale locale)
+  public TemporalConfig(String dateFormat, String dateImplicitYearFormat,
+                        String timeFormat12, String timeFormat24,
+                        char dateSeparator, char timeSeparator, Locale locale)
   {
     _dateFormat = dateFormat;
+    _dateImplicitYearFormat = dateImplicitYearFormat;
     _timeFormat12 = timeFormat12;
     _timeFormat24 = timeFormat24;
     _dateSeparator = dateSeparator;
@@ -178,7 +210,27 @@ public class TemporalConfig
     }
   }
 
+  public String getImplicitYearDateTimeFormat(Type type) {
+    switch(type) {
+    case DATE:
+      return _dateImplicitYearFormat;
+    case DATE_TIME:
+      return toDateTimeFormat(_dateImplicitYearFormat, getDefaultTimeFormat());
+    case DATE_TIME_12:
+      return toDateTimeFormat(_dateImplicitYearFormat, getTimeFormat12());
+    case DATE_TIME_24:
+      return toDateTimeFormat(_dateImplicitYearFormat, getTimeFormat24());
+    default:
+      throw new IllegalArgumentException(
+          "the given format does not include a date " + type);
+    }
+  }
+
   public DateFormatSymbols getDateFormatSymbols() {
     return _symbols;
+  }
+
+  private static String toDateTimeFormat(String dateFormat, String timeFormat) {
+    return dateFormat + " " + timeFormat;
   }
 }

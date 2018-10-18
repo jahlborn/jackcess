@@ -21,6 +21,7 @@ import java.util.Date;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.Value;
 
 /**
  *
@@ -65,6 +66,11 @@ public class DateTimeValue extends BaseValue
   @Override
   public Date getAsDateTime(LocaleContext ctx) {
     return _val;
+  }
+
+  @Override
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    return this;
   }
 
   @Override

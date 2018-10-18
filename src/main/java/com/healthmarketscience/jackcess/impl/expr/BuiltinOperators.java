@@ -655,7 +655,7 @@ public class BuiltinOperators
                     Value.Type.BIG_DEC : Value.Type.DOUBLE);
       }
       return prefType;
-    } catch(NumberFormatException ignored) {
+    } catch(EvalException ignored) {
       // not a number
     }
 

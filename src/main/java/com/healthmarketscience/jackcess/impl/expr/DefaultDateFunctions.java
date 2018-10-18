@@ -50,6 +50,18 @@ public class DefaultDateFunctions
   private static final long SECONDS_PER_HOUR = 60L * 60L;
   private static final long SECONDS_PER_MINUTE = 60L;
 
+  private static final String INTV_YEAR = "yyyy";
+  private static final String INTV_QUARTER = "q";
+  private static final String INTV_MONTH = "m";
+  private static final String INTV_DAY_OF_YEAR = "y";
+  private static final String INTV_DAY = "d";
+  private static final String INTV_WEEKDAY = "w";
+  private static final String INTV_WEEK = "ww";
+  private static final String INTV_HOUR = "h";
+  private static final String INTV_MINUTE = "n";
+  private static final String INTV_SECOND = "s";
+
+
   private DefaultDateFunctions() {}
 
   static void init() {
@@ -67,7 +79,7 @@ public class DefaultDateFunctions
   public static final Function DATEVALUE = registerFunc(new Func1NullIsNull("DateValue") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value dv = nonNullToDateValue(ctx, param1);
+      Value dv = param1.getAsDateTimeValue(ctx);
       if(dv.getType() == Value.Type.DATE) {
         return dv;
       }
@@ -100,6 +112,51 @@ public class DefaultDateFunctions
     }
   });
 
+  public static final Function DATEPART = registerFunc(new FuncVar("DatePart", 2, 4) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param2 = params[1];
+      if(param2.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      int firstDay = getFirstDayParam(ctx, params, 2);
+      int firstWeekType = getFirstWeekTypeParam(ctx, params, 3);
+
+      String intv = params[0].getAsString(ctx).trim();
+      int result = -1;
+      if(intv.equalsIgnoreCase(INTV_YEAR)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.YEAR);
+      } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
+        // month in is 0 based
+        int month = nonNullToCalendarField(ctx, param2, Calendar.MONTH);
+        result = (month / 3) + 1;
+      } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
+        // convert from 0 based to 1 based value
+        result = nonNullToCalendarField(ctx, param2, Calendar.MONTH) + 1;
+      } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_YEAR);
+      } else if(intv.equalsIgnoreCase(INTV_DAY)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_MONTH);
+      } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
+        int dayOfWeek = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_WEEK);
+        result = dayOfWeekToWeekDay(dayOfWeek, firstDay);
+      } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
+        result = weekOfYear(ctx, param2, firstDay, firstWeekType);
+      } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.HOUR_OF_DAY);
+      } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.MINUTE);
+      } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
+        result = nonNullToCalendarField(ctx, param2, Calendar.SECOND);
+      } else {
+        throw new EvalException("Invalid interval " + intv);
+      }
+
+      return ValueSupport.toValue(result);
+    }
+  });
+
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
@@ -118,7 +175,7 @@ public class DefaultDateFunctions
   public static final Function TIMEVALUE = registerFunc(new Func1NullIsNull("TimeValue") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      Value dv = nonNullToDateValue(ctx, param1);
+      Value dv = param1.getAsDateTimeValue(ctx);
       if(dv.getType() == Value.Type.TIME) {
         return dv;
       }
@@ -202,8 +259,8 @@ public class DefaultDateFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
-      if(param1 == null) {
-        return null;
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
       }
       // convert from 1 based to 0 based value
       int month = param1.getAsLongInt(ctx) - 1;
@@ -230,8 +287,8 @@ public class DefaultDateFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
-      if(param1 == null) {
-        return null;
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
       }
       int dayOfWeek = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
 
@@ -245,8 +302,8 @@ public class DefaultDateFunctions
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
-      if(param1 == null) {
-        return null;
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
       }
       int weekday = param1.getAsLongInt(ctx);
 
@@ -270,59 +327,46 @@ public class DefaultDateFunctions
   }
 
   private static Calendar nonNullToCalendar(EvalContext ctx, Value param) {
-    Value origParam = param;
-    param = nonNullToDateValue(ctx, param);
-    if(param == null) {
-      // not a date/time
-      throw new EvalException("Invalid date/time expression '" +
-                              origParam + "'");
-    }
-
     Calendar cal = ctx.getCalendar();
     cal.setTime(param.getAsDateTime(ctx));
     return cal;
   }
 
-  static Value nonNullToDateValue(EvalContext ctx, Value param) {
-    Value.Type type = param.getType();
-    if(type.isTemporal()) {
-      return param;
-    }
+  static Value stringToDateValue(LocaleContext ctx, String valStr) {
+    // see if we can coerce to date/time
+    TemporalConfig.Type valTempType = ExpressionTokenizer.determineDateType(
+        valStr, ctx);
 
-    if(type == Value.Type.STRING) {
+    if(valTempType != null) {
 
-      // see if we can coerce to date/time or double
-      String valStr = param.getAsString(ctx);
-      TemporalConfig.Type valTempType = ExpressionTokenizer.determineDateType(
-          valStr, ctx);
+      DateFormat parseDf = ExpressionTokenizer.createParseDateTimeFormat(
+          valTempType, ctx);
 
-      if(valTempType != null) {
+      try {
+        Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
+        return ValueSupport.toValue(valTempType.getValueType(), dateVal);
+      } catch(java.text.ParseException pe) {
 
-        try {
-          DateFormat parseDf = ExpressionTokenizer.createParseDateTimeFormat(
+        if(valTempType.includesDate()) {
+          // the date may not include a year value, in which case it means
+          // to use the "current" year.  see if this is an implicit year date
+          parseDf = ExpressionTokenizer.createParseImplicitYearDateTimeFormat(
               valTempType, ctx);
-          Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
-          return ValueSupport.toValue(valTempType.getValueType(), dateVal);
-        } catch(java.text.ParseException pe) {
-          // not a valid date string, not a date/time
-          return null;
+          try {
+            Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
+            return ValueSupport.toValue(valTempType.getValueType(), dateVal);
+          } catch(java.text.ParseException pe2) {
+            // guess not, continue on to failure
+          }
         }
       }
-
-      // see if string can be coerced to number
-      try {
-        return numberToDateValue(ctx, param.getAsDouble(ctx));
-      } catch(NumberFormatException ignored) {
-        // not a number, not a date/time
-        return null;
-      }
     }
 
-    // must be a number
-    return numberToDateValue(ctx, param.getAsDouble(ctx));
+    // not a valid date string, not a date/time
+    return null;
   }
 
-  private static Value numberToDateValue(EvalContext ctx, double dd) {
+  static Value numberToDateValue(LocaleContext ctx, double dd) {
     if((dd < MIN_DATE) || (dd > MAX_DATE)) {
       // outside valid date range
       return null;
@@ -345,7 +389,7 @@ public class DefaultDateFunctions
 
   private static double timeOnly(double dd) {
     // the fractional part of the date/time double is the time value.  discard
-    // the integral portion and convert to seconds
+    // the integral portion
     return new BigDecimal(dd).remainder(BigDecimal.ONE).doubleValue();
   }
 
@@ -367,15 +411,67 @@ public class DefaultDateFunctions
 
   private static int getFirstDayParam(
       LocaleContext ctx, Value[] params, int idx) {
-    // vbSunday (default)
-    int firstDay = 1;
+    // vbSunday (default) 1
+    // vbUseSystem 0
+    return getOptionalIntParam(ctx, params, idx, 1, 0);
+  }
+
+  private static int getFirstWeekTypeParam(
+      LocaleContext ctx, Value[] params, int idx) {
+    // vbFirstJan1 (default) 1
+    // vbUseSystem 0
+    return getOptionalIntParam(ctx, params, idx, 1, 0);
+  }
+
+  private static int getOptionalIntParam(
+      LocaleContext ctx, Value[] params, int idx, int defValue, int useDefValue) {
+    int val = defValue;
     if(params.length > idx) {
-      firstDay = params[idx].getAsLongInt(ctx);
-      if(firstDay == 0) {
-        // 0 == vbUseSystem, so we will use the default "sunday"
-        firstDay = 1;
+      val = params[idx].getAsLongInt(ctx);
+      if(val == useDefValue) {
+        val = defValue;
       }
     }
-    return firstDay;
+    return val;
+  }
+
+  private static int weekOfYear(EvalContext ctx, Value param, int firstDay,
+                                int firstWeekType) {
+    Calendar cal = nonNullToCalendar(ctx, param);
+
+    // need to mess with some calendar settings, but they need to be restored
+    // when done because the Calendar instance may be shared
+    int origFirstDay = cal.getFirstDayOfWeek();
+    int origMinDays = cal.getMinimalDaysInFirstWeek();
+    try {
+
+      int minDays = 1;
+      switch(firstWeekType) {
+      case 1:
+        // vbUseSystem 0
+        // vbFirstJan1 1 (default)
+        break;
+      case 2:
+        // vbFirstFourDays 2
+        minDays = 4;
+        break;
+      case 3:
+        // vbFirstFullWeek 3
+        minDays = 7;
+        break;
+      default:
+        throw new EvalException("Invalid first week of year type " +
+                                firstWeekType);
+      }
+
+      cal.setFirstDayOfWeek(firstDay);
+      cal.setMinimalDaysInFirstWeek(minDays);
+
+      return cal.get(Calendar.WEEK_OF_YEAR);
+
+    } finally {
+      cal.setFirstDayOfWeek(origFirstDay);
+      cal.setMinimalDaysInFirstWeek(origMinDays);
+    }
   }
 }

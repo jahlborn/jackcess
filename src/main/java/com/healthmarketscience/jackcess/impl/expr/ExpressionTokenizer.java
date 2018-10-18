@@ -54,8 +54,10 @@ class ExpressionTokenizer
   private static final char EQUALS_CHAR = '=';
 
   // access times are based on this date (not the UTC base)
-  private static final String BASE_DATE = "12/30/1899";
-  private static final String BASE_DATE_FMT = "M/d/yyyy";
+  private static final String BASE_DATE_PREFIX = "1899/12/30 ";
+  private static final String BASE_DATE_FMT_PREFIX = "yyyy/M/d ";
+
+  private static final String IMPLICIT_YEAR_FMT_PREFIX = "yyyy ";
 
   private static final byte IS_OP_FLAG =     0x01;
   private static final byte IS_COMP_FLAG =   0x02;
@@ -350,47 +352,18 @@ class ExpressionTokenizer
   static DateFormat createParseDateTimeFormat(TemporalConfig.Type type,
                                               LocaleContext ctx)
   {
-    switch(type) {
-    case TIME:
-      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME, ctx);
-    case TIME_12:
-      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME_12, ctx);
-    case TIME_24:
-      return createParseTimeFormat(TemporalConfig.Type.DATE_TIME_24, ctx);
-    default:
-      // use normal formatter
+    if(type.isTimeOnly()) {
+      return new ParseTimeFormat(type, ctx);
     }
 
     TemporalConfig cfg = ctx.getTemporalConfig();
     return ctx.createDateFormat(cfg.getDateTimeFormat(type));
   }
 
-  private static DateFormat createParseTimeFormat(TemporalConfig.Type parseType,
-                                                  LocaleContext ctx)
+  static DateFormat createParseImplicitYearDateTimeFormat(
+      TemporalConfig.Type type, LocaleContext ctx)
   {
-    TemporalConfig cfg = ctx.getTemporalConfig();
-    // we need to use a special DateFormat impl which manipulates the parsed
-    // time-only value so it becomes the right Date value
-    String baseDate = getBaseDatePrefix(ctx);
-    DateFormat parseDf = ctx.createDateFormat(
-        cfg.getDateTimeFormat(parseType));
-    return new ParseTimeFormat(parseDf, baseDate);
-  }
-
-  private static String getBaseDatePrefix(LocaleContext ctx) {
-    String dateFmt = ctx.getTemporalConfig().getDateFormat();
-    String baseDate = BASE_DATE;
-    if(!BASE_DATE_FMT.equals(dateFmt)) {
-      try {
-        // need to reformat the base date to the relevant date format
-        DateFormat parseDf = ctx.createDateFormat(BASE_DATE_FMT);
-        DateFormat df = ctx.createDateFormat(dateFmt);
-        baseDate = df.format(parseComplete(parseDf, baseDate));
-      } catch(Exception e) {
-        throw new ParseException("Could not parse base date", e);
-      }
-    }
-    return baseDate + " ";
+    return new ParseImplicitYearFormat(type, ctx);
   }
 
   private static Token maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
@@ -630,32 +603,37 @@ class ExpressionTokenizer
   }
 
   /**
-   * Special date/time format which will parse time-only strings "correctly"
-   * according to how access handles time-only values.
+   * Base DateFormat implementation for parsing date/time formats where
+   * additional information is added on to the format in order for it to be
+   * parsed correctly.
    */
-  private static final class ParseTimeFormat extends DateFormat
+  private static abstract class ParsePrefixFormat extends DateFormat
   {
     private static final long serialVersionUID = 0L;
 
     private final DateFormat _parseDelegate;
-    private final String _baseDate;
 
-    private ParseTimeFormat(DateFormat parseDelegate, String baseDate)
-    {
-      _parseDelegate = parseDelegate;
-      _baseDate = baseDate;
+    private ParsePrefixFormat(String formatPrefix, String formatStr,
+                              LocaleContext ctx) {
+      _parseDelegate = ctx.createDateFormat(formatPrefix + formatStr);
     }
 
     @Override
-    public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition fieldPosition) {
+    public StringBuffer format(Date date, StringBuffer toAppendTo,
+                               FieldPosition fieldPosition) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public Date parse(String source, ParsePosition pos) {
-      // we parse as a full date/time in order to get the correct "base date"
-      // used by access
-      return _parseDelegate.parse(_baseDate + source, pos);
+      String prefix = getPrefix();
+
+      Date result = _parseDelegate.parse(prefix + source, pos);
+
+      // adjust index for original string
+      pos.setIndex(pos.getIndex() - prefix.length());
+
+      return result;
     }
 
     @Override
@@ -666,6 +644,55 @@ class ExpressionTokenizer
     @Override
     public TimeZone getTimeZone() {
       return _parseDelegate.getTimeZone();
+    }
+
+    protected abstract String getPrefix();
+  }
+
+  /**
+   * Special date/time format which will parse time-only strings "correctly"
+   * according to how access handles time-only values.
+   */
+  private static final class ParseTimeFormat extends ParsePrefixFormat
+  {
+    private static final long serialVersionUID = 0L;
+
+    private ParseTimeFormat(TemporalConfig.Type timeType, LocaleContext ctx) {
+      super(BASE_DATE_FMT_PREFIX,
+            ctx.getTemporalConfig().getDateTimeFormat(timeType), ctx);
+    }
+
+    @Override
+    protected String getPrefix() {
+      // we parse as a full date/time in order to get the correct "base date"
+      // used by access
+      return BASE_DATE_PREFIX;
+    }
+  }
+
+  /**
+   * Special date/time format which will parse dates with implicit (current)
+   * years.
+   */
+  private static final class ParseImplicitYearFormat extends ParsePrefixFormat
+  {
+    private static final long serialVersionUID = 0L;
+
+    private ParseImplicitYearFormat(TemporalConfig.Type type,
+                                    LocaleContext ctx) {
+      super(IMPLICIT_YEAR_FMT_PREFIX,
+            ctx.getTemporalConfig().getImplicitYearDateTimeFormat(type),
+            ctx);
+    }
+
+    @Override
+    protected String getPrefix() {
+      // need to get the current year
+      Calendar cal = getCalendar();
+      cal.setTimeInMillis(System.currentTimeMillis());
+      int year = cal.get(Calendar.YEAR);
+      // return a value matching IMPLICIT_YEAR_FMT_PREFIX
+      return year + " ";
     }
   }
 

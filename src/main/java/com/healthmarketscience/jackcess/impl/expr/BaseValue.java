@@ -35,32 +35,36 @@ public abstract class BaseValue implements Value
   }
 
   public boolean getAsBoolean(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.LONG);
+    throw invalidConversion(Type.LONG);
   }
 
   public String getAsString(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.STRING);
+    throw invalidConversion(Type.STRING);
   }
 
   public Date getAsDateTime(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.DATE_TIME);
+    return (Date)getAsDateTimeValue(ctx).get();
+  }
+
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    throw invalidConversion(Type.DATE_TIME);
   }
 
   public Integer getAsLongInt(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.LONG);
+    throw invalidConversion(Type.LONG);
   }
 
   public Double getAsDouble(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.DOUBLE);
+    throw invalidConversion(Type.DOUBLE);
   }
 
   public BigDecimal getAsBigDecimal(LocaleContext ctx) {
-    throw invalidConversion(Value.Type.BIG_DEC);
+    throw invalidConversion(Type.BIG_DEC);
   }
 
-  private EvalException invalidConversion(Value.Type newType) {
+  protected EvalException invalidConversion(Type newType) {
     return new EvalException(
-        getType() + " value cannot be converted to " + newType);
+        this + " cannot be converted to " + newType);
   }
 
   protected Integer roundToLongInt(LocaleContext ctx) {

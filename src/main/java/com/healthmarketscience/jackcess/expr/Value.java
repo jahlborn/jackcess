@@ -98,6 +98,14 @@ public interface Value
   public Date getAsDateTime(LocaleContext ctx);
 
   /**
+   * Since date/time values have different types, it may be more convenient to
+   * get the date/time primitive value with the appropriate type information.
+   *
+   * @return this value converted to a date/time value
+   */
+  public Value getAsDateTimeValue(LocaleContext ctx);
+
+  /**
    * @return this primitive value converted (rounded) to an int
    */
   public Integer getAsLongInt(LocaleContext ctx);

@@ -254,5 +254,4 @@ public class FunctionSupport
     }
     return defValue;
   }
-
 }
