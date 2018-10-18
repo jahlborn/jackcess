@@ -16,7 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
-import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang3.ObjectUtils;
 
 /**
  * identifies a database entity (e.g. the name of a database field).  An
