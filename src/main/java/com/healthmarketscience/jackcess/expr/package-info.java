@@ -134,7 +134,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Date </td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateAdd</td><td></td></tr>
  * <tr class="TableRowColor"><td>DateDiff</td><td></td></tr>
- * <tr class="TableRowColor"><td>DatePart</td><td></td></tr>
+ * <tr class="TableRowColor"><td>DatePart</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateSerial</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateValue</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Hour</td><td>Y</td></tr>
