@@ -157,6 +157,49 @@ public class DefaultDateFunctions
     }
   });
 
+  public static final Function DATEADD = registerFunc(new Func3("DateAdd") {
+    @Override
+    protected Value eval3(EvalContext ctx,
+                          Value param1, Value param2, Value param3) {
+      if(param3.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      String intv = param1.getAsString(ctx).trim();
+      int val = param2.getAsLongInt(ctx);
+
+      int result = -1;
+      Calendar cal = nonNullToCalendar(ctx, param3);
+
+      // FIXME
+      if(intv.equalsIgnoreCase(INTV_YEAR)) {
+        cal.add(Calendar.YEAR, val);
+      } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
+        cal.add(Calendar.MONTH, val * 3);
+      } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
+        cal.add(Calendar.MONTH, val);
+      } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR)) {
+        cal.add(Calendar.DAY_OF_YEAR, val);
+      } else if(intv.equalsIgnoreCase(INTV_DAY)) {
+        cal.add(Calendar.DAY_OF_YEAR, val);
+      } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
+        cal.add(Calendar.DAY_OF_WEEK, val);
+      } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
+        cal.add(Calendar.WEEK_OF_YEAR, val);
+      } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
+        cal.add(Calendar.HOUR, val);
+      } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
+        cal.add(Calendar.MINUTE, val);
+      } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
+        cal.add(Calendar.SECOND, val);
+      } else {
+        throw new EvalException("Invalid interval " + intv);
+      }
+
+      return ValueSupport.toValue(cal);
+    }
+  });
+
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {

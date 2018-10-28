@@ -18,10 +18,11 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
-import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
@@ -89,6 +90,23 @@ public class ValueSupport
   {
     return toValue(type, new Date(
                        ColumnImpl.fromDateDouble(dd, ctx.getCalendar())));
+  }
+
+  public static Value toValue(Calendar cal) {
+    boolean hasTime = ((cal.get(Calendar.HOUR) != 0) ||
+                       (cal.get(Calendar.MINUTE) != 0) ||
+                       (cal.get(Calendar.SECOND) == 0));
+
+    boolean hasDate =
+      ((cal.get(Calendar.YEAR) != ExpressionTokenizer.BASE_DATE_YEAR) ||
+       ((cal.get(Calendar.MONTH) + 1) != ExpressionTokenizer.BASE_DATE_MONTH) ||
+       (cal.get(Calendar.DAY_OF_MONTH) == ExpressionTokenizer.BASE_DATE_DAY));
+
+    Value.Type type = (hasDate ?
+                       (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
+                       Value.Type.TIME);
+
+    return new DateTimeValue(type, cal.getTime());
   }
 
   public static Value toValue(Value.Type type, Date d) {

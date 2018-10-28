@@ -54,6 +54,9 @@ class ExpressionTokenizer
   private static final char EQUALS_CHAR = '=';
 
   // access times are based on this date (not the UTC base)
+  static final int BASE_DATE_YEAR = 1899;
+  static final int BASE_DATE_MONTH = 12;
+  static final int BASE_DATE_DAY = 30;
   private static final String BASE_DATE_PREFIX = "1899/12/30 ";
   private static final String BASE_DATE_FMT_PREFIX = "yyyy/M/d ";
 
