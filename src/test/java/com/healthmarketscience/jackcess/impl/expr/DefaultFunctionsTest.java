@@ -306,6 +306,23 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals(5, eval("=DatePart('h',#11/22/2003 5:45:13 AM#)"));
     assertEquals(45, eval("=DatePart('n',#11/22/2003 5:45:13 AM#)"));
     assertEquals(13, eval("=DatePart('s',#11/22/2003 5:45:13 AM#)"));
+
+    assertEquals("11/22/2005 5:45:13 AM", eval("CStr(DateAdd('yyyy',2,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("2/22/2004 5:45:13 AM", eval("CStr(DateAdd('q',1,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("1/22/2004 5:45:13 AM", eval("CStr(DateAdd('m',2,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("12/12/2003 5:45:13 AM", eval("CStr(DateAdd('d',20,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("12/12/2003 5:45:13 AM", eval("CStr(DateAdd('w',20,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("12/12/2003 5:45:13 AM", eval("CStr(DateAdd('y',20,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("12/27/2003 5:45:13 AM", eval("CStr(DateAdd('ww',5,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("11/22/2003 3:45:13 PM", eval("CStr(DateAdd('h',10,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("11/22/2003 6:19:13 AM", eval("CStr(DateAdd('n',34,#11/22/2003 5:45:13 AM#))"));
+    assertEquals("11/22/2003 5:46:27 AM", eval("CStr(DateAdd('s',74,#11/22/2003 5:45:13 AM#))"));
+
+    assertEquals("12/12/2003", eval("CStr(DateAdd('d',20,#11/22/2003#))"));
+    assertEquals("11/22/2003 10:00:00 AM", eval("CStr(DateAdd('h',10,#11/22/2003#))"));
+    assertEquals("11/23/2003", eval("CStr(DateAdd('h',24,#11/22/2003#))"));
+    assertEquals("3:45:13 PM", eval("CStr(DateAdd('h',10,#5:45:13 AM#))"));
+    assertEquals("12/31/1899 11:45:13 AM", eval("CStr(DateAdd('h',30,#5:45:13 AM#))"));
   }
 
   public void testFinancialFuncs() throws Exception

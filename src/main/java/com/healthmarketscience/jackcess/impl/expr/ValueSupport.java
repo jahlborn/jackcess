@@ -17,9 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
@@ -52,6 +54,14 @@ public class ValueSupport
   public static final Value NEG_ONE_VAL = TRUE_VAL;
   public static final Value ONE_VAL = new LongValue(1);
 
+  static final char NUMBER_BASE_PREFIX = '&';
+  static final Pattern OCTAL_PAT =
+    Pattern.compile("^" + NUMBER_BASE_PREFIX + "[oO][0-7]+");
+  static final Pattern HEX_PAT =
+    Pattern.compile("^" + NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
+  static final char CANON_DEC_SEP = '.';
+  static final Pattern NUMBER_PAT = Pattern.compile("^[-+]?[0-9]*[.]?[0-9]*");
+  
   private ValueSupport() {}
 
   public static Value toValue(boolean b) {
@@ -93,14 +103,14 @@ public class ValueSupport
   }
 
   public static Value toValue(Calendar cal) {
-    boolean hasTime = ((cal.get(Calendar.HOUR) != 0) ||
+    boolean hasTime = ((cal.get(Calendar.HOUR_OF_DAY) != 0) ||
                        (cal.get(Calendar.MINUTE) != 0) ||
-                       (cal.get(Calendar.SECOND) == 0));
+                       (cal.get(Calendar.SECOND) != 0));
 
     boolean hasDate =
       ((cal.get(Calendar.YEAR) != ExpressionTokenizer.BASE_DATE_YEAR) ||
        ((cal.get(Calendar.MONTH) + 1) != ExpressionTokenizer.BASE_DATE_MONTH) ||
-       (cal.get(Calendar.DAY_OF_MONTH) == ExpressionTokenizer.BASE_DATE_DAY));
+       (cal.get(Calendar.DAY_OF_MONTH) != ExpressionTokenizer.BASE_DATE_DAY));
 
     Value.Type type = (hasDate ?
                        (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
@@ -147,5 +157,9 @@ public class ValueSupport
       bd = bd.setScale(0);
     }
     return bd;
+  }
+
+  static BigInteger parseIntegerString(String val, int radix) {
+    return new BigInteger(val.substring(2), radix);
   }
 }

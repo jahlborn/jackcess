@@ -17,8 +17,10 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
@@ -348,6 +350,43 @@ public class DefaultFunctions
     }
   });
 
+  // public static final Function VAL = registerStringFunc(new Func1NullIsNull("Val") {
+  //   @Override
+  //   protected Value eval1(EvalContext ctx, Value param1) {
+  //     String str = param1.getAsString(ctx).trim();
+
+  //     if(str.length() == 0) {
+  //       return ValueSupport.ZERO_VAL;
+  //     }
+
+  //     Matcher m = null;
+      
+  //     if(str.charAt(0) == ValueSupport.NUMBER_BASE_PREFIX) {
+  //       // see if we can parse as a radix format
+  //       if((m = ValueSupport.HEX_PAT.matcher(str)).find()) {
+  //         BigInteger bi = ValueSupport.parseIntegerString(m.group(), 16);
+  //         // FIXME, what to do with large numbers?  to double or decimal?
+  //         return ValueSupport.toValue(bi.intValue());
+  //       } else if((m = ValueSupport.OCTAL_PAT.matcher(str)).find()) {
+  //         BigInteger bi = ValueSupport.parseIntegerString(m.group(), 8);
+  //         // FIXME, what to do with large numbers?  to double or decimal?
+  //         return ValueSupport.toValue(bi.intValue());
+  //       }
+        
+  //       return ValueSupport.ZERO_VAL;
+  //     }
+
+  //     // parse ase normal "decimal" number.
+  //     // FIXME - leading '+'? exponent?
+  //     if((m = ValueSupport.NUMBER_PAT.matcher(str)).find()) {
+        
+  //     }
+      
+  //     // return ValueSupport.toValue(Integer.toHexString(lv).toUpperCase());
+  //     return null;
+  //   }
+  // });
+  
   private static boolean stringIsNumeric(EvalContext ctx, Value param) {
     try {
       param.getAsBigDecimal(ctx);

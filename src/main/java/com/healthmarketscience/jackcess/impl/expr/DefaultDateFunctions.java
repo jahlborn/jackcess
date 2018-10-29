@@ -168,10 +168,8 @@ public class DefaultDateFunctions
       String intv = param1.getAsString(ctx).trim();
       int val = param2.getAsLongInt(ctx);
 
-      int result = -1;
       Calendar cal = nonNullToCalendar(ctx, param3);
 
-      // FIXME
       if(intv.equalsIgnoreCase(INTV_YEAR)) {
         cal.add(Calendar.YEAR, val);
       } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {

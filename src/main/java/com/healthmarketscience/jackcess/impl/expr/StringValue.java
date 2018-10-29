@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.DecimalFormatSymbols;
-import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
@@ -33,13 +32,6 @@ import org.apache.commons.lang.StringUtils;
 public class StringValue extends BaseValue
 {
   private static final Object NOT_A_NUMBER = new Object();
-
-  private static final char NUMBER_BASE_PREFIX = '&';
-  private static final Pattern OCTAL_PAT =
-    Pattern.compile(NUMBER_BASE_PREFIX + "[oO][0-7]+");
-  private static final Pattern HEX_PAT =
-    Pattern.compile(NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
-  private static final char CANON_DEC_SEP = '.';
 
   private final String _val;
   private Object _num;
@@ -119,7 +111,7 @@ public class StringValue extends BaseValue
         String tmpVal = _val.trim();
         if(tmpVal.length() > 0) {
 
-          if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
+          if(tmpVal.charAt(0) != ValueSupport.NUMBER_BASE_PREFIX) {
             // convert to standard numeric support for parsing
             tmpVal = toCanonicalNumberFormat(ctx, tmpVal);
             _num = ValueSupport.normalize(new BigDecimal(tmpVal));
@@ -127,9 +119,9 @@ public class StringValue extends BaseValue
           }
 
           // parse as hex/octal symbolic value
-          if(HEX_PAT.matcher(tmpVal).matches()) {
+          if(ValueSupport.HEX_PAT.matcher(tmpVal).matches()) {
             return parseIntegerString(tmpVal, 16);
-          } else if(OCTAL_PAT.matcher(tmpVal).matches()) {
+          } else if(ValueSupport.OCTAL_PAT.matcher(tmpVal).matches()) {
             return parseIntegerString(tmpVal, 8);
           }
 
@@ -144,7 +136,7 @@ public class StringValue extends BaseValue
   }
 
   private BigDecimal parseIntegerString(String tmpVal, int radix) {
-    _num = new BigDecimal(new BigInteger(tmpVal.substring(2), radix));
+    _num = new BigDecimal(ValueSupport.parseIntegerString(tmpVal, radix));
     return (BigDecimal)_num;
   }
 
@@ -158,8 +150,8 @@ public class StringValue extends BaseValue
     tmpVal = StringUtils.remove(tmpVal, groupSepChar);
 
     char decSepChar = syms.getDecimalSeparator();
-    if((decSepChar != CANON_DEC_SEP) && (tmpVal.indexOf(decSepChar) >= 0)) {
-      tmpVal = tmpVal.replace(decSepChar, CANON_DEC_SEP);
+    if((decSepChar != ValueSupport.CANON_DEC_SEP) && (tmpVal.indexOf(decSepChar) >= 0)) {
+      tmpVal = tmpVal.replace(decSepChar, ValueSupport.CANON_DEC_SEP);
     }
 
     return tmpVal;
