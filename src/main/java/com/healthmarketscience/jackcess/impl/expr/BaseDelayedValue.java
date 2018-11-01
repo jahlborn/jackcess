@@ -19,7 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.util.Date;
 
-import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
 
 /**
@@ -52,28 +52,32 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().get();
   }
 
-  public boolean getAsBoolean() {
-    return getDelegate().getAsBoolean();
+  public boolean getAsBoolean(LocaleContext ctx) {
+    return getDelegate().getAsBoolean(ctx);
   }
 
-  public String getAsString() {
-    return getDelegate().getAsString();
+  public String getAsString(LocaleContext ctx) {
+    return getDelegate().getAsString(ctx);
   }
 
-  public Date getAsDateTime(EvalContext ctx) {
+  public Date getAsDateTime(LocaleContext ctx) {
     return getDelegate().getAsDateTime(ctx);
   }
 
-  public Integer getAsLongInt() {
-    return getDelegate().getAsLongInt();
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    return getDelegate().getAsDateTimeValue(ctx);
   }
 
-  public Double getAsDouble() {
-    return getDelegate().getAsDouble();
+  public Integer getAsLongInt(LocaleContext ctx) {
+    return getDelegate().getAsLongInt(ctx);
   }
 
-  public BigDecimal getAsBigDecimal() {
-    return getDelegate().getAsBigDecimal();
+  public Double getAsDouble(LocaleContext ctx) {
+    return getDelegate().getAsDouble(ctx);
+  }
+
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
+    return getDelegate().getAsBigDecimal(ctx);
   }
 
   protected abstract Value eval();

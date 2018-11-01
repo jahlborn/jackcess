@@ -19,8 +19,8 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.util.regex.Pattern;
 
-import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.ValueSupport.*;
@@ -63,7 +63,7 @@ public class BuiltinOperators
   // - between, not, like, in
   // - *NOT* concal op '&'
 
-  public static Value negate(EvalContext ctx, Value param1) {
+  public static Value negate(LocaleContext ctx, Value param1) {
     if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
@@ -76,60 +76,60 @@ public class BuiltinOperators
     case TIME:
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
-      double result = -param1.getAsDouble();
-      return toDateValue(ctx, mathType, result, param1, null);
+      double result = -param1.getAsDouble(ctx);
+      return toDateValue(ctx, mathType, result);
     case LONG:
-      return toValue(-param1.getAsLongInt());
+      return toValue(-param1.getAsLongInt(ctx));
     case DOUBLE:
-      return toValue(-param1.getAsDouble());
+      return toValue(-param1.getAsDouble(ctx));
     case STRING:
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().negate(
+      return toValue(param1.getAsBigDecimal(ctx).negate(
                          NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
   }
 
-  public static Value add(EvalContext ctx, Value param1, Value param2) {
+  public static Value add(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.SIMPLE);
 
     switch(mathType) {
     case STRING:
       // string '+' is a null-propagation (handled above) concat
-      return nonNullConcat(param1, param2);
+      return nonNullConcat(ctx, param1, param2);
     case DATE:
     case TIME:
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
-      double result = param1.getAsDouble() + param2.getAsDouble();
-      return toDateValue(ctx, mathType, result, param1, param2);
+      double result = param1.getAsDouble(ctx) + param2.getAsDouble(ctx);
+      return toDateValue(ctx, mathType, result);
     case LONG:
-      return toValue(param1.getAsLongInt() + param2.getAsLongInt());
+      return toValue(param1.getAsLongInt(ctx) + param2.getAsLongInt(ctx));
     case DOUBLE:
-      return toValue(param1.getAsDouble() + param2.getAsDouble());
+      return toValue(param1.getAsDouble(ctx) + param2.getAsDouble(ctx));
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().add(
-                         param2.getAsBigDecimal(),
+      return toValue(param1.getAsBigDecimal(ctx).add(
+                         param2.getAsBigDecimal(ctx),
                          NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
   }
 
-  public static Value subtract(EvalContext ctx, Value param1, Value param2) {
+  public static Value subtract(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.SIMPLE);
 
     switch(mathType) {
@@ -138,28 +138,28 @@ public class BuiltinOperators
     case TIME:
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
-      double result = param1.getAsDouble() - param2.getAsDouble();
-      return toDateValue(ctx, mathType, result, param1, param2);
+      double result = param1.getAsDouble(ctx) - param2.getAsDouble(ctx);
+      return toDateValue(ctx, mathType, result);
     case LONG:
-      return toValue(param1.getAsLongInt() - param2.getAsLongInt());
+      return toValue(param1.getAsLongInt(ctx) - param2.getAsLongInt(ctx));
     case DOUBLE:
-      return toValue(param1.getAsDouble() - param2.getAsDouble());
+      return toValue(param1.getAsDouble(ctx) - param2.getAsDouble(ctx));
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().subtract(
-                         param2.getAsBigDecimal(),
+      return toValue(param1.getAsBigDecimal(ctx).subtract(
+                         param2.getAsBigDecimal(ctx),
                          NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
   }
 
-  public static Value multiply(Value param1, Value param2) {
+  public static Value multiply(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
 
     switch(mathType) {
@@ -168,25 +168,25 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      return toValue(param1.getAsLongInt() * param2.getAsLongInt());
+      return toValue(param1.getAsLongInt(ctx) * param2.getAsLongInt(ctx));
     case DOUBLE:
-      return toValue(param1.getAsDouble() * param2.getAsDouble());
+      return toValue(param1.getAsDouble(ctx) * param2.getAsDouble(ctx));
     case BIG_DEC:
-      return toValue(param1.getAsBigDecimal().multiply(
-                         param2.getAsBigDecimal(),
+      return toValue(param1.getAsBigDecimal(ctx).multiply(
+                         param2.getAsBigDecimal(ctx),
                          NumberFormatter.DEC_MATH_CONTEXT));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
   }
 
-  public static Value divide(Value param1, Value param2) {
+  public static Value divide(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
 
     switch(mathType) {
@@ -195,54 +195,54 @@ public class BuiltinOperators
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      int lp1 = param1.getAsLongInt();
-      int lp2 = param2.getAsLongInt();
+      int lp1 = param1.getAsLongInt(ctx);
+      int lp2 = param2.getAsLongInt(ctx);
       if((lp1 % lp2) == 0) {
         return toValue(lp1 / lp2);
       }
       return toValue((double)lp1 / (double)lp2);
     case DOUBLE:
-      double d2 = param2.getAsDouble();
+      double d2 = param2.getAsDouble(ctx);
       if(d2 == 0.0d) {
         throw new ArithmeticException(DIV_BY_ZERO);
       }
-      return toValue(param1.getAsDouble() / d2);
+      return toValue(param1.getAsDouble(ctx) / d2);
     case BIG_DEC:
-      return toValue(divide(param1.getAsBigDecimal(), param2.getAsBigDecimal()));
+      return toValue(divide(param1.getAsBigDecimal(ctx), param2.getAsBigDecimal(ctx)));
     default:
       throw new EvalException("Unexpected type " + mathType);
     }
   }
 
-  public static Value intDivide(Value param1, Value param2) {
+  public static Value intDivide(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
     if(mathType == Value.Type.STRING) {
       throw new EvalException("Unexpected type " + mathType);
     }
-    return toValue(param1.getAsLongInt() / param2.getAsLongInt());
+    return toValue(param1.getAsLongInt(ctx) / param2.getAsLongInt(ctx));
   }
 
-  public static Value exp(Value param1, Value param2) {
+  public static Value exp(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
 
     if(mathType == Value.Type.BIG_DEC) {
       // see if we can handle the limited options supported for BigDecimal
       // (must be a positive int exponent)
       try {
-        BigDecimal result = param1.getAsBigDecimal().pow(
-            param2.getAsBigDecimal().intValueExact(),
+        BigDecimal result = param1.getAsBigDecimal(ctx).pow(
+            param2.getAsBigDecimal(ctx).intValueExact(),
             NumberFormatter.DEC_MATH_CONTEXT);
         return toValue(result);
       } catch(ArithmeticException ae) {
@@ -251,7 +251,7 @@ public class BuiltinOperators
     }
 
     // jdk only supports general pow() as doubles, let's go with that
-    double result = Math.pow(param1.getAsDouble(), param2.getAsDouble());
+    double result = Math.pow(param1.getAsDouble(ctx), param2.getAsDouble(ctx));
 
     // attempt to convert integral types back to integrals if possible
     if((mathType == Value.Type.LONG) && isIntegral(result)) {
@@ -261,22 +261,22 @@ public class BuiltinOperators
     return toValue(result);
   }
 
-  public static Value mod(Value param1, Value param2) {
+  public static Value mod(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    Value.Type mathType = getMathTypePrecedence(param1, param2,
+    Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
 
     if(mathType == Value.Type.STRING) {
       throw new EvalException("Unexpected type " + mathType);
     }
-    return toValue(param1.getAsLongInt() % param2.getAsLongInt());
+    return toValue(param1.getAsLongInt(ctx) % param2.getAsLongInt(ctx));
   }
 
-  public static Value concat(Value param1, Value param2) {
+  public static Value concat(LocaleContext ctx, Value param1, Value param2) {
 
     // note, this op converts null to empty string
     if(param1.isNull()) {
@@ -287,77 +287,81 @@ public class BuiltinOperators
       param2 = EMPTY_STR_VAL;
     }
 
-    return nonNullConcat(param1, param2);
+    return nonNullConcat(ctx, param1, param2);
   }
 
-  private static Value nonNullConcat(Value param1, Value param2) {
-    return toValue(param1.getAsString().concat(param2.getAsString()));
+  private static Value nonNullConcat(
+      LocaleContext ctx, Value param1, Value param2) {
+    return toValue(param1.getAsString(ctx).concat(param2.getAsString(ctx)));
   }
 
-  public static Value not(Value param1) {
+  public static Value not(LocaleContext ctx, Value param1) {
     if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(!param1.getAsBoolean());
+    return toValue(!param1.getAsBoolean(ctx));
   }
 
-  public static Value lessThan(Value param1, Value param2) {
+  public static Value lessThan(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) < 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) < 0);
   }
 
-  public static Value greaterThan(Value param1, Value param2) {
+  public static Value greaterThan(
+      LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) > 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) > 0);
   }
 
-  public static Value lessThanEq(Value param1, Value param2) {
+  public static Value lessThanEq(
+      LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) <= 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) <= 0);
   }
 
-  public static Value greaterThanEq(Value param1, Value param2) {
+  public static Value greaterThanEq(
+      LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) >= 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) >= 0);
   }
 
-  public static Value equals(Value param1, Value param2) {
+  public static Value equals(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) == 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) == 0);
   }
 
-  public static Value notEquals(Value param1, Value param2) {
+  public static Value notEquals(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(nonNullCompareTo(param1, param2) != 0);
+    return toValue(nonNullCompareTo(ctx, param1, param2) != 0);
   }
 
-  public static Value and(Value param1, Value param2) {
+  public static Value and(LocaleContext ctx, Value param1, Value param2) {
 
     // "and" uses short-circuit logic
 
@@ -365,7 +369,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = param1.getAsBoolean();
+    boolean b1 = param1.getAsBoolean(ctx);
     if(!b1) {
       return FALSE_VAL;
     }
@@ -374,10 +378,10 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(param2.getAsBoolean());
+    return toValue(param2.getAsBoolean(ctx));
   }
 
-  public static Value or(Value param1, Value param2) {
+  public static Value or(LocaleContext ctx, Value param1, Value param2) {
 
     // "or" uses short-circuit logic
 
@@ -385,7 +389,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    boolean b1 = param1.getAsBoolean();
+    boolean b1 = param1.getAsBoolean(ctx);
     if(b1) {
       return TRUE_VAL;
     }
@@ -394,39 +398,39 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(param2.getAsBoolean());
+    return toValue(param2.getAsBoolean(ctx));
   }
 
-  public static Value eqv(Value param1, Value param2) {
+  public static Value eqv(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    boolean b1 = param1.getAsBoolean();
-    boolean b2 = param2.getAsBoolean();
+    boolean b1 = param1.getAsBoolean(ctx);
+    boolean b2 = param2.getAsBoolean(ctx);
 
     return toValue(b1 == b2);
   }
 
-  public static Value xor(Value param1, Value param2) {
+  public static Value xor(LocaleContext ctx, Value param1, Value param2) {
     if(anyParamIsNull(param1, param2)) {
       // null propagation
       return NULL_VAL;
     }
 
-    boolean b1 = param1.getAsBoolean();
-    boolean b2 = param2.getAsBoolean();
+    boolean b1 = param1.getAsBoolean(ctx);
+    boolean b2 = param2.getAsBoolean(ctx);
 
     return toValue(b1 ^ b2);
   }
 
-  public static Value imp(Value param1, Value param2) {
+  public static Value imp(LocaleContext ctx, Value param1, Value param2) {
 
     // "imp" uses short-circuit logic
 
     if(param1.isNull()) {
-      if(param2.isNull() || !param2.getAsBoolean()) {
+      if(param2.isNull() || !param2.getAsBoolean(ctx)) {
         // null propagation
         return NULL_VAL;
       }
@@ -434,7 +438,7 @@ public class BuiltinOperators
       return TRUE_VAL;
     }
 
-    boolean b1 = param1.getAsBoolean();
+    boolean b1 = param1.getAsBoolean(ctx);
     if(!b1) {
       return TRUE_VAL;
     }
@@ -444,7 +448,7 @@ public class BuiltinOperators
       return NULL_VAL;
     }
 
-    return toValue(param2.getAsBoolean());
+    return toValue(param2.getAsBoolean(ctx));
   }
 
   public static Value isNull(Value param1) {
@@ -455,20 +459,22 @@ public class BuiltinOperators
     return toValue(!param1.isNull());
   }
 
-  public static Value like(Value param1, Pattern pattern) {
+  public static Value like(LocaleContext ctx, Value param1, Pattern pattern) {
     if(param1.isNull()) {
       // null propagation
       return NULL_VAL;
     }
 
-    return toValue(pattern.matcher(param1.getAsString()).matches());
+    return toValue(pattern.matcher(param1.getAsString(ctx)).matches());
   }
 
-  public static Value notLike(Value param1, Pattern pattern) {
-    return not(like(param1, pattern));
+  public static Value notLike(
+      LocaleContext ctx, Value param1, Pattern pattern) {
+    return not(ctx, like(ctx, param1, pattern));
   }
 
-  public static Value between(Value param1, Value param2, Value param3) {
+  public static Value between(
+      LocaleContext ctx, Value param1, Value param2, Value param3) {
     // null propagate any param.  uses short circuit eval of params
     if(anyParamIsNull(param1, param2, param3)) {
       // null propagation
@@ -478,20 +484,21 @@ public class BuiltinOperators
     // the between values can be in either order!?!
     Value min = param2;
     Value max = param3;
-    Value gt = greaterThan(min, max);
-    if(gt.getAsBoolean()) {
+    Value gt = greaterThan(ctx, min, max);
+    if(gt.getAsBoolean(ctx)) {
       min = param3;
       max = param2;
     }
 
-    return and(greaterThanEq(param1, min), lessThanEq(param1, max));
+    return and(ctx, greaterThanEq(ctx, param1, min), lessThanEq(ctx, param1, max));
   }
 
-  public static Value notBetween(Value param1, Value param2, Value param3) {
-    return not(between(param1, param2, param3));
+  public static Value notBetween(
+      LocaleContext ctx, Value param1, Value param2, Value param3) {
+    return not(ctx, between(ctx, param1, param2, param3));
   }
 
-  public static Value in(Value param1, Value[] params) {
+  public static Value in(LocaleContext ctx, Value param1, Value[] params) {
 
     // null propagate any param.  uses short circuit eval of params
     if(param1.isNull()) {
@@ -504,8 +511,8 @@ public class BuiltinOperators
         continue;
       }
 
-      Value eq = equals(param1, val);
-      if(eq.getAsBoolean()) {
+      Value eq = equals(ctx, param1, val);
+      if(eq.getAsBoolean(ctx)) {
         return TRUE_VAL;
       }
     }
@@ -513,8 +520,8 @@ public class BuiltinOperators
     return FALSE_VAL;
   }
 
-  public static Value notIn(Value param1, Value[] params) {
-    return not(in(param1, params));
+  public static Value notIn(LocaleContext ctx, Value param1, Value[] params) {
+    return not(ctx, in(ctx, param1, params));
   }
 
 
@@ -528,10 +535,10 @@ public class BuiltinOperators
   }
 
   protected static int nonNullCompareTo(
-      Value param1, Value param2)
+      LocaleContext ctx, Value param1, Value param2)
   {
     // note that comparison does not do string to num coercion
-    Value.Type compareType = getMathTypePrecedence(param1, param2,
+    Value.Type compareType = getMathTypePrecedence(ctx, param1, param2,
                                                    CoercionType.COMPARE);
 
     switch(compareType) {
@@ -540,23 +547,23 @@ public class BuiltinOperators
       if(param1.getType() != param2.getType()) {
         throw new EvalException("Unexpected type " + compareType);
       }
-      return param1.getAsString().compareToIgnoreCase(param2.getAsString());
+      return param1.getAsString(ctx).compareToIgnoreCase(param2.getAsString(ctx));
     // case DATE: break; promoted to double
     // case TIME: break; promoted to double
     // case DATE_TIME: break; promoted to double
     case LONG:
-      return param1.getAsLongInt().compareTo(param2.getAsLongInt());
+      return param1.getAsLongInt(ctx).compareTo(param2.getAsLongInt(ctx));
     case DOUBLE:
-      return param1.getAsDouble().compareTo(param2.getAsDouble());
+      return param1.getAsDouble(ctx).compareTo(param2.getAsDouble(ctx));
     case BIG_DEC:
-      return param1.getAsBigDecimal().compareTo(param2.getAsBigDecimal());
+      return param1.getAsBigDecimal(ctx).compareTo(param2.getAsBigDecimal(ctx));
     default:
       throw new EvalException("Unexpected type " + compareType);
     }
   }
 
   private static Value.Type getMathTypePrecedence(
-      Value param1, Value param2, CoercionType cType)
+      LocaleContext ctx, Value param1, Value param2, CoercionType cType)
   {
     Value.Type t1 = param1.getType();
     Value.Type t2 = param2.getType();
@@ -577,7 +584,8 @@ public class BuiltinOperators
       if(cType._allowCoerceStringToNum) {
         // see if this is mixed string/numeric and the string can be coerced
         // to a number
-        Value.Type numericType = coerceStringToNumeric(param1, param2, cType);
+        Value.Type numericType = coerceStringToNumeric(
+            ctx, param1, param2, cType);
         if(numericType != null) {
           // string can be coerced to number
           return numericType;
@@ -614,7 +622,7 @@ public class BuiltinOperators
   }
 
   private static Value.Type coerceStringToNumeric(
-      Value param1, Value param2, CoercionType cType) {
+      LocaleContext ctx, Value param1, Value param2, CoercionType cType) {
     Value.Type t1 = param1.getType();
     Value.Type t2 = param2.getType();
 
@@ -639,7 +647,7 @@ public class BuiltinOperators
 
     try {
       // see if string can be coerced to a number
-      strParam.getAsBigDecimal();
+      strParam.getAsBigDecimal(ctx);
       if(prefType.isNumeric()) {
         // seems like when strings are coerced to numbers, they are usually
         // doubles, unless the current context is decimal
@@ -647,7 +655,7 @@ public class BuiltinOperators
                     Value.Type.BIG_DEC : Value.Type.DOUBLE);
       }
       return prefType;
-    } catch(NumberFormatException ignored) {
+    } catch(EvalException ignored) {
       // not a number
     }
 

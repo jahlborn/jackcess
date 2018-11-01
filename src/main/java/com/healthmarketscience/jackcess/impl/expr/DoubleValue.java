@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
@@ -47,22 +48,22 @@ public class DoubleValue extends BaseNumericValue
   }
 
   @Override
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     return (_val.doubleValue() != 0.0d);
   }
 
   @Override
-  public Double getAsDouble() {
+  public Double getAsDouble(LocaleContext ctx) {
     return _val;
   }
 
   @Override
-  public BigDecimal getAsBigDecimal() {
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
     return BigDecimal.valueOf(_val);
   }
 
   @Override
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     return NumberFormatter.format(_val);
   }
 }

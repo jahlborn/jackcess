@@ -42,6 +42,18 @@ public interface EvalConfig
   public void setTemporalConfig(TemporalConfig temporal);
 
   /**
+   * @return the currently configured NumericConfig
+   */
+  public NumericConfig getNumericConfig();
+
+  /**
+   * Sets the NumericConfig for use when evaluating expressions.  The default
+   * date/time formatting is US based, so this may need to be modified when
+   * interacting with {@link Database} instances from other locales.
+   */
+  public void setNumericConfig(NumericConfig numeric);
+
+  /**
    * @return the currently configured FunctionLookup
    */
   public FunctionLookup getFunctionLookup();

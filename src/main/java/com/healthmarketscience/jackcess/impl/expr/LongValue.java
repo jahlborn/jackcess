@@ -18,6 +18,8 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 
+import com.healthmarketscience.jackcess.expr.LocaleContext;
+
 /**
  *
  * @author James Ahlborn
@@ -45,22 +47,22 @@ public class LongValue extends BaseNumericValue
   }
 
   @Override
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     return (_val.longValue() != 0L);
   }
 
   @Override
-  public Integer getAsLongInt() {
+  public Integer getAsLongInt(LocaleContext ctx) {
     return _val;
   }
 
   @Override
-  public BigDecimal getAsBigDecimal() {
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
     return BigDecimal.valueOf(_val);
   }
 
   @Override
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     return _val.toString();
   }
 }

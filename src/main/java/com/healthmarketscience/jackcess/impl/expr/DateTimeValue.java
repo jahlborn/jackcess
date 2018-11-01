@@ -16,22 +16,75 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
-import java.text.DateFormat;
+import java.math.BigDecimal;
 import java.util.Date;
+
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.Value;
 
 /**
  *
  * @author James Ahlborn
  */
-public class DateTimeValue extends BaseDateValue
+public class DateTimeValue extends BaseValue
 {
+  private final Type _type;
+  private final Date _val;
 
-  public DateTimeValue(Date val, DateFormat fmt) 
-  {
-    super(val, fmt);
+  public DateTimeValue(Type type, Date val) {
+    if(!type.isTemporal()) {
+      throw new IllegalArgumentException("invalid date/time type");
+    }
+    _type = type;
+    _val = val;
   }
 
   public Type getType() {
-    return Type.DATE_TIME;
+    return _type;
+  }
+
+  public Object get() {
+    return _val;
+  }
+
+  protected Double getNumber(LocaleContext ctx) {
+    return ColumnImpl.toDateDouble(_val, ctx.getCalendar());
+  }
+
+  @Override
+  public boolean getAsBoolean(LocaleContext ctx) {
+    // ms access seems to treat dates/times as "true"
+    return true;
+  }
+
+  @Override
+  public String getAsString(LocaleContext ctx) {
+    return ValueSupport.getDateFormatForType(ctx, getType()).format(_val);
+  }
+
+  @Override
+  public Date getAsDateTime(LocaleContext ctx) {
+    return _val;
+  }
+
+  @Override
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    return this;
+  }
+
+  @Override
+  public Integer getAsLongInt(LocaleContext ctx) {
+    return roundToLongInt(ctx);
+  }
+
+  @Override
+  public Double getAsDouble(LocaleContext ctx) {
+    return getNumber(ctx);
+  }
+
+  @Override
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
+    return BigDecimal.valueOf(getNumber(ctx));
   }
 }

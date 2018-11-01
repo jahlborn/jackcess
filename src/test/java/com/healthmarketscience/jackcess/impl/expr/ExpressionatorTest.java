@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
@@ -31,6 +32,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
+import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -98,7 +100,7 @@ public class ExpressionatorTest extends TestCase
     validateExpr("' \"A\" '", "<ELiteralValue>{\" \"\"A\"\" \"}",
                  "\" \"\"A\"\" \"");
 
-    validateExpr("<=1 And >=0", "<ELogicalOp>{<ECompOp>{<EThisValue>{<THIS_COL>} <= <ELiteralValue>{1}} And <ECompOp>{<EThisValue>{<THIS_COL>} >= <ELiteralValue>{0}}}", "<THIS_COL> <= 1 And <THIS_COL> >= 0");
+    validateExpr("<=1 And >=0", "<ELogicalOp>{<ECompOp>{<EThisValue>{<THIS_COL>} <= <ELiteralValue>{1}} And <ECompOp>{<EThisValue>{<THIS_COL>} >= <ELiteralValue>{0}}}", "<= 1 And >= 0");
   }
 
   private static void doTestSimpleBinOp(String opName, String... ops) throws Exception
@@ -320,6 +322,10 @@ public class ExpressionatorTest extends TestCase
     assertEquals(new Date(1044680400000L), eval("=#01/02/2003# + '37'"));
     assertEquals(new Date(1044680400000L), eval("='37' + #01/02/2003#"));
     assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00 AM#"));
+
+    assertEquals("2/8/2003", eval("=CStr(#01/02/2003# + '37')"));
+    assertEquals("9:24:00 AM", eval("=CStr(#7:00:00 AM# + 0.1)"));
+    assertEquals("1/2/2003 1:10:00 PM", eval("=CStr(#01/02/2003# + #13:10:00#)"));
   }
 
   public void testNull() throws Exception
@@ -387,6 +393,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(37d, eval("=\" &h1A \" + 11"));
     assertEquals(37d, eval("=\" &h1a \" + 11"));
     assertEquals(37d, eval("=\" &O32 \" + 11"));
+    assertEquals(1037d, eval("=\"1,025\" + 12"));
 
     evalFail(("=12 - \"foo\""), RuntimeException.class);
     evalFail(("=\"foo\" - 12"), RuntimeException.class);
@@ -403,12 +410,12 @@ public class ExpressionatorTest extends TestCase
   public void testLikeExpression() throws Exception
   {
     validateExpr("Like \"[abc]*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc]*\"([abc].*)}",
-                 "<THIS_COL> Like \"[abc]*\"");
+                 "Like \"[abc]*\"");
     assertTrue(evalCondition("Like \"[abc]*\"", "afcd"));
     assertFalse(evalCondition("Like \"[abc]*\"", "fcd"));
 
-    validateExpr("Like \"[abc*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc*\"((?!))}",
-                 "<THIS_COL> Like \"[abc*\"");
+    validateExpr("Like  \"[abc*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc*\"((?!))}",
+                 "Like \"[abc*\"");
     assertFalse(evalCondition("Like \"[abc*\"", "afcd"));
     assertFalse(evalCondition("Like \"[abc*\"", "fcd"));
     assertTrue(evalCondition("Not Like \"[abc*\"", "fcd"));
@@ -500,17 +507,17 @@ public class ExpressionatorTest extends TestCase
 
   private static void validateExpr(String exprStr, String debugStr,
                                    String cleanStr) {
+    TestContext ctx = new TestContext();
     Expression expr = Expressionator.parse(
-        Expressionator.Type.FIELD_VALIDATOR, exprStr, null,
-        new TestContext());
-    String foundDebugStr = expr.toDebugString();
+        Expressionator.Type.FIELD_VALIDATOR, exprStr, null, ctx);
+    String foundDebugStr = expr.toDebugString(ctx);
     if(foundDebugStr.startsWith("<EImplicitCompOp>")) {
       assertEquals("<EImplicitCompOp>{<EThisValue>{<THIS_COL>} = " +
                    debugStr + "}", foundDebugStr);
     } else {
       assertEquals(debugStr, foundDebugStr);
     }
-    assertEquals(cleanStr, expr.toString());
+    assertEquals(cleanStr, expr.toCleanString(ctx));
     assertEquals(exprStr, expr.toRawString());
   }
 
@@ -586,6 +593,15 @@ public class ExpressionatorTest extends TestCase
       SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
       sdf.setTimeZone(TestUtil.TEST_TZ);
       return sdf;
+    }
+
+    public Calendar getCalendar() {
+      return createDateFormat(getTemporalConfig().getDefaultDateTimeFormat())
+        .getCalendar();
+    }
+
+    public NumericConfig getNumericConfig() {
+      return NumericConfig.US_NUMERIC_CONFIG;
     }
 
     public FunctionLookup getFunctionLookup() {

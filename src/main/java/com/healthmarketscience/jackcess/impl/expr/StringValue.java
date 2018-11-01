@@ -18,7 +18,13 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormatSymbols;
 import java.util.regex.Pattern;
+
+import com.healthmarketscience.jackcess.expr.EvalException;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.Value;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -33,6 +39,7 @@ public class StringValue extends BaseValue
     Pattern.compile(NUMBER_BASE_PREFIX + "[oO][0-7]+");
   private static final Pattern HEX_PAT =
     Pattern.compile(NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
+  private static final char CANON_DEC_SEP = '.';
 
   private final String _val;
   private Object _num;
@@ -51,32 +58,56 @@ public class StringValue extends BaseValue
   }
 
   @Override
-  public boolean getAsBoolean() {
+  public boolean getAsBoolean(LocaleContext ctx) {
     // ms access seems to treat strings as "true"
     return true;
   }
 
   @Override
-  public String getAsString() {
+  public String getAsString(LocaleContext ctx) {
     return _val;
   }
 
   @Override
-  public Integer getAsLongInt() {
-    return roundToLongInt();
+  public Integer getAsLongInt(LocaleContext ctx) {
+    return roundToLongInt(ctx);
   }
 
   @Override
-  public Double getAsDouble() {
-    return getNumber().doubleValue();
+  public Double getAsDouble(LocaleContext ctx) {
+    return getNumber(ctx).doubleValue();
   }
 
   @Override
-  public BigDecimal getAsBigDecimal() {
-    return getNumber();
+  public BigDecimal getAsBigDecimal(LocaleContext ctx) {
+    return getNumber(ctx);
   }
 
-  protected BigDecimal getNumber() {
+  @Override
+  public Value getAsDateTimeValue(LocaleContext ctx) {
+    Value dateValue = DefaultDateFunctions.stringToDateValue(ctx, _val);
+
+    if(dateValue == null) {
+      // see if string can be coerced to number and then to value date (note,
+      // numberToDateValue may return null for out of range numbers)
+      try {
+        dateValue = DefaultDateFunctions.numberToDateValue(
+            ctx, getNumber(ctx).doubleValue());
+      } catch(EvalException ignored) {
+        // not a number, not a date/time
+      }
+
+      if(dateValue == null) {
+        throw invalidConversion(Type.DATE_TIME);
+      }
+    }
+
+    // TODO, for now, we can't cache the date value becuase it could be an
+    // "implicit" date which would need to be re-calculated on each call
+    return dateValue;
+  }
+
+  protected BigDecimal getNumber(LocaleContext ctx) {
     if(_num instanceof BigDecimal) {
       return (BigDecimal)_num;
     }
@@ -89,7 +120,8 @@ public class StringValue extends BaseValue
         if(tmpVal.length() > 0) {
 
           if(tmpVal.charAt(0) != NUMBER_BASE_PREFIX) {
-            // parse using standard numeric support
+            // convert to standard numeric support for parsing
+            tmpVal = toCanonicalNumberFormat(ctx, tmpVal);
             _num = ValueSupport.normalize(new BigDecimal(tmpVal));
             return (BigDecimal)_num;
           }
@@ -108,11 +140,28 @@ public class StringValue extends BaseValue
       }
       _num = NOT_A_NUMBER;
     }
-    throw new NumberFormatException("Invalid number '" + _val + "'");
+    throw invalidConversion(Type.DOUBLE);
   }
 
   private BigDecimal parseIntegerString(String tmpVal, int radix) {
     _num = new BigDecimal(new BigInteger(tmpVal.substring(2), radix));
     return (BigDecimal)_num;
+  }
+
+  private static String toCanonicalNumberFormat(LocaleContext ctx, String tmpVal)
+  {
+    // convert to standard numeric format:
+    // - discard any grouping separators
+    // - convert decimal separator to '.'
+    DecimalFormatSymbols syms = ctx.getNumericConfig().getDecimalFormatSymbols();
+    char groupSepChar = syms.getGroupingSeparator();
+    tmpVal = StringUtils.remove(tmpVal, groupSepChar);
+
+    char decSepChar = syms.getDecimalSeparator();
+    if((decSepChar != CANON_DEC_SEP) && (tmpVal.indexOf(decSepChar) >= 0)) {
+      tmpVal = tmpVal.replace(decSepChar, CANON_DEC_SEP);
+    }
+
+    return tmpVal;
   }
 }

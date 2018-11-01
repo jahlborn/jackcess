@@ -16,7 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
-import java.text.SimpleDateFormat;
 import javax.script.Bindings;
 
 /**
@@ -26,20 +25,8 @@ import javax.script.Bindings;
  *
  * @author James Ahlborn
  */
-public interface EvalContext
+public interface EvalContext extends LocaleContext
 {
-  /**
-   * @return the currently configured TemporalConfig (from the
-   *         {@link EvalConfig})
-   */
-  public TemporalConfig getTemporalConfig();
-
-  /**
-   * @return an appropriately configured (i.e. TimeZone and other date/time
-   *         flags) SimpleDateFormat for the given format.
-   */
-  public SimpleDateFormat createDateFormat(String formatStr);
-
   /**
    * @param seed the seed for the random value, following the rules for the
    *             "Rnd" function

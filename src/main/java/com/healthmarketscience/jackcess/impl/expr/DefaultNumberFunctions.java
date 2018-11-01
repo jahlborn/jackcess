@@ -49,15 +49,15 @@ public class DefaultNumberFunctions
       case TIME:
       case DATE_TIME:
         // dates/times get converted to date doubles for arithmetic
-        double result = Math.abs(param1.getAsDouble());
-        return ValueSupport.toDateValue(ctx, mathType, result, param1, null);
+        double result = Math.abs(param1.getAsDouble(ctx));
+        return ValueSupport.toDateValue(ctx, mathType, result);
       case LONG:
-        return ValueSupport.toValue(Math.abs(param1.getAsLongInt()));
+        return ValueSupport.toValue(Math.abs(param1.getAsLongInt(ctx)));
       case DOUBLE:
-        return ValueSupport.toValue(Math.abs(param1.getAsDouble()));
+        return ValueSupport.toValue(Math.abs(param1.getAsDouble(ctx)));
       case STRING:
       case BIG_DEC:
-        return ValueSupport.toValue(param1.getAsBigDecimal().abs(
+        return ValueSupport.toValue(param1.getAsBigDecimal(ctx).abs(
                                             NumberFormatter.DEC_MATH_CONTEXT));
       default:
         throw new EvalException("Unexpected type " + mathType);
@@ -68,21 +68,21 @@ public class DefaultNumberFunctions
   public static final Function ATAN = registerFunc(new Func1("Atan") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.atan(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.atan(param1.getAsDouble(ctx)));
     }
   });
 
   public static final Function COS = registerFunc(new Func1("Cos") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.cos(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.cos(param1.getAsDouble(ctx)));
     }
   });
 
   public static final Function EXP = registerFunc(new Func1("Exp") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.exp(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.exp(param1.getAsDouble(ctx)));
     }
   });
 
@@ -92,7 +92,7 @@ public class DefaultNumberFunctions
       if(param1.getType().isIntegral()) {
         return param1;
       }
-      return ValueSupport.toValue(param1.getAsDouble().intValue());
+      return ValueSupport.toValue(param1.getAsDouble(ctx).intValue());
     }
   });
 
@@ -102,14 +102,14 @@ public class DefaultNumberFunctions
       if(param1.getType().isIntegral()) {
         return param1;
       }
-      return ValueSupport.toValue((int)Math.floor(param1.getAsDouble()));
+      return ValueSupport.toValue((int)Math.floor(param1.getAsDouble(ctx)));
     }
   });
 
   public static final Function LOG = registerFunc(new Func1("Log") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.log(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.log(param1.getAsDouble(ctx)));
     }
   });
 
@@ -120,7 +120,7 @@ public class DefaultNumberFunctions
     }
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      Integer seed = ((params.length > 0) ? params[0].getAsLongInt() : null);
+      Integer seed = ((params.length > 0) ? params[0].getAsLongInt(ctx) : null);
       return ValueSupport.toValue(ctx.getRandom(seed));
     }
   });
@@ -130,16 +130,16 @@ public class DefaultNumberFunctions
     protected Value evalVar(EvalContext ctx, Value[] params) {
       Value param1 = params[0];
       if(param1.isNull()) {
-        return null;
+        return ValueSupport.NULL_VAL;
       }
       if(param1.getType().isIntegral()) {
         return param1;
       }
       int scale = 0;
       if(params.length > 1) {
-        scale = params[1].getAsLongInt();
+        scale = params[1].getAsLongInt(ctx);
       }
-      BigDecimal bd = param1.getAsBigDecimal()
+      BigDecimal bd = param1.getAsBigDecimal(ctx)
         .setScale(scale, NumberFormatter.ROUND_MODE);
       return ValueSupport.toValue(bd);
     }
@@ -150,9 +150,9 @@ public class DefaultNumberFunctions
     protected Value eval1(EvalContext ctx, Value param1) {
       int val = 0;
       if(param1.getType().isIntegral()) {
-        val = param1.getAsLongInt();
+        val = param1.getAsLongInt(ctx);
       } else {
-        val = param1.getAsBigDecimal().signum();
+        val = param1.getAsBigDecimal(ctx).signum();
       }
       return ((val > 0) ? ValueSupport.ONE_VAL :
               ((val < 0) ? ValueSupport.NEG_ONE_VAL :
@@ -163,7 +163,7 @@ public class DefaultNumberFunctions
   public static final Function SQR = registerFunc(new Func1("Sqr") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      double dv = param1.getAsDouble();
+      double dv = param1.getAsDouble(ctx);
       if(dv < 0.0d) {
         throw new EvalException("Invalid value '" + dv + "'");
       }
@@ -174,14 +174,14 @@ public class DefaultNumberFunctions
   public static final Function SIN = registerFunc(new Func1("Sin") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.sin(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.sin(param1.getAsDouble(ctx)));
     }
   });
 
   public static final Function TAN = registerFunc(new Func1("Tan") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(Math.tan(param1.getAsDouble()));
+      return ValueSupport.toValue(Math.tan(param1.getAsDouble(ctx)));
     }
   });
 

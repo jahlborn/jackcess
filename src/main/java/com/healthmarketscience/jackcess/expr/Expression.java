@@ -44,12 +44,18 @@ public interface Expression
    * @return a detailed string which indicates how the expression was
    *         interpreted by the expression evaluation engine.
    */
-  public String toDebugString();
+  public String toDebugString(LocaleContext ctx);
 
   /**
-   * @return the original, unparsed expression string.  By contrast, the {@link
-   *         Object#toString} result may return a value which has been cleaned
-   *         up with respect to the original expression.
+   * @return a parsed and re-formated version of the expression.  This may
+   *         look slightly different than the original, raw string, although
+   *         it should be an equivalent expression.
+   */
+  public String toCleanString(LocaleContext ctx);
+
+  /**
+   * @return the original, unparsed expression string.  This is the same as
+   *         the value which will be returned by {@link Object#toString}.
    */
   public String toRawString();
 

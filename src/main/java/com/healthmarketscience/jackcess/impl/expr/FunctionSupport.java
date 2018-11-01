@@ -21,6 +21,7 @@ import java.util.Arrays;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
 
 /**
@@ -227,7 +228,7 @@ public class FunctionSupport
       if(result.isNull()) {
         // non-variant version does not do null-propagation, so force
         // exception to be thrown here
-        result.getAsString();
+        result.getAsString(ctx);
       }
       return result;
     }
@@ -238,4 +239,19 @@ public class FunctionSupport
     }
   }
 
+  public static boolean getOptionalBooleanParam(
+      LocaleContext ctx, Value[] params, int idx) {
+    if(params.length > idx) {
+      return params[idx].getAsBoolean(ctx);
+    }
+    return false;
+  }
+
+  public static double getOptionalDoubleParam(
+      EvalContext ctx, Value[] params, int idx, double defValue) {
+    if(params.length > idx) {
+      return params[idx].getAsDouble(ctx);
+    }
+    return defValue;
+  }
 }

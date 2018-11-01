@@ -63,6 +63,8 @@ limitations under the License.
  *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.TemporalConfig} encapsulates date/time formatting options for
  *     expression evaluation.</li>
+ * <li>{@link com.healthmarketscience.jackcess.expr.NumericConfig} encapsulates number formatting options for
+ *     expression evaluation.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.FunctionLookup} provides a source for {@link com.healthmarketscience.jackcess.expr.Function} instances
  *     used during expression evaluation.</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalException} wrapper exception thrown for failures which occur
@@ -132,13 +134,13 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Date </td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateAdd</td><td></td></tr>
  * <tr class="TableRowColor"><td>DateDiff</td><td></td></tr>
- * <tr class="TableRowColor"><td>DatePart</td><td></td></tr>
+ * <tr class="TableRowColor"><td>DatePart</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateSerial</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateValue</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Hour</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Minute</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Month</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>MonthName</td><td></td></tr>
+ * <tr class="TableRowColor"><td>MonthName</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Now</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Second</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Time</td><td>Y</td></tr>
@@ -146,7 +148,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>TimeSerial</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>TimeValue</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Weekday</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>WeekdayName</td><td></td></tr>
+ * <tr class="TableRowColor"><td>WeekdayName</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Year</td><td>Y</td></tr>
  * </table>
  *
@@ -154,19 +156,16 @@ limitations under the License.
  *
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
- * <tr class="TableRowColor"><td>DDB</td><td></td></tr>
+ * <tr class="TableRowColor"><td>DDB</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>FV</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>IPmt</td><td></td></tr>
- * <tr class="TableRowColor"><td>IRR</td><td></td></tr>
- * <tr class="TableRowColor"><td>MIRR</td><td></td></tr>
+ * <tr class="TableRowColor"><td>IPmt</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>NPer</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>NPV</td><td></td></tr>
  * <tr class="TableRowColor"><td>Pmt</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>PPmt</td><td></td></tr>
+ * <tr class="TableRowColor"><td>PPmt</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>PV</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Rate</td><td></td></tr>
- * <tr class="TableRowColor"><td>SLN</td><td></td></tr>
- * <tr class="TableRowColor"><td>SYD</td><td></td></tr>
+ * <tr class="TableRowColor"><td>Rate</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>SLN</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>SYD</td><td>Y</td></tr>
  * </table>
  *
  * <h3>Inspection</h3>
@@ -230,7 +229,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Right[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Space[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrComp</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>StrConv</td><td></td></tr>
+ * <tr class="TableRowColor"><td>StrConv[$]</td><td>Partial</td></tr>
  * <tr class="TableRowColor"><td>String[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrReverse</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>UCase[$]</td><td>Y</td></tr>

@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumMap;
@@ -31,6 +32,8 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Expression;
 import com.healthmarketscience.jackcess.expr.Identifier;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
@@ -80,6 +83,14 @@ public abstract class BaseEvalContext implements EvalContext
 
   public SimpleDateFormat createDateFormat(String formatStr) {
     return _dbCtx.createDateFormat(formatStr);
+  }
+
+  public Calendar getCalendar() {
+    return _dbCtx.getCalendar();
+  }
+
+  public NumericConfig getNumericConfig() {
+    return _dbCtx.getNumericConfig();
   }
 
   public float getRandom(Integer seed) {
@@ -142,7 +153,7 @@ public abstract class BaseEvalContext implements EvalContext
       case DATE:
       case TIME:
       case DATE_TIME:
-        return ValueSupport.toValue(this, vType, (Date)val);
+        return ValueSupport.toValue(vType, (Date)val);
       case LONG:
         Integer i = ((val instanceof Integer) ? (Integer)val :
                      ((Number)val).intValue());
@@ -191,12 +202,16 @@ public abstract class BaseEvalContext implements EvalContext
       return getExpr().eval(ctx);
     }
 
-    public String toDebugString() {
-      return "<raw>{" + _exprStr + "}";
+    public String toDebugString(LocaleContext ctx) {
+      return getExpr().toDebugString(ctx);
     }
 
     public String toRawString() {
       return _exprStr;
+    }
+
+    public String toCleanString(LocaleContext ctx) {
+      return getExpr().toCleanString(ctx);
     }
 
     public boolean isConstant() {
@@ -209,7 +224,7 @@ public abstract class BaseEvalContext implements EvalContext
 
     @Override
     public String toString() {
-      return _exprStr;
+      return toRawString();
     }
   }
 }
