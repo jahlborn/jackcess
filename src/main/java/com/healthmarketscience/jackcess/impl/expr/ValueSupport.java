@@ -53,6 +53,7 @@ public class ValueSupport
   public static final Value ZERO_VAL = FALSE_VAL;
   public static final Value NEG_ONE_VAL = TRUE_VAL;
   public static final Value ONE_VAL = new LongValue(1);
+  public static final Value ZERO_D_VAL = new DoubleValue(0d);
 
   static final char NUMBER_BASE_PREFIX = '&';
   static final Pattern OCTAL_PAT =
@@ -60,8 +61,10 @@ public class ValueSupport
   static final Pattern HEX_PAT =
     Pattern.compile("^" + NUMBER_BASE_PREFIX + "[hH]\\p{XDigit}+");
   static final char CANON_DEC_SEP = '.';
-  static final Pattern NUMBER_PAT = Pattern.compile("^[-+]?[0-9]*[.]?[0-9]*");
-  
+  static final Pattern NUMBER_PAT =
+    Pattern.compile("^[+-]?(([0-9]+[.]?[0-9]*)|([.][0-9]+))([eE][+-]?[0-9]+)?");
+  static final Pattern WHITESPACE_PAT = Pattern.compile("[ \\t\\r\\n]+");
+
   private ValueSupport() {}
 
   public static Value toValue(boolean b) {

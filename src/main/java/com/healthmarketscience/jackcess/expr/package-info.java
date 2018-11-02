@@ -111,7 +111,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Oct[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Str[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StringFromGUID</td><td></td></tr>
- * <tr class="TableRowColor"><td>Val</td><td></td></tr>
+ * <tr class="TableRowColor"><td>Val</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>CBool</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>CByte</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>CCur</td><td>Y</td></tr>

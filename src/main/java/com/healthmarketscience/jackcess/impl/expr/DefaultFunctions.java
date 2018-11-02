@@ -350,43 +350,52 @@ public class DefaultFunctions
     }
   });
 
-  // public static final Function VAL = registerStringFunc(new Func1NullIsNull("Val") {
-  //   @Override
-  //   protected Value eval1(EvalContext ctx, Value param1) {
-  //     String str = param1.getAsString(ctx).trim();
+  public static final Function VAL = registerStringFunc(new Func1NullIsNull("Val") {
+    @Override
+    protected Value eval1(EvalContext ctx, Value param1) {
 
-  //     if(str.length() == 0) {
-  //       return ValueSupport.ZERO_VAL;
-  //     }
+      // strip all whitespace from string
+      String str = ValueSupport.WHITESPACE_PAT.matcher(param1.getAsString(ctx))
+        .replaceAll("");
 
-  //     Matcher m = null;
-      
-  //     if(str.charAt(0) == ValueSupport.NUMBER_BASE_PREFIX) {
-  //       // see if we can parse as a radix format
-  //       if((m = ValueSupport.HEX_PAT.matcher(str)).find()) {
-  //         BigInteger bi = ValueSupport.parseIntegerString(m.group(), 16);
-  //         // FIXME, what to do with large numbers?  to double or decimal?
-  //         return ValueSupport.toValue(bi.intValue());
-  //       } else if((m = ValueSupport.OCTAL_PAT.matcher(str)).find()) {
-  //         BigInteger bi = ValueSupport.parseIntegerString(m.group(), 8);
-  //         // FIXME, what to do with large numbers?  to double or decimal?
-  //         return ValueSupport.toValue(bi.intValue());
-  //       }
-        
-  //       return ValueSupport.ZERO_VAL;
-  //     }
+      if(str.length() == 0) {
+        return ValueSupport.ZERO_D_VAL;
+      }
 
-  //     // parse ase normal "decimal" number.
-  //     // FIXME - leading '+'? exponent?
-  //     if((m = ValueSupport.NUMBER_PAT.matcher(str)).find()) {
-        
-  //     }
-      
-  //     // return ValueSupport.toValue(Integer.toHexString(lv).toUpperCase());
-  //     return null;
-  //   }
-  // });
-  
+      Matcher m = null;
+
+      if(str.charAt(0) == ValueSupport.NUMBER_BASE_PREFIX) {
+
+        // see if we can parse as a radix format
+        BigInteger bi = null;
+        if((m = ValueSupport.HEX_PAT.matcher(str)).find()) {
+          bi = ValueSupport.parseIntegerString(m.group(), 16);
+        } else if((m = ValueSupport.OCTAL_PAT.matcher(str)).find()) {
+          bi = ValueSupport.parseIntegerString(m.group(), 8);
+        }
+
+        if(bi != null) {
+          // this function works differently than normal string to number
+          // conversion.  it seems to coerce these values to a short/long int
+          // depending on the size of the number (which creates
+          // positive/negative values dependent on the value length)
+          int iVal = ((bi.bitLength() <= 16) ? bi.shortValue() : bi.intValue());
+          return ValueSupport.toValue((double)iVal);
+        }
+
+      } else {
+
+        // parse as normal "decimal" number.
+        if((m = ValueSupport.NUMBER_PAT.matcher(str)).find()) {
+          BigDecimal bd = new BigDecimal(m.group());
+          return ValueSupport.toValue(bd.doubleValue());
+        }
+      }
+
+      return ValueSupport.ZERO_D_VAL;
+    }
+  });
+
   private static boolean stringIsNumeric(EvalContext ctx, Value param) {
     try {
       param.getAsBigDecimal(ctx);

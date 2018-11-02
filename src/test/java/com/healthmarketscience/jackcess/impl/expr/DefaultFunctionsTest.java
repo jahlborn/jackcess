@@ -195,6 +195,16 @@ public class DefaultFunctionsTest extends TestCase
     } catch(EvalException e) {
       assertTrue(e.getMessage().contains("Invalid function call"));
     }
+
+    assertEquals(1615198d, eval("=Val('    1615 198th Street N.E.')"));
+    assertEquals(-1d, eval("=Val('  &HFFFFwhatever')"));
+    assertEquals(131071d, eval("=Val('  &H1FFFFwhatever')"));
+    assertEquals(-1d, eval("=Val('  &HFFFFFFFFwhatever')"));
+    assertEquals(291d, eval("=Val('  &H123whatever')"));
+    assertEquals(83d, eval("=Val('  &O123whatever')"));
+    assertEquals(1.23d, eval("=Val('  1 2 3 e -2 whatever')"));
+    assertEquals(0d, eval("=Val('  whatever123 ')"));
+    assertEquals(0d, eval("=Val('')"));
   }
 
   public void testNumberFuncs() throws Exception
