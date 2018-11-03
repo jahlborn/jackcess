@@ -225,7 +225,7 @@ limitations under the License.
  * <tr class="TableRowColor"><td>RTrim[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Trim[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Mid[$]</td><td>Y</td></tr>
- * <tr class="TableRowColor"><td>Replace</td><td></td></tr>
+ * <tr class="TableRowColor"><td>Replace</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Right[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Space[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>StrComp</td><td>Y</td></tr>

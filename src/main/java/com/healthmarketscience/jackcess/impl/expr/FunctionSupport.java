@@ -254,4 +254,22 @@ public class FunctionSupport
     }
     return defValue;
   }
+
+  public static int getOptionalIntParam(
+      LocaleContext ctx, Value[] params, int idx, int defValue) {
+    return getOptionalIntParam(ctx, params, idx, defValue, defValue);
+  }
+
+  public static int getOptionalIntParam(
+      LocaleContext ctx, Value[] params, int idx, int defValue, int useDefValue) {
+    int val = defValue;
+    if(params.length > idx) {
+      val = params[idx].getAsLongInt(ctx);
+      if(val == useDefValue) {
+        val = defValue;
+      }
+    }
+    return val;
+  }
+
 }

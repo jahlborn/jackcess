@@ -205,6 +205,22 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals(1.23d, eval("=Val('  1 2 3 e -2 whatever')"));
     assertEquals(0d, eval("=Val('  whatever123 ')"));
     assertEquals(0d, eval("=Val('')"));
+
+    assertEquals("faa", eval("=Replace('foo','o','a')"));
+    assertEquals("faa", eval("=Replace('fOo','o','a')"));
+    assertEquals("aa", eval("=Replace('foo','o','a',2)"));
+    assertEquals("oo", eval("=Replace('foo','o','a',2,0)"));
+    assertEquals("", eval("=Replace('foo','o','a',4)"));
+    assertEquals("foo", eval("=Replace('foo','','a')"));
+    assertEquals("o", eval("=Replace('foo','','a',3)"));
+    assertEquals("fahhabahhaahha", eval("=Replace('fooboooo','OO','ahha')"));
+    assertEquals("fahhaboooo", eval("=Replace('fooboooo','OO','ahha',1,1)"));
+    assertEquals("fooboooo", eval("=Replace('fooboooo','OO','ahha',1,1,0)"));
+    assertEquals("ahhabahhaahha", eval("=Replace('fooboooo','OO','ahha',2)"));
+    assertEquals("obahhaahha", eval("=Replace('fooboooo','OO','ahha',3)"));
+    assertEquals("fb", eval("=Replace('fooboooo','OO','')"));
+    assertEquals("", eval("=Replace('','o','a')"));
+    assertEquals("foo", eval("=Replace('foo','foobar','a')"));
   }
 
   public void testNumberFuncs() throws Exception

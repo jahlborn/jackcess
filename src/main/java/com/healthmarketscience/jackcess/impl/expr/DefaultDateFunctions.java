@@ -464,18 +464,6 @@ public class DefaultDateFunctions
     return getOptionalIntParam(ctx, params, idx, 1, 0);
   }
 
-  private static int getOptionalIntParam(
-      LocaleContext ctx, Value[] params, int idx, int defValue, int useDefValue) {
-    int val = defValue;
-    if(params.length > idx) {
-      val = params[idx].getAsLongInt(ctx);
-      if(val == useDefValue) {
-        val = defValue;
-      }
-    }
-    return val;
-  }
-
   private static int weekOfYear(EvalContext ctx, Value param, int firstDay,
                                 int firstWeekType) {
     Calendar cal = nonNullToCalendar(ctx, param);

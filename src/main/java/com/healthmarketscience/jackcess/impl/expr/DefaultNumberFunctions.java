@@ -184,14 +184,4 @@ public class DefaultNumberFunctions
       return ValueSupport.toValue(Math.tan(param1.getAsDouble(ctx)));
     }
   });
-
-
-  // public static final Function VAL = registerFunc(new Func1("Val") {
-  //   @Override
-  //   protected Value eval1(EvalContext ctx, Value param1) {
-  //     // FIXME, maybe leverage ExpressionTokenizer.maybeParseNumberLiteral (note, leading - or + is valid, exponent form is valid)
-  //   }
-  // });
-
-
 }

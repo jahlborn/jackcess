@@ -136,10 +136,7 @@ public class DefaultTextFunctions
         // 1 based offsets
         return ValueSupport.toValue(start + 1);
       }
-      boolean ignoreCase = true;
-      if(params.length > 3) {
-        ignoreCase = doIgnoreCase(ctx, params[3]);
-      }
+      boolean ignoreCase = getIgnoreCase(ctx, params, 3);
       int end = s1Len - s2Len;
       while(start < end) {
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
@@ -183,10 +180,7 @@ public class DefaultTextFunctions
         // 1 based offsets
         --start;
       }
-      boolean ignoreCase = true;
-      if(params.length > 3) {
-        ignoreCase = doIgnoreCase(ctx, params[3]);
-      }
+      boolean ignoreCase = getIgnoreCase(ctx, params, 3);
       start = Math.min(s1Len - s2Len, start - s2Len + 1);
       while(start >= 0) {
         if(s1.regionMatches(ignoreCase, start, s2, 0, s2Len)) {
@@ -290,6 +284,54 @@ public class DefaultTextFunctions
     }
   });
 
+  public static final Function REPLACE = registerStringFunc(new FuncVar("Replace", 3, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      String str = params[0].getAsString(ctx);
+      String searchStr = params[1].getAsString(ctx);
+      String replStr = params[2].getAsString(ctx);
+
+      int strLen = str.length();
+
+      int start = getOptionalIntParam(ctx, params, 3, 1) - 1;
+      int count = getOptionalIntParam(ctx, params, 4, -1);
+      boolean ignoreCase = getIgnoreCase(ctx, params, 5);
+
+      if(start >= strLen) {
+        return ValueSupport.EMPTY_STR_VAL;
+      }
+
+      int searchLen = searchStr.length();
+      if((searchLen == 0) || (count == 0)) {
+        String result = str;
+        if(start > 0) {
+          result = str.substring(start);
+        }
+        return ValueSupport.toValue(result);
+      }
+
+      if(count < 0) {
+        count = strLen;
+      }
+
+      StringBuilder result = new StringBuilder(strLen);
+
+      int matchCount = 0;
+      for(int i = start; i < strLen; ++i) {
+        if((matchCount < count) &&
+           str.regionMatches(ignoreCase, i, searchStr, 0, searchLen)) {
+          result.append(replStr);
+          ++matchCount;
+          i += searchLen - 1;
+        } else {
+          result.append(str.charAt(i));
+        }
+      }
+
+      return ValueSupport.toValue(result.toString());
+    }
+  });
+
   public static final Function SPACE = registerStringFunc(new Func1("Space") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -308,10 +350,7 @@ public class DefaultTextFunctions
       }
       String s1 = param1.getAsString(ctx);
       String s2 = param2.getAsString(ctx);
-      boolean ignoreCase = true;
-      if(params.length > 2) {
-        ignoreCase = doIgnoreCase(ctx, params[2]);
-      }
+      boolean ignoreCase = getIgnoreCase(ctx, params, 2);
       int cmp = (ignoreCase ?
                  s1.compareToIgnoreCase(s2) : s1.compareTo(s2));
       // stupid java doesn't return 1, -1, 0...
@@ -410,6 +449,14 @@ public class DefaultTextFunctions
       }
     }
     return str.substring(start, end);
+  }
+
+  private static boolean getIgnoreCase(EvalContext ctx, Value[] params, int idx) {
+    boolean ignoreCase = true;
+    if(params.length > idx) {
+      ignoreCase = doIgnoreCase(ctx, params[idx]);
+    }
+    return ignoreCase;
   }
 
   private static boolean doIgnoreCase(LocaleContext ctx, Value paramCmp) {
