@@ -61,6 +61,7 @@ public class DefaultDateFunctions
   private static final String INTV_MINUTE = "n";
   private static final String INTV_SECOND = "s";
 
+  private enum WeekOpType { GET_WEEK, GET_NUM_WEEKS }
 
   private DefaultDateFunctions() {}
 
@@ -128,9 +129,7 @@ public class DefaultDateFunctions
       if(intv.equalsIgnoreCase(INTV_YEAR)) {
         result = nonNullToCalendarField(ctx, param2, Calendar.YEAR);
       } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
-        // month in is 0 based
-        int month = nonNullToCalendarField(ctx, param2, Calendar.MONTH);
-        result = (month / 3) + 1;
+        result = getQuarter(nonNullToCalendar(ctx, param2));
       } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
         // convert from 0 based to 1 based value
         result = nonNullToCalendarField(ctx, param2, Calendar.MONTH) + 1;
@@ -195,6 +194,94 @@ public class DefaultDateFunctions
       }
 
       return ValueSupport.toValue(cal);
+    }
+  });
+
+  public static final Function DATEDIFF = registerFunc(new FuncVar("DateDiff", 3, 5) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+
+      Value param2 = params[1];
+      Value param3 = params[2];
+      if(param2.isNull() || param3.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      int firstDay = getFirstDayParam(ctx, params, 3);
+      int firstWeekType = getFirstWeekTypeParam(ctx, params, 4);
+
+      String intv = params[0].getAsString(ctx).trim();
+
+      Calendar cal1 = nonNullToCalendar(ctx, param2);
+      Calendar cal2 = nonNullToCalendar(ctx, param3);
+
+      int sign = 1;
+      if(cal1.after(cal2)) {
+        Calendar tmp = cal1;
+        cal1 = cal2;
+        cal2 = tmp;
+        sign = -1;
+      }
+
+      // NOTE: DateDiff understands leap years, but not daylight savings time
+      // (i.e. it doesn't really take into account timezones).  so all time
+      // based calculations assume 24 hour days.
+
+      int result = -1;
+      if(intv.equalsIgnoreCase(INTV_YEAR)) {
+        result = cal2.get(Calendar.YEAR) - cal1.get(Calendar.YEAR);
+      } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
+        int y1 = cal1.get(Calendar.YEAR);
+        int q1 = getQuarter(cal1);
+        int y2 = cal2.get(Calendar.YEAR);
+        int q2 = getQuarter(cal2);
+        while(y2 > y1) {
+          q2 += 4;
+          --y2;
+        }
+        result = q2 - q1;
+      } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
+        int y1 = cal1.get(Calendar.YEAR);
+        int m1 = cal1.get(Calendar.MONTH);
+        int y2 = cal2.get(Calendar.YEAR);
+        int m2 = cal2.get(Calendar.MONTH);
+        while(y2 > y1) {
+          m2 += 12;
+          --y2;
+        }
+        result = m2 - m1;
+      } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR) ||
+                intv.equalsIgnoreCase(INTV_DAY)) {
+        result = getDayDiff(cal1, cal2);
+      } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
+        // this calulates number of 7 day periods between two dates
+        result = getDayDiff(cal1, cal2) / 7;
+      } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
+        // this counts number of "week of year" intervals between two dates
+        int w1 = weekOfYear(cal1, firstDay, firstWeekType);
+        int y1 = getWeekOfYearYear(cal1, w1);
+        int w2 = weekOfYear(cal2, firstDay, firstWeekType);
+        int y2 = getWeekOfYearYear(cal2, w2);
+        while(y2 > y1) {
+          cal2.add(Calendar.YEAR, -1);
+          w2 += weeksInYear(cal2, firstDay, firstWeekType);
+          y2 = cal2.get(Calendar.YEAR);
+        }
+        result = w2 - w1;
+      } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
+        result = getHourDiff(cal1, cal2);
+      } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
+        result = getMinuteDiff(cal1, cal2);
+      } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
+        int s1 = cal1.get(Calendar.SECOND);
+        int s2 = cal2.get(Calendar.SECOND);
+        int minuteDiff = getMinuteDiff(cal1, cal2);
+        result = (s2 + (60 * minuteDiff)) - s1;
+      } else {
+        throw new EvalException("Invalid interval " + intv);
+      }
+
+      return ValueSupport.toValue(result * sign);
     }
   });
 
@@ -466,8 +553,20 @@ public class DefaultDateFunctions
 
   private static int weekOfYear(EvalContext ctx, Value param, int firstDay,
                                 int firstWeekType) {
-    Calendar cal = nonNullToCalendar(ctx, param);
+    return doWeekOp(nonNullToCalendar(ctx, param), firstDay, firstWeekType,
+                    WeekOpType.GET_WEEK);
+  }
 
+  private static int weekOfYear(Calendar cal, int firstDay, int firstWeekType) {
+    return doWeekOp(cal, firstDay, firstWeekType, WeekOpType.GET_WEEK);
+  }
+
+  private static int weeksInYear(Calendar cal, int firstDay, int firstWeekType) {
+    return doWeekOp(cal, firstDay, firstWeekType, WeekOpType.GET_NUM_WEEKS);
+  }
+
+  private static int doWeekOp(Calendar cal, int firstDay, int firstWeekType,
+                              WeekOpType opType) {
     // need to mess with some calendar settings, but they need to be restored
     // when done because the Calendar instance may be shared
     int origFirstDay = cal.getFirstDayOfWeek();
@@ -496,11 +595,70 @@ public class DefaultDateFunctions
       cal.setFirstDayOfWeek(firstDay);
       cal.setMinimalDaysInFirstWeek(minDays);
 
-      return cal.get(Calendar.WEEK_OF_YEAR);
+      switch(opType) {
+      case GET_WEEK:
+        return cal.get(Calendar.WEEK_OF_YEAR);
+      case GET_NUM_WEEKS:
+        return cal.getActualMaximum(Calendar.WEEK_OF_YEAR);
+      default:
+        throw new RuntimeException("Unknown op type " + opType);
+      }
 
     } finally {
       cal.setFirstDayOfWeek(origFirstDay);
       cal.setMinimalDaysInFirstWeek(origMinDays);
     }
+  }
+
+  private static int getQuarter(Calendar cal) {
+    // month is 0 based
+    int month = cal.get(Calendar.MONTH);
+    return (month / 3) + 1;
+  }
+
+  private static int getWeekOfYearYear(Calendar cal, int weekOfYear) {
+    // the "week of year" gets weird at the beginning/end of the year.
+    // e.g. 12/31 might be int the first week of the next year, and 1/1 might
+    // be in the last week of the previous year.  we need to detect this and
+    // adjust the intervals accordingly
+    if(cal.get(Calendar.MONTH) == Calendar.JANUARY) {
+      if(weekOfYear >= 52) {
+        // this week of year is effectively for the previous year
+        cal.add(Calendar.YEAR, -1);
+      }
+    } else {
+      if(weekOfYear == 1) {
+        // this week of year is effectively for next year
+        cal.add(Calendar.YEAR, 1);
+      }
+    }
+    return cal.get(Calendar.YEAR);
+  }
+
+  private static int getDayDiff(Calendar cal1, Calendar cal2) {
+    int y1 = cal1.get(Calendar.YEAR);
+    int d1 = cal1.get(Calendar.DAY_OF_YEAR);
+    int y2 = cal2.get(Calendar.YEAR);
+    int d2 = cal2.get(Calendar.DAY_OF_YEAR);
+    while(y2 > y1) {
+      cal2.add(Calendar.YEAR, -1);
+      d2 += cal2.getActualMaximum(Calendar.DAY_OF_YEAR);
+      y2 = cal2.get(Calendar.YEAR);
+    }
+    return d2 - d1;
+  }
+
+  private static int getHourDiff(Calendar cal1, Calendar cal2) {
+    int h1 = cal1.get(Calendar.HOUR_OF_DAY);
+    int h2 = cal2.get(Calendar.HOUR_OF_DAY);
+    int dayDiff = getDayDiff(cal1, cal2);
+    return (h2 + (24 * dayDiff)) - h1;
+  }
+
+  private static int getMinuteDiff(Calendar cal1, Calendar cal2) {
+    int m1 = cal1.get(Calendar.MINUTE);
+    int m2 = cal2.get(Calendar.MINUTE);
+    int hourDiff = getHourDiff(cal1, cal2);
+    return (m2 + (60 * hourDiff)) - m1;
   }
 }

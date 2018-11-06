@@ -349,6 +349,75 @@ public class DefaultFunctionsTest extends TestCase
     assertEquals("11/23/2003", eval("CStr(DateAdd('h',24,#11/22/2003#))"));
     assertEquals("3:45:13 PM", eval("CStr(DateAdd('h',10,#5:45:13 AM#))"));
     assertEquals("12/31/1899 11:45:13 AM", eval("CStr(DateAdd('h',30,#5:45:13 AM#))"));
+
+    assertEquals(0, eval("=DateDiff('yyyy',#10/22/2003#,#11/22/2003#)"));
+    assertEquals(4, eval("=DateDiff('yyyy',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-4, eval("=DateDiff('yyyy',#11/22/2007#,#10/22/2003#)"));
+
+    assertEquals(0, eval("=DateDiff('q',#10/22/2003#,#11/22/2003#)"));
+    assertEquals(3, eval("=DateDiff('q',#03/01/2003#,#11/22/2003#)"));
+    assertEquals(16, eval("=DateDiff('q',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-13, eval("=DateDiff('q',#03/22/2007#,#10/22/2003#)"));
+
+    assertEquals(1, eval("=DateDiff('m',#10/22/2003#,#11/01/2003#)"));
+    assertEquals(8, eval("=DateDiff('m',#03/22/2003#,#11/01/2003#)"));
+    assertEquals(49, eval("=DateDiff('m',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-41, eval("=DateDiff('m',#03/22/2007#,#10/01/2003#)"));
+
+    assertEquals(10, eval("=DateDiff('d','10/22','11/01')"));
+    assertEquals(0, eval("=DateDiff('y',#1:37:00 AM#,#2:15:00 AM#)"));
+    assertEquals(10, eval("=DateDiff('d',#10/22/2003#,#11/01/2003#)"));
+    assertEquals(1, eval("=DateDiff('d',#10/22/2003 11:00:00 PM#,#10/23/2003 1:00:00 AM#)"));
+    assertEquals(224, eval("=DateDiff('d',#03/22/2003#,#11/01/2003#)"));
+    assertEquals(1492, eval("=DateDiff('y',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-1268, eval("=DateDiff('d',#03/22/2007#,#10/01/2003#)"));
+    assertEquals(366, eval("=DateDiff('d',#1/1/2000#,#1/1/2001#)"));
+    assertEquals(365, eval("=DateDiff('d',#1/1/2001#,#1/1/2002#)"));
+
+    assertEquals(0, eval("=DateDiff('w',#11/3/2018#,#11/04/2018#)"));
+    assertEquals(1, eval("=DateDiff('w',#11/3/2018#,#11/10/2018#)"));
+    assertEquals(0, eval("=DateDiff('w',#12/31/2017#,#1/1/2018#)"));
+    assertEquals(32, eval("=DateDiff('w',#03/22/2003#,#11/01/2003#)"));
+    assertEquals(213, eval("=DateDiff('w',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-181, eval("=DateDiff('w',#03/22/2007#,#10/01/2003#)"));
+
+    assertEquals(1, eval("=DateDiff('ww',#11/3/2018#,#11/04/2018#)"));
+    assertEquals(1, eval("=DateDiff('ww',#11/3/2018#,#11/10/2018#)"));
+    assertEquals(0, eval("=DateDiff('ww',#12/31/2017#,#1/1/2018#)"));
+    assertEquals(1, eval("=DateDiff('ww',#12/31/2017#,#1/1/2018#,2)"));
+    assertEquals(0, eval("=DateDiff('ww',#12/31/2017#,#1/1/2018#,1,3)"));
+    assertEquals(53, eval("=DateDiff('ww',#1/1/2000#,#1/1/2001#)"));
+    assertEquals(32, eval("=DateDiff('ww',#03/22/2003#,#11/01/2003#)"));
+    assertEquals(213, eval("=DateDiff('ww',#10/22/2003#,#11/22/2007#)"));
+    assertEquals(-181, eval("=DateDiff('ww',#03/22/2007#,#10/01/2003#)"));
+
+    assertEquals(1, eval("=DateDiff('h',#1:37:00 AM#,#2:15:00 AM#)"));
+    assertEquals(13, eval("=DateDiff('h',#1:37:00 AM#,#2:15:00 PM#)"));
+    assertEquals(1, eval("=DateDiff('h',#11/3/2018 1:37:00 AM#,#11/3/2018 2:15:00 AM#)"));
+    assertEquals(13, eval("=DateDiff('h',#11/3/2018 1:37:00 AM#,#11/3/2018 2:15:00 PM#)"));
+    assertEquals(24, eval("=DateDiff('h',#11/3/2018#,#11/4/2018#)"));
+    assertEquals(5641, eval("=DateDiff('h',#3/13/2018 1:37:00 AM#,#11/3/2018 2:15:00 AM#)"));
+    assertEquals(23161, eval("=DateDiff('h',#3/13/2016 1:37:00 AM#,#11/3/2018 2:15:00 AM#)"));
+    assertEquals(-23173, eval("=DateDiff('h',#11/3/2018 2:15:00 PM#,#3/13/2016 1:37:00 AM#)"));
+
+    assertEquals(1, eval("=DateDiff('n',#1:37:59 AM#,#1:38:00 AM#)"));
+    assertEquals(758, eval("=DateDiff('n',#1:37:30 AM#,#2:15:13 PM#)"));
+    assertEquals(1, eval("=DateDiff('n',#11/3/2018 1:37:59 AM#,#11/3/2018 1:38:00 AM#)"));
+    assertEquals(758, eval("=DateDiff('n',#11/3/2018 1:37:59 AM#,#11/3/2018 2:15:00 PM#)"));
+    assertEquals(1440, eval("=DateDiff('n',#11/3/2018#,#11/4/2018#)"));
+    assertEquals(338438, eval("=DateDiff('n',#3/13/2018 1:37:59 AM#,#11/3/2018 2:15:00 AM#)"));
+    assertEquals(1389638, eval("=DateDiff('n',#3/13/2016 1:37:30 AM#,#11/3/2018 2:15:13 AM#)"));
+    assertEquals(-1390358, eval("=DateDiff('n',#11/3/2018 2:15:30 PM#,#3/13/2016 1:37:13 AM#)"));
+
+    assertEquals(1, eval("=DateDiff('s',#1:37:59 AM#,#1:38:00 AM#)"));
+    assertEquals(35, eval("=DateDiff('s',#1:37:10 AM#,#1:37:45 AM#)"));
+    assertEquals(45463, eval("=DateDiff('s',#1:37:30 AM#,#2:15:13 PM#)"));
+    assertEquals(1, eval("=DateDiff('s',#11/3/2018 1:37:59 AM#,#11/3/2018 1:38:00 AM#)"));
+    assertEquals(45463, eval("=DateDiff('s',#11/3/2018 1:37:30 AM#,#11/3/2018 2:15:13 PM#)"));
+    assertEquals(86400, eval("=DateDiff('s',#11/3/2018#,#11/4/2018#)"));
+    assertEquals(20306221, eval("=DateDiff('s',#3/13/2018 1:37:59 AM#,#11/3/2018 2:15:00 AM#)"));
+    assertEquals(83378263, eval("=DateDiff('s',#3/13/2016 1:37:30 AM#,#11/3/2018 2:15:13 AM#)"));
+    assertEquals(-83421497, eval("=DateDiff('s',#11/3/2018 2:15:30 PM#,#3/13/2016 1:37:13 AM#)"));
   }
 
   public void testFinancialFuncs() throws Exception
