@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -278,6 +279,42 @@ public class DefaultFunctions
     }
   });
 
+  public static final Function FORMATNUMBER = registerFunc(new FuncVar("FormatNumber", 1, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      int numDecDigits = getOptionalIntParam(ctx, params, 1, 2, -1);
+      boolean incLeadDigit = getOptionalTriStateBoolean(ctx, params, 2, true);
+      boolean negParens = getOptionalTriStateBoolean(ctx, params, 3, false);
+      boolean groupDigits = getOptionalTriStateBoolean(ctx, params, 4, true);
+
+      StringBuilder fmt = new StringBuilder();
+
+      fmt.append(incLeadDigit ? "0" : "#");
+      if(numDecDigits > 0) {
+        fmt.append(".");
+        for(int i = 0; i < numDecDigits; ++i) {
+          fmt.append("0");
+        }
+      }
+
+      if(negParens) {
+        fmt.append(";(#)");
+      }
+
+      // Note, DecimalFormat rounding mode uses HALF_EVEN by default
+      DecimalFormat df = new DecimalFormat(
+          fmt.toString(), ctx.getNumericConfig().getDecimalFormatSymbols());
+      df.setGroupingUsed(groupDigits);
+
+      return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
+    }
+  });
+
   public static final Function VARTYPE = registerFunc(new Func1("VarType") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
@@ -415,6 +452,31 @@ public class DefaultFunctions
       // not a date/time
     }
     return false;
+  }
+
+  private static boolean getOptionalTriStateBoolean(
+      EvalContext ctx, Value[] params, int idx, boolean defValue) {
+    boolean bv = defValue;
+    if(params.length > idx) {
+      int val = params[idx].getAsLongInt(ctx);
+      switch(val) {
+      case 0:
+        // vbFalse
+        bv = false;
+        break;
+      case -1:
+        // vbTrue
+        bv = true;
+        break;
+      case -2:
+        // vbUseDefault
+        bv = defValue;
+        break;
+      default:
+        throw new EvalException("Unsupported tri-state boolean value " + val);
+      }
+    }
+    return bv;
   }
 
   // https://www.techonthenet.com/access/functions/
