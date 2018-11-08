@@ -31,12 +31,37 @@ import java.util.Locale;
 public class NumericConfig
 {
   public static final NumericConfig US_NUMERIC_CONFIG = new NumericConfig(
-      Locale.US);
+      2, true, false, 3, Locale.US);
 
+  private final int _numDecDigits;
+  private final boolean _incLeadingDigit;
+  private final boolean _useNegParens;
+  private final int _numGroupDigits;
   private final DecimalFormatSymbols _symbols;
 
-  public NumericConfig(Locale locale) {
+  public NumericConfig(int numDecDigits, boolean incLeadingDigit,
+                       boolean useNegParens, int numGroupDigits, Locale locale) {
+    _numDecDigits = numDecDigits;
+    _incLeadingDigit = incLeadingDigit;
+    _useNegParens = useNegParens;
+    _numGroupDigits = numGroupDigits;
     _symbols = DecimalFormatSymbols.getInstance(locale);
+  }
+
+  public int getNumDecimalDigits() {
+    return _numDecDigits;
+  }
+
+  public boolean includeLeadingDigit() {
+    return _incLeadingDigit;
+  }
+
+  public boolean useParensForNegatives() {
+    return _useNegParens;
+  }
+
+  public int getNumGroupingDigits() {
+    return _numGroupDigits;
   }
 
   public DecimalFormatSymbols getDecimalFormatSymbols() {

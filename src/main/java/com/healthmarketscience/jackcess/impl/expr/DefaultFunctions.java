@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
+import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
@@ -287,10 +288,16 @@ public class DefaultFunctions
         return ValueSupport.NULL_VAL;
       }
 
-      int numDecDigits = getOptionalIntParam(ctx, params, 1, 2, -1);
-      boolean incLeadDigit = getOptionalTriStateBoolean(ctx, params, 2, true);
-      boolean negParens = getOptionalTriStateBoolean(ctx, params, 3, false);
-      boolean groupDigits = getOptionalTriStateBoolean(ctx, params, 4, true);
+      NumericConfig cfg = ctx.getNumericConfig();
+      int numDecDigits = getOptionalIntParam(
+          ctx, params, 1, cfg.getNumDecimalDigits(), -1);
+      boolean incLeadDigit = getOptionalTriStateBoolean(
+          ctx, params, 2, cfg.includeLeadingDigit());
+      boolean negParens = getOptionalTriStateBoolean(
+          ctx, params, 3, cfg.useParensForNegatives());
+      int numGroupDigits = cfg.getNumGroupingDigits();
+      boolean groupDigits = getOptionalTriStateBoolean(
+          ctx, params, 4, (numGroupDigits > 0));
 
       StringBuilder fmt = new StringBuilder();
 
@@ -308,8 +315,14 @@ public class DefaultFunctions
 
       // Note, DecimalFormat rounding mode uses HALF_EVEN by default
       DecimalFormat df = new DecimalFormat(
-          fmt.toString(), ctx.getNumericConfig().getDecimalFormatSymbols());
-      df.setGroupingUsed(groupDigits);
+          fmt.toString(), cfg.getDecimalFormatSymbols());
+      if(groupDigits) {
+        df.setGroupingUsed(true);
+        df.setGroupingSize(numGroupDigits);
+      } else {
+        df.setGroupingUsed(false);
+        df.setGroupingSize(numGroupDigits);
+      }
 
       return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
     }
