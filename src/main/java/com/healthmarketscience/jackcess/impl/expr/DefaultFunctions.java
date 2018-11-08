@@ -310,9 +310,12 @@ public class DefaultFunctions
       }
 
       if(negParens) {
-        fmt.append(";(#)");
+        // the javadocs claim the second pattern does not need to be fully
+        // defined, but it doesn't seem to work that way
+        String mainPat = fmt.toString();
+        fmt.append(";(").append(mainPat).append(")");
       }
-
+      
       // Note, DecimalFormat rounding mode uses HALF_EVEN by default
       DecimalFormat df = new DecimalFormat(
           fmt.toString(), cfg.getDecimalFormatSymbols());

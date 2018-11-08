@@ -225,12 +225,24 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("12,345.00", "=FormatNumber(12345)");
     assertEval("0.12", "=FormatNumber(0.12345)");
     assertEval("12.34", "=FormatNumber(12.345)");
+    assertEval("-12,345.00", "=FormatNumber(-12345)");
+    assertEval("-0.12", "=FormatNumber(-0.12345)");
+    assertEval("-12.34", "=FormatNumber(-12.345)");
     assertEval("12,345.000", "=FormatNumber(12345,3)");
     assertEval("0.123", "=FormatNumber(0.12345,3)");
     assertEval("12.345", "=FormatNumber(12.345,3)");
     assertEval("12,345", "=FormatNumber(12345,0)");
     assertEval("0", "=FormatNumber(0.12345,0)");
     assertEval("12", "=FormatNumber(12.345,0)");
+    assertEval("0.123", "=FormatNumber(0.12345,3,True)");
+    assertEval(".123", "=FormatNumber(0.12345,3,False)");
+    assertEval("-0.123", "=FormatNumber(-0.12345,3,True)");
+    assertEval("-.123", "=FormatNumber(-0.12345,3,False)");
+    assertEval("-12.34", "=FormatNumber(-12.345,-1,True,False)");
+    assertEval("(12.34)", "=FormatNumber(-12.345,-1,True,True)");
+    assertEval("(12)", "=FormatNumber(-12.345,0,True,True)");
+    assertEval("12,345.00", "=FormatNumber(12345,-1,-2,-2,True)");
+    assertEval("12345.00", "=FormatNumber(12345,-1,-2,-2,False)");
   }
 
   public void testNumberFuncs() throws Exception
@@ -508,6 +520,7 @@ public class DefaultFunctionsTest extends TestCase
     try {
       assertEquals(expected, eval(exprStr));
     } catch(Error e) {
+      // Convenience for adding new tests
       // System.err.println("[ERROR] " + e);
       throw e;
     }
