@@ -243,6 +243,16 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("(12)", "=FormatNumber(-12.345,0,True,True)");
     assertEval("12,345.00", "=FormatNumber(12345,-1,-2,-2,True)");
     assertEval("12345.00", "=FormatNumber(12345,-1,-2,-2,False)");
+
+    assertEval("1,234,500.00%", "=FormatPercent(12345)");
+    assertEval("(1,234.50%)", "=FormatPercent(-12.345,-1,True,True)");
+    assertEval("34%", "=FormatPercent(0.345,0,True,True)");
+    assertEval("-.123%", "=FormatPercent(-0.0012345,3,False)");
+
+    assertEval("$12,345.00", "=FormatCurrency(12345)");
+    assertEval("($12.34)", "=FormatCurrency(-12.345,-1,True,True)");
+    assertEval("$12", "=FormatCurrency(12.345,0,True,True)");
+    assertEval("-$.123", "=FormatCurrency(-0.12345,3,False)");
   }
 
   public void testNumberFuncs() throws Exception

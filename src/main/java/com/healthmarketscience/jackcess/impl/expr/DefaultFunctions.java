@@ -283,51 +283,23 @@ public class DefaultFunctions
   public static final Function FORMATNUMBER = registerFunc(new FuncVar("FormatNumber", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      Value param1 = params[0];
-      if(param1.isNull()) {
-        return ValueSupport.NULL_VAL;
-      }
+      return formatNumber(ctx, params, false, false);
+    }
+  });
 
-      NumericConfig cfg = ctx.getNumericConfig();
-      int numDecDigits = getOptionalIntParam(
-          ctx, params, 1, cfg.getNumDecimalDigits(), -1);
-      boolean incLeadDigit = getOptionalTriStateBoolean(
-          ctx, params, 2, cfg.includeLeadingDigit());
-      boolean negParens = getOptionalTriStateBoolean(
-          ctx, params, 3, cfg.useParensForNegatives());
-      int numGroupDigits = cfg.getNumGroupingDigits();
-      boolean groupDigits = getOptionalTriStateBoolean(
-          ctx, params, 4, (numGroupDigits > 0));
+  public static final Function FORMATPERCENT = registerFunc(new FuncVar("FormatPercent", 1, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      // FIXME, are defaults same for percent & currency?
+      return formatNumber(ctx, params, true, false);
+    }
+  });
 
-      StringBuilder fmt = new StringBuilder();
-
-      fmt.append(incLeadDigit ? "0" : "#");
-      if(numDecDigits > 0) {
-        fmt.append(".");
-        for(int i = 0; i < numDecDigits; ++i) {
-          fmt.append("0");
-        }
-      }
-
-      if(negParens) {
-        // the javadocs claim the second pattern does not need to be fully
-        // defined, but it doesn't seem to work that way
-        String mainPat = fmt.toString();
-        fmt.append(";(").append(mainPat).append(")");
-      }
-      
-      // Note, DecimalFormat rounding mode uses HALF_EVEN by default
-      DecimalFormat df = new DecimalFormat(
-          fmt.toString(), cfg.getDecimalFormatSymbols());
-      if(groupDigits) {
-        df.setGroupingUsed(true);
-        df.setGroupingSize(numGroupDigits);
-      } else {
-        df.setGroupingUsed(false);
-        df.setGroupingSize(numGroupDigits);
-      }
-
-      return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
+  public static final Function FORMATCURRENCY = registerFunc(new FuncVar("FormatCurrency", 1, 6) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      // FIXME, are defaults same for percent & currency?
+      return formatNumber(ctx, params, false, true);
     }
   });
 
@@ -493,6 +465,64 @@ public class DefaultFunctions
       }
     }
     return bv;
+  }
+
+  private static Value formatNumber(
+      EvalContext ctx, Value[] params, boolean isPercent, boolean isCurrency) {
+
+    Value param1 = params[0];
+    if(param1.isNull()) {
+      return ValueSupport.NULL_VAL;
+    }
+
+    NumericConfig cfg = ctx.getNumericConfig();
+    int numDecDigits = getOptionalIntParam(
+        ctx, params, 1, cfg.getNumDecimalDigits(), -1);
+    boolean incLeadDigit = getOptionalTriStateBoolean(
+        ctx, params, 2, cfg.includeLeadingDigit());
+    boolean negParens = getOptionalTriStateBoolean(
+        ctx, params, 3, cfg.useParensForNegatives());
+    int numGroupDigits = cfg.getNumGroupingDigits();
+    boolean groupDigits = getOptionalTriStateBoolean(
+        ctx, params, 4, (numGroupDigits > 0));
+
+    StringBuilder fmt = new StringBuilder();
+
+    if(isCurrency) {
+      fmt.append("\u00A4");
+    }
+    
+    fmt.append(incLeadDigit ? "0" : "#");
+    if(numDecDigits > 0) {
+      fmt.append(".");
+      for(int i = 0; i < numDecDigits; ++i) {
+        fmt.append("0");
+      }
+    }
+
+    if(isPercent) {
+      fmt.append("%");
+    }
+    
+    if(negParens) {
+      // the javadocs claim the second pattern does not need to be fully
+      // defined, but it doesn't seem to work that way
+      String mainPat = fmt.toString();
+      fmt.append(";(").append(mainPat).append(")");
+    }
+      
+    // Note, DecimalFormat rounding mode uses HALF_EVEN by default
+    DecimalFormat df = new DecimalFormat(
+        fmt.toString(), cfg.getDecimalFormatSymbols());
+    if(groupDigits) {
+      df.setGroupingUsed(true);
+      df.setGroupingSize(numGroupDigits);
+    } else {
+      df.setGroupingUsed(false);
+      df.setGroupingSize(numGroupDigits);
+    }
+
+    return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
   }
 
   // https://www.techonthenet.com/access/functions/
