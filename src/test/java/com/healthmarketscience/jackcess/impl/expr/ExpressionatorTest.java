@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -604,6 +605,11 @@ public class ExpressionatorTest extends TestCase
       return NumericConfig.US_NUMERIC_CONFIG;
     }
 
+    public DecimalFormat createDecimalFormat(String formatStr) {
+      return new DecimalFormat(
+          formatStr, NumericConfig.US_NUMERIC_CONFIG.getDecimalFormatSymbols());
+    }
+    
     public FunctionLookup getFunctionLookup() {
       return DefaultFunctions.LOOKUP;
     }

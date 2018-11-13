@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
@@ -41,6 +42,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   private final DatabaseImpl _db;
   private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
   private Map<String,SimpleDateFormat> _sdfs;
+  private Map<String,DecimalFormat> _dfs;
   private TemporalConfig _temporal = TemporalConfig.US_TEMPORAL_CONFIG;
   private NumericConfig _numeric = NumericConfig.US_NUMERIC_CONFIG;
   private final RandomContext _rndCtx = new RandomContext();
@@ -103,6 +105,18 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     return sdf;
   }
 
+  public DecimalFormat createDecimalFormat(String formatStr) {
+    if(_dfs == null) {
+      _dfs = new SimpleCache<String,DecimalFormat>(MAX_CACHE_SIZE);
+    }
+    DecimalFormat df = _dfs.get(formatStr);
+    if(df == null) {
+      df = new DecimalFormat(formatStr, _numeric.getDecimalFormatSymbols());
+      _dfs.put(formatStr, df);
+    }
+    return df;
+  }
+  
   public float getRandom(Integer seed) {
     return _rndCtx.getRandom(seed);
   }

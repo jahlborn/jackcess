@@ -549,12 +549,15 @@ public class DefaultFunctions
       fmt.append("\u00A4");
     }
 
+    if(groupDigits) {
+      fmt.append("#,");
+      appendNum(fmt, '#', numGroupDigits - 1);
+    }
+    
     fmt.append(incLeadDigit ? "0" : "#");
     if(numDecDigits > 0) {
       fmt.append(".");
-      for(int i = 0; i < numDecDigits; ++i) {
-        fmt.append("0");
-      }
+      appendNum(fmt, '0', numDecDigits);
     }
 
     if(isPercent) {
@@ -569,15 +572,7 @@ public class DefaultFunctions
     }
 
     // Note, DecimalFormat rounding mode uses HALF_EVEN by default
-    DecimalFormat df = new DecimalFormat(
-        fmt.toString(), cfg.getDecimalFormatSymbols());
-    if(groupDigits) {
-      df.setGroupingUsed(true);
-      df.setGroupingSize(numGroupDigits);
-    } else {
-      df.setGroupingUsed(false);
-      df.setGroupingSize(numGroupDigits);
-    }
+    DecimalFormat df = ctx.createDecimalFormat(fmt.toString());
 
     return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
   }
@@ -600,6 +595,12 @@ public class DefaultFunctions
     String lookupFname = DatabaseImpl.toLookupName(fname);
     if(FUNCS.put(lookupFname, func) != null) {
       throw new IllegalStateException("Duplicate function " + fname);
+    }
+  }
+
+  private static void appendNum(StringBuilder sb, char c, int num) {
+    for(int i = 0; i < num; ++i) {
+      sb.append(c);
     }
   }
 }

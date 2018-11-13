@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -50,4 +51,10 @@ public interface LocaleContext
    *         {@link EvalConfig})
    */
   public NumericConfig getNumericConfig();
+
+  /**
+   * @return an appropriately configured (i.e. DecimalFormatSymbols)
+   *         DecimalFormat for the given format.
+   */
+  public DecimalFormat createDecimalFormat(String formatStr);
 }

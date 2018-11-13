@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collection;
@@ -91,6 +92,10 @@ public abstract class BaseEvalContext implements EvalContext
 
   public NumericConfig getNumericConfig() {
     return _dbCtx.getNumericConfig();
+  }
+
+  public DecimalFormat createDecimalFormat(String formatStr) {
+    return _dbCtx.createDecimalFormat(formatStr);
   }
 
   public float getRandom(Integer seed) {
