@@ -537,14 +537,14 @@ public class DefaultDateFunctions
     return (((firstDay - 1) + (weekday - 1)) % 7) + 1;
   }
 
-  private static int getFirstDayParam(
+  static int getFirstDayParam(
       LocaleContext ctx, Value[] params, int idx) {
     // vbSunday (default) 1
     // vbUseSystem 0
     return getOptionalIntParam(ctx, params, idx, 1, 0);
   }
 
-  private static int getFirstWeekTypeParam(
+  static int getFirstWeekTypeParam(
       LocaleContext ctx, Value[] params, int idx) {
     // vbFirstJan1 (default) 1
     // vbUseSystem 0

@@ -425,7 +425,27 @@ public class DefaultTextFunctions
     }
   });
 
+  public static final Function FORMAT = registerFunc(new FuncVar("Format", 1, 4) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
 
+      Value expr = params[0];
+      if(params.length < 2) {
+        // no formatting, do simple string conversion
+        if(expr.isNull()) {
+          return ValueSupport.NULL_VAL;
+        }
+        return ValueSupport.toValue(expr.getAsString(ctx));
+      }
+
+      String fmtStr = params[1].getAsString(ctx);
+      int firstDay = DefaultDateFunctions.getFirstDayParam(ctx, params, 2);
+      int firstWeekType = DefaultDateFunctions.getFirstWeekTypeParam(ctx, params, 3);
+      
+      return FormatUtil.format(ctx, expr, fmtStr, firstDay, firstWeekType);
+    }
+  });
+    
   private static String nchars(int num, char c) {
     StringBuilder sb = new StringBuilder(num);
     nchars(sb, num, c);
