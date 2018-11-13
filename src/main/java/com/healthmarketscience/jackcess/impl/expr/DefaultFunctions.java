@@ -18,7 +18,10 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -28,6 +31,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.NumericConfig;
+import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.NumberFormatter;
@@ -290,7 +294,6 @@ public class DefaultFunctions
   public static final Function FORMATPERCENT = registerFunc(new FuncVar("FormatPercent", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      // FIXME, are defaults same for percent & currency?
       return formatNumber(ctx, params, true, false);
     }
   });
@@ -298,8 +301,62 @@ public class DefaultFunctions
   public static final Function FORMATCURRENCY = registerFunc(new FuncVar("FormatCurrency", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      // FIXME, are defaults same for percent & currency?
       return formatNumber(ctx, params, false, true);
+    }
+  });
+
+  public static final Function FORMATDATETIME = registerFunc(new FuncVar("FormatDateTime", 1, 2) {
+    @Override
+    protected Value evalVar(EvalContext ctx, Value[] params) {
+      Value param1 = params[0];
+      if(param1.isNull()) {
+        return ValueSupport.NULL_VAL;
+      }
+
+      Date d = param1.getAsDateTime(ctx);
+
+      int fmtType = getOptionalIntParam(ctx, params, 1, 0);
+      TemporalConfig.Type tempType = null;
+      switch(fmtType) {
+      case 0:
+        // vbGeneralDate
+        Calendar cal = ctx.getCalendar();
+        cal.setTime(d);
+        Value.Type valType = ValueSupport.getDateTimeType(cal);
+        switch(valType) {
+        case DATE:
+          tempType = TemporalConfig.Type.SHORT_DATE;
+          break;
+        case TIME:
+          tempType = TemporalConfig.Type.LONG_TIME;
+          break;
+        default:
+          tempType = TemporalConfig.Type.GENERAL_DATE;
+        }
+        break;
+      case 1:
+        // vbLongDate
+        tempType = TemporalConfig.Type.LONG_DATE;
+        break;
+      case 2:
+        // vbShortDate
+        tempType = TemporalConfig.Type.SHORT_DATE;
+        break;
+      case 3:
+        // vbLongTime
+        tempType = TemporalConfig.Type.LONG_TIME;
+        break;
+      case 4:
+        // vbShortTime
+        tempType = TemporalConfig.Type.SHORT_TIME;
+        break;
+      default:
+        throw new EvalException("Unknown format " + fmtType);
+      }
+
+      DateFormat sdf = ctx.createDateFormat(
+          ctx.getTemporalConfig().getDateTimeFormat(tempType));
+      return ValueSupport.toValue(sdf.format(d));
     }
   });
 
@@ -491,7 +548,7 @@ public class DefaultFunctions
     if(isCurrency) {
       fmt.append("\u00A4");
     }
-    
+
     fmt.append(incLeadDigit ? "0" : "#");
     if(numDecDigits > 0) {
       fmt.append(".");
@@ -503,14 +560,14 @@ public class DefaultFunctions
     if(isPercent) {
       fmt.append("%");
     }
-    
+
     if(negParens) {
       // the javadocs claim the second pattern does not need to be fully
       // defined, but it doesn't seem to work that way
       String mainPat = fmt.toString();
       fmt.append(";(").append(mainPat).append(")");
     }
-      
+
     // Note, DecimalFormat rounding mode uses HALF_EVEN by default
     DecimalFormat df = new DecimalFormat(
         fmt.toString(), cfg.getDecimalFormatSymbols());

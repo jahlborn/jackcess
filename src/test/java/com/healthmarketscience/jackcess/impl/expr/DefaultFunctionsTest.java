@@ -253,6 +253,14 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("($12.34)", "=FormatCurrency(-12.345,-1,True,True)");
     assertEval("$12", "=FormatCurrency(12.345,0,True,True)");
     assertEval("-$.123", "=FormatCurrency(-0.12345,3,False)");
+
+    assertEval("1/1/1973 1:37:25 PM", "=FormatDateTime(#1/1/1973 1:37:25 PM#)");
+    assertEval("1:37:25 PM", "=FormatDateTime(#1:37:25 PM#,0)");
+    assertEval("1/1/1973", "=FormatDateTime(#1/1/1973#,0)");
+    assertEval("Monday, January 01, 1973", "=FormatDateTime(#1/1/1973 1:37:25 PM#,1)");
+    assertEval("1/1/1973", "=FormatDateTime(#1/1/1973 1:37:25 PM#,2)");
+    assertEval("1:37:25 PM", "=FormatDateTime(#1/1/1973 1:37:25 PM#,3)");
+    assertEval("13:37", "=FormatDateTime(#1/1/1973 1:37:25 PM#,4)");
   }
 
   public void testNumberFuncs() throws Exception

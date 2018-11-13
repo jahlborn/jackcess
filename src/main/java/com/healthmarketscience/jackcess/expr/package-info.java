@@ -101,10 +101,10 @@ limitations under the License.
  * <tr class="TableRowColor"><td>Chr</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>ChrW</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>EuroConvert</td><td></td></tr>
- * <tr class="TableRowColor"><td>FormatCurrency</td><td></td></tr>
- * <tr class="TableRowColor"><td>FormatDateTime</td><td></td></tr>
- * <tr class="TableRowColor"><td>FormatNumber</td><td></td></tr>
- * <tr class="TableRowColor"><td>FormatPercent</td><td></td></tr>
+ * <tr class="TableRowColor"><td>FormatCurrency</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>FormatDateTime</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>FormatNumber</td><td>Y</td></tr>
+ * <tr class="TableRowColor"><td>FormatPercent</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>GUIDFromString</td><td></td></tr>
  * <tr class="TableRowColor"><td>Hex[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Nz</td><td>Y</td></tr>

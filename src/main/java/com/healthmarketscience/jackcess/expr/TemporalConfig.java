@@ -32,28 +32,42 @@ public class TemporalConfig
 {
   public static final String US_DATE_FORMAT = "M/d/yyyy";
   public static final String US_DATE_IMPLICIT_YEAR_FORMAT = "M/d";
-  public static final String US_TIME_FORMAT_12 = "h:mm:ss a";
-  public static final String US_TIME_FORMAT_24 = "H:mm:ss";
+  public static final String US_TIME_FORMAT_12_FORMAT = "h:mm:ss a";
+  public static final String US_TIME_FORMAT_24_FORMAT = "H:mm:ss";
+  public static final String US_LONG_DATE_FORMAT = "EEEE, MMMM dd, yyyy";
+
+  public static final String MEDIUM_DATE_FORMAT = "dd-MMM-yy";
+  public static final String MEDIUM_TIME_FORMAT = "hh:mm a";
+  public static final String SHORT_TIME_FORMAT = "HH:mm";
 
   /** default implementation which is configured for the US locale */
   public static final TemporalConfig US_TEMPORAL_CONFIG = new TemporalConfig(
-      US_DATE_FORMAT, US_DATE_IMPLICIT_YEAR_FORMAT,
-      US_TIME_FORMAT_12, US_TIME_FORMAT_24, '/', ':', Locale.US);
+      US_DATE_FORMAT, US_DATE_IMPLICIT_YEAR_FORMAT, US_LONG_DATE_FORMAT,
+      US_TIME_FORMAT_12_FORMAT, US_TIME_FORMAT_24_FORMAT, '/', ':', Locale.US);
 
   public enum Type {
-    DATE, TIME, DATE_TIME, TIME_12, TIME_24, DATE_TIME_12, DATE_TIME_24;
+    DATE, TIME, DATE_TIME, TIME_12, TIME_24, DATE_TIME_12, DATE_TIME_24,
+    GENERAL_DATE, LONG_DATE, MEDIUM_DATE, SHORT_DATE,
+    LONG_TIME, MEDIUM_TIME, SHORT_TIME;
 
     public Type getDefaultType() {
       switch(this) {
       case DATE:
+      case LONG_DATE:
+      case MEDIUM_DATE:
+      case SHORT_DATE:
         return DATE;
       case TIME:
       case TIME_12:
       case TIME_24:
+      case LONG_TIME:
+      case MEDIUM_TIME:
+      case SHORT_TIME:
         return TIME;
       case DATE_TIME:
       case DATE_TIME_12:
       case DATE_TIME_24:
+      case GENERAL_DATE:
         return DATE_TIME;
       default:
         throw new RuntimeException("invalid type " + this);
@@ -63,34 +77,45 @@ public class TemporalConfig
     public Value.Type getValueType() {
       switch(this) {
       case DATE:
+      case LONG_DATE:
+      case MEDIUM_DATE:
+      case SHORT_DATE:
         return Value.Type.DATE;
       case TIME:
       case TIME_12:
       case TIME_24:
+      case LONG_TIME:
+      case MEDIUM_TIME:
+      case SHORT_TIME:
         return Value.Type.TIME;
       case DATE_TIME:
       case DATE_TIME_12:
       case DATE_TIME_24:
+      case GENERAL_DATE:
         return Value.Type.DATE_TIME;
       default:
         throw new RuntimeException("invalid type " + this);
       }
     }
 
+    public boolean includesTime() {
+      return !isDateOnly();
+    }
+
     public boolean includesDate() {
+      return !isTimeOnly();
+    }
+
+    public boolean isDateOnly() {
       switch(this) {
       case DATE:
-      case DATE_TIME:
-      case DATE_TIME_12:
-      case DATE_TIME_24:
+      case LONG_DATE:
+      case MEDIUM_DATE:
+      case SHORT_DATE:
         return true;
       default:
         return false;
       }
-    }
-
-    public boolean includesTime() {
-      return (this != DATE);
     }
 
     public boolean isTimeOnly() {
@@ -98,6 +123,9 @@ public class TemporalConfig
       case TIME:
       case TIME_12:
       case TIME_24:
+      case LONG_TIME:
+      case MEDIUM_TIME:
+      case SHORT_TIME:
         return true;
       default:
         return false;
@@ -107,6 +135,7 @@ public class TemporalConfig
 
   private final String _dateFormat;
   private final String _dateImplicitYearFormat;
+  private final String _longDateFormat;
   private final String _timeFormat12;
   private final String _timeFormat24;
   private final char _dateSeparator;
@@ -135,11 +164,13 @@ public class TemporalConfig
    *                      dateSeparator.
    */
   public TemporalConfig(String dateFormat, String dateImplicitYearFormat,
+                        String longDateFormat,
                         String timeFormat12, String timeFormat24,
                         char dateSeparator, char timeSeparator, Locale locale)
   {
     _dateFormat = dateFormat;
     _dateImplicitYearFormat = dateImplicitYearFormat;
+    _longDateFormat = longDateFormat;
     _timeFormat12 = timeFormat12;
     _timeFormat24 = timeFormat24;
     _dateSeparator = dateSeparator;
@@ -192,12 +223,15 @@ public class TemporalConfig
   public String getDateTimeFormat(Type type) {
     switch(type) {
     case DATE:
+    case SHORT_DATE:
       return getDefaultDateFormat();
     case TIME:
       return getDefaultTimeFormat();
     case DATE_TIME:
+    case GENERAL_DATE:
       return getDefaultDateTimeFormat();
     case TIME_12:
+    case LONG_TIME:
       return getTimeFormat12();
     case TIME_24:
       return getTimeFormat24();
@@ -205,6 +239,14 @@ public class TemporalConfig
       return getDateTimeFormat12();
     case DATE_TIME_24:
       return getDateTimeFormat24();
+    case LONG_DATE:
+      return getLongDateFormat();
+    case MEDIUM_DATE:
+      return getMediumDateFormat();
+    case MEDIUM_TIME:
+      return getMediumTimeFormat();
+    case SHORT_TIME:
+      return getShortTimeFormat();
     default:
       throw new IllegalArgumentException("unknown date/time type " + type);
     }
@@ -232,5 +274,21 @@ public class TemporalConfig
 
   private static String toDateTimeFormat(String dateFormat, String timeFormat) {
     return dateFormat + " " + timeFormat;
+  }
+
+  protected String getLongDateFormat() {
+    return _longDateFormat;
+  }
+
+  protected String getMediumDateFormat() {
+    return MEDIUM_DATE_FORMAT;
+  }
+
+  protected String getMediumTimeFormat() {
+    return MEDIUM_TIME_FORMAT;
+  }
+
+  protected String getShortTimeFormat() {
+    return SHORT_TIME_FORMAT;
   }
 }

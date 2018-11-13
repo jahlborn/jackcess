@@ -106,6 +106,10 @@ public class ValueSupport
   }
 
   public static Value toValue(Calendar cal) {
+    return new DateTimeValue(getDateTimeType(cal), cal.getTime());
+  }
+
+  public static Value.Type getDateTimeType(Calendar cal) {
     boolean hasTime = ((cal.get(Calendar.HOUR_OF_DAY) != 0) ||
                        (cal.get(Calendar.MINUTE) != 0) ||
                        (cal.get(Calendar.SECOND) != 0));
@@ -115,11 +119,9 @@ public class ValueSupport
        ((cal.get(Calendar.MONTH) + 1) != ExpressionTokenizer.BASE_DATE_MONTH) ||
        (cal.get(Calendar.DAY_OF_MONTH) != ExpressionTokenizer.BASE_DATE_DAY));
 
-    Value.Type type = (hasDate ?
-                       (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
-                       Value.Type.TIME);
-
-    return new DateTimeValue(type, cal.getTime());
+    return (hasDate ?
+            (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
+            Value.Type.TIME);
   }
 
   public static Value toValue(Value.Type type, Date d) {
