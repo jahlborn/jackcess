@@ -428,12 +428,16 @@ public class DefaultTextFunctions
 
   private static String nchars(int num, char c) {
     StringBuilder sb = new StringBuilder(num);
-    for(int i = 0; i < num; ++i) {
-      sb.append(c);
-    }
+    nchars(sb, num, c);
     return sb.toString();
   }
 
+  static void nchars(StringBuilder sb, int num, char c) {
+    for(int i = 0; i < num; ++i) {
+      sb.append(c);
+    }
+  }
+  
   private static String trim(String str, boolean doLeft, boolean doRight) {
     int start = 0;
     int end = str.length();

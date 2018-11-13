@@ -551,13 +551,13 @@ public class DefaultFunctions
 
     if(groupDigits) {
       fmt.append("#,");
-      appendNum(fmt, '#', numGroupDigits - 1);
+      DefaultTextFunctions.nchars(fmt, numGroupDigits - 1, '#');
     }
     
     fmt.append(incLeadDigit ? "0" : "#");
     if(numDecDigits > 0) {
       fmt.append(".");
-      appendNum(fmt, '0', numDecDigits);
+      DefaultTextFunctions.nchars(fmt, numDecDigits, '0');
     }
 
     if(isPercent) {
@@ -595,12 +595,6 @@ public class DefaultFunctions
     String lookupFname = DatabaseImpl.toLookupName(fname);
     if(FUNCS.put(lookupFname, func) != null) {
       throw new IllegalStateException("Duplicate function " + fname);
-    }
-  }
-
-  private static void appendNum(StringBuilder sb, char c, int num) {
-    for(int i = 0; i < num; ++i) {
-      sb.append(c);
     }
   }
 }
