@@ -28,7 +28,7 @@ import com.healthmarketscience.jackcess.expr.Value;
  *
  * @author James Ahlborn
  */
-public class FormatUtil 
+public class FormatUtil
 {
   private static final Map<String,Fmt> PREDEF_FMTS = new HashMap<String,Fmt>();
 
@@ -48,8 +48,11 @@ public class FormatUtil
     PREDEF_FMTS.put("Short Time",
                     new PredefDateFmt(TemporalConfig.Type.SHORT_TIME));
 
+    PREDEF_FMTS.put("True/False", new PredefBoolFmt("True", "False"));
+    PREDEF_FMTS.put("Yes/No", new PredefBoolFmt("Yes", "No"));
+    PREDEF_FMTS.put("On/Off", new PredefBoolFmt("On", "Off"));
   }
-  
+
   private FormatUtil() {}
 
 
@@ -75,7 +78,7 @@ public class FormatUtil
     private PredefDateFmt(TemporalConfig.Type type) {
       _type = type;
     }
-    
+
     @Override
     public Value format(EvalContext ctx, Value expr, String fmtStr,
                          int firstDay, int firstWeekType) {
@@ -94,7 +97,7 @@ public class FormatUtil
       _trueVal = ValueSupport.toValue(trueStr);
       _falseVal = ValueSupport.toValue(falseStr);
     }
-    
+
     @Override
     public Value format(EvalContext ctx, Value expr, String fmtStr,
                         int firstDay, int firstWeekType) {
@@ -103,5 +106,5 @@ public class FormatUtil
     }
   }
 
-  
+
 }

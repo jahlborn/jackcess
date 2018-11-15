@@ -250,9 +250,9 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-.123%", "=FormatPercent(-0.0012345,3,False)");
 
     assertEval("$12,345.00", "=FormatCurrency(12345)");
-    assertEval("($12.34)", "=FormatCurrency(-12.345,-1,True,True)");
+    assertEval("-$12.34", "=FormatCurrency(-12.345,-1,True,False)");
     assertEval("$12", "=FormatCurrency(12.345,0,True,True)");
-    assertEval("-$.123", "=FormatCurrency(-0.12345,3,False)");
+    assertEval("($.123)", "=FormatCurrency(-0.12345,3,False)");
 
     assertEval("1/1/1973 1:37:25 PM", "=FormatDateTime(#1/1/1973 1:37:25 PM#)");
     assertEval("1:37:25 PM", "=FormatDateTime(#1:37:25 PM#,0)");

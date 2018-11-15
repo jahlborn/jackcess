@@ -537,8 +537,10 @@ public class DefaultFunctions
         ctx, params, 1, cfg.getNumDecimalDigits(), -1);
     boolean incLeadDigit = getOptionalTriStateBoolean(
         ctx, params, 2, cfg.includeLeadingDigit());
+    boolean defNegParens = (isCurrency ? cfg.useParensForCurrencyNegatives() :
+                            cfg.useParensForNegatives());
     boolean negParens = getOptionalTriStateBoolean(
-        ctx, params, 3, cfg.useParensForNegatives());
+        ctx, params, 3, defNegParens);
     int numGroupDigits = cfg.getNumGroupingDigits();
     boolean groupDigits = getOptionalTriStateBoolean(
         ctx, params, 4, (numGroupDigits > 0));
@@ -553,7 +555,7 @@ public class DefaultFunctions
       fmt.append("#,");
       DefaultTextFunctions.nchars(fmt, numGroupDigits - 1, '#');
     }
-    
+
     fmt.append(incLeadDigit ? "0" : "#");
     if(numDecDigits > 0) {
       fmt.append(".");

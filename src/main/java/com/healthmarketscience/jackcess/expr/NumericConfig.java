@@ -31,19 +31,22 @@ import java.util.Locale;
 public class NumericConfig
 {
   public static final NumericConfig US_NUMERIC_CONFIG = new NumericConfig(
-      2, true, false, 3, Locale.US);
+      2, true, false, true, 3, Locale.US);
 
   private final int _numDecDigits;
   private final boolean _incLeadingDigit;
   private final boolean _useNegParens;
+  private final boolean _useNegCurrencyParens;
   private final int _numGroupDigits;
   private final DecimalFormatSymbols _symbols;
 
   public NumericConfig(int numDecDigits, boolean incLeadingDigit,
-                       boolean useNegParens, int numGroupDigits, Locale locale) {
+                       boolean useNegParens, boolean useNegCurrencyParens,
+                       int numGroupDigits, Locale locale) {
     _numDecDigits = numDecDigits;
     _incLeadingDigit = incLeadingDigit;
     _useNegParens = useNegParens;
+    _useNegCurrencyParens = useNegCurrencyParens;
     _numGroupDigits = numGroupDigits;
     _symbols = DecimalFormatSymbols.getInstance(locale);
   }
@@ -58,6 +61,10 @@ public class NumericConfig
 
   public boolean useParensForNegatives() {
     return _useNegParens;
+  }
+
+  public boolean useParensForCurrencyNegatives() {
+    return _useNegCurrencyParens;
   }
 
   public int getNumGroupingDigits() {
