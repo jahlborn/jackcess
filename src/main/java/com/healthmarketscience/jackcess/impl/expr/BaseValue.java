@@ -22,7 +22,6 @@ import java.util.Date;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
  *

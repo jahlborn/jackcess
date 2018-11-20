@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.ValueSupport.*;
 
 
@@ -222,7 +221,7 @@ public class BuiltinOperators
 
     Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
-    if(mathType == Value.Type.STRING) {
+    if(mathType.isString()) {
       throw new EvalException("Unexpected type " + mathType);
     }
     return toValue(param1.getAsLongInt(ctx) / param2.getAsLongInt(ctx));
@@ -270,7 +269,7 @@ public class BuiltinOperators
     Value.Type mathType = getMathTypePrecedence(ctx, param1, param2,
                                                 CoercionType.GENERAL);
 
-    if(mathType == Value.Type.STRING) {
+    if(mathType.isString()) {
       throw new EvalException("Unexpected type " + mathType);
     }
     return toValue(param1.getAsLongInt(ctx) % param2.getAsLongInt(ctx));
@@ -579,7 +578,7 @@ public class BuiltinOperators
       return t1;
     }
 
-    if((t1 == Value.Type.STRING) || (t2 == Value.Type.STRING)) {
+    if(t1.isString() || t2.isString()) {
 
       if(cType._allowCoerceStringToNum) {
         // see if this is mixed string/numeric and the string can be coerced

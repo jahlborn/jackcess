@@ -16,11 +16,15 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.expr;
 
+import java.math.BigDecimal;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
+import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 
@@ -30,11 +34,43 @@ import com.healthmarketscience.jackcess.expr.Value;
  */
 public class FormatUtil
 {
+  public enum NumPatternType {
+    GENERAL, CURRENCY {
+      @Override
+      protected void appendPrefix(StringBuilder fmt) {
+        fmt.append("\u00A4");
+      }
+      @Override
+      protected boolean useParensForNegatives(NumericConfig cfg) {
+        return cfg.useParensForCurrencyNegatives();
+      }
+    },
+    PERCENT {
+      @Override
+      protected void appendSuffix(StringBuilder fmt) {
+        fmt.append("%");
+      }
+    },
+    SCIENTIFIC {
+      @Override
+      protected void appendSuffix(StringBuilder fmt) {
+        fmt.append("E0");
+      }
+    };
+
+    protected void appendPrefix(StringBuilder fmt) {}
+
+    protected void appendSuffix(StringBuilder fmt) {}
+
+    protected boolean useParensForNegatives(NumericConfig cfg) {
+      return cfg.useParensForNegatives();
+    }
+  }
+
   private static final Map<String,Fmt> PREDEF_FMTS = new HashMap<String,Fmt>();
 
   static {
-    PREDEF_FMTS.put("General Date",
-                    new PredefDateFmt(TemporalConfig.Type.GENERAL_DATE));
+    PREDEF_FMTS.put("General Date", new GenPredefDateFmt());
     PREDEF_FMTS.put("Long Date",
                     new PredefDateFmt(TemporalConfig.Type.LONG_DATE));
     PREDEF_FMTS.put("Medium Date",
@@ -48,6 +84,20 @@ public class FormatUtil
     PREDEF_FMTS.put("Short Time",
                     new PredefDateFmt(TemporalConfig.Type.SHORT_TIME));
 
+    PREDEF_FMTS.put("General Number", new GenPredefNumberFmt());
+    PREDEF_FMTS.put("Currency",
+                    new PredefNumberFmt(NumericConfig.Type.CURRENCY));
+    // FIXME ?
+    // PREDEF_FMTS.put("Euro",
+    //                 new PredefNumberFmt(???));
+    PREDEF_FMTS.put("Fixed",
+                    new PredefNumberFmt(NumericConfig.Type.FIXED));
+    PREDEF_FMTS.put("Standard",
+                    new PredefNumberFmt(NumericConfig.Type.STANDARD));
+    PREDEF_FMTS.put("Percent",
+                    new PredefNumberFmt(NumericConfig.Type.PERCENT));
+    PREDEF_FMTS.put("Scientific", new ScientificPredefNumberFmt());
+
     PREDEF_FMTS.put("True/False", new PredefBoolFmt("True", "False"));
     PREDEF_FMTS.put("Yes/No", new PredefBoolFmt("Yes", "No"));
     PREDEF_FMTS.put("On/Off", new PredefBoolFmt("On", "Off"));
@@ -59,14 +109,55 @@ public class FormatUtil
   public static Value format(EvalContext ctx, Value expr, String fmtStr,
                              int firstDay, int firstWeekType) {
 
+    Fmt predefFmt = PREDEF_FMTS.get(fmtStr);
+    if(predefFmt != null) {
+      if(expr.isNull()) {
+        // predefined formats return null for null
+        return ValueSupport.NULL_VAL;
+      }
+      return predefFmt.format(ctx, expr, null, firstDay, firstWeekType);
+    }
 
     // FIXME,
     throw new UnsupportedOperationException();
   }
 
+  public static String createNumberFormatPattern(
+      NumPatternType numPatType, int numDecDigits, boolean incLeadDigit,
+      boolean negParens, int numGroupDigits) {
+
+    StringBuilder fmt = new StringBuilder();
+
+    numPatType.appendPrefix(fmt);
+
+    if(numGroupDigits > 0) {
+      fmt.append("#,");
+      DefaultTextFunctions.nchars(fmt, numGroupDigits - 1, '#');
+    }
+
+    fmt.append(incLeadDigit ? "0" : "#");
+    if(numDecDigits > 0) {
+      fmt.append(".");
+      DefaultTextFunctions.nchars(fmt, numDecDigits, '0');
+    }
+
+    numPatType.appendSuffix(fmt);
+
+    if(negParens) {
+      // the javadocs claim the second pattern does not need to be fully
+      // defined, but it doesn't seem to work that way
+      String mainPat = fmt.toString();
+      fmt.append(";(").append(mainPat).append(")");
+    }
+
+    return fmt.toString();
+  }
+
+
   private static abstract class Fmt
   {
     // FIXME, no null
+    // FIXME, need fmtStr?
     public abstract Value format(EvalContext ctx, Value expr, String fmtStr,
                                  int firstDay, int firstWeekType);
   }
@@ -88,6 +179,22 @@ public class FormatUtil
     }
   }
 
+  private static class GenPredefDateFmt extends Fmt
+  {
+    @Override
+    public Value format(EvalContext ctx, Value expr, String fmtStr,
+                         int firstDay, int firstWeekType) {
+      Value tempExpr = expr;
+      if(!expr.getType().isTemporal()) {
+        Value maybe = DefaultFunctions.maybeGetAsDateTimeValue(ctx, expr);
+        if(maybe != null) {
+          tempExpr = maybe;
+        }
+      }
+      return ValueSupport.toValue(tempExpr.getAsString(ctx));
+    }
+  }
+
   private static class PredefBoolFmt extends Fmt
   {
     private final Value _trueVal;
@@ -101,10 +208,64 @@ public class FormatUtil
     @Override
     public Value format(EvalContext ctx, Value expr, String fmtStr,
                         int firstDay, int firstWeekType) {
-      // FIXME, handle null?
       return(expr.getAsBoolean(ctx) ? _trueVal : _falseVal);
     }
   }
 
+  private static class PredefNumberFmt extends Fmt
+  {
+    private final NumericConfig.Type _type;
 
+    private PredefNumberFmt(NumericConfig.Type type) {
+      _type = type;
+    }
+
+    @Override
+    public Value format(EvalContext ctx, Value expr, String fmtStr,
+                         int firstDay, int firstWeekType) {
+      DecimalFormat df = ctx.createDecimalFormat(
+          ctx.getNumericConfig().getNumberFormat(_type));
+      return ValueSupport.toValue(df.format(expr.getAsBigDecimal(ctx)));
+    }
+  }
+
+  private static class GenPredefNumberFmt extends Fmt
+  {
+    @Override
+    public Value format(EvalContext ctx, Value expr, String fmtStr,
+                        int firstDay, int firstWeekType) {
+      Value numExpr = expr;
+      if(!expr.getType().isNumeric()) {
+        if(expr.getType().isString()) {
+          BigDecimal bd = DefaultFunctions.maybeGetAsBigDecimal(ctx, expr);
+          if(bd != null) {
+            numExpr = ValueSupport.toValue(bd);
+          } else {
+            // convert to date to number
+            Value maybe = DefaultFunctions.maybeGetAsDateTimeValue(ctx, expr);
+            if(maybe != null) {
+              numExpr = ValueSupport.toValue(maybe.getAsDouble(ctx));
+            }
+          }
+        } else {
+          // convert date to number
+          numExpr = ValueSupport.toValue(expr.getAsDouble(ctx));
+        }
+      }
+      return ValueSupport.toValue(numExpr.getAsString(ctx));
+    }
+  }
+
+  private static class ScientificPredefNumberFmt extends Fmt
+  {
+    @Override
+    public Value format(EvalContext ctx, Value expr, String fmtStr,
+                         int firstDay, int firstWeekType) {
+      NumberFormat df = ctx.createDecimalFormat(
+          ctx.getNumericConfig().getNumberFormat(
+              NumericConfig.Type.SCIENTIFIC));
+      df = new NumberFormatter.ScientificFormat(df);
+      return ValueSupport.toValue(df.format(expr.getAsBigDecimal(ctx)));
+    }
+  }
 }

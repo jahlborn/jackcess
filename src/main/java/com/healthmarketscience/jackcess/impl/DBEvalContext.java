@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
+import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.impl.expr.RandomContext;
 
 /**
@@ -112,11 +113,12 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     DecimalFormat df = _dfs.get(formatStr);
     if(df == null) {
       df = new DecimalFormat(formatStr, _numeric.getDecimalFormatSymbols());
+      df.setRoundingMode(NumberFormatter.ROUND_MODE);
       _dfs.put(formatStr, df);
     }
     return df;
   }
-  
+
   public float getRandom(Integer seed) {
     return _rndCtx.getRandom(seed);
   }

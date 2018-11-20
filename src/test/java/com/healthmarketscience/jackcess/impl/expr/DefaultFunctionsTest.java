@@ -263,6 +263,65 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("13:37", "=FormatDateTime(#1/1/1973 1:37:25 PM#,4)");
   }
 
+  public void testFormat() throws Exception
+  {
+    assertEval("12345.6789", "=Format(12345.6789, 'General Number')");
+    assertEval("0.12345", "=Format(0.12345, 'General Number')");
+    assertEval("-12345.6789", "=Format(-12345.6789, 'General Number')");
+    assertEval("-0.12345", "=Format(-0.12345, 'General Number')");
+    assertEval("12345.6789", "=Format('12345.6789', 'General Number')");
+    assertEval("1678.9", "=Format('1.6789E+3', 'General Number')");
+    assertEval("37623.2916666667", "=Format(#01/02/2003 7:00:00 AM#, 'General Number')");
+    assertEval("foo", "=Format('foo', 'General Number')");
+
+    assertEval("12,345.68", "=Format(12345.6789, 'Standard')");
+    assertEval("0.12", "=Format(0.12345, 'Standard')");
+    assertEval("-12,345.68", "=Format(-12345.6789, 'Standard')");
+    assertEval("-0.12", "=Format(-0.12345, 'Standard')");
+
+    assertEval("12345.68", "=Format(12345.6789, 'Fixed')");
+    assertEval("0.12", "=Format(0.12345, 'Fixed')");
+    assertEval("-12345.68", "=Format(-12345.6789, 'Fixed')");
+    assertEval("-0.12", "=Format(-0.12345, 'Fixed')");
+
+    assertEval("$12,345.68", "=Format(12345.6789, 'Currency')");
+    assertEval("$0.12", "=Format(0.12345, 'Currency')");
+    assertEval("($12,345.68)", "=Format(-12345.6789, 'Currency')");
+    assertEval("($0.12)", "=Format(-0.12345, 'Currency')");
+
+    assertEval("1234567.89%", "=Format(12345.6789, 'Percent')");
+    assertEval("12.34%", "=Format(0.12345, 'Percent')");
+    assertEval("-1234567.89%", "=Format(-12345.6789, 'Percent')");
+    assertEval("-12.34%", "=Format(-0.12345, 'Percent')");
+
+    assertEval("1.23E+4", "=Format(12345.6789, 'Scientific')");
+    assertEval("1.23E-1", "=Format(0.12345, 'Scientific')");
+    assertEval("-1.23E+4", "=Format(-12345.6789, 'Scientific')");
+    assertEval("-1.23E-1", "=Format(-0.12345, 'Scientific')");
+
+    assertEval("Yes", "=Format(True, 'Yes/No')");
+    assertEval("No", "=Format(False, 'Yes/No')");
+    assertEval("True", "=Format(True, 'True/False')");
+    assertEval("False", "=Format(False, 'True/False')");
+    assertEval("On", "=Format(True, 'On/Off')");
+    assertEval("Off", "=Format(False, 'On/Off')");
+
+    assertEval("1/2/2003 7:00:00 AM", "=Format(#01/02/2003 7:00:00 AM#, 'General Date')");
+    assertEval("1/2/2003", "=Format(#01/02/2003#, 'General Date')");
+    assertEval("7:00:00 AM", "=Format(#7:00:00 AM#, 'General Date')");
+    assertEval("1/2/2003 7:00:00 AM", "=Format('37623.2916666667', 'General Date')");
+    assertEval("foo", "=Format('foo', 'General Date')");
+
+    assertEval("Thursday, January 02, 2003", "=Format(#01/02/2003 7:00:00 AM#, 'Long Date')");
+    assertEval("02-Jan-03", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Date')");
+    assertEval("1/2/2003", "=Format(#01/02/2003 7:00:00 AM#, 'Short Date')");
+    assertEval("7:00:00 AM", "=Format(#01/02/2003 7:00:00 AM#, 'Long Time')");
+    assertEval("07:00 AM", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Time')");
+    assertEval("07:00", "=Format(#01/02/2003 7:00:00 AM#, 'Short Time')");
+    assertEval("19:00", "=Format(#01/02/2003 7:00:00 PM#, 'Short Time')");
+
+  }
+
   public void testNumberFuncs() throws Exception
   {
     assertEval(1, "=Abs(1)");

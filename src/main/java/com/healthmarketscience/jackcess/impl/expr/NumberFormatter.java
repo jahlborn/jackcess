@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package com.healthmarketscience.jackcess.impl;
+package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -31,6 +31,41 @@ import java.text.ParsePosition;
 public class NumberFormatter
 {
   public static final RoundingMode ROUND_MODE = RoundingMode.HALF_EVEN;
+
+  /** designates the format of exponent notation used by ScientificFormat */
+  public enum NotationType {
+    /** Scientific notation "E", "E-" (default java behavior) */
+    EXP_E_MINUS {
+      @Override
+      protected void format(StringBuffer sb, int eIdx) {
+        // nothing to do
+      }
+    },
+    /** Scientific notation "E+", "E-" */
+    EXP_E_PLUS {
+      @Override
+      protected void format(StringBuffer sb, int eIdx) {
+        maybeInsertExpPlus(sb, eIdx);
+      }
+    },
+    /** Scientific notation "e", "e-" */
+    EXP_e_MINUS {
+      @Override
+      protected void format(StringBuffer sb, int eIdx) {
+        sb.setCharAt(eIdx, 'e');
+      }
+    },
+    /** Scientific notation "e+", "e-" */
+    EXP_e_PLUS {
+      @Override
+      protected void format(StringBuffer sb, int eIdx) {
+        sb.setCharAt(eIdx, 'e');
+        maybeInsertExpPlus(sb, eIdx);
+      }
+    };
+
+    protected abstract void format(StringBuffer sb, int idx);
+  }
 
   private static final int FLT_SIG_DIGITS = 7;
   private static final int DBL_SIG_DIGITS = 15;
@@ -102,10 +137,18 @@ public class NumberFormatter
     return _decFmt.format(bd.round(DEC_MATH_CONTEXT));
   }
 
+  private static ScientificFormat createScientificFormat(int prec) {
+    DecimalFormat df = new DecimalFormat("0.#E00");
+    df.setMaximumIntegerDigits(1);
+    df.setMaximumFractionDigits(prec);
+    df.setRoundingMode(ROUND_MODE);
+    return new ScientificFormat(df);
+  }
+
   private static final class TypeFormatter
   {
     private final DecimalFormat _df = new DecimalFormat("0.#");
-    private final BetterDecimalFormat _dfS;
+    private final ScientificFormat _dfS;
     private final int _prec;
 
     private TypeFormatter(int prec) {
@@ -113,7 +156,7 @@ public class NumberFormatter
       _df.setMaximumIntegerDigits(prec);
       _df.setMaximumFractionDigits(prec);
       _df.setRoundingMode(ROUND_MODE);
-      _dfS = new BetterDecimalFormat("0.#E00", prec);
+      _dfS = createScientificFormat(prec);
     }
 
     public String format(BigDecimal bd) {
@@ -132,18 +175,26 @@ public class NumberFormatter
     }
   }
 
-  private static final class BetterDecimalFormat extends NumberFormat
+  private static void maybeInsertExpPlus(StringBuffer sb, int eIdx) {
+    if(sb.charAt(eIdx + 1) != '-') {
+      sb.insert(eIdx + 1, '+');
+    }
+  }
+
+  public static class ScientificFormat extends NumberFormat
   {
     private static final long serialVersionUID = 0L;
 
-    private final DecimalFormat _df;
+    private final NumberFormat _df;
+    private final NotationType _type;
 
-    private BetterDecimalFormat(String pat, int prec) {
-      super();
-      _df = new DecimalFormat(pat);
-      _df.setMaximumIntegerDigits(1);
-      _df.setMaximumFractionDigits(prec);
-      _df.setRoundingMode(ROUND_MODE);
+    public ScientificFormat(NumberFormat df) {
+      this(df, NotationType.EXP_E_PLUS);
+    }
+
+    public ScientificFormat(NumberFormat df, NotationType type) {
+      _df = df;
+      _type = type;
     }
 
     @Override
@@ -151,10 +202,7 @@ public class NumberFormatter
                                FieldPosition pos)
     {
       StringBuffer sb = _df.format(number, toAppendTo, pos);
-      int idx = sb.lastIndexOf("E");
-      if(sb.charAt(idx + 1) != '-') {
-        sb.insert(idx + 1, '+');
-      }
+      _type.format(sb, sb.lastIndexOf("E"));
       return sb;
     }
 

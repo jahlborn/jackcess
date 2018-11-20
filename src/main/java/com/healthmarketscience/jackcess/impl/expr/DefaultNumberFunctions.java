@@ -22,7 +22,6 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.Value;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 

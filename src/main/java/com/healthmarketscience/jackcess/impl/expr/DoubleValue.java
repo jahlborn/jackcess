@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.expr.LocaleContext;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
 
 /**
  *

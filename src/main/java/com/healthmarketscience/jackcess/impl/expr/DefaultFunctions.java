@@ -34,7 +34,6 @@ import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
 /**
@@ -75,7 +74,7 @@ public class DefaultFunctions
   public static final Function HEX = registerStringFunc(new Func1NullIsNull("Hex") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      if((param1.getType() == Value.Type.STRING) &&
+      if(param1.getType().isString() &&
          (param1.getAsString(ctx).length() == 0)) {
         return ValueSupport.ZERO_VAL;
       }
@@ -95,8 +94,7 @@ public class DefaultFunctions
         return params[1];
       }
       Value.Type resultType = ctx.getResultType();
-      return (((resultType == null) ||
-               (resultType == Value.Type.STRING)) ?
+      return (((resultType == null) || resultType.isString()) ?
               ValueSupport.EMPTY_STR_VAL : ValueSupport.ZERO_VAL);
     }
   });
@@ -131,7 +129,7 @@ public class DefaultFunctions
   public static final Function OCT = registerStringFunc(new Func1NullIsNull("Oct") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      if((param1.getType() == Value.Type.STRING) &&
+      if(param1.getType().isString() &&
          (param1.getAsString(ctx).length() == 0)) {
         return ValueSupport.ZERO_VAL;
       }
@@ -256,7 +254,7 @@ public class DefaultFunctions
       // return true if it is explicitly a date/time, not if it is just a
       // number (even though casting a number string to a date/time works in
       // general)
-      if((param1.getType() == Value.Type.STRING) &&
+      if(param1.getType().isString() &&
          !stringIsNumeric(ctx, param1) &&
          stringIsTemporal(ctx, param1)) {
         return ValueSupport.TRUE_VAL;
@@ -275,8 +273,7 @@ public class DefaultFunctions
 
       // note, only a string can be considered numberic for this function,
       // even though a date/time can be cast to a number in general
-      if((param1.getType() == Value.Type.STRING) &&
-         stringIsNumeric(ctx, param1)) {
+      if(param1.getType().isString() && stringIsNumeric(ctx, param1)) {
         return ValueSupport.TRUE_VAL;
       }
 
@@ -287,21 +284,21 @@ public class DefaultFunctions
   public static final Function FORMATNUMBER = registerFunc(new FuncVar("FormatNumber", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      return formatNumber(ctx, params, false, false);
+      return formatNumber(ctx, params, FormatUtil.NumPatternType.GENERAL);
     }
   });
 
   public static final Function FORMATPERCENT = registerFunc(new FuncVar("FormatPercent", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      return formatNumber(ctx, params, true, false);
+      return formatNumber(ctx, params, FormatUtil.NumPatternType.PERCENT);
     }
   });
 
   public static final Function FORMATCURRENCY = registerFunc(new FuncVar("FormatCurrency", 1, 6) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
-      return formatNumber(ctx, params, false, true);
+      return formatNumber(ctx, params, FormatUtil.NumPatternType.CURRENCY);
     }
   });
 
@@ -479,24 +476,30 @@ public class DefaultFunctions
   });
 
   private static boolean stringIsNumeric(EvalContext ctx, Value param) {
+    return (maybeGetAsBigDecimal(ctx, param) != null);
+  }
+
+  static BigDecimal maybeGetAsBigDecimal(EvalContext ctx, Value param) {
     try {
-      param.getAsBigDecimal(ctx);
-      return true;
+      return param.getAsBigDecimal(ctx);
     } catch(EvalException ignored) {
-      // fall through to false
+      // not a number
     }
-    return false;
+    return null;
   }
 
   private static boolean stringIsTemporal(EvalContext ctx, Value param) {
+    return (maybeGetAsDateTimeValue(ctx, param) != null);
+  }
+
+  static Value maybeGetAsDateTimeValue(EvalContext ctx, Value param) {
     try {
       // see if we can coerce to date/time
-      param.getAsDateTimeValue(ctx);
-      return true;
+      return param.getAsDateTimeValue(ctx);
     } catch(EvalException ignored) {
       // not a date/time
     }
-    return false;
+    return null;
   }
 
   private static boolean getOptionalTriStateBoolean(
@@ -525,7 +528,7 @@ public class DefaultFunctions
   }
 
   private static Value formatNumber(
-      EvalContext ctx, Value[] params, boolean isPercent, boolean isCurrency) {
+      EvalContext ctx, Value[] params, FormatUtil.NumPatternType numPatType) {
 
     Value param1 = params[0];
     if(param1.isNull()) {
@@ -537,44 +540,18 @@ public class DefaultFunctions
         ctx, params, 1, cfg.getNumDecimalDigits(), -1);
     boolean incLeadDigit = getOptionalTriStateBoolean(
         ctx, params, 2, cfg.includeLeadingDigit());
-    boolean defNegParens = (isCurrency ? cfg.useParensForCurrencyNegatives() :
-                            cfg.useParensForNegatives());
+    boolean defNegParens = numPatType.useParensForNegatives(cfg);
     boolean negParens = getOptionalTriStateBoolean(
         ctx, params, 3, defNegParens);
-    int numGroupDigits = cfg.getNumGroupingDigits();
+    int defNumGroupDigits = cfg.getNumGroupingDigits();
     boolean groupDigits = getOptionalTriStateBoolean(
-        ctx, params, 4, (numGroupDigits > 0));
+        ctx, params, 4, (defNumGroupDigits > 0));
+    int numGroupDigits = (groupDigits ? defNumGroupDigits : 0);
 
-    StringBuilder fmt = new StringBuilder();
+    String fmtStr = FormatUtil.createNumberFormatPattern(
+        numPatType, numDecDigits, incLeadDigit, negParens, numGroupDigits);
 
-    if(isCurrency) {
-      fmt.append("\u00A4");
-    }
-
-    if(groupDigits) {
-      fmt.append("#,");
-      DefaultTextFunctions.nchars(fmt, numGroupDigits - 1, '#');
-    }
-
-    fmt.append(incLeadDigit ? "0" : "#");
-    if(numDecDigits > 0) {
-      fmt.append(".");
-      DefaultTextFunctions.nchars(fmt, numDecDigits, '0');
-    }
-
-    if(isPercent) {
-      fmt.append("%");
-    }
-
-    if(negParens) {
-      // the javadocs claim the second pattern does not need to be fully
-      // defined, but it doesn't seem to work that way
-      String mainPat = fmt.toString();
-      fmt.append(";(").append(mainPat).append(")");
-    }
-
-    // Note, DecimalFormat rounding mode uses HALF_EVEN by default
-    DecimalFormat df = ctx.createDecimalFormat(fmt.toString());
+    DecimalFormat df = ctx.createDecimalFormat(fmtStr);
 
     return ValueSupport.toValue(df.format(param1.getAsBigDecimal(ctx)));
   }

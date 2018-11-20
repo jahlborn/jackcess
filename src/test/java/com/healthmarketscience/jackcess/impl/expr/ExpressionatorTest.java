@@ -38,7 +38,7 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.BaseEvalContext;
-import com.healthmarketscience.jackcess.impl.NumberFormatter;
+import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import junit.framework.TestCase;
 
 /**
@@ -609,7 +609,7 @@ public class ExpressionatorTest extends TestCase
       return new DecimalFormat(
           formatStr, NumericConfig.US_NUMERIC_CONFIG.getDecimalFormatSymbols());
     }
-    
+
     public FunctionLookup getFunctionLookup() {
       return DefaultFunctions.LOOKUP;
     }

@@ -35,6 +35,10 @@ public interface Value
   {
     NULL, STRING, DATE, TIME, DATE_TIME, LONG, DOUBLE, BIG_DEC;
 
+    public boolean isString() {
+      return (this == STRING);
+    }
+
     public boolean isNumeric() {
       return inRange(LONG, BIG_DEC);
     }

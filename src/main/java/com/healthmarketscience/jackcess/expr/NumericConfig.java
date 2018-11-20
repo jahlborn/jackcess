@@ -18,6 +18,7 @@ package com.healthmarketscience.jackcess.expr;
 
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
+import com.healthmarketscience.jackcess.impl.expr.FormatUtil;
 
 /**
  * A NumericConfig encapsulates number formatting options for expression
@@ -33,12 +34,21 @@ public class NumericConfig
   public static final NumericConfig US_NUMERIC_CONFIG = new NumericConfig(
       2, true, false, true, 3, Locale.US);
 
+  public enum Type {
+    CURRENCY, FIXED, STANDARD, PERCENT, SCIENTIFIC;
+  }
+
   private final int _numDecDigits;
   private final boolean _incLeadingDigit;
   private final boolean _useNegParens;
   private final boolean _useNegCurrencyParens;
   private final int _numGroupDigits;
   private final DecimalFormatSymbols _symbols;
+  private final String _currencyFormat;
+  private final String _fixedFormat;
+  private final String _standardFormat;
+  private final String _percentFormat;
+  private final String _scientificFormat;
 
   public NumericConfig(int numDecDigits, boolean incLeadingDigit,
                        boolean useNegParens, boolean useNegCurrencyParens,
@@ -49,6 +59,22 @@ public class NumericConfig
     _useNegCurrencyParens = useNegCurrencyParens;
     _numGroupDigits = numGroupDigits;
     _symbols = DecimalFormatSymbols.getInstance(locale);
+
+    _currencyFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.CURRENCY, _numDecDigits, _incLeadingDigit,
+        _useNegCurrencyParens, _numGroupDigits);
+    _fixedFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.GENERAL, _numDecDigits, true,
+        _useNegParens, 0);
+    _standardFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.GENERAL, _numDecDigits, _incLeadingDigit,
+        _useNegParens, _numGroupDigits);
+    _percentFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.PERCENT, _numDecDigits, _incLeadingDigit,
+        _useNegParens, 0);
+    _scientificFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.SCIENTIFIC, _numDecDigits, true,
+        false, 0);
   }
 
   public int getNumDecimalDigits() {
@@ -69,6 +95,23 @@ public class NumericConfig
 
   public int getNumGroupingDigits() {
     return _numGroupDigits;
+  }
+
+  public String getNumberFormat(Type type) {
+    switch(type) {
+    case CURRENCY:
+      return _currencyFormat;
+    case FIXED:
+      return _fixedFormat;
+    case STANDARD:
+      return _standardFormat;
+    case PERCENT:
+      return _percentFormat;
+    case SCIENTIFIC:
+      return _scientificFormat;
+    default:
+      throw new IllegalArgumentException("unknown number type " + type);
+    }
   }
 
   public DecimalFormatSymbols getDecimalFormatSymbols() {
