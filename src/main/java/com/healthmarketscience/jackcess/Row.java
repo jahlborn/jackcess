@@ -26,7 +26,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
 
 
 /**
- * A row of data as column name->value pairs.  Values are strongly typed, and
+ * A row of data as column name-&gt;value pairs.  Values are strongly typed, and
  * column names are case sensitive.
  *
  * @author James Ahlborn
@@ -35,7 +35,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
 public interface Row extends Map<String,Object>
 {
   /**
-   * @return the id of this row 
+   * @return the id of this row
    */
   public RowId getId();
 
@@ -108,7 +108,7 @@ public interface Row extends Map<String,Object>
   /**
    * Convenience method which gets the value for the row with the given name,
    * converting it to an {@link OleBlob} (DataTypes OLE).
-   * </p>
+   * <br>
    * Note, <i>the OleBlob should be closed after use</i>.
    */
   public OleBlob getBlob(String name) throws IOException;

@@ -189,6 +189,35 @@
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>with-regex2</id>
+            <phase>site</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+            <configuration>
+              <includes>
+                <include>${project.build.directory}/site/apidocs/**/*.html</include>
+              </includes>
+              <regex>true</regex>
+              <replacements>
+                <replacement>
+                  <token>_general_(method|class|field)_</token>
+                  <value>&lt;span class="UsageGeneral"&gt;&lt;span class="UsageGeneralHeader"&gt;General&lt;/span&gt;: This $1 is general use.&lt;/span&gt;</value>
+                </replacement>
+                <replacement>
+                  <token>_intermediate_(method|class|field)_</token>
+                  <value>&lt;span class="UsageIntermediate"&gt;&lt;span class="UsageIntermediateHeader"&gt;Intermediate&lt;/span&gt;: This $1 requires moderate API knowledge.&lt;/span&gt;</value>
+                </replacement>
+                <replacement>
+                  <token>_advanced_(method|class|field)_</token>
+                  <value>&lt;span class="UsageAdvanced"&gt;&lt;span class="UsageAdvancedHeader"&gt;Advanced&lt;/span&gt;: This $1 is for advanced/internal use.&lt;/span&gt;</value>
+                </replacement>
+              </replacements>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -201,7 +230,7 @@
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <version>1.1.3</version>
+      <version>1.2</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -221,7 +250,7 @@
     <dependency>
       <groupId>org.apache.poi</groupId>
       <artifactId>poi</artifactId>
-      <version>3.9</version>
+      <version>4.0.0</version>
       <optional>true</optional>
     </dependency>
 
@@ -250,9 +279,9 @@
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <additionalJOption>-J-DTaglets.ConfigurationFile=${basedir}/src/site/javadoc/taglets.properties -J-DTaglets.NoDefaultConfiguration=true</additionalJOption>
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
+          <doclint>-accessibility,-missing</doclint>
           <links>
             <list>https://docs.oracle.com/javase/8/docs/api/</list>
             <list>http://docs.oracle.com/javaee/5/api/</list>
@@ -267,16 +296,6 @@
               <head>Usage:</head>
             </tag>
           </tags>
-          <taglets>
-            <taglet>
-              <tagletClass>net.sourceforge.taglets.Taglets</tagletClass>
-              <tagletArtifact>
-                <groupId>net.sourceforge.taglets</groupId>
-                <artifactId>taglets</artifactId>
-                <version>2.0.3</version>
-              </tagletArtifact>
-            </taglet>
-          </taglets>
           <quiet>true</quiet>
         </configuration>
       </plugin>
@@ -289,20 +308,6 @@
       </plugin>
     </plugins>
   </reporting>
-  <repositories>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>taglets</id>
-      <name>Taglets</name>
-      <url>http://maven.geotoolkit.org/</url>
-      <layout>default</layout>
-    </repository>
-  </repositories>
   <distributionManagement>
     <site>
       <id>jackcess-build-site</id>

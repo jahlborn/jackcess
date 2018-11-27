@@ -2086,7 +2086,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   }
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values
+   * Converts a map of columnName -&gt; columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}, where the generated
    * RowId will be an extra value at the end of the array.
    * @see ColumnImpl#RETURN_ROW_ID
@@ -2110,7 +2110,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   }
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values.
+   * Converts a map of columnName -&gt; columnValue to an array of row values.
    */
   private Object[] asRow(Map<String,?> rowMap, Object defaultValue,
                          boolean returnRowId)

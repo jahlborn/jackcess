@@ -41,17 +41,17 @@ import org.apache.commons.logging.LogFactory;
  * Access table index data.  This is the actual data which backs a logical
  * Index, where one or more logical indexes can be backed by the same index
  * data.
- * 
+ *
  * @author Tim McCune
  */
 public class IndexData {
-  
+
   protected static final Log LOG = LogFactory.getLog(Index.class);
 
   /** special entry which is less than any other entry */
   public static final Entry FIRST_ENTRY =
     createSpecialEntry(RowIdImpl.FIRST_ROW_ID);
-  
+
   /** special entry which is greater than any other entry */
   public static final Entry LAST_ENTRY =
     createSpecialEntry(RowIdImpl.LAST_ROW_ID);
@@ -65,12 +65,12 @@ public class IndexData {
   public static final Object MIN_VALUE = new Object();
 
   private static final DataPage NEW_ROOT_DATA_PAGE = new RootDataPage();
-  
-  protected static final int INVALID_INDEX_PAGE_NUMBER = 0;          
-  
+
+  protected static final int INVALID_INDEX_PAGE_NUMBER = 0;
+
   /** Max number of columns in an index */
   public static final int MAX_COLUMNS = 10;
-  
+
   protected static final byte[] EMPTY_PREFIX = new byte[0];
 
   static final short COLUMN_UNUSED = -1;
@@ -85,7 +85,7 @@ public class IndexData {
   private static final int MAGIC_INDEX_NUMBER = 1923;
 
   private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
-  
+
   /** type attributes for Entries which simplify comparisons */
   public enum EntryType {
     /** comparable type indicating this Entry should always compare less than
@@ -104,7 +104,7 @@ public class IndexData {
         than valid RowIds */
     ALWAYS_LAST;
   }
-  
+
   public static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
       public int compare(byte[] left, byte[] right) {
@@ -131,8 +131,8 @@ public class IndexData {
                 ((left.length > right.length) ? 1 : 0));
       }
     };
-        
-  
+
+
   /** name, generated on demand */
   private String _name;
   /** owning table */
@@ -175,7 +175,7 @@ public class IndexData {
   private String _unsupportedReason;
   /** Cache which manages the index pages */
   private final IndexPageCache _pageCache;
-  
+
   protected IndexData(TableImpl table, int number, int uniqueEntryCount,
                       int uniqueEntryCountOffset)
   {
@@ -216,14 +216,14 @@ public class IndexData {
       } else {
         _name = String.valueOf(_number);
       }
-    } 
+    }
     return _name;
   }
 
   public TableImpl getTable() {
     return _table;
   }
-  
+
   public JetFormat getFormat() {
     return getTable().getFormat();
   }
@@ -280,7 +280,7 @@ public class IndexData {
   public int getIndexDataNumber() {
     return _number;
   }
-  
+
   public int getUniqueEntryCount() {
     return _uniqueEntryCount;
   }
@@ -315,7 +315,7 @@ public class IndexData {
   public boolean isUnique() {
     return(isBackingPrimaryKey() || ((_indexFlags & UNIQUE_INDEX_FLAG) != 0));
   }
-  
+
   /**
    * Whether or not values are required in the columns.
    */
@@ -345,7 +345,7 @@ public class IndexData {
     return _rootPageNumber;
   }
 
-  private void setUnsupportedReason(String reason, ColumnImpl col) {    
+  private void setUnsupportedReason(String reason, ColumnImpl col) {
     _unsupportedReason = withErrorContext(reason);
     if(!col.getTable().isSystem()) {
       LOG.warn(_unsupportedReason + ", making read-only");
@@ -371,7 +371,7 @@ public class IndexData {
   public int getOwnedPageCount() {
     return _ownedPages.getPageCount();
   }
-  
+
   void addOwnedPage(int pageNumber) throws IOException {
     _ownedPages.addPageNumber(pageNumber);
   }
@@ -379,7 +379,7 @@ public class IndexData {
   void collectUsageMapPages(Collection<Integer> pages) {
     pages.add(_ownedPages.getTablePageNumber());
   }
-  
+
   /**
    * Used by unit tests to validate the internal status of the index.
    * @usage _advanced_method_
@@ -407,7 +407,7 @@ public class IndexData {
     }
     return count;
   }
-  
+
   /**
    * Forces initialization of this index (actual parsing of index pages).
    * normally, the index will not be initialized until the entries are
@@ -429,7 +429,7 @@ public class IndexData {
   {
     // make sure we've parsed the entries
     initialize();
-    
+
     if(_unsupportedReason != null) {
       throw new UnsupportedOperationException(
           "Cannot write indexes of this type due to " + _unsupportedReason);
@@ -470,7 +470,7 @@ public class IndexData {
     }
 
     _ownedPages = UsageMap.read(getTable().getDatabase(), tableBuffer);
-    
+
     _rootPageNumber = tableBuffer.getInt();
 
     ByteUtil.forward(tableBuffer, getFormat().SKIP_BEFORE_INDEX_FLAGS); //Forward past Unknown
@@ -525,7 +525,7 @@ public class IndexData {
    * @param buffer Buffer to write to
    */
   protected static void writeDefinition(
-      TableMutator creator, ByteBuffer buffer, 
+      TableMutator creator, ByteBuffer buffer,
       TableMutator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
     throws IOException
   {
@@ -559,7 +559,7 @@ public class IndexData {
                   creator.getDatabase(), creator.getTableName(), idx.getName()));
         }
       }
-         
+
       buffer.putShort(columnNumber); // table column number
       buffer.put(flags); // column flags (e.g. ordering)
     }
@@ -568,7 +568,7 @@ public class IndexData {
     ByteUtil.put3ByteInt(buffer, idxDataState.getUmapPageNumber()); // umap page
 
     // write empty root index page
-    creator.getPageChannel().writePage(rootPageBuffer, 
+    creator.getPageChannel().writePage(rootPageBuffer,
                                        idxDataState.getRootPageNumber());
 
     buffer.putInt(idxDataState.getRootPageNumber());
@@ -577,11 +577,11 @@ public class IndexData {
     ByteUtil.forward(buffer, 5); // unknown
   }
 
-  private static ByteBuffer createRootPageBuffer(TableMutator creator) 
+  private static ByteBuffer createRootPageBuffer(TableMutator creator)
     throws IOException
   {
     ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
-    writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE, 
+    writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE,
                   creator.getTdefPageNumber(), creator.getFormat());
     return rootPageBuffer;
   }
@@ -591,7 +591,7 @@ public class IndexData {
    * this method returns.
    * <p>
    * Forces index initialization.
-   * 
+   *
    * @param row Row to add
    * @param rowId rowId of the row to be added
    *
@@ -603,7 +603,7 @@ public class IndexData {
   {
     return prepareAddRow(row, rowId, new AddRowPendingChange(nextChange));
   }
-  
+
   private PendingChange prepareAddRow(Object[] row, RowIdImpl rowId,
                                       AddRowPendingChange change)
     throws IOException
@@ -619,7 +619,7 @@ public class IndexData {
           "Null value found in row " + Arrays.asList(row) +
           " for primary key or required index"));
     }
-    
+
     // make sure we've parsed the entries
     initialize();
 
@@ -637,14 +637,14 @@ public class IndexData {
     DataPage dataPage = findDataPage(newEntry);
     int idx = dataPage.findEntry(newEntry);
     if(idx < 0) {
-      
+
       // this is a new entry
       idx = missingIndexToInsertionPoint(idx);
 
       Position newPos = new Position(dataPage, idx, newEntry, true);
       Position nextPos = getNextPosition(newPos);
       Position prevPos = getPreviousPosition(newPos);
-      
+
       // determine if the addition of this entry would break the uniqueness
       // constraint.  See isUnique() for some notes about uniqueness as
       // defined by Access.
@@ -691,7 +691,7 @@ public class IndexData {
    * before this method returns.
    * <p>
    * Forces index initialization.
-   * 
+   *
    * @param oldRow Row to be removed
    * @param newRow Row to be added
    * @param rowId rowId of the row to be updated
@@ -699,7 +699,7 @@ public class IndexData {
    * @return a PendingChange which can complete the update or roll it back
    */
   public PendingChange prepareUpdateRow(Object[] oldRow, RowIdImpl rowId,
-                                        Object[] newRow, 
+                                        Object[] newRow,
                                         PendingChange nextChange)
     throws IOException
   {
@@ -715,12 +715,12 @@ public class IndexData {
       throw e;
     }
   }
-  
+
   /**
    * Removes a row from this index
    * <p>
    * Forces index initialization.
-   * 
+   *
    * @param row Row to remove
    * @param rowId rowId of the row to be removed
    */
@@ -729,7 +729,7 @@ public class IndexData {
   {
     deleteRowImpl(row, rowId);
   }
-  
+
   private Entry deleteRowImpl(Object[] row, RowIdImpl rowId)
     throws IOException
   {
@@ -738,7 +738,7 @@ public class IndexData {
       // nothing to do
       return null;
     }
-    
+
     // make sure we've parsed the entries
     initialize();
 
@@ -748,7 +748,7 @@ public class IndexData {
       ++_modCount;
     } else {
       LOG.warn(withErrorContext(
-          "Failed removing index entry " + oldEntry + " for row: " + 
+          "Failed removing index entry " + oldEntry + " for row: " +
           Arrays.asList(row)));
     }
     return removedEntry;
@@ -773,7 +773,7 @@ public class IndexData {
       dataPage.addEntry(missingIndexToInsertionPoint(idx), removedEntry);
     }
   }
-  
+
   /**
    * Removes an entry from the relevant index dataPage, maintaining the order.
    * Will search by RowId if entry is not found (in case a partial entry was
@@ -810,10 +810,10 @@ public class IndexData {
       // found it!
       removedEntry = dataPage.removeEntry(idx);
     }
-    
+
     return removedEntry;
   }
-      
+
   public static void commitAll(PendingChange change) throws IOException {
     while(change != null) {
       change.commit();
@@ -827,7 +827,7 @@ public class IndexData {
       change = change.getNext();
     }
   }
-      
+
   /**
    * Gets a new cursor for this index.
    * <p>
@@ -838,13 +838,13 @@ public class IndexData {
   {
     return cursor(null, true, null, true);
   }
-  
+
   /**
    * Gets a new cursor for this index, narrowed to the range defined by the
    * given startRow and endRow.
    * <p>
    * Forces index initialization.
-   * 
+   *
    * @param startRow the first row of data for the cursor, or {@code null} for
    *                 the first entry
    * @param startInclusive whether or not startRow is inclusive or exclusive
@@ -1008,13 +1008,13 @@ public class IndexData {
     int valIdx = 0;
     Object[] idxRow = new Object[getTable().getColumnCount()];
     for(ColumnDescriptor col : _columns) {
-      idxRow[col.getColumnIndex()] = 
+      idxRow[col.getColumnIndex()] =
         ((valIdx < values.length) ? values[valIdx] : filler);
       ++valIdx;
     }
     return idxRow;
   }
-    
+
   /**
    * Constructs an array of values appropriate for this index from the given
    * column value.
@@ -1057,7 +1057,7 @@ public class IndexData {
       idxRow[col.getColumnIndex()] = row.get(col.getName());
     }
     return idxRow;
-  }  
+  }
 
   /**
    * Constructs an array of values appropriate for this index from the given
@@ -1088,7 +1088,7 @@ public class IndexData {
     Object[] idxRow = new Object[getTable().getColumnCount()];
     int valIdx = 0;
     for(ColumnDescriptor col : _columns) {
-      idxRow[col.getColumnIndex()] = 
+      idxRow[col.getColumnIndex()] =
         ((valIdx < numCols) ? row.get(col.getName()) : filler);
       ++valIdx;
     }
@@ -1116,7 +1116,7 @@ public class IndexData {
     sb.append("pageCache", _pageCache);
     return sb.toString();
   }
-  
+
   /**
    * Write the given index page out to a buffer
    */
@@ -1126,7 +1126,7 @@ public class IndexData {
     if(dataPage.getCompressedEntrySize() > _maxPageEntrySize) {
       throw new IllegalStateException(withErrorContext("data page is too large"));
     }
-    
+
     ByteBuffer buffer = _indexBufferH.getPageBuffer(getPageChannel());
 
     writeDataPage(buffer, dataPage, getTable().getTableDefPageNumber(),
@@ -1170,7 +1170,7 @@ public class IndexData {
 
     // first entry includes the prefix
     buffer.put(entryPrefix);
-    
+
     for(Entry entry : dataPage.getEntries()) {
       entry.write(buffer, entryPrefix);
     }
@@ -1232,7 +1232,7 @@ public class IndexData {
                     "Unexpected order in index entries, " +
                     prevEntry + " >= " + entry));
           }
-          
+
           entries.add(entry);
 
           if((entries.size() == 1) && (entryPrefixLength > 0)) {
@@ -1251,7 +1251,7 @@ public class IndexData {
     dataPage.setEntryPrefix(entryPrefix != null ? entryPrefix : EMPTY_PREFIX);
     dataPage.setEntries(entries);
     dataPage.setTotalEntrySize(totalEntrySize);
-    
+
     int prevPageNumber = buffer.getInt(getFormat().OFFSET_PREV_INDEX_PAGE);
     int nextPageNumber = buffer.getInt(getFormat().OFFSET_NEXT_INDEX_PAGE);
     int childTailPageNumber =
@@ -1265,7 +1265,7 @@ public class IndexData {
   /**
    * Returns a new Entry of the correct type for the given data and page type.
    */
-  private static Entry newEntry(ByteBuffer buffer, int entryLength, 
+  private static Entry newEntry(ByteBuffer buffer, int entryLength,
                                 boolean isLeaf)
     throws IOException
   {
@@ -1291,10 +1291,10 @@ public class IndexData {
     tmpEntryBuffer.put(valuePrefix);
     tmpEntryBuffer.put(indexPage.array(), indexPage.position(), entryLen);
     tmpEntryBuffer.flip();
-    
+
     return tmpEntryBuffer;
   }
-    
+
   /**
    * Determines if the given index page is a leaf or node page.
    */
@@ -1309,7 +1309,7 @@ public class IndexData {
     }
     throw new IOException(withErrorContext("Unexpected page type " + pageType));
   }
-  
+
   /**
    * Determines the number of {@code null} values for this index from the
    * given row.
@@ -1319,7 +1319,7 @@ public class IndexData {
     if(values == null) {
       return _columns.size();
     }
-    
+
     // annoyingly, the values array could come from different sources, one
     // of which will make it a different size than the other.  we need to
     // handle both situations.
@@ -1330,7 +1330,7 @@ public class IndexData {
         ++nullCount;
       }
     }
-    
+
     return nullCount;
   }
 
@@ -1342,12 +1342,12 @@ public class IndexData {
     if(values == null) {
       return null;
     }
-    
+
     if(_entryBuffer == null) {
       _entryBuffer = new ByteStream();
     }
     _entryBuffer.reset();
-    
+
     for(ColumnDescriptor col : _columns) {
 
       Object value = values[col.getColumnIndex()];
@@ -1373,9 +1373,9 @@ public class IndexData {
 
       col.writeValue(value, _entryBuffer);
     }
-    
+
     return _entryBuffer.toByteArray();
-  }  
+  }
 
   /**
    * Finds the data page for the given entry.
@@ -1385,7 +1385,7 @@ public class IndexData {
   {
     return _pageCache.findCacheDataPage(entry);
   }
-  
+
   /**
    * Gets the data page for the pageNumber.
    */
@@ -1394,7 +1394,7 @@ public class IndexData {
   {
     return _pageCache.getCacheDataPage(pageNumber);
   }
-  
+
   /**
    * Flips the first bit in the byte at the given index.
    */
@@ -1418,7 +1418,7 @@ public class IndexData {
   static byte[] flipBytes(byte[] value, int offset, int length) {
     for(int i = offset; i < (offset + length); ++i) {
       value[i] = (byte)(~value[i]);
-    } 
+    }
     return value;
   }
 
@@ -1430,7 +1430,7 @@ public class IndexData {
   {
     // always write in big endian order
     return column.write(value, 0, ENTRY_BYTE_ORDER).array();
-  }    
+  }
 
   /**
    * Writes a binary value using the general binary entry encoding rules.
@@ -1452,7 +1452,7 @@ public class IndexData {
 
     // bit twiddling rules:
     // - isAsc  => nothing
-    // - !isAsc => flipBytes, _but keep intermediate 09 unflipped_!      
+    // - !isAsc => flipBytes, _but keep intermediate 09 unflipped_!
 
     // first, write any intermediate segements
     int segmentLen = dataLen;
@@ -1549,7 +1549,7 @@ public class IndexData {
 
     default:
       // we can't modify this index at this point in time
-      setUnsupportedReason("unsupported data type " + col.getType() + 
+      setUnsupportedReason("unsupported data type " + col.getType() +
                            " for index", col);
       return new ReadOnlyColumnDescriptor(col, flags);
     }
@@ -1598,7 +1598,7 @@ public class IndexData {
     return msg + " (Db=" + db.getName() + ";Table=" + tableName +
       ";Index=" + idxName + ")";
   }
-  
+
   /**
    * Information about the columns in an index.  Also encodes new index
    * values.
@@ -1626,11 +1626,11 @@ public class IndexData {
     public boolean isAscending() {
       return((getFlags() & ASCENDING_COLUMN_FLAG) != 0);
     }
-    
+
     public int getColumnIndex() {
       return getColumn().getColumnIndex();
     }
-    
+
     public String getName() {
       return getColumn().getName();
     }
@@ -1638,7 +1638,7 @@ public class IndexData {
     protected boolean isNullValue(Object value) {
       return (value == null);
     }
-    
+
     protected final void writeValue(Object value, ByteStream bout)
       throws IOException
     {
@@ -1647,7 +1647,7 @@ public class IndexData {
         bout.write(getNullEntryFlag(isAscending()));
         return;
       }
-      
+
       // write the start flag
       bout.write(getStartEntryFlag(isAscending()));
       // write the rest of the value
@@ -1655,8 +1655,8 @@ public class IndexData {
     }
 
     protected abstract void writeNonNullValue(Object value, ByteStream bout)
-      throws IOException; 
-    
+      throws IOException;
+
     @Override
     public String toString() {
       return CustomToStringStyle.builder(this)
@@ -1676,26 +1676,26 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-      
+
       // bit twiddling rules:
       // - isAsc  => flipFirstBit
       // - !isAsc => flipFirstBit, flipBytes
-      
+
       flipFirstBitInByte(valueBytes, 0);
       if(!isAscending()) {
         flipBytes(valueBytes);
       }
-      
+
       bout.write(valueBytes);
-    }    
+    }
   }
-  
+
   /**
    * ColumnDescriptor for floating point based columns.
    */
@@ -1707,13 +1707,13 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-      
+
       // determine if the number is negative by testing if the first bit is
       // set
       boolean isNegative = ((valueBytes[0] & 0x80) != 0);
@@ -1723,18 +1723,18 @@ public class IndexData {
       // isAsc && isNeg => flipBytes
       // !isAsc && !isNeg => flipFirstBit, flipBytes
       // !isAsc && isNeg => nothing
-      
+
       if(!isNegative) {
         flipFirstBitInByte(valueBytes, 0);
       }
       if(isNegative == isAscending()) {
         flipBytes(valueBytes);
       }
-      
+
       bout.write(valueBytes);
-    }    
+    }
   }
-  
+
   /**
    * ColumnDescriptor for fixed point based columns (legacy sort order).
    */
@@ -1755,15 +1755,15 @@ public class IndexData {
       }
 
       // reverse the sign byte (after any previous byte flipping)
-      valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);      
+      valueBytes[0] = (isNegative ? (byte)0x00 : (byte)0xFF);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-      
+
       // determine if the number is negative by testing if the first bit is
       // set
       boolean isNegative = ((valueBytes[0] & 0x80) != 0);
@@ -1773,7 +1773,7 @@ public class IndexData {
       // isAsc && isNeg => flipBytes, setReverseSignByte   => 00 FF FF ...
       // !isAsc && !isNeg => flipBytes, setReverseSignByte => FF FF FF ...
       // !isAsc && isNeg => setReverseSignByte             => 00 00 00 ...
-      
+
       // v2007 bit twiddling rules (old ordering was a bug, MS kb 837148):
       // isAsc && !isNeg => setSignByte 0xFF            => FF 00 00 ...
       // isAsc && isNeg => setSignByte 0xFF, flipBytes  => 00 FF FF ...
@@ -1782,9 +1782,9 @@ public class IndexData {
       handleNegationAndOrder(isNegative, valueBytes);
 
       bout.write(valueBytes);
-    }    
+    }
   }
-  
+
   /**
    * ColumnDescriptor for new-style fixed point based columns.
    */
@@ -1796,7 +1796,7 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void handleNegationAndOrder(boolean isNegative,
                                           byte[] valueBytes)
@@ -1809,9 +1809,9 @@ public class IndexData {
       if(isNegative == isAscending()) {
         flipBytes(valueBytes);
       }
-    }    
+    }
   }
-  
+
   /**
    * ColumnDescriptor for byte based columns.
    */
@@ -1822,24 +1822,24 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
-      
+
       // bit twiddling rules:
       // - isAsc  => nothing
       // - !isAsc => flipBytes
       if(!isAscending()) {
         flipBytes(valueBytes);
       }
-      
+
       bout.write(valueBytes);
-    }    
+    }
   }
-  
+
   /**
    * ColumnDescriptor for boolean columns.
    */
@@ -1856,7 +1856,7 @@ public class IndexData {
       // null values are handled as booleans
       return false;
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
@@ -1867,11 +1867,11 @@ public class IndexData {
           (isAscending() ? ASC_BOOLEAN_FALSE : DESC_BOOLEAN_FALSE));
     }
   }
-  
+
   /**
    * ColumnDescriptor for "general legacy" sort order text based columns.
    */
-  private static final class GenLegTextColumnDescriptor 
+  private static final class GenLegTextColumnDescriptor
     extends ColumnDescriptor
   {
     private GenLegTextColumnDescriptor(ColumnImpl column, byte flags)
@@ -1879,14 +1879,14 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       GeneralLegacyIndexCodes.GEN_LEG_INSTANCE.writeNonNullIndexTextValue(
           value, bout, isAscending());
-    }    
+    }
   }
 
   /**
@@ -1899,14 +1899,14 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
     {
       GeneralIndexCodes.GEN_INSTANCE.writeNonNullIndexTextValue(
           value, bout, isAscending());
-    }    
+    }
   }
 
   /**
@@ -1919,7 +1919,7 @@ public class IndexData {
     {
       super(column, flags);
     }
-    
+
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
       throws IOException
@@ -1929,7 +1929,7 @@ public class IndexData {
           bout);
     }
   }
-  
+
 
   /**
    * ColumnDescriptor for BINARY columns.
@@ -1950,8 +1950,8 @@ public class IndexData {
           ColumnImpl.toByteArray(value), isAscending(), bout);
     }
   }
-  
-  
+
+
   /**
    * ColumnDescriptor for columns which we cannot currently write.
    */
@@ -1971,7 +1971,7 @@ public class IndexData {
           "Cannot write indexes of this type due to " + _unsupportedReason);
     }
   }
-    
+
   /**
    * A single leaf entry in an index (points to a single row)
    */
@@ -1983,7 +1983,7 @@ public class IndexData {
     private final byte[] _entryBytes;
     /** comparable type for the entry */
     private final EntryType _type;
-    
+
     /**
      * Create a new entry
      * @param entryBytes encoded bytes for this index entry
@@ -1995,7 +1995,7 @@ public class IndexData {
       _entryBytes = entryBytes;
       _type = type;
     }
-    
+
     /**
      * Create a new entry
      * @param entryBytes encoded bytes for this index entry
@@ -2014,7 +2014,7 @@ public class IndexData {
     {
       this(buffer, entryLen, 0);
     }
-    
+
     /**
      * Read an existing entry in from a buffer
      */
@@ -2031,11 +2031,11 @@ public class IndexData {
       // read the rowId
       int page = ByteUtil.get3ByteInt(buffer, ENTRY_BYTE_ORDER);
       int row = ByteUtil.getUnsignedByte(buffer);
-      
+
       _rowId = new RowIdImpl(page, row);
       _type = EntryType.NORMAL;
     }
-    
+
     public RowIdImpl getRowId() {
       return _rowId;
     }
@@ -2047,11 +2047,11 @@ public class IndexData {
     public Integer getSubPageNumber() {
       throw new UnsupportedOperationException();
     }
-    
+
     public boolean isLeafEntry() {
       return true;
     }
-    
+
     public boolean isValid() {
       return(_entryBytes != null);
     }
@@ -2059,7 +2059,7 @@ public class IndexData {
     protected final byte[] getEntryBytes() {
       return _entryBytes;
     }
-    
+
     /**
      * Size of this entry in the db.
      */
@@ -2067,7 +2067,7 @@ public class IndexData {
       // need 4 trailing bytes for the rowId
       return _entryBytes.length + 4;
     }
-    
+
     /**
      * Write this entry into a buffer
      */
@@ -2076,15 +2076,15 @@ public class IndexData {
       throws IOException
     {
       if(prefix.length <= _entryBytes.length) {
-        
+
         // write entry bytes, not including prefix
         buffer.put(_entryBytes, prefix.length,
                    (_entryBytes.length - prefix.length));
         ByteUtil.put3ByteInt(buffer, getRowId().getPageNumber(),
                              ENTRY_BYTE_ORDER);
-        
+
       } else if(prefix.length <= (_entryBytes.length + 3)) {
-        
+
         // the prefix includes part of the page number, write to temp buffer
         // and copy last bytes to output buffer
         ByteBuffer tmp = ByteBuffer.allocate(3);
@@ -2093,16 +2093,16 @@ public class IndexData {
         tmp.flip();
         tmp.position(prefix.length - _entryBytes.length);
         buffer.put(tmp);
-        
+
       } else {
-        
+
         // since the row number would never be the same if the page number is
         // the same, nothing past the page number should ever be included in
         // the prefix.
         // FIXME, this could happen if page has only one row...
         throw new IllegalStateException("prefix should never be this long");
       }
-      
+
       buffer.put((byte)getRowId().getRowNumber());
     }
 
@@ -2113,7 +2113,7 @@ public class IndexData {
       }
       return sb;
     }
-    
+
     @Override
     public String toString() {
       return entryBytesToStringBuilder(
@@ -2141,7 +2141,7 @@ public class IndexData {
     public boolean equalsEntryBytes(Entry o) {
       return(BYTE_CODE_COMPARATOR.compare(_entryBytes, o._entryBytes) == 0);
     }
-    
+
     public int compareTo(Entry other) {
       if (this == other) {
         return 0;
@@ -2165,7 +2165,7 @@ public class IndexData {
           return typeCmp;
         }
       }
-      
+
       // at this point we let the RowId decide the final result
       return _rowId.compareTo(other.getRowId());
     }
@@ -2177,7 +2177,7 @@ public class IndexData {
     protected Entry asNodeEntry(Integer subPageNumber) {
       return new NodeEntry(_entryBytes, _rowId, _type, subPageNumber);
     }
-    
+
   }
 
   /**
@@ -2200,7 +2200,7 @@ public class IndexData {
       super(entryBytes, rowId, type);
       _subPageNumber = subPageNumber;
     }
-    
+
     /**
      * Read an existing node entry in from a buffer
      */
@@ -2222,19 +2222,19 @@ public class IndexData {
     public boolean isLeafEntry() {
       return false;
     }
-    
+
     @Override
     protected int size() {
       // need 4 trailing bytes for the sub-page number
       return super.size() + 4;
     }
-    
+
     @Override
     protected void write(ByteBuffer buffer, byte[] prefix) throws IOException {
       super.write(buffer, prefix);
       ByteUtil.putInt(buffer, _subPageNumber, ENTRY_BYTE_ORDER);
     }
-    
+
     @Override
     public boolean equals(Object o) {
       return((this == o) ||
@@ -2250,7 +2250,7 @@ public class IndexData {
           .append("rowId", getRowId())
           .append("subPage", _subPageNumber))
         .toString();
-    }        
+    }
   }
 
   /**
@@ -2298,14 +2298,14 @@ public class IndexData {
     private int getIndexModCount() {
       return IndexData.this._modCount;
     }
-    
+
     /**
      * Returns the first entry (exclusive) as defined by this cursor.
      */
     public Entry getFirstEntry() {
       return _firstPos.getEntry();
     }
-  
+
     /**
      * Returns the last entry (exclusive) as defined by this cursor.
      */
@@ -2320,7 +2320,7 @@ public class IndexData {
     public boolean isUpToDate() {
       return(getIndexModCount() == _lastModCount);
     }
-        
+
     public void reset() {
       beforeFirst();
     }
@@ -2341,26 +2341,26 @@ public class IndexData {
 
     /**
      * Repositions the cursor so that the next row will be the first entry
-     * >= the given row.
+     * &gt;= the given row.
      */
     public void beforeEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(IndexData.this.createEntryBytes(row), 
+      restorePosition(new Entry(IndexData.this.createEntryBytes(row),
                                 RowIdImpl.FIRST_ROW_ID));
     }
-    
+
     /**
      * Repositions the cursor so that the previous row will be the first
-     * entry <= the given row.
+     * entry &lt;= the given row.
      */
     public void afterEntry(Object[] row)
       throws IOException
     {
-      restorePosition(new Entry(IndexData.this.createEntryBytes(row), 
+      restorePosition(new Entry(IndexData.this.createEntryBytes(row),
                                 RowIdImpl.LAST_ROW_ID));
     }
-    
+
     /**
      * @return valid entry if there was a next entry,
      *         {@code #getLastEntry} otherwise
@@ -2386,7 +2386,7 @@ public class IndexData {
     {
       restorePosition(curEntry, _curPos.getEntry());
     }
-    
+
     /**
      * Restores a current and previous position for the cursor.
      */
@@ -2406,7 +2406,7 @@ public class IndexData {
         checkForModification();
       }
     }
-    
+
     /**
      * Gets another entry in the given direction, returning the new entry.
      */
@@ -2462,7 +2462,7 @@ public class IndexData {
               withErrorContext("Invalid entry given " + entry));
         }
       }
-      
+
       Position pos = findEntryPosition(entry);
       if(pos.compareTo(_lastPos) >= 0) {
         return _lastPos;
@@ -2471,7 +2471,7 @@ public class IndexData {
       }
       return pos;
     }
-    
+
     /**
      * Updates any the boundary info (_firstPos/_lastPos).
      */
@@ -2481,7 +2481,7 @@ public class IndexData {
       _firstPos = findEntryPosition(_firstPos.getEntry());
       _lastPos = findEntryPosition(_lastPos.getEntry());
     }
-        
+
     @Override
     public String toString() {
       return CustomToStringStyle.valueBuilder(this)
@@ -2489,7 +2489,7 @@ public class IndexData {
         .append("prevPosition", _prevPos)
         .toString();
     }
-    
+
     /**
      * Handles moving the cursor in a given direction.  Separates cursor
      * logic from value storage.
@@ -2500,7 +2500,7 @@ public class IndexData {
       public abstract Position getBeginningPosition();
       public abstract Position getEndPosition();
     }
-        
+
     /**
      * Handles moving the cursor forward.
      */
@@ -2524,7 +2524,7 @@ public class IndexData {
         return _lastPos;
       }
     }
-        
+
     /**
      * Handles moving the cursor backward.
      */
@@ -2569,7 +2569,7 @@ public class IndexData {
     {
       this(dataPage, idx, dataPage.getEntries().get(idx), false);
     }
-    
+
     private Position(DataPage dataPage, int idx, Entry entry, boolean between)
     {
       _dataPage = dataPage;
@@ -2581,7 +2581,7 @@ public class IndexData {
     public DataPage getDataPage() {
       return _dataPage;
     }
-    
+
     public int getIndex() {
       return _idx;
     }
@@ -2598,7 +2598,7 @@ public class IndexData {
       // non-between case
       return(_idx - 1);
     }
-    
+
     public Entry getEntry() {
       return _entry;
     }
@@ -2610,7 +2610,7 @@ public class IndexData {
     public boolean equalsEntry(Entry entry) {
       return _entry.equals(entry);
     }
-    
+
     public int compareTo(Position other)
     {
       if(this == other) {
@@ -2627,16 +2627,16 @@ public class IndexData {
           return idxCmp;
         }
       }
-      
+
       // compare the entries.
       return _entry.compareTo(other._entry);
     }
-    
+
     @Override
     public int hashCode() {
       return _entry.hashCode();
     }
-    
+
     @Override
     public boolean equals(Object o) {
       return((this == o) ||
@@ -2661,7 +2661,7 @@ public class IndexData {
   protected static abstract class DataPage {
 
     public abstract int getPageNumber();
-    
+
     public abstract boolean isLeaf();
     public abstract void setLeaf(boolean isLeaf);
 
@@ -2671,7 +2671,7 @@ public class IndexData {
     public abstract void setNextPageNumber(int pageNumber);
     public abstract int getChildTailPageNumber();
     public abstract void setChildTailPageNumber(int pageNumber);
-    
+
     public abstract int getTotalEntrySize();
     public abstract void setTotalEntrySize(int totalSize);
     public abstract byte[] getEntryPrefix();
@@ -2688,7 +2688,7 @@ public class IndexData {
     public final boolean isEmpty() {
       return getEntries().isEmpty();
     }
-    
+
     public final int getCompressedEntrySize() {
       // when written to the index page, the entryPrefix bytes will only be
       // written for the first entry, so we subtract the entry prefix size
@@ -2717,7 +2717,7 @@ public class IndexData {
     public final String toString() {
       List<Entry> entries = getEntries();
 
-      String objName = 
+      String objName =
         (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
         getChildTailPageNumber() + ")";
@@ -2740,7 +2740,7 @@ public class IndexData {
 
     @Override
     public int getPageNumber() { return 0; }
-    
+
     @Override
     public boolean isLeaf() { return true; }
     @Override
@@ -2760,7 +2760,7 @@ public class IndexData {
     public int getChildTailPageNumber() { return 0; }
     @Override
     public void setChildTailPageNumber(int pageNumber) { }
-    
+
     @Override
     public int getTotalEntrySize() { return 0; }
     @Override
@@ -2772,7 +2772,7 @@ public class IndexData {
     public void setEntryPrefix(byte[] entryPrefix) { }
 
     @Override
-    public List<Entry> getEntries() { return Collections.emptyList(); }    
+    public List<Entry> getEntries() { return Collections.emptyList(); }
     @Override
     public void setEntries(List<Entry> entries) { }
     @Override
@@ -2800,7 +2800,7 @@ public class IndexData {
     public PendingChange getNext() {
       return _next;
     }
-    
+
     /**
      * Completes the pending change.
      */
@@ -2827,7 +2827,7 @@ public class IndexData {
       super(next);
     }
 
-    public void setAddRow(Entry addEntry, DataPage dataPage, int idx, 
+    public void setAddRow(Entry addEntry, DataPage dataPage, int idx,
                           boolean isDupe) {
       _addEntry = addEntry;
       _addDataPage = dataPage;
@@ -2843,7 +2843,7 @@ public class IndexData {
     public void commit() throws IOException {
       commitAddRow(_addEntry, _addDataPage, _addIdx, _isDupe, _oldEntry);
     }
-    
+
     @Override
     public void rollback() throws IOException {
       _addEntry = null;

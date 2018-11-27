@@ -33,7 +33,7 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
  * {@link TableBuilder}.  The {@link com.healthmarketscience.jackcess.util.Joiner} utility can be used to traverse
  * table relationships (e.g. find rows in another table based on a foreign-key
  * relationship).
- * <p/>
+ * <br>
  * A Table instance is not thread-safe (see {@link Database} for more
  * thread-safety details).
  *
@@ -160,14 +160,14 @@ public interface Table extends Iterable<Row>
   public Index getForeignKeyIndex(Table otherTable);
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values
+   * Converts a map of columnName -&gt; columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}.
    * @usage _general_method_
    */
   public Object[] asRow(Map<String,?> rowMap);
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values
+   * Converts a map of columnName -&gt; columnValue to an array of row values
    * appropriate for a call to {@link Cursor#updateCurrentRow(Object...)}.
    * @usage _general_method_
    */
@@ -203,7 +203,7 @@ public interface Table extends Iterable<Row>
   /**
    * Calls {@link #asRow} on the given row map and passes the result to {@link
    * #addRow}.
-   * <p/>
+   * <br>
    * Note, if this table has an auto-number column, the value generated will be
    * put back into the given row map.
    * @return the given row map, which will contain any autonumbers generated
@@ -242,7 +242,7 @@ public interface Table extends Iterable<Row>
   /**
    * Calls {@link #asRow} on the given row maps and passes the results to
    * {@link #addRows}.
-   * <p/>
+   * <br>
    * Note, if this table has an auto-number column, the values generated will
    * be put back into the appropriate row maps.
    * <p>
@@ -278,7 +278,7 @@ public interface Table extends Iterable<Row>
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
-   * <p/>
+   * <br>
    * For more advanced iteration, use the {@link #getDefaultCursor default
    * cursor} directly.
    * @throws RuntimeIOException if an IOException is thrown by one of the
@@ -296,7 +296,7 @@ public interface Table extends Iterable<Row>
   public void reset();
 
   /**
-   * @return The next row in this table (Column name -> Column value) (uses
+   * @return The next row in this table (Column name -&gt; Column value) (uses
    *         the {@link #getDefaultCursor default cursor})
    * @usage _general_method_
    */

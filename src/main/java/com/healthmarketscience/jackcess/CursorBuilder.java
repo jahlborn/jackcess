@@ -34,14 +34,14 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
  * Builder style class for constructing a {@link Cursor}.  By default, a
  * cursor is created at the beginning of the table, and any start/end rows are
  * inclusive.
- * <p/>
+ * <br>
  * Simple example traversal:
  * <pre>
  *   for(Row row : table.newCursor().toCursor()) {
  *     // ... process each row ...
  *   }
  * </pre>
- * <p/>
+ * <br>
  * Simple example search:
  * <pre>
  *   Row row = CursorBuilder.findRow(table, Collections.singletonMap(col, "foo"));

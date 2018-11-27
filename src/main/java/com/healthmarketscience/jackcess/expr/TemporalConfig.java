@@ -147,8 +147,8 @@ public class TemporalConfig
   /**
    * Instantiates a new TemporalConfig with the given configuration.  Note
    * that the date/time format variants will be created by concatenating the
-   * relevant date and time formats, separated by a single space, e.g. "<date>
-   * <time>".
+   * relevant date and time formats, separated by a single space, e.g. "&lt;date&gt;
+   * &lt;time&gt;".
    *
    * @param dateFormat the date (no time) format
    * @param dateImplicitYearFormat the date (no time) with no year format

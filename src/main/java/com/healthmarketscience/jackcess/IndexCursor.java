@@ -41,9 +41,9 @@ public interface IndexCursor extends Cursor
    * @param entryValues the column values for the index's columns.
    * @return the matching row or {@code null} if a match could not be found.
    */
-  public Row findRowByEntry(Object... entryValues) 
+  public Row findRowByEntry(Object... entryValues)
     throws IOException;
-  
+
   /**
    * Moves to the first row (as defined by the cursor) where the index entries
    * match the given values.  If a match is not found (or an exception is
@@ -56,32 +56,32 @@ public interface IndexCursor extends Cursor
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
-  public boolean findFirstRowByEntry(Object... entryValues) 
+  public boolean findFirstRowByEntry(Object... entryValues)
     throws IOException;
 
   /**
    * Moves to the first row (as defined by the cursor) where the index entries
-   * are >= the given values.  If a an exception is thrown, the cursor is
+   * are &gt;= the given values.  If a an exception is thrown, the cursor is
    * restored to its previous state.
    *
    * @param entryValues the column values for the index's columns.
    */
-  public void findClosestRowByEntry(Object... entryValues) 
+  public void findClosestRowByEntry(Object... entryValues)
     throws IOException;
 
   /**
    * Returns {@code true} if the current row matches the given index entries.
-   * 
+   *
    * @param entryValues the column values for the index's columns.
    */
-  public boolean currentRowMatchesEntry(Object... entryValues) 
+  public boolean currentRowMatchesEntry(Object... entryValues)
     throws IOException;
 
   /**
    * Convenience method for constructing a new EntryIterableBuilder for this
    * cursor.  An EntryIterableBuilder provides a variety of options for more
    * flexible iteration based on a specific index entry.
-   * 
+   *
    * @param entryValues the column values for the index's columns.
    */
   public EntryIterableBuilder newEntryIterable(Object... entryValues);

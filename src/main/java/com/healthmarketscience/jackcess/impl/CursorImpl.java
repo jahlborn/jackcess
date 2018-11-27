@@ -299,7 +299,7 @@ public abstract class CursorImpl implements Cursor
    * Moves to another row in the table based on the given direction and
    * returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return another row in this table (Column name -> Column value), where
+   * @return another row in this table (Column name -&gt; Column value), where
    *         "next" may be backwards if moveForward is {@code false}, or
    *         {@code null} if there is not another row in the given direction.
    */

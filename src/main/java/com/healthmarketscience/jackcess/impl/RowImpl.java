@@ -27,8 +27,8 @@ import com.healthmarketscience.jackcess.util.OleBlob;
 
 
 /**
- * A row of data as column->value pairs.
- * </p>
+ * A row of data as column-&gt;value pairs.
+ * <br>
  * Note that the {@link #equals} and {@link #hashCode} methods work on the row
  * contents <i>only</i> (i.e. they ignore the id).
  *
@@ -36,7 +36,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
  */
 public class RowImpl extends LinkedHashMap<String,Object> implements Row
 {
-  private static final long serialVersionUID = 20130314L;  
+  private static final long serialVersionUID = 20130314L;
 
   private final RowIdImpl _id;
 

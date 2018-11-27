@@ -36,12 +36,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.poi.poifs.filesystem.DirectoryEntry;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
 /**
  * Utility code for working with OLE data which is in the compound storage
  * format.  This functionality relies on the optional POI library.
- * <p/>
+ * <br>
  * Note that all POI usage is restricted to this file so that the basic ole
  * support in OleUtil can be utilized without requiring POI.
  *
@@ -57,7 +57,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
   static {
     // force a poi class to be loaded to ensure that when this class is
     // loaded, we know that the poi classes are available
-    NPOIFSFileSystem.class.getName();
+    POIFSFileSystem.class.getName();
   }
 
   public CompoundOleUtil()
@@ -139,7 +139,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
     extends EmbeddedPackageContentImpl
     implements CompoundContent
   {
-    private NPOIFSFileSystem _fs;
+    private POIFSFileSystem _fs;
 
     private CompoundContentImpl(
         OleBlobImpl blob, String prettyName, String className,
@@ -152,9 +152,9 @@ public class CompoundOleUtil implements CompoundPackageFactory
       return ContentType.COMPOUND_STORAGE;
     }
 
-    private NPOIFSFileSystem getFileSystem() throws IOException {
+    private POIFSFileSystem getFileSystem() throws IOException {
       if(_fs == null) {
-        _fs = new NPOIFSFileSystem(MemFileChannel.newChannel(getStream(), "r"));
+        _fs = new POIFSFileSystem(MemFileChannel.newChannel(getStream(), "r"));
       }
       return _fs;
     }

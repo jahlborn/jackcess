@@ -28,7 +28,7 @@ import com.healthmarketscience.jackcess.Database;
 
 /**
  * Wrapper for existing FileChannel which is read-only.
- * <p/>
+ * <br>
  * Implementation note: this class is optimized for use with {@link Database}.
  * Therefore not all methods may be implemented.
  * 
