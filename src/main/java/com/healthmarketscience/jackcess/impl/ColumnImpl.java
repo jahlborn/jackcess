@@ -54,7 +54,7 @@ import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

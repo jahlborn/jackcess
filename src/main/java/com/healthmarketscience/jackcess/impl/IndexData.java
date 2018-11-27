@@ -33,7 +33,7 @@ import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

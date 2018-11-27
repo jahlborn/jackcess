@@ -16,7 +16,8 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
-import org.apache.commons.lang.ObjectUtils;
+import java.util.Objects;
+
 
 /**
  * identifies a database entity (e.g. the name of a database field).  An
@@ -71,9 +72,9 @@ public class Identifier
 
     Identifier oi = (Identifier)o;
 
-    return (ObjectUtils.equals(_objectName, oi._objectName) &&
-            ObjectUtils.equals(_collectionName, oi._collectionName) &&
-            ObjectUtils.equals(_propertyName, oi._propertyName));
+    return (Objects.equals(_objectName, oi._objectName) &&
+            Objects.equals(_collectionName, oi._collectionName) &&
+            Objects.equals(_propertyName, oi._propertyName));
   }
 
   @Override

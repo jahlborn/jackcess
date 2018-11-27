@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.RandomAccess;
 
 import static com.healthmarketscience.jackcess.impl.IndexData.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Manager of the index pages for a IndexData.

@@ -194,9 +194,9 @@
   </build>
   <dependencies>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.6</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.8.1</version>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
@@ -254,10 +254,10 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>http://docs.oracle.com/javase/1.5.0/docs/api/</list>
+            <list>https://docs.oracle.com/javase/8/docs/api/</list>
             <list>http://docs.oracle.com/javaee/5/api/</list>
           </links>
-          <source>1.5</source>
+          <source>1.8</source>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>

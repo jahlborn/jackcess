@@ -21,9 +21,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.apache.commons.lang.SystemUtils;
-import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.StandardToStringStyle;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Custom ToStringStyle for use with ToStringBuilder.
@@ -34,7 +33,7 @@ public class CustomToStringStyle extends StandardToStringStyle
 {
   private static final long serialVersionUID = 0L;
 
-  private static final String ML_FIELD_SEP = SystemUtils.LINE_SEPARATOR + "  ";
+  private static final String ML_FIELD_SEP = System.lineSeparator() + "  ";
   private static final String IMPL_SUFFIX = "Impl";
   private static final int MAX_BYTE_DETAIL_LEN = 20;
   private static final Object IGNORE_ME = new Object();
@@ -47,7 +46,7 @@ public class CustomToStringStyle extends StandardToStringStyle
       setFieldSeparatorAtStart(true);
       setFieldNameValueSeparator(": ");
       setArraySeparator("," + ML_FIELD_SEP);
-      setContentEnd(SystemUtils.LINE_SEPARATOR + "]");
+      setContentEnd(System.lineSeparator() + "]");
       setUseShortClassName(true);
     }
   };
@@ -91,7 +90,7 @@ public class CustomToStringStyle extends StandardToStringStyle
   }
 
   @Override
-  protected String getShortClassName(Class clss) {
+  protected String getShortClassName(Class<?> clss) {
     String shortName = super.getShortClassName(clss);
     if(shortName.endsWith(IMPL_SUFFIX)) {
       shortName = shortName.substring(0,
@@ -116,7 +115,7 @@ public class CustomToStringStyle extends StandardToStringStyle
 
   @Override
   protected void appendDetail(StringBuffer buffer, String fieldName,
-                              Collection value) {
+                              Collection<?> value) {
     buffer.append("[");
 
     // gather contents of list in a new StringBuffer
@@ -145,13 +144,12 @@ public class CustomToStringStyle extends StandardToStringStyle
 
   @Override
   protected void appendDetail(StringBuffer buffer, String fieldName,
-                              Map value) {
+                              Map<?,?> value) {
     buffer.append("{");
 
     // gather contents of map in a new StringBuffer
     StringBuffer sb = new StringBuffer();
-    @SuppressWarnings("unchecked")
-    Iterator<Map.Entry<?,?>> iter = value.entrySet().iterator();
+    Iterator<? extends Map.Entry<?,?>> iter = value.entrySet().iterator();
     if(iter.hasNext()) {
       if(isFieldSeparatorAtStart()) {
         appendFieldSeparator(sb);
@@ -203,7 +201,7 @@ public class CustomToStringStyle extends StandardToStringStyle
 
   private static String indent(Object obj) {
     return ((obj != null) ? obj.toString().replaceAll(
-                SystemUtils.LINE_SEPARATOR, ML_FIELD_SEP) : null);
+                System.lineSeparator(), ML_FIELD_SEP) : null);
   }
 
   public static Object ignoreNull(Object obj) {

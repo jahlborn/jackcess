@@ -19,7 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.Serializable;
 
 import com.healthmarketscience.jackcess.RowId;
-import org.apache.commons.lang.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.CompareToBuilder;
 
 
 /**

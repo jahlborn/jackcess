@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.util.OleBlob;
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Utility code for working with OLE data.

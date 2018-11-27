@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
@@ -23,7 +22,6 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
-import org.apache.commons.lang.WordUtils;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
@@ -360,6 +358,7 @@ public class DefaultTextFunctions
     }
   });
 
+  @SuppressWarnings("deprecation")
   public static final Function STRCONV = registerStringFunc(new FuncVar("StrConv", 2, 3) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
@@ -387,7 +386,8 @@ public class DefaultTextFunctions
         break;
       case 3:
         // vbProperCase
-        str = WordUtils.capitalize(str.toLowerCase());
+        str = org.apache.commons.lang3.text.WordUtils.capitalize(
+            str.toLowerCase());
         break;
       default:
         // do nothing
@@ -441,11 +441,11 @@ public class DefaultTextFunctions
       String fmtStr = params[1].getAsString(ctx);
       int firstDay = DefaultDateFunctions.getFirstDayParam(ctx, params, 2);
       int firstWeekType = DefaultDateFunctions.getFirstWeekTypeParam(ctx, params, 3);
-      
+
       return FormatUtil.format(ctx, expr, fmtStr, firstDay, firstWeekType);
     }
   });
-    
+
   private static String nchars(int num, char c) {
     StringBuilder sb = new StringBuilder(num);
     nchars(sb, num, c);
@@ -457,7 +457,7 @@ public class DefaultTextFunctions
       sb.append(c);
     }
   }
-  
+
   private static String trim(String str, boolean doLeft, boolean doRight) {
     int start = 0;
     int end = str.length();

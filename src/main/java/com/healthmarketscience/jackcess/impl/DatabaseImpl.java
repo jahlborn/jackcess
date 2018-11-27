@@ -73,8 +73,8 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

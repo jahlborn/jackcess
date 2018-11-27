@@ -47,7 +47,7 @@ import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 
 /**
