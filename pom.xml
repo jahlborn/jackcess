@@ -124,8 +124,8 @@
             <threadCount>2</threadCount>
             <systemProperties>
               <property>
-                <name>log4j.configuration</name>
-                <value>log4j_test.properties</value>
+                <name>java.util.logging.config.file</name>
+                <value>logging_test.properties</value>
               </property>
               <property>
                 <name>com.healthmarketscience.jackcess.testFormats</name>
@@ -233,16 +233,9 @@
       <version>1.2</version>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <version>1.2.7</version>
-      <scope>runtime</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
 
