@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -28,6 +27,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -198,9 +201,11 @@ public class DatabaseImpl implements Database
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
 
   /** read-only channel access mode */
-  public static final String RO_CHANNEL_MODE = "r";
+  public static final OpenOption[] RO_CHANNEL_OPTS =
+    {StandardOpenOption.READ};
   /** read/write channel access mode */
-  public static final String RW_CHANNEL_MODE = "rw";
+  public static final OpenOption[] RW_CHANNEL_OPTS =
+    {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
@@ -252,7 +257,7 @@ public class DatabaseImpl implements Database
     Pattern.compile("[\\p{Cntrl}.!`\\]\\[]");
 
   /** the File of the database */
-  private final File _file;
+  private final Path _file;
   /** the simple name of the database */
   private final String _name;
   /** Buffer to hold database pages */
@@ -362,20 +367,20 @@ public class DatabaseImpl implements Database
    * @usage _advanced_method_
    */
   public static DatabaseImpl open(
-      File mdbFile, boolean readOnly, FileChannel channel,
+      Path mdbFile, boolean readOnly, FileChannel channel,
       boolean autoSync, Charset charset, TimeZone timeZone,
       CodecProvider provider)
     throws IOException
   {
     boolean closeChannel = false;
     if(channel == null) {
-      if(!mdbFile.exists() || !mdbFile.canRead()) {
+      if(!Files.isReadable(mdbFile)) {
         throw new FileNotFoundException("given file does not exist: " +
                                         mdbFile);
       }
 
       // force read-only for non-writable files
-      readOnly |= !mdbFile.canWrite();
+      readOnly |= !Files.isWritable(mdbFile);
 
       // open file channel
       channel = openChannel(mdbFile, readOnly);
@@ -431,7 +436,7 @@ public class DatabaseImpl implements Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @usage _advanced_method_
    */
-  public static DatabaseImpl create(FileFormat fileFormat, File mdbFile,
+  public static DatabaseImpl create(FileFormat fileFormat, Path mdbFile,
                                     FileChannel channel, boolean autoSync,
                                     Charset charset, TimeZone timeZone)
     throws IOException
@@ -482,11 +487,11 @@ public class DatabaseImpl implements Database
    *            that name cannot be created, or if some other error occurs
    *            while opening or creating the file
    */
-  static FileChannel openChannel(final File mdbFile, final boolean readOnly)
-    throws FileNotFoundException
+  static FileChannel openChannel(Path mdbFile, boolean readOnly)
+    throws IOException
   {
-    final String mode = (readOnly ? RO_CHANNEL_MODE : RW_CHANNEL_MODE);
-    return new RandomAccessFile(mdbFile, mode).getChannel();
+    OpenOption[] opts = (readOnly ? RO_CHANNEL_OPTS : RW_CHANNEL_OPTS);
+    return FileChannel.open(mdbFile, opts);
   }
 
   /**
@@ -508,7 +513,7 @@ public class DatabaseImpl implements Database
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected DatabaseImpl(File file, FileChannel channel, boolean closeChannel,
+  protected DatabaseImpl(Path file, FileChannel channel, boolean closeChannel,
                          boolean autoSync, FileFormat fileFormat, Charset charset,
                          TimeZone timeZone, CodecProvider provider)
     throws IOException
@@ -536,6 +541,10 @@ public class DatabaseImpl implements Database
   }
 
   public File getFile() {
+    return ((_file != null) ? _file.toFile() : null);
+  }
+
+  public Path getPath() {
     return _file;
   }
 
@@ -2096,11 +2105,11 @@ public class DatabaseImpl implements Database
     FILE_FORMAT_DETAILS.put(fileFormat, new FileFormatDetails(emptyFile, format));
   }
 
-  private static String getName(File file) {
+  private static String getName(Path file) {
     if(file == null) {
       return "<UNKNOWN.DB>";
     }
-    return file.getName();
+    return file.getFileName().toString();
   }
 
   private String withErrorContext(String msg) {

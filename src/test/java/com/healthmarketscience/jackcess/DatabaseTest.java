@@ -51,7 +51,7 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
 /**
  * @author Tim McCune
  */
-public class DatabaseTest extends TestCase 
+public class DatabaseTest extends TestCase
 {
   public DatabaseTest(String name) throws Exception {
     super(name);
@@ -114,7 +114,7 @@ public class DatabaseTest extends TestCase
       db.close();
     }
   }
-      
+
   public void testReadDeletedRows() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL, true)) {
       Table table = open(testDB).getTable("Table");
@@ -122,11 +122,11 @@ public class DatabaseTest extends TestCase
       while (table.getNextRow() != null) {
         rows++;
       }
-      assertEquals(2, rows);      
+      assertEquals(2, rows);
       table.getDatabase().close();
     }
   }
-  
+
   public void testGetColumns() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
@@ -143,9 +143,9 @@ public class DatabaseTest extends TestCase
       checkColumn(columns, 8, "I", DataType.BOOLEAN);
     }
   }
-  
+
   private static void checkColumn(
-      List<? extends Column> columns, int columnNumber, String name, 
+      List<? extends Column> columns, int columnNumber, String name,
       DataType dataType)
     throws Exception
   {
@@ -153,7 +153,7 @@ public class DatabaseTest extends TestCase
     assertEquals(name, column.getName());
     assertEquals(dataType, column.getType());
   }
-  
+
   public void testGetNextRow() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
@@ -183,7 +183,7 @@ public class DatabaseTest extends TestCase
       db.close();
     }
   }
-  
+
   public void testDeleteCurrentRow() throws Exception {
 
     // make sure correct row is deleted
@@ -269,7 +269,7 @@ public class DatabaseTest extends TestCase
       table.reset();
 
       List<Row> rows = RowFilterTest.toList(table);
-      
+
       Row r1 = rows.remove(7);
       Row r2 = rows.remove(3);
       assertEquals(8, rows.size());
@@ -282,10 +282,10 @@ public class DatabaseTest extends TestCase
       table.deleteRow(r2);
       table.deleteRow(r1);
 
-      assertTable(rows, table);      
+      assertTable(rows, table);
     }
   }
-  
+
   public void testMissingFile() throws Exception {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
@@ -326,7 +326,7 @@ public class DatabaseTest extends TestCase
         }
         rowNum++;
       }
-      
+
       table.getDatabase().close();
     }
   }
@@ -508,7 +508,7 @@ public class DatabaseTest extends TestCase
 
       db.close();
     }
-  }  
+  }
 
   public void testMultiPageTableDef() throws Exception
   {
@@ -580,7 +580,7 @@ public class DatabaseTest extends TestCase
 
       db.close();
     }
-  }  
+  }
 
 
   public void testLargeTableDef() throws Exception {
@@ -685,8 +685,8 @@ public class DatabaseTest extends TestCase
     TimeZone tz = TimeZone.getTimeZone("America/New_York");
     SimpleDateFormat sdf = DatabaseBuilder.createDateFormat("yyyy-MM-dd");
     sdf.getCalendar().setTimeZone(tz);
-    
-    List<String> dates = Arrays.asList("1582-10-15", "1582-10-14", 
+
+    List<String> dates = Arrays.asList("1582-10-15", "1582-10-14",
                                        "1492-01-10", "1392-01-10");
 
 
@@ -703,7 +703,7 @@ public class DatabaseTest extends TestCase
         Date d = sdf.parse(dateStr);
         table.addRow("row " + dateStr, d);
       }
-       
+
       List<String> foundDates = new ArrayList<String>();
       for(Row row : table) {
         foundDates.add(sdf.format(row.getDate("date")));
@@ -741,7 +741,7 @@ public class DatabaseTest extends TestCase
       sysTables.addAll(
           Arrays.asList("MSysObjects", "MSysQueries", "MSysACES",
                         "MSysRelationships"));
-      
+
       if (fileFormat == FileFormat.GENERIC_JET4) {
         assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
       } else if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
@@ -766,11 +766,11 @@ public class DatabaseTest extends TestCase
         if(fileFormat.ordinal() >= FileFormat.V2010.ordinal()) {
           sysTables.add("f_12D7448B56564D8AAE333BCC9B3718E5_Data");
           sysTables.add("MSysResources");
-        } 
+        }
       }
 
       assertEquals(sysTables, db.getSystemTableNames());
-      
+
       assertNotNull(db.getSystemTable("MSysObjects"));
       assertNotNull(db.getSystemTable("MSysQueries"));
       assertNotNull(db.getSystemTable("MSysACES"));
@@ -782,7 +782,7 @@ public class DatabaseTest extends TestCase
       assertEquals("MSysObjects", tmd.getName());
       assertFalse(tmd.isLinked());
       assertTrue(tmd.isSystem());
-      
+
       db.close();
     }
   }
@@ -839,7 +839,7 @@ public class DatabaseTest extends TestCase
           "RawData[(12) FF FE 6F 74  68 65 72 20  64 61 74 61]",
           null);
       List<String> fixVals = Arrays.asList("RawData[(4) 37 00 00 00]",
-                                           "RawData[(4) F3 FF FF FF]", 
+                                           "RawData[(4) F3 FF FF FF]",
                                            "RawData[(4) 02 00 00 00]");
 
       int idx = 0;
@@ -891,7 +891,8 @@ public class DatabaseTest extends TestCase
       Database linkeeDb = db.getLinkedDatabases().get(linkeeDbName);
       assertNotNull(linkeeDb);
       assertEquals(linkeeFile, linkeeDb.getFile());
-      
+      assertEquals("linkeeTest.accdb", ((DatabaseImpl)linkeeDb).getName());
+
       List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
             createExpectedRow(
@@ -900,7 +901,7 @@ public class DatabaseTest extends TestCase
 
       assertTable(expectedRows, t2);
 
-      db.createLinkedTable("FooTable", linkeeDbName, "Table2");      
+      db.createLinkedTable("FooTable", linkeeDbName, "Table2");
 
       tmd = db.getTableMetaData("FooTable");
       assertEquals("FooTable", tmd.getName());
@@ -929,7 +930,7 @@ public class DatabaseTest extends TestCase
       assertNull(tmd.getLinkedDbName());
 
       Table t1 = tmd.open(db);
-      
+
       assertFalse(db.isLinkedTable(null));
       assertTrue(db.isLinkedTable(t2));
       assertTrue(db.isLinkedTable(t3));
@@ -941,21 +942,21 @@ public class DatabaseTest extends TestCase
       assertTrue(tables.contains(t2));
       assertTrue(tables.contains(t3));
       assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-      
+
       tables = getTables(db.newIterable().setIncludeNormalTables(false));
       assertEquals(2, tables.size());
       assertFalse(tables.contains(t1));
       assertTrue(tables.contains(t2));
       assertTrue(tables.contains(t3));
       assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-      
+
       tables = getTables(db.newIterable().withLocalUserTablesOnly());
       assertEquals(1, tables.size());
       assertTrue(tables.contains(t1));
       assertFalse(tables.contains(t2));
       assertFalse(tables.contains(t3));
       assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-      
+
       tables = getTables(db.newIterable().withSystemTablesOnly());
       assertTrue(tables.size() > 5);
       assertFalse(tables.contains(t1));
@@ -975,7 +976,7 @@ public class DatabaseTest extends TestCase
     }
     return tableList;
   }
-  
+
   public void testTimeZone() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");

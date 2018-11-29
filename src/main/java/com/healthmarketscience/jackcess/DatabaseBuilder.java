@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -51,10 +52,10 @@ import com.healthmarketscience.jackcess.util.MemFileChannel;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public class DatabaseBuilder 
+public class DatabaseBuilder
 {
   /** the file name of the mdb to open/create */
-  private File _mdbFile;
+  private Path _mdbFile;
   /** whether or not to open existing mdb read-only */
   private boolean _readOnly;
   /** whether or not to auto-sync writes to the filesystem */
@@ -77,12 +78,16 @@ public class DatabaseBuilder
   /** database user-defined (if any) */
   private Map<String,PropertyMap.Property> _userProps;
 
-  
+
   public DatabaseBuilder() {
-    this(null);
+    this((Path)null);
   }
 
   public DatabaseBuilder(File mdbFile) {
+    this(toPath(mdbFile));
+  }
+
+  public DatabaseBuilder(Path mdbFile) {
     _mdbFile = mdbFile;
   }
 
@@ -93,6 +98,16 @@ public class DatabaseBuilder
    * @usage _general_method_
    */
   public DatabaseBuilder setFile(File mdbFile) {
+    return setPath(toPath(mdbFile));
+  }
+
+  /**
+   * File containing an existing database for {@link #open} or target file for
+   * new database for {@link #create} (in which case, <b>tf this file already
+   * exists, it will be overwritten.</b>)
+   * @usage _general_method_
+   */
+  public DatabaseBuilder setPath(Path mdbFile) {
     _mdbFile = mdbFile;
     return this;
   }
@@ -183,7 +198,7 @@ public class DatabaseBuilder
   public DatabaseBuilder putDatabaseProperty(String name, Object value) {
     return putDatabaseProperty(name, null, value);
   }
-  
+
   /**
    * Sets the database property with the given name and type to the given
    * value.
@@ -193,7 +208,7 @@ public class DatabaseBuilder
     _dbProps = putProperty(_dbProps, name, type, value);
     return this;
   }
-  
+
   /**
    * Sets the summary database property with the given name to the given
    * value.  Attempts to determine the type of the property (see
@@ -203,7 +218,7 @@ public class DatabaseBuilder
   public DatabaseBuilder putSummaryProperty(String name, Object value) {
     return putSummaryProperty(name, null, value);
   }
-  
+
   /**
    * Sets the summary database property with the given name and type to
    * the given value.
@@ -223,7 +238,7 @@ public class DatabaseBuilder
   public DatabaseBuilder putUserDefinedProperty(String name, Object value) {
     return putUserDefinedProperty(name, null, value);
   }
-  
+
   /**
    * Sets the user-defined database property with the given name and type to
    * the given value.
@@ -257,7 +272,7 @@ public class DatabaseBuilder
    * Creates a new Database using the configured information.
    */
   public Database create() throws IOException {
-    Database db = DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync, 
+    Database db = DatabaseImpl.create(_fileFormat, _mdbFile, _channel, _autoSync,
                                       _charset, _timeZone);
     if(_dbProps != null) {
       PropertyMap props = db.getDatabaseProperties();
@@ -281,19 +296,19 @@ public class DatabaseBuilder
    * Open an existing Database.  If the existing file is not writeable, the
    * file will be opened read-only.  Auto-syncing is enabled for the returned
    * Database.
-   * 
+   *
    * @param mdbFile File containing the database
-   * 
+   *
    * @see DatabaseBuilder for more flexible Database opening
    * @usage _general_method_
    */
   public static Database open(File mdbFile) throws IOException {
     return new DatabaseBuilder(mdbFile).open();
   }
-  
+
   /**
    * Create a new Database for the given fileFormat
-   * 
+   *
    * @param fileFormat version of new database.
    * @param mdbFile Location to write the new database to.  <b>If this file
    *    already exists, it will be overwritten.</b>
@@ -301,8 +316,8 @@ public class DatabaseBuilder
    * @see DatabaseBuilder for more flexible Database creation
    * @usage _general_method_
    */
-  public static Database create(Database.FileFormat fileFormat, File mdbFile) 
-    throws IOException 
+  public static Database create(Database.FileFormat fileFormat, File mdbFile)
+    throws IOException
   {
     return new DatabaseBuilder(mdbFile).setFileFormat(fileFormat).create();
   }
@@ -329,5 +344,9 @@ public class DatabaseBuilder
       ((GregorianCalendar)cal).setGregorianChange(new Date(Long.MIN_VALUE));
     }
     return cal;
+  }
+
+  private static Path toPath(File file) {
+    return ((file != null) ? file.toPath() : null);
   }
 }

@@ -16,9 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.util;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
@@ -55,7 +55,7 @@ public class CustomLinkResolverTest extends TestCase
       Table t1 = db.getTable("Table1");
       assertNotNull(t1);
       assertNotSame(db, t1.getDatabase());
-      
+
       assertTable(createExpectedTable(createExpectedRow("id", 0,
                                                         "data1", "row0"),
                                       createExpectedRow("id", 1,
@@ -101,7 +101,7 @@ public class CustomLinkResolverTest extends TestCase
         Database linkerDb, String linkeeFileName) throws IOException
     {
       return (("testFile1.txt".equals(linkeeFileName) ||
-               "testFile2.txt".equals(linkeeFileName)) ? 
+               "testFile2.txt".equals(linkeeFileName)) ?
               linkeeFileName : null);
     }
 
@@ -121,7 +121,7 @@ public class CustomLinkResolverTest extends TestCase
         for(int i = 0; i < 3; ++i) {
           t.addRow(i, "row" + i);
         }
-        
+
         return true;
 
       } else if("OtherTable2".equals(tableName)) {
@@ -135,7 +135,7 @@ public class CustomLinkResolverTest extends TestCase
         for(int i = 3; i < 6; ++i) {
           t.addRow(i, "row" + i);
         }
-        
+
         return true;
 
       } else if("Table4".equals(tableName)) {
@@ -149,7 +149,7 @@ public class CustomLinkResolverTest extends TestCase
 
     @Override
     protected Database createTempDb(Object customFile, FileFormat format,
-                                    boolean inMemory, File tempDir)
+                                    boolean inMemory, Path tempDir)
       throws IOException
     {
       inMemory = "testFile1.txt".equals(customFile);

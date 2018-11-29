@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.Flushable;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -29,8 +30,8 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import com.healthmarketscience.jackcess.expr.EvalConfig;
-import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
@@ -177,6 +178,11 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * Returns the File underlying this Database
    */
   public File getFile();
+
+  /**
+   * Returns the File underlying this Database
+   */
+  public Path getPath();
 
   /**
    * @return The names of all of the user tables

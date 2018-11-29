@@ -86,7 +86,7 @@ public class TestUtil
     throws Exception
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel(
-                               file, DatabaseImpl.RW_CHANNEL_MODE)
+                               file, MemFileChannel.RW_CHANNEL_MODE)
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(getTestAutoSync()).setChannel(channel).open();

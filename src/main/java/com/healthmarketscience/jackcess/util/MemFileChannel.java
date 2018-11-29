@@ -29,6 +29,9 @@ import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
@@ -53,8 +56,13 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-public class MemFileChannel extends FileChannel 
+public class MemFileChannel extends FileChannel
 {
+  /** read-only channel access mode */
+  public static final String RO_CHANNEL_MODE = "r";
+  /** read/write channel access mode */
+  public static final String RW_CHANNEL_MODE = "rw";
+
   private static final byte[][] EMPTY_DATA = new byte[0][];
 
   // use largest possible Jet "page size" to ensure that reads/writes will
@@ -68,10 +76,10 @@ public class MemFileChannel extends FileChannel
   /** current amount of actual data in the file */
   private long _size;
   /** chunks containing the file data.  the length of the chunk array is
-      always a power of 2 and the chunks are always CHUNK_SIZE. */ 
+      always a power of 2 and the chunks are always CHUNK_SIZE. */
   private byte[][] _data;
 
-  private MemFileChannel() 
+  private MemFileChannel()
   {
     this(0L, 0L, EMPTY_DATA);
   }
@@ -95,7 +103,7 @@ public class MemFileChannel extends FileChannel
    * affect the original File source.
    */
   public static MemFileChannel newChannel(File file) throws IOException {
-    return newChannel(file, DatabaseImpl.RW_CHANNEL_MODE);
+    return newChannel(file, RW_CHANNEL_MODE);
   }
 
   /**
@@ -105,13 +113,41 @@ public class MemFileChannel extends FileChannel
    * modifications to the returned channel will <i>not</i> affect the original
    * File source.
    */
-  public static MemFileChannel newChannel(File file, String mode) 
-    throws IOException 
+  public static MemFileChannel newChannel(File file, String mode)
+    throws IOException
   {
     FileChannel in = null;
     try {
       return newChannel(in = new RandomAccessFile(
-                            file, DatabaseImpl.RO_CHANNEL_MODE).getChannel(),
+                            file, RO_CHANNEL_MODE).getChannel(),
+                        mode);
+    } finally {
+      ByteUtil.closeQuietly(in);
+    }
+  }
+
+  /**
+   * Creates a new MemFileChannel containing the contents of the
+   * given Path with the given mode (for mode details see
+   * {@link RandomAccessFile#RandomAccessFile(File,String)}).  Note,
+   * modifications to the returned channel will <i>not</i> affect the original
+   * File source.
+   */
+  public static MemFileChannel newChannel(Path file, OpenOption... opts)
+    throws IOException
+  {
+    FileChannel in = null;
+    try {
+      String mode = RO_CHANNEL_MODE;
+      if(opts != null) {
+        for(OpenOption opt : opts) {
+          if(opt == StandardOpenOption.WRITE) {
+            mode = RW_CHANNEL_MODE;
+            break;
+          }
+        }
+      }
+      return newChannel(in = FileChannel.open(file, StandardOpenOption.READ),
                         mode);
     } finally {
       ByteUtil.closeQuietly(in);
@@ -120,10 +156,19 @@ public class MemFileChannel extends FileChannel
 
   /**
    * Creates a new read/write MemFileChannel containing the contents of the
+   * given Path.  Note, modifications to the returned channel will <i>not</i>
+   * affect the original File source.
+   */
+  public static MemFileChannel newChannel(Path file) throws IOException {
+    return newChannel(file, DatabaseImpl.RW_CHANNEL_OPTS);
+  }
+
+  /**
+   * Creates a new read/write MemFileChannel containing the contents of the
    * given InputStream.
    */
   public static MemFileChannel newChannel(InputStream in) throws IOException {
-    return newChannel(in, DatabaseImpl.RW_CHANNEL_MODE);
+    return newChannel(in, RW_CHANNEL_MODE);
   }
 
   /**
@@ -131,8 +176,8 @@ public class MemFileChannel extends FileChannel
    * given InputStream with the given mode (for mode details see
    * {@link RandomAccessFile#RandomAccessFile(File,String)}).
    */
-  public static MemFileChannel newChannel(InputStream in, String mode) 
-    throws IOException 
+  public static MemFileChannel newChannel(InputStream in, String mode)
+    throws IOException
   {
     return newChannel(Channels.newChannel(in), mode);
   }
@@ -141,10 +186,10 @@ public class MemFileChannel extends FileChannel
    * Creates a new read/write MemFileChannel containing the contents of the
    * given ReadableByteChannel.
    */
-  public static MemFileChannel newChannel(ReadableByteChannel in) 
+  public static MemFileChannel newChannel(ReadableByteChannel in)
     throws IOException
   {
-    return newChannel(in, DatabaseImpl.RW_CHANNEL_MODE);
+    return newChannel(in, RW_CHANNEL_MODE);
   }
 
   /**
@@ -152,7 +197,7 @@ public class MemFileChannel extends FileChannel
    * given ReadableByteChannel with the given mode (for mode details see
    * {@link RandomAccessFile#RandomAccessFile(File,String)}).
    */
-  public static MemFileChannel newChannel(ReadableByteChannel in, String mode) 
+  public static MemFileChannel newChannel(ReadableByteChannel in, String mode)
     throws IOException
   {
     MemFileChannel channel = new MemFileChannel();
@@ -282,7 +327,7 @@ public class MemFileChannel extends FileChannel
     if(position >= _size) {
       return 0L;
     }
-    
+
     count = Math.min(count, _size - position);
 
     int chunkIndex = getChunkIndex(position);
@@ -304,7 +349,7 @@ public class MemFileChannel extends FileChannel
         numBytes += bytesWritten;
         count -= bytesWritten;
       } while(src.hasRemaining());
-      
+
       ++chunkIndex;
       chunkOffset = 0;
     }
@@ -360,11 +405,11 @@ public class MemFileChannel extends FileChannel
         count -= bytesRead;
         _size = Math.max(_size, position + numBytes);
       } while(dst.hasRemaining());
-      
+
       ++chunkIndex;
-      chunkOffset = 0;      
+      chunkOffset = 0;
     }
-    
+
     return numBytes;
   }
 
@@ -410,7 +455,7 @@ public class MemFileChannel extends FileChannel
   private static int getChunkIndex(long pos) {
     return (int)(pos / CHUNK_SIZE);
   }
-  
+
   private static int getChunkOffset(long pos) {
     return (int)(pos % CHUNK_SIZE);
   }
@@ -418,7 +463,7 @@ public class MemFileChannel extends FileChannel
   private static int getNumChunks(long size) {
     return getChunkIndex(size + CHUNK_SIZE - 1);
   }
-  
+
   @Override
   public long write(ByteBuffer[] srcs, int offset, int length)
     throws IOException
@@ -433,7 +478,7 @@ public class MemFileChannel extends FileChannel
   @Override
   public long read(ByteBuffer[] dsts, int offset, int length)
     throws IOException
-  {    
+  {
     long numBytes = 0L;
     for(int i = offset; i < offset + length; ++i) {
       if(_position >= _size) {
@@ -474,7 +519,7 @@ public class MemFileChannel extends FileChannel
     {
       super(channel._position, channel._size, channel._data);
     }
-    
+
     @Override
     public int write(ByteBuffer src, long position) throws IOException {
       throw new NonWritableChannelException();
@@ -491,6 +536,6 @@ public class MemFileChannel extends FileChannel
       throws IOException
     {
       throw new NonWritableChannelException();
-    }    
+    }
   }
 }
