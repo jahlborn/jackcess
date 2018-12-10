@@ -49,8 +49,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   private final RandomContext _rndCtx = new RandomContext();
   private Bindings _bindings = new SimpleBindings();
 
-  public DBEvalContext(DatabaseImpl db)
-  {
+  public DBEvalContext(DatabaseImpl db) {
     _db = db;
   }
 
@@ -63,7 +62,10 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   }
 
   public void setTemporalConfig(TemporalConfig temporal) {
-    _temporal = temporal;
+    if(_temporal != temporal) {
+      _temporal = temporal;
+      _sdfs = null;
+    }
   }
 
   public Calendar getCalendar() {
@@ -75,7 +77,10 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   }
 
   public void setNumericConfig(NumericConfig numeric) {
-    _numeric = numeric;
+    if(_numeric != numeric) {
+      _numeric = numeric;
+      _dfs = null;
+    }
   }
 
   public FunctionLookup getFunctionLookup() {
@@ -101,6 +106,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     SimpleDateFormat sdf = _sdfs.get(formatStr);
     if(sdf == null) {
       sdf = _db.createDateFormat(formatStr);
+      sdf.setDateFormatSymbols(_temporal.getDateFormatSymbols());
       _sdfs.put(formatStr, sdf);
     }
     return sdf;

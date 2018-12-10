@@ -1990,7 +1990,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((value instanceof Double) ? value :
               toNumber(value, db).doubleValue());
     case SHORT_DATE_TIME:
-      return ((value instanceof DateExt) ? value :
+      return ((value instanceof Date) ? value :
               new Date(toDateLong(value)));
     case TEXT:
     case MEMO:
