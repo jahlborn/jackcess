@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Date;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
@@ -92,6 +93,10 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   public Date getDate(String name) {
     return (Date)get(name);
+  }
+
+  public LocalDateTime getLocalDateTime(String name) {
+    return (LocalDateTime)get(name);
   }
 
   public byte[] getBytes(String name) {

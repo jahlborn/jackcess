@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -990,7 +991,9 @@ public class DatabaseTest extends TestCase
   {
     ColumnImpl col = new ColumnImpl(null, null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
       @Override
-      protected Calendar getCalendar() { return Calendar.getInstance(tz); }
+      protected TimeZone getTimeZone() { return tz; }
+      @Override
+      protected ZoneId getZoneId() { return null; }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");

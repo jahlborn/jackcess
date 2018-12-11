@@ -32,6 +32,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -56,6 +57,7 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.IndexCursor;
@@ -303,6 +305,8 @@ public class DatabaseImpl implements Database
   private Charset _charset;
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
+  /** zoneId to use when handling dates */
+  private ZoneId _zoneId;
   /** language sort order to be used for textual columns */
   private ColumnImpl.SortOrder _defaultSortOrder;
   /** default code page to be used for textual columns (in some dbs) */
@@ -342,6 +346,9 @@ public class DatabaseImpl implements Database
   private Calendar _calendar;
   /** shared context for evaluating expressions */
   private DBEvalContext _evalCtx;
+  /** factory for the appropriate date/time type */
+  private ColumnImpl.DateTimeFactory _dtf =
+    ColumnImpl.getDateTimeFactory(DateTimeType.DATE);
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
@@ -644,20 +651,57 @@ public class DatabaseImpl implements Database
             (_linkedDbs.get(linkedDbName) == table.getDatabase()));
   }
 
+  @Override
   public TimeZone getTimeZone() {
     return _timeZone;
   }
 
+  @Override
   public void setTimeZone(TimeZone newTimeZone) {
-    if(newTimeZone == null) {
+    setZoneInfo(newTimeZone, null);
+  }
+
+  @Override
+  public ZoneId getZoneId() {
+    return _zoneId;
+  }
+
+  public void setZoneId(ZoneId newZoneId) {
+    setZoneInfo(null, newZoneId);
+  }
+
+  private void setZoneInfo(TimeZone newTimeZone, ZoneId newZoneId) {
+    if(newTimeZone != null) {
+      newZoneId = newTimeZone.toZoneId();
+    } else if(newZoneId != null) {
+      newTimeZone = TimeZone.getTimeZone(newZoneId);
+    } else {
       newTimeZone = getDefaultTimeZone();
+      newZoneId = newTimeZone.toZoneId();
     }
+
     _timeZone = newTimeZone;
+    _zoneId = newZoneId;
+
     // clear cached calendar(s) when timezone is changed
     _calendar = null;
     if(_evalCtx != null) {
       _evalCtx.resetDateTimeConfig();
     }
+  }
+
+  @Override
+  public DateTimeType getDateTimeType() {
+    return _dtf.getType();
+  }
+
+  @Override
+  public void setDateTimeType(DateTimeType dateTimeType) {
+    _dtf = ColumnImpl.getDateTimeFactory(dateTimeType);
+  }
+
+  protected ColumnImpl.DateTimeFactory getDateTimeFactory() {
+    return _dtf;
   }
 
   public Charset getCharset()

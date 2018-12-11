@@ -22,6 +22,7 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -207,6 +208,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    *         database while an Iterator is in use.
    * @usage _general_method_
    */
+  @Override
   public Iterator<Table> iterator();
 
   /**
@@ -325,6 +327,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * databases) to disk.
    * @usage _general_method_
    */
+  @Override
   public void flush() throws IOException;
 
   /**
@@ -335,6 +338,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * OutputStream or jdbc Connection).
    * @usage _general_method_
    */
+  @Override
   public void close() throws IOException;
 
   /**
@@ -383,16 +387,32 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public boolean isLinkedTable(Table table) throws IOException;
 
   /**
-   * Gets currently configured TimeZone (always non-{@code null}).
+   * Gets currently configured TimeZone (always non-{@code null} and aligned
+   * with the ZoneId).
    * @usage _intermediate_method_
    */
   public TimeZone getTimeZone();
 
   /**
-   * Sets a new TimeZone.  If {@code null}, resets to the default value.
+   * Sets a new TimeZone.  If {@code null}, resets to the default value.  Note
+   * that setting the TimeZone will alter the ZoneId as well.
    * @usage _intermediate_method_
    */
   public void setTimeZone(TimeZone newTimeZone);
+
+  /**
+   * Gets currently configured ZoneId (always non-{@code null} and aligned
+   * with the TimeZone).
+   * @usage _intermediate_method_
+   */
+  public ZoneId getZoneId();
+
+  /**
+   * Sets a new ZoneId.  If {@code null}, resets to the default value.  Note
+   * that setting the ZoneId will alter the TimeZone as well.
+   * @usage _intermediate_method_
+   */
+  public void setZoneId(ZoneId newZoneId);
 
   /**
    * Gets currently configured Charset (always non-{@code null}).
@@ -498,4 +518,16 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * Returns the EvalConfig for configuring expression evaluation.
    */
   public EvalConfig getEvalConfig();
+
+  /**
+   * Gets the currently configured DateTimeType.
+   * @usage _general_method_
+   */
+  public DateTimeType getDateTimeType();
+
+  /**
+   * Sets the DateTimeType.  If {@code null}, resets to the default value.
+   * @usage _general_method_
+   */
+  public void setDateTimeType(DateTimeType dateTimeType);
 }

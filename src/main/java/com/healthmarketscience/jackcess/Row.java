@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.util.OleBlob;
@@ -92,6 +93,12 @@ public interface Row extends Map<String,Object>
    * casting it to a Date (DataType SHORT_DATE_TIME).
    */
   public Date getDate(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME).
+   */
+  public LocalDateTime getLocalDateTime(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
