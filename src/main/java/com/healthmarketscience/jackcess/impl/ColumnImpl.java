@@ -65,6 +65,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
+import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -95,6 +96,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   private static final long MILLISECONDS_PER_DAY = (24L * 60L * 60L * 1000L);
   private static final long SECONDS_PER_DAY = (24L * 60L * 60L);
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
+  private static final long NANOS_PER_MILLI = 1_000_000L;
+  private static final long MILLIS_PER_SECOND = 1000L;
 
   /**
    * Access starts counting dates at Dec 30, 1899 (note, this strange date
@@ -980,12 +983,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     double secondsDouble = (Math.abs(value) % 1.0d) * SECONDS_PER_DAY;
     long timeSeconds = (long)secondsDouble;
-    long timeNanos = Math.round((secondsDouble % 1.0d) * NANOS_PER_SECOND);
+    long timeMillis = (long)(roundToMillis(secondsDouble % 1.0d) *
+                             MILLIS_PER_SECOND);
 
-    return Duration.ofSeconds(dateSeconds + timeSeconds, timeNanos);
+    return Duration.ofSeconds(dateSeconds + timeSeconds,
+                              timeMillis * NANOS_PER_MILLI);
   }
-
-
 
   /**
    * Writes a date value.
@@ -1053,7 +1056,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   public static double toDateDouble(Object value, TimeZone tz, ZoneId zoneId)
   {
     if(value instanceof TemporalAccessor) {
-      return toDateDouble(toLocalDateTime((Temporal)value, tz, zoneId));
+      return toDateDouble(
+          toLocalDateTime((TemporalAccessor)value, tz, zoneId));
     }
 
     // seems access stores dates in the local timezone.  guess you just
@@ -1147,8 +1151,25 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     long dateSeconds = dateTimeSeconds - timeSeconds;
     long timeNanos = time.getNano();
 
-    double timeDouble = ((((double)timeNanos / NANOS_PER_SECOND) + timeSeconds)
-                         / SECONDS_PER_DAY);
+    // we have a difficult choice to make here between keeping a value which
+    // most accurately represents the bits saved and rounding to a value that
+    // would match what the user would expect too see.  since we do a double
+    // to long conversion, we end up in a situation where the value might be
+    // 19.9999 seconds.  access will display this as 20 seconds (access seems
+    // to only record times to second precision).  if we return 19.9999, then
+    // when the value is written back out it will be exactly the same double
+    // (good), but will display as 19 seconds (bad because it looks wrong to
+    // the user).  on the flip side, if we round, the value will display
+    // "correctly" to the user, but if the value is written back out, it will
+    // be a slightly different double value.  this may not be a problem for
+    // most situations, but may result in incorrect index based lookups.  in
+    // the old date time handling we use DateExt to store the original bits.
+    // in jdk8, we cannot extend LocalDateTime.  for now, we will try
+    // returning the value rounded to milliseconds (technically still more
+    // precision than access uses but more likely to round trip to the same
+    // value).
+    double timeDouble = ((roundToMillis((double)timeNanos / NANOS_PER_SECOND) +
+                          timeSeconds) / SECONDS_PER_DAY);
 
     double dateDouble = ((double)dateSeconds / SECONDS_PER_DAY);
 
@@ -1157,6 +1178,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
 
     return dateDouble + timeDouble;
+  }
+
+  /**
+   * Rounds the given decimal to milliseconds (3 decimal places) using the
+   * standard access rounding mode.
+   */
+  private static double roundToMillis(double dbl) {
+    return ((dbl == 0d) ? dbl :
+            new BigDecimal(dbl).setScale(3, NumberFormatter.ROUND_MODE)
+            .doubleValue());
   }
 
   /**
