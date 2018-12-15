@@ -20,14 +20,13 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Expression;
@@ -38,7 +37,6 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.BaseEvalContext;
-import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import junit.framework.TestCase;
 
 /**
@@ -318,11 +316,11 @@ public class ExpressionatorTest extends TestCase
 
   public void testDateArith() throws Exception
   {
-    assertEquals(new Date(1041508800000L), eval("=#01/02/2003# + #7:00:00 AM#"));
-    assertEquals(new Date(1041458400000L), eval("=#01/02/2003# - #7:00:00 AM#"));
-    assertEquals(new Date(1044680400000L), eval("=#01/02/2003# + '37'"));
-    assertEquals(new Date(1044680400000L), eval("='37' + #01/02/2003#"));
-    assertEquals(new Date(1041508800000L), eval("=#01/02/2003 7:00:00 AM#"));
+    assertEquals(LocalDateTime.of(2003,1,2,7,0), eval("=#01/02/2003# + #7:00:00 AM#"));
+    assertEquals(LocalDateTime.of(2003,1,1,17,0), eval("=#01/02/2003# - #7:00:00 AM#"));
+    assertEquals(LocalDateTime.of(2003,2,8,0,0), eval("=#01/02/2003# + '37'"));
+    assertEquals(LocalDateTime.of(2003,2,8,0,0), eval("='37' + #01/02/2003#"));
+    assertEquals(LocalDateTime.of(2003,1,2,7,0), eval("=#01/02/2003 7:00:00 AM#"));
 
     assertEquals("2/8/2003", eval("=CStr(#01/02/2003# + '37')"));
     assertEquals("9:24:00 AM", eval("=CStr(#7:00:00 AM# + 0.1)"));
@@ -404,7 +402,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals("foo37", eval("=\"foo\" + (12 + 25)"));
     assertEquals("25foo12", eval("=\"25foo\" + 12"));
 
-    assertEquals(new Date(1485579600000L), eval("=#1/1/2017# + 27"));
+    assertEquals(LocalDateTime.of(2017,1,28,0,0), eval("=#1/1/2017# + 27"));
     assertEquals(128208, eval("=#1/1/2017# * 3"));
   }
 
@@ -590,15 +588,14 @@ public class ExpressionatorTest extends TestCase
       return TemporalConfig.US_TEMPORAL_CONFIG;
     }
 
-    public SimpleDateFormat createDateFormat(String formatStr) {
-      SimpleDateFormat sdf = DatabaseBuilder.createDateFormat(formatStr);
-      sdf.setTimeZone(TestUtil.TEST_TZ);
-      return sdf;
+    public DateTimeFormatter createDateFormatter(String formatStr) {
+      DateTimeFormatter dtf = DateTimeFormatter.ofPattern(
+          formatStr, TemporalConfig.US_TEMPORAL_CONFIG.getLocale());
+      return dtf;
     }
 
-    public Calendar getCalendar() {
-      return createDateFormat(getTemporalConfig().getDefaultDateTimeFormat())
-        .getCalendar();
+    public ZoneId getZoneId() {
+      return TestUtil.TEST_TZ.toZoneId();
     }
 
     public NumericConfig getNumericConfig() {

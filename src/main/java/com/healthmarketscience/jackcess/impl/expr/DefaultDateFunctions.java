@@ -17,11 +17,20 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 
-import java.math.BigDecimal;
-import java.text.DateFormat;
-import java.text.DateFormatSymbols;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.DateTimeException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.MonthDay;
+import java.time.Year;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.WeekFields;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
@@ -44,12 +53,6 @@ public class DefaultDateFunctions
   // max, valid, recognizable date: December 31, 9999 A.D. 23:59:59
   private static final double MAX_DATE = 2958465.999988426d;
 
-  private static final long SECONDS_PER_DAY = 24L * 60L * 60L;
-  private static final double DSECONDS_PER_DAY = SECONDS_PER_DAY;
-
-  private static final long SECONDS_PER_HOUR = 60L * 60L;
-  private static final long SECONDS_PER_MINUTE = 60L;
-
   private static final String INTV_YEAR = "yyyy";
   private static final String INTV_QUARTER = "q";
   private static final String INTV_MONTH = "m";
@@ -61,7 +64,8 @@ public class DefaultDateFunctions
   private static final String INTV_MINUTE = "n";
   private static final String INTV_SECOND = "s";
 
-  private enum WeekOpType { GET_WEEK, GET_NUM_WEEKS }
+  private static final WeekFields SUNDAY_FIRST =
+    WeekFields.of(DayOfWeek.SUNDAY, 1);
 
   private DefaultDateFunctions() {}
 
@@ -72,8 +76,7 @@ public class DefaultDateFunctions
   public static final Function DATE = registerFunc(new Func0("Date") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      double dd = dateOnly(currentTimeDouble(ctx));
-      return ValueSupport.toDateValue(ctx, Value.Type.DATE, dd);
+      return ValueSupport.toValue(LocalDate.now());
     }
   });
 
@@ -84,8 +87,7 @@ public class DefaultDateFunctions
       if(dv.getType() == Value.Type.DATE) {
         return dv;
       }
-      double dd = dateOnly(dv.getAsDouble(ctx));
-      return ValueSupport.toDateValue(ctx, Value.Type.DATE, dd);
+      return ValueSupport.toValue(dv.getAsLocalDateTime(ctx).toLocalDate());
     }
   });
 
@@ -101,15 +103,11 @@ public class DefaultDateFunctions
         year += ((year <= 29) ? 2000 : 1900);
       }
 
-      Calendar cal = ctx.getCalendar();
-      cal.clear();
+      // we have to construct incrementatlly to handle out of range values
+      LocalDate ld = LocalDate.of(year,1,1).plusMonths(month - 1)
+        .plusDays(day - 1);
 
-      cal.set(Calendar.YEAR, year);
-      // convert to 0 based value
-      cal.set(Calendar.MONTH, month - 1);
-      cal.set(Calendar.DAY_OF_MONTH, day);
-
-      return ValueSupport.toValue(Value.Type.DATE, cal.getTime());
+      return ValueSupport.toValue(ld);
     }
   });
 
@@ -127,27 +125,27 @@ public class DefaultDateFunctions
       String intv = params[0].getAsString(ctx).trim();
       int result = -1;
       if(intv.equalsIgnoreCase(INTV_YEAR)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.YEAR);
+        result = param2.getAsLocalDateTime(ctx).getYear();
       } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
-        result = getQuarter(nonNullToCalendar(ctx, param2));
+        result = getQuarter(param2.getAsLocalDateTime(ctx));
       } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
-        // convert from 0 based to 1 based value
-        result = nonNullToCalendarField(ctx, param2, Calendar.MONTH) + 1;
+        result = param2.getAsLocalDateTime(ctx).getMonthValue();
       } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_YEAR);
+        result = param2.getAsLocalDateTime(ctx).getDayOfYear();
       } else if(intv.equalsIgnoreCase(INTV_DAY)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_MONTH);
+        result = param2.getAsLocalDateTime(ctx).getDayOfMonth();
       } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
-        int dayOfWeek = nonNullToCalendarField(ctx, param2, Calendar.DAY_OF_WEEK);
+        int dayOfWeek = param2.getAsLocalDateTime(ctx)
+          .get(SUNDAY_FIRST.dayOfWeek());
         result = dayOfWeekToWeekDay(dayOfWeek, firstDay);
       } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
         result = weekOfYear(ctx, param2, firstDay, firstWeekType);
       } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.HOUR_OF_DAY);
+        result = param2.getAsLocalDateTime(ctx).getHour();
       } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.MINUTE);
+        result = param2.getAsLocalDateTime(ctx).getMinute();
       } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
-        result = nonNullToCalendarField(ctx, param2, Calendar.SECOND);
+        result = param2.getAsLocalDateTime(ctx).getSecond();
       } else {
         throw new EvalException("Invalid interval " + intv);
       }
@@ -167,33 +165,31 @@ public class DefaultDateFunctions
       String intv = param1.getAsString(ctx).trim();
       int val = param2.getAsLongInt(ctx);
 
-      Calendar cal = nonNullToCalendar(ctx, param3);
+      LocalDateTime ldt = param3.getAsLocalDateTime(ctx);
 
       if(intv.equalsIgnoreCase(INTV_YEAR)) {
-        cal.add(Calendar.YEAR, val);
+        ldt = ldt.plus(val, ChronoUnit.YEARS);
       } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
-        cal.add(Calendar.MONTH, val * 3);
+        ldt = ldt.plus(val * 3, ChronoUnit.MONTHS);
       } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
-        cal.add(Calendar.MONTH, val);
-      } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR)) {
-        cal.add(Calendar.DAY_OF_YEAR, val);
-      } else if(intv.equalsIgnoreCase(INTV_DAY)) {
-        cal.add(Calendar.DAY_OF_YEAR, val);
-      } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
-        cal.add(Calendar.DAY_OF_WEEK, val);
+        ldt = ldt.plus(val, ChronoUnit.MONTHS);
+      } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR) ||
+                intv.equalsIgnoreCase(INTV_DAY) ||
+                intv.equalsIgnoreCase(INTV_WEEKDAY)) {
+        ldt = ldt.plus(val, ChronoUnit.DAYS);
       } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
-        cal.add(Calendar.WEEK_OF_YEAR, val);
+        ldt = ldt.plus(val, ChronoUnit.WEEKS);
       } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
-        cal.add(Calendar.HOUR, val);
+        ldt = ldt.plus(val, ChronoUnit.HOURS);
       } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
-        cal.add(Calendar.MINUTE, val);
+        ldt = ldt.plus(val, ChronoUnit.MINUTES);
       } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
-        cal.add(Calendar.SECOND, val);
+        ldt = ldt.plus(val, ChronoUnit.SECONDS);
       } else {
         throw new EvalException("Invalid interval " + intv);
       }
 
-      return ValueSupport.toValue(cal);
+      return ValueSupport.toValue(ldt);
     }
   });
 
@@ -212,14 +208,14 @@ public class DefaultDateFunctions
 
       String intv = params[0].getAsString(ctx).trim();
 
-      Calendar cal1 = nonNullToCalendar(ctx, param2);
-      Calendar cal2 = nonNullToCalendar(ctx, param3);
+      LocalDateTime ldt1 = param2.getAsLocalDateTime(ctx);
+      LocalDateTime ldt2 = param3.getAsLocalDateTime(ctx);
 
       int sign = 1;
-      if(cal1.after(cal2)) {
-        Calendar tmp = cal1;
-        cal1 = cal2;
-        cal2 = tmp;
+      if(ldt1.isAfter(ldt2)) {
+        LocalDateTime tmp = ldt1;
+        ldt1 = ldt2;
+        ldt2 = tmp;
         sign = -1;
       }
 
@@ -229,22 +225,22 @@ public class DefaultDateFunctions
 
       int result = -1;
       if(intv.equalsIgnoreCase(INTV_YEAR)) {
-        result = cal2.get(Calendar.YEAR) - cal1.get(Calendar.YEAR);
+        result = ldt2.getYear() - ldt1.getYear();
       } else if(intv.equalsIgnoreCase(INTV_QUARTER)) {
-        int y1 = cal1.get(Calendar.YEAR);
-        int q1 = getQuarter(cal1);
-        int y2 = cal2.get(Calendar.YEAR);
-        int q2 = getQuarter(cal2);
+        int y1 = ldt1.getYear();
+        int q1 = getQuarter(ldt1);
+        int y2 = ldt2.getYear();
+        int q2 = getQuarter(ldt2);
         while(y2 > y1) {
           q2 += 4;
           --y2;
         }
         result = q2 - q1;
       } else if(intv.equalsIgnoreCase(INTV_MONTH)) {
-        int y1 = cal1.get(Calendar.YEAR);
-        int m1 = cal1.get(Calendar.MONTH);
-        int y2 = cal2.get(Calendar.YEAR);
-        int m2 = cal2.get(Calendar.MONTH);
+        int y1 = ldt1.getYear();
+        int m1 = ldt1.getMonthValue();
+        int y2 = ldt2.getYear();
+        int m2 = ldt2.getMonthValue();
         while(y2 > y1) {
           m2 += 12;
           --y2;
@@ -252,30 +248,30 @@ public class DefaultDateFunctions
         result = m2 - m1;
       } else if(intv.equalsIgnoreCase(INTV_DAY_OF_YEAR) ||
                 intv.equalsIgnoreCase(INTV_DAY)) {
-        result = getDayDiff(cal1, cal2);
+        result = getDayDiff(ldt1, ldt2);
       } else if(intv.equalsIgnoreCase(INTV_WEEKDAY)) {
         // this calulates number of 7 day periods between two dates
-        result = getDayDiff(cal1, cal2) / 7;
+        result = getDayDiff(ldt1, ldt2) / 7;
       } else if(intv.equalsIgnoreCase(INTV_WEEK)) {
         // this counts number of "week of year" intervals between two dates
-        int w1 = weekOfYear(cal1, firstDay, firstWeekType);
-        int y1 = getWeekOfYearYear(cal1, w1);
-        int w2 = weekOfYear(cal2, firstDay, firstWeekType);
-        int y2 = getWeekOfYearYear(cal2, w2);
+        WeekFields weekFields = weekFields(firstDay, firstWeekType);
+        int w1 = ldt1.get(weekFields.weekOfWeekBasedYear());
+        int y1 = ldt1.get(weekFields.weekBasedYear());
+        int w2 = ldt2.get(weekFields.weekOfWeekBasedYear());
+        int y2 = ldt2.get(weekFields.weekBasedYear());
         while(y2 > y1) {
-          cal2.add(Calendar.YEAR, -1);
-          w2 += weeksInYear(cal2, firstDay, firstWeekType);
-          y2 = cal2.get(Calendar.YEAR);
+          --y2;
+          w2 += weeksInYear(y2, weekFields);
         }
         result = w2 - w1;
       } else if(intv.equalsIgnoreCase(INTV_HOUR)) {
-        result = getHourDiff(cal1, cal2);
+        result = getHourDiff(ldt1, ldt2);
       } else if(intv.equalsIgnoreCase(INTV_MINUTE)) {
-        result = getMinuteDiff(cal1, cal2);
+        result = getMinuteDiff(ldt1, ldt2);
       } else if(intv.equalsIgnoreCase(INTV_SECOND)) {
-        int s1 = cal1.get(Calendar.SECOND);
-        int s2 = cal2.get(Calendar.SECOND);
-        int minuteDiff = getMinuteDiff(cal1, cal2);
+        int s1 = ldt1.getSecond();
+        int s2 = ldt2.getSecond();
+        int minuteDiff = getMinuteDiff(ldt1, ldt2);
         result = (s2 + (60 * minuteDiff)) - s1;
       } else {
         throw new EvalException("Invalid interval " + intv);
@@ -288,15 +284,15 @@ public class DefaultDateFunctions
   public static final Function NOW = registerFunc(new Func0("Now") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      return ValueSupport.toValue(Value.Type.DATE_TIME, new Date());
+      return ValueSupport.toValue(Value.Type.DATE_TIME,
+                                  LocalDateTime.now(ctx.getZoneId()));
     }
   });
 
   public static final Function TIME = registerFunc(new Func0("Time") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      double dd = timeOnly(currentTimeDouble(ctx));
-      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
+      return ValueSupport.toValue(LocalTime.now(ctx.getZoneId()));
     }
   });
 
@@ -307,15 +303,15 @@ public class DefaultDateFunctions
       if(dv.getType() == Value.Type.TIME) {
         return dv;
       }
-      double dd = timeOnly(dv.getAsDouble(ctx));
-      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
+      return ValueSupport.toValue(dv.getAsLocalDateTime(ctx).toLocalTime());
     }
   });
 
   public static final Function TIMER = registerFunc(new Func0("Timer") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      double dd = timeOnly(currentTimeDouble(ctx)) * DSECONDS_PER_DAY;
+      double dd = LocalTime.now(ctx.getZoneId())
+        .get(ChronoField.MILLI_OF_DAY) / 1000d;
       return ValueSupport.toValue(dd);
     }
   });
@@ -327,59 +323,46 @@ public class DefaultDateFunctions
       int minutes = param2.getAsLongInt(ctx);
       int seconds = param3.getAsLongInt(ctx);
 
-      long totalSeconds = (hours * SECONDS_PER_HOUR) +
-        (minutes * SECONDS_PER_MINUTE) + seconds;
-      if(totalSeconds < 0L) {
-        do {
-          totalSeconds += SECONDS_PER_DAY;
-        } while(totalSeconds < 0L);
-      } else if(totalSeconds > SECONDS_PER_DAY) {
-        totalSeconds %= SECONDS_PER_DAY;
-      }
+      // we have to construct incrementatlly to handle out of range values
+      LocalTime lt = ColumnImpl.BASE_LT.plusHours(hours).plusMinutes(minutes)
+        .plusSeconds(seconds);
 
-      double dd = totalSeconds / DSECONDS_PER_DAY;
-      return ValueSupport.toDateValue(ctx, Value.Type.TIME, dd);
+      return ValueSupport.toValue(lt);
     }
   });
 
   public static final Function HOUR = registerFunc(new Func1NullIsNull("Hour") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.HOUR_OF_DAY));
+      return ValueSupport.toValue(param1.getAsLocalDateTime(ctx).getHour());
     }
   });
 
   public static final Function MINUTE = registerFunc(new Func1NullIsNull("Minute") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.MINUTE));
+      return ValueSupport.toValue(param1.getAsLocalDateTime(ctx).getMinute());
     }
   });
 
   public static final Function SECOND = registerFunc(new Func1NullIsNull("Second") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.SECOND));
+      return ValueSupport.toValue(param1.getAsLocalDateTime(ctx).getSecond());
     }
   });
 
   public static final Function YEAR = registerFunc(new Func1NullIsNull("Year") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.YEAR));
+      return ValueSupport.toValue(param1.getAsLocalDateTime(ctx).getYear());
     }
   });
 
   public static final Function MONTH = registerFunc(new Func1NullIsNull("Month") {
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
-      // convert from 0 based to 1 based value
-      return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.MONTH) + 1);
+      return ValueSupport.toValue(param1.getAsLocalDateTime(ctx).getMonthValue());
     }
   });
 
@@ -390,16 +373,12 @@ public class DefaultDateFunctions
       if(param1.isNull()) {
         return ValueSupport.NULL_VAL;
       }
-      // convert from 1 based to 0 based value
-      int month = param1.getAsLongInt(ctx) - 1;
+      Month month = Month.of(param1.getAsLongInt(ctx));
 
-      boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
-
-      DateFormatSymbols syms = ctx.getTemporalConfig().getDateFormatSymbols();
-      String[] monthNames = (abbreviate ?
-                             syms.getShortMonths() : syms.getMonths());
-      // note, the array is 1 based
-      return ValueSupport.toValue(monthNames[month]);
+      TextStyle textStyle = getTextStyle(ctx, params, 1);
+      String monthName = month.getDisplayName(
+          textStyle, ctx.getTemporalConfig().getLocale());
+      return ValueSupport.toValue(monthName);
     }
   });
 
@@ -407,7 +386,7 @@ public class DefaultDateFunctions
     @Override
     protected Value eval1(EvalContext ctx, Value param1) {
       return ValueSupport.toValue(
-          nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_MONTH));
+          param1.getAsLocalDateTime(ctx).getDayOfMonth());
     }
   });
 
@@ -418,7 +397,8 @@ public class DefaultDateFunctions
       if(param1.isNull()) {
         return ValueSupport.NULL_VAL;
       }
-      int dayOfWeek = nonNullToCalendarField(ctx, param1, Calendar.DAY_OF_WEEK);
+      int dayOfWeek = param1.getAsLocalDateTime(ctx)
+        .get(SUNDAY_FIRST.dayOfWeek());
 
       int firstDay = getFirstDayParam(ctx, params, 1);
 
@@ -435,30 +415,16 @@ public class DefaultDateFunctions
       }
       int weekday = param1.getAsLongInt(ctx);
 
-      boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
+      TextStyle textStyle = getTextStyle(ctx, params, 1);
 
       int firstDay = getFirstDayParam(ctx, params, 2);
 
       int dayOfWeek = weekDayToDayOfWeek(weekday, firstDay);
-
-      DateFormatSymbols syms = ctx.getTemporalConfig().getDateFormatSymbols();
-      String[] weekdayNames = (abbreviate ?
-                               syms.getShortWeekdays() : syms.getWeekdays());
-      // note, the array is 1 based
-      return ValueSupport.toValue(weekdayNames[dayOfWeek]);
+      String weekdayName = dayOfWeek(dayOfWeek).getDisplayName(
+          textStyle, ctx.getTemporalConfig().getLocale());
+      return ValueSupport.toValue(weekdayName);
     }
   });
-
-  private static int nonNullToCalendarField(EvalContext ctx, Value param,
-                                            int field) {
-    return nonNullToCalendar(ctx, param).get(field);
-  }
-
-  private static Calendar nonNullToCalendar(EvalContext ctx, Value param) {
-    Calendar cal = ctx.getCalendar();
-    cal.setTime(param.getAsDateTime(ctx));
-    return cal;
-  }
 
   static Value stringToDateValue(LocaleContext ctx, String valStr) {
     // see if we can coerce to date/time
@@ -467,26 +433,31 @@ public class DefaultDateFunctions
 
     if(valTempType != null) {
 
-      DateFormat parseDf = ExpressionTokenizer.createParseDateTimeFormat(
-          valTempType, ctx);
+      DateTimeFormatter parseDf = ctx.createDateFormatter(
+          ctx.getTemporalConfig().getDateTimeFormat(valTempType));
 
       try {
-        Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
-        return ValueSupport.toValue(valTempType.getValueType(), dateVal);
-      } catch(java.text.ParseException pe) {
+        TemporalAccessor parsedInfo = parseDf.parse(valStr);
 
+        LocalDate ld = ColumnImpl.BASE_LD;
         if(valTempType.includesDate()) {
-          // the date may not include a year value, in which case it means
-          // to use the "current" year.  see if this is an implicit year date
-          parseDf = ExpressionTokenizer.createParseImplicitYearDateTimeFormat(
-              valTempType, ctx);
-          try {
-            Date dateVal = ExpressionTokenizer.parseComplete(parseDf, valStr);
-            return ValueSupport.toValue(valTempType.getValueType(), dateVal);
-          } catch(java.text.ParseException pe2) {
-            // guess not, continue on to failure
+          // the year may not be explicitly specified
+          if(parsedInfo.isSupported(ChronoField.YEAR)) {
+            ld = LocalDate.from(parsedInfo);
+          } else {
+            ld = MonthDay.from(parsedInfo).atYear(
+                Year.now(ctx.getZoneId()).getValue());
           }
         }
+
+        LocalTime lt = ColumnImpl.BASE_LT;
+        if(valTempType.includesTime()) {
+          lt = LocalTime.from(parsedInfo);
+        }
+
+        return ValueSupport.toValue(LocalDateTime.of(ld, lt));
+      } catch(DateTimeException de) {
+        // note a valid date/time
       }
     }
 
@@ -494,35 +465,18 @@ public class DefaultDateFunctions
     return null;
   }
 
-  static Value numberToDateValue(LocaleContext ctx, double dd) {
-    if((dd < MIN_DATE) || (dd > MAX_DATE)) {
+  static boolean isValidDateDouble(double dd) {
+    return ((dd >= MIN_DATE) && (dd <= MAX_DATE));
+  }
+
+  static Value numberToDateValue(double dd) {
+    if(!isValidDateDouble(dd)) {
       // outside valid date range
       return null;
     }
 
-    boolean hasDate = (dateOnly(dd) != 0.0d);
-    boolean hasTime = (timeOnly(dd) != 0.0d);
-
-    Value.Type type = (hasDate ? (hasTime ? Value.Type.DATE_TIME :
-                                  Value.Type.DATE) :
-                       Value.Type.TIME);
-    return ValueSupport.toDateValue(ctx, type, dd);
-  }
-
-  private static double dateOnly(double dd) {
-    // the integral part of the date/time double is the date value.  discard
-    // the fractional portion
-    return (long)dd;
-  }
-
-  private static double timeOnly(double dd) {
-    // the fractional part of the date/time double is the time value.  discard
-    // the integral portion
-    return new BigDecimal(dd).remainder(BigDecimal.ONE).doubleValue();
-  }
-
-  private static double currentTimeDouble(LocaleContext ctx) {
-    return ColumnImpl.toDateDouble(System.currentTimeMillis(), ctx.getCalendar());
+    LocalDateTime ldt = ColumnImpl.ldtFromLocalDateDouble(dd);
+    return ValueSupport.toValue(ldt);
   }
 
   private static int dayOfWeekToWeekDay(int day, int firstDay) {
@@ -551,114 +505,85 @@ public class DefaultDateFunctions
     return getOptionalIntParam(ctx, params, idx, 1, 0);
   }
 
+  private static WeekFields weekFields(int firstDay, int firstWeekType) {
+
+    int minDays = 1;
+    switch(firstWeekType) {
+    case 1:
+      // vbUseSystem 0
+      // vbFirstJan1 1 (default)
+      break;
+    case 2:
+      // vbFirstFourDays 2
+      minDays = 4;
+      break;
+    case 3:
+      // vbFirstFullWeek 3
+      minDays = 7;
+      break;
+    default:
+      throw new EvalException("Invalid first week of year type " +
+                              firstWeekType);
+    }
+
+    return WeekFields.of(dayOfWeek(firstDay), minDays);
+  }
+
+  private static DayOfWeek dayOfWeek(int dayOfWeek) {
+    return DayOfWeek.SUNDAY.plus(dayOfWeek - 1);
+  }
+
+  private static TextStyle getTextStyle(EvalContext ctx, Value[] params,
+                                        int idx) {
+    boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
+    return (abbreviate ? TextStyle.SHORT : TextStyle.FULL);
+  }
+
   private static int weekOfYear(EvalContext ctx, Value param, int firstDay,
                                 int firstWeekType) {
-    return doWeekOp(nonNullToCalendar(ctx, param), firstDay, firstWeekType,
-                    WeekOpType.GET_WEEK);
+    return weekOfYear(param.getAsLocalDateTime(ctx), firstDay, firstWeekType);
   }
 
-  private static int weekOfYear(Calendar cal, int firstDay, int firstWeekType) {
-    return doWeekOp(cal, firstDay, firstWeekType, WeekOpType.GET_WEEK);
+  private static int weekOfYear(LocalDateTime ldt, int firstDay,
+                                int firstWeekType) {
+    WeekFields weekFields = weekFields(firstDay, firstWeekType);
+    return ldt.get(weekFields.weekOfWeekBasedYear());
   }
 
-  private static int weeksInYear(Calendar cal, int firstDay, int firstWeekType) {
-    return doWeekOp(cal, firstDay, firstWeekType, WeekOpType.GET_NUM_WEEKS);
+  private static int weeksInYear(int year, WeekFields weekFields) {
+    return (int)LocalDate.of(year,2,1).range(weekFields.weekOfWeekBasedYear())
+      .getMaximum();
   }
 
-  private static int doWeekOp(Calendar cal, int firstDay, int firstWeekType,
-                              WeekOpType opType) {
-    // need to mess with some calendar settings, but they need to be restored
-    // when done because the Calendar instance may be shared
-    int origFirstDay = cal.getFirstDayOfWeek();
-    int origMinDays = cal.getMinimalDaysInFirstWeek();
-    try {
-
-      int minDays = 1;
-      switch(firstWeekType) {
-      case 1:
-        // vbUseSystem 0
-        // vbFirstJan1 1 (default)
-        break;
-      case 2:
-        // vbFirstFourDays 2
-        minDays = 4;
-        break;
-      case 3:
-        // vbFirstFullWeek 3
-        minDays = 7;
-        break;
-      default:
-        throw new EvalException("Invalid first week of year type " +
-                                firstWeekType);
-      }
-
-      cal.setFirstDayOfWeek(firstDay);
-      cal.setMinimalDaysInFirstWeek(minDays);
-
-      switch(opType) {
-      case GET_WEEK:
-        return cal.get(Calendar.WEEK_OF_YEAR);
-      case GET_NUM_WEEKS:
-        return cal.getActualMaximum(Calendar.WEEK_OF_YEAR);
-      default:
-        throw new RuntimeException("Unknown op type " + opType);
-      }
-
-    } finally {
-      cal.setFirstDayOfWeek(origFirstDay);
-      cal.setMinimalDaysInFirstWeek(origMinDays);
-    }
-  }
-
-  private static int getQuarter(Calendar cal) {
-    // month is 0 based
-    int month = cal.get(Calendar.MONTH);
+  private static int getQuarter(LocalDateTime ldt) {
+    int month = ldt.getMonthValue() - 1;
     return (month / 3) + 1;
   }
 
-  private static int getWeekOfYearYear(Calendar cal, int weekOfYear) {
-    // the "week of year" gets weird at the beginning/end of the year.
-    // e.g. 12/31 might be int the first week of the next year, and 1/1 might
-    // be in the last week of the previous year.  we need to detect this and
-    // adjust the intervals accordingly
-    if(cal.get(Calendar.MONTH) == Calendar.JANUARY) {
-      if(weekOfYear >= 52) {
-        // this week of year is effectively for the previous year
-        cal.add(Calendar.YEAR, -1);
-      }
-    } else {
-      if(weekOfYear == 1) {
-        // this week of year is effectively for next year
-        cal.add(Calendar.YEAR, 1);
-      }
-    }
-    return cal.get(Calendar.YEAR);
-  }
-
-  private static int getDayDiff(Calendar cal1, Calendar cal2) {
-    int y1 = cal1.get(Calendar.YEAR);
-    int d1 = cal1.get(Calendar.DAY_OF_YEAR);
-    int y2 = cal2.get(Calendar.YEAR);
-    int d2 = cal2.get(Calendar.DAY_OF_YEAR);
-    while(y2 > y1) {
-      cal2.add(Calendar.YEAR, -1);
-      d2 += cal2.getActualMaximum(Calendar.DAY_OF_YEAR);
-      y2 = cal2.get(Calendar.YEAR);
+  private static int getDayDiff(LocalDateTime ldt1, LocalDateTime ldt2) {
+    int y1 = ldt1.getYear();
+    int d1 = ldt1.getDayOfYear();
+    int y2 = ldt2.getYear();
+    int d2 = ldt2.getDayOfYear();
+    while(y2  > y1) {
+      ldt2 = ldt2.minusYears(1);
+      d2 += ldt2.range(ChronoField.DAY_OF_YEAR).getMaximum();
+      y2 = ldt2.getYear();
     }
     return d2 - d1;
   }
 
-  private static int getHourDiff(Calendar cal1, Calendar cal2) {
-    int h1 = cal1.get(Calendar.HOUR_OF_DAY);
-    int h2 = cal2.get(Calendar.HOUR_OF_DAY);
-    int dayDiff = getDayDiff(cal1, cal2);
+  private static int getHourDiff(LocalDateTime ldt1, LocalDateTime ldt2) {
+    int h1 = ldt1.getHour();
+    int h2 = ldt2.getHour();
+    int dayDiff = getDayDiff(ldt1, ldt2);
     return (h2 + (24 * dayDiff)) - h1;
   }
 
-  private static int getMinuteDiff(Calendar cal1, Calendar cal2) {
-    int m1 = cal1.get(Calendar.MINUTE);
-    int m2 = cal2.get(Calendar.MINUTE);
-    int hourDiff = getHourDiff(cal1, cal2);
+  private static int getMinuteDiff(LocalDateTime ldt1, LocalDateTime ldt2) {
+    int m1 = ldt1.getMinute();
+    int m2 = ldt2.getMinute();
+    int hourDiff = getHourDiff(ldt1, ldt2);
     return (m2 + (60 * hourDiff)) - m1;
   }
 }

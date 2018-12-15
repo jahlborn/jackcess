@@ -19,8 +19,9 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumMap;
@@ -28,6 +29,7 @@ import java.util.Map;
 import javax.script.Bindings;
 
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
@@ -82,12 +84,12 @@ public abstract class BaseEvalContext implements EvalContext
     return _dbCtx.getTemporalConfig();
   }
 
-  public SimpleDateFormat createDateFormat(String formatStr) {
-    return _dbCtx.createDateFormat(formatStr);
+  public DateTimeFormatter createDateFormatter(String formatStr) {
+    return _dbCtx.createDateFormatter(formatStr);
   }
 
-  public Calendar getCalendar() {
-    return _dbCtx.getCalendar();
+  public ZoneId getZoneId() {
+    return _dbCtx.getZoneId();
   }
 
   public NumericConfig getNumericConfig() {
@@ -146,7 +148,10 @@ public abstract class BaseEvalContext implements EvalContext
 
   protected Value toValue(Object val, DataType dType) {
     try {
-      val = ColumnImpl.toInternalValue(dType, val, getDatabase());
+      // expression engine always uses LocalDateTime, so force that date/time
+      // type
+      val = ColumnImpl.toInternalValue(dType, val, getDatabase(),
+                                       ColumnImpl.LDT_DATE_TIME_FACTORY);
       if(val == null) {
         return ValueSupport.NULL_VAL;
       }
@@ -158,7 +163,7 @@ public abstract class BaseEvalContext implements EvalContext
       case DATE:
       case TIME:
       case DATE_TIME:
-        return ValueSupport.toValue(vType, (Date)val);
+        return ValueSupport.toValue(vType, (LocalDateTime)val);
       case LONG:
         Integer i = ((val instanceof Integer) ? (Integer)val :
                      ((Number)val).intValue());

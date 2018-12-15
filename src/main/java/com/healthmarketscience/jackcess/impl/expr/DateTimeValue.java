@@ -17,11 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 /**
  *
@@ -30,9 +30,9 @@ import com.healthmarketscience.jackcess.expr.Value;
 public class DateTimeValue extends BaseValue
 {
   private final Type _type;
-  private final Date _val;
+  private final LocalDateTime _val;
 
-  public DateTimeValue(Type type, Date val) {
+  public DateTimeValue(Type type, LocalDateTime val) {
     if(!type.isTemporal()) {
       throw new IllegalArgumentException("invalid date/time type");
     }
@@ -49,7 +49,7 @@ public class DateTimeValue extends BaseValue
   }
 
   protected Double getNumber(LocaleContext ctx) {
-    return ColumnImpl.toDateDouble(_val, ctx.getCalendar());
+    return ColumnImpl.toDateDouble(_val);
   }
 
   @Override
@@ -64,7 +64,7 @@ public class DateTimeValue extends BaseValue
   }
 
   @Override
-  public Date getAsDateTime(LocaleContext ctx) {
+  public LocalDateTime getAsLocalDateTime(LocaleContext ctx) {
     return _val;
   }
 

@@ -342,8 +342,6 @@ public class DatabaseImpl implements Database
   /** shared state used when enforcing foreign keys */
   private final FKEnforcer.SharedState _fkEnforcerSharedState =
     FKEnforcer.initSharedState();
-  /** Calendar for use interpreting dates/times in Columns */
-  private Calendar _calendar;
   /** shared context for evaluating expressions */
   private DBEvalContext _evalCtx;
   /** factory for the appropriate date/time type */
@@ -535,7 +533,7 @@ public class DatabaseImpl implements Database
     _evaluateExpressions = getDefaultEvaluateExpressions();
     _fileFormat = fileFormat;
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
-    _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
+    setZoneInfo(timeZone, null);
     if(provider == null) {
       provider = DefaultCodecProvider.INSTANCE;
     }
@@ -682,12 +680,6 @@ public class DatabaseImpl implements Database
 
     _timeZone = newTimeZone;
     _zoneId = newZoneId;
-
-    // clear cached calendar(s) when timezone is changed
-    _calendar = null;
-    if(_evalCtx != null) {
-      _evalCtx.resetDateTimeConfig();
-    }
   }
 
   @Override
@@ -776,17 +768,6 @@ public class DatabaseImpl implements Database
    */
   FKEnforcer.SharedState getFKEnforcerSharedState() {
     return _fkEnforcerSharedState;
-  }
-
-  /**
-   * @usage _advanced_method_
-   */
-  Calendar getCalendar() {
-    if(_calendar == null) {
-      _calendar = DatabaseBuilder.toCompatibleCalendar(
-          Calendar.getInstance(_timeZone));
-    }
-    return _calendar;
   }
 
   public EvalConfig getEvalConfig() {

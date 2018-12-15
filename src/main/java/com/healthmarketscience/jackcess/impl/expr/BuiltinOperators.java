@@ -76,7 +76,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = -param1.getAsDouble(ctx);
-      return toDateValue(ctx, mathType, result);
+      return toDateValueIfPossible(mathType, result);
     case LONG:
       return toValue(-param1.getAsLongInt(ctx));
     case DOUBLE:
@@ -108,7 +108,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = param1.getAsDouble(ctx) + param2.getAsDouble(ctx);
-      return toDateValue(ctx, mathType, result);
+      return toDateValueIfPossible(mathType, result);
     case LONG:
       return toValue(param1.getAsLongInt(ctx) + param2.getAsLongInt(ctx));
     case DOUBLE:
@@ -138,7 +138,7 @@ public class BuiltinOperators
     case DATE_TIME:
       // dates/times get converted to date doubles for arithmetic
       double result = param1.getAsDouble(ctx) - param2.getAsDouble(ctx);
-      return toDateValue(ctx, mathType, result);
+      return toDateValueIfPossible(mathType, result);
     case LONG:
       return toValue(param1.getAsLongInt(ctx) - param2.getAsLongInt(ctx));
     case DOUBLE:

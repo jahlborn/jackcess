@@ -49,7 +49,7 @@ public class DefaultNumberFunctions
       case DATE_TIME:
         // dates/times get converted to date doubles for arithmetic
         double result = Math.abs(param1.getAsDouble(ctx));
-        return ValueSupport.toDateValue(ctx, mathType, result);
+        return ValueSupport.toDateValueIfPossible(mathType, result);
       case LONG:
         return ValueSupport.toValue(Math.abs(param1.getAsLongInt(ctx)));
       case DOUBLE:

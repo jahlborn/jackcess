@@ -17,8 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * LocaleContext encapsulates all shared localization state for expression
@@ -35,16 +35,15 @@ public interface LocaleContext
   public TemporalConfig getTemporalConfig();
 
   /**
-   * @return an appropriately configured (i.e. TimeZone and other date/time
-   *         flags) SimpleDateFormat for the given format.
+   * @return an appropriately configured (i.e. locale) DateTimeFormatter for
+   *         the given format.
    */
-  public SimpleDateFormat createDateFormat(String formatStr);
+  public DateTimeFormatter createDateFormatter(String formatStr);
 
   /**
-   * @return an appropriately configured (i.e. TimeZone and other date/time
-   *         flags) Calendar.
+   * @return the currently configured ZoneId
    */
-  public Calendar getCalendar();
+  public ZoneId getZoneId();
 
   /**
    * @return the currently configured NumericConfig (from the

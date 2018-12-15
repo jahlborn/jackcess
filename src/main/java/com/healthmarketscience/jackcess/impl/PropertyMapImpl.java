@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -208,7 +209,7 @@ public class PropertyMapImpl implements PropertyMap
         type = DataType.FLOAT;
       } else if(value instanceof Double) {
         type = DataType.DOUBLE;
-      } else if(value instanceof Date) {
+      } else if((value instanceof Date) || (value instanceof LocalDateTime)) {
         type = DataType.SHORT_DATE_TIME;
       } else if(value instanceof byte[]) {
         type = DataType.OLE;

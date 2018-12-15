@@ -40,7 +40,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.Calendar;
@@ -108,14 +107,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
     25569L * MILLISECONDS_PER_DAY;
 
-  static final LocalDate BASE_LD = LocalDate.of(1899, 12, 30);
-  static final LocalTime BASE_LT = LocalTime.of(0, 0);
-  static final LocalDateTime BASE_LDT = LocalDateTime.of(BASE_LD, BASE_LT);
+  public static final LocalDate BASE_LD = LocalDate.of(1899, 12, 30);
+  public static final LocalTime BASE_LT = LocalTime.of(0, 0);
+  public static final LocalDateTime BASE_LDT = LocalDateTime.of(BASE_LD, BASE_LT);
 
   private static final DateTimeFactory DEF_DATE_TIME_FACTORY =
     new DefaultDateTimeFactory();
 
-  private static final DateTimeFactory LDT_DATE_TIME_FACTORY =
+  static final DateTimeFactory LDT_DATE_TIME_FACTORY =
     new LDTDateTimeFactory();
 
   /**
@@ -929,30 +928,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return fromDateDouble(value, getTimeZone());
   }
 
-  /**
-   * Returns a java long time value converted from an access date double.
-   * @usage _advanced_method_
-   */
-  public static long fromDateDouble(double value, DatabaseImpl db) {
-    return fromDateDouble(value, db.getTimeZone());
-  }
-
-  /**
-   * Returns a java long time value converted from an access date double.
-   * @usage _advanced_method_
-   */
-  @Deprecated
-  public static long fromDateDouble(double value, Calendar c) {
-    // FIXME, remove me
-    return fromDateDouble(value, c.getTimeZone());
-  }
-
-  public static long fromDateDouble(double value, TimeZone tz) {
+  private static long fromDateDouble(double value, TimeZone tz) {
     long localTime = fromLocalDateDouble(value);
     return localTime - getFromLocalTimeZoneOffset(localTime, tz);
   }
 
-  public static long fromLocalDateDouble(double value) {
+  static long fromLocalDateDouble(double value) {
     long datePart = ((long)value) * MILLISECONDS_PER_DAY;
 
     // the fractional part of the double represents the time.  it is always
@@ -968,11 +949,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   }
 
   public static LocalDateTime ldtFromLocalDateDouble(double value) {
-    Duration dateTimeOffset = durationFromLocalDateDouble1900(value);
+    Duration dateTimeOffset = durationFromLocalDateDouble(value);
     return BASE_LDT.plus(dateTimeOffset);
   }
 
-  private static Duration durationFromLocalDateDouble1900(double value) {
+  private static Duration durationFromLocalDateDouble(double value) {
     long dateSeconds = ((long)value) * SECONDS_PER_DAY;
 
     // the fractional part of the double represents the time.  it is always
@@ -1027,7 +1008,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * time value.
    * @usage _advanced_method_
    */
-  public static double toDateDouble(Object value, DatabaseImpl db)
+  private static double toDateDouble(Object value, DatabaseImpl db)
   {
     return toDateDouble(value, db.getTimeZone(), db.getZoneId());
   }
@@ -1037,23 +1018,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Date/Calendar/Number/Temporal time value.
    * @usage _advanced_method_
    */
-  @Deprecated
-  public static double toDateDouble(Object value, Calendar c) {
-    // FIXME remove me
-    return toDateDouble(value, c.getTimeZone());
-  }
-
-  public static double toDateDouble(Object value, TimeZone tz)
-  {
-    return toDateDouble(value, tz, null);
-  }
-
-  /**
-   * Returns an access date double converted from a java
-   * Date/Calendar/Number/Temporal time value.
-   * @usage _advanced_method_
-   */
-  public static double toDateDouble(Object value, TimeZone tz, ZoneId zoneId)
+  private static double toDateDouble(Object value, TimeZone tz, ZoneId zoneId)
   {
     if(value instanceof TemporalAccessor) {
       return toDateDouble(
@@ -1139,10 +1104,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   public static double toDateDouble(LocalDateTime ldt) {
     Duration dateTimeOffset = Duration.between(BASE_LDT, ldt);
-    return toLocalDateDouble1900(dateTimeOffset);
+    return toLocalDateDouble(dateTimeOffset);
   }
 
-  private static double toLocalDateDouble1900(Duration time) {
+  private static double toLocalDateDouble(Duration time) {
     long dateTimeSeconds = time.getSeconds();
     long timeSeconds = dateTimeSeconds % SECONDS_PER_DAY;
     if(timeSeconds < 0) {
@@ -1782,6 +1747,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((Boolean)value) ? BigDecimal.valueOf(-1) : BigDecimal.ZERO;
     } else if(value instanceof Date) {
       return new BigDecimal(toDateDouble(value, db));
+    } else if(value instanceof LocalDateTime) {
+      return new BigDecimal(toDateDouble((LocalDateTime)value));
     }
     return new BigDecimal(value.toString());
   }
@@ -1812,6 +1779,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((Boolean)value) ? -1 : 0;
     } else if(value instanceof Date) {
       return toDateDouble(value, db);
+    } else if(value instanceof LocalDateTime) {
+      return toDateDouble((LocalDateTime)value);
     }
     return Double.valueOf(value.toString());
   }
@@ -2147,6 +2116,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
                                        DatabaseImpl db)
     throws IOException
   {
+    return toInternalValue(dataType, value, db, null);
+  }
+
+  static Object toInternalValue(DataType dataType, Object value,
+                                DatabaseImpl db,
+                                ColumnImpl.DateTimeFactory factory)
+    throws IOException
+  {
     if(value == null) {
       return null;
     }
@@ -2171,7 +2148,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((value instanceof Double) ? value :
               toNumber(value, db).doubleValue());
     case SHORT_DATE_TIME:
-      return db.getDateTimeFactory().toInternalValue(db, value);
+      if(factory == null) {
+        factory = db.getDateTimeFactory();
+      }
+      return factory.toInternalValue(db, value);
     case TEXT:
     case MEMO:
     case GUID:

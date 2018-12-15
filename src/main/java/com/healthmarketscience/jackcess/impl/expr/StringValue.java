@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.text.DecimalFormatSymbols;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
@@ -84,7 +83,7 @@ public class StringValue extends BaseValue
       // numberToDateValue may return null for out of range numbers)
       try {
         dateValue = DefaultDateFunctions.numberToDateValue(
-            ctx, getNumber(ctx).doubleValue());
+            getNumber(ctx).doubleValue());
       } catch(EvalException ignored) {
         // not a number, not a date/time
       }

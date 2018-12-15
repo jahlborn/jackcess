@@ -17,8 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
@@ -42,7 +42,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
 
   private final DatabaseImpl _db;
   private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
-  private Map<String,SimpleDateFormat> _sdfs;
+  private Map<String,DateTimeFormatter> _sdfs;
   private Map<String,DecimalFormat> _dfs;
   private TemporalConfig _temporal = TemporalConfig.US_TEMPORAL_CONFIG;
   private NumericConfig _numeric = NumericConfig.US_NUMERIC_CONFIG;
@@ -68,8 +68,8 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     }
   }
 
-  public Calendar getCalendar() {
-    return _db.getCalendar();
+  public ZoneId getZoneId() {
+    return _db.getZoneId();
   }
 
   public NumericConfig getNumericConfig() {
@@ -99,14 +99,13 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     _bindings = bindings;
   }
 
-  public SimpleDateFormat createDateFormat(String formatStr) {
+  public DateTimeFormatter createDateFormatter(String formatStr) {
     if(_sdfs == null) {
-      _sdfs = new SimpleCache<String,SimpleDateFormat>(MAX_CACHE_SIZE);
+      _sdfs = new SimpleCache<String,DateTimeFormatter>(MAX_CACHE_SIZE);
     }
-    SimpleDateFormat sdf = _sdfs.get(formatStr);
+    DateTimeFormatter sdf = _sdfs.get(formatStr);
     if(sdf == null) {
-      sdf = _db.createDateFormat(formatStr);
-      sdf.setDateFormatSymbols(_temporal.getDateFormatSymbols());
+      sdf = DateTimeFormatter.ofPattern(formatStr, _temporal.getLocale());
       _sdfs.put(formatStr, sdf);
     }
     return sdf;
@@ -127,9 +126,5 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
 
   public float getRandom(Integer seed) {
     return _rndCtx.getRandom(seed);
-  }
-
-  void resetDateTimeConfig() {
-    _sdfs = null;
   }
 }

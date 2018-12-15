@@ -17,9 +17,9 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -172,10 +172,10 @@ public class FormatUtil
 
     @Override
     public Value format(EvalContext ctx, Value expr, String fmtStr,
-                         int firstDay, int firstWeekType) {
-      DateFormat sdf = ctx.createDateFormat(
+                        int firstDay, int firstWeekType) {
+      DateTimeFormatter dtf = ctx.createDateFormatter(
           ctx.getTemporalConfig().getDateTimeFormat(_type));
-      return ValueSupport.toValue(sdf.format(expr.getAsDateTime(ctx)));
+      return ValueSupport.toValue(dtf.format(expr.getAsLocalDateTime(ctx)));
     }
   }
 

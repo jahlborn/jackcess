@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -78,9 +79,9 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CSng(\"57.12345\")"));
     assertEval("9786", "=CStr(9786)");
     assertEval("-42", "=CStr(-42)");
-    assertEval(new Date(1041483600000L), "=CDate('01/02/2003')");
-    assertEval(new Date(1041508800000L), "=CDate('01/02/2003 7:00:00 AM')");
-    assertEval(new Date(-1948781520000L), "=CDate(3013.45)");
+    assertEval(LocalDateTime.of(2003,1,2,0,0), "=CDate('01/02/2003')");
+    assertEval(LocalDateTime.of(2003,1,2,7,0), "=CDate('01/02/2003 7:00:00 AM')");
+    assertEval(LocalDateTime.of(1908,3,31,10,48), "=CDate(3013.45)");
 
 
     assertEval(-1, "=IsNull(Null)");

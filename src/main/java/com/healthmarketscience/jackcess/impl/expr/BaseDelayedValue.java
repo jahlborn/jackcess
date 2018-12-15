@@ -17,7 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -60,8 +60,8 @@ public abstract class BaseDelayedValue implements Value
     return getDelegate().getAsString(ctx);
   }
 
-  public Date getAsDateTime(LocaleContext ctx) {
-    return getDelegate().getAsDateTime(ctx);
+  public LocalDateTime getAsLocalDateTime(LocaleContext ctx) {
+    return getDelegate().getAsLocalDateTime(ctx);
   }
 
   public Value getAsDateTimeValue(LocaleContext ctx) {
