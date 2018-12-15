@@ -76,7 +76,8 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class ColumnImpl implements Column, Comparable<ColumnImpl> {
+public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
+{
 
   protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
 
@@ -358,10 +359,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // base does nothing
   }
 
+  @Override
   public TableImpl getTable() {
     return _table;
   }
 
+  @Override
   public DatabaseImpl getDatabase() {
     return getTable().getDatabase();
   }
@@ -380,14 +383,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getDatabase().getPageChannel();
   }
 
+  @Override
   public String getName() {
     return _name;
   }
 
+  @Override
   public boolean isVariableLength() {
     return _variableLength;
   }
 
+  @Override
   public boolean isAutoNumber() {
     return _autoNumber;
   }
@@ -399,6 +405,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _columnNumber;
   }
 
+  @Override
   public int getColumnIndex() {
     return _columnIndex;
   }
@@ -417,22 +424,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _displayIndex;
   }
 
+  @Override
   public DataType getType() {
     return _type;
   }
 
+  @Override
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
   }
 
+  @Override
   public boolean isCompressedUnicode() {
     return false;
   }
 
+  @Override
   public byte getPrecision() {
     return (byte)getType().getDefaultPrecision();
   }
 
+  @Override
   public byte getScale() {
     return (byte)getType().getDefaultScale();
   }
@@ -451,14 +463,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return 0;
   }
 
+  @Override
   public short getLength() {
     return _columnLength;
   }
 
+  @Override
   public short getLengthInUnits() {
     return (short)getType().toUnitSize(getLength());
   }
 
+  @Override
   public boolean isCalculated() {
     return _calculated;
   }
@@ -481,11 +496,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getDatabase().getCharset();
   }
 
-  protected TimeZone getTimeZone() {
+  @Override
+  public TimeZone getTimeZone() {
     return getDatabase().getTimeZone();
   }
 
-  protected ZoneId getZoneId() {
+  @Override
+  public ZoneId getZoneId() {
     return getDatabase().getZoneId();
   }
 
@@ -493,10 +510,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getDatabase().getDateTimeFactory();
   }
 
+  @Override
   public boolean isAppendOnly() {
     return (getVersionHistoryColumn() != null);
   }
 
+  @Override
   public ColumnImpl getVersionHistoryColumn() {
     return null;
   }
@@ -516,10 +535,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public boolean isHyperlink() {
     return false;
   }
 
+  @Override
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return null;
   }
@@ -610,12 +631,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     reloadPropertiesValidators();
   }
 
+  @Override
   public ColumnValidator getColumnValidator() {
     // unwrap any "internal" validator
     return ((_validator instanceof InternalColumnValidator) ?
             ((InternalColumnValidator)_validator).getExternal() : _validator);
   }
 
+  @Override
   public void setColumnValidator(ColumnValidator newValidator) {
 
     if(isAutoNumber()) {
@@ -676,6 +699,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _autoNumberGenerator;
   }
 
+  @Override
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
       _props = getTable().getPropertyMaps().get(getName());
@@ -683,20 +707,24 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _props;
   }
 
+  @Override
   public Object setRowValue(Object[] rowArray, Object value) {
     rowArray[_columnIndex] = value;
     return value;
   }
 
+  @Override
   public Object setRowValue(Map<String,Object> rowMap, Object value) {
     rowMap.put(_name, value);
     return value;
   }
 
+  @Override
   public Object getRowValue(Object[] rowArray) {
     return rowArray[_columnIndex];
   }
 
+  @Override
   public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }
@@ -997,20 +1025,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     throws InvalidValueException
   {
     try {
-      return toDateDouble(value, getTimeZone(), getZoneId());
+      return toDateDouble(value, this);
     } catch(IllegalArgumentException iae) {
       throw new InvalidValueException(withErrorContext(iae.getMessage()), iae);
     }
-  }
-
-  /**
-   * Returns an access date double converted from a java Date/Calendar/Number
-   * time value.
-   * @usage _advanced_method_
-   */
-  private static double toDateDouble(Object value, DatabaseImpl db)
-  {
-    return toDateDouble(value, db.getTimeZone(), db.getZoneId());
   }
 
   /**
@@ -1018,22 +1036,21 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Date/Calendar/Number/Temporal time value.
    * @usage _advanced_method_
    */
-  private static double toDateDouble(Object value, TimeZone tz, ZoneId zoneId)
+  private static double toDateDouble(Object value, ZoneContext zc)
   {
     if(value instanceof TemporalAccessor) {
-      return toDateDouble(
-          toLocalDateTime((TemporalAccessor)value, tz, zoneId));
+      return toDateDouble(toLocalDateTime((TemporalAccessor)value, zc));
     }
 
     // seems access stores dates in the local timezone.  guess you just
     // hope you read it in the same timezone in which it was written!
     long time = toDateLong(value);
-    time += getToLocalTimeZoneOffset(time, tz);
+    time += getToLocalTimeZoneOffset(time, zc.getTimeZone());
     return toLocalDateDouble(time);
   }
 
   private static LocalDateTime toLocalDateTime(
-      TemporalAccessor value, TimeZone tz, ZoneId zoneId) {
+      TemporalAccessor value, ZoneContext zc) {
 
     // handle some common Temporal types
     if(value instanceof LocalDateTime) {
@@ -1042,10 +1059,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     if(value instanceof ZonedDateTime) {
       // if the temporal value has a timezone, convert it to this db's timezone
       return ((ZonedDateTime)value).withZoneSameInstant(
-          getZoneId(tz, zoneId)).toLocalDateTime();
+          zc.getZoneId()).toLocalDateTime();
     }
     if(value instanceof Instant) {
-      return LocalDateTime.ofInstant((Instant)value, getZoneId(tz, zoneId));
+      return LocalDateTime.ofInstant((Instant)value, zc.getZoneId());
     }
     if(value instanceof LocalDate) {
       return ((LocalDate)value).atTime(BASE_LT);
@@ -1069,7 +1086,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       if(zone != null) {
         // the Temporal has a zone, see if it is the right zone.  if not,
         // adjust it
-        zoneId = getZoneId(tz, zoneId);
+        ZoneId zoneId = zc.getZoneId();
         if(!zoneId.equals(zone)) {
           return ZonedDateTime.of(ld, lt, zone).withZoneSameInstant(zoneId)
             .toLocalDateTime();
@@ -1082,10 +1099,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       throw new IllegalArgumentException(
           "Unsupported temporal type " + value.getClass(), e);
     }
-  }
-
-  private static ZoneId getZoneId(TimeZone tz, ZoneId zoneId) {
-    return ((zoneId != null) ? zoneId : tz.toZoneId());
   }
 
   static double toLocalDateDouble(long time) {
@@ -1692,6 +1705,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Orders Columns by column number.
    * @usage _general_method_
    */
+  @Override
   public int compareTo(ColumnImpl other) {
     if (_columnNumber > other.getColumnNumber()) {
       return 1;
@@ -2707,7 +2721,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     @Override
     public Object toInternalValue(DatabaseImpl db, Object value) {
       if(value instanceof TemporalAccessor) {
-        return toLocalDateTime((TemporalAccessor)value, null, db.getZoneId());
+        return toLocalDateTime((TemporalAccessor)value, db);
       }
       Instant inst = Instant.ofEpochMilli(toDateLong(value));
       return LocalDateTime.ofInstant(inst, db.getZoneId());

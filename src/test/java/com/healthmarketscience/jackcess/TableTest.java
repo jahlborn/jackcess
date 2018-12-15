@@ -185,7 +185,7 @@ public class TableTest extends TestCase {
           return getFormat().CHARSET;
         }
         @Override
-        protected TimeZone getTimeZone() {
+        public TimeZone getTimeZone() {
           return TimeZone.getDefault();
         }
         @Override

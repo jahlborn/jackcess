@@ -127,9 +127,9 @@ public class LocalDateTimeTest extends TestCase
     final TimeZone tz = TimeZone.getTimeZone(zoneId);
     ColumnImpl col = new ColumnImpl(null, null, DataType.SHORT_DATE_TIME, 0, 0, 0) {
       @Override
-      protected TimeZone getTimeZone() { return tz; }
+      public TimeZone getTimeZone() { return tz; }
       @Override
-      protected ZoneId getZoneId() { return zoneId; }
+      public ZoneId getZoneId() { return zoneId; }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");

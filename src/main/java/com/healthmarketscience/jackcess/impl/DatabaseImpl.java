@@ -89,7 +89,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class DatabaseImpl implements Database
+public class DatabaseImpl implements Database, ZoneContext
 {
   private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
