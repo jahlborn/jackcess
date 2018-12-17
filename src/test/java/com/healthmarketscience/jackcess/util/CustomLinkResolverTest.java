@@ -149,11 +149,13 @@ public class CustomLinkResolverTest extends TestCase
 
     @Override
     protected Database createTempDb(Object customFile, FileFormat format,
-                                    boolean inMemory, Path tempDir)
+                                    boolean inMemory, Path tempDir,
+                                    boolean readOnly)
       throws IOException
     {
       inMemory = "testFile1.txt".equals(customFile);
-      return super.createTempDb(customFile, format, inMemory, tempDir);
+      return super.createTempDb(customFile, format, inMemory, tempDir,
+                                readOnly);
     }
   }
 }

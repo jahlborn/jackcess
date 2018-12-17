@@ -138,8 +138,11 @@ public abstract class CustomLinkResolver implements LinkResolver
   {
     Object customFile = loadCustomFile(linkerDb, linkeeFileName);
     if(customFile != null) {
+      // if linker is read-only, open linkee read-only
+      boolean readOnly = ((linkerDb instanceof DatabaseImpl) ?
+                          ((DatabaseImpl)linkerDb).isReadOnly() : false);
       return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
-                          getDefaultTempDirectory());
+                          getDefaultTempDirectory(), readOnly);
     }
     return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
   }
@@ -159,7 +162,8 @@ public abstract class CustomLinkResolver implements LinkResolver
    * @return the temp db for holding the linked table info
    */
   protected Database createTempDb(Object customFile, FileFormat format,
-                                  boolean inMemory, Path tempDir)
+                                  boolean inMemory, Path tempDir,
+                                  boolean readOnly)
     throws IOException
   {
     Path dbFile = null;
@@ -182,7 +186,7 @@ public abstract class CustomLinkResolver implements LinkResolver
 
       TempDatabaseImpl.initDbChannel(channel, format);
       TempDatabaseImpl db = new TempDatabaseImpl(this, customFile, dbFile,
-                                                 channel, format);
+                                                 channel, format, readOnly);
       success = true;
       return db;
 
@@ -259,10 +263,11 @@ public abstract class CustomLinkResolver implements LinkResolver
 
     protected TempDatabaseImpl(CustomLinkResolver resolver, Object customFile,
                                Path file, FileChannel channel,
-                               FileFormat fileFormat)
+                               FileFormat fileFormat, boolean readOnly)
       throws IOException
     {
-      super(file, channel, true, false, fileFormat, null, null, null);
+      super(file, channel, true, false, fileFormat, null, null, null,
+            readOnly);
       _resolver = resolver;
       _customFile = customFile;
     }

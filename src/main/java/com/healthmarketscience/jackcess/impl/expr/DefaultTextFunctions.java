@@ -425,7 +425,7 @@ public class DefaultTextFunctions
     }
   });
 
-  public static final Function FORMAT = registerFunc(new FuncVar("Format", 1, 4) {
+  public static final Function FORMAT = registerStringFunc(new FuncVar("Format", 1, 4) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
 

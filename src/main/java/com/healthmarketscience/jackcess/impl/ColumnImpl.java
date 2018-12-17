@@ -546,6 +546,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
   }
 
   void initColumnValidator() throws IOException {
+
+    if(getDatabase().isReadOnly()) {
+      // validators are irrelevant for read-only databases
+      return;
+    }
+
     // first initialize any "external" (user-defined) validator
     setColumnValidator(null);
 
