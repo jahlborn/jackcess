@@ -6,8 +6,26 @@
   <body>
     <release version="2.2.1" date="TBD">
       <action dev="jahlborn" type="update">
-        Implement IsNumeric function.  Add support for hex/oct integer
-        strings.
+        Implement the majority of the missing standard functions:
+        FormatCurrency, FormatDateTime, FormatNumber, FormatPercent, Val,
+        DateAdd, DateDiff, DatePart, MonthName, WeekdayName, DDB, IPmt, PPmt,
+        Rate, SLN, SYD, Format, Replace, StrConv.  (Note that the internal API
+        for the expr package has changed in an incompatible way.  However,
+        since the API is still experimental, this was deemed acceptable for a
+        minor version.).  Note that many of the financial functions were
+        copied and adpated from the Apache POI and UCanAccess projects (which
+        are both under the Apache License 2.0).
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement more type coercion methods for expressions.  Add support for
+        hex/oct integer strings.  Add support for number strings with commas.
+        Add support for coercing numeric String to a date/time value.  Add
+        support for date/time values with implicit (current) year.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="150">
+        Ignore column validators for read-only dbs.  This will avoid
+        irrelevant failures when reading databases which have invalid column
+        properties.
       </action>
     </release>
     <release version="2.2.0" date="2018-09-08"

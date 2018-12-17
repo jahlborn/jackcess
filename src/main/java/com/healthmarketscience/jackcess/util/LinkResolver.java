@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * Resolver for linked databases.
@@ -28,7 +29,7 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
  * @author James Ahlborn
  * @usage _intermediate_class_
  */
-public interface LinkResolver 
+public interface LinkResolver
 {
   /**
    * default link resolver used if none provided
@@ -39,7 +40,11 @@ public interface LinkResolver
                                             String linkeeFileName)
         throws IOException
       {
-        return DatabaseBuilder.open(new File(linkeeFileName));
+        // if linker is read-only, open linkee read-only
+        boolean readOnly = ((linkerDb instanceof DatabaseImpl) ?
+                            ((DatabaseImpl)linkerDb).isReadOnly() : false);
+        return new DatabaseBuilder(new File(linkeeFileName))
+          .setReadOnly(readOnly).open();
       }
     };
 

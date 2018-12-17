@@ -425,7 +425,7 @@ public class DefaultTextFunctions
     }
   });
 
-  public static final Function FORMAT = registerFunc(new FuncVar("Format", 1, 4) {
+  public static final Function FORMAT = registerStringFunc(new FuncVar("Format", 1, 4) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
 
@@ -441,11 +441,11 @@ public class DefaultTextFunctions
       String fmtStr = params[1].getAsString(ctx);
       int firstDay = DefaultDateFunctions.getFirstDayParam(ctx, params, 2);
       int firstWeekType = DefaultDateFunctions.getFirstWeekTypeParam(ctx, params, 3);
-      
+
       return FormatUtil.format(ctx, expr, fmtStr, firstDay, firstWeekType);
     }
   });
-    
+
   private static String nchars(int num, char c) {
     StringBuilder sb = new StringBuilder(num);
     nchars(sb, num, c);
@@ -457,7 +457,7 @@ public class DefaultTextFunctions
       sb.append(c);
     }
   }
-  
+
   private static String trim(String str, boolean doLeft, boolean doRight) {
     int start = 0;
     int end = str.length();

@@ -255,6 +255,8 @@ public class DatabaseImpl implements Database
   private final File _file;
   /** the simple name of the database */
   private final String _name;
+  /** whether or not this db is read-only */
+  private final boolean _readOnly;
   /** Buffer to hold database pages */
   private ByteBuffer _buffer;
   /** ID of the Tables system object */
@@ -399,7 +401,8 @@ public class DatabaseImpl implements Database
       }
 
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
-                                         null, charset, timeZone, provider);
+                                         null, charset, timeZone, provider,
+                                         readOnly);
       success = true;
       return db;
 
@@ -458,7 +461,8 @@ public class DatabaseImpl implements Database
       transferDbFrom(channel, getResourceAsStream(details.getEmptyFilePath()));
       channel.force(true);
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
-                                         fileFormat, charset, timeZone, null);
+                                         fileFormat, charset, timeZone, null,
+                                         false);
       success = true;
       return db;
     } finally {
@@ -510,11 +514,13 @@ public class DatabaseImpl implements Database
    */
   protected DatabaseImpl(File file, FileChannel channel, boolean closeChannel,
                          boolean autoSync, FileFormat fileFormat, Charset charset,
-                         TimeZone timeZone, CodecProvider provider)
+                         TimeZone timeZone, CodecProvider provider,
+                         boolean readOnly)
     throws IOException
   {
     _file = file;
     _name = getName(file);
+    _readOnly = readOnly;
     _format = JetFormat.getFormat(channel);
     _charset = ((charset == null) ? getDefaultCharset(_format) : charset);
     _columnOrder = getDefaultColumnOrder();
@@ -541,6 +547,10 @@ public class DatabaseImpl implements Database
 
   public String getName() {
     return _name;
+  }
+
+  public boolean isReadOnly() {
+    return _readOnly;
   }
 
   /**

@@ -117,28 +117,31 @@ public abstract class CustomLinkResolver implements LinkResolver
    * <pre>
    *   // attempt to load the linkeeFileName as a custom file
    *   Object customFile = loadCustomFile(linkerDb, linkeeFileName);
-   *   
+   *
    *   if(customFile != null) {
    *     // this is a custom file, create and return relevant temp db
    *     return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
    *                         getDefaultTempDirectory());
    *   }
-   *   
+   *
    *   // not a custmom file, load using the default behavior
    *   return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
    * </pre>
-   * 
+   *
    * @see #loadCustomFile
    * @see #createTempDb
    * @see LinkResolver#DEFAULT
    */
   public Database resolveLinkedDatabase(Database linkerDb, String linkeeFileName)
-    throws IOException 
+    throws IOException
   {
     Object customFile = loadCustomFile(linkerDb, linkeeFileName);
     if(customFile != null) {
-      return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(), 
-                          getDefaultTempDirectory());
+      // if linker is read-only, open linkee read-only
+      boolean readOnly = ((linkerDb instanceof DatabaseImpl) ?
+                          ((DatabaseImpl)linkerDb).isReadOnly() : false);
+      return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
+                          getDefaultTempDirectory(), readOnly);
     }
     return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
   }
@@ -157,8 +160,9 @@ public abstract class CustomLinkResolver implements LinkResolver
    *
    * @return the temp db for holding the linked table info
    */
-  protected Database createTempDb(Object customFile, FileFormat format, 
-                                  boolean inMemory, File tempDir)
+  protected Database createTempDb(Object customFile, FileFormat format,
+                                  boolean inMemory, File tempDir,
+                                  boolean readOnly)
     throws IOException
   {
     File dbFile = null;
@@ -178,8 +182,8 @@ public abstract class CustomLinkResolver implements LinkResolver
       }
 
       TempDatabaseImpl.initDbChannel(channel, format);
-      TempDatabaseImpl db = new TempDatabaseImpl(this, customFile, dbFile, 
-                                                 channel, format);
+      TempDatabaseImpl db = new TempDatabaseImpl(this, customFile, dbFile,
+                                                 channel, format, readOnly);
       success = true;
       return db;
 
@@ -203,7 +207,7 @@ public abstract class CustomLinkResolver implements LinkResolver
       ByteUtil.closeQuietly((Closeable)customFile);
     }
   }
-  
+
   /**
    * Called by {@link #resolveLinkedDatabase} to determine whether the
    * linkeeFileName should be treated as a custom file (thus utiliziing a temp
@@ -252,21 +256,22 @@ public abstract class CustomLinkResolver implements LinkResolver
     private final Object _customFile;
 
     protected TempDatabaseImpl(CustomLinkResolver resolver, Object customFile,
-                               File file, FileChannel channel, 
-                               FileFormat fileFormat)
+                               File file, FileChannel channel,
+                               FileFormat fileFormat, boolean readOnly)
       throws IOException
     {
-      super(file, channel, true, false, fileFormat, null, null, null);
+      super(file, channel, true, false, fileFormat, null, null, null,
+            readOnly);
       _resolver = resolver;
       _customFile = customFile;
     }
 
     @Override
-    protected TableImpl getTable(String name, boolean includeSystemTables) 
-      throws IOException 
+    protected TableImpl getTable(String name, boolean includeSystemTables)
+      throws IOException
     {
       TableImpl table = super.getTable(name, includeSystemTables);
-      if((table == null) && 
+      if((table == null) &&
          _resolver.loadCustomTable(this, _customFile, name)) {
         table = super.getTable(name, includeSystemTables);
       }
