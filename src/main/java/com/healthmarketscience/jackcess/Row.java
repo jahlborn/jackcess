@@ -91,12 +91,20 @@ public interface Row extends Map<String,Object>
   /**
    * Convenience method which gets the value for the row with the given name,
    * casting it to a Date (DataType SHORT_DATE_TIME).
+   * @deprecated this is only valid for Database instances configured for the
+   *             legacy {@link DateTimeType#DATE}.  Prefer using
+   *             {@link DateTimeType#LOCAL_DATE_TIME} and the corresponding
+   *             {@link #getLocalDateTime} method. Using Date is being phased
+   *             out and will eventually be removed.
    */
+  @Deprecated
   public Date getDate(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME).
+   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME).  This method
+   * will only work for Database instances configured for
+   * {@link DateTimeType#LOCAL_DATE_TIME}.
    */
   public LocalDateTime getLocalDateTime(String name);
 

@@ -53,6 +53,7 @@ import org.junit.Assert;
  *
  * @author James Ahlborn
  */
+@SuppressWarnings("deprecation")
 public class TestUtil
 {
   public static final TimeZone TEST_TZ =

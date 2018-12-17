@@ -39,7 +39,8 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  *
  * @author James Ahlborn
  */
-public class ComplexColumnTest extends TestCase 
+@SuppressWarnings("deprecation")
+public class ComplexColumnTest extends TestCase
 {
 
   public ComplexColumnTest(String name) {
@@ -66,7 +67,7 @@ public class ComplexColumnTest extends TestCase
           (ComplexValueForeignKey)verCol.getRowValue(row);
 
         String curValue = (String)col.getRowValue(row);
-      
+
         if(rowId.equals("row1")) {
           checkVersions(1, complexValueFk, curValue);
         } else if(rowId.equals("row2")) {
@@ -94,7 +95,7 @@ public class ComplexColumnTest extends TestCase
       Date upTime = new Date();
       row8ValFk.addVersion("row8-memo", upTime);
       checkVersions(row8ValFk.get(), row8ValFk, "row8-memo",
-                    "row8-memo", upTime);    
+                    "row8-memo", upTime);
 
       Cursor cursor = CursorBuilder.createCursor(t1);
       assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
@@ -120,7 +121,7 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-again", new Date(1315876965382L),
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
-    
+
       try {
         v.delete();
         fail("UnsupportedOperationException should have been thrown");
@@ -133,7 +134,7 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-again", new Date(1315876965382L),
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
-    
+
       try {
         v.getComplexValueForeignKey().deleteAllValues();
         fail("UnsupportedOperationException should have been thrown");
@@ -146,7 +147,7 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-again", new Date(1315876965382L),
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
-    
+
       db.close();
     }
   }
@@ -154,7 +155,7 @@ public class ComplexColumnTest extends TestCase
   public void testAttachments() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
-      
+
       Database db = openCopy(testDB);
 
       Table t1 = db.getTable("Table1");
@@ -187,12 +188,12 @@ public class ComplexColumnTest extends TestCase
       ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
         col.getRowValue(row8);
       row8ValFk.addAttachment(null, "test_data.txt", "txt",
-                              getFileBytes("test_data.txt"), null, null);
+                              getFileBytes("test_data.txt"), (Date)null, null);
       checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
       row8ValFk.addEncodedAttachment(null, "test_data2.txt", "txt",
-                                     getEncodedFileBytes("test_data2.txt"), null,
-                                     null);
-      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt", 
+                                     getEncodedFileBytes("test_data2.txt"),
+                                     (Date)null, null);
+      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt",
                        "test_data2.txt");
 
       Cursor cursor = CursorBuilder.createCursor(t1);
@@ -200,8 +201,8 @@ public class ComplexColumnTest extends TestCase
       ComplexValueForeignKey row4ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       Attachment a = row4ValFk.addAttachment(null, "test_data.txt", "txt",
-                                             getFileBytes("test_data.txt"), null,
-                                             null);
+                                             getFileBytes("test_data.txt"),
+                                             (Date)null, null);
       checkAttachments(4, row4ValFk, "test_data2.txt", "test_data.txt");
 
       a.setFileType("zip");
@@ -230,8 +231,8 @@ public class ComplexColumnTest extends TestCase
       ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
         cursor.getCurrentRowValue(col);
       row2ValFk.deleteAllValues();
-      checkAttachments(2, row2ValFk);      
-    
+      checkAttachments(2, row2ValFk);
+
       db.close();
     }
   }
@@ -239,7 +240,7 @@ public class ComplexColumnTest extends TestCase
   public void testMultiValues() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
-      
+
       Database db = openCopy(testDB);
 
       Table t1 = db.getTable("Table1");
@@ -264,7 +265,7 @@ public class ComplexColumnTest extends TestCase
         } else {
           assertTrue(false);
         }
-      }     
+      }
 
       Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
                        Column.AUTO_NUMBER, Column.AUTO_NUMBER};
@@ -307,17 +308,17 @@ public class ComplexColumnTest extends TestCase
       PropertyMap props = col.getProperties();
       assertEquals(Boolean.TRUE, props.getValue(PropertyMap.ALLOW_MULTI_VALUE_PROP));
       assertEquals("Value List", props.getValue(PropertyMap.ROW_SOURCE_TYPE_PROP));
-      assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"", 
+      assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"",
                    props.getValue(PropertyMap.ROW_SOURCE_PROP));
-    
+
       db.close();
     }
   }
-  
+
   public void testUnsupported() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
-      
+
       Database db = openCopy(testDB);
 
       Table t1 = db.getTable("Test");
@@ -331,7 +332,7 @@ public class ComplexColumnTest extends TestCase
           (ComplexValueForeignKey)col.getRowValue(row);
 
         if(rowId.equals(1)) {
-          checkUnsupportedValues(1, complexValueFk, 
+          checkUnsupportedValues(1, complexValueFk,
                                  "RawData[(5) FF FE 62 61  7A]");
         } else if(rowId.equals(2)) {
           checkUnsupportedValues(2, complexValueFk, "RawData[(5) FF FE 66 6F  6F]", "RawData[(5) FF FE 62 61  7A]");
@@ -340,12 +341,12 @@ public class ComplexColumnTest extends TestCase
         } else {
           assertTrue(false);
         }
-      }     
-    
+      }
+
       db.close();
     }
   }
-  
+
   private static void checkVersions(
       int cValId, ComplexValueForeignKey complexValueFk,
       String curValue, Object... versionInfos)
@@ -376,7 +377,7 @@ public class ComplexColumnTest extends TestCase
     throws Exception
   {
     assertEquals(cValId, complexValueFk.get());
-    
+
     List<Attachment> attachments = complexValueFk.getAttachments();
     if(fileNames.length == 0) {
       assertTrue(attachments.isEmpty());
@@ -388,12 +389,12 @@ public class ComplexColumnTest extends TestCase
         assertEquals(fname, a.getFileName());
         assertEquals("txt", a.getFileType());
         assertTrue(Arrays.equals(getFileBytes(fname), a.getFileData()));
-        assertTrue(Arrays.equals(getEncodedFileBytes(fname), 
+        assertTrue(Arrays.equals(getEncodedFileBytes(fname),
                                  a.getEncodedFileData()));
       }
     }
   }
-  
+
   private static void checkMultiValues(
       int cValId, ComplexValueForeignKey complexValueFk,
       Object... expectedValues)
@@ -411,7 +412,7 @@ public class ComplexColumnTest extends TestCase
         SingleValue v = values.get(i);
         assertEquals(value, v.get());
       }
-    }    
+    }
   }
 
   private static void checkUnsupportedValues(
@@ -434,7 +435,7 @@ public class ComplexColumnTest extends TestCase
         assertTrue(ColumnImpl.isRawData(rv));
         assertEquals(value, rv.toString());
       }
-    }    
+    }
   }
 
   private static byte[] getFileBytes(String fname) throws Exception
@@ -447,7 +448,7 @@ public class ComplexColumnTest extends TestCase
     }
     throw new RuntimeException("unexpected bytes");
   }
-  
+
   private static byte[] getEncodedFileBytes(String fname) throws Exception
   {
     if("test_data.txt".equals(fname)) {
@@ -458,9 +459,9 @@ public class ComplexColumnTest extends TestCase
     }
     throw new RuntimeException("unexpected bytes");
   }
-  
+
   private static byte b(int i) { return (byte)i; }
-  
+
   private static byte[] getAsciiBytes(String str) {
     try {
       return str.getBytes("US-ASCII");
@@ -468,7 +469,7 @@ public class ComplexColumnTest extends TestCase
       throw new RuntimeException(e);
     }
   }
-  
+
   private static final byte[] TEST_ENC_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3A),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),b(0x25),b(0x89),b(0x0A),b(0x69),b(0xF9),
@@ -476,7 +477,7 @@ public class ComplexColumnTest extends TestCase
   };
 
   private static final byte[] TEST_BYTES = getAsciiBytes("this is some test data for attachment.");
-  
+
   private static final byte[] TEST2_ENC_BYTES = new byte[] {
     b(0x01),b(0x00),b(0x00),b(0x00),b(0x3F),b(0x00),b(0x00),b(0x00),b(0x78),b(0x5E),b(0x13),b(0x61),b(0x60),b(0x60),b(0x60),b(0x04),b(0x62),b(0x16),b(0x20),b(0x2E),b(0x61),b(0xA8),b(0x00),b(0x62),
     b(0x20),b(0x9D),b(0x91),b(0x59),b(0xAC),b(0x00),b(0x44),b(0xC5),b(0xF9),b(0xB9),b(0xA9),b(0x0A),b(0xB9),b(0xF9),b(0x45),b(0xA9),b(0x0A),b(0x25),b(0xA9),b(0xC5),b(0x25),b(0x0A),b(0x29),b(0x89),
@@ -484,5 +485,5 @@ public class ComplexColumnTest extends TestCase
   };
 
   private static final byte[] TEST2_BYTES = getAsciiBytes("this is some more test data for attachment.");
-  
+
 }

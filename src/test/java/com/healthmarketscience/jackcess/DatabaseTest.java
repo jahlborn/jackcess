@@ -52,6 +52,7 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
 /**
  * @author Tim McCune
  */
+@SuppressWarnings("deprecation")
 public class DatabaseTest extends TestCase
 {
   public DatabaseTest(String name) throws Exception {
