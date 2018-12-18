@@ -46,11 +46,11 @@ import com.healthmarketscience.jackcess.util.TableIterableBuilder;
  * Database has been opened, you can interact with the data via the relevant
  * {@link Table}.  When a Database instance is no longer useful, it should
  * <b>always</b> be closed ({@link #close}) to avoid corruption.
- * <br>
+ * <p>
  * Database instances (and all the related objects) are <i>not</i>
  * thread-safe.  However, separate Database instances (and their respective
  * objects) can be used by separate threads without a problem.
- * <br>
+ * <p>
  * Database instances do not implement any "transactional" support, and
  * therefore concurrent editing of the same database file by multiple Database
  * instances (or with outside programs such as MS Access) <i>will generally
@@ -248,7 +248,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Finds all the relationships in the database in <i>non-system</i> tables.
-   * <br>
+   * <p>
    * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
    * database which could cause memory issues.
    * @usage _intermediate_method_
@@ -258,7 +258,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   /**
    * Finds <i>all</i> the relationships in the database, <i>including system
    * tables</i>.
-   * <br>
+   * <p>
    * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
    * database which could cause memory issues.
    * @usage _intermediate_method_

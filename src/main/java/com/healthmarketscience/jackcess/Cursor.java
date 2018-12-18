@@ -31,7 +31,7 @@ import com.healthmarketscience.jackcess.util.IterableBuilder;
  * of table modification during traversal (although depending on how the table
  * is traversed, row updates may or may not be seen).  Multiple cursors may
  * traverse the same table simultaneously.
- * <br>
+ * <p>
  * Basic cursors will generally iterate table data in the order it appears in
  * the database and searches will require scanning the entire table.
  * Additional features are available when utilizing an {@link Index} backed
@@ -135,7 +135,7 @@ public interface Cursor extends Iterable<Row>
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
-   * <br>
+   * <p>
    * For more flexible iteration see {@link #newIterable}.
    * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
@@ -151,7 +151,7 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Delete the current row.
-   * <br>
+   * <p>
    * Note, re-deleting an already deleted row is allowed (it does nothing).
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table)

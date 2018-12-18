@@ -41,7 +41,7 @@ import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 /**
  * Utility code for working with OLE data which is in the compound storage
  * format.  This functionality relies on the optional POI library.
- * <br>
+ * <p>
  * Note that all POI usage is restricted to this file so that the basic ole
  * support in OleUtil can be utilized without requiring POI.
  *

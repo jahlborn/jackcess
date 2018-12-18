@@ -33,7 +33,7 @@ import com.healthmarketscience.jackcess.util.ErrorHandler;
  * {@link TableBuilder}.  The {@link com.healthmarketscience.jackcess.util.Joiner} utility can be used to traverse
  * table relationships (e.g. find rows in another table based on a foreign-key
  * relationship).
- * <br>
+ * <p>
  * A Table instance is not thread-safe (see {@link Database} for more
  * thread-safety details).
  *
@@ -203,7 +203,7 @@ public interface Table extends Iterable<Row>
   /**
    * Calls {@link #asRow} on the given row map and passes the result to {@link
    * #addRow}.
-   * <br>
+   * <p>
    * Note, if this table has an auto-number column, the value generated will be
    * put back into the given row map.
    * @return the given row map, which will contain any autonumbers generated
@@ -242,7 +242,7 @@ public interface Table extends Iterable<Row>
   /**
    * Calls {@link #asRow} on the given row maps and passes the results to
    * {@link #addRows}.
-   * <br>
+   * <p>
    * Note, if this table has an auto-number column, the values generated will
    * be put back into the appropriate row maps.
    * <p>
@@ -278,7 +278,7 @@ public interface Table extends Iterable<Row>
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
-   * <br>
+   * <p>
    * For more advanced iteration, use the {@link #getDefaultCursor default
    * cursor} directly.
    * @throws RuntimeIOException if an IOException is thrown by one of the

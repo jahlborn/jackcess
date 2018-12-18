@@ -36,12 +36,12 @@ import com.healthmarketscience.jackcess.util.MemFileChannel;
 
 /**
  * Builder style class for opening/creating a {@link Database}.
- * <br>
+ * <p>
  * Simple example usage:
  * <pre>
  *   Database db = DatabaseBuilder.open(new File("test.mdb"));
  * </pre>
- * <br>
+ * <p>
  * Advanced example usage:
  * <pre>
  *   Database db = new DatabaseBuilder(new File("test.mdb"))

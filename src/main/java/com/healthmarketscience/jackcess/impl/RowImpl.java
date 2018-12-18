@@ -29,7 +29,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
 
 /**
  * A row of data as column-&gt;value pairs.
- * <br>
+ * <p>
  * Note that the {@link #equals} and {@link #hashCode} methods work on the row
  * contents <i>only</i> (i.e. they ignore the id).
  *

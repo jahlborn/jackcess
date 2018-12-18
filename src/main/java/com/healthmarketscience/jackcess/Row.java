@@ -123,7 +123,7 @@ public interface Row extends Map<String,Object>
   /**
    * Convenience method which gets the value for the row with the given name,
    * converting it to an {@link OleBlob} (DataTypes OLE).
-   * <br>
+   * <p>
    * Note, <i>the OleBlob should be closed after use</i>.
    */
   public OleBlob getBlob(String name) throws IOException;

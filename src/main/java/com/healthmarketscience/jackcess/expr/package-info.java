@@ -20,13 +20,13 @@ limitations under the License.
  * but can be globally enabled via the system property
  * "com.healthmarketscience.jackcess.enableExpressionEvaluation" or
  * selectively enabled on a per database basis using {@link com.healthmarketscience.jackcess.Database#setEvaluateExpressions(Boolean)}.
- * <br>
+ * <p>
  * The expression evaluation engine implementation does its best to follow all
  * the warts and idiosyncracies of Access expression evaluation (both those
  * that are documented as well as those discovered through experimentation).
  * These include such things as value conversions, "Null" handling, rounding
  * rules, and implicit interpretations of expression in certain contexts.
- * <br>
+ * <p>
  * Expressions can be used in a number of different places within an Access
  * database.  When enabled, Jackcess supports the following usage:
  * <ul>
@@ -50,14 +50,14 @@ limitations under the License.
  *       record validation rules will be run for the entire record before
  *       update.  Failures are handled in a similar manner.</li>
  * </ul>
- * <br>
+ * <p>
  * <h2>Supporting Classes</h2>
- * <br>
+ * <p>
  * The classes in this package make up the public api for expression handling
  * in Jackcess.  They generally fall into two categories:
- * <br>
+ * <p>
  * <h3>General Use Classes</h3>
- * <br>
+ * <p>
  * <ul>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalConfig} allows for customization of the expression
  *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
@@ -72,9 +72,9 @@ limitations under the License.
  * <li>{@link com.healthmarketscience.jackcess.expr.ParseException} wrapper exception thrown for failures which
  *     occur during expression parsing.</li>
  * </ul>
- * <br>
+ * <p>
  * <h3>Advanced Use Classes</h3>
- * <br>
+ * <p>
  * <ul>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalContext} encapsulates all shared state for expression
  *     parsing and evaluation.</li>
@@ -86,9 +86,9 @@ limitations under the License.
  *     database field).</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.Value} represents a typed primitive value.</li>
  * </ul>
- * <br>
+ * <p>
  * <h2>Function Support</h2>
- * <br>
+ * <p>
  * Jackcess supports many of the standard Access functions.  The following
  * tables list the (hopefully) current status of support built into Jackcess.
  *
