@@ -4,6 +4,31 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="3.0.0" date="TBD" description="Update to Java 8">
+      <action dev="jahlborn" type="update">
+        Jackcess now requires a Java 8+ runtime.  As part of this update, all
+        dependencies have been updated to their latest versions.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for Java 8 Temporal types.  Date/time fields will now
+        accept as input most Temporal types (e.g. LocalDate, LocalTime,
+        LocalDateTime, etc).  Additionally, date/time fields can optionally be
+        changed to output LocalDateTime instead of Date.  This behavior is
+        configurable on a per-Database basis by setting the DateTimeType for
+        the database.  All Date based APIs now have a parallel LocalDateTime
+        API.  Note that <i>only one of those will work</i> depending on how
+        the Database is configured.  The legacy Date support will be the
+        default initially, but is deprecated and may be removed in the future.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for Path.  Existing File based APIs now have parallel
+        versions which utilize Path.
+      </action>
+      <action dev="jahlborn" type="update">
+        The Apache commons-lang dependency has been replaced with
+        commons-lang3.
+      </action>
+    </release>
     <release version="2.2.1" date="TBD">
       <action dev="jahlborn" type="update">
         Implement the majority of the missing standard functions:
