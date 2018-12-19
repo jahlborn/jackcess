@@ -50,14 +50,14 @@ limitations under the License.
  *       record validation rules will be run for the entire record before
  *       update.  Failures are handled in a similar manner.</li>
  * </ul>
- * <p>
+ *
  * <h2>Supporting Classes</h2>
  * <p>
  * The classes in this package make up the public api for expression handling
  * in Jackcess.  They generally fall into two categories:
- * <p>
+ *
  * <h3>General Use Classes</h3>
- * <p>
+ *
  * <ul>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalConfig} allows for customization of the expression
  *     evaluation context for a given {@link com.healthmarketscience.jackcess.Database} instance.</li>
@@ -72,9 +72,9 @@ limitations under the License.
  * <li>{@link com.healthmarketscience.jackcess.expr.ParseException} wrapper exception thrown for failures which
  *     occur during expression parsing.</li>
  * </ul>
- * <p>
+ *
  * <h3>Advanced Use Classes</h3>
- * <p>
+ *
  * <ul>
  * <li>{@link com.healthmarketscience.jackcess.expr.EvalContext} encapsulates all shared state for expression
  *     parsing and evaluation.</li>
@@ -86,7 +86,7 @@ limitations under the License.
  *     database field).</li>
  * <li>{@link com.healthmarketscience.jackcess.expr.Value} represents a typed primitive value.</li>
  * </ul>
- * <p>
+ *
  * <h2>Function Support</h2>
  * <p>
  * Jackcess supports many of the standard Access functions.  The following
