@@ -204,6 +204,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (short)value;
     }
 
+    @Override
     public Short getValue() {
       return _value;
     }
@@ -228,6 +229,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }
@@ -261,6 +263,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }
@@ -287,6 +290,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }

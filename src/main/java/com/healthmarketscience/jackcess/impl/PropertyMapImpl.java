@@ -74,6 +74,7 @@ public class PropertyMapImpl implements PropertyMap
     _owner = owner;
   }
 
+  @Override
   public String getName() {
     return _mapName;
   }
@@ -86,22 +87,27 @@ public class PropertyMapImpl implements PropertyMap
     return _owner;
   }
 
+  @Override
   public int getSize() {
     return _props.size();
   }
 
+  @Override
   public boolean isEmpty() {
     return _props.isEmpty();
   }
 
+  @Override
   public Property get(String name) {
     return _props.get(DatabaseImpl.toLookupName(name));
   }
 
+  @Override
   public Object getValue(String name) {
     return getValue(name, null);
   }
 
+  @Override
   public Object getValue(String name, Object defaultValue) {
     Property prop = get(name);
     Object value = defaultValue;
@@ -111,14 +117,17 @@ public class PropertyMapImpl implements PropertyMap
     return value;
   }
 
+  @Override
   public PropertyImpl put(String name, Object value) {
     return put(name, null, value, false);
   }
 
+  @Override
   public PropertyImpl put(String name, DataType type, Object value) {
     return put(name, type, value, false);
   }
 
+  @Override
   public void putAll(Iterable<? extends Property> props) {
     if(props == null) {
       return;
@@ -136,6 +145,7 @@ public class PropertyMapImpl implements PropertyMap
   /**
    * Puts a property into this map with the given information.
    */
+  @Override
   public PropertyImpl put(String name, DataType type, Object value,
                           boolean isDdl) {
     PropertyImpl prop = (PropertyImpl)createProperty(name, type, value, isDdl);
@@ -143,14 +153,17 @@ public class PropertyMapImpl implements PropertyMap
     return prop;
   }
 
+  @Override
   public PropertyImpl remove(String name) {
     return (PropertyImpl)_props.remove(DatabaseImpl.toLookupName(name));
   }
 
+  @Override
   public Iterator<Property> iterator() {
     return _props.values().iterator();
   }
 
+  @Override
   public void save() throws IOException {
     getOwner().save();
   }
@@ -243,22 +256,27 @@ public class PropertyMapImpl implements PropertyMap
       _value = value;
     }
 
+    @Override
     public String getName() {
       return _name;
     }
 
+    @Override
     public DataType getType() {
       return _type;
     }
 
+    @Override
     public Object getValue() {
       return _value;
     }
 
+    @Override
     public void setValue(Object newValue) {
       _value = newValue;
     }
 
+    @Override
     public boolean isDdl() {
       return _ddl;
     }

@@ -266,6 +266,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       _encodedData = encodedData;
     }
 
+    @Override
     public byte[] getFileData() throws IOException {
       if((_data == null) && (_encodedData != null)) {
         _data = decodeData();
@@ -273,11 +274,13 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       return _data;
     }
 
+    @Override
     public void setFileData(byte[] data) {
       _data = data;
       _encodedData = null;
     }
 
+    @Override
     public byte[] getEncodedFileData() throws IOException {
       if((_encodedData == null) && (_data != null)) {
         _encodedData = encodeData();
@@ -285,67 +288,83 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
       return _encodedData;
     }
 
+    @Override
     public void setEncodedFileData(byte[] data) {
       _encodedData = data;
       _data = null;
     }
 
+    @Override
     public String getFileName() {
       return _name;
     }
 
+    @Override
     public void setFileName(String fileName) {
       _name = fileName;
     }
 
+    @Override
     public String getFileUrl() {
       return _url;
     }
 
+    @Override
     public void setFileUrl(String fileUrl) {
       _url = fileUrl;
     }
 
+    @Override
     public String getFileType() {
       return _type;
     }
 
+    @Override
     public void setFileType(String fileType) {
       _type = fileType;
     }
 
+    @Override
     public Date getFileTimeStamp() {
       return (Date)_timeStamp;
     }
 
+    @Override
     public void setFileTimeStamp(Date fileTimeStamp) {
       _timeStamp = fileTimeStamp;
     }
 
+    @Override
     public LocalDateTime getFileLocalTimeStamp() {
       return (LocalDateTime)_timeStamp;
     }
 
+    @Override
     public void setFileLocalTimeStamp(LocalDateTime fileTimeStamp) {
       _timeStamp = fileTimeStamp;
     }
 
+    @Override
     public Object getFileTimeStampObject() {
       return _timeStamp;
     }
 
+    @Override
     public Integer getFileFlags() {
       return _flags;
     }
 
+    @Override
     public void setFileFlags(Integer fileFlags) {
       _flags = fileFlags;
     }
 
+    @Override
     public void update() throws IOException {
       getComplexValueForeignKey().updateAttachment(this);
     }
 
+    @Override
     public void delete() throws IOException {
       getComplexValueForeignKey().deleteAttachment(this);
     }

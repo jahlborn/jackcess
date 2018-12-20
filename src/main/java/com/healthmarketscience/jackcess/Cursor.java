@@ -140,6 +140,7 @@ public interface Cursor extends Iterable<Row>
    * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
+  @Override
   public Iterator<Row> iterator();
 
   /**

@@ -33,10 +33,12 @@ public class LongValue extends BaseNumericValue
     _val = val;
   }
 
+  @Override
   public Type getType() {
     return Type.LONG;
   }
 
+  @Override
   public Object get() {
     return _val;
   }

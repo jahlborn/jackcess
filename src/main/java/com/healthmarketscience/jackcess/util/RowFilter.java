@@ -163,12 +163,14 @@ public abstract class RowFilter
      * iterable, returning only rows for which the {@link RowFilter#matches}
      * method returns {@code true}
      */
+    @Override
     public Iterator<Row> iterator()
     {
       return new Iterator<Row>() {
         private final Iterator<? extends Row> _iter = _iterable.iterator();
         private Row _next;
 
+        @Override
         public boolean hasNext() {
           while(_iter.hasNext()) {
             _next = _iter.next();
@@ -180,6 +182,7 @@ public abstract class RowFilter
           return false;
         }
 
+        @Override
         public Row next() {
           if(_next == null) {
             throw new NoSuchElementException();
@@ -187,6 +190,7 @@ public abstract class RowFilter
           return _next;
         }
 
+        @Override
         public void remove() {
           throw new UnsupportedOperationException();
         }

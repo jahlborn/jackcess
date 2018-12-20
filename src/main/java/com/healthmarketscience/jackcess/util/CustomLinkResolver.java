@@ -133,6 +133,7 @@ public abstract class CustomLinkResolver implements LinkResolver
    * @see #createTempDb
    * @see LinkResolver#DEFAULT
    */
+  @Override
   public Database resolveLinkedDatabase(Database linkerDb, String linkeeFileName)
     throws IOException
   {

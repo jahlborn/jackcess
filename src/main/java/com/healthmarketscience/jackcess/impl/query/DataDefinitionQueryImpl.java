@@ -34,6 +34,7 @@ public class DataDefinitionQueryImpl extends QueryImpl
     super(name, rows, objectId, objectFlag, Type.DATA_DEFINITION);
   }
 
+  @Override
   public String getDDLString() {
     return getTypeRow().expression;
   }

@@ -41,6 +41,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
   public SimpleColumnMatcher() {
   }
 
+  @Override
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {

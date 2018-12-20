@@ -1685,22 +1685,27 @@ public class Expressionator
       return areConstant(_left, _right);
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getLeft() {
       return _left;
     }
 
+    @Override
     public void setLeft(Expr left) {
       _left = left;
     }
 
+    @Override
     public Expr getRight() {
       return _right;
     }
 
+    @Override
     public void setRight(Expr right) {
       _right = right;
     }
@@ -1748,14 +1753,17 @@ public class Expressionator
       return _expr.isConstant();
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getRight() {
       return _expr;
     }
 
+    @Override
     public void setRight(Expr right) {
       _expr = right;
     }
@@ -1854,14 +1862,17 @@ public class Expressionator
       return _expr.isConstant();
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getLeft() {
       return _expr;
     }
 
+    @Override
     public void setLeft(Expr left) {
       _expr = left;
     }
@@ -1986,10 +1997,12 @@ public class Expressionator
       return _expr.isConstant() && areConstant(_startRangeExpr, _endRangeExpr);
     }
 
+    @Override
     public Expr getRight() {
       return _endRangeExpr;
     }
 
+    @Override
     public void setRight(Expr right) {
       _endRangeExpr = right;
     }
@@ -2032,22 +2045,27 @@ public class Expressionator
       _expr = expr;
     }
 
+    @Override
     public String toDebugString(LocaleContext ctx) {
       return _expr.toDebugString(ctx);
     }
 
+    @Override
     public String toRawString() {
       return _rawExprStr;
     }
 
+    @Override
     public String toCleanString(LocaleContext ctx) {
       return _expr.toCleanString(ctx);
     }
 
+    @Override
     public boolean isConstant() {
       return _expr.isConstant();
     }
 
+    @Override
     public void collectIdentifiers(Collection<Identifier> identifiers) {
       _expr.collectIdentifiers(identifiers);
     }
@@ -2112,6 +2130,7 @@ public class Expressionator
       _resultType = resultType;
     }
 
+    @Override
     public Object eval(EvalContext ctx) {
       return evalValue(_resultType, ctx);
     }
@@ -2127,6 +2146,7 @@ public class Expressionator
       super(rawExprStr, expr);
     }
 
+    @Override
     public Object eval(EvalContext ctx) {
       return evalCondition(ctx);
     }

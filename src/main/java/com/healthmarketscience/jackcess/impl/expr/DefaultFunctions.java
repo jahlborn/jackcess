@@ -53,6 +53,7 @@ public class DefaultFunctions
   }
 
   public static final FunctionLookup LOOKUP = new FunctionLookup() {
+    @Override
     public Function getFunction(String name) {
       return FUNCS.get(DatabaseImpl.toLookupName(name));
     }

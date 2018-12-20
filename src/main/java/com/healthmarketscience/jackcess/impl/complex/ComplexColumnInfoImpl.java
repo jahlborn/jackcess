@@ -122,12 +122,14 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return _typeCols;
   }
   
+  @Override
   public int countValues(int complexValueFk) throws IOException {
     return getRawValues(complexValueFk,
                         Collections.singleton(_complexValFkCol.getName()))
       .size();
   }
   
+  @Override
   public List<Row> getRawValues(int complexValueFk)
     throws IOException
   {
@@ -148,6 +150,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       .setColumnNames(columnNames).iterator();
   }
   
+  @Override
   public List<Row> getRawValues(int complexValueFk,
                                 Collection<String> columnNames)
     throws IOException
@@ -166,6 +169,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return values;
   }
 
+  @Override
   public List<V> getValues(ComplexValueForeignKey complexValueFk)
     throws IOException
   {
@@ -189,6 +193,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return values;
   }
 
+  @Override
   public ComplexValue.Id addRawValue(Map<String,?> rawValue)
     throws IOException 
   {
@@ -197,6 +202,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return getValueId(row);
   }
 
+  @Override
   public ComplexValue.Id addValue(V value) throws IOException {
     Object[] row = asRow(newRowArray(), value);
     _flatTable.addRow(row);
@@ -205,43 +211,51 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return id;
   }
 
+  @Override
   public void addValues(Collection<? extends V> values) throws IOException {
     for(V value : values) {
       addValue(value);
     }
   }
 
+  @Override
   public ComplexValue.Id updateRawValue(Row rawValue) throws IOException {
     _flatTable.updateRow(rawValue);
     return getValueId(rawValue);
   }
   
+  @Override
   public ComplexValue.Id updateValue(V value) throws IOException {
     ComplexValue.Id id = value.getId();
     updateRow(id, asRow(newRowArray(), value));
     return id;
   }
 
+  @Override
   public void updateValues(Collection<? extends V> values) throws IOException {
     for(V value : values) {
       updateValue(value);
     }
   }
 
+  @Override
   public void deleteRawValue(Row rawValue) throws IOException {
     deleteRow(rawValue.getId());
   }
   
+  @Override
   public void deleteValue(V value) throws IOException {
     deleteRow(value.getId().getRowId());
   }
 
+  @Override
   public void deleteValues(Collection<? extends V> values) throws IOException {
     for(V value : values) {
       deleteValue(value);
     }
   }
 
+  @Override
   public void deleteAllValues(int complexValueFk) throws IOException {
     Iterator<Row> entryIter =
       getComplexValFkIter(complexValueFk, Collections.<String>emptySet());
@@ -255,6 +269,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     }
   }
 
+  @Override
   public void deleteAllValues(ComplexValueForeignKey complexValueFk)
     throws IOException
   {
@@ -322,6 +337,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     } 
   }
   
+  @Override
   public abstract ComplexDataType getType();
 
   protected abstract V toValue(
@@ -339,10 +355,12 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       _complexValueFk = complexValueFk;
     }
 
+    @Override
     public Id getId() {
       return _id;
     }
 
+    @Override
     public void setId(Id id) {
       if(_id == id) {
         // harmless, ignore
@@ -354,10 +372,12 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       _id = id;
     }
     
+    @Override
     public ComplexValueForeignKey getComplexValueForeignKey() {
       return _complexValueFk;
     }
 
+    @Override
     public void setComplexValueForeignKey(ComplexValueForeignKey complexValueFk)
     {
       if(_complexValueFk == complexValueFk) {
@@ -370,6 +390,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       _complexValueFk = complexValueFk;
     }
 
+    @Override
     public Column getColumn() {
       return _complexValueFk.getColumn();
     }

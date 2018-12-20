@@ -67,6 +67,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
   /**
    * Creates a nes CompoundContent for the given blob information.
    */
+  @Override
   public ContentImpl createCompoundPackageContent(
       OleBlobImpl blob, String prettyName, String className, String typeName,
       ByteBuffer blobBb, int dataBlockLen)
@@ -148,6 +149,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
       super(blob, prettyName, className, typeName, position, length);
     }
 
+    @Override
     public ContentType getType() {
       return ContentType.COMPOUND_STORAGE;
     }
@@ -159,6 +161,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
       return _fs;
     }
 
+    @Override
     public Iterator<Entry> iterator() {
       try {
       return getEntries(new ArrayList<Entry>(), getFileSystem().getRoot(),
@@ -168,15 +171,18 @@ public class CompoundOleUtil implements CompoundPackageFactory
       }
     }
 
+    @Override
     public EntryImpl getEntry(String entryName) throws IOException {
       return new EntryImpl(entryName,
                            getDocumentEntry(entryName, getFileSystem().getRoot()));
     }
 
+    @Override
     public boolean hasContentsEntry() throws IOException {
       return getFileSystem().getRoot().hasEntry(CONTENTS_ENTRY);
     }
 
+    @Override
     public EntryImpl getContentsEntry() throws IOException {
       return getEntry(CONTENTS_ENTRY);
     }
@@ -230,30 +236,37 @@ public class CompoundOleUtil implements CompoundPackageFactory
         _docEntry = docEntry;
       }
 
+      @Override
       public ContentType getType() {
         return ContentType.UNKNOWN;
       }
 
+      @Override
       public String getName() {
         return _name;
       }
 
+      @Override
       public CompoundContentImpl getParent() {
         return CompoundContentImpl.this;
       }
 
+      @Override
       public OleBlobImpl getBlob() {
         return getParent().getBlob();
       }
 
+      @Override
       public long length() {
         return _docEntry.getSize();
       }
 
+      @Override
       public InputStream getStream() throws IOException {
         return new DocumentInputStream(_docEntry);
       }
 
+      @Override
       public void writeTo(OutputStream out) throws IOException {
         InputStream in = null;
         try {

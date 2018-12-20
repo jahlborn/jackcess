@@ -55,59 +55,73 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
     _id = (RowIdImpl)row.getId();
   }
 
+  @Override
   public RowIdImpl getId() {
     return _id;
   }
 
+  @Override
   public String getString(String name) {
     return (String)get(name);
   }
 
+  @Override
   public Boolean getBoolean(String name) {
     return (Boolean)get(name);
   }
 
+  @Override
   public Byte getByte(String name) {
     return (Byte)get(name);
   }
 
+  @Override
   public Short getShort(String name) {
     return (Short)get(name);
   }
 
+  @Override
   public Integer getInt(String name) {
     return (Integer)get(name);
   }
 
+  @Override
   public BigDecimal getBigDecimal(String name) {
     return (BigDecimal)get(name);
   }
 
+  @Override
   public Float getFloat(String name) {
     return (Float)get(name);
   }
 
+  @Override
   public Double getDouble(String name) {
     return (Double)get(name);
   }
 
+  @Override
   @SuppressWarnings("deprecation")
   public Date getDate(String name) {
     return (Date)get(name);
   }
 
+  @Override
   public LocalDateTime getLocalDateTime(String name) {
     return (LocalDateTime)get(name);
   }
 
+  @Override
   public byte[] getBytes(String name) {
     return (byte[])get(name);
   }
 
+  @Override
   public ComplexValueForeignKey getForeignKey(String name) {
     return (ComplexValueForeignKey)get(name);
   }
 
+  @Override
   public OleBlob getBlob(String name) throws IOException {
     byte[] bytes = getBytes(name);
     return ((bytes != null) ? OleBlob.Builder.fromInternalData(bytes) : null);

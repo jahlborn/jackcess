@@ -112,6 +112,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return _data;
   }
 
+  @Override
   public TableImpl getTable() {
     return getIndexData().getTable();
   }
@@ -140,6 +141,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return getIndexData().getUniqueEntryCountOffset();
   }
 
+  @Override
   public String getName() {
     return _name;
   }
@@ -148,10 +150,12 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     _name = name;
   }
 
+  @Override
   public boolean isPrimaryKey() {
     return _indexType == PRIMARY_KEY_INDEX_TYPE;
   }
 
+  @Override
   public boolean isForeignKey() {
     return _indexType == FOREIGN_KEY_INDEX_TYPE;
   }
@@ -160,6 +164,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return _reference;
   }
 
+  @Override
   public IndexImpl getReferencedIndex() throws IOException {
 
     if(_reference == null) {
@@ -204,26 +209,32 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return refIndex;
   }
 
+  @Override
   public boolean shouldIgnoreNulls() {
     return getIndexData().shouldIgnoreNulls();
   }
 
+  @Override
   public boolean isUnique() {
     return getIndexData().isUnique();
   }
   
+  @Override
   public boolean isRequired() {
     return getIndexData().isRequired();
   }
   
+  @Override
   public List<IndexData.ColumnDescriptor> getColumns() {
     return getIndexData().getColumns();
   }
 
+  @Override
   public int getColumnCount() {
     return getIndexData().getColumnCount();
   }
 
+  @Override
   public CursorBuilder newCursor() {
     return getTable().newCursor().setIndex(this);
   }
@@ -367,6 +378,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     return sb.toString();
   }
   
+  @Override
   public int compareTo(IndexImpl other) {
     if (_indexNumber > other.getIndexNumber()) {
       return 1;

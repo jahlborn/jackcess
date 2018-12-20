@@ -38,6 +38,7 @@ public interface ErrorHandler
    * @usage _general_field_
    */
   public static final ErrorHandler DEFAULT = new ErrorHandler() {
+      @Override
       public Object handleRowError(Column column, byte[] columnData,
                                    Location location, Exception error)
         throws IOException
@@ -84,6 +85,7 @@ public interface ErrorHandler
     /**
      * Contains details about the errored row, useful for debugging.
      */
+    @Override
     public String toString();
   }
 }

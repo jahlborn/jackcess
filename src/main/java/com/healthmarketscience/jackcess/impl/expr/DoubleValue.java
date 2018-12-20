@@ -33,10 +33,12 @@ public class DoubleValue extends BaseNumericValue
     _val = val;
   }
 
+  @Override
   public Type getType() {
     return Type.DOUBLE;
   }
 
+  @Override
   public Object get() {
     return _val;
   }

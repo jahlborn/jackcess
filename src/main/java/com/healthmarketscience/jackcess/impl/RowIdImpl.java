@@ -98,6 +98,7 @@ public class RowIdImpl implements RowId, Serializable
     return _type;
   }
 
+  @Override
   public int compareTo(RowId other) {
     return compareTo((RowIdImpl)other);
   }

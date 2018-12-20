@@ -389,10 +389,12 @@ public class PageChannel implements Channel, Flushable {
     return ByteBuffer.allocate(size).order(order);
   }
   
+  @Override
   public void flush() throws IOException {
     _channel.force(true);
   }
   
+  @Override
   public void close() throws IOException {
     flush();
     if(_closeChannel) {
@@ -400,6 +402,7 @@ public class PageChannel implements Channel, Flushable {
     }
   }
   
+  @Override
   public boolean isOpen() {
     return _channel.isOpen();
   }

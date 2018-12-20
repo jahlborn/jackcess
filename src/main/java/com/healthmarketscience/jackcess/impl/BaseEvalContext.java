@@ -80,50 +80,62 @@ public abstract class BaseEvalContext implements EvalContext
     return _dbCtx.getDatabase();
   }
 
+  @Override
   public TemporalConfig getTemporalConfig() {
     return _dbCtx.getTemporalConfig();
   }
 
+  @Override
   public DateTimeFormatter createDateFormatter(String formatStr) {
     return _dbCtx.createDateFormatter(formatStr);
   }
 
+  @Override
   public ZoneId getZoneId() {
     return _dbCtx.getZoneId();
   }
 
+  @Override
   public NumericConfig getNumericConfig() {
     return _dbCtx.getNumericConfig();
   }
 
+  @Override
   public DecimalFormat createDecimalFormat(String formatStr) {
     return _dbCtx.createDecimalFormat(formatStr);
   }
 
+  @Override
   public float getRandom(Integer seed) {
     return _dbCtx.getRandom(seed);
   }
 
+  @Override
   public Value.Type getResultType() {
     return null;
   }
 
+  @Override
   public Value getThisColumnValue() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public Value getIdentifierValue(Identifier identifier) {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public Bindings getBindings() {
     return _dbCtx.getBindings();
   }
 
+  @Override
   public Object get(String key) {
     return _dbCtx.getBindings().get(key);
   }
 
+  @Override
   public void put(String key, Object value) {
     _dbCtx.getBindings().put(key, value);
   }
@@ -208,26 +220,32 @@ public abstract class BaseEvalContext implements EvalContext
       return expr;
     }
 
+    @Override
     public Object eval(EvalContext ctx) {
       return getExpr().eval(ctx);
     }
 
+    @Override
     public String toDebugString(LocaleContext ctx) {
       return getExpr().toDebugString(ctx);
     }
 
+    @Override
     public String toRawString() {
       return _exprStr;
     }
 
+    @Override
     public String toCleanString(LocaleContext ctx) {
       return getExpr().toCleanString(ctx);
     }
 
+    @Override
     public boolean isConstant() {
       return getExpr().isConstant();
     }
 
+    @Override
     public void collectIdentifiers(Collection<Identifier> identifiers) {
       getExpr().collectIdentifiers(identifiers);
     }

@@ -77,6 +77,7 @@ public abstract class BaseSelectQueryImpl extends QueryImpl
     }
   }
 
+  @Override
   public String getSelectType()
   {
     if(hasFlag(DISTINCT_SELECT_TYPE)) {
@@ -99,6 +100,7 @@ public abstract class BaseSelectQueryImpl extends QueryImpl
     return DEFAULT_TYPE;
   }
 
+  @Override
   public List<String> getSelectColumns() 
   {
     List<String> result = (new RowFormatter(getColumnRows()) {
@@ -143,6 +145,7 @@ public abstract class BaseSelectQueryImpl extends QueryImpl
     return super.getWhereExpression();
   }
 
+  @Override
   public List<String> getGroupings() 
   {
     return (new RowFormatter(getGroupByRows()) {
@@ -152,6 +155,7 @@ public abstract class BaseSelectQueryImpl extends QueryImpl
       }).format();
   }
 
+  @Override
   public String getHavingExpression()
   {
     return getHavingRow().expression;

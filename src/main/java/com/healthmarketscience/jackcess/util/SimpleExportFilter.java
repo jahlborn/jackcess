@@ -34,10 +34,12 @@ public class SimpleExportFilter implements ExportFilter {
   public SimpleExportFilter() {
   }
 
+  @Override
   public List<Column> filterColumns(List<Column> columns) throws IOException {
     return columns;
   }
 
+  @Override
   public Object[] filterRow(Object[] row) throws IOException {
     return row;
   }

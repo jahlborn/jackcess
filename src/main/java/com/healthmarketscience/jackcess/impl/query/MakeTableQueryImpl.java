@@ -35,14 +35,17 @@ public class MakeTableQueryImpl extends BaseSelectQueryImpl
     super(name, rows, objectId, objectFlag, Type.MAKE_TABLE);
   }
 
+  @Override
   public String getTargetTable() {
     return getTypeRow().name1;
   }
 
+  @Override
   public String getRemoteDbPath() {
     return getTypeRow().name2;
   }
 
+  @Override
   public String getRemoteDbType() {
     return getTypeRow().expression;
   }

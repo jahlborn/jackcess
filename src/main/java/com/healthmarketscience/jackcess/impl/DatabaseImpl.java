@@ -35,7 +35,6 @@ import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -551,10 +550,12 @@ public class DatabaseImpl implements Database, ZoneContext
     readSystemCatalog();
   }
 
+  @Override
   public File getFile() {
     return ((_file != null) ? _file.toFile() : null);
   }
 
+  @Override
   public Path getPath() {
     return _file;
   }
@@ -611,27 +612,33 @@ public class DatabaseImpl implements Database, ZoneContext
     return _complexCols;
   }
 
+  @Override
   public ErrorHandler getErrorHandler() {
     return((_dbErrorHandler != null) ? _dbErrorHandler : ErrorHandler.DEFAULT);
   }
 
+  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }
 
+  @Override
   public LinkResolver getLinkResolver() {
     return((_linkResolver != null) ? _linkResolver : LinkResolver.DEFAULT);
   }
 
+  @Override
   public void setLinkResolver(LinkResolver newLinkResolver) {
     _linkResolver = newLinkResolver;
   }
 
+  @Override
   public Map<String,Database> getLinkedDatabases() {
     return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() :
             Collections.unmodifiableMap(_linkedDbs));
   }
 
+  @Override
   public boolean isLinkedTable(Table table) throws IOException {
 
     if((table == null) || (this == table.getDatabase())) {
@@ -674,6 +681,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _zoneId;
   }
 
+  @Override
   public void setZoneId(ZoneId newZoneId) {
     setZoneInfo(null, newZoneId);
   }
@@ -706,11 +714,13 @@ public class DatabaseImpl implements Database, ZoneContext
     return _dtf;
   }
 
+  @Override
   public Charset getCharset()
   {
     return _charset;
   }
 
+  @Override
   public void setCharset(Charset newCharset) {
     if(newCharset == null) {
       newCharset = getDefaultCharset(getFormat());
@@ -718,10 +728,12 @@ public class DatabaseImpl implements Database, ZoneContext
     _charset = newCharset;
   }
 
+  @Override
   public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
   }
 
+  @Override
   public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
     if(newColumnOrder == null) {
       newColumnOrder = getDefaultColumnOrder();
@@ -729,10 +741,12 @@ public class DatabaseImpl implements Database, ZoneContext
     _columnOrder = newColumnOrder;
   }
 
+  @Override
   public boolean isEnforceForeignKeys() {
     return _enforceForeignKeys;
   }
 
+  @Override
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys) {
     if(newEnforceForeignKeys == null) {
       newEnforceForeignKeys = getDefaultEnforceForeignKeys();
@@ -740,10 +754,12 @@ public class DatabaseImpl implements Database, ZoneContext
     _enforceForeignKeys = newEnforceForeignKeys;
   }
 
+  @Override
   public boolean isAllowAutoNumberInsert() {
     return _allowAutoNumInsert;
   }
 
+  @Override
   public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert) {
     if(allowAutoNumInsert == null) {
       allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
@@ -751,10 +767,12 @@ public class DatabaseImpl implements Database, ZoneContext
     _allowAutoNumInsert = allowAutoNumInsert;
   }
 
+  @Override
   public boolean isEvaluateExpressions() {
     return _evaluateExpressions;
   }
 
+  @Override
   public void setEvaluateExpressions(Boolean evaluateExpressions) {
     if(evaluateExpressions == null) {
       evaluateExpressions = getDefaultEvaluateExpressions();
@@ -762,10 +780,12 @@ public class DatabaseImpl implements Database, ZoneContext
     _evaluateExpressions = evaluateExpressions;
   }
 
+  @Override
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
   }
 
+  @Override
   public void setColumnValidatorFactory(ColumnValidatorFactory newFactory) {
     if(newFactory == null) {
       newFactory = SimpleColumnValidatorFactory.INSTANCE;
@@ -780,6 +800,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _fkEnforcerSharedState;
   }
 
+  @Override
   public EvalConfig getEvalConfig() {
     return getEvalContext();
   }
@@ -817,6 +838,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _propsHandler;
   }
 
+  @Override
   public FileFormat getFileFormat() throws IOException {
 
     if(_fileFormat == null) {
@@ -974,6 +996,7 @@ public class DatabaseImpl implements Database, ZoneContext
     }
   }
 
+  @Override
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
       _tableNames = getTableNames(true, false, true);
@@ -981,6 +1004,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _tableNames;
   }
 
+  @Override
   public Set<String> getSystemTableNames() throws IOException {
     return getTableNames(false, true, false);
   }
@@ -995,6 +1019,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return tableNames;
   }
 
+  @Override
   public Iterator<Table> iterator() {
     try {
       return new TableIterator(getTableNames());
@@ -1013,14 +1038,17 @@ public class DatabaseImpl implements Database, ZoneContext
     }
   }
 
+  @Override
   public TableIterableBuilder newIterable() {
     return new TableIterableBuilder(this);
   }
 
+  @Override
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
 
+  @Override
   public TableMetaData getTableMetaData(String name) throws IOException {
     return getTableInfo(name, true);
   }
@@ -1135,6 +1163,7 @@ public class DatabaseImpl implements Database, ZoneContext
       .toTable(this);
   }
 
+  @Override
   public void createLinkedTable(String name, String linkedDbName,
                                 String linkedTableName)
     throws IOException
@@ -1181,6 +1210,7 @@ public class DatabaseImpl implements Database, ZoneContext
     addToAccessControlEntries(tdefPageNumber, _tableParentId, _newTableSIDs);
   }
 
+  @Override
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
@@ -1208,6 +1238,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return getRelationshipsImpl(table1, table2, true);
   }
 
+  @Override
   public List<Relationship> getRelationships(Table table)
     throws IOException
   {
@@ -1219,12 +1250,14 @@ public class DatabaseImpl implements Database, ZoneContext
     return getRelationshipsImpl((TableImpl)table, null, true);
   }
 
+  @Override
   public List<Relationship> getRelationships()
     throws IOException
   {
     return getRelationshipsImpl(null, null, false);
   }
 
+  @Override
   public List<Relationship> getSystemRelationships()
     throws IOException
   {
@@ -1367,6 +1400,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return ((i == 0) ? origName : (origName + i));
   }
 
+  @Override
   public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
@@ -1416,6 +1450,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return queries;
   }
 
+  @Override
   public TableImpl getSystemTable(String tableName) throws IOException
   {
     return getTable(tableName, true);
@@ -1431,6 +1466,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return table;
   }
 
+  @Override
   public PropertyMap getDatabaseProperties() throws IOException {
     if(_dbPropMaps == null) {
       _dbPropMaps = getPropertiesForDbObject(OBJECT_NAME_DB_PROPS);
@@ -1438,6 +1474,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _dbPropMaps.getDefault();
   }
 
+  @Override
   public PropertyMap getSummaryProperties() throws IOException {
     if(_summaryPropMaps == null) {
       _summaryPropMaps = getPropertiesForDbObject(OBJECT_NAME_SUMMARY_PROPS);
@@ -1445,6 +1482,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return _summaryPropMaps.getDefault();
   }
 
+  @Override
   public PropertyMap getUserDefinedProperties() throws IOException {
     if(_userDefPropMaps == null) {
       _userDefPropMaps = getPropertiesForDbObject(OBJECT_NAME_USERDEF_PROPS);
@@ -1522,6 +1560,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return getPropsHandler().read(propsBytes, objectId, rowId, owner);
   }
 
+  @Override
   public String getDatabasePassword() throws IOException
   {
     ByteBuffer buffer = takeSharedBuffer();
@@ -1788,6 +1827,7 @@ public class DatabaseImpl implements Database, ZoneContext
     return CursorImpl.createCursor(table);
   }
 
+  @Override
   public void flush() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1797,6 +1837,7 @@ public class DatabaseImpl implements Database, ZoneContext
     _pageChannel.flush();
   }
 
+  @Override
   public void close() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -2170,26 +2211,32 @@ public class DatabaseImpl implements Database, ZoneContext
       flags = newFlags;
     }
 
+    @Override
     public String getName() {
       return tableName;
     }
 
+    @Override
     public boolean isLinked() {
       return false;
     }
 
+    @Override
     public boolean isSystem() {
       return isSystemObject(flags);
     }
 
+    @Override
     public String getLinkedTableName() {
       return null;
     }
 
+    @Override
     public String getLinkedDbName() {
       return null;
     }
 
+    @Override
     public Table open(Database db) throws IOException {
       return ((DatabaseImpl)db).getTable(this, true);
     }
@@ -2253,14 +2300,17 @@ public class DatabaseImpl implements Database, ZoneContext
       _tableNameIter = tableNames.iterator();
     }
 
+    @Override
     public boolean hasNext() {
       return _tableNameIter.hasNext();
     }
 
+    @Override
     public void remove() {
       throw new UnsupportedOperationException();
     }
 
+    @Override
     public Table next() {
       if(!hasNext()) {
         throw new NoSuchElementException();

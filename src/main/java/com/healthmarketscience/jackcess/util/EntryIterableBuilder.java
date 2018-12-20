@@ -106,6 +106,7 @@ public class EntryIterableBuilder implements Iterable<Row>
     return this;
   }
 
+  @Override
   public Iterator<Row> iterator() {
     return ((IndexCursorImpl)_cursor).entryIterator(this);
   }  

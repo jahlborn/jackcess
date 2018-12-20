@@ -36,6 +36,7 @@ public class SimpleImportFilter implements ImportFilter {
   public SimpleImportFilter() {
   }
 
+  @Override
   public List<ColumnBuilder> filterColumns(List<ColumnBuilder> destColumns,
                                            ResultSetMetaData srcColumns)
      throws SQLException, IOException
@@ -43,6 +44,7 @@ public class SimpleImportFilter implements ImportFilter {
     return destColumns;
   }
 
+  @Override
   public Object[] filterRow(Object[] row)
     throws SQLException, IOException
   {

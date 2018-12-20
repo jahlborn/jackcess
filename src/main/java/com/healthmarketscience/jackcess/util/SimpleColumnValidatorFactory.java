@@ -30,6 +30,7 @@ public class SimpleColumnValidatorFactory implements ColumnValidatorFactory
   public static final SimpleColumnValidatorFactory INSTANCE =
     new SimpleColumnValidatorFactory();
   
+  @Override
   public ColumnValidator createValidator(Column col) {
     return SimpleColumnValidator.INSTANCE;
   }

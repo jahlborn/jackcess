@@ -107,6 +107,7 @@ public class IndexData {
 
   public static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
+      @Override
       public int compare(byte[] left, byte[] right) {
         if(left == right) {
           return 0;
@@ -1615,6 +1616,7 @@ public class IndexData {
       _flags = flags;
     }
 
+    @Override
     public ColumnImpl getColumn() {
       return _column;
     }
@@ -1623,14 +1625,17 @@ public class IndexData {
       return _flags;
     }
 
+    @Override
     public boolean isAscending() {
       return((getFlags() & ASCENDING_COLUMN_FLAG) != 0);
     }
 
+    @Override
     public int getColumnIndex() {
       return getColumn().getColumnIndex();
     }
 
+    @Override
     public String getName() {
       return getColumn().getName();
     }
@@ -2142,6 +2147,7 @@ public class IndexData {
       return(BYTE_CODE_COMPARATOR.compare(_entryBytes, o._entryBytes) == 0);
     }
 
+    @Override
     public int compareTo(Entry other) {
       if (this == other) {
         return 0;
@@ -2611,6 +2617,7 @@ public class IndexData {
       return _entry.equals(entry);
     }
 
+    @Override
     public int compareTo(Position other)
     {
       if(this == other) {

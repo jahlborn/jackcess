@@ -285,6 +285,7 @@ public interface Table extends Iterable<Row>
    *         operations, the actual exception will be contained within
    * @usage _general_method_
    */
+  @Override
   public Iterator<Row> iterator();
 
   /**

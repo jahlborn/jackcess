@@ -39,9 +39,11 @@ public class ValueSupport
     @Override public boolean isNull() {
       return true;
     }
+    @Override
     public Type getType() {
       return Type.NULL;
     }
+    @Override
     public Object get() {
       return null;
     }

@@ -83,22 +83,27 @@ public class RelationshipImpl implements Relationship
     _flags = flags;
   }
 
+  @Override
   public String getName() {
     return _name;
   }
   
+  @Override
   public Table getFromTable() {
     return _fromTable;
   }
 
+  @Override
   public List<Column> getFromColumns() {
     return _fromColumns;
   }
 
+  @Override
   public Table getToTable() {
     return _toTable;
   }
 
+  @Override
   public List<Column> getToColumns() {
     return _toColumns;
   }
@@ -107,34 +112,42 @@ public class RelationshipImpl implements Relationship
     return _flags;
   }
 
+  @Override
   public boolean isOneToOne() {
     return hasFlag(ONE_TO_ONE_FLAG);
   }
 
+  @Override
   public boolean hasReferentialIntegrity() {
     return !hasFlag(NO_REFERENTIAL_INTEGRITY_FLAG);
   }
 
+  @Override
   public boolean cascadeUpdates() {
     return hasFlag(CASCADE_UPDATES_FLAG);
   }
   
+  @Override
   public boolean cascadeDeletes() {
     return hasFlag(CASCADE_DELETES_FLAG);
   }
 
+  @Override
   public boolean cascadeNullOnDelete() {
     return hasFlag(CASCADE_NULL_FLAG);
   }
 
+  @Override
   public boolean isLeftOuterJoin() {
     return hasFlag(LEFT_OUTER_JOIN_FLAG);
   }
 
+  @Override
   public boolean isRightOuterJoin() {
     return hasFlag(RIGHT_OUTER_JOIN_FLAG);
   }
 
+  @Override
   public JoinType getJoinType() {
     if(isLeftOuterJoin()) {
       return JoinType.LEFT_OUTER;

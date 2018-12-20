@@ -96,18 +96,22 @@ public class MultiValueColumnInfoImpl extends ComplexColumnInfoImpl<SingleValue>
       _value = value;
     }
     
+    @Override
     public Object get() {
       return _value;
     }
 
+    @Override
     public void set(Object value) {
       _value = value;
     }
 
+    @Override
     public void update() throws IOException {
       getComplexValueForeignKey().updateMultiValue(this);
     }
     
+    @Override
     public void delete() throws IOException {
       getComplexValueForeignKey().deleteMultiValue(this);
     }

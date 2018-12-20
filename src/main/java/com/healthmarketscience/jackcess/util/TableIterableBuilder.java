@@ -87,6 +87,7 @@ public class TableIterableBuilder implements Iterable<Table>
     return setIncludeLinkedTables(false);
   }
   
+  @Override
   public Iterator<Table> iterator() {
     return ((DatabaseImpl)_db).iterator(this);
   }

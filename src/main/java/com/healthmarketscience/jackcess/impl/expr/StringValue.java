@@ -40,10 +40,12 @@ public class StringValue extends BaseValue
     _val = val;
   }
 
+  @Override
   public Type getType() {
     return Type.STRING;
   }
 
+  @Override
   public Object get() {
     return _val;
   }

@@ -34,10 +34,12 @@ public class PassthroughQueryImpl extends QueryImpl implements PassthroughQuery
     super(name, rows, objectId, objectFlag, Type.PASSTHROUGH);
   }
 
+  @Override
   public String getConnectionString() {
     return getTypeRow().name1;
   }
 
+  @Override
   public String getPassthroughString() {
     return getTypeRow().expression;
   }

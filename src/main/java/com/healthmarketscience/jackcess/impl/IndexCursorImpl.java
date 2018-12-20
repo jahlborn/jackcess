@@ -129,10 +129,12 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     return _indexEntryPattern;
   }
 
+  @Override
   public IndexImpl getIndex() {
     return _index;
   }
 
+  @Override
   public Row findRowByEntry(Object... entryValues) 
     throws IOException
   {
@@ -142,6 +144,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     return null;
   }
   
+  @Override
   public boolean findFirstRowByEntry(Object... entryValues) 
     throws IOException 
   {
@@ -163,6 +166,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
   }
 
+  @Override
   public void findClosestRowByEntry(Object... entryValues) 
     throws IOException 
   {
@@ -184,12 +188,14 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
     }
   }
 
+  @Override
   public boolean currentRowMatchesEntry(Object... entryValues) 
     throws IOException 
   {
     return currentRowMatchesEntryImpl(toRowValues(entryValues), _columnMatcher);
   }
 
+  @Override
   public EntryIterableBuilder newEntryIterable(Object... entryValues) {
     return new EntryIterableBuilder(this, entryValues);
   }

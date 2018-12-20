@@ -471,10 +471,12 @@ public class OleUtil
       _bytes = bytes;
     }
 
+    @Override
     public void writeTo(OutputStream out) throws IOException {
       out.write(_bytes);
     }
 
+    @Override
     public Content getContent() throws IOException {
       if(_content == null) {
         _content = parseContent(this);
@@ -482,16 +484,19 @@ public class OleUtil
       return _content;
     }
 
+    @Override
     public InputStream getBinaryStream() throws SQLException {
       return new ByteArrayInputStream(_bytes);
     }
 
+    @Override
     public InputStream getBinaryStream(long pos, long len) 
       throws SQLException 
     {
       return new ByteArrayInputStream(_bytes, fromJdbcOffset(pos), (int)len);
     }
 
+    @Override
     public long length() throws SQLException {
       return _bytes.length;
     }
@@ -503,41 +508,50 @@ public class OleUtil
       return _bytes;
     }
 
+    @Override
     public byte[] getBytes(long pos, int len) throws SQLException {
       return ByteUtil.copyOf(_bytes, fromJdbcOffset(pos), len);
     }
 
+    @Override
     public long position(byte[] pattern, long start) throws SQLException {
       int pos = ByteUtil.findRange(PageChannel.wrap(_bytes), 
                                    fromJdbcOffset(start), pattern);
       return((pos >= 0) ? toJdbcOffset(pos) : pos);
     }
     
+    @Override
     public long position(Blob pattern, long start) throws SQLException {
       return position(pattern.getBytes(1L, (int)pattern.length()), start);
     }
 
+    @Override
     public OutputStream setBinaryStream(long position) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
     
+    @Override
     public void truncate(long len) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
     
+    @Override
     public int setBytes(long pos, byte[] bytes) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
     
+    @Override
     public int setBytes(long pos, byte[] bytes, int offset, int lesn)
       throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
     
+    @Override
     public void free() {
       close();
     }
 
+    @Override
     public void close() {
       _bytes = null;
       ByteUtil.closeQuietly(_content);
@@ -573,6 +587,7 @@ public class OleUtil
       _blob = blob;
     }
 
+    @Override
     public OleBlobImpl getBlob() {
       return _blob;
     }
@@ -581,6 +596,7 @@ public class OleUtil
       return getBlob().getBytes();
     }
     
+    @Override
     public void close() {
       // base does nothing
     }
@@ -604,14 +620,17 @@ public class OleUtil
       _length = length;
     }
 
+    @Override
     public long length() {
       return _length;
     }
 
+    @Override
     public InputStream getStream() throws IOException {
       return new ByteArrayInputStream(getBytes(), _position, _length);
     }
 
+    @Override
     public void writeTo(OutputStream out) throws IOException {
       out.write(getBytes(), _position, _length);
     }
@@ -644,14 +663,17 @@ public class OleUtil
       _typeName = typeName;
     }
 
+    @Override
     public String getPrettyName() {
       return _prettyName;
     }
 
+    @Override
     public String getClassName() {
       return _className;
     }
 
+    @Override
     public String getTypeName() {
       return _typeName;
     }
@@ -685,22 +707,27 @@ public class OleUtil
       _filePath = filePath;      
     }
 
+    @Override
     public ContentType getType() {
       return ContentType.LINK;
     }
 
+    @Override
     public String getFileName() {
       return _fileName;
     }
 
+    @Override
     public String getLinkPath() {
       return _linkPath;
     }
 
+    @Override
     public String getFilePath() {
       return _filePath;
     }
 
+    @Override
     public InputStream getLinkStream() throws IOException {
       return new FileInputStream(getLinkPath());
     }
@@ -735,18 +762,22 @@ public class OleUtil
       _localFilePath = localFilePath;
     }
 
+    @Override
     public ContentType getType() {
       return ContentType.SIMPLE_PACKAGE;
     }
 
+    @Override
     public String getFileName() {
       return _fileName;
     }
 
+    @Override
     public String getFilePath() {
       return _filePath;
     }
 
+    @Override
     public String getLocalFilePath() {
       return _localFilePath;
     }
@@ -772,6 +803,7 @@ public class OleUtil
       super(blob, prettyName, className, typeName, position, length);
     }        
 
+    @Override
     public ContentType getType() {
       return ContentType.OTHER;
     }
@@ -789,6 +821,7 @@ public class OleUtil
       super(blob);
     }
 
+    @Override
     public ContentType getType() {
       return ContentType.UNKNOWN;
     }

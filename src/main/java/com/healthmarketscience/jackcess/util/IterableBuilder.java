@@ -178,6 +178,7 @@ public class IterableBuilder implements Iterable<Row>
     return this;
   }
 
+  @Override
   public Iterator<Row> iterator() {
     return ((CursorImpl)_cursor).iterator(this);
   }

@@ -170,22 +170,27 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
       _modifiedDate = modifiedDate;
     }
 
+    @Override
     public String getValue() {
       return _value;
     }
 
+    @Override
     public Date getModifiedDate() {
       return (Date)_modifiedDate;
     }
 
+    @Override
     public LocalDateTime getModifiedLocalDate() {
       return (LocalDateTime)_modifiedDate;
     }
 
+    @Override
     public Object getModifiedDateObject() {
       return _modifiedDate;
     }
 
+    @Override
     public int compareTo(Version o) {
       Object d1 = getModifiedDateObject();
       Object d2 = o.getModifiedDateObject();
@@ -218,11 +223,13 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
       return c1.compareTo(c2);
     }
 
+    @Override
     public void update() throws IOException {
       throw new UnsupportedOperationException(
           "This column does not support value updates");
     }
 
+    @Override
     public void delete() throws IOException {
       throw new UnsupportedOperationException(
           "This column does not support value deletes");

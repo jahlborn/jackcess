@@ -102,10 +102,12 @@ public abstract class CursorImpl implements Cursor
     return _rowState;
   }
   
+  @Override
   public IdImpl getId() {
     return _id;
   }
 
+  @Override
   public TableImpl getTable() {
     return _table;
   }
@@ -118,18 +120,22 @@ public abstract class CursorImpl implements Cursor
     return getTable().getPageChannel();
   }
 
+  @Override
   public ErrorHandler getErrorHandler() {
     return _rowState.getErrorHandler();
   }
 
+  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _rowState.setErrorHandler(newErrorHandler);
   }    
 
+  @Override
   public ColumnMatcher getColumnMatcher() {
     return _columnMatcher;
   }
 
+  @Override
   public void setColumnMatcher(ColumnMatcher columnMatcher) {
     if(columnMatcher == null) {
       columnMatcher = getDefaultColumnMatcher();
@@ -144,10 +150,12 @@ public abstract class CursorImpl implements Cursor
     return SimpleColumnMatcher.INSTANCE;
   }
 
+  @Override
   public SavepointImpl getSavepoint() {
     return new SavepointImpl(_id, _curPos, _prevPos);
   }
 
+  @Override
   public void restoreSavepoint(Savepoint savepoint)
     throws IOException
   {
@@ -180,22 +188,27 @@ public abstract class CursorImpl implements Cursor
     return _lastPos;
   }
 
+  @Override
   public void reset() {
     beforeFirst();
   }  
 
+  @Override
   public void beforeFirst() {
     reset(MOVE_FORWARD);
   }
   
+  @Override
   public void afterLast() {
     reset(MOVE_REVERSE);
   }
 
+  @Override
   public boolean isBeforeFirst() throws IOException {
     return isAtBeginning(MOVE_FORWARD);
   }
   
+  @Override
   public boolean isAfterLast() throws IOException {
     return isAtBeginning(MOVE_REVERSE);
   }
@@ -207,6 +220,7 @@ public abstract class CursorImpl implements Cursor
     return false;
   }
   
+  @Override
   public boolean isCurrentRowDeleted() throws IOException
   {
     // we need to ensure that the "deleted" flag has been read for this row
@@ -224,10 +238,12 @@ public abstract class CursorImpl implements Cursor
     _rowState.reset();
   }  
   
+  @Override
   public Iterator<Row> iterator() {
     return new RowIterator(null, true, MOVE_FORWARD);
   }
 
+  @Override
   public IterableBuilder newIterable() {
     return new IterableBuilder(this);
   }
@@ -260,34 +276,41 @@ public abstract class CursorImpl implements Cursor
     }
   }
   
+  @Override
   public void deleteCurrentRow() throws IOException {
     _table.deleteRow(_rowState, _curPos.getRowId());
   }
 
+  @Override
   public Object[] updateCurrentRow(Object... row) throws IOException {
     return _table.updateRow(_rowState, _curPos.getRowId(), row);
   }
 
+  @Override
   public <M extends Map<String,Object>> M updateCurrentRowFromMap(M row) 
     throws IOException 
   {
     return _table.updateRowFromMap(_rowState, _curPos.getRowId(), row);
   }
 
+  @Override
   public Row getNextRow() throws IOException {
     return getNextRow(null);
   }
 
+  @Override
   public Row getNextRow(Collection<String> columnNames) 
     throws IOException
   {
     return getAnotherRow(columnNames, MOVE_FORWARD);
   }
 
+  @Override
   public Row getPreviousRow() throws IOException {
     return getPreviousRow(null);
   }
 
+  @Override
   public Row getPreviousRow(Collection<String> columnNames) 
     throws IOException
   {
@@ -313,11 +336,13 @@ public abstract class CursorImpl implements Cursor
     return null;
   }  
 
+  @Override
   public boolean moveToNextRow() throws IOException
   {
     return moveToAnotherRow(MOVE_FORWARD);
   }
 
+  @Override
   public boolean moveToPreviousRow() throws IOException
   {
     return moveToAnotherRow(MOVE_REVERSE);
@@ -407,6 +432,7 @@ public abstract class CursorImpl implements Cursor
     return(!_curPos.equals(getDirHandler(moveForward).getEndPosition()));
   }
 
+  @Override
   public boolean findRow(RowId rowId) throws IOException
   {
     RowIdImpl rowIdImpl = (RowIdImpl)rowId;
@@ -435,6 +461,7 @@ public abstract class CursorImpl implements Cursor
     }
   }
 
+  @Override
   public boolean findFirstRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -449,6 +476,7 @@ public abstract class CursorImpl implements Cursor
                           prepareSearchInfo(columnPattern, valuePattern));
   }
 
+  @Override
   public boolean findNextRow(Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -489,12 +517,14 @@ public abstract class CursorImpl implements Cursor
     }
   }
   
+  @Override
   public boolean findFirstRow(Map<String,?> rowPattern) throws IOException
   {
     return findAnotherRow(rowPattern, true, MOVE_FORWARD, _columnMatcher,
                           prepareSearchInfo(rowPattern));
   }
 
+  @Override
   public boolean findNextRow(Map<String,?> rowPattern)
     throws IOException
   {
@@ -528,6 +558,7 @@ public abstract class CursorImpl implements Cursor
     }
   }
 
+  @Override
   public boolean currentRowMatches(Column columnPattern, Object valuePattern)
     throws IOException
   {
@@ -550,6 +581,7 @@ public abstract class CursorImpl implements Cursor
                                  getCurrentRowValue(columnPattern));
   }
   
+  @Override
   public boolean currentRowMatches(Map<String,?> rowPattern)
     throws IOException
   {
@@ -663,11 +695,13 @@ public abstract class CursorImpl implements Cursor
     return true;
   }
 
+  @Override
   public int moveNextRows(int numRows) throws IOException
   {
     return moveSomeRows(numRows, MOVE_FORWARD);
   }
 
+  @Override
   public int movePreviousRows(int numRows) throws IOException
   {
     return moveSomeRows(numRows, MOVE_REVERSE);
@@ -688,17 +722,20 @@ public abstract class CursorImpl implements Cursor
     return numMovedRows;
   }
 
+  @Override
   public Row getCurrentRow() throws IOException
   {
     return getCurrentRow(null);
   }
 
+  @Override
   public Row getCurrentRow(Collection<String> columnNames)
     throws IOException
   {
     return _table.getRow(_rowState, _curPos.getRowId(), columnNames);
   }
 
+  @Override
   public Object getCurrentRowValue(Column column)
     throws IOException
   {
@@ -711,6 +748,7 @@ public abstract class CursorImpl implements Cursor
     return _table.getRowValue(_rowState, _curPos.getRowId(), column);
   }
 
+  @Override
   public void setCurrentRowValue(Column column, Object value)
     throws IOException
   {
@@ -802,6 +840,7 @@ public abstract class CursorImpl implements Cursor
       }
     }
 
+    @Override
     public boolean hasNext() {
       if(_hasNext == null) {
         try {
@@ -814,6 +853,7 @@ public abstract class CursorImpl implements Cursor
       return _hasNext; 
     }
     
+    @Override
     public Row next() {
       if(!hasNext()) {
         throw new NoSuchElementException();
@@ -827,6 +867,7 @@ public abstract class CursorImpl implements Cursor
       }
     }
 
+    @Override
     public void remove() {
       if(_validRow) {
         try {
@@ -983,6 +1024,7 @@ public abstract class CursorImpl implements Cursor
     /**
      * Returns the unique RowId of the position of the cursor.
      */
+    @Override
     public abstract RowIdImpl getRowId();
 
     /**
@@ -1010,10 +1052,12 @@ public abstract class CursorImpl implements Cursor
       _prevPos = prevPos;
     }
 
+    @Override
     public IdImpl getCursorId() {
       return _cursorId;
     }
 
+    @Override
     public PositionImpl getCurrentPosition() {
       return _curPos;
     }

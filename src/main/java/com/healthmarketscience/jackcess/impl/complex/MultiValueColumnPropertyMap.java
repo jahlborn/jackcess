@@ -49,18 +49,22 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     _complex = complex;
   }
 
+  @Override
   public String getName() {
     return _primary.getName();
   }
 
+  @Override
   public int getSize() {
     return _primary.getSize() + _complex.getSize();
   }
 
+  @Override
   public boolean isEmpty() {
     return _primary.isEmpty() && _complex.isEmpty();
   }
 
+  @Override
   public Property get(String name) {
     Property prop = _primary.get(name);
     if(prop != null) {
@@ -69,23 +73,28 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     return _complex.get(name);
   }
 
+  @Override
   public Object getValue(String name) {
     return getValue(name, null);
   }
 
+  @Override
   public Object getValue(String name, Object defaultValue) {
     Property prop = get(name);
     return ((prop != null) ? prop.getValue() : defaultValue);
   }
 
+  @Override
   public Property put(String name, Object value) {
     return put(name, null, value, false);
   }
 
+  @Override
   public Property put(String name, DataType type, Object value) {
     return put(name, type, value, false);
   }
 
+  @Override
   public Property put(String name, DataType type, Object value, boolean isDdl) {
     // the only property which seems to go in the "primary" is the "multi
     // value" property
@@ -95,6 +104,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     return _complex.put(name, type, value, isDdl);
   }
 
+  @Override
   public void putAll(Iterable<? extends Property> props) {
     if(props == null) {
       return;
@@ -109,6 +119,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     }
   }  
 
+  @Override
   public Property remove(String name) {
     if(isPrimaryKey(name)) {
       return _primary.remove(name);
@@ -116,11 +127,13 @@ public class MultiValueColumnPropertyMap implements PropertyMap
     return _complex.remove(name);
   }
 
+  @Override
   public void save() throws IOException {
     _primary.save();
     _complex.save();
   }
 
+  @Override
   public Iterator<Property> iterator() {
     final List<Iterator<Property>> iters = new ArrayList<Iterator<Property>>(2);
     iters.add(_primary.iterator());
@@ -142,10 +155,12 @@ public class MultiValueColumnPropertyMap implements PropertyMap
         return null;
       }
 
+      @Override
       public boolean hasNext() {
         return (_next != null);
       }
 
+      @Override
       public Property next() {
         if(!hasNext()) {
           throw new NoSuchElementException();
@@ -155,6 +170,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
         return prop;
       }
 
+      @Override
       public void remove() {
         if(_cur != null) {
           _cur.remove();
