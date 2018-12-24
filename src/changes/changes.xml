@@ -29,7 +29,7 @@
         commons-lang3.
       </action>
     </release>
-    <release version="2.2.1" date="TBD">
+    <release version="2.2.1" date="2018-12-22">
       <action dev="jahlborn" type="update">
         Implement the majority of the missing standard functions:
         FormatCurrency, FormatDateTime, FormatNumber, FormatPercent, Val,
