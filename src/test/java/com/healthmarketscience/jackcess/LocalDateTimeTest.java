@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
@@ -222,6 +223,67 @@ public class LocalDateTimeTest extends TestCase
         assertEquals(sdf.format(curLdt), sdf.format(newLdt));
       }
       curCal.add(Calendar.MINUTE, 30);
+    }
+  }
+
+  public void testWriteAndReadTemporals() throws Exception {
+    ZoneId zoneId = ZoneId.of("America/New_York");
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = createMem(fileFormat);
+      db.setZoneId(zoneId);
+      db.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
+
+      Table table = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("name", DataType.TEXT))
+        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+        .toTable(db);
+
+      // since jackcess does not really store millis, shave them off before
+      // storing the current date/time
+      long curTimeNoMillis = (System.currentTimeMillis() / 1000L);
+      curTimeNoMillis *= 1000L;
+
+      DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+      List<Date> tmpDates =
+        new ArrayList<Date>(
+            Arrays.asList(
+                df.parse("19801231 00:00:00"),
+                df.parse("19930513 14:43:27"),
+                df.parse("20210102 02:37:00"),
+                new Date(curTimeNoMillis)));
+
+      List<Object> objs = new ArrayList<Object>();
+      List<LocalDateTime> expected = new ArrayList<LocalDateTime>();
+      for(Date d : tmpDates) {
+        Instant inst = Instant.ofEpochMilli(d.getTime());
+        objs.add(inst);
+        ZonedDateTime zdt = inst.atZone(zoneId);
+        objs.add(zdt);
+        LocalDateTime ldt = zdt.toLocalDateTime();
+        objs.add(ldt);
+
+        for(int i = 0; i < 3; ++i) {
+          expected.add(ldt);
+        }
+      }
+
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        for(Object o : objs) {
+          table.addRow("row " + o, o);
+        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
+      }
+
+      List<LocalDateTime> foundDates = new ArrayList<LocalDateTime>();
+      for(Row row : table) {
+        foundDates.add(row.getLocalDateTime("date"));
+      }
+
+      assertEquals(expected, foundDates);
+
+      db.close();
     }
   }
 
