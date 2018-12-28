@@ -16,10 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -28,26 +24,15 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
-import java.util.TreeSet;
-import java.util.UUID;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.RowIdImpl;
-import com.healthmarketscience.jackcess.impl.RowImpl;
-import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.util.LinkResolver;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
