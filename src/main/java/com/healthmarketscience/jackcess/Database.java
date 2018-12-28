@@ -106,7 +106,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     "com.healthmarketscience.jackcess.brokenNio";
 
   /** system property which can be used to set the default sort order for
-   *  table columns.  Value should be one {@link Table.ColumnOrder} enum
+   *  table columns.  Value should be one of {@link Table.ColumnOrder} enum
    *  values.
    * @usage _intermediate_field_
    */
@@ -133,6 +133,13 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public static final String ENABLE_EXPRESSION_EVALUATION_PROPERTY =
     "com.healthmarketscience.jackcess.enableExpressionEvaluation";
+
+  /** system property which can be used to set the default date/Time type.
+   * Value should be one of {@link DateTimeType} enum values.
+   * @usage _general_field_
+   */
+  public static final String DATE_TIME_TYPE_PROPERTY =
+    "com.healthmarketscience.jackcess.dateTimeType";
 
   /**
    * Enum which indicates which version of Access created the database.

@@ -995,6 +995,10 @@ public class DatabaseTest extends TestCase
       public TimeZone getTimeZone() { return tz; }
       @Override
       public ZoneId getZoneId() { return null; }
+      @Override
+      public ColumnImpl.DateTimeFactory getDateTimeFactory() {
+        return getDateTimeFactory(DateTimeType.DATE);
+      }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");

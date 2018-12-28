@@ -76,7 +76,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
+public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeContext
 {
 
   protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
@@ -506,7 +506,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
     return getDatabase().getZoneId();
   }
 
-  protected DateTimeFactory getDateTimeFactory() {
+  @Override
+  public DateTimeFactory getDateTimeFactory() {
     return getDatabase().getDateTimeFactory();
   }
 
@@ -1042,21 +1043,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
    * Date/Calendar/Number/Temporal time value.
    * @usage _advanced_method_
    */
-  private static double toDateDouble(Object value, ZoneContext zc)
-  {
-    if(value instanceof TemporalAccessor) {
-      return toDateDouble(toLocalDateTime((TemporalAccessor)value, zc));
-    }
-
-    // seems access stores dates in the local timezone.  guess you just
-    // hope you read it in the same timezone in which it was written!
-    long time = toDateLong(value);
-    time += getToLocalTimeZoneOffset(time, zc.getTimeZone());
-    return toLocalDateDouble(time);
+  private static double toDateDouble(Object value, DateTimeContext dtc) {
+    return dtc.getDateTimeFactory().toDateDouble(value, dtc);
   }
 
   private static LocalDateTime toLocalDateTime(
-      TemporalAccessor value, ZoneContext zc) {
+      TemporalAccessor value, DateTimeContext dtc) {
 
     // handle some common Temporal types
     if(value instanceof LocalDateTime) {
@@ -1065,10 +1057,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
     if(value instanceof ZonedDateTime) {
       // if the temporal value has a timezone, convert it to this db's timezone
       return ((ZonedDateTime)value).withZoneSameInstant(
-          zc.getZoneId()).toLocalDateTime();
+          dtc.getZoneId()).toLocalDateTime();
     }
     if(value instanceof Instant) {
-      return LocalDateTime.ofInstant((Instant)value, zc.getZoneId());
+      return LocalDateTime.ofInstant((Instant)value, dtc.getZoneId());
     }
     if(value instanceof LocalDate) {
       return ((LocalDate)value).atTime(BASE_LT);
@@ -1092,7 +1084,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
       if(zone != null) {
         // the Temporal has a zone, see if it is the right zone.  if not,
         // adjust it
-        ZoneId zoneId = zc.getZoneId();
+        ZoneId zoneId = dtc.getZoneId();
         if(!zoneId.equals(zone)) {
           return ZonedDateTime.of(ld, lt, zone).withZoneSameInstant(zoneId)
             .toLocalDateTime();
@@ -1105,6 +1097,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
       throw new IllegalArgumentException(
           "Unsupported temporal type " + value.getClass(), e);
     }
+  }
+
+  private static Instant toInstant(TemporalAccessor value, DateTimeContext dtc) {
+    if(value instanceof ZonedDateTime) {
+      return ((ZonedDateTime)value).toInstant();
+    }
+    if(value instanceof Instant) {
+      return (Instant)value;
+    }
+    return toLocalDateTime(value, dtc).atZone(dtc.getZoneId()).toInstant();
   }
 
   static double toLocalDateDouble(long time) {
@@ -2191,7 +2193,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
     }
   }
 
-  static DateTimeFactory getDateTimeFactory(DateTimeType type) {
+  protected static DateTimeFactory getDateTimeFactory(DateTimeType type) {
     return ((type == DateTimeType.LOCAL_DATE_TIME) ?
             LDT_DATE_TIME_FACTORY : DEF_DATE_TIME_FACTORY);
   }
@@ -2676,11 +2678,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
   /**
    * Factory which handles date/time values appropriately for a DateTimeType.
    */
-  static abstract class DateTimeFactory
+  protected static abstract class DateTimeFactory
   {
     public abstract DateTimeType getType();
 
     public abstract Object fromDateBits(ColumnImpl col, long dateBits);
+
+    public abstract double toDateDouble(Object value, DateTimeContext dtc);
 
     public abstract Object toInternalValue(DatabaseImpl db, Object value);
   }
@@ -2688,7 +2692,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
   /**
    * Factory impl for legacy Date handling.
    */
-  static final class DefaultDateTimeFactory extends DateTimeFactory
+  private static final class DefaultDateTimeFactory extends DateTimeFactory
   {
     @Override
     public DateTimeType getType() {
@@ -2703,6 +2707,23 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
     }
 
     @Override
+    public double toDateDouble(Object value, DateTimeContext dtc) {
+      // ZoneId and TimeZone have different rules for older timezones, so we
+      // need to consistently use one or the other depending on the date/time
+      // type
+      long time = 0L;
+      if(value instanceof TemporalAccessor) {
+        time = toInstant((TemporalAccessor)value, dtc).toEpochMilli();
+      } else {
+        time = toDateLong(value);
+      }
+      // seems access stores dates in the local timezone.  guess you just
+      // hope you read it in the same timezone in which it was written!
+      time += getToLocalTimeZoneOffset(time, dtc.getTimeZone());
+      return toLocalDateDouble(time);
+    }
+
+    @Override
     public Object toInternalValue(DatabaseImpl db, Object value) {
       return ((value instanceof Date) ? value :
               new Date(toDateLong(value)));
@@ -2712,7 +2733,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
   /**
    * Factory impl for LocalDateTime handling.
    */
-  static final class LDTDateTimeFactory extends DateTimeFactory
+  private static final class LDTDateTimeFactory extends DateTimeFactory
   {
     @Override
     public DateTimeType getType() {
@@ -2722,6 +2743,18 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, ZoneContext
     @Override
     public Object fromDateBits(ColumnImpl col, long dateBits) {
       return ldtFromLocalDateDouble(Double.longBitsToDouble(dateBits));
+    }
+
+    @Override
+    public double toDateDouble(Object value, DateTimeContext dtc) {
+      // ZoneId and TimeZone have different rules for older timezones, so we
+      // need to consistently use one or the other depending on the date/time
+      // type
+      if(!(value instanceof TemporalAccessor)) {
+        value = Instant.ofEpochMilli(toDateLong(value));
+      }
+      return ColumnImpl.toDateDouble(
+          toLocalDateTime((TemporalAccessor)value, dtc));
     }
 
     @Override

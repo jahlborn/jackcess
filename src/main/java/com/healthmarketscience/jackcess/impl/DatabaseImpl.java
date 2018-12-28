@@ -88,7 +88,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class DatabaseImpl implements Database, ZoneContext
+public class DatabaseImpl implements Database, DateTimeContext
 {
   private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
@@ -346,8 +346,7 @@ public class DatabaseImpl implements Database, ZoneContext
   /** shared context for evaluating expressions */
   private DBEvalContext _evalCtx;
   /** factory for the appropriate date/time type */
-  private ColumnImpl.DateTimeFactory _dtf =
-    ColumnImpl.getDateTimeFactory(DateTimeType.DATE);
+  private ColumnImpl.DateTimeFactory _dtf;
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
@@ -537,8 +536,9 @@ public class DatabaseImpl implements Database, ZoneContext
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
     _evaluateExpressions = getDefaultEvaluateExpressions();
     _fileFormat = fileFormat;
-    _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     setZoneInfo(timeZone, null);
+    _dtf = ColumnImpl.getDateTimeFactory(getDefaultDateTimeType());
+    _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
     if(provider == null) {
       provider = DefaultCodecProvider.INSTANCE;
     }
@@ -710,7 +710,8 @@ public class DatabaseImpl implements Database, ZoneContext
     _dtf = ColumnImpl.getDateTimeFactory(dateTimeType);
   }
 
-  protected ColumnImpl.DateTimeFactory getDateTimeFactory() {
+  @Override
+  public ColumnImpl.DateTimeFactory getDateTimeFactory() {
     return _dtf;
   }
 
@@ -2043,16 +2044,8 @@ public class DatabaseImpl implements Database, ZoneContext
    */
   public static Table.ColumnOrder getDefaultColumnOrder()
   {
-    String coProp = System.getProperty(COLUMN_ORDER_PROPERTY);
-    if(coProp != null) {
-      coProp = coProp.trim();
-      if(coProp.length() > 0) {
-        return Table.ColumnOrder.valueOf(coProp);
-      }
-    }
-
-    // use default order
-    return DEFAULT_COLUMN_ORDER;
+    return getEnumSystemProperty(Table.ColumnOrder.class, COLUMN_ORDER_PROPERTY,
+                                 DEFAULT_COLUMN_ORDER);
   }
 
   /**
@@ -2098,6 +2091,17 @@ public class DatabaseImpl implements Database, ZoneContext
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
     return false;
+  }
+
+  /**
+   * Returns the default DateTimeType.  This defaults to
+   * {@link DateTimeType#DATE}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#DATE_TIME_TYPE_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static DateTimeType getDefaultDateTimeType() {
+    return getEnumSystemProperty(DateTimeType.class, DATE_TIME_TYPE_PROPERTY,
+                                 DateTimeType.DATE);
   }
 
   /**
@@ -2194,6 +2198,19 @@ public class DatabaseImpl implements Database, ZoneContext
 
   private static String withErrorContext(String msg, String dbName) {
     return msg + " (Db=" + dbName + ")";
+  }
+
+  private static <E extends Enum<E>> E getEnumSystemProperty(
+      Class<E> enumClass, String propName, E defaultValue)
+  {
+    String prop = System.getProperty(propName);
+    if(prop != null) {
+      prop = prop.trim().toUpperCase();
+      if(!prop.isEmpty()) {
+        return Enum.valueOf(enumClass, prop);
+      }
+    }
+    return defaultValue;
   }
 
   /**

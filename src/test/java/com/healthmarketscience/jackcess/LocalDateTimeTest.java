@@ -62,7 +62,71 @@ public class LocalDateTimeTest extends TestCase
     super(name);
   }
 
-  public void testAncientDates() throws Exception
+  public void testWriteAndReadLocalDate() throws Exception {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+      Database db = createMem(fileFormat);
+
+      db.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
+
+      Table table = new TableBuilder("test")
+        .addColumn(new ColumnBuilder("name", DataType.TEXT))
+        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+        .toTable(db);
+
+      // since jackcess does not really store millis, shave them off before
+      // storing the current date/time
+      long curTimeNoMillis = (System.currentTimeMillis() / 1000L);
+      curTimeNoMillis *= 1000L;
+
+      DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+      List<Date> dates =
+        new ArrayList<Date>(
+            Arrays.asList(
+                df.parse("19801231 00:00:00"),
+                df.parse("19930513 14:43:27"),
+                null,
+                df.parse("20210102 02:37:00"),
+                new Date(curTimeNoMillis)));
+
+      Calendar c = Calendar.getInstance();
+      for(int year = 1801; year < 2050; year +=3) {
+        for(int month = 0; month <= 12; ++month) {
+          for(int day = 1; day < 29; day += 3) {
+            c.clear();
+            c.set(Calendar.YEAR, year);
+            c.set(Calendar.MONTH, month);
+            c.set(Calendar.DAY_OF_MONTH, day);
+            dates.add(c.getTime());
+          }
+        }
+      }
+
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        for(Date d : dates) {
+          table.addRow("row " + d, d);
+        }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
+      }
+
+      List<LocalDateTime> foundDates = new ArrayList<LocalDateTime>();
+      for(Row row : table) {
+        foundDates.add(row.getLocalDateTime("date"));
+      }
+
+      assertEquals(dates.size(), foundDates.size());
+      for(int i = 0; i < dates.size(); ++i) {
+        Date expected = dates.get(i);
+        LocalDateTime found = foundDates.get(i);
+        assertSameDate(expected, found);
+      }
+
+      db.close();
+    }
+  }
+
+  public void testAncientLocalDates() throws Exception
   {
     ZoneId zoneId = ZoneId.of("America/New_York");
     DateTimeFormatter sdf = DateTimeFormatter.ofPattern("uuuu-MM-dd");
@@ -130,6 +194,10 @@ public class LocalDateTimeTest extends TestCase
       public TimeZone getTimeZone() { return tz; }
       @Override
       public ZoneId getZoneId() { return zoneId; }
+      @Override
+      public ColumnImpl.DateTimeFactory getDateTimeFactory() {
+        return getDateTimeFactory(DateTimeType.LOCAL_DATE_TIME);
+      }
     };
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy.MM.dd");
