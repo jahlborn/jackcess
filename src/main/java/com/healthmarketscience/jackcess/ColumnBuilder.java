@@ -68,7 +68,7 @@ public class ColumnBuilder {
   public ColumnBuilder(String name) {
     this(name, null);
   }
-  
+
   public ColumnBuilder(String name, DataType type) {
     _name = name;
     _type = type;
@@ -96,7 +96,7 @@ public class ColumnBuilder {
   public ColumnBuilder setSQLType(int type) throws SQLException {
     return setSQLType(type, 0, null);
   }
-  
+
   /**
    * Sets the type for the new column based on the given SQL type and target
    * data length (in type specific units).
@@ -182,9 +182,9 @@ public class ColumnBuilder {
    * Sets the length (in type specific units) for the new column.
    */
   public ColumnBuilder setLengthInUnits(int unitLength) {
-    return setLength(_type.getUnitSize() * unitLength);
+    return setLength(_type.fromUnitSize(unitLength));
   }
-  
+
   /**
    * Sets the length for the new column to the max length for the type.  Does
    * nothing for types which are not variable length.
@@ -196,7 +196,7 @@ public class ColumnBuilder {
     }
     return this;
   }
-  
+
   /**
    * Sets whether of not the new column is an auto-number column.
    */
@@ -295,12 +295,12 @@ public class ColumnBuilder {
   private PropertyMap.Property getProperty(String name) {
     return ((_props != null) ? _props.get(name) : null);
   }
-  
+
   /**
    * Sets all attributes except name from the given Column template (including
    * all column properties except GUID).
    */
-  public ColumnBuilder setFromColumn(Column template) 
+  public ColumnBuilder setFromColumn(Column template)
     throws IOException
   {
     DataType type = template.getType();
@@ -325,7 +325,7 @@ public class ColumnBuilder {
         setProperty(colProp.getName(), colProp);
       }
     }
-    
+
     return this;
   }
 
@@ -349,7 +349,7 @@ public class ColumnBuilder {
     if(template._props != null) {
       _props = new HashMap<String,PropertyMap.Property>(template._props);
     }
-    
+
     return this;
   }
 
@@ -410,7 +410,7 @@ public class ColumnBuilder {
       throw new IllegalArgumentException(withErrorContext(
           "Database format " + format + " does not support type " + getType()));
     }
-    
+
     if(!getType().isVariableLength()) {
       if(getLength() < getType().getFixedSize()) {
         throw new IllegalArgumentException(withErrorContext(
@@ -433,7 +433,7 @@ public class ColumnBuilder {
       if(!getType().isValidPrecision(getPrecision())) {
         throw new IllegalArgumentException(withErrorContext(
             "Precision must be from " + getType().getMinPrecision() + " to " +
-            getType().getMaxPrecision() + " inclusive, found " + 
+            getType().getMaxPrecision() + " inclusive, found " +
             getPrecision()));
       }
     }

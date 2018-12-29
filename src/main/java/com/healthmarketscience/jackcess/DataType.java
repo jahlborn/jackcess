@@ -30,7 +30,7 @@ import com.healthmarketscience.jackcess.impl.JetFormat;
 
 /**
  * Supported access data types.
- * 
+ *
  * @author Tim McCune
  * @usage _general_class_
  */
@@ -104,7 +104,7 @@ public enum DataType {
    * null}.  Equivalent to SQL {@link Types#VARCHAR}, {@link Types#CHAR}.
    */
   TEXT((byte) 0x0A, Types.VARCHAR, null, true, false, 0,
-       JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_MAX_LENGTH, 
+       JetFormat.TEXT_FIELD_MAX_LENGTH, JetFormat.TEXT_FIELD_MAX_LENGTH,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
    * Corresponds to a java {@code byte[]} of max length 16777215 bytes.
@@ -151,7 +151,7 @@ public enum DataType {
    * Complex type corresponds to a special {@link #LONG} autonumber field
    * which is the key for a secondary table which holds the "real" data.
    */
-  COMPLEX_TYPE((byte) 0x12, null, 4),    
+  COMPLEX_TYPE((byte) 0x12, null, 4),
   /**
    * Corresponds to a java {@link Long}.  Accepts any {@link Number} (using
    * {@link Number#longValue}), Boolean as 1 or 0, any Object converted to a
@@ -206,7 +206,7 @@ public enum DataType {
     addNewSqlType("TIME_WITH_TIMEZONE", SHORT_DATE_TIME, null);
     addNewSqlType("TIMESTAMP_WITH_TIMEZONE", SHORT_DATE_TIME, null);
   }
-  
+
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
   static {
     for (DataType type : DataType.values()) {
@@ -249,11 +249,11 @@ public enum DataType {
   private final int _maxPrecision;
   /** the number of bytes per "unit" for this data type */
   private final int _unitSize;
-  
+
   private DataType(byte value) {
     this(value, null, null);
   }
-  
+
   private DataType(byte value, Integer sqlType, Integer fixedSize) {
     this(value, sqlType, fixedSize, false, false, 0, 0, 0, 1);
   }
@@ -269,7 +269,7 @@ public enum DataType {
          minSize, defaultSize, maxSize,
          false, 0, 0, 0, 0, 0, 0, unitSize);
   }
-  
+
   private DataType(byte value, Integer sqlType, Integer fixedSize,
                    boolean variableLength,
                    boolean longValue,
@@ -301,11 +301,11 @@ public enum DataType {
     _maxPrecision = maxPrecision;
     _unitSize = unitSize;
   }
-  
+
   public byte getValue() {
     return _value;
   }
-  
+
   public boolean isVariableLength() {
     return _variableLength;
   }
@@ -315,7 +315,7 @@ public enum DataType {
     // e.g. NUMERIC
     return (isVariableLength() && (getMinSize() != getMaxSize()));
   }
-  
+
   public boolean isLongValue() {
     return _longValue;
   }
@@ -327,7 +327,7 @@ public enum DataType {
   public int getFixedSize() {
     return getFixedSize(null);
   }
-  
+
   public int getFixedSize(Short colLength) {
     if(_fixedSize != null) {
       if(colLength != null) {
@@ -338,7 +338,7 @@ public enum DataType {
     if(colLength != null) {
       return colLength;
     }
-    throw new IllegalArgumentException("Unexpected fixed length column " + 
+    throw new IllegalArgumentException("Unexpected fixed length column " +
                                        this);
   }
 
@@ -353,7 +353,7 @@ public enum DataType {
   public int getMaxSize() {
     return _maxSize;
   }
-  
+
   public int getSQLType() throws SQLException {
     if (_sqlType != null) {
       return _sqlType;
@@ -368,19 +368,19 @@ public enum DataType {
   public int getDefaultScale() {
     return _defaultScale;
   }
-  
+
   public int getMaxScale() {
     return _maxScale;
   }
-  
+
   public int getMinPrecision() {
     return _minPrecision;
   }
-  
+
   public int getDefaultPrecision() {
     return _defaultPrecision;
   }
-  
+
   public int getMaxPrecision() {
     return _maxPrecision;
   }
@@ -389,13 +389,11 @@ public enum DataType {
     return _unitSize;
   }
 
-  public int toUnitSize(int size)
-  {
+  public int toUnitSize(int size) {
     return(size / getUnitSize());
   }
 
-  public int fromUnitSize(int unitSize)
-  {
+  public int fromUnitSize(int unitSize) {
     return(unitSize * getUnitSize());
   }
 
@@ -414,7 +412,7 @@ public enum DataType {
   private static boolean isWithinRange(int value, int minValue, int maxValue) {
     return((value >= minValue) && (value <= maxValue));
   }
-  
+
   public int toValidSize(int size) {
     return toValidRange(size, getMinSize(), getMaxSize());
   }
@@ -442,12 +440,12 @@ public enum DataType {
   public boolean isUnsupported() {
     return((this == UNSUPPORTED_FIXEDLEN) || (this == UNSUPPORTED_VARLEN));
   }
-  
+
   private static int toValidRange(int value, int minValue, int maxValue) {
     return((value > maxValue) ? maxValue :
            ((value < minValue) ? minValue : value));
   }
-  
+
   public static DataType fromByte(byte b) throws IOException {
     DataType rtn = DATA_TYPES.get(b);
     if (rtn != null) {
@@ -455,13 +453,13 @@ public enum DataType {
     }
     throw new IOException("Unrecognized data type: " + b);
   }
-  
+
   public static DataType fromSQLType(int sqlType)
     throws SQLException
   {
     return fromSQLType(sqlType, 0, null);
   }
-  
+
   public static DataType fromSQLType(int sqlType, int lengthInUnits)
     throws SQLException
   {
@@ -493,7 +491,7 @@ public enum DataType {
     }
 
     // make sure size is reasonable
-    int size = lengthInUnits * rtn.getUnitSize();
+    int size = rtn.fromUnitSize(lengthInUnits);
     if(rtn.isVariableLength() && !rtn.isValidSize(size)) {
       // try alternate type.  we always accept alternate "long value" types
       // regardless of the given lengthInUnits
@@ -504,7 +502,7 @@ public enum DataType {
         rtn = altRtn;
       }
     }
-      
+
     return rtn;
   }
 
@@ -512,7 +510,7 @@ public enum DataType {
    * Adds mappings for a sql type which was added after jdk 1.5 (using
    * reflection).
    */
-  private static void addNewSqlType(String typeName, DataType type, 
+  private static void addNewSqlType(String typeName, DataType type,
                                     DataType altType)
   {
     try {
