@@ -204,9 +204,13 @@ public class DatabaseImpl implements Database, DateTimeContext
   /** read-only channel access mode */
   public static final OpenOption[] RO_CHANNEL_OPTS =
     {StandardOpenOption.READ};
-  /** read/write channel access mode */
+  /** read/write channel access mode for existing files */
   public static final OpenOption[] RW_CHANNEL_OPTS =
     {StandardOpenOption.READ, StandardOpenOption.WRITE};
+  /** read/write/create channel access mode for new files */
+  public static final OpenOption[] RWC_CHANNEL_OPTS =
+  {StandardOpenOption.READ, StandardOpenOption.WRITE,
+   StandardOpenOption.CREATE};
 
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
@@ -388,7 +392,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       readOnly |= !Files.isWritable(mdbFile);
 
       // open file channel
-      channel = openChannel(mdbFile, readOnly);
+      channel = openChannel(mdbFile, readOnly, false);
       closeChannel = true;
     }
 
@@ -459,7 +463,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     boolean closeChannel = false;
     if(channel == null) {
-      channel = openChannel(mdbFile, false);
+      channel = openChannel(mdbFile, false, true);
       closeChannel = true;
     }
 
@@ -494,10 +498,12 @@ public class DatabaseImpl implements Database, DateTimeContext
    *            that name cannot be created, or if some other error occurs
    *            while opening or creating the file
    */
-  static FileChannel openChannel(Path mdbFile, boolean readOnly)
+  static FileChannel openChannel(
+      Path mdbFile, boolean readOnly, boolean create)
     throws IOException
   {
-    OpenOption[] opts = (readOnly ? RO_CHANNEL_OPTS : RW_CHANNEL_OPTS);
+    OpenOption[] opts = (readOnly ? RO_CHANNEL_OPTS :
+                         (create ? RWC_CHANNEL_OPTS : RW_CHANNEL_OPTS));
     return FileChannel.open(mdbFile, opts);
   }
 

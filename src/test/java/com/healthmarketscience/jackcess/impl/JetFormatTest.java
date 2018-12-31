@@ -194,7 +194,7 @@ public class JetFormatTest extends TestCase {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
       final FileChannel channel = DatabaseImpl.openChannel(
-          testDB.dbFile.toPath(), false);
+          testDB.dbFile.toPath(), false, false);
       try {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
