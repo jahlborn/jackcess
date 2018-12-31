@@ -186,6 +186,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   /** auto numbers must be > 0 */
   static final int INVALID_AUTO_NUMBER = 0;
 
+  static final int INVALID_LENGTH = -1;
+
 
   /** owning table */
   private final TableImpl _table;
@@ -219,6 +221,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   private ColumnValidator _validator = SimpleColumnValidator.INSTANCE;
   /** default value generator */
   private ColDefaultValueEvalContext _defValue;
+  /** length of the column in units, lazily computed */
+  private int _lengthInUnits = INVALID_LENGTH;
 
   /**
    * @usage _advanced_method_
@@ -469,8 +473,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   }
 
   @Override
-  public short getLengthInUnits() {
-    return (short)getType().toUnitSize(getLength());
+  public final short getLengthInUnits() {
+    if(_lengthInUnits == INVALID_LENGTH) {
+      _lengthInUnits = calcLengthInUnits();
+    }
+    return (short)_lengthInUnits;
+  }
+
+  protected int calcLengthInUnits() {
+    return getType().toUnitSize(getLength(), getFormat());
   }
 
   @Override

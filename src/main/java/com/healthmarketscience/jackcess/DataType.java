@@ -391,14 +391,27 @@ public enum DataType {
     return _unitSize;
   }
 
-  public int toUnitSize(int size)
-  {
-    return(size / getUnitSize());
+  public int getUnitSize(JetFormat format) {
+    if((format != null) && isTextual()) {
+      return format.SIZE_TEXT_FIELD_UNIT;
+    }
+    return _unitSize;
   }
 
-  public int fromUnitSize(int unitSize)
-  {
-    return(unitSize * getUnitSize());
+  public int toUnitSize(int size) {
+    return toUnitSize(size, null);
+  }
+
+  public int toUnitSize(int size, JetFormat format) {
+    return(size / getUnitSize(format));
+  }
+
+  public int fromUnitSize(int unitSize) {
+    return fromUnitSize(unitSize, null);
+  }
+
+  public int fromUnitSize(int unitSize, JetFormat format) {
+    return(unitSize * getUnitSize(format));
   }
 
   public boolean isValidSize(int size) {
@@ -478,13 +491,15 @@ public enum DataType {
     if(rtnArr == null) {
       throw new SQLException("Unsupported SQL type: " + sqlType);
     }
+    JetFormat format =
+      ((fileFormat != null) ?
+       DatabaseImpl.getFileFormatDetails(fileFormat).getFormat() :
+       null);
     DataType rtn = rtnArr[0];
-    if((rtnArr.length > 1) && (fileFormat != null)) {
+    if((rtnArr.length > 1) && (format != null)) {
       // there are multiple possibilities, ordered from lowest version to
       // highest version supported.  go in opposite order to find the best
       // type for this format
-      JetFormat format = DatabaseImpl.getFileFormatDetails(fileFormat)
-        .getFormat();
       for(int i = rtnArr.length - 1; i >= 0; --i) {
         DataType tmp = rtnArr[i];
         if(format.isSupportedDataType(tmp)) {
@@ -495,7 +510,7 @@ public enum DataType {
     }
 
     // make sure size is reasonable
-    int size = lengthInUnits * rtn.getUnitSize();
+    int size = rtn.fromUnitSize(lengthInUnits, format);
     if(rtn.isVariableLength() && !rtn.isValidSize(size)) {
       // try alternate type.  we always accept alternate "long value" types
       // regardless of the given lengthInUnits
