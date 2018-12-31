@@ -55,6 +55,7 @@ class LongValueColumnImpl extends ColumnImpl
 
   /** Holds additional info for writing long values */
   private LongValueBufferHolder _lvalBufferH;
+  private int _maxLenInUnits = INVALID_LENGTH;
 
   LongValueColumnImpl(InitArgs args) throws IOException
   {
@@ -84,8 +85,15 @@ class LongValueColumnImpl extends ColumnImpl
     super.postTableLoadInit();
   }
 
-  protected int getMaxLengthInUnits() {
-    return getType().toUnitSize(getType().getMaxSize());
+  protected final int getMaxLengthInUnits() {
+    if(_maxLenInUnits == INVALID_LENGTH) {
+      _maxLenInUnits = calcMaxLengthInUnits();
+    }
+    return _maxLenInUnits;
+  }
+
+  protected int calcMaxLengthInUnits() {
+    return getType().toUnitSize(getType().getMaxSize(), getFormat());
   }
 
   @Override

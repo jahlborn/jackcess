@@ -242,10 +242,11 @@ class CalculatedColumnUtil
     }
 
     @Override
-    public short getLengthInUnits() {
+    protected int calcLengthInUnits() {
       // the byte "length" includes the calculated field overhead.  remove
       // that to get the _actual_ data length (in units)
-      return (short)getType().toUnitSize(getLength() - CALC_EXTRA_DATA_LEN);
+      return getType().toUnitSize(getLength() - CALC_EXTRA_DATA_LEN,
+                                  getFormat());
     }
 
     @Override
@@ -285,10 +286,11 @@ class CalculatedColumnUtil
     }
 
     @Override
-    protected int getMaxLengthInUnits() {
+    protected int calcMaxLengthInUnits() {
       // the byte "length" includes the calculated field overhead.  remove
       // that to get the _actual_ data length (in units)
-      return getType().toUnitSize(getType().getMaxSize() - CALC_EXTRA_DATA_LEN);
+      return getType().toUnitSize(getType().getMaxSize() - CALC_EXTRA_DATA_LEN,
+                                  getFormat());
     }
 
     @Override

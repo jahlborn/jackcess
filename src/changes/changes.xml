@@ -27,6 +27,9 @@
         irrelevant failures when reading databases which have invalid column
         properties.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="151">
+        Fix length in units calculation for Access 97 text fields.
+      </action>
     </release>
     <release version="2.2.0" date="2018-09-08"
              description="Add support for expression evaluation">
