@@ -29,6 +29,11 @@
         commons-lang3.
       </action>
     </release>
+    <release version="2.2.2" date="2019-01-05">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="151">
+        Fix length in units calculation for Access 97 text fields.
+      </action>
+    </release>
     <release version="2.2.1" date="2018-12-22">
       <action dev="jahlborn" type="update">
         Implement the majority of the missing standard functions:
@@ -51,9 +56,6 @@
         Ignore column validators for read-only dbs.  This will avoid
         irrelevant failures when reading databases which have invalid column
         properties.
-      </action>
-      <action dev="jahlborn" type="fix" system="SourceForge2" issue="151">
-        Fix length in units calculation for Access 97 text fields.
       </action>
     </release>
     <release version="2.2.0" date="2018-09-08"
