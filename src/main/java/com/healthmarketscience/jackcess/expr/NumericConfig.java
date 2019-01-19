@@ -35,7 +35,7 @@ public class NumericConfig
       2, true, false, true, 3, Locale.US);
 
   public enum Type {
-    CURRENCY, FIXED, STANDARD, PERCENT, SCIENTIFIC;
+    CURRENCY, FIXED, STANDARD, PERCENT, SCIENTIFIC, EURO;
   }
 
   private final int _numDecDigits;
@@ -49,6 +49,7 @@ public class NumericConfig
   private final String _standardFormat;
   private final String _percentFormat;
   private final String _scientificFormat;
+  private final String _euroFormat;
 
   public NumericConfig(int numDecDigits, boolean incLeadingDigit,
                        boolean useNegParens, boolean useNegCurrencyParens,
@@ -75,6 +76,9 @@ public class NumericConfig
     _scientificFormat = FormatUtil.createNumberFormatPattern(
         FormatUtil.NumPatternType.SCIENTIFIC, _numDecDigits, true,
         false, 0);
+    _euroFormat = FormatUtil.createNumberFormatPattern(
+        FormatUtil.NumPatternType.EURO, _numDecDigits, _incLeadingDigit,
+        _useNegCurrencyParens, _numGroupDigits);
   }
 
   public int getNumDecimalDigits() {
@@ -109,6 +113,8 @@ public class NumericConfig
       return _percentFormat;
     case SCIENTIFIC:
       return _scientificFormat;
+    case EURO:
+      return _euroFormat;
     default:
       throw new IllegalArgumentException("unknown number type " + type);
     }

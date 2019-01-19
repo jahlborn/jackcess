@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Calendar;
-import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
 import junit.framework.TestCase;
@@ -145,6 +144,7 @@ public class DefaultFunctionsTest extends TestCase
 
     assertEval("FOOO", "=UCase(\"fOoO\")");
     assertEval("fooo", "=LCase(\"fOoO\")");
+    assertEval(" FOO \" BAR ", "=UCase(\" foo \"\" bar \")");
 
     assertEval("bl", "=Left(\"blah\", 2)");
     assertEval("", "=Left(\"blah\", 0)");
@@ -285,6 +285,11 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-12345.68", "=Format(-12345.6789, 'Fixed')");
     assertEval("-0.12", "=Format(-0.12345, 'Fixed')");
 
+    assertEval("\u20AC12,345.68", "=Format(12345.6789, 'Euro')");
+    assertEval("\u20AC0.12", "=Format(0.12345, 'Euro')");
+    assertEval("(\u20AC12,345.68)", "=Format(-12345.6789, 'Euro')");
+    assertEval("(\u20AC0.12)", "=Format(-0.12345, 'Euro')");
+
     assertEval("$12,345.68", "=Format(12345.6789, 'Currency')");
     assertEval("$0.12", "=Format(0.12345, 'Currency')");
     assertEval("($12,345.68)", "=Format(-12345.6789, 'Currency')");
@@ -321,6 +326,16 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("07:00", "=Format(#01/02/2003 7:00:00 AM#, 'Short Time')");
     assertEval("19:00", "=Format(#01/02/2003 7:00:00 PM#, 'Short Time')");
 
+    assertEval("07:00 a", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p')");
+    assertEval("07:00 a 6 2", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww')");
+    assertEval("07:00 a 4 1", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww', 3, 3)");
+    assertEval("1313", "=Format(#01/10/2003 7:13:00 AM#, 'nnnn; foo bar')");
+    assertEval("1 1/10/2003 7:13:00 AM ttt this is text",
+               "=Format(#01/10/2003 7:13:00 AM#, 'q c ttt \"this is text\"')");
+    assertEval("1 1/10/2003 ttt this is text",
+               "=Format(#01/10/2003#, 'q c ttt \"this is text\"')");
+    assertEval("4 7:13:00 AM ttt this 'is' \"text\"",
+               "=Format(#7:13:00 AM#, \"q c ttt \"\"this 'is' \"\"\"\"text\"\"\"\"\"\"\")");
   }
 
   public void testNumberFuncs() throws Exception

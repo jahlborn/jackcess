@@ -239,29 +239,34 @@ class ExpressionTokenizer
   }
 
   private static String parseQuotedString(ExprBuf buf, char quoteChar) {
-    return parseStringUntil(buf, quoteChar, null, true);
+    return parseStringUntil(buf, null, quoteChar, true);
   }
 
   private static String parseObjNameString(ExprBuf buf) {
-    return parseStringUntil(buf, OBJ_NAME_END_CHAR, OBJ_NAME_START_CHAR, false);
+    return parseStringUntil(buf, OBJ_NAME_START_CHAR, OBJ_NAME_END_CHAR, false);
   }
 
   private static String parseDateLiteralString(ExprBuf buf) {
-    return parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null, false);
+    return parseStringUntil(buf, null, DATE_LIT_QUOTE_CHAR, false);
   }
 
-  private static String parseStringUntil(ExprBuf buf, char endChar,
-                                         Character startChar,
-                                         boolean allowDoubledEscape)
+  static String parseStringUntil(ExprBuf buf, Character startChar,
+                                 char endChar, boolean allowDoubledEscape)
   {
-    StringBuilder sb = buf.getScratchBuffer();
+    return parseStringUntil(buf, startChar, endChar, allowDoubledEscape,
+                            buf.getScratchBuffer())
+      .toString();
+  }
 
+  static StringBuilder parseStringUntil(
+      ExprBuf buf, Character startChar, char endChar, boolean allowDoubledEscape,
+      StringBuilder sb)
+  {
     boolean complete = false;
     while(buf.hasNext()) {
       char c = buf.next();
       if(c == endChar) {
         if(allowDoubledEscape && (buf.peekNext() == endChar)) {
-          sb.append(endChar);
           buf.next();
         } else {
           complete = true;
@@ -281,7 +286,7 @@ class ExpressionTokenizer
                                "' for quoted string " + buf);
     }
 
-    return sb.toString();
+    return sb;
   }
 
   private static Token parseDateLiteral(ExprBuf buf)
@@ -451,7 +456,7 @@ class ExpressionTokenizer
     return new AbstractMap.SimpleImmutableEntry<K,V>(a, b);
   }
 
-  private static final class ExprBuf
+  static final class ExprBuf
   {
     private final String _str;
     private final ParseContext _ctx;
@@ -461,7 +466,7 @@ class ExpressionTokenizer
           TemporalConfig.Type.class);
     private final StringBuilder _scratch = new StringBuilder();
 
-    private ExprBuf(String str, ParseContext ctx) {
+    ExprBuf(String str, ParseContext ctx) {
       _str = str;
       _ctx = ctx;
     }

@@ -505,7 +505,7 @@ public class DefaultDateFunctions
     return getOptionalIntParam(ctx, params, idx, 1, 0);
   }
 
-  private static WeekFields weekFields(int firstDay, int firstWeekType) {
+  static WeekFields weekFields(int firstDay, int firstWeekType) {
 
     int minDays = 1;
     switch(firstWeekType) {
