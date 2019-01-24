@@ -222,5 +222,15 @@ public class NumberFormatter
                                FieldPosition pos) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public int getMaximumFractionDigits() {
+      return _df.getMaximumFractionDigits();
+    }
+
+    @Override
+    public int getMinimumFractionDigits() {
+      return _df.getMinimumFractionDigits();
+    }
   }
 }

@@ -325,7 +325,10 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("07:00 AM", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Time')");
     assertEval("07:00", "=Format(#01/02/2003 7:00:00 AM#, 'Short Time')");
     assertEval("19:00", "=Format(#01/02/2003 7:00:00 PM#, 'Short Time')");
+  }
 
+  public void testCustomFormat() throws Exception
+  {
     assertEval("07:00 a", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p')");
     assertEval("07:00 a 6 2", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww')");
     assertEval("07:00 a 4 1", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww', 3, 3)");
@@ -336,6 +339,23 @@ public class DefaultFunctionsTest extends TestCase
                "=Format(#01/10/2003#, 'q c ttt \"this is text\"')");
     assertEval("4 7:13:00 AM ttt this 'is' \"text\"",
                "=Format(#7:13:00 AM#, \"q c ttt \"\"this 'is' \"\"\"\"text\"\"\"\"\"\"\")");
+    assertEval("12/29/1899", "=Format('true', 'c')");
+    assertEval("Tuesday, 00 Jan 2, 21:36:00",
+               "=Format('3.9', 'dddd, yy mmm d, hh:nn:ss')");
+    assertEval("Tuesday, 00 Jan 01 2, 09:36:00 PM",
+               "=Format('3.9', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
+    assertEval("foo",
+               "=Format('foo', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
+
+    assertEval("p13.00blah",
+               "=Format('13', '\"p\"#.00#\"blah\"')");
+    assertEval("-p13.00blah",
+               "=Format('-13', '\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\")')");
+    // assertEval("-p13.00blah",
+    //            "=Format('-13', '\"p\"#.00#\"blah\"')");
+
+
+
   }
 
   public void testNumberFuncs() throws Exception

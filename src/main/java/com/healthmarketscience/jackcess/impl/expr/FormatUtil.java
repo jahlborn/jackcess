@@ -163,6 +163,11 @@ public class FormatUtil
   private static final char TO_LOWER_CHAR = '<';
   private static final char DT_LIT_COLON_CHAR = ':';
   private static final char DT_LIT_SLASH_CHAR = '/';
+  private static final char SINGLE_QUOTE_CHAR = '\'';
+  private static final char EXP_E_CHAR = 'E';
+  private static final char EXP_e_CHAR = 'e';
+  private static final char PLUS_CHAR = '+';
+  private static final char MINUS_CHAR = '-';
   private static final int NO_CHAR = -1;
 
   private static final byte FCT_UNKNOWN = 0;
@@ -188,11 +193,12 @@ public class FormatUtil
 
   @FunctionalInterface
   interface DateFormatBuilder {
-    public void build(DateTimeFormatterBuilder dtfb, Args args);
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtType);
   }
 
   private static final DateFormatBuilder PARTIAL_PREFIX =
-    (dtfb, args) -> {
+    (dtfb, args, hasAmPm, dtType) -> {
       throw new UnsupportedOperationException();
     };
 
@@ -200,9 +206,9 @@ public class FormatUtil
     new HashMap<>();
   static {
     DATE_FMT_BUILDERS.put("c",
-        (dtfb, args) ->
+      (dtfb, args, hasAmPm, dtType) ->
         dtfb.append(ValueSupport.getDateFormatForType(
-                        args._ctx, args._expr.getType())));
+                        args._ctx, dtType)));
     DATE_FMT_BUILDERS.put("d", new SimpleDFB("d"));
     DATE_FMT_BUILDERS.put("dd", new SimpleDFB("dd"));
     DATE_FMT_BUILDERS.put("ddd", new SimpleDFB("eee"));
@@ -221,16 +227,16 @@ public class FormatUtil
         return weekFields.weekOfWeekBasedYear();
       }
     });
-    DATE_FMT_BUILDERS.put("m", new SimpleDFB("M"));
-    DATE_FMT_BUILDERS.put("mm", new SimpleDFB("MM"));
-    DATE_FMT_BUILDERS.put("mmm", new SimpleDFB("LLL"));
-    DATE_FMT_BUILDERS.put("mmmm", new SimpleDFB("LLLL"));
+    DATE_FMT_BUILDERS.put("m", new SimpleDFB("L"));
+    DATE_FMT_BUILDERS.put("mm", new SimpleDFB("LL"));
+    DATE_FMT_BUILDERS.put("mmm", new SimpleDFB("MMM"));
+    DATE_FMT_BUILDERS.put("mmmm", new SimpleDFB("MMMM"));
     DATE_FMT_BUILDERS.put("q", new SimpleDFB("Q"));
     DATE_FMT_BUILDERS.put("y", new SimpleDFB("D"));
     DATE_FMT_BUILDERS.put("yy", new SimpleDFB("yy"));
     DATE_FMT_BUILDERS.put("yyyy", new SimpleDFB("yyyy"));
-    DATE_FMT_BUILDERS.put("h", new SimpleDFB("H"));
-    DATE_FMT_BUILDERS.put("hh", new SimpleDFB("HH"));
+    DATE_FMT_BUILDERS.put("h", new HourlyDFB("h", "H"));
+    DATE_FMT_BUILDERS.put("hh", new HourlyDFB("hh", "HH"));
     DATE_FMT_BUILDERS.put("n", new SimpleDFB("m"));
     DATE_FMT_BUILDERS.put("nn", new SimpleDFB("mm"));
     DATE_FMT_BUILDERS.put("s", new SimpleDFB("s"));
@@ -241,9 +247,9 @@ public class FormatUtil
     DATE_FMT_BUILDERS.put("A/P", new AmPmDFB("A", "P"));
     DATE_FMT_BUILDERS.put("a/p", new AmPmDFB("a", "p"));
     DATE_FMT_BUILDERS.put("AMPM",
-                          (dtfb, args) -> {
+      (dtfb, args, hasAmPm, dtType) -> {
         String[] amPmStrs = args._ctx.getTemporalConfig().getAmPmStrings();
-        new AmPmDFB(amPmStrs[0], amPmStrs[1]).build(dtfb, args);
+        new AmPmDFB(amPmStrs[0], amPmStrs[1]).build(dtfb, args, hasAmPm, dtType);
       }
     );
     fillInPartialPrefixes();
@@ -254,6 +260,10 @@ public class FormatUtil
   private static final int NF_ZERO_IDX = 2;
   private static final int NF_NULL_IDX = 3;
   private static final int NUM_NF_FMTS = 4;
+
+  private static final NumberFormatter.NotationType[] NO_EXP_TYPES =
+    new NumberFormatter.NotationType[NUM_NF_FMTS];
+
 
   private static final class Args
   {
@@ -269,6 +279,22 @@ public class FormatUtil
       _firstWeekType = firstWeekType;
     }
 
+    public boolean isNullOrEmptyString() {
+      return(_expr.isNull() ||
+             // only a string value could ever be an empty string
+             (_expr.getType().isString() && getAsString().isEmpty()));
+    }
+
+    public boolean maybeCoerceToEmptyString() {
+      if(isNullOrEmptyString()) {
+        // ensure that we have a non-null value when formatting (null acts
+        // like empty string)
+        _expr = ValueSupport.EMPTY_STR_VAL;
+        return true;
+      }
+      return false;
+    }
+
     public Args coerceToDateTimeValue() {
       if(!_expr.getType().isTemporal()) {
 
@@ -280,7 +306,8 @@ public class FormatUtil
         }
 
         // StringValue already handles most String -> Number -> Date/Time, so
-        // most other convertions work here
+        // most other convertions work here (and failures are thrown so that
+        // default handling kicks in)
         _expr = _expr.getAsDateTimeValue(_ctx);
       }
       return this;
@@ -292,7 +319,6 @@ public class FormatUtil
 
           // format coerces "true"/"false" to boolean values
           Value boolExpr = maybeGetStringAsBooleanValue();
-
           if(boolExpr != null) {
             _expr = boolExpr;
           } else {
@@ -307,6 +333,10 @@ public class FormatUtil
                   _ctx, _expr);
               if(maybe != null) {
                 _expr = ValueSupport.toValue(maybe.getAsDouble(_ctx));
+              } else {
+                // string which can't be converted to number force failure
+                // here so default formatting will kick in
+                throw new EvalException("invalid number value");
               }
             }
           }
@@ -320,7 +350,7 @@ public class FormatUtil
 
     private Value maybeGetStringAsBooleanValue() {
       // format coerces "true"/"false" to boolean values
-      String val = _expr.getAsString(_ctx);
+      String val = getAsString();
       if("true".equalsIgnoreCase(val)) {
         return ValueSupport.TRUE_VAL;
       }
@@ -340,6 +370,15 @@ public class FormatUtil
       return _expr.getAsLocalDateTime(_ctx);
     }
 
+    public boolean getAsBoolean() {
+      // even though string values have a "boolean" value, for formatting,
+      // strings which don't convert to valid boolean/number/date are just
+      // returned as is.  so we use coerceToNumberValue to force the exception
+      // to be thrown which results in the "default" formatting behavior.
+      coerceToNumberValue();
+      return _expr.getAsBoolean(_ctx);
+    }
+
     public String getAsString() {
       return _expr.getAsString(_ctx);
     }
@@ -352,17 +391,20 @@ public class FormatUtil
                              int firstDay, int firstWeekType) {
 
     try {
-
       Args args = new Args(ctx, expr, firstDay, firstWeekType);
 
       Fmt predefFmt = PREDEF_FMTS.get(fmtStr);
       if(predefFmt != null) {
-        if(expr.isNull()) {
+        if(args.isNullOrEmptyString()) {
           // predefined formats return empty string for null
           return ValueSupport.EMPTY_STR_VAL;
         }
         return predefFmt.format(args);
       }
+
+      // TODO implement caching for custom formats?  put into Bindings.  use
+      // special "cache" prefix to know which caches to clear when evalconfig
+      // is altered (could also cache other Format* functions)
 
       return parseCustomFormat(fmtStr, args).format(args);
 
@@ -443,9 +485,6 @@ public class FormatUtil
 
     // a "general" format is actually a "yes/no" format which functions almost
     // exactly like a number format (without any number format specific chars)
-    if(!args._expr.isNull()) {
-      args.coerceToNumberValue();
-    }
 
     StringBuilder sb = new StringBuilder();
     String[] fmtStrs = new String[NUM_NF_FMTS];
@@ -503,54 +542,26 @@ public class FormatUtil
       addCustomGeneralFormat(fmtStrs, fmtIdx++, sb);
     }
 
-    return new CustomNumberFmt(
-        createCustomLiteralFormat(fmtStrs[NF_POS_IDX]),
-        createCustomLiteralFormat(fmtStrs[NF_NEG_IDX]),
-        createCustomLiteralFormat(fmtStrs[NF_ZERO_IDX]),
-        createCustomLiteralFormat(fmtStrs[NF_NULL_IDX]));
+    return new CustomGeneralFmt(
+        ValueSupport.toValue(fmtStrs[NF_POS_IDX]),
+        ValueSupport.toValue(fmtStrs[NF_NEG_IDX]),
+        ValueSupport.toValue(fmtStrs[NF_ZERO_IDX]),
+        ValueSupport.toValue(fmtStrs[NF_NULL_IDX]));
   }
 
   private static void addCustomGeneralFormat(String[] fmtStrs, int fmtIdx,
                                              StringBuilder sb)
   {
-    if(sb.length() == 0) {
-      // do special empty format handling on a per-format-type basis
-      switch(fmtIdx) {
-      case NF_NEG_IDX:
-        // re-use "pos" format with '-' prepended
-        sb.append('-').append(fmtStrs[NF_POS_IDX]);
-        break;
-      case NF_ZERO_IDX:
-        // re-use "pos" format
-        sb.append(fmtStrs[NF_POS_IDX]);
-        break;
-      default:
-        // use empty string result
-      }
-    }
-
-    fmtStrs[fmtIdx] = sb.toString();
-    sb.setLength(0);
-  }
-
-  private static Fmt createCustomLiteralFormat(String str) {
-    Value literal = ValueSupport.toValue(str);
-    return args -> literal;
+    addCustomNumberFormat(fmtStrs, NO_EXP_TYPES, fmtIdx, sb);
   }
 
   private static Fmt parseCustomDateFormat(ExprBuf buf, Args args) {
 
-    // custom date formats don't have special null handling
-    if(args._expr.isNull()) {
-      return NULL_FMT;
-    }
-
-    // force to temporal value before proceeding (this will throw if we don't
-    // have a date/time and therefore don't need to proceed with the rest of
-    // the format translation work)
-    args.coerceToDateTimeValue();
-
-    DateTimeFormatterBuilder dtfb = new DateTimeFormatterBuilder();
+    // keep track of some extra state while parsing the format, whether or not
+    // there was an am/pm pattern and whether or not there was a general
+    // date/time pattern
+    boolean[] fmtState = new boolean[]{false, false};
+    List<DateFormatBuilder> dfbs = new ArrayList<>();
 
     BUF_LOOP:
     while(buf.hasNext()) {
@@ -560,7 +571,9 @@ public class FormatUtil
       case FCT_GENERAL:
         switch(c) {
         case QUOTE_CHAR:
-          dtfb.appendLiteral(parseQuotedString(buf));
+          String str = parseQuotedString(buf);
+          dfbs.add((dtfb, argsParam, hasAmPmParam, dtType) ->
+                   dtfb.appendLiteral(str));
           break;
         case START_COLOR_CHAR:
           // color strings seem to be ignored
@@ -568,7 +581,7 @@ public class FormatUtil
           break;
         case ESCAPE_CHAR:
           if(buf.hasNext()) {
-            dtfb.appendLiteral(buf.next());
+            dfbs.add(buildLiteralCharDFB(buf.next()));
           }
           break;
         case FILL_ESCAPE_CHAR:
@@ -583,37 +596,142 @@ public class FormatUtil
           // respect the char.  ignore everything after the first choice
           break BUF_LOOP;
         default:
-          dtfb.appendLiteral(c);
+          dfbs.add(buildLiteralCharDFB(c));
         }
         break;
       case FCT_DATE:
-        parseCustomDateFormatPattern(c, buf, dtfb, args);
+        parseCustomDateFormatPattern(c, buf, dfbs, fmtState, args);
         break;
       default:
-        dtfb.appendLiteral(c);
+        dfbs.add(buildLiteralCharDFB(c));
       }
     }
 
-    DateTimeFormatter dtf = dtfb.toFormatter(
-        args._ctx.getTemporalConfig().getLocale());
+    boolean hasAmPm = fmtState[0];
+    boolean hasGeneralFormat = fmtState[1];
+    if(!hasGeneralFormat) {
+      // simple situation, one format for every value
+      DateTimeFormatter dtf = createDateTimeFormatter(dfbs, args, hasAmPm, null);
+      return new CustomFmt(argsParam -> ValueSupport.toValue(
+                               dtf.format(argsParam.getAsLocalDateTime())));
+    }
 
-    return argsParam -> ValueSupport.toValue(
-        dtf.format(argsParam.getAsLocalDateTime()));
+    // we need separate formatters for date, time, and date/time values
+    DateTimeFormatter dateFmt = createDateTimeFormatter(dfbs, args, hasAmPm,
+                                                        Value.Type.DATE);
+    DateTimeFormatter timeFmt = createDateTimeFormatter(dfbs, args, hasAmPm,
+                                                        Value.Type.TIME);
+    DateTimeFormatter dtFmt = createDateTimeFormatter(dfbs, args, hasAmPm,
+                                                      Value.Type.DATE_TIME);
+
+    return new CustomFmt(argsParam -> formatDateTime(
+                             argsParam, dateFmt, timeFmt, dtFmt));
+  }
+
+  private static void parseCustomDateFormatPattern(
+      char c, ExprBuf buf, List<DateFormatBuilder> dfbs,
+      boolean[] fmtState, Args args) {
+
+    if((c == DT_LIT_COLON_CHAR) || (c == DT_LIT_SLASH_CHAR)) {
+      // date/time literal char, nothing more to do
+      dfbs.add(buildLiteralCharDFB(c));
+      return;
+    }
+
+    StringBuilder sb = buf.getScratchBuffer();
+    sb.append(c);
+
+    char firstChar = c;
+    int firstPos = buf.curPos();
+    String bestMatchPat = sb.toString();
+
+    DateFormatBuilder bestMatch = DATE_FMT_BUILDERS.get(bestMatchPat);
+    int bestPos = firstPos;
+    while(buf.hasNext()) {
+      sb.append(buf.next());
+      String tmpPat = sb.toString();
+      DateFormatBuilder dfb = DATE_FMT_BUILDERS.get(tmpPat);
+      if(dfb == null) {
+        // no more possible matches
+        break;
+      }
+      if(dfb != PARTIAL_PREFIX) {
+        // this is the longest, valid pattern we have seen so far
+        bestMatch = dfb;
+        bestPos = buf.curPos();
+        bestMatchPat = tmpPat;
+      }
+    }
+
+    if(bestMatch != PARTIAL_PREFIX) {
+
+      // apply valid pattern
+      buf.reset(bestPos);
+      dfbs.add(bestMatch);
+
+      switch(firstChar) {
+      case 'a':
+      case 'A':
+        // this was an am/pm pattern
+        fmtState[0] = true;
+        break;
+      case 'c':
+        // this was a general date/time format
+        fmtState[1] = true;
+        break;
+      default:
+        // don't care
+      }
+
+    } else {
+
+      // just consume the first char
+      buf.reset(firstPos);
+      dfbs.add(buildLiteralCharDFB(firstChar));
+    }
+  }
+
+  private static DateFormatBuilder buildLiteralCharDFB(char c) {
+    return (dtfb, args, hasAmPm, dtType) -> dtfb.appendLiteral(c);
+  }
+
+  private static DateTimeFormatter createDateTimeFormatter(
+      List<DateFormatBuilder> dfbs, Args args, boolean hasAmPm,
+      Value.Type dtType)
+  {
+    DateTimeFormatterBuilder dtfb = new DateTimeFormatterBuilder();
+    dfbs.forEach(d -> d.build(dtfb, args, hasAmPm, dtType));
+    return dtfb.toFormatter(args._ctx.getTemporalConfig().getLocale());
+  }
+
+  private static Value formatDateTime(
+      Args args, DateTimeFormatter dateFmt,
+      DateTimeFormatter timeFmt, DateTimeFormatter dtFmt)
+  {
+    LocalDateTime ldt = args.getAsLocalDateTime();
+    DateTimeFormatter fmt = null;
+    switch(args._expr.getType()) {
+    case DATE:
+      fmt = dateFmt;
+      break;
+    case TIME:
+      fmt = timeFmt;
+      break;
+    default:
+      fmt = dtFmt;
+    }
+
+    return ValueSupport.toValue(fmt.format(ldt));
   }
 
   private static Fmt parseCustomNumberFormat(ExprBuf buf, Args args) {
 
-
-    // force to number value before proceeding (this will throw if we don't
-    // have a number and therefore don't need to proceed with the rest of
-    // the format translation work)
-    if(!args._expr.isNull()) {
-      args.coerceToNumberValue();
-    }
-
     StringBuilder sb = new StringBuilder();
     String[] fmtStrs = new String[NUM_NF_FMTS];
     int fmtIdx = 0;
+    StringBuilder pendingLiteral = new StringBuilder();
+    NumberFormatter.NotationType[] expTypes =
+      new NumberFormatter.NotationType[NUM_NF_FMTS];
 
     BUF_LOOP:
     while(buf.hasNext()) {
@@ -626,7 +744,7 @@ public class FormatUtil
           // no effect
           break;
         case QUOTE_CHAR:
-          parseQuotedString(buf, sb);
+          parseQuotedString(buf, pendingLiteral);
           break;
         case START_COLOR_CHAR:
           // color strings seem to be ignored
@@ -634,7 +752,7 @@ public class FormatUtil
           break;
         case ESCAPE_CHAR:
           if(buf.hasNext()) {
-            sb.append(buf.next());
+            pendingLiteral.append(buf.next());
           }
           break;
         case FILL_ESCAPE_CHAR:
@@ -645,30 +763,145 @@ public class FormatUtil
           }
           break;
         case CHOICE_SEP_CHAR:
-          // yes/no (number) format supports up to 4 formats: pos, neg, zero,
-          // null.  after that, ignore the rest
+          // number format supports up to 4 formats: pos, neg, zero, null.
+          // after that, ignore the rest
           if(fmtIdx == (NUM_NF_FMTS - 1)) {
             // last possible format, ignore remaining
             break BUF_LOOP;
           }
-          addCustomGeneralFormat(fmtStrs, fmtIdx++, sb);
+          flushPendingNumberLiteral(pendingLiteral, sb);
+          addCustomNumberFormat(fmtStrs, expTypes, fmtIdx++, sb);
           break;
         default:
+          pendingLiteral.append(c);
+        }
+        break;
+      case FCT_NUMBER:
+        switch(c) {
+        case EXP_E_CHAR:
+          int signChar = buf.peekNext();
+          if((signChar == PLUS_CHAR) || (signChar == MINUS_CHAR)) {
+            buf.next();
+            expTypes[fmtIdx] = ((signChar == PLUS_CHAR) ?
+                                NumberFormatter.NotationType.EXP_E_PLUS :
+                                NumberFormatter.NotationType.EXP_E_MINUS);
+            flushPendingNumberLiteral(pendingLiteral, sb);
+            sb.append(EXP_E_CHAR);
+          } else {
+            pendingLiteral.append(c);
+          }
+          break;
+        case EXP_e_CHAR:
+          signChar = buf.peekNext();
+          if((signChar == PLUS_CHAR) || (signChar == MINUS_CHAR)) {
+            buf.next();
+            expTypes[fmtIdx] = ((signChar == PLUS_CHAR) ?
+                                NumberFormatter.NotationType.EXP_e_PLUS :
+                                NumberFormatter.NotationType.EXP_e_MINUS);
+            flushPendingNumberLiteral(pendingLiteral, sb);
+            sb.append(EXP_E_CHAR);
+          } else {
+            pendingLiteral.append(c);
+          }
+          break;
+        default:
+          // most number format chars pass straight through
+          flushPendingNumberLiteral(pendingLiteral, sb);
           sb.append(c);
         }
         break;
       default:
-        sb.append(c);
+        pendingLiteral.append(c);
       }
     }
 
     // fill in remaining formats
     while(fmtIdx < NUM_NF_FMTS) {
-      addCustomGeneralFormat(fmtStrs, fmtIdx++, sb);
+      flushPendingNumberLiteral(pendingLiteral, sb);
+      addCustomNumberFormat(fmtStrs, expTypes, fmtIdx++, sb);
     }
 
-    // FIXME writeme
-    throw new UnsupportedOperationException();
+    return new CustomNumberFmt(
+        createCustomNumberFormat(fmtStrs, expTypes, NF_POS_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, NF_NEG_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, NF_ZERO_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, NF_NULL_IDX, args));
+  }
+
+  private static void addCustomNumberFormat(
+      String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
+      int fmtIdx, StringBuilder sb)
+  {
+    if(sb.length() == 0) {
+      // do special empty format handling on a per-format-type basis
+      switch(fmtIdx) {
+      case NF_NEG_IDX:
+        // re-use "pos" format
+        sb.append('-').append(fmtStrs[NF_POS_IDX]);
+        expTypes[NF_NEG_IDX] = expTypes[NF_POS_IDX];
+        break;
+      case NF_ZERO_IDX:
+        // re-use "pos" format
+        sb.append(fmtStrs[NF_POS_IDX]);
+        expTypes[NF_ZERO_IDX] = expTypes[NF_POS_IDX];
+        break;
+      default:
+        // use empty string result
+      }
+    }
+
+    fmtStrs[fmtIdx] = sb.toString();
+    sb.setLength(0);
+  }
+
+  private static void flushPendingNumberLiteral(
+      StringBuilder pendingLiteral, StringBuilder sb) {
+    if(pendingLiteral.length() == 0) {
+      return;
+    }
+
+    if((pendingLiteral.length() == 1) &&
+       pendingLiteral.charAt(0) == SINGLE_QUOTE_CHAR) {
+      // handle standalone single quote
+      sb.append(SINGLE_QUOTE_CHAR).append(SINGLE_QUOTE_CHAR);
+      pendingLiteral.setLength(0);
+      return;
+    }
+
+    sb.append(SINGLE_QUOTE_CHAR);
+    int startPos = sb.length();
+    sb.append(pendingLiteral);
+
+    // we need to quote any single quotes in the literal string
+    for(int i = startPos; i < sb.length(); ++i) {
+      char c = sb.charAt(i);
+      if(c == SINGLE_QUOTE_CHAR) {
+        sb.insert(++i, SINGLE_QUOTE_CHAR);
+      }
+    }
+
+    sb.append(SINGLE_QUOTE_CHAR);
+    pendingLiteral.setLength(0);
+  }
+
+  private static NumberFormat createCustomNumberFormat(
+      String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
+      int fmtIdx, Args args) {
+
+    String fmtStr = fmtStrs[fmtIdx];
+    NumberFormatter.NotationType expType = expTypes[fmtIdx];
+
+    if(fmtIdx == NF_NEG_IDX) {
+      // force explicit negative format handling
+      fmtStr = fmtStr + ";" + fmtStr;
+    }
+
+    NumberFormat df = args._ctx.createDecimalFormat(fmtStr);
+    if(expType != null) {
+      df = new NumberFormatter.ScientificFormat(df, expType);
+    }
+
+    return df;
   }
 
   private static Fmt parseCustomTextFormat(ExprBuf buf, Args args) {
@@ -786,7 +1019,7 @@ public class FormatUtil
                   NULL_FMT);
     }
 
-    return new CustomTextFmt(fmt, emptyFmt);
+    return new CustomFmt(fmt, emptyFmt);
   }
 
   private static void flushPendingTextLiteral(
@@ -799,48 +1032,6 @@ public class FormatUtil
     String literal = pendingLiteral.toString();
     pendingLiteral.setLength(0);
     subFmts.add((sb, cs) -> sb.append(literal));
-  }
-
-  private static void parseCustomDateFormatPattern(
-      char c, ExprBuf buf, DateTimeFormatterBuilder dtfb, Args args) {
-
-    if((c == DT_LIT_COLON_CHAR) || (c == DT_LIT_SLASH_CHAR)) {
-      // date/time literal char, nothing more to do
-      dtfb.appendLiteral(c);
-      return;
-    }
-
-    StringBuilder sb = buf.getScratchBuffer();
-    sb.append(c);
-
-    char firstChar = c;
-    int firstPos = buf.curPos();
-
-    DateFormatBuilder bestMatch = DATE_FMT_BUILDERS.get(sb.toString());
-    int bestPos = firstPos;
-    while(buf.hasNext()) {
-      sb.append(buf.next());
-      DateFormatBuilder dfb = DATE_FMT_BUILDERS.get(sb.toString());
-      if(dfb == null) {
-        // no more possible matches
-        break;
-      }
-      if(dfb != PARTIAL_PREFIX) {
-        // this is the longest, valid pattern we have seen so far
-        bestMatch = dfb;
-        bestPos = buf.curPos();
-      }
-    }
-
-    if(bestMatch != PARTIAL_PREFIX) {
-      // apply valid pattern
-      buf.reset(bestPos);
-      bestMatch.build(dtfb, args);
-    } else {
-      // just consume the first char
-      buf.reset(firstPos);
-      dtfb.appendLiteral(firstChar);
-    }
   }
 
   public static String createNumberFormatPattern(
@@ -940,7 +1131,7 @@ public class FormatUtil
 
     @Override
     public Value format(Args args) {
-      return(args._expr.getAsBoolean(args._ctx) ? _trueVal : _falseVal);
+      return(args.getAsBoolean() ? _trueVal : _falseVal);
     }
   }
 
@@ -982,20 +1173,6 @@ public class FormatUtil
     }
   }
 
-  private static final class NumberFmt extends BaseNumberFmt
-  {
-    private final NumberFormat _df;
-
-    private NumberFmt(NumberFormat df) {
-      _df = df;
-    }
-
-    @Override
-    protected NumberFormat getNumberFormat(Args args) {
-      return _df;
-    }
-  }
-
   private static final class SimpleDFB implements DateFormatBuilder
   {
     private final String _pat;
@@ -1004,8 +1181,28 @@ public class FormatUtil
       _pat = pat;
     }
     @Override
-    public void build(DateTimeFormatterBuilder dtfb, Args args) {
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtType) {
       dtfb.appendPattern(_pat);
+    }
+  }
+
+  private static final class HourlyDFB implements DateFormatBuilder
+  {
+    private final String _pat12;
+    private final String _pat24;
+
+    private HourlyDFB(String pat12, String pat24) {
+      _pat12 = pat12;
+      _pat24 = pat24;
+    }
+    @Override
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtTypePm) {
+      // annoyingly the "hour" patterns are the same and depend on the
+      // existence of the am/pm pattern to determine how they function (12 vs
+      // 24 hour).
+      dtfb.appendPattern(hasAmPm ? _pat12 : _pat24);
     }
   }
 
@@ -1017,7 +1214,8 @@ public class FormatUtil
       _type = type;
     }
     @Override
-    public void build(DateTimeFormatterBuilder dtfb, Args args) {
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtType) {
       dtfb.appendPattern(args._ctx.getTemporalConfig().getDateTimeFormat(_type));
     }
   }
@@ -1025,7 +1223,8 @@ public class FormatUtil
   private static abstract class WeekBasedDFB implements DateFormatBuilder
   {
     @Override
-    public void build(DateTimeFormatterBuilder dtfb, Args args) {
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtType) {
       dtfb.appendValue(getField(DefaultDateFunctions.weekFields(
                                     args._firstDay, args._firstWeekType)));
     }
@@ -1045,7 +1244,8 @@ public class FormatUtil
       _pm = pm;
     }
     @Override
-    public void build(DateTimeFormatterBuilder dtfb, Args args) {
+    public void build(DateTimeFormatterBuilder dtfb, Args args,
+                      boolean hasAmPm, Value.Type dtType) {
       dtfb.appendText(ChronoField.AMPM_OF_DAY, this);
     }
     @Override
@@ -1074,29 +1274,25 @@ public class FormatUtil
     }
   }
 
-  private static final class CustomTextFmt implements Fmt
+  private static final class CustomFmt implements Fmt
   {
     private final Fmt _fmt;
     private final Fmt _emptyFmt;
 
-    private CustomTextFmt(Fmt fmt, Fmt emptyFmt) {
-      _fmt = fmt;
-      _emptyFmt = emptyFmt;
+    private CustomFmt(Fmt fmt) {
+      this(fmt, NULL_FMT);
     }
 
-    private static boolean isEmptyString(Args args) {
-      // only a string value could ever be an empty string
-      return (args._expr.getType().isString() && args.getAsString().isEmpty());
+    private CustomFmt(Fmt fmt, Fmt emptyFmt) {
+      _fmt = fmt;
+      _emptyFmt = emptyFmt;
     }
 
     @Override
     public Value format(Args args) {
       Fmt fmt = _fmt;
-      if(args._expr.isNull() || isEmptyString(args)) {
+      if(args.maybeCoerceToEmptyString()) {
         fmt = _emptyFmt;
-        // ensure that we have a non-null value when formatting (null acts
-        // like empty string in this case)
-        args._expr = ValueSupport.EMPTY_STR_VAL;
       }
       return fmt.format(args);
     }
@@ -1110,7 +1306,8 @@ public class FormatUtil
     private final TextCase _textCase;
 
     private CharSourceFmt(List<BiConsumer<StringBuilder,CharSource>> subFmts,
-                          int numPlaceholders, boolean rightAligned, TextCase textCase) {
+                          int numPlaceholders, boolean rightAligned,
+                          TextCase textCase) {
       _subFmts = subFmts;
       _numPlaceholders = numPlaceholders;
       _rightAligned = rightAligned;
@@ -1119,8 +1316,8 @@ public class FormatUtil
 
     @Override
     public Value format(Args args) {
-      CharSource cs = new CharSource(args.getAsString(), _numPlaceholders, _rightAligned,
-                                     _textCase);
+      CharSource cs = new CharSource(args.getAsString(), _numPlaceholders,
+                                     _rightAligned, _textCase);
       StringBuilder sb = new StringBuilder();
       _subFmts.stream().forEach(fmt -> fmt.accept(sb, cs));
       cs.appendRemaining(sb);
@@ -1174,12 +1371,13 @@ public class FormatUtil
 
   private static final class CustomNumberFmt implements Fmt
   {
-    private final Fmt _posFmt;
-    private final Fmt _negFmt;
-    private final Fmt _zeroFmt;
-    private final Fmt _nullFmt;
+    private final NumberFormat _posFmt;
+    private final NumberFormat _negFmt;
+    private final NumberFormat _zeroFmt;
+    private final NumberFormat _nullFmt;
 
-    private CustomNumberFmt(Fmt posFmt, Fmt negFmt, Fmt zeroFmt, Fmt nullFmt) {
+    private CustomNumberFmt(NumberFormat posFmt, NumberFormat negFmt,
+                            NumberFormat zeroFmt, NumberFormat nullFmt) {
       _posFmt = posFmt;
       _negFmt = negFmt;
       _zeroFmt = zeroFmt;
@@ -1189,13 +1387,57 @@ public class FormatUtil
     @Override
     public Value format(Args args) {
       if(args._expr.isNull()) {
-        return _nullFmt.format(args);
+        return ValueSupport.toValue(_nullFmt.format(BigDecimal.ZERO));
       }
       BigDecimal bd = args.getAsBigDecimal();
       int cmp = BigDecimal.ZERO.compareTo(bd);
-      Fmt fmt = ((cmp < 0) ? _posFmt :
-                 ((cmp > 0) ? _negFmt : _zeroFmt));
-      return fmt.format(args);
+
+      NumberFormat fmt = null;
+      if(cmp > 0) {
+        // in theory we want to use the negative format.  however, if, due to
+        // rounding, we end up with a number equivalent to zero, then we fall
+        // back to the zero format
+        fmt = _negFmt;
+        int maxDecDigits = fmt.getMaximumFractionDigits();
+        bd = bd.negate().setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
+        if(BigDecimal.ZERO.equals(bd)) {
+          // fall back to zero format
+          fmt = _zeroFmt;
+        }
+      } else {
+        // positive or zero number
+        fmt = ((cmp < 0) ? _posFmt : _zeroFmt);
+      }
+
+      return ValueSupport.toValue(fmt.format(bd));
+    }
+  }
+
+  private static final class CustomGeneralFmt implements Fmt
+  {
+    private final Value _posVal;
+    private final Value _negVal;
+    private final Value _zeroVal;
+    private final Value _nullVal;
+
+    private CustomGeneralFmt(Value posVal, Value negVal,
+                             Value zeroVal, Value nullVal) {
+      _posVal = posVal;
+      _negVal = negVal;
+      _zeroVal = zeroVal;
+      _nullVal = nullVal;
+    }
+
+    @Override
+    public Value format(Args args) {
+      if(args._expr.isNull()) {
+        return _nullVal;
+      }
+      BigDecimal bd = args.getAsBigDecimal();
+      int cmp = BigDecimal.ZERO.compareTo(bd);
+
+      return ((cmp < 0) ? _posVal :
+              ((cmp > 0) ? _negVal : _zeroVal));
     }
   }
 
