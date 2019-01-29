@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.Calendar;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
+import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
@@ -251,6 +252,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-.123%", "=FormatPercent(-0.0012345,3,False)");
 
     assertEval("$12,345.00", "=FormatCurrency(12345)");
+    assertEval("($12,345.00)", "=FormatCurrency(-12345)");
     assertEval("-$12.34", "=FormatCurrency(-12.345,-1,True,False)");
     assertEval("$12", "=FormatCurrency(12.345,0,True,True)");
     assertEval("($.123)", "=FormatCurrency(-0.12345,3,False)");
@@ -317,6 +319,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("7:00:00 AM", "=Format(#7:00:00 AM#, 'General Date')");
     assertEval("1/2/2003 7:00:00 AM", "=Format('37623.2916666667', 'General Date')");
     assertEval("foo", "=Format('foo', 'General Date')");
+    assertEval("", "=Format('', 'General Date')");
 
     assertEval("Thursday, January 02, 2003", "=Format(#01/02/2003 7:00:00 AM#, 'Long Date')");
     assertEval("02-Jan-03", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Date')");
@@ -340,22 +343,189 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("4 7:13:00 AM ttt this 'is' \"text\"",
                "=Format(#7:13:00 AM#, \"q c ttt \"\"this 'is' \"\"\"\"text\"\"\"\"\"\"\")");
     assertEval("12/29/1899", "=Format('true', 'c')");
-    assertEval("Tuesday, 00 Jan 2, 21:36:00",
-               "=Format('3.9', 'dddd, yy mmm d, hh:nn:ss')");
-    assertEval("Tuesday, 00 Jan 01 2, 09:36:00 PM",
-               "=Format('3.9', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
+    assertEval("Tuesday, 00 Jan 2, 21:36:00 Y",
+               "=Format('3.9', '*~dddd, yy mmm d, hh:nn:ss \\Y[Yellow]')");
+    assertEval("Tuesday, 00 Jan 01/2, 09:36:00 PM",
+               "=Format('3.9', 'dddd, yy mmm mm/d, hh:nn:ss AMPM')");
     assertEval("foo",
                "=Format('foo', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
 
-    assertEval("p13.00blah",
-               "=Format('13', '\"p\"#.00#\"blah\"')");
-    assertEval("-p13.00blah",
-               "=Format('-13', '\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\")')");
-    // assertEval("-p13.00blah",
-    //            "=Format('-13', '\"p\"#.00#\"blah\"')");
+    assertEvalFormat("';\\y;\\n'",
+                     "foo", "'foo'",
+                     "", "''",
+                     "y", "True",
+                     "n", "'0'",
+                     "", "Null");
 
+    assertEvalFormat("';\"y\";!\\n;*~\\z[Blue];'",
+                     "foo", "'foo'",
+                     "", "''",
+                     "y", "True",
+                     "n", "'0'",
+                     "z", "Null");
 
+    assertEvalFormat("'\"p\"#.00#\"blah\"'",
+                     "p13.00blah", "13",
+                     "-p13.00blah", "-13",
+                     "p.00blah", "0",
+                     "", "''",
+                     "", "Null");
 
+    assertEvalFormat("'\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\")'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "p.00blah", "0",
+                     "(p1.00blah)", "True",
+                     "p.00blah", "'false'",
+                     "p37623.292blah", "#01/02/2003 7:00:00 AM#",
+                     "p37623.292blah", "'01/02/2003 7:00:00 AM'",
+                     "NotANumber", "'NotANumber'",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'\"p\"#.00#\"blah\";!(\"p\"#.00#\"blah\")[Red];\"zero\"'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "zero", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\");\"zero\";\"yuck\"'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "zero", "0",
+                     "", "''",
+                     "yuck", "Null");
+
+    assertEvalFormat("'0.##;(0.###);\"zero\";\"yuck\"'",
+                     "0.03", "0.03",
+                     "zero", "0.003",
+                     "(0.003)", "-0.003",
+                     "zero", "-0.0003");
+
+    // FIXME, need to handle rounding w/ negatives
+    // FIXME, need to handle dangling decimal
+    // assertEvalFormat("'0.##;(0.###E+0)'",
+    //                  "0.03", "0.03",
+    //                  "(0.003)", "-0.0003",
+
+    assertEvalFormat("'0.'",
+                     "13.", "13",
+                     "0.", "0.003",
+                     "-45.", "-45",
+                     "0.", "-0.003",
+                     "0.", "0"
+                     );
+
+    assertEvalFormat("'0.#'",
+                     "13.", "13",
+                     "0.3", "0.3",
+                     "0.", "0.003",
+                     "-45.", "-45",
+                     "0.", "-0.003",
+                     "0.", "0"
+                     );
+
+    assertEvalFormat("'0'",
+                     "13", "13",
+                     "0", "0.003",
+                     "-45", "-45",
+                     "0", "-0.003",
+                     "0", "0"
+                     );
+
+    assertEvalFormat("'#'",
+                     "13", "13",
+                     "0", "0.003",
+                     "-45", "-45",
+                     "0", "-0.003"
+                     // FIXME
+                     // "", "0"
+                     );
+
+    assertEvalFormat("'$0.0#'",
+                     "$213.0", "213");
+
+    assertEvalFormat("'@'",
+                     "foo", "'foo'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'>@'",
+                     "FOO", "'foo'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'<@'",
+                     "foo", "'FOO'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'!>@'",
+                     "O", "'foo'",
+                     "3", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'!>@[Red];\"empty\"'",
+                     "O", "'foo'",
+                     "3", "-13",
+                     "0", "0",
+                     "empty", "''",
+                     "empty", "Null");
+
+    assertEvalFormat("'><@'",
+                     "fOo", "'fOo'");
+
+    assertEvalFormat("'\\x@@@&&&\\y'",
+                     "x   fy", "'f'",
+                     "x   fooy", "'foo'",
+                     "x foobay", "'fooba'",
+                     "xfoobarybaz", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'!\\x@@@&&&\\y'",
+                     "xf  y", "'f'",
+                     "xfooy", "'foo'",
+                     "xfoobay", "'fooba'",
+                     "xbarbazy", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'\\x&&&@@@\\y'",
+                     "x  fy", "'f'",
+                     "xfooy", "'foo'",
+                     "xfoobay", "'fooba'",
+                     "xfoobarybaz", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'!\\x&&&@@@\\y'",
+                     "xf   y", "'f'",
+                     "xfoo   y", "'foo'",
+                     "xfooba y", "'fooba'",
+                     "xbarbazy", "'foobarbaz'"
+                     );
+  }
+
+  private static void assertEvalFormat(String fmtStr, String... testStrs) {
+    for(int i = 0; i < testStrs.length; i+=2) {
+      String expected = testStrs[i];
+      String val = testStrs[i + 1];
+
+      try {
+        assertEval(expected,
+                   "=Format(" + val + ", " + fmtStr + ")");
+      } catch(AssertionFailedError afe) {
+        throw new AssertionFailedError("Input " + val + ": " +
+                                       afe.getMessage());
+      }
+    }
   }
 
   public void testNumberFuncs() throws Exception

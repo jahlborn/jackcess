@@ -17,7 +17,10 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.FieldPosition;
 import java.text.NumberFormat;
+import java.text.ParsePosition;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -263,6 +266,7 @@ public class FormatUtil
 
   private static final NumberFormatter.NotationType[] NO_EXP_TYPES =
     new NumberFormatter.NotationType[NUM_NF_FMTS];
+  private static final boolean[] NO_FMT_TYPES = new boolean[NUM_NF_FMTS];
 
 
   private static final class Args
@@ -552,7 +556,7 @@ public class FormatUtil
   private static void addCustomGeneralFormat(String[] fmtStrs, int fmtIdx,
                                              StringBuilder sb)
   {
-    addCustomNumberFormat(fmtStrs, NO_EXP_TYPES, fmtIdx, sb);
+    addCustomNumberFormat(fmtStrs, NO_EXP_TYPES, NO_FMT_TYPES, fmtIdx, sb);
   }
 
   private static Fmt parseCustomDateFormat(ExprBuf buf, Args args) {
@@ -732,6 +736,7 @@ public class FormatUtil
     StringBuilder pendingLiteral = new StringBuilder();
     NumberFormatter.NotationType[] expTypes =
       new NumberFormatter.NotationType[NUM_NF_FMTS];
+    boolean[] hasFmts = new boolean[NUM_NF_FMTS];
 
     BUF_LOOP:
     while(buf.hasNext()) {
@@ -770,13 +775,14 @@ public class FormatUtil
             break BUF_LOOP;
           }
           flushPendingNumberLiteral(pendingLiteral, sb);
-          addCustomNumberFormat(fmtStrs, expTypes, fmtIdx++, sb);
+          addCustomNumberFormat(fmtStrs, expTypes, hasFmts, fmtIdx++, sb);
           break;
         default:
           pendingLiteral.append(c);
         }
         break;
       case FCT_NUMBER:
+        hasFmts[fmtIdx] = true;
         switch(c) {
         case EXP_E_CHAR:
           int signChar = buf.peekNext();
@@ -818,19 +824,19 @@ public class FormatUtil
     // fill in remaining formats
     while(fmtIdx < NUM_NF_FMTS) {
       flushPendingNumberLiteral(pendingLiteral, sb);
-      addCustomNumberFormat(fmtStrs, expTypes, fmtIdx++, sb);
+      addCustomNumberFormat(fmtStrs, expTypes, hasFmts, fmtIdx++, sb);
     }
 
     return new CustomNumberFmt(
-        createCustomNumberFormat(fmtStrs, expTypes, NF_POS_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, NF_NEG_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, NF_ZERO_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, NF_NULL_IDX, args));
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_POS_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_NEG_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_ZERO_IDX, args),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_NULL_IDX, args));
   }
 
   private static void addCustomNumberFormat(
       String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
-      int fmtIdx, StringBuilder sb)
+      boolean[] hasFmts, int fmtIdx, StringBuilder sb)
   {
     if(sb.length() == 0) {
       // do special empty format handling on a per-format-type basis
@@ -839,11 +845,13 @@ public class FormatUtil
         // re-use "pos" format
         sb.append('-').append(fmtStrs[NF_POS_IDX]);
         expTypes[NF_NEG_IDX] = expTypes[NF_POS_IDX];
+        hasFmts[NF_NEG_IDX] = hasFmts[NF_POS_IDX];
         break;
       case NF_ZERO_IDX:
         // re-use "pos" format
         sb.append(fmtStrs[NF_POS_IDX]);
         expTypes[NF_ZERO_IDX] = expTypes[NF_POS_IDX];
+        hasFmts[NF_ZERO_IDX] = hasFmts[NF_POS_IDX];
         break;
       default:
         // use empty string result
@@ -886,22 +894,43 @@ public class FormatUtil
 
   private static NumberFormat createCustomNumberFormat(
       String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
-      int fmtIdx, Args args) {
+      boolean[] hasFmts, int fmtIdx, Args args) {
 
     String fmtStr = fmtStrs[fmtIdx];
+    if(!hasFmts[fmtIdx]) {
+      // convert the literal string to a dummy number format
+      if(fmtStr.length() > 0) {
+        // strip quoting
+        StringBuilder sb = new StringBuilder(fmtStr)
+          .deleteCharAt(fmtStr.length() - 1)
+          .deleteCharAt(0);
+        if(sb.length() > 0) {
+          for(int i = 0; i < sb.length(); ++i) {
+            if(sb.charAt(i) == SINGLE_QUOTE_CHAR) {
+              // delete next single quote char
+              sb.deleteCharAt(++i);
+            }
+          }
+        }
+        fmtStr = sb.toString();
+      }
+      return new LiteralNumberFormat(fmtStr);
+    }
+
     NumberFormatter.NotationType expType = expTypes[fmtIdx];
+    NumberFormat nf = args._ctx.createDecimalFormat(fmtStr);
 
-    if(fmtIdx == NF_NEG_IDX) {
-      // force explicit negative format handling
-      fmtStr = fmtStr + ";" + fmtStr;
+    DecimalFormat df = (DecimalFormat)nf;
+    if(df.getMaximumFractionDigits() > 0) {
+      // if the decimal is included in the format, access always shows it
+      df.setDecimalSeparatorAlwaysShown(true);
     }
 
-    NumberFormat df = args._ctx.createDecimalFormat(fmtStr);
     if(expType != null) {
-      df = new NumberFormatter.ScientificFormat(df, expType);
+      nf = new NumberFormatter.ScientificFormat(nf, expType);
     }
 
-    return df;
+    return nf;
   }
 
   private static Fmt parseCustomTextFormat(ExprBuf buf, Args args) {
@@ -1088,7 +1117,7 @@ public class FormatUtil
 
   private static String parseColorString(ExprBuf buf) {
     return ExpressionTokenizer.parseStringUntil(
-        buf, END_COLOR_CHAR, START_COLOR_CHAR, false);
+        buf, START_COLOR_CHAR, END_COLOR_CHAR, false);
   }
 
   private static void fillInPartialPrefixes() {
@@ -1369,7 +1398,29 @@ public class FormatUtil
     }
   }
 
-  private static final class CustomNumberFmt implements Fmt
+  private static abstract class BaseCustomNumberFmt implements Fmt
+  {
+    @Override
+    public Value format(Args args) {
+      if(args._expr.isNull()) {
+        return formatNull(args);
+      }
+
+      BigDecimal bd = args.getAsBigDecimal();
+      int cmp = BigDecimal.ZERO.compareTo(bd);
+
+      return ((cmp < 0) ? formatPos(bd, args) :
+              ((cmp > 0) ? formatNeg(bd, args) :
+               formatZero(bd, args)));
+    }
+
+    protected abstract Value formatNull(Args args);
+    protected abstract Value formatPos(BigDecimal bd, Args args);
+    protected abstract Value formatNeg(BigDecimal bd, Args args);
+    protected abstract Value formatZero(BigDecimal bd, Args args);
+  }
+
+  private static final class CustomNumberFmt extends BaseCustomNumberFmt
   {
     private final NumberFormat _posFmt;
     private final NumberFormat _negFmt;
@@ -1384,36 +1435,41 @@ public class FormatUtil
       _nullFmt = nullFmt;
     }
 
-    @Override
-    public Value format(Args args) {
-      if(args._expr.isNull()) {
-        return ValueSupport.toValue(_nullFmt.format(BigDecimal.ZERO));
+    private Value formatMaybeZero(BigDecimal bd, NumberFormat fmt) {
+      // in theory we want to use the given format.  however, if, due to
+      // rounding, we end up with a number equivalent to zero, then we fall
+      // back to the zero format
+      int maxDecDigits = fmt.getMaximumFractionDigits();
+      if(maxDecDigits < bd.scale()) {
+        bd = bd.setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
       }
-      BigDecimal bd = args.getAsBigDecimal();
-      int cmp = BigDecimal.ZERO.compareTo(bd);
-
-      NumberFormat fmt = null;
-      if(cmp > 0) {
-        // in theory we want to use the negative format.  however, if, due to
-        // rounding, we end up with a number equivalent to zero, then we fall
-        // back to the zero format
-        fmt = _negFmt;
-        int maxDecDigits = fmt.getMaximumFractionDigits();
-        bd = bd.negate().setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
-        if(BigDecimal.ZERO.equals(bd)) {
-          // fall back to zero format
-          fmt = _zeroFmt;
-        }
-      } else {
-        // positive or zero number
-        fmt = ((cmp < 0) ? _posFmt : _zeroFmt);
+      if(BigDecimal.ZERO.compareTo(bd) == 0) {
+        // fall back to zero format
+        fmt = _zeroFmt;
       }
 
       return ValueSupport.toValue(fmt.format(bd));
     }
+
+    @Override
+    protected Value formatNull(Args args) {
+        return ValueSupport.toValue(_nullFmt.format(BigDecimal.ZERO));
+    }
+    @Override
+    protected Value formatPos(BigDecimal bd, Args args) {
+      return formatMaybeZero(bd, _posFmt);
+    }
+    @Override
+    protected Value formatNeg(BigDecimal bd, Args args) {
+      return formatMaybeZero(bd.negate(), _negFmt);
+    }
+    @Override
+    protected Value formatZero(BigDecimal bd, Args args) {
+      return ValueSupport.toValue(_zeroFmt.format(bd));
+    }
   }
 
-  private static final class CustomGeneralFmt implements Fmt
+  private static final class CustomGeneralFmt extends BaseCustomNumberFmt
   {
     private final Value _posVal;
     private final Value _negVal;
@@ -1429,17 +1485,56 @@ public class FormatUtil
     }
 
     @Override
-    public Value format(Args args) {
-      if(args._expr.isNull()) {
-        return _nullVal;
-      }
-      BigDecimal bd = args.getAsBigDecimal();
-      int cmp = BigDecimal.ZERO.compareTo(bd);
-
-      return ((cmp < 0) ? _posVal :
-              ((cmp > 0) ? _negVal : _zeroVal));
+    protected Value formatNull(Args args) {
+      return _nullVal;
+    }
+    @Override
+    protected Value formatPos(BigDecimal bd, Args args) {
+      return _posVal;
+    }
+    @Override
+    protected Value formatNeg(BigDecimal bd, Args args) {
+      return _negVal;
+    }
+    @Override
+    protected Value formatZero(BigDecimal bd, Args args) {
+      return _zeroVal;
     }
   }
 
+  private static final class LiteralNumberFormat extends NumberFormat
+  {
+    private static final long serialVersionUID = 0L;
+
+    private final String _str;
+
+    private LiteralNumberFormat(String str) {
+      _str = str;
+    }
+
+    @Override
+    public StringBuffer format(Object number, StringBuffer toAppendTo,
+                               FieldPosition pos)
+    {
+      return toAppendTo.append(_str);
+    }
+
+    @Override
+    public StringBuffer format(double number, StringBuffer toAppendTo,
+                               FieldPosition pos) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Number parse(String source, ParsePosition parsePosition) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public StringBuffer format(long number, StringBuffer toAppendTo,
+                               FieldPosition pos) {
+      throw new UnsupportedOperationException();
+    }
+  }
 
 }
