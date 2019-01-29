@@ -39,9 +39,9 @@ import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 
-/** 
+/**
  *  @author Rob Di Marco
- */ 
+ */
 public class ImportTest extends TestCase
 {
 
@@ -194,7 +194,7 @@ public class ImportTest extends TestCase
       assertEquals(Arrays.asList(
                        "RESULT_PHYS_ID", "FIRST", "MIDDLE", "LAST", "OUTLIER",
                        "RANK", "CLAIM_COUNT", "PROCEDURE_COUNT",
-                       "WEIGHTED_CLAIM_COUNT", "WEIGHTED_PROCEDURE_COUNT"), 
+                       "WEIGHTED_CLAIM_COUNT", "WEIGHTED_PROCEDURE_COUNT"),
                    colNames);
 
       db.close();
@@ -271,7 +271,7 @@ public class ImportTest extends TestCase
     private List<Integer> _displaySizes = new ArrayList<Integer>();
     private List<Integer> _scales = new ArrayList<Integer>();
     private List<Integer> _precisions = new ArrayList<Integer>();
-    
+
     public Object invoke(Object proxy, Method method, Object[] args)
     {
       String methodName = method.getName();
@@ -284,7 +284,8 @@ public class ImportTest extends TestCase
         return Boolean.FALSE;
       } else if(methodName.equals("getColumnCount")) {
         return _types.size();
-      } else if(methodName.equals("getColumnName")) {
+      } else if(methodName.equals("getColumnName") ||
+                methodName.equals("getColumnLabel")) {
         return getValue(_names, args[0]);
       } else if(methodName.equals("getColumnDisplaySize")) {
         return getValue(_displaySizes, args[0]);
@@ -318,5 +319,5 @@ public class ImportTest extends TestCase
       return values.get((Integer)index - 1);
     }
   }
-  
-} 
+
+}
