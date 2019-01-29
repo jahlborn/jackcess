@@ -269,7 +269,6 @@ class ExpressionTokenizer
       char c = buf.next();
       if(c == endChar) {
         if(allowDoubledEscape && (buf.peekNext() == endChar)) {
-          sb.append(endChar);
           buf.next();
         } else {
           complete = true;

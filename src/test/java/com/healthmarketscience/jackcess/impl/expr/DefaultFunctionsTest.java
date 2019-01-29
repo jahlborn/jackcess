@@ -144,6 +144,7 @@ public class DefaultFunctionsTest extends TestCase
 
     assertEval("FOOO", "=UCase(\"fOoO\")");
     assertEval("fooo", "=LCase(\"fOoO\")");
+    assertEval(" FOO \" BAR ", "=UCase(\" foo \"\" bar \")");
 
     assertEval("bl", "=Left(\"blah\", 2)");
     assertEval("", "=Left(\"blah\", 0)");
