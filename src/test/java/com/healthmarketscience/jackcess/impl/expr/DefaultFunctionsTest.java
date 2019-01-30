@@ -347,6 +347,8 @@ public class DefaultFunctionsTest extends TestCase
                "=Format('3.9', '*~dddd, yy mmm d, hh:nn:ss \\Y[Yellow]')");
     assertEval("Tuesday, 00 Jan 01/2, 09:36:00 PM",
                "=Format('3.9', 'dddd, yy mmm mm/d, hh:nn:ss AMPM')");
+    assertEval("9:36:00 PM",
+               "=Format('3.9', 'ttttt')");
     assertEval("foo",
                "=Format('foo', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
 
@@ -390,24 +392,46 @@ public class DefaultFunctionsTest extends TestCase
                      "", "''",
                      "", "Null");
 
-    assertEvalFormat("'\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\");\"zero\";\"yuck\"'",
+    assertEvalFormat("'\\p#.00#\"blah\";*~(\"p\"#.00#\"blah\");\"zero\";\"yuck\"'",
                      "p13.00blah", "13",
                      "(p13.00blah)", "-13",
                      "zero", "0",
                      "", "''",
                      "yuck", "Null");
 
-    assertEvalFormat("'0.##;(0.###);\"zero\";\"yuck\"'",
+    assertEvalFormat("'0.##;(0.###);\"zero\";\"yuck\";'",
                      "0.03", "0.03",
                      "zero", "0.003",
                      "(0.003)", "-0.003",
                      "zero", "-0.0003");
 
-    // FIXME, need to handle rounding w/ negatives
-    // FIXME, need to handle dangling decimal
-    // assertEvalFormat("'0.##;(0.###E+0)'",
-    //                  "0.03", "0.03",
-    //                  "(0.003)", "-0.0003",
+    assertEvalFormat("'0.##;(0.###E+0)'",
+                     "0.03", "0.03",
+                     "(3.E-4)", "-0.0003",
+                     "0.", "0",
+                     "34223.", "34223",
+                     "(3.422E+4)", "-34223");
+
+    assertEvalFormat("'0.###E-0'",
+                     "3.E-4", "0.0003",
+                     "3.422E4", "34223"
+                     );
+
+    assertEvalFormat("'0.###e+0'",
+                     "3.e-4", "0.0003",
+                     "3.422e+4", "34223"
+                     );
+
+    assertEvalFormat("'0.###e-0'",
+                     "3.e-4", "0.0003",
+                     "3.422e4", "34223"
+                     );
+
+    assertEvalFormat("'#,##0.###'",
+                     "0.003", "0.003",
+                     "0.", "0.0003",
+                     "34,223.", "34223"
+                     );
 
     assertEvalFormat("'0.'",
                      "13.", "13",
@@ -432,6 +456,14 @@ public class DefaultFunctionsTest extends TestCase
                      "-45", "-45",
                      "0", "-0.003",
                      "0", "0"
+                     );
+
+    assertEvalFormat("'%0'",
+                     "%13", "0.13",
+                     "%0", "0.003",
+                     "-%45", "-0.45",
+                     "%0", "-0.003",
+                     "%0", "0"
                      );
 
     assertEvalFormat("'#'",
@@ -467,14 +499,14 @@ public class DefaultFunctionsTest extends TestCase
                      "", "''",
                      "", "Null");
 
-    assertEvalFormat("'!>@'",
+    assertEvalFormat("'!>@;'",
                      "O", "'foo'",
                      "3", "-13",
                      "0", "0",
                      "", "''",
                      "", "Null");
 
-    assertEvalFormat("'!>@[Red];\"empty\"'",
+    assertEvalFormat("'!>*~@[Red];\"empty\";'",
                      "O", "'foo'",
                      "3", "-13",
                      "0", "0",

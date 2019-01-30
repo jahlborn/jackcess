@@ -936,7 +936,6 @@ public class FormatUtil
   private static Fmt parseCustomTextFormat(ExprBuf buf, Args args) {
 
     Fmt fmt = null;
-    Fmt emptyFmt = null;
 
     List<BiConsumer<StringBuilder,CharSource>> subFmts = new ArrayList<>();
     int numPlaceholders = 0;
@@ -1037,11 +1036,12 @@ public class FormatUtil
 
     flushPendingTextLiteral(pendingLiteral, subFmts);
 
+    Fmt emptyFmt = null;
     if(fmt == null) {
       fmt = new CharSourceFmt(subFmts, numPlaceholders, rightAligned,
                               textCase);
       emptyFmt = NULL_FMT;
-    } else if(emptyFmt == null) {
+    } else {
       emptyFmt = (hasFmtChars ?
                   new CharSourceFmt(subFmts, numPlaceholders, rightAligned,
                                     textCase) :
@@ -1438,10 +1438,18 @@ public class FormatUtil
     private Value formatMaybeZero(BigDecimal bd, NumberFormat fmt) {
       // in theory we want to use the given format.  however, if, due to
       // rounding, we end up with a number equivalent to zero, then we fall
-      // back to the zero format
-      int maxDecDigits = fmt.getMaximumFractionDigits();
-      if(maxDecDigits < bd.scale()) {
-        bd = bd.setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
+      // back to the zero format.  if we are using scientific notation,
+      // however, then don't worry about this
+      if(!(fmt instanceof NumberFormatter.ScientificFormat)) {
+        int maxDecDigits = fmt.getMaximumFractionDigits();
+        int mult = ((DecimalFormat)fmt).getMultiplier();
+        while(mult > 1) {
+          ++maxDecDigits;
+          mult /= 10;
+        }
+        if(maxDecDigits < bd.scale()) {
+          bd = bd.setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
+        }
       }
       if(BigDecimal.ZERO.compareTo(bd) == 0) {
         // fall back to zero format
