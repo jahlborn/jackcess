@@ -333,6 +333,7 @@ public class DefaultFunctionsTest extends TestCase
   public void testCustomFormat() throws Exception
   {
     assertEval("07:00 a", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p')");
+    assertEval("07:00 p", "=Format(#01/10/2003 7:00:00 PM#, 'hh:nn a/p')");
     assertEval("07:00 a 6 2", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww')");
     assertEval("07:00 a 4 1", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww', 3, 3)");
     assertEval("1313", "=Format(#01/10/2003 7:13:00 AM#, 'nnnn; foo bar')");
@@ -349,6 +350,8 @@ public class DefaultFunctionsTest extends TestCase
                "=Format('3.9', 'dddd, yy mmm mm/d, hh:nn:ss AMPM')");
     assertEval("9:36:00 PM",
                "=Format('3.9', 'ttttt')");
+    assertEval("9:36:00 PM",
+               "=Format(3.9, 'ttttt')");
     assertEval("foo",
                "=Format('foo', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
 
@@ -359,11 +362,12 @@ public class DefaultFunctionsTest extends TestCase
                      "n", "'0'",
                      "", "Null");
 
-    assertEvalFormat("';\"y\";!\\n;*~\\z[Blue];'",
+    assertEvalFormat("'\\p;\"y\";!\\n;*~\\z[Blue];'",
                      "foo", "'foo'",
                      "", "''",
                      "y", "True",
                      "n", "'0'",
+                     "p", "'10'",
                      "z", "Null");
 
     assertEvalFormat("'\"p\"#.00#\"blah\"'",
@@ -474,6 +478,11 @@ public class DefaultFunctionsTest extends TestCase
                      // FIXME
                      // "", "0"
                      );
+
+    assertEvalFormat("\"#;n'g;'\"",
+                     "5", "5",
+                     "n'g", "-5",
+                     "'", "0");
 
     assertEvalFormat("'$0.0#'",
                      "$213.0", "213");

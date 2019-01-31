@@ -18,9 +18,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.text.FieldPosition;
 import java.text.NumberFormat;
-import java.text.ParsePosition;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -892,7 +890,7 @@ public class FormatUtil
     pendingLiteral.setLength(0);
   }
 
-  private static NumberFormat createCustomNumberFormat(
+  private static BDFormat createCustomNumberFormat(
       String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
       boolean[] hasFmts, int fmtIdx, Args args) {
 
@@ -911,26 +909,29 @@ public class FormatUtil
               sb.deleteCharAt(++i);
             }
           }
+        } else {
+          // this was a single, literal single quote
+          sb.append(SINGLE_QUOTE_CHAR);
         }
         fmtStr = sb.toString();
       }
-      return new LiteralNumberFormat(fmtStr);
+      return new LiteralBDFormat(fmtStr);
     }
 
     NumberFormatter.NotationType expType = expTypes[fmtIdx];
-    NumberFormat nf = args._ctx.createDecimalFormat(fmtStr);
+    DecimalFormat df = args._ctx.createDecimalFormat(fmtStr);
 
-    DecimalFormat df = (DecimalFormat)nf;
     if(df.getMaximumFractionDigits() > 0) {
       // if the decimal is included in the format, access always shows it
       df.setDecimalSeparatorAlwaysShown(true);
     }
 
     if(expType != null) {
-      nf = new NumberFormatter.ScientificFormat(nf, expType);
+      return new BaseBDFormat(
+          new NumberFormatter.ScientificFormat(df, expType));
     }
 
-    return nf;
+    return new DecimalBDFormat(df);
   }
 
   private static Fmt parseCustomTextFormat(ExprBuf buf, Args args) {
@@ -1289,7 +1290,7 @@ public class FormatUtil
     public Set<Map.Entry<Long,String>> entrySet() {
       return new AbstractSet<Map.Entry<Long,String>>() {
         @Override
-          public int size() {
+        public int size() {
           return 2;
         }
         @Override
@@ -1420,63 +1421,6 @@ public class FormatUtil
     protected abstract Value formatZero(BigDecimal bd, Args args);
   }
 
-  private static final class CustomNumberFmt extends BaseCustomNumberFmt
-  {
-    private final NumberFormat _posFmt;
-    private final NumberFormat _negFmt;
-    private final NumberFormat _zeroFmt;
-    private final NumberFormat _nullFmt;
-
-    private CustomNumberFmt(NumberFormat posFmt, NumberFormat negFmt,
-                            NumberFormat zeroFmt, NumberFormat nullFmt) {
-      _posFmt = posFmt;
-      _negFmt = negFmt;
-      _zeroFmt = zeroFmt;
-      _nullFmt = nullFmt;
-    }
-
-    private Value formatMaybeZero(BigDecimal bd, NumberFormat fmt) {
-      // in theory we want to use the given format.  however, if, due to
-      // rounding, we end up with a number equivalent to zero, then we fall
-      // back to the zero format.  if we are using scientific notation,
-      // however, then don't worry about this
-      if(!(fmt instanceof NumberFormatter.ScientificFormat)) {
-        int maxDecDigits = fmt.getMaximumFractionDigits();
-        int mult = ((DecimalFormat)fmt).getMultiplier();
-        while(mult > 1) {
-          ++maxDecDigits;
-          mult /= 10;
-        }
-        if(maxDecDigits < bd.scale()) {
-          bd = bd.setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
-        }
-      }
-      if(BigDecimal.ZERO.compareTo(bd) == 0) {
-        // fall back to zero format
-        fmt = _zeroFmt;
-      }
-
-      return ValueSupport.toValue(fmt.format(bd));
-    }
-
-    @Override
-    protected Value formatNull(Args args) {
-        return ValueSupport.toValue(_nullFmt.format(BigDecimal.ZERO));
-    }
-    @Override
-    protected Value formatPos(BigDecimal bd, Args args) {
-      return formatMaybeZero(bd, _posFmt);
-    }
-    @Override
-    protected Value formatNeg(BigDecimal bd, Args args) {
-      return formatMaybeZero(bd.negate(), _negFmt);
-    }
-    @Override
-    protected Value formatZero(BigDecimal bd, Args args) {
-      return ValueSupport.toValue(_zeroFmt.format(bd));
-    }
-  }
-
   private static final class CustomGeneralFmt extends BaseCustomNumberFmt
   {
     private final Value _posVal;
@@ -1510,39 +1454,112 @@ public class FormatUtil
     }
   }
 
-  private static final class LiteralNumberFormat extends NumberFormat
+  private static final class CustomNumberFmt extends BaseCustomNumberFmt
   {
-    private static final long serialVersionUID = 0L;
+    private final BDFormat _posFmt;
+    private final BDFormat _negFmt;
+    private final BDFormat _zeroFmt;
+    private final BDFormat _nullFmt;
 
+    private CustomNumberFmt(BDFormat posFmt, BDFormat negFmt,
+                            BDFormat zeroFmt, BDFormat nullFmt) {
+      _posFmt = posFmt;
+      _negFmt = negFmt;
+      _zeroFmt = zeroFmt;
+      _nullFmt = nullFmt;
+    }
+
+    private Value formatMaybeZero(BigDecimal bd, BDFormat fmt) {
+      // in theory we want to use the given format.  however, if, due to
+      // rounding, we end up with a number equivalent to zero, then we fall
+      // back to the zero format.  if we are using scientific notation,
+      // however, then don't worry about this
+      int maxDecDigits = fmt.getMaxDecimalDigits();
+      if(maxDecDigits < bd.scale()) {
+          bd = bd.setScale(maxDecDigits, NumberFormatter.ROUND_MODE);
+          if(BigDecimal.ZERO.compareTo(bd) == 0) {
+            // fall back to zero format
+            fmt = _zeroFmt;
+          }
+      }
+
+      return ValueSupport.toValue(fmt.format(bd));
+    }
+
+    @Override
+    protected Value formatNull(Args args) {
+        return ValueSupport.toValue(_nullFmt.format(BigDecimal.ZERO));
+    }
+    @Override
+    protected Value formatPos(BigDecimal bd, Args args) {
+      return formatMaybeZero(bd, _posFmt);
+    }
+    @Override
+    protected Value formatNeg(BigDecimal bd, Args args) {
+      return formatMaybeZero(bd.negate(), _negFmt);
+    }
+    @Override
+    protected Value formatZero(BigDecimal bd, Args args) {
+      return ValueSupport.toValue(_zeroFmt.format(bd));
+    }
+  }
+
+  private static abstract class BDFormat
+  {
+    public int getMaxDecimalDigits() {
+      return Integer.MAX_VALUE;
+    }
+
+    public abstract String format(BigDecimal bd);
+  }
+
+  private static final class LiteralBDFormat extends BDFormat
+  {
     private final String _str;
 
-    private LiteralNumberFormat(String str) {
+    private LiteralBDFormat(String str) {
       _str = str;
     }
 
     @Override
-    public StringBuffer format(Object number, StringBuffer toAppendTo,
-                               FieldPosition pos)
-    {
-      return toAppendTo.append(_str);
-    }
-
-    @Override
-    public StringBuffer format(double number, StringBuffer toAppendTo,
-                               FieldPosition pos) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Number parse(String source, ParsePosition parsePosition) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public StringBuffer format(long number, StringBuffer toAppendTo,
-                               FieldPosition pos) {
-      throw new UnsupportedOperationException();
+    public String format(BigDecimal bd) {
+      return _str;
     }
   }
 
+  private static class BaseBDFormat extends BDFormat
+  {
+    private final NumberFormat _nf;
+
+    private BaseBDFormat(NumberFormat nf) {
+      _nf = nf;
+    }
+
+    @Override
+    public String format(BigDecimal bd) {
+      return _nf.format(bd);
+    }
+  }
+
+  private static final class DecimalBDFormat extends BaseBDFormat
+  {
+    private final int _maxDecDigits;
+
+    private DecimalBDFormat(DecimalFormat df) {
+      super(df);
+
+      int maxDecDigits = df.getMaximumFractionDigits();
+      int mult = df.getMultiplier();
+      while(mult > 1) {
+        ++maxDecDigits;
+        mult /= 10;
+      }
+      _maxDecDigits = maxDecDigits;
+    }
+
+    @Override
+    public int getMaxDecimalDigits() {
+      return _maxDecDigits;
+    }
+  }
 }
