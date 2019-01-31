@@ -29,6 +29,14 @@
         commons-lang3.
       </action>
     </release>
+    <release version="2.2.3" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Fix parsing of escaped double quotes in expressions.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="152">
+        Use column label from ResultSetMetaData when importing.
+      </action>
+    </release>
     <release version="2.2.2" date="2019-01-05">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="151">
         Fix length in units calculation for Access 97 text fields.

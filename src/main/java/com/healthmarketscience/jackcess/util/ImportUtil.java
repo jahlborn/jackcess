@@ -47,14 +47,14 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public class ImportUtil 
+public class ImportUtil
 {
   /** Batch commit size for copying other result sets into this database */
   private static final int COPY_TABLE_BATCH_SIZE = 200;
 
   /** the platform line separator */
   static final String LINE_SEPARATOR = System.getProperty("line.separator");
-  
+
   private ImportUtil() {}
 
   /**
@@ -69,7 +69,7 @@ public class ImportUtil
   {
       List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
-        ColumnBuilder column = new ColumnBuilder(md.getColumnName(i))
+        ColumnBuilder column = new ColumnBuilder(md.getColumnLabel(i))
           .escapeName();
         int lengthInUnits = md.getColumnDisplaySize(i);
         column.setSQLType(md.getColumnType(i), lengthInUnits);
@@ -100,7 +100,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importResultSet(source, db, name, SimpleImportFilter.INSTANCE);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    *
@@ -115,13 +115,13 @@ public class ImportUtil
   {
     return importResultSet(source, db, name, SimpleImportFilter.INSTANCE);
   }
-  
+
   /**
    * Copy an existing JDBC ResultSet into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importResultSet(source, db, name, filter, false);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    * @param filter valid import filter
@@ -137,11 +137,11 @@ public class ImportUtil
   {
     return importResultSet(source, db, name, filter, false);
   }
-   
+
   /**
    * Copy an existing JDBC ResultSet into a new (or optionally existing) table
    * in this database.
-   * 
+   *
    * @param name Name of the new table to create
    * @param source ResultSet to copy from
    * @param filter valid import filter
@@ -150,7 +150,7 @@ public class ImportUtil
    *                         name
    *
    * @return the name of the imported table
-   * 
+   *
    * @see Builder
    */
   public static String importResultSet(ResultSet source, Database db,
@@ -191,13 +191,13 @@ public class ImportUtil
 
     return table.getName();
   }
-  
+
   /**
    * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importFile(f, name, db, delim, SimpleImportFilter.INSTANCE);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
@@ -219,7 +219,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importFile(f, name, db, delim, "'", filter, false);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
@@ -243,7 +243,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importReader(new BufferedReader(new FileReader(f)), db, name, delim, "'", filter, useExistingTable, true);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
@@ -258,8 +258,8 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter,boolean)
    * @see Builder
    */
-  public static String importFile(File f, Database db, String name, 
-                                  String delim, char quote, 
+  public static String importFile(File f, Database db, String name,
+                                  String delim, char quote,
                                   ImportFilter filter,
                                   boolean useExistingTable)
     throws IOException
@@ -272,7 +272,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importReader(new BufferedReader(new FileReader(f)), db, name, delim, "'", filter, useExistingTable, header);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param f Source file to import
    * @param delim Regular expression representing the delimiter string.
@@ -288,8 +288,8 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,char,ImportFilter,boolean,boolean)
    * @see Builder
    */
-  public static String importFile(File f, Database db, String name, 
-                                  String delim, char quote, 
+  public static String importFile(File f, Database db, String name,
+                                  String delim, char quote,
                                   ImportFilter filter,
                                   boolean useExistingTable,
                                   boolean header)
@@ -298,7 +298,7 @@ public class ImportUtil
     BufferedReader in = null;
     try {
       in = new BufferedReader(new FileReader(f));
-      return importReader(in, db, name, delim, quote, filter, 
+      return importReader(in, db, name, delim, quote, filter,
                           useExistingTable, header);
     } finally {
       ByteUtil.closeQuietly(in);
@@ -310,7 +310,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, SimpleImportFilter.INSTANCE);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -320,19 +320,19 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter)
    * @see Builder
    */
-  public static String importReader(BufferedReader in, Database db, 
+  public static String importReader(BufferedReader in, Database db,
                                     String name, String delim)
     throws IOException
   {
     return importReader(in, db, name, delim, SimpleImportFilter.INSTANCE);
   }
-  
+
   /**
    * Copy a delimited text file into a new table in this database.
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, filter, false);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -343,7 +343,7 @@ public class ImportUtil
    * @see #importReader(BufferedReader,Database,String,String,ImportFilter,boolean)
    * @see Builder
    */
-  public static String importReader(BufferedReader in, Database db, 
+  public static String importReader(BufferedReader in, Database db,
                                     String name, String delim,
                                     ImportFilter filter)
     throws IOException
@@ -357,7 +357,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, '"', filter, false);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -367,12 +367,12 @@ public class ImportUtil
    *                         name
    *
    * @return the name of the imported table
-   * 
+   *
    * @see Builder
    */
-  public static String importReader(BufferedReader in, Database db, 
+  public static String importReader(BufferedReader in, Database db,
                                     String name, String delim,
-                                    ImportFilter filter, 
+                                    ImportFilter filter,
                                     boolean useExistingTable)
     throws IOException
   {
@@ -386,7 +386,7 @@ public class ImportUtil
    * <p>
    * Equivalent to:
    * {@code  importReader(in, db, name, delim, '"', filter, useExistingTable, true);}
-   * 
+   *
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -397,23 +397,23 @@ public class ImportUtil
    *                         name
    *
    * @return the name of the imported table
-   * 
+   *
    * @see Builder
    */
-  public static String importReader(BufferedReader in, Database db, 
+  public static String importReader(BufferedReader in, Database db,
                                     String name, String delim, char quote,
                                     ImportFilter filter,
                                     boolean useExistingTable)
     throws IOException
   {
-    return importReader(in, db, name, delim, quote, filter, useExistingTable, 
+    return importReader(in, db, name, delim, quote, filter, useExistingTable,
                         true);
   }
 
   /**
    * Copy a delimited text file into a new (or optionally exixsting) table in
    * this database.
-   * 
+   *
    * @param name Name of the new table to create
    * @param in Source reader to import
    * @param delim Regular expression representing the delimiter string.
@@ -426,10 +426,10 @@ public class ImportUtil
    *               valid if useExistingTable is {@code true}
    *
    * @return the name of the imported table
-   * 
+   *
    * @see Builder
    */
-  public static String importReader(BufferedReader in, Database db, 
+  public static String importReader(BufferedReader in, Database db,
                                     String name, String delim, char quote,
                                     ImportFilter filter,
                                     boolean useExistingTable, boolean header)
@@ -449,7 +449,7 @@ public class ImportUtil
 
         List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
         Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
-      
+
         for (int i = 0; i < columnNames.length; i++) {
           columns.add(new ColumnBuilder((String)columnNames[i], DataType.TEXT)
                       .escapeName()
@@ -458,21 +458,21 @@ public class ImportUtil
         }
 
         table = createUniqueTable(db, name, columns, null, filter);
-        
+
         // the first row was a header row
         header = true;
       }
 
       List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
       int numColumns = table.getColumnCount();
-      
+
       if(!header) {
         // first line is _not_ a header line
         Object[] data = splitLine(line, delimPat, quote, in, numColumns);
         data = filter.filterRow(data);
         if(data != null) {
           rows.add(data);
-        } 
+        }
       }
 
       while ((line = in.readLine()) != null)
@@ -535,7 +535,7 @@ public class ImportUtil
               idx = endIdx + 1;
 
             } else {
-              
+
               // done
               idx = endIdx;
               break;
@@ -582,7 +582,7 @@ public class ImportUtil
    */
   private static Table createUniqueTable(Database db, String name,
                                          List<ColumnBuilder> columns,
-                                         ResultSetMetaData md, 
+                                         ResultSetMetaData md,
                                          ImportFilter filter)
     throws IOException, SQLException
   {
@@ -592,7 +592,7 @@ public class ImportUtil
     while(db.getTable(name) != null) {
       name = baseName + (counter++);
     }
-    
+
     return new TableBuilder(name)
       .addColumns(filter.filterColumns(columns, md))
       .toTable(db);
@@ -661,7 +661,7 @@ public class ImportUtil
     public String importResultSet(ResultSet source)
       throws SQLException, IOException
     {
-      return ImportUtil.importResultSet(source, _db, _tableName, _filter,  
+      return ImportUtil.importResultSet(source, _db, _tableName, _filter,
                                         _useExistingTable);
     }
 
@@ -677,7 +677,7 @@ public class ImportUtil
      * @see ImportUtil#importReader(BufferedReader,Database,String,String,char,ImportFilter,boolean,boolean)
      */
     public String importReader(BufferedReader reader) throws IOException {
-      return ImportUtil.importReader(reader, _db, _tableName, _delim, _quote, 
+      return ImportUtil.importReader(reader, _db, _tableName, _delim, _quote,
                                      _filter, _useExistingTable, _header);
     }
   }
