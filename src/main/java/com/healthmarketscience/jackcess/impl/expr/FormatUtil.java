@@ -169,6 +169,7 @@ public class FormatUtil
   private static final char EXP_e_CHAR = 'e';
   private static final char PLUS_CHAR = '+';
   private static final char MINUS_CHAR = '-';
+  private static final char REQ_DIGIT_CHAR = '0';
   private static final int NO_CHAR = -1;
 
   private static final byte FCT_UNKNOWN = 0;
@@ -554,7 +555,8 @@ public class FormatUtil
   private static void addCustomGeneralFormat(String[] fmtStrs, int fmtIdx,
                                              StringBuilder sb)
   {
-    addCustomNumberFormat(fmtStrs, NO_EXP_TYPES, NO_FMT_TYPES, fmtIdx, sb);
+    addCustomNumberFormat(fmtStrs, NO_EXP_TYPES, NO_FMT_TYPES, NO_FMT_TYPES,
+                          fmtIdx, sb);
   }
 
   private static Fmt parseCustomDateFormat(ExprBuf buf, Args args) {
@@ -735,6 +737,7 @@ public class FormatUtil
     NumberFormatter.NotationType[] expTypes =
       new NumberFormatter.NotationType[NUM_NF_FMTS];
     boolean[] hasFmts = new boolean[NUM_NF_FMTS];
+    boolean[] hasReqDigit = new boolean[NUM_NF_FMTS];
 
     BUF_LOOP:
     while(buf.hasNext()) {
@@ -773,7 +776,8 @@ public class FormatUtil
             break BUF_LOOP;
           }
           flushPendingNumberLiteral(pendingLiteral, sb);
-          addCustomNumberFormat(fmtStrs, expTypes, hasFmts, fmtIdx++, sb);
+          addCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                                fmtIdx++, sb);
           break;
         default:
           pendingLiteral.append(c);
@@ -808,6 +812,11 @@ public class FormatUtil
             pendingLiteral.append(c);
           }
           break;
+        case REQ_DIGIT_CHAR:
+          hasReqDigit[fmtIdx] = true;
+          flushPendingNumberLiteral(pendingLiteral, sb);
+          sb.append(c);
+          break;
         default:
           // most number format chars pass straight through
           flushPendingNumberLiteral(pendingLiteral, sb);
@@ -822,19 +831,24 @@ public class FormatUtil
     // fill in remaining formats
     while(fmtIdx < NUM_NF_FMTS) {
       flushPendingNumberLiteral(pendingLiteral, sb);
-      addCustomNumberFormat(fmtStrs, expTypes, hasFmts, fmtIdx++, sb);
+      addCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                            fmtIdx++, sb);
     }
 
     return new CustomNumberFmt(
-        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_POS_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_NEG_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_ZERO_IDX, args),
-        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, NF_NULL_IDX, args));
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                                 NF_POS_IDX, false, args, buf),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                                 NF_NEG_IDX, false, args, buf),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                                 NF_ZERO_IDX, true, args, buf),
+        createCustomNumberFormat(fmtStrs, expTypes, hasFmts, hasReqDigit,
+                                 NF_NULL_IDX, true, args, buf));
   }
 
   private static void addCustomNumberFormat(
       String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
-      boolean[] hasFmts, int fmtIdx, StringBuilder sb)
+      boolean[] hasFmts, boolean[] hasReqDigit, int fmtIdx, StringBuilder sb)
   {
     if(sb.length() == 0) {
       // do special empty format handling on a per-format-type basis
@@ -844,12 +858,14 @@ public class FormatUtil
         sb.append('-').append(fmtStrs[NF_POS_IDX]);
         expTypes[NF_NEG_IDX] = expTypes[NF_POS_IDX];
         hasFmts[NF_NEG_IDX] = hasFmts[NF_POS_IDX];
+        hasReqDigit[NF_NEG_IDX] = hasReqDigit[NF_POS_IDX];
         break;
       case NF_ZERO_IDX:
         // re-use "pos" format
         sb.append(fmtStrs[NF_POS_IDX]);
         expTypes[NF_ZERO_IDX] = expTypes[NF_POS_IDX];
         hasFmts[NF_ZERO_IDX] = hasFmts[NF_POS_IDX];
+        hasReqDigit[NF_ZERO_IDX] = hasReqDigit[NF_POS_IDX];
         break;
       default:
         // use empty string result
@@ -892,14 +908,15 @@ public class FormatUtil
 
   private static BDFormat createCustomNumberFormat(
       String[] fmtStrs, NumberFormatter.NotationType[] expTypes,
-      boolean[] hasFmts, int fmtIdx, Args args) {
+      boolean[] hasFmts, boolean[] hasReqDigit, int fmtIdx,
+      boolean isZeroFmt, Args args, ExprBuf buf) {
 
     String fmtStr = fmtStrs[fmtIdx];
     if(!hasFmts[fmtIdx]) {
       // convert the literal string to a dummy number format
       if(fmtStr.length() > 0) {
         // strip quoting
-        StringBuilder sb = new StringBuilder(fmtStr)
+        StringBuilder sb = buf.getScratchBuffer().append(fmtStr)
           .deleteCharAt(fmtStr.length() - 1)
           .deleteCharAt(0);
         if(sb.length() > 0) {
@@ -927,8 +944,36 @@ public class FormatUtil
     }
 
     if(expType != null) {
-      return new BaseBDFormat(
-          new NumberFormatter.ScientificFormat(df, expType));
+      NumberFormat nf = new NumberFormatter.ScientificFormat(df, expType);
+      if(isZeroFmt) {
+        return new LiteralBDFormat(nf.format(BigDecimal.ZERO));
+      }
+      return new BaseBDFormat(nf);
+    }
+
+    if(!hasReqDigit[fmtIdx]) {
+      // java likes to force extra 0's while access doesn't
+      df.setMinimumIntegerDigits(0);
+    }
+
+    if(isZeroFmt) {
+
+      String zeroVal = df.format(BigDecimal.ZERO);
+      if(!hasReqDigit[fmtIdx]) {
+        // java forces a 0 but access doesn't.  delete any 0 chars which were
+        // inserted by the java format
+        int prefLen = df.getPositivePrefix().length();
+        int len = zeroVal.length() - df.getPositiveSuffix().length();
+        StringBuilder sb = buf.getScratchBuffer().append(zeroVal);
+        for(int i = len - 1; i >= prefLen; --i) {
+          if(sb.charAt(i) == '0') {
+            sb.deleteCharAt(i);
+          }
+        }
+        zeroVal = sb.toString();
+      }
+
+      return  new LiteralBDFormat(zeroVal);
     }
 
     return new DecimalBDFormat(df);
