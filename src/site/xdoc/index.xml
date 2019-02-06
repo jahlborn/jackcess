@@ -23,9 +23,10 @@
         <p>
           Jackcess now requires Java 8+ as of the 3.0.0 release.  All third
           party dependencies have been updated to the latest versions.
-          Jackcess now supports Java 8+ data types like LocalDateTime and
-          Path.  Databases can now optionally return Date values (legacy,
-          backwards compatible) or LocalDateTime values.  See <a href="apidocs/com/healthmarketscience/jackcess/DateTimeType.html">DateTimeType</a>
+          Jackcess now supports Java 8+ data types like
+          <code>LocalDateTime</code> and <code>Path</code>.  Databases can now
+          optionally return <code>Date</code> values (legacy, backwards
+          compatible) or <code>LocalDateTime</code> values.  See <a href="apidocs/com/healthmarketscience/jackcess/DateTimeType.html">DateTimeType</a>
           for more details.
         </p>
       </subsection>
