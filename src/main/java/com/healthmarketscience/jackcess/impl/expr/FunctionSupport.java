@@ -47,10 +47,12 @@ public class FunctionSupport
       _maxParams = maxParams;
     }
 
+    @Override
     public String getName() {
       return _name;
     }
 
+    @Override
     public boolean isPure() {
       // most functions are probably pure, so make this the default
       return true;
@@ -94,6 +96,7 @@ public class FunctionSupport
       return false;
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -112,6 +115,7 @@ public class FunctionSupport
       super(name, 1, 1);
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -130,6 +134,7 @@ public class FunctionSupport
       super(name, 1, 1);
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -152,6 +157,7 @@ public class FunctionSupport
       super(name, 2, 2);
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -170,6 +176,7 @@ public class FunctionSupport
       super(name, 3, 3);
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -193,6 +200,7 @@ public class FunctionSupport
       super(name, minParams, maxParams);
     }
 
+    @Override
     public final Value eval(EvalContext ctx, Value... params) {
       try {
         validateNumParams(params);
@@ -215,14 +223,17 @@ public class FunctionSupport
       _name = _delegate.getName() + NON_VAR_SUFFIX;
     }
 
+    @Override
     public String getName() {
       return _name;
     }
 
+    @Override
     public boolean isPure() {
       return _delegate.isPure();
     }
 
+    @Override
     public Value eval(EvalContext ctx, Value... params) {
       Value result = _delegate.eval(ctx, params);
       if(result.isNull()) {

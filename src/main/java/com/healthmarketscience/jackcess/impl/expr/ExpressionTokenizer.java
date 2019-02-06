@@ -17,26 +17,27 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.text.DateFormat;
-import java.text.FieldPosition;
-import java.text.ParsePosition;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 
 import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 
 
 /**
@@ -52,15 +53,6 @@ class ExpressionTokenizer
   private static final char OBJ_NAME_END_CHAR = ']';
   private static final char DATE_LIT_QUOTE_CHAR = '#';
   private static final char EQUALS_CHAR = '=';
-
-  // access times are based on this date (not the UTC base)
-  static final int BASE_DATE_YEAR = 1899;
-  static final int BASE_DATE_MONTH = 12;
-  static final int BASE_DATE_DAY = 30;
-  private static final String BASE_DATE_PREFIX = "1899/12/30 ";
-  private static final String BASE_DATE_FMT_PREFIX = "yyyy/M/d ";
-
-  private static final String IMPLICIT_YEAR_FMT_PREFIX = "yyyy ";
 
   private static final byte IS_OP_FLAG =     0x01;
   private static final byte IS_COMP_FLAG =   0x02;
@@ -247,23 +239,29 @@ class ExpressionTokenizer
   }
 
   private static String parseQuotedString(ExprBuf buf, char quoteChar) {
-    return parseStringUntil(buf, quoteChar, null, true);
+    return parseStringUntil(buf, null, quoteChar, true);
   }
 
   private static String parseObjNameString(ExprBuf buf) {
-    return parseStringUntil(buf, OBJ_NAME_END_CHAR, OBJ_NAME_START_CHAR, false);
+    return parseStringUntil(buf, OBJ_NAME_START_CHAR, OBJ_NAME_END_CHAR, false);
   }
 
   private static String parseDateLiteralString(ExprBuf buf) {
-    return parseStringUntil(buf, DATE_LIT_QUOTE_CHAR, null, false);
+    return parseStringUntil(buf, null, DATE_LIT_QUOTE_CHAR, false);
   }
 
-  private static String parseStringUntil(ExprBuf buf, char endChar,
-                                         Character startChar,
-                                         boolean allowDoubledEscape)
+  static String parseStringUntil(ExprBuf buf, Character startChar,
+                                 char endChar, boolean allowDoubledEscape)
   {
-    StringBuilder sb = buf.getScratchBuffer();
+    return parseStringUntil(buf, startChar, endChar, allowDoubledEscape,
+                            buf.getScratchBuffer())
+      .toString();
+  }
 
+  static StringBuilder parseStringUntil(
+      ExprBuf buf, Character startChar, char endChar, boolean allowDoubledEscape,
+      StringBuilder sb)
+  {
     boolean complete = false;
     while(buf.hasNext()) {
       char c = buf.next();
@@ -288,7 +286,7 @@ class ExpressionTokenizer
                                "' for quoted string " + buf);
     }
 
-    return sb.toString();
+    return sb;
   }
 
   private static Token parseDateLiteral(ExprBuf buf)
@@ -304,14 +302,26 @@ class ExpressionTokenizer
 
     // note that although we may parse in the time "24" format, we will
     // display as the default time format
-    DateFormat parseDf = buf.getParseDateTimeFormat(type);
+    DateTimeFormatter parseDf = buf.getParseDateTimeFormat(type);
 
     try {
-      return new Token(TokenType.LITERAL, parseComplete(parseDf, dateStr),
+      TemporalAccessor parsedInfo = parseDf.parse(dateStr);
+
+      LocalDate ld = ColumnImpl.BASE_LD;
+      if(type.includesDate()) {
+        ld = LocalDate.from(parsedInfo);
+      }
+
+      LocalTime lt = ColumnImpl.BASE_LT;
+      if(type.includesTime()) {
+        lt = LocalTime.from(parsedInfo);
+      }
+
+      return new Token(TokenType.LITERAL, LocalDateTime.of(ld, lt),
                        dateStr, type.getValueType());
-    } catch(java.text.ParseException pe) {
+    } catch(DateTimeException de) {
       throw new ParseException(
-          "Invalid date/time literal " + dateStr + " " + buf, pe);
+          "Invalid date/time literal " + dateStr + " " + buf, de);
     }
   }
 
@@ -324,7 +334,7 @@ class ExpressionTokenizer
     boolean hasAmPm = false;
 
     if(hasTime) {
-      String[] amPmStrs = cfg.getDateFormatSymbols().getAmPmStrings();
+      String[] amPmStrs = cfg.getAmPmStrings();
       String amStr = " " + amPmStrs[0];
       String pmStr = " " + amPmStrs[1];
       hasAmPm = (hasSuffix(dateStr, amStr) || hasSuffix(dateStr, pmStr));
@@ -349,23 +359,6 @@ class ExpressionTokenizer
     return ((strLen >= suffStrLen) &&
             str.regionMatches(true, strLen - suffStrLen,
                               suffStr, 0, suffStrLen));
-  }
-
-  static DateFormat createParseDateTimeFormat(TemporalConfig.Type type,
-                                              LocaleContext ctx)
-  {
-    if(type.isTimeOnly()) {
-      return new ParseTimeFormat(type, ctx);
-    }
-
-    TemporalConfig cfg = ctx.getTemporalConfig();
-    return ctx.createDateFormat(cfg.getDateTimeFormat(type));
-  }
-
-  static DateFormat createParseImplicitYearDateTimeFormat(
-      TemporalConfig.Type type, LocaleContext ctx)
-  {
-    return new ParseImplicitYearFormat(type, ctx);
   }
 
   private static Token maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
@@ -463,32 +456,17 @@ class ExpressionTokenizer
     return new AbstractMap.SimpleImmutableEntry<K,V>(a, b);
   }
 
-  static Date parseComplete(DateFormat df, String str)
-    throws java.text.ParseException
-  {
-    // the java parsers will parse "successfully" even if there is leftover
-    // information.  we only want to consider a parse operation successful if
-    // it parses the entire string (ignoring surrounding whitespace)
-    str = str.trim();
-    ParsePosition pp = new ParsePosition(0);
-    Object d = df.parse(str, pp);
-    if(pp.getIndex() < str.length()) {
-      throw new java.text.ParseException("Failed parsing '" + str + "'",
-                                         pp.getIndex());
-    }
-    return (Date)d;
-  }
-
-  private static final class ExprBuf
+  static final class ExprBuf
   {
     private final String _str;
     private final ParseContext _ctx;
     private int _pos;
-    private final Map<TemporalConfig.Type,DateFormat> _dateTimeFmts =
-      new EnumMap<TemporalConfig.Type,DateFormat>(TemporalConfig.Type.class);
+    private final Map<TemporalConfig.Type,DateTimeFormatter> _dateTimeFmts =
+      new EnumMap<TemporalConfig.Type,DateTimeFormatter>(
+          TemporalConfig.Type.class);
     private final StringBuilder _scratch = new StringBuilder();
 
-    private ExprBuf(String str, ParseContext ctx) {
+    ExprBuf(String str, ParseContext ctx) {
       _str = str;
       _ctx = ctx;
     }
@@ -537,10 +515,11 @@ class ExpressionTokenizer
       return _ctx;
     }
 
-    public DateFormat getParseDateTimeFormat(TemporalConfig.Type type) {
-      DateFormat df = _dateTimeFmts.get(type);
+    public DateTimeFormatter getParseDateTimeFormat(TemporalConfig.Type type) {
+      DateTimeFormatter df = _dateTimeFmts.get(type);
       if(df == null) {
-        df = createParseDateTimeFormat(type, _ctx);
+        df = _ctx.createDateFormatter(
+            _ctx.getTemporalConfig().getDateTimeFormat(type));
         _dateTimeFmts.put(type, df);
       }
       return df;
@@ -601,100 +580,6 @@ class ExpressionTokenizer
         str += " (" + _valType + ")";
       }
       return str;
-    }
-  }
-
-  /**
-   * Base DateFormat implementation for parsing date/time formats where
-   * additional information is added on to the format in order for it to be
-   * parsed correctly.
-   */
-  private static abstract class ParsePrefixFormat extends DateFormat
-  {
-    private static final long serialVersionUID = 0L;
-
-    private final DateFormat _parseDelegate;
-
-    private ParsePrefixFormat(String formatPrefix, String formatStr,
-                              LocaleContext ctx) {
-      _parseDelegate = ctx.createDateFormat(formatPrefix + formatStr);
-    }
-
-    @Override
-    public StringBuffer format(Date date, StringBuffer toAppendTo,
-                               FieldPosition fieldPosition) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Date parse(String source, ParsePosition pos) {
-      String prefix = getPrefix();
-
-      Date result = _parseDelegate.parse(prefix + source, pos);
-
-      // adjust index for original string
-      pos.setIndex(pos.getIndex() - prefix.length());
-
-      return result;
-    }
-
-    @Override
-    public Calendar getCalendar() {
-      return _parseDelegate.getCalendar();
-    }
-
-    @Override
-    public TimeZone getTimeZone() {
-      return _parseDelegate.getTimeZone();
-    }
-
-    protected abstract String getPrefix();
-  }
-
-  /**
-   * Special date/time format which will parse time-only strings "correctly"
-   * according to how access handles time-only values.
-   */
-  private static final class ParseTimeFormat extends ParsePrefixFormat
-  {
-    private static final long serialVersionUID = 0L;
-
-    private ParseTimeFormat(TemporalConfig.Type timeType, LocaleContext ctx) {
-      super(BASE_DATE_FMT_PREFIX,
-            ctx.getTemporalConfig().getDateTimeFormat(timeType), ctx);
-    }
-
-    @Override
-    protected String getPrefix() {
-      // we parse as a full date/time in order to get the correct "base date"
-      // used by access
-      return BASE_DATE_PREFIX;
-    }
-  }
-
-  /**
-   * Special date/time format which will parse dates with implicit (current)
-   * years.
-   */
-  private static final class ParseImplicitYearFormat extends ParsePrefixFormat
-  {
-    private static final long serialVersionUID = 0L;
-
-    private ParseImplicitYearFormat(TemporalConfig.Type type,
-                                    LocaleContext ctx) {
-      super(IMPLICIT_YEAR_FMT_PREFIX,
-            ctx.getTemporalConfig().getImplicitYearDateTimeFormat(type),
-            ctx);
-    }
-
-    @Override
-    protected String getPrefix() {
-      // need to get the current year
-      Calendar cal = getCalendar();
-      cal.setTimeInMillis(System.currentTimeMillis());
-      int year = cal.get(Calendar.YEAR);
-      // return a value matching IMPLICIT_YEAR_FMT_PREFIX
-      return year + " ";
     }
   }
 

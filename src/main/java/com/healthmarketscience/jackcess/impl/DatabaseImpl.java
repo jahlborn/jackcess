@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -28,10 +27,14 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -53,6 +56,7 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.IndexCursor;
@@ -73,8 +77,8 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -84,7 +88,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class DatabaseImpl implements Database
+public class DatabaseImpl implements Database, DateTimeContext
 {
   private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
 
@@ -198,9 +202,15 @@ public class DatabaseImpl implements Database
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
 
   /** read-only channel access mode */
-  public static final String RO_CHANNEL_MODE = "r";
-  /** read/write channel access mode */
-  public static final String RW_CHANNEL_MODE = "rw";
+  public static final OpenOption[] RO_CHANNEL_OPTS =
+    {StandardOpenOption.READ};
+  /** read/write channel access mode for existing files */
+  public static final OpenOption[] RW_CHANNEL_OPTS =
+    {StandardOpenOption.READ, StandardOpenOption.WRITE};
+  /** read/write/create channel access mode for new files */
+  public static final OpenOption[] RWC_CHANNEL_OPTS =
+  {StandardOpenOption.READ, StandardOpenOption.WRITE,
+   StandardOpenOption.CREATE};
 
   /** Name of the system object that is the parent of all tables */
   private static final String SYSTEM_OBJECT_NAME_TABLES = "Tables";
@@ -252,7 +262,7 @@ public class DatabaseImpl implements Database
     Pattern.compile("[\\p{Cntrl}.!`\\]\\[]");
 
   /** the File of the database */
-  private final File _file;
+  private final Path _file;
   /** the simple name of the database */
   private final String _name;
   /** whether or not this db is read-only */
@@ -300,6 +310,8 @@ public class DatabaseImpl implements Database
   private Charset _charset;
   /** timezone to use when handling dates */
   private TimeZone _timeZone;
+  /** zoneId to use when handling dates */
+  private ZoneId _zoneId;
   /** language sort order to be used for textual columns */
   private ColumnImpl.SortOrder _defaultSortOrder;
   /** default code page to be used for textual columns (in some dbs) */
@@ -335,10 +347,10 @@ public class DatabaseImpl implements Database
   /** shared state used when enforcing foreign keys */
   private final FKEnforcer.SharedState _fkEnforcerSharedState =
     FKEnforcer.initSharedState();
-  /** Calendar for use interpreting dates/times in Columns */
-  private Calendar _calendar;
   /** shared context for evaluating expressions */
   private DBEvalContext _evalCtx;
+  /** factory for the appropriate date/time type */
+  private ColumnImpl.DateTimeFactory _dtf;
 
   /**
    * Open an existing Database.  If the existing file is not writeable or the
@@ -364,23 +376,23 @@ public class DatabaseImpl implements Database
    * @usage _advanced_method_
    */
   public static DatabaseImpl open(
-      File mdbFile, boolean readOnly, FileChannel channel,
+      Path mdbFile, boolean readOnly, FileChannel channel,
       boolean autoSync, Charset charset, TimeZone timeZone,
       CodecProvider provider)
     throws IOException
   {
     boolean closeChannel = false;
     if(channel == null) {
-      if(!mdbFile.exists() || !mdbFile.canRead()) {
+      if(!Files.isReadable(mdbFile)) {
         throw new FileNotFoundException("given file does not exist: " +
                                         mdbFile);
       }
 
       // force read-only for non-writable files
-      readOnly |= !mdbFile.canWrite();
+      readOnly |= !Files.isWritable(mdbFile);
 
       // open file channel
-      channel = openChannel(mdbFile, readOnly);
+      channel = openChannel(mdbFile, readOnly, false);
       closeChannel = true;
     }
 
@@ -434,7 +446,7 @@ public class DatabaseImpl implements Database
    * @param timeZone TimeZone to use, if {@code null}, uses default
    * @usage _advanced_method_
    */
-  public static DatabaseImpl create(FileFormat fileFormat, File mdbFile,
+  public static DatabaseImpl create(FileFormat fileFormat, Path mdbFile,
                                     FileChannel channel, boolean autoSync,
                                     Charset charset, TimeZone timeZone)
     throws IOException
@@ -451,7 +463,7 @@ public class DatabaseImpl implements Database
 
     boolean closeChannel = false;
     if(channel == null) {
-      channel = openChannel(mdbFile, false);
+      channel = openChannel(mdbFile, false, true);
       closeChannel = true;
     }
 
@@ -486,11 +498,13 @@ public class DatabaseImpl implements Database
    *            that name cannot be created, or if some other error occurs
    *            while opening or creating the file
    */
-  static FileChannel openChannel(final File mdbFile, final boolean readOnly)
-    throws FileNotFoundException
+  static FileChannel openChannel(
+      Path mdbFile, boolean readOnly, boolean create)
+    throws IOException
   {
-    final String mode = (readOnly ? RO_CHANNEL_MODE : RW_CHANNEL_MODE);
-    return new RandomAccessFile(mdbFile, mode).getChannel();
+    OpenOption[] opts = (readOnly ? RO_CHANNEL_OPTS :
+                         (create ? RWC_CHANNEL_OPTS : RW_CHANNEL_OPTS));
+    return FileChannel.open(mdbFile, opts);
   }
 
   /**
@@ -512,7 +526,7 @@ public class DatabaseImpl implements Database
    * @param charset Charset to use, if {@code null}, uses default
    * @param timeZone TimeZone to use, if {@code null}, uses default
    */
-  protected DatabaseImpl(File file, FileChannel channel, boolean closeChannel,
+  protected DatabaseImpl(Path file, FileChannel channel, boolean closeChannel,
                          boolean autoSync, FileFormat fileFormat, Charset charset,
                          TimeZone timeZone, CodecProvider provider,
                          boolean readOnly)
@@ -528,8 +542,9 @@ public class DatabaseImpl implements Database
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
     _evaluateExpressions = getDefaultEvaluateExpressions();
     _fileFormat = fileFormat;
+    setZoneInfo(timeZone, null);
+    _dtf = ColumnImpl.getDateTimeFactory(getDefaultDateTimeType());
     _pageChannel = new PageChannel(channel, closeChannel, _format, autoSync);
-    _timeZone = ((timeZone == null) ? getDefaultTimeZone() : timeZone);
     if(provider == null) {
       provider = DefaultCodecProvider.INSTANCE;
     }
@@ -541,7 +556,13 @@ public class DatabaseImpl implements Database
     readSystemCatalog();
   }
 
+  @Override
   public File getFile() {
+    return ((_file != null) ? _file.toFile() : null);
+  }
+
+  @Override
+  public Path getPath() {
     return _file;
   }
 
@@ -597,27 +618,33 @@ public class DatabaseImpl implements Database
     return _complexCols;
   }
 
+  @Override
   public ErrorHandler getErrorHandler() {
     return((_dbErrorHandler != null) ? _dbErrorHandler : ErrorHandler.DEFAULT);
   }
 
+  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _dbErrorHandler = newErrorHandler;
   }
 
+  @Override
   public LinkResolver getLinkResolver() {
     return((_linkResolver != null) ? _linkResolver : LinkResolver.DEFAULT);
   }
 
+  @Override
   public void setLinkResolver(LinkResolver newLinkResolver) {
     _linkResolver = newLinkResolver;
   }
 
+  @Override
   public Map<String,Database> getLinkedDatabases() {
     return ((_linkedDbs == null) ? Collections.<String,Database>emptyMap() :
             Collections.unmodifiableMap(_linkedDbs));
   }
 
+  @Override
   public boolean isLinkedTable(Table table) throws IOException {
 
     if((table == null) || (this == table.getDatabase())) {
@@ -645,27 +672,62 @@ public class DatabaseImpl implements Database
             (_linkedDbs.get(linkedDbName) == table.getDatabase()));
   }
 
+  @Override
   public TimeZone getTimeZone() {
     return _timeZone;
   }
 
+  @Override
   public void setTimeZone(TimeZone newTimeZone) {
-    if(newTimeZone == null) {
-      newTimeZone = getDefaultTimeZone();
-    }
-    _timeZone = newTimeZone;
-    // clear cached calendar(s) when timezone is changed
-    _calendar = null;
-    if(_evalCtx != null) {
-      _evalCtx.resetDateTimeConfig();
-    }
+    setZoneInfo(newTimeZone, null);
   }
 
+  @Override
+  public ZoneId getZoneId() {
+    return _zoneId;
+  }
+
+  @Override
+  public void setZoneId(ZoneId newZoneId) {
+    setZoneInfo(null, newZoneId);
+  }
+
+  private void setZoneInfo(TimeZone newTimeZone, ZoneId newZoneId) {
+    if(newTimeZone != null) {
+      newZoneId = newTimeZone.toZoneId();
+    } else if(newZoneId != null) {
+      newTimeZone = TimeZone.getTimeZone(newZoneId);
+    } else {
+      newTimeZone = getDefaultTimeZone();
+      newZoneId = newTimeZone.toZoneId();
+    }
+
+    _timeZone = newTimeZone;
+    _zoneId = newZoneId;
+  }
+
+  @Override
+  public DateTimeType getDateTimeType() {
+    return _dtf.getType();
+  }
+
+  @Override
+  public void setDateTimeType(DateTimeType dateTimeType) {
+    _dtf = ColumnImpl.getDateTimeFactory(dateTimeType);
+  }
+
+  @Override
+  public ColumnImpl.DateTimeFactory getDateTimeFactory() {
+    return _dtf;
+  }
+
+  @Override
   public Charset getCharset()
   {
     return _charset;
   }
 
+  @Override
   public void setCharset(Charset newCharset) {
     if(newCharset == null) {
       newCharset = getDefaultCharset(getFormat());
@@ -673,10 +735,12 @@ public class DatabaseImpl implements Database
     _charset = newCharset;
   }
 
+  @Override
   public Table.ColumnOrder getColumnOrder() {
     return _columnOrder;
   }
 
+  @Override
   public void setColumnOrder(Table.ColumnOrder newColumnOrder) {
     if(newColumnOrder == null) {
       newColumnOrder = getDefaultColumnOrder();
@@ -684,10 +748,12 @@ public class DatabaseImpl implements Database
     _columnOrder = newColumnOrder;
   }
 
+  @Override
   public boolean isEnforceForeignKeys() {
     return _enforceForeignKeys;
   }
 
+  @Override
   public void setEnforceForeignKeys(Boolean newEnforceForeignKeys) {
     if(newEnforceForeignKeys == null) {
       newEnforceForeignKeys = getDefaultEnforceForeignKeys();
@@ -695,10 +761,12 @@ public class DatabaseImpl implements Database
     _enforceForeignKeys = newEnforceForeignKeys;
   }
 
+  @Override
   public boolean isAllowAutoNumberInsert() {
     return _allowAutoNumInsert;
   }
 
+  @Override
   public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert) {
     if(allowAutoNumInsert == null) {
       allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
@@ -706,10 +774,12 @@ public class DatabaseImpl implements Database
     _allowAutoNumInsert = allowAutoNumInsert;
   }
 
+  @Override
   public boolean isEvaluateExpressions() {
     return _evaluateExpressions;
   }
 
+  @Override
   public void setEvaluateExpressions(Boolean evaluateExpressions) {
     if(evaluateExpressions == null) {
       evaluateExpressions = getDefaultEvaluateExpressions();
@@ -717,10 +787,12 @@ public class DatabaseImpl implements Database
     _evaluateExpressions = evaluateExpressions;
   }
 
+  @Override
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
   }
 
+  @Override
   public void setColumnValidatorFactory(ColumnValidatorFactory newFactory) {
     if(newFactory == null) {
       newFactory = SimpleColumnValidatorFactory.INSTANCE;
@@ -735,17 +807,7 @@ public class DatabaseImpl implements Database
     return _fkEnforcerSharedState;
   }
 
-  /**
-   * @usage _advanced_method_
-   */
-  Calendar getCalendar() {
-    if(_calendar == null) {
-      _calendar = DatabaseBuilder.toCompatibleCalendar(
-          Calendar.getInstance(_timeZone));
-    }
-    return _calendar;
-  }
-
+  @Override
   public EvalConfig getEvalConfig() {
     return getEvalContext();
   }
@@ -783,6 +845,7 @@ public class DatabaseImpl implements Database
     return _propsHandler;
   }
 
+  @Override
   public FileFormat getFileFormat() throws IOException {
 
     if(_fileFormat == null) {
@@ -940,6 +1003,7 @@ public class DatabaseImpl implements Database
     }
   }
 
+  @Override
   public Set<String> getTableNames() throws IOException {
     if(_tableNames == null) {
       _tableNames = getTableNames(true, false, true);
@@ -947,6 +1011,7 @@ public class DatabaseImpl implements Database
     return _tableNames;
   }
 
+  @Override
   public Set<String> getSystemTableNames() throws IOException {
     return getTableNames(false, true, false);
   }
@@ -961,6 +1026,7 @@ public class DatabaseImpl implements Database
     return tableNames;
   }
 
+  @Override
   public Iterator<Table> iterator() {
     try {
       return new TableIterator(getTableNames());
@@ -979,14 +1045,17 @@ public class DatabaseImpl implements Database
     }
   }
 
+  @Override
   public TableIterableBuilder newIterable() {
     return new TableIterableBuilder(this);
   }
 
+  @Override
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
 
+  @Override
   public TableMetaData getTableMetaData(String name) throws IOException {
     return getTableInfo(name, true);
   }
@@ -1101,6 +1170,7 @@ public class DatabaseImpl implements Database
       .toTable(this);
   }
 
+  @Override
   public void createLinkedTable(String name, String linkedDbName,
                                 String linkedTableName)
     throws IOException
@@ -1147,6 +1217,7 @@ public class DatabaseImpl implements Database
     addToAccessControlEntries(tdefPageNumber, _tableParentId, _newTableSIDs);
   }
 
+  @Override
   public List<Relationship> getRelationships(Table table1, Table table2)
     throws IOException
   {
@@ -1174,6 +1245,7 @@ public class DatabaseImpl implements Database
     return getRelationshipsImpl(table1, table2, true);
   }
 
+  @Override
   public List<Relationship> getRelationships(Table table)
     throws IOException
   {
@@ -1185,12 +1257,14 @@ public class DatabaseImpl implements Database
     return getRelationshipsImpl((TableImpl)table, null, true);
   }
 
+  @Override
   public List<Relationship> getRelationships()
     throws IOException
   {
     return getRelationshipsImpl(null, null, false);
   }
 
+  @Override
   public List<Relationship> getSystemRelationships()
     throws IOException
   {
@@ -1333,6 +1407,7 @@ public class DatabaseImpl implements Database
     return ((i == 0) ? origName : (origName + i));
   }
 
+  @Override
   public List<Query> getQueries() throws IOException
   {
     // the queries table does not get loaded until first accessed
@@ -1382,6 +1457,7 @@ public class DatabaseImpl implements Database
     return queries;
   }
 
+  @Override
   public TableImpl getSystemTable(String tableName) throws IOException
   {
     return getTable(tableName, true);
@@ -1397,6 +1473,7 @@ public class DatabaseImpl implements Database
     return table;
   }
 
+  @Override
   public PropertyMap getDatabaseProperties() throws IOException {
     if(_dbPropMaps == null) {
       _dbPropMaps = getPropertiesForDbObject(OBJECT_NAME_DB_PROPS);
@@ -1404,6 +1481,7 @@ public class DatabaseImpl implements Database
     return _dbPropMaps.getDefault();
   }
 
+  @Override
   public PropertyMap getSummaryProperties() throws IOException {
     if(_summaryPropMaps == null) {
       _summaryPropMaps = getPropertiesForDbObject(OBJECT_NAME_SUMMARY_PROPS);
@@ -1411,6 +1489,7 @@ public class DatabaseImpl implements Database
     return _summaryPropMaps.getDefault();
   }
 
+  @Override
   public PropertyMap getUserDefinedProperties() throws IOException {
     if(_userDefPropMaps == null) {
       _userDefPropMaps = getPropertiesForDbObject(OBJECT_NAME_USERDEF_PROPS);
@@ -1488,6 +1567,7 @@ public class DatabaseImpl implements Database
     return getPropsHandler().read(propsBytes, objectId, rowId, owner);
   }
 
+  @Override
   public String getDatabasePassword() throws IOException
   {
     ByteBuffer buffer = takeSharedBuffer();
@@ -1754,6 +1834,7 @@ public class DatabaseImpl implements Database
     return CursorImpl.createCursor(table);
   }
 
+  @Override
   public void flush() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1763,6 +1844,7 @@ public class DatabaseImpl implements Database
     _pageChannel.flush();
   }
 
+  @Override
   public void close() throws IOException {
     if(_linkedDbs != null) {
       for(Database linkedDb : _linkedDbs.values()) {
@@ -1968,16 +2050,8 @@ public class DatabaseImpl implements Database
    */
   public static Table.ColumnOrder getDefaultColumnOrder()
   {
-    String coProp = System.getProperty(COLUMN_ORDER_PROPERTY);
-    if(coProp != null) {
-      coProp = coProp.trim();
-      if(coProp.length() > 0) {
-        return Table.ColumnOrder.valueOf(coProp);
-      }
-    }
-
-    // use default order
-    return DEFAULT_COLUMN_ORDER;
+    return getEnumSystemProperty(Table.ColumnOrder.class, COLUMN_ORDER_PROPERTY,
+                                 DEFAULT_COLUMN_ORDER);
   }
 
   /**
@@ -2023,6 +2097,17 @@ public class DatabaseImpl implements Database
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
     return false;
+  }
+
+  /**
+   * Returns the default DateTimeType.  This defaults to
+   * {@link DateTimeType#DATE}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#DATE_TIME_TYPE_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static DateTimeType getDefaultDateTimeType() {
+    return getEnumSystemProperty(DateTimeType.class, DATE_TIME_TYPE_PROPERTY,
+                                 DateTimeType.DATE);
   }
 
   /**
@@ -2106,11 +2191,11 @@ public class DatabaseImpl implements Database
     FILE_FORMAT_DETAILS.put(fileFormat, new FileFormatDetails(emptyFile, format));
   }
 
-  private static String getName(File file) {
+  private static String getName(Path file) {
     if(file == null) {
       return "<UNKNOWN.DB>";
     }
-    return file.getName();
+    return file.getFileName().toString();
   }
 
   private String withErrorContext(String msg) {
@@ -2119,6 +2204,19 @@ public class DatabaseImpl implements Database
 
   private static String withErrorContext(String msg, String dbName) {
     return msg + " (Db=" + dbName + ")";
+  }
+
+  private static <E extends Enum<E>> E getEnumSystemProperty(
+      Class<E> enumClass, String propName, E defaultValue)
+  {
+    String prop = System.getProperty(propName);
+    if(prop != null) {
+      prop = prop.trim().toUpperCase();
+      if(!prop.isEmpty()) {
+        return Enum.valueOf(enumClass, prop);
+      }
+    }
+    return defaultValue;
   }
 
   /**
@@ -2136,26 +2234,32 @@ public class DatabaseImpl implements Database
       flags = newFlags;
     }
 
+    @Override
     public String getName() {
       return tableName;
     }
 
+    @Override
     public boolean isLinked() {
       return false;
     }
 
+    @Override
     public boolean isSystem() {
       return isSystemObject(flags);
     }
 
+    @Override
     public String getLinkedTableName() {
       return null;
     }
 
+    @Override
     public String getLinkedDbName() {
       return null;
     }
 
+    @Override
     public Table open(Database db) throws IOException {
       return ((DatabaseImpl)db).getTable(this, true);
     }
@@ -2219,14 +2323,17 @@ public class DatabaseImpl implements Database
       _tableNameIter = tableNames.iterator();
     }
 
+    @Override
     public boolean hasNext() {
       return _tableNameIter.hasNext();
     }
 
+    @Override
     public void remove() {
       throw new UnsupportedOperationException();
     }
 
+    @Override
     public Table next() {
       if(!hasNext()) {
         throw new NoSuchElementException();

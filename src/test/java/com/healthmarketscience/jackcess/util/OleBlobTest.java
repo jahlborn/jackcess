@@ -34,7 +34,7 @@ import com.healthmarketscience.jackcess.impl.CompoundOleUtil;
 import junit.framework.TestCase;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 
@@ -42,7 +42,7 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  *
  * @author James Ahlborn
  */
-public class OleBlobTest extends TestCase 
+public class OleBlobTest extends TestCase
 {
 
   public OleBlobTest(String name) {
@@ -73,7 +73,7 @@ public class OleBlobTest extends TestCase
       } finally {
         ByteUtil.closeQuietly(blob);
       }
-      
+
       try {
         blob = new OleBlob.Builder()
           .setLink(sampleFile)
@@ -82,7 +82,7 @@ public class OleBlobTest extends TestCase
       } finally {
         ByteUtil.closeQuietly(blob);
       }
-      
+
       try {
         blob = new OleBlob.Builder()
           .setPackagePrettyName("Text File")
@@ -109,14 +109,14 @@ public class OleBlobTest extends TestCase
             assertEquals(sampleFilePath, spc.getFilePath());
             assertEquals(sampleFilePath, spc.getLocalFilePath());
             assertEquals(sampleFileName, spc.getFileName());
-            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, 
+            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME,
                          spc.getPrettyName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
+            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
                          spc.getTypeName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, 
+            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
                          spc.getClassName());
             assertEquals(sampleFileBytes.length, spc.length());
-            assertTrue(Arrays.equals(sampleFileBytes, 
+            assertTrue(Arrays.equals(sampleFileBytes,
                                      toByteArray(spc.getStream(), spc.length())));
             break;
 
@@ -130,7 +130,7 @@ public class OleBlobTest extends TestCase
             assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getTypeName());
             assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getClassName());
             break;
-            
+
           case 3:
             OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
             assertEquals(OleBlob.ContentType.OTHER, oc.getType());
@@ -138,7 +138,7 @@ public class OleBlobTest extends TestCase
             assertEquals("Text.File", oc.getClassName());
             assertEquals("TextFile", oc.getTypeName());
             assertEquals(sampleFileBytes.length, oc.length());
-            assertTrue(Arrays.equals(sampleFileBytes, 
+            assertTrue(Arrays.equals(sampleFileBytes,
                                      toByteArray(oc.getStream(), oc.length())));
             break;
           default:
@@ -149,8 +149,8 @@ public class OleBlobTest extends TestCase
         }
       }
 
-      db.close();      
-    }    
+      db.close();
+    }
   }
 
   public void testReadBlob() throws Exception
@@ -198,7 +198,7 @@ public class OleBlobTest extends TestCase
             } else {
 
               if("test_word.doc".equals(name)) {
-                checkCompoundEntries(cc, 
+                checkCompoundEntries(cc,
                                      "/%02OlePres000", 466,
                                      "/WordDocument", 4096,
                                      "/%05SummaryInformation", 4096,
@@ -210,7 +210,7 @@ public class OleBlobTest extends TestCase
                                      "/%01Ole", 20);
                 checkCompoundStorage(cc, attach);
               } else if("test_excel.xls".equals(name)) {
-                checkCompoundEntries(cc, 
+                checkCompoundEntries(cc,
                                      "/%02OlePres000", 1326,
                                      "/%03AccessObjSiteData", 56,
                                      "/%05SummaryInformation", 200,
@@ -243,10 +243,10 @@ public class OleBlobTest extends TestCase
       }
 
       db.close();
-    } 
+    }
   }
 
-  private static void checkCompoundEntries(OleBlob.CompoundContent cc, 
+  private static void checkCompoundEntries(OleBlob.CompoundContent cc,
                                            Object... entryInfo)
     throws Exception
   {
@@ -262,7 +262,7 @@ public class OleBlobTest extends TestCase
     }
   }
 
-  private static void checkCompoundStorage(OleBlob.CompoundContent cc, 
+  private static void checkCompoundStorage(OleBlob.CompoundContent cc,
                                            Attachment attach)
     throws Exception
   {
@@ -273,7 +273,7 @@ public class OleBlobTest extends TestCase
       fout.write(attach.getFileData());
       fout.close();
 
-      NPOIFSFileSystem attachFs = new NPOIFSFileSystem(tmpData, true);
+      POIFSFileSystem attachFs = new POIFSFileSystem(tmpData, true);
 
       for(OleBlob.CompoundContent.Entry e : cc) {
         DocumentEntry attachE = null;
@@ -284,7 +284,7 @@ public class OleBlobTest extends TestCase
           continue;
         }
 
-        byte[] attachEBytes = toByteArray(new DocumentInputStream(attachE), 
+        byte[] attachEBytes = toByteArray(new DocumentInputStream(attachE),
                                           attachE.getSize());
         byte[] entryBytes = toByteArray(e.getStream(), e.length());
 
@@ -292,9 +292,9 @@ public class OleBlobTest extends TestCase
       }
 
       ByteUtil.closeQuietly(attachFs);
-      
+
     } finally {
       tmpData.delete();
-    }    
+    }
   }
 }

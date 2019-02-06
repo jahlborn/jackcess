@@ -80,7 +80,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
    * determine the type of the property based on the name and value (the
    * property names listed above have their types builtin, otherwise the type
    * of the value is used).
-   * <p/>
+   * <p>
    * Note, this change will not be persisted until the {@link #save} method
    * has been called.
    *
@@ -92,7 +92,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
 
   /**
    * Creates a new (or updates an existing) property in the map.
-   * <p/>
+   * <p>
    * Note, this change will not be persisted until the {@link #save} method
    * has been called.
    *
@@ -102,7 +102,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
 
   /**
    * Creates a new (or updates an existing) property in the map.
-   * <p/>
+   * <p>
    * Note, this change will not be persisted until the {@link #save} method
    * has been called.
    *
@@ -151,7 +151,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
 
     /**
      * Sets the new value for this property.
-     * <p/>
+     * <p>
      * Note, this change will not be persisted until the {@link
      * PropertyMap#save} method has been called.
      */
@@ -204,6 +204,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (short)value;
     }
 
+    @Override
     public Short getValue() {
       return _value;
     }
@@ -228,6 +229,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }
@@ -261,6 +263,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }
@@ -287,6 +290,7 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
       _value = (byte)value;
     }
 
+    @Override
     public Byte getValue() {
       return _value;
     }

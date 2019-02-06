@@ -35,14 +35,17 @@ public class UnionQueryImpl extends QueryImpl implements UnionQuery
     super(name, rows, objectId, objectFlag, Type.UNION);
   }
 
+  @Override
   public String getUnionType() {
     return(hasFlag(UNION_FLAG) ? DEFAULT_TYPE : "ALL");
   }
 
+  @Override
   public String getUnionString1() {
     return getUnionString(UNION_PART1);
   }
 
+  @Override
   public String getUnionString2() {
     return getUnionString(UNION_PART2);
   }

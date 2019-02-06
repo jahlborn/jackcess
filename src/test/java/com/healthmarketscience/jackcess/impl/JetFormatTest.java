@@ -98,7 +98,7 @@ public class JetFormatTest extends TestCase {
     }
 
     SUPPORTED_FILEFORMATS = supported.toArray(new FileFormat[0]);
-    SUPPORTED_FILEFORMATS_FOR_READ = 
+    SUPPORTED_FILEFORMATS_FOR_READ =
       supportedForRead.toArray(new FileFormat[0]);
   }
 
@@ -110,7 +110,7 @@ public class JetFormatTest extends TestCase {
     private final File dbFile;
     private final FileFormat expectedFileFormat;
 
-    private TestDB(File databaseFile, 
+    private TestDB(File databaseFile,
                    FileFormat expectedDBFileFormat) {
 
       dbFile = databaseFile;
@@ -119,12 +119,12 @@ public class JetFormatTest extends TestCase {
 
     public final File getFile() { return dbFile; }
 
-    public final FileFormat  getExpectedFileFormat() { 
-      return expectedFileFormat; 
+    public final FileFormat  getExpectedFileFormat() {
+      return expectedFileFormat;
     }
 
-    public final JetFormat getExpectedFormat() { 
-      return DatabaseImpl.getFileFormatDetails(expectedFileFormat).getFormat(); 
+    public final JetFormat getExpectedFormat() {
+      return DatabaseImpl.getFileFormatDetails(expectedFileFormat).getFormat();
     }
 
     @Override
@@ -141,14 +141,14 @@ public class JetFormatTest extends TestCase {
                                                        boolean readOnly) {
 
       List<TestDB> supportedTestDBs = new ArrayList<TestDB>();
-      for (FileFormat fileFormat : 
+      for (FileFormat fileFormat :
              (readOnly ? SUPPORTED_FILEFORMATS_FOR_READ :
               SUPPORTED_FILEFORMATS)) {
         File testFile = getFileForBasename(basename, fileFormat);
         if(!testFile.exists()) {
           continue;
         }
-        
+
         // verify that the db is the file format expected
         try {
           Database db = new DatabaseBuilder(testFile).setReadOnly(true).open();
@@ -170,16 +170,16 @@ public class JetFormatTest extends TestCase {
     private static File getFileForBasename(
         Basename basename, FileFormat fileFormat) {
 
-      return new File(DIR_TEST_DATA, 
+      return new File(DIR_TEST_DATA,
                       fileFormat.name() + File.separator +
-                      basename + fileFormat.name() + 
+                      basename + fileFormat.name() +
                       fileFormat.getFileExtension());
     }
   }
 
-  public static final List<TestDB> SUPPORTED_DBS_TEST = 
+  public static final List<TestDB> SUPPORTED_DBS_TEST =
     TestDB.getSupportedForBasename(Basename.TEST);
-  public static final List<TestDB> SUPPORTED_DBS_TEST_FOR_READ = 
+  public static final List<TestDB> SUPPORTED_DBS_TEST_FOR_READ =
     TestDB.getSupportedForBasename(Basename.TEST, true);
 
 
@@ -193,11 +193,12 @@ public class JetFormatTest extends TestCase {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      final FileChannel channel = DatabaseImpl.openChannel(testDB.dbFile, false);
+      final FileChannel channel = DatabaseImpl.openChannel(
+          testDB.dbFile.toPath(), false, false);
       try {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
-        assertEquals("Unexpected JetFormat for dbFile: " + 
+        assertEquals("Unexpected JetFormat for dbFile: " +
                      testDB.dbFile.getAbsolutePath(),
                      testDB.getExpectedFormat(), fmtActual);
 
@@ -221,7 +222,7 @@ public class JetFormatTest extends TestCase {
           PropertyMap props = db.getUserDefinedProperties();
           props.put("foo", "bar");
           props.save();
-        } 
+        }
 
       } catch(Exception e) {
         failure = e;
@@ -268,7 +269,7 @@ public class JetFormatTest extends TestCase {
   }
 
   public void testSqlTypes() throws Exception {
-    
+
     JetFormat v2000 = JetFormat.VERSION_4;
     for(DataType dt : DataType.values()) {
       if(v2000.isSupportedDataType(dt)) {

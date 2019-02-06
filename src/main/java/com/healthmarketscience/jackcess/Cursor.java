@@ -31,7 +31,7 @@ import com.healthmarketscience.jackcess.util.IterableBuilder;
  * of table modification during traversal (although depending on how the table
  * is traversed, row updates may or may not be seen).  Multiple cursors may
  * traverse the same table simultaneously.
- * <p/>
+ * <p>
  * Basic cursors will generally iterate table data in the order it appears in
  * the database and searches will require scanning the entire table.
  * Additional features are available when utilizing an {@link Index} backed
@@ -135,11 +135,12 @@ public interface Cursor extends Iterable<Row>
    * Iterator which will iterate through all the rows of this table.  Use of
    * the Iterator follows the same restrictions as a call to
    * {@link #getNextRow}.
-   * <p/>
+   * <p>
    * For more flexible iteration see {@link #newIterable}.
    * @throws RuntimeIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    */
+  @Override
   public Iterator<Row> iterator();
 
   /**
@@ -151,7 +152,7 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Delete the current row.
-   * <p/>
+   * <p>
    * Note, re-deleting an already deleted row is allowed (it does nothing).
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table)
@@ -178,7 +179,7 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Moves to the next row in the table and returns it.
-   * @return The next row in this table (Column name -> Column value), or
+   * @return The next row in this table (Column name -&gt; Column value), or
    *         {@code null} if no next row is found
    */
   public Row getNextRow() throws IOException;
@@ -186,7 +187,7 @@ public interface Cursor extends Iterable<Row>
   /**
    * Moves to the next row in the table and returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return The next row in this table (Column name -> Column value), or
+   * @return The next row in this table (Column name -&gt; Column value), or
    *         {@code null} if no next row is found
    */
   public Row getNextRow(Collection<String> columnNames) 
@@ -194,7 +195,7 @@ public interface Cursor extends Iterable<Row>
 
   /**
    * Moves to the previous row in the table and returns it.
-   * @return The previous row in this table (Column name -> Column value), or
+   * @return The previous row in this table (Column name -&gt; Column value), or
    *         {@code null} if no previous row is found
    */
   public Row getPreviousRow() throws IOException;
@@ -202,7 +203,7 @@ public interface Cursor extends Iterable<Row>
   /**
    * Moves to the previous row in the table and returns it.
    * @param columnNames Only column names in this collection will be returned
-   * @return The previous row in this table (Column name -> Column value), or
+   * @return The previous row in this table (Column name -&gt; Column value), or
    *         {@code null} if no previous row is found
    */
   public Row getPreviousRow(Collection<String> columnNames) 
@@ -325,12 +326,12 @@ public interface Cursor extends Iterable<Row>
   public int movePreviousRows(int numRows) throws IOException;
 
   /**
-   * Returns the current row in this cursor (Column name -> Column value).
+   * Returns the current row in this cursor (Column name -&gt; Column value).
    */
   public Row getCurrentRow() throws IOException;
 
   /**
-   * Returns the current row in this cursor (Column name -> Column value).
+   * Returns the current row in this cursor (Column name -&gt; Column value).
    * @param columnNames Only column names in this collection will be returned
    */
   public Row getCurrentRow(Collection<String> columnNames)

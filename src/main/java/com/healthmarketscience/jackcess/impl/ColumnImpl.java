@@ -32,11 +32,22 @@ import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
+import java.time.DateTimeException;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalQueries;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,6 +55,7 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.InvalidValueException;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Table;
@@ -52,9 +64,10 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
+import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -63,7 +76,8 @@ import org.apache.commons.logging.LogFactory;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class ColumnImpl implements Column, Comparable<ColumnImpl> {
+public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeContext
+{
 
   protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
 
@@ -79,8 +93,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Access stores numeric dates in days.  Java stores them in milliseconds.
    */
-  private static final long MILLISECONDS_PER_DAY =
-    (24L * 60L * 60L * 1000L);
+  private static final long MILLISECONDS_PER_DAY = (24L * 60L * 60L * 1000L);
+  private static final long SECONDS_PER_DAY = (24L * 60L * 60L);
+  private static final long NANOS_PER_SECOND = 1_000_000_000L;
+  private static final long NANOS_PER_MILLI = 1_000_000L;
+  private static final long MILLIS_PER_SECOND = 1000L;
 
   /**
    * Access starts counting dates at Dec 30, 1899 (note, this strange date
@@ -90,6 +107,16 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    */
   static final long MILLIS_BETWEEN_EPOCH_AND_1900 =
     25569L * MILLISECONDS_PER_DAY;
+
+  public static final LocalDate BASE_LD = LocalDate.of(1899, 12, 30);
+  public static final LocalTime BASE_LT = LocalTime.of(0, 0);
+  public static final LocalDateTime BASE_LDT = LocalDateTime.of(BASE_LD, BASE_LT);
+
+  private static final DateTimeFactory DEF_DATE_TIME_FACTORY =
+    new DefaultDateTimeFactory();
+
+  static final DateTimeFactory LDT_DATE_TIME_FACTORY =
+    new LDTDateTimeFactory();
 
   /**
    * mask for the fixed len bit
@@ -336,10 +363,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // base does nothing
   }
 
+  @Override
   public TableImpl getTable() {
     return _table;
   }
 
+  @Override
   public DatabaseImpl getDatabase() {
     return getTable().getDatabase();
   }
@@ -358,14 +387,17 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getDatabase().getPageChannel();
   }
 
+  @Override
   public String getName() {
     return _name;
   }
 
+  @Override
   public boolean isVariableLength() {
     return _variableLength;
   }
 
+  @Override
   public boolean isAutoNumber() {
     return _autoNumber;
   }
@@ -377,6 +409,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _columnNumber;
   }
 
+  @Override
   public int getColumnIndex() {
     return _columnIndex;
   }
@@ -395,22 +428,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _displayIndex;
   }
 
+  @Override
   public DataType getType() {
     return _type;
   }
 
+  @Override
   public int getSQLType() throws SQLException {
     return _type.getSQLType();
   }
 
+  @Override
   public boolean isCompressedUnicode() {
     return false;
   }
 
+  @Override
   public byte getPrecision() {
     return (byte)getType().getDefaultPrecision();
   }
 
+  @Override
   public byte getScale() {
     return (byte)getType().getDefaultScale();
   }
@@ -429,10 +467,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return 0;
   }
 
+  @Override
   public short getLength() {
     return _columnLength;
   }
 
+  @Override
   public final short getLengthInUnits() {
     if(_lengthInUnits == INVALID_LENGTH) {
       _lengthInUnits = calcLengthInUnits();
@@ -444,6 +484,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getType().toUnitSize(getLength(), getFormat());
   }
 
+  @Override
   public boolean isCalculated() {
     return _calculated;
   }
@@ -466,14 +507,27 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return getDatabase().getCharset();
   }
 
-  protected Calendar getCalendar() {
-    return getDatabase().getCalendar();
+  @Override
+  public TimeZone getTimeZone() {
+    return getDatabase().getTimeZone();
   }
 
+  @Override
+  public ZoneId getZoneId() {
+    return getDatabase().getZoneId();
+  }
+
+  @Override
+  public DateTimeFactory getDateTimeFactory() {
+    return getDatabase().getDateTimeFactory();
+  }
+
+  @Override
   public boolean isAppendOnly() {
     return (getVersionHistoryColumn() != null);
   }
 
+  @Override
   public ColumnImpl getVersionHistoryColumn() {
     return null;
   }
@@ -493,10 +547,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public boolean isHyperlink() {
     return false;
   }
 
+  @Override
   public ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return null;
   }
@@ -593,12 +649,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     reloadPropertiesValidators();
   }
 
+  @Override
   public ColumnValidator getColumnValidator() {
     // unwrap any "internal" validator
     return ((_validator instanceof InternalColumnValidator) ?
             ((InternalColumnValidator)_validator).getExternal() : _validator);
   }
 
+  @Override
   public void setColumnValidator(ColumnValidator newValidator) {
 
     if(isAutoNumber()) {
@@ -659,6 +717,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _autoNumberGenerator;
   }
 
+  @Override
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
       _props = getTable().getPropertyMaps().get(getName());
@@ -666,20 +725,24 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return _props;
   }
 
+  @Override
   public Object setRowValue(Object[] rowArray, Object value) {
     rowArray[_columnIndex] = value;
     return value;
   }
 
+  @Override
   public Object setRowValue(Map<String,Object> rowMap, Object value) {
     rowMap.put(_name, value);
     return value;
   }
 
+  @Override
   public Object getRowValue(Object[] rowArray) {
     return rowArray[_columnIndex];
   }
 
+  @Override
   public Object getRowValue(Map<String,?> rowMap) {
     return rowMap.get(_name);
   }
@@ -898,45 +961,25 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
   /**
    * Decodes a date value.
    */
-  private Date readDateValue(ByteBuffer buffer)
-  {
-    // seems access stores dates in the local timezone.  guess you just hope
-    // you read it in the same timezone in which it was written!
+  private Object readDateValue(ByteBuffer buffer) {
     long dateBits = buffer.getLong();
-    long time = fromDateDouble(Double.longBitsToDouble(dateBits));
-    return new DateExt(time, dateBits);
+    return getDateTimeFactory().fromDateBits(this, dateBits);
   }
 
   /**
    * Returns a java long time value converted from an access date double.
    * @usage _advanced_method_
    */
-  public long fromDateDouble(double value)
-  {
-    return fromDateDouble(value, getCalendar());
+  public long fromDateDouble(double value) {
+    return fromDateDouble(value, getTimeZone());
   }
 
-  /**
-   * Returns a java long time value converted from an access date double.
-   * @usage _advanced_method_
-   */
-  public static long fromDateDouble(double value, DatabaseImpl db)
-  {
-    return fromDateDouble(value, db.getCalendar());
-  }
-
-  /**
-   * Returns a java long time value converted from an access date double.
-   * @usage _advanced_method_
-   */
-  public static long fromDateDouble(double value, Calendar c)
-  {
+  private static long fromDateDouble(double value, TimeZone tz) {
     long localTime = fromLocalDateDouble(value);
-    return localTime - getFromLocalTimeZoneOffset(localTime, c);
+    return localTime - getFromLocalTimeZoneOffset(localTime, tz);
   }
 
-  static long fromLocalDateDouble(double value)
-  {
+  static long fromLocalDateDouble(double value) {
     long datePart = ((long)value) * MILLISECONDS_PER_DAY;
 
     // the fractional part of the double represents the time.  it is always
@@ -944,29 +987,49 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     // _not_ the time distance from zero (as one would expect with "normal"
     // numbers).  therefore, we need to do a little number logic to convert
     // the absolute time fraction into a normal distance from zero number.
-    long timePart = Math.round((Math.abs(value) % 1.0) *
-                               (double)MILLISECONDS_PER_DAY);
+    long timePart = Math.round((Math.abs(value) % 1.0d) *
+                               MILLISECONDS_PER_DAY);
 
     long time = datePart + timePart;
-    time -= MILLIS_BETWEEN_EPOCH_AND_1900;
-    return time;
+    return time - MILLIS_BETWEEN_EPOCH_AND_1900;
+  }
+
+  public static LocalDateTime ldtFromLocalDateDouble(double value) {
+    Duration dateTimeOffset = durationFromLocalDateDouble(value);
+    return BASE_LDT.plus(dateTimeOffset);
+  }
+
+  private static Duration durationFromLocalDateDouble(double value) {
+    long dateSeconds = ((long)value) * SECONDS_PER_DAY;
+
+    // the fractional part of the double represents the time.  it is always
+    // a positive fraction of the day (even if the double is negative),
+    // _not_ the time distance from zero (as one would expect with "normal"
+    // numbers).  therefore, we need to do a little number logic to convert
+    // the absolute time fraction into a normal distance from zero number.
+
+    double secondsDouble = (Math.abs(value) % 1.0d) * SECONDS_PER_DAY;
+    long timeSeconds = (long)secondsDouble;
+    long timeMillis = (long)(roundToMillis(secondsDouble % 1.0d) *
+                             MILLIS_PER_SECOND);
+
+    return Duration.ofSeconds(dateSeconds + timeSeconds,
+                              timeMillis * NANOS_PER_MILLI);
   }
 
   /**
    * Writes a date value.
    */
   private void writeDateValue(ByteBuffer buffer, Object value)
+    throws InvalidValueException
   {
     if(value == null) {
       buffer.putDouble(0d);
     } else if(value instanceof DateExt) {
-
       // this is a Date value previously read from readDateValue().  use the
       // original bits to store the value so we don't lose any precision
       buffer.putLong(((DateExt)value).getDateBits());
-
     } else {
-
       buffer.putDouble(toDateDouble(value));
     }
   }
@@ -977,36 +1040,87 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * @usage _advanced_method_
    */
   public double toDateDouble(Object value)
+    throws InvalidValueException
   {
-    return toDateDouble(value, getCalendar());
+    try {
+      return toDateDouble(value, this);
+    } catch(IllegalArgumentException iae) {
+      throw new InvalidValueException(withErrorContext(iae.getMessage()), iae);
+    }
   }
 
   /**
-   * Returns an access date double converted from a java Date/Calendar/Number
-   * time value.
+   * Returns an access date double converted from a java
+   * Date/Calendar/Number/Temporal time value.
    * @usage _advanced_method_
    */
-  public static double toDateDouble(Object value, DatabaseImpl db)
-  {
-    return toDateDouble(value, db.getCalendar());
+  private static double toDateDouble(Object value, DateTimeContext dtc) {
+    return dtc.getDateTimeFactory().toDateDouble(value, dtc);
   }
 
-  /**
-   * Returns an access date double converted from a java Date/Calendar/Number
-   * time value.
-   * @usage _advanced_method_
-   */
-  public static double toDateDouble(Object value, Calendar c)
-  {
-    // seems access stores dates in the local timezone.  guess you just
-    // hope you read it in the same timezone in which it was written!
-    long time = toDateLong(value);
-    time += getToLocalTimeZoneOffset(time, c);
-    return toLocalDateDouble(time);
+  private static LocalDateTime toLocalDateTime(
+      TemporalAccessor value, DateTimeContext dtc) {
+
+    // handle some common Temporal types
+    if(value instanceof LocalDateTime) {
+      return (LocalDateTime)value;
+    }
+    if(value instanceof ZonedDateTime) {
+      // if the temporal value has a timezone, convert it to this db's timezone
+      return ((ZonedDateTime)value).withZoneSameInstant(
+          dtc.getZoneId()).toLocalDateTime();
+    }
+    if(value instanceof Instant) {
+      return LocalDateTime.ofInstant((Instant)value, dtc.getZoneId());
+    }
+    if(value instanceof LocalDate) {
+      return ((LocalDate)value).atTime(BASE_LT);
+    }
+    if(value instanceof LocalTime) {
+      return ((LocalTime)value).atDate(BASE_LD);
+    }
+
+    // generic handling for many other Temporal types
+    try {
+
+      LocalDate ld = value.query(TemporalQueries.localDate());
+      if(ld == null) {
+        ld = BASE_LD;
+      }
+      LocalTime lt = value.query(TemporalQueries.localTime());
+      if(lt == null) {
+        lt = BASE_LT;
+      }
+      ZoneId zone = value.query(TemporalQueries.zone());
+      if(zone != null) {
+        // the Temporal has a zone, see if it is the right zone.  if not,
+        // adjust it
+        ZoneId zoneId = dtc.getZoneId();
+        if(!zoneId.equals(zone)) {
+          return ZonedDateTime.of(ld, lt, zone).withZoneSameInstant(zoneId)
+            .toLocalDateTime();
+        }
+      }
+
+      return LocalDateTime.of(ld, lt);
+
+    } catch(DateTimeException | ArithmeticException e) {
+      throw new IllegalArgumentException(
+          "Unsupported temporal type " + value.getClass(), e);
+    }
   }
 
-  static double toLocalDateDouble(long time)
-  {
+  private static Instant toInstant(TemporalAccessor value, DateTimeContext dtc) {
+    if(value instanceof ZonedDateTime) {
+      return ((ZonedDateTime)value).toInstant();
+    }
+    if(value instanceof Instant) {
+      return (Instant)value;
+    }
+    return toLocalDateTime(value, dtc).atZone(dtc.getZoneId()).toInstant();
+  }
+
+  static double toLocalDateDouble(long time) {
     time += MILLIS_BETWEEN_EPOCH_AND_1900;
 
     if(time < 0L) {
@@ -1020,11 +1134,63 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     return time / (double)MILLISECONDS_PER_DAY;
   }
 
+  public static double toDateDouble(LocalDateTime ldt) {
+    Duration dateTimeOffset = Duration.between(BASE_LDT, ldt);
+    return toLocalDateDouble(dateTimeOffset);
+  }
+
+  private static double toLocalDateDouble(Duration time) {
+    long dateTimeSeconds = time.getSeconds();
+    long timeSeconds = dateTimeSeconds % SECONDS_PER_DAY;
+    if(timeSeconds < 0) {
+      timeSeconds += SECONDS_PER_DAY;
+    }
+    long dateSeconds = dateTimeSeconds - timeSeconds;
+    long timeNanos = time.getNano();
+
+    // we have a difficult choice to make here between keeping a value which
+    // most accurately represents the bits saved and rounding to a value that
+    // would match what the user would expect too see.  since we do a double
+    // to long conversion, we end up in a situation where the value might be
+    // 19.9999 seconds.  access will display this as 20 seconds (access seems
+    // to only record times to second precision).  if we return 19.9999, then
+    // when the value is written back out it will be exactly the same double
+    // (good), but will display as 19 seconds (bad because it looks wrong to
+    // the user).  on the flip side, if we round, the value will display
+    // "correctly" to the user, but if the value is written back out, it will
+    // be a slightly different double value.  this may not be a problem for
+    // most situations, but may result in incorrect index based lookups.  in
+    // the old date time handling we use DateExt to store the original bits.
+    // in jdk8, we cannot extend LocalDateTime.  for now, we will try
+    // returning the value rounded to milliseconds (technically still more
+    // precision than access uses but more likely to round trip to the same
+    // value).
+    double timeDouble = ((roundToMillis((double)timeNanos / NANOS_PER_SECOND) +
+                          timeSeconds) / SECONDS_PER_DAY);
+
+    double dateDouble = ((double)dateSeconds / SECONDS_PER_DAY);
+
+    if(dateSeconds < 0) {
+      timeDouble = -timeDouble;
+    }
+
+    return dateDouble + timeDouble;
+  }
+
+  /**
+   * Rounds the given decimal to milliseconds (3 decimal places) using the
+   * standard access rounding mode.
+   */
+  private static double roundToMillis(double dbl) {
+    return ((dbl == 0d) ? dbl :
+            new BigDecimal(dbl).setScale(3, NumberFormatter.ROUND_MODE)
+            .doubleValue());
+  }
+
   /**
    * @return an appropriate Date long value for the given object
    */
-  private static long toDateLong(Object value)
-  {
+  private static long toDateLong(Object value) {
     return ((value instanceof Date) ?
             ((Date)value).getTime() :
             ((value instanceof Calendar) ?
@@ -1036,24 +1202,19 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Gets the timezone offset from UTC to local time for the given time
    * (including DST).
    */
-  private static long getToLocalTimeZoneOffset(long time, Calendar c)
-  {
-    c.setTimeInMillis(time);
-    return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
+  private static long getToLocalTimeZoneOffset(long time, TimeZone tz) {
+    return tz.getOffset(time);
   }
 
   /**
    * Gets the timezone offset from local time to UTC for the given time
    * (including DST).
    */
-  private static long getFromLocalTimeZoneOffset(long time, Calendar c)
-  {
+  private static long getFromLocalTimeZoneOffset(long time, TimeZone tz) {
     // getting from local time back to UTC is a little wonky (and not
-    // guaranteed to get you back to where you started)
-    c.setTimeInMillis(time);
-    // apply the zone offset first to get us closer to the original time
-    c.setTimeInMillis(time - c.get(Calendar.ZONE_OFFSET));
-    return ((long)c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
+    // guaranteed to get you back to where you started).  apply the zone
+    // offset first to get us closer to the original time
+    return tz.getOffset(time - tz.getRawOffset());
   }
 
   /**
@@ -1563,6 +1724,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
    * Orders Columns by column number.
    * @usage _general_method_
    */
+  @Override
   public int compareTo(ColumnImpl other) {
     if (_columnNumber > other.getColumnNumber()) {
       return 1;
@@ -1618,6 +1780,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((Boolean)value) ? BigDecimal.valueOf(-1) : BigDecimal.ZERO;
     } else if(value instanceof Date) {
       return new BigDecimal(toDateDouble(value, db));
+    } else if(value instanceof LocalDateTime) {
+      return new BigDecimal(toDateDouble((LocalDateTime)value));
     }
     return new BigDecimal(value.toString());
   }
@@ -1648,6 +1812,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((Boolean)value) ? -1 : 0;
     } else if(value instanceof Date) {
       return toDateDouble(value, db);
+    } else if(value instanceof LocalDateTime) {
+      return toDateDouble((LocalDateTime)value);
     }
     return Double.valueOf(value.toString());
   }
@@ -1983,6 +2149,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
                                        DatabaseImpl db)
     throws IOException
   {
+    return toInternalValue(dataType, value, db, null);
+  }
+
+  static Object toInternalValue(DataType dataType, Object value,
+                                DatabaseImpl db,
+                                ColumnImpl.DateTimeFactory factory)
+    throws IOException
+  {
     if(value == null) {
       return null;
     }
@@ -2007,8 +2181,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
       return ((value instanceof Double) ? value :
               toNumber(value, db).doubleValue());
     case SHORT_DATE_TIME:
-      return ((value instanceof Date) ? value :
-              new Date(toDateLong(value)));
+      if(factory == null) {
+        factory = db.getDateTimeFactory();
+      }
+      return factory.toInternalValue(db, value);
     case TEXT:
     case MEMO:
     case GUID:
@@ -2028,6 +2204,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     }
   }
 
+  protected static DateTimeFactory getDateTimeFactory(DateTimeType type) {
+    return ((type == DateTimeType.LOCAL_DATE_TIME) ?
+            LDT_DATE_TIME_FACTORY : DEF_DATE_TIME_FACTORY);
+  }
+
   String withErrorContext(String msg) {
     return withErrorContext(msg, getDatabase(), getTable().getName(), getName());
   }
@@ -2045,8 +2226,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
   /**
    * Date subclass which stashes the original date bits, in case we attempt to
-   * re-write the value (will not lose precision).
+   * re-write the value (will not lose precision).  Also, this implementation
+   * is immutable.
    */
+  @SuppressWarnings("deprecation")
   private static final class DateExt extends Date
   {
     private static final long serialVersionUID = 0L;
@@ -2061,6 +2244,41 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
 
     public long getDateBits() {
       return _dateBits;
+    }
+
+    @Override
+    public void setDate(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setHours(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setMinutes(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setMonth(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setSeconds(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setYear(int time) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setTime(long time) {
+      throw new UnsupportedOperationException();
     }
 
     private Object writeReplace() throws ObjectStreamException {
@@ -2465,6 +2683,98 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl> {
     @Override
     protected void appendToString(StringBuilder sb) {
       sb.append("allowZeroLength=false");
+    }
+  }
+
+  /**
+   * Factory which handles date/time values appropriately for a DateTimeType.
+   */
+  protected static abstract class DateTimeFactory
+  {
+    public abstract DateTimeType getType();
+
+    public abstract Object fromDateBits(ColumnImpl col, long dateBits);
+
+    public abstract double toDateDouble(Object value, DateTimeContext dtc);
+
+    public abstract Object toInternalValue(DatabaseImpl db, Object value);
+  }
+
+  /**
+   * Factory impl for legacy Date handling.
+   */
+  private static final class DefaultDateTimeFactory extends DateTimeFactory
+  {
+    @Override
+    public DateTimeType getType() {
+      return DateTimeType.DATE;
+    }
+
+    @Override
+    public Object fromDateBits(ColumnImpl col, long dateBits) {
+      long time = col.fromDateDouble(
+          Double.longBitsToDouble(dateBits));
+      return new DateExt(time, dateBits);
+    }
+
+    @Override
+    public double toDateDouble(Object value, DateTimeContext dtc) {
+      // ZoneId and TimeZone have different rules for older timezones, so we
+      // need to consistently use one or the other depending on the date/time
+      // type
+      long time = 0L;
+      if(value instanceof TemporalAccessor) {
+        time = toInstant((TemporalAccessor)value, dtc).toEpochMilli();
+      } else {
+        time = toDateLong(value);
+      }
+      // seems access stores dates in the local timezone.  guess you just
+      // hope you read it in the same timezone in which it was written!
+      time += getToLocalTimeZoneOffset(time, dtc.getTimeZone());
+      return toLocalDateDouble(time);
+    }
+
+    @Override
+    public Object toInternalValue(DatabaseImpl db, Object value) {
+      return ((value instanceof Date) ? value :
+              new Date(toDateLong(value)));
+    }
+  }
+
+  /**
+   * Factory impl for LocalDateTime handling.
+   */
+  private static final class LDTDateTimeFactory extends DateTimeFactory
+  {
+    @Override
+    public DateTimeType getType() {
+      return DateTimeType.LOCAL_DATE_TIME;
+    }
+
+    @Override
+    public Object fromDateBits(ColumnImpl col, long dateBits) {
+      return ldtFromLocalDateDouble(Double.longBitsToDouble(dateBits));
+    }
+
+    @Override
+    public double toDateDouble(Object value, DateTimeContext dtc) {
+      // ZoneId and TimeZone have different rules for older timezones, so we
+      // need to consistently use one or the other depending on the date/time
+      // type
+      if(!(value instanceof TemporalAccessor)) {
+        value = Instant.ofEpochMilli(toDateLong(value));
+      }
+      return ColumnImpl.toDateDouble(
+          toLocalDateTime((TemporalAccessor)value, dtc));
+    }
+
+    @Override
+    public Object toInternalValue(DatabaseImpl db, Object value) {
+      if(value instanceof TemporalAccessor) {
+        return toLocalDateTime((TemporalAccessor)value, db);
+      }
+      Instant inst = Instant.ofEpochMilli(toDateLong(value));
+      return LocalDateTime.ofInstant(inst, db.getZoneId());
     }
   }
 }

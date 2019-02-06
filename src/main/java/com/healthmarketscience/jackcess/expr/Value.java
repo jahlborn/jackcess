@@ -17,7 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.expr;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * Wrapper for a typed primitive value used within the expression evaluation
@@ -97,9 +97,9 @@ public interface Value
   public String getAsString(LocaleContext ctx);
 
   /**
-   * @return this primitive value converted to a Date
+   * @return this primitive value converted to a LocalDateTime
    */
-  public Date getAsDateTime(LocaleContext ctx);
+  public LocalDateTime getAsLocalDateTime(LocaleContext ctx);
 
   /**
    * Since date/time values have different types, it may be more convenient to

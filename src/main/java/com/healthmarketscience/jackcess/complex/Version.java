@@ -16,7 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.complex;
 
+import java.time.LocalDateTime;
 import java.util.Date;
+import com.healthmarketscience.jackcess.DateTimeType;
 
 /**
  * Complex value corresponding to a version of a memo column.
@@ -27,5 +29,13 @@ public interface Version extends ComplexValue, Comparable<Version>
 {
   public String getValue();
 
+  /**
+   * @deprecated see {@link DateTimeType} for details
+   */
+  @Deprecated
   public Date getModifiedDate();
+
+  public LocalDateTime getModifiedLocalDate();
+
+  public Object getModifiedDateObject();
 }

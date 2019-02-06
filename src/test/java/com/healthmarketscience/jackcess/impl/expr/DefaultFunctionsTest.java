@@ -17,10 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Calendar;
-import java.util.Date;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
+import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
@@ -78,9 +79,9 @@ public class DefaultFunctionsTest extends TestCase
                  eval("=CSng(\"57.12345\")"));
     assertEval("9786", "=CStr(9786)");
     assertEval("-42", "=CStr(-42)");
-    assertEval(new Date(1041483600000L), "=CDate('01/02/2003')");
-    assertEval(new Date(1041508800000L), "=CDate('01/02/2003 7:00:00 AM')");
-    assertEval(new Date(-1948781520000L), "=CDate(3013.45)");
+    assertEval(LocalDateTime.of(2003,1,2,0,0), "=CDate('01/02/2003')");
+    assertEval(LocalDateTime.of(2003,1,2,7,0), "=CDate('01/02/2003 7:00:00 AM')");
+    assertEval(LocalDateTime.of(1908,3,31,10,48), "=CDate(3013.45)");
 
 
     assertEval(-1, "=IsNull(Null)");
@@ -251,6 +252,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-.123%", "=FormatPercent(-0.0012345,3,False)");
 
     assertEval("$12,345.00", "=FormatCurrency(12345)");
+    assertEval("($12,345.00)", "=FormatCurrency(-12345)");
     assertEval("-$12.34", "=FormatCurrency(-12.345,-1,True,False)");
     assertEval("$12", "=FormatCurrency(12.345,0,True,True)");
     assertEval("($.123)", "=FormatCurrency(-0.12345,3,False)");
@@ -285,6 +287,11 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-12345.68", "=Format(-12345.6789, 'Fixed')");
     assertEval("-0.12", "=Format(-0.12345, 'Fixed')");
 
+    assertEval("\u20AC12,345.68", "=Format(12345.6789, 'Euro')");
+    assertEval("\u20AC0.12", "=Format(0.12345, 'Euro')");
+    assertEval("(\u20AC12,345.68)", "=Format(-12345.6789, 'Euro')");
+    assertEval("(\u20AC0.12)", "=Format(-0.12345, 'Euro')");
+
     assertEval("$12,345.68", "=Format(12345.6789, 'Currency')");
     assertEval("$0.12", "=Format(0.12345, 'Currency')");
     assertEval("($12,345.68)", "=Format(-12345.6789, 'Currency')");
@@ -312,6 +319,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("7:00:00 AM", "=Format(#7:00:00 AM#, 'General Date')");
     assertEval("1/2/2003 7:00:00 AM", "=Format('37623.2916666667', 'General Date')");
     assertEval("foo", "=Format('foo', 'General Date')");
+    assertEval("", "=Format('', 'General Date')");
 
     assertEval("Thursday, January 02, 2003", "=Format(#01/02/2003 7:00:00 AM#, 'Long Date')");
     assertEval("02-Jan-03", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Date')");
@@ -320,7 +328,254 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("07:00 AM", "=Format(#01/02/2003 7:00:00 AM#, 'Medium Time')");
     assertEval("07:00", "=Format(#01/02/2003 7:00:00 AM#, 'Short Time')");
     assertEval("19:00", "=Format(#01/02/2003 7:00:00 PM#, 'Short Time')");
+  }
 
+  public void testCustomFormat() throws Exception
+  {
+    assertEval("07:00 a", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p')");
+    assertEval("07:00 p", "=Format(#01/10/2003 7:00:00 PM#, 'hh:nn a/p')");
+    assertEval("07:00 a 6 2", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww')");
+    assertEval("07:00 a 4 1", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p w ww', 3, 3)");
+    assertEval("1313", "=Format(#01/10/2003 7:13:00 AM#, 'nnnn; foo bar')");
+    assertEval("1 1/10/2003 7:13:00 AM ttt this is text",
+               "=Format(#01/10/2003 7:13:00 AM#, 'q c ttt \"this is text\"')");
+    assertEval("1 1/10/2003 ttt this is text",
+               "=Format(#01/10/2003#, 'q c ttt \"this is text\"')");
+    assertEval("4 7:13:00 AM ttt this 'is' \"text\"",
+               "=Format(#7:13:00 AM#, \"q c ttt \"\"this 'is' \"\"\"\"text\"\"\"\"\"\"\")");
+    assertEval("12/29/1899", "=Format('true', 'c')");
+    assertEval("Tuesday, 00 Jan 2, 21:36:00 Y",
+               "=Format('3.9', '*~dddd, yy mmm d, hh:nn:ss \\Y[Yellow]')");
+    assertEval("Tuesday, 00 Jan 01/2, 09:36:00 PM",
+               "=Format('3.9', 'dddd, yy mmm mm/d, hh:nn:ss AMPM')");
+    assertEval("9:36:00 PM",
+               "=Format('3.9', 'ttttt')");
+    assertEval("9:36:00 PM",
+               "=Format(3.9, 'ttttt')");
+    assertEval("foo",
+               "=Format('foo', 'dddd, yy mmm mm d, hh:nn:ss AMPM')");
+
+    assertEvalFormat("';\\y;\\n'",
+                     "foo", "'foo'",
+                     "", "''",
+                     "y", "True",
+                     "n", "'0'",
+                     "", "Null");
+
+    assertEvalFormat("'\\p;\"y\";!\\n;*~\\z[Blue];'",
+                     "foo", "'foo'",
+                     "", "''",
+                     "y", "True",
+                     "n", "'0'",
+                     "p", "'10'",
+                     "z", "Null");
+
+    assertEvalFormat("'\"p\"#.00#\"blah\"'",
+                     "p13.00blah", "13",
+                     "-p13.00blah", "-13",
+                     "p.00blah", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'\"p\"#.00#\"blah\";(\"p\"#.00#\"blah\")'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "p.00blah", "0",
+                     "(p1.00blah)", "True",
+                     "p.00blah", "'false'",
+                     "p37623.292blah", "#01/02/2003 7:00:00 AM#",
+                     "p37623.292blah", "'01/02/2003 7:00:00 AM'",
+                     "NotANumber", "'NotANumber'",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'\"p\"#.00#\"blah\";!(\"p\"#.00#\"blah\")[Red];\"zero\"'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "zero", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'\\p#.00#\"blah\";*~(\"p\"#.00#\"blah\");\"zero\";\"yuck\"'",
+                     "p13.00blah", "13",
+                     "(p13.00blah)", "-13",
+                     "zero", "0",
+                     "", "''",
+                     "yuck", "Null");
+
+    assertEvalFormat("'0.##;(0.###);\"zero\";\"yuck\";'",
+                     "0.03", "0.03",
+                     "zero", "0.003",
+                     "(0.003)", "-0.003",
+                     "zero", "-0.0003");
+
+    assertEvalFormat("'0.##;(0.###E+0)'",
+                     "0.03", "0.03",
+                     "(3.E-4)", "-0.0003",
+                     "0.", "0",
+                     "34223.", "34223",
+                     "(3.422E+4)", "-34223");
+
+    assertEvalFormat("'0.###E-0'",
+                     "3.E-4", "0.0003",
+                     "3.422E4", "34223"
+                     );
+
+    assertEvalFormat("'0.###e+0'",
+                     "3.e-4", "0.0003",
+                     "3.422e+4", "34223"
+                     );
+
+    assertEvalFormat("'0.###e-0'",
+                     "3.e-4", "0.0003",
+                     "3.422e4", "34223"
+                     );
+
+    assertEvalFormat("'#,##0.###'",
+                     "0.003", "0.003",
+                     "0.", "0.0003",
+                     "34,223.", "34223"
+                     );
+
+    assertEvalFormat("'0.'",
+                     "13.", "13",
+                     "0.", "0.003",
+                     "-45.", "-45",
+                     "0.", "-0.003",
+                     "0.", "0"
+                     );
+
+    assertEvalFormat("'0.#'",
+                     "13.", "13",
+                     "0.3", "0.3",
+                     "0.", "0.003",
+                     "-45.", "-45",
+                     "0.", "-0.003",
+                     "0.", "0"
+                     );
+
+    assertEvalFormat("'0'",
+                     "13", "13",
+                     "0", "0.003",
+                     "-45", "-45",
+                     "0", "-0.003",
+                     "0", "0"
+                     );
+
+    assertEvalFormat("'%0'",
+                     "%13", "0.13",
+                     "%0", "0.003",
+                     "-%45", "-0.45",
+                     "%0", "-0.003",
+                     "%0", "0"
+                     );
+
+    assertEvalFormat("'#'",
+                     "13", "13",
+                     "", "0.003",
+                     "-45", "-45",
+                     "", "-0.003",
+                     "", "0"
+                     );
+
+    assertEvalFormat("'\\0\\[#.#\\]\\0'",
+                     "0[13.]0", "13",
+                     "0[.]0", "0.003",
+                     "0[.3]0", "0.3",
+                     "-0[45.]0", "-45",
+                     "0[.]0", "-0.003",
+                     "-0[.3]0", "-0.3",
+                     "0[.]0", "0"
+                     );
+
+    assertEvalFormat("\"#;n'g;'\"",
+                     "5", "5",
+                     "n'g", "-5",
+                     "'", "0");
+
+    assertEvalFormat("'$0.0#'",
+                     "$213.0", "213");
+
+    assertEvalFormat("'@'",
+                     "foo", "'foo'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'>@'",
+                     "FOO", "'foo'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'<@'",
+                     "foo", "'FOO'",
+                     "-13", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'!>@;'",
+                     "O", "'foo'",
+                     "3", "-13",
+                     "0", "0",
+                     "", "''",
+                     "", "Null");
+
+    assertEvalFormat("'!>*~@[Red];\"empty\";'",
+                     "O", "'foo'",
+                     "3", "-13",
+                     "0", "0",
+                     "empty", "''",
+                     "empty", "Null");
+
+    assertEvalFormat("'><@'",
+                     "fOo", "'fOo'");
+
+    assertEvalFormat("'\\x@@@&&&\\y'",
+                     "x   fy", "'f'",
+                     "x   fooy", "'foo'",
+                     "x foobay", "'fooba'",
+                     "xfoobarybaz", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'!\\x@@@&&&\\y'",
+                     "xf  y", "'f'",
+                     "xfooy", "'foo'",
+                     "xfoobay", "'fooba'",
+                     "xbarbazy", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'\\x&&&@@@\\y'",
+                     "x  fy", "'f'",
+                     "xfooy", "'foo'",
+                     "xfoobay", "'fooba'",
+                     "xfoobarybaz", "'foobarbaz'"
+                     );
+
+    assertEvalFormat("'!\\x&&&@@@\\y'",
+                     "xf   y", "'f'",
+                     "xfoo   y", "'foo'",
+                     "xfooba y", "'fooba'",
+                     "xbarbazy", "'foobarbaz'"
+                     );
+  }
+
+  private static void assertEvalFormat(String fmtStr, String... testStrs) {
+    for(int i = 0; i < testStrs.length; i+=2) {
+      String expected = testStrs[i];
+      String val = testStrs[i + 1];
+
+      try {
+        assertEval(expected,
+                   "=Format(" + val + ", " + fmtStr + ")");
+      } catch(AssertionFailedError afe) {
+        throw new AssertionFailedError("Input " + val + ": " +
+                                       afe.getMessage());
+      }
+    }
   }
 
   public void testNumberFuncs() throws Exception
@@ -590,7 +845,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("409.090909090909", "=CStr(SYD(30000,7500,10,10))");
 
     assertEval("-1.63048347266756E-02", "=CStr(Rate(3,200,-610,0,-20,0.1))");
-    assertEval("7.70147248820175E-03", "=CStr(Rate(4*12,-200,8000))");
+    assertEval("7.70147248820165E-03", "=CStr(Rate(4*12,-200,8000))");
     assertEval("-1.09802980531205", "=CStr(Rate(60,93.22,5000,0.1))");
   }
 

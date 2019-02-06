@@ -19,6 +19,17 @@
         for more info.
       </p>
 
+      <subsection name="Java 8+ Support (TBD)">
+        <p>
+          Jackcess now requires Java 8+ as of the 3.0.0 release.  All third
+          party dependencies have been updated to the latest versions.
+          Jackcess now supports Java 8+ data types like LocalDateTime and
+          Path.  Databases can now optionally return Date values (legacy,
+          backwards compatible) or LocalDateTime values.  See <a href="apidocs/com/healthmarketscience/jackcess/DateTimeType.html">DateTimeType</a>
+          for more details.
+        </p>
+      </subsection>
+
       <subsection name="Expression Evaluation (2018-09-08)">
         <p>
           Have you ever wished that Jackcess could handle field "default

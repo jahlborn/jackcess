@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.complex;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -42,14 +43,14 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  *
  * @author James Ahlborn
  */
-public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version> 
+public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   implements VersionHistoryColumnInfo
 {
   private final Column _valueCol;
   private final Column _modifiedCol;
-  
+
   public VersionHistoryColumnInfoImpl(Column column, int complexId,
-                                      Table typeObjTable, Table flatTable) 
+                                      Table typeObjTable, Table flatTable)
     throws IOException
   {
     super(column, complexId, typeObjTable, flatTable);
@@ -83,7 +84,7 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
         getValueColumn().getName());
     ((ColumnImpl)versionedCol).setVersionHistoryColumn((ColumnImpl)getColumn());
   }
-    
+
   public Column getValueColumn() {
     return _valueCol;
   }
@@ -91,7 +92,7 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   public Column getModifiedDateColumn() {
     return _modifiedCol;
   }
-  
+
   @Override
   public ComplexDataType getType() {
     return ComplexDataType.VERSION_HISTORY;
@@ -124,7 +125,7 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
 
     // order versions newest to oldest
     Collections.sort(versions);
-    
+
     return versions;
   }
 
@@ -133,7 +134,7 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
                                 Row rawValue) {
     ComplexValue.Id id = getValueId(rawValue);
     String value = (String)getValueColumn().getRowValue(rawValue);
-    Date modifiedDate = (Date)getModifiedDateColumn().getRowValue(rawValue);
+    Object modifiedDate = getModifiedDateColumn().getRowValue(rawValue);
 
     return new VersionImpl(id, complexValueFk, value, modifiedDate);
   }
@@ -142,47 +143,60 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   protected Object[] asRow(Object[] row, Version version) throws IOException {
     super.asRow(row, version);
     getValueColumn().setRowValue(row, version.getValue());
-    getModifiedDateColumn().setRowValue(row, version.getModifiedDate());
+    getModifiedDateColumn().setRowValue(row, version.getModifiedDateObject());
     return row;
   }
-  
-  public static Version newVersion(String value, Date modifiedDate) {
+
+  public static Version newVersion(String value, Object modifiedDate) {
     return newVersion(INVALID_FK, value, modifiedDate);
   }
-  
+
   public static Version newVersion(ComplexValueForeignKey complexValueFk,
-                                   String value, Date modifiedDate) {
+                                   String value, Object modifiedDate) {
     return new VersionImpl(INVALID_ID, complexValueFk, value, modifiedDate);
   }
 
-
+  @SuppressWarnings("deprecation")
   private static class VersionImpl extends ComplexValueImpl implements Version
   {
     private final String _value;
-    private final Date _modifiedDate;
+    private final Object _modifiedDate;
 
     private VersionImpl(Id id, ComplexValueForeignKey complexValueFk,
-                        String value, Date modifiedDate)
+                        String value, Object modifiedDate)
     {
       super(id, complexValueFk);
       _value = value;
       _modifiedDate = modifiedDate;
     }
-    
+
+    @Override
     public String getValue() {
       return _value;
     }
 
+    @Override
     public Date getModifiedDate() {
+      return (Date)_modifiedDate;
+    }
+
+    @Override
+    public LocalDateTime getModifiedLocalDate() {
+      return (LocalDateTime)_modifiedDate;
+    }
+
+    @Override
+    public Object getModifiedDateObject() {
       return _modifiedDate;
-    }    
-    
+    }
+
+    @Override
     public int compareTo(Version o) {
-      Date d1 = getModifiedDate();
-      Date d2 = o.getModifiedDate();
+      Object d1 = getModifiedDateObject();
+      Object d2 = o.getModifiedDateObject();
 
       // sort by descending date (newest/greatest first)
-      int cmp = d2.compareTo(d1);
+      int cmp = compare(d2, d1);
       if(cmp != 0) {
         return cmp;
       }
@@ -200,11 +214,22 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
               ((id1 < id2) ? 1 : 0));
     }
 
+    @SuppressWarnings("unchecked")
+    private static <C extends Comparable<C>> int compare(Object o1, Object o2) {
+      // each date/time type (Date, LocalDateTime) is mutually Comparable, so
+      // just silence the compiler
+      C c1 = (C)o1;
+      C c2 = (C)o2;
+      return c1.compareTo(c2);
+    }
+
+    @Override
     public void update() throws IOException {
       throw new UnsupportedOperationException(
           "This column does not support value updates");
     }
-    
+
+    @Override
     public void delete() throws IOException {
       throw new UnsupportedOperationException(
           "This column does not support value deletes");
@@ -214,8 +239,8 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
     public String toString()
     {
       return "Version(" + getComplexValueForeignKey() + "," + getId() + ") " +
-        getModifiedDate() + ", " + getValue();
-    } 
+        getModifiedDateObject() + ", " + getValue();
+    }
   }
-  
+
 }

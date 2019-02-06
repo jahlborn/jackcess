@@ -30,19 +30,18 @@ import java.util.Locale;
  */
 public class TemporalConfig
 {
-  public static final String US_DATE_FORMAT = "M/d/yyyy";
-  public static final String US_DATE_IMPLICIT_YEAR_FORMAT = "M/d";
+  public static final String US_DATE_FORMAT = "M/d[/uuuu]";
   public static final String US_TIME_FORMAT_12_FORMAT = "h:mm:ss a";
   public static final String US_TIME_FORMAT_24_FORMAT = "H:mm:ss";
-  public static final String US_LONG_DATE_FORMAT = "EEEE, MMMM dd, yyyy";
+  public static final String US_LONG_DATE_FORMAT = "EEEE, MMMM dd, uuuu";
 
-  public static final String MEDIUM_DATE_FORMAT = "dd-MMM-yy";
+  public static final String MEDIUM_DATE_FORMAT = "dd-MMM-uu";
   public static final String MEDIUM_TIME_FORMAT = "hh:mm a";
   public static final String SHORT_TIME_FORMAT = "HH:mm";
 
   /** default implementation which is configured for the US locale */
   public static final TemporalConfig US_TEMPORAL_CONFIG = new TemporalConfig(
-      US_DATE_FORMAT, US_DATE_IMPLICIT_YEAR_FORMAT, US_LONG_DATE_FORMAT,
+      US_DATE_FORMAT, US_LONG_DATE_FORMAT,
       US_TIME_FORMAT_12_FORMAT, US_TIME_FORMAT_24_FORMAT, '/', ':', Locale.US);
 
   public enum Type {
@@ -133,8 +132,8 @@ public class TemporalConfig
     }
   }
 
+  private final Locale _locale;
   private final String _dateFormat;
-  private final String _dateImplicitYearFormat;
   private final String _longDateFormat;
   private final String _timeFormat12;
   private final String _timeFormat24;
@@ -142,16 +141,15 @@ public class TemporalConfig
   private final char _timeSeparator;
   private final String _dateTimeFormat12;
   private final String _dateTimeFormat24;
-  private final DateFormatSymbols _symbols;
+  private final String[] _amPmStrings;
 
   /**
    * Instantiates a new TemporalConfig with the given configuration.  Note
    * that the date/time format variants will be created by concatenating the
-   * relevant date and time formats, separated by a single space, e.g. "<date>
-   * <time>".
+   * relevant date and time formats, separated by a single space,
+   * e.g. "&lt;date&gt; &lt;time&gt;".
    *
    * @param dateFormat the date (no time) format
-   * @param dateImplicitYearFormat the date (no time) with no year format
    * @param timeFormat12 the 12 hour time format
    * @param timeFormat24 the 24 hour time format
    * @param dateSeparator the primary separator used to separate elements in
@@ -163,21 +161,26 @@ public class TemporalConfig
    *                      string.  This value should differ from the
    *                      dateSeparator.
    */
-  public TemporalConfig(String dateFormat, String dateImplicitYearFormat,
-                        String longDateFormat,
+  public TemporalConfig(String dateFormat, String longDateFormat,
                         String timeFormat12, String timeFormat24,
                         char dateSeparator, char timeSeparator, Locale locale)
   {
+    _locale = locale;
     _dateFormat = dateFormat;
-    _dateImplicitYearFormat = dateImplicitYearFormat;
     _longDateFormat = longDateFormat;
     _timeFormat12 = timeFormat12;
     _timeFormat24 = timeFormat24;
     _dateSeparator = dateSeparator;
     _timeSeparator = timeSeparator;
-    _dateTimeFormat12 = _dateFormat + " " + _timeFormat12;
-    _dateTimeFormat24 = _dateFormat + " " + _timeFormat24;
-    _symbols = DateFormatSymbols.getInstance(locale);
+    _dateTimeFormat12 = toDateTimeFormat(_dateFormat, _timeFormat12);
+    _dateTimeFormat24 = toDateTimeFormat(_dateFormat, _timeFormat24);
+    // there doesn't seem to be a good/easy way to get this in new jave.time
+    // api, so just use old api
+    _amPmStrings = DateFormatSymbols.getInstance(locale).getAmPmStrings();
+  }
+
+  public Locale getLocale() {
+    return _locale;
   }
 
   public String getDateFormat() {
@@ -252,24 +255,8 @@ public class TemporalConfig
     }
   }
 
-  public String getImplicitYearDateTimeFormat(Type type) {
-    switch(type) {
-    case DATE:
-      return _dateImplicitYearFormat;
-    case DATE_TIME:
-      return toDateTimeFormat(_dateImplicitYearFormat, getDefaultTimeFormat());
-    case DATE_TIME_12:
-      return toDateTimeFormat(_dateImplicitYearFormat, getTimeFormat12());
-    case DATE_TIME_24:
-      return toDateTimeFormat(_dateImplicitYearFormat, getTimeFormat24());
-    default:
-      throw new IllegalArgumentException(
-          "the given format does not include a date " + type);
-    }
-  }
-
-  public DateFormatSymbols getDateFormatSymbols() {
-    return _symbols;
+  public String[] getAmPmStrings() {
+    return _amPmStrings;
   }
 
   private static String toDateTimeFormat(String dateFormat, String timeFormat) {

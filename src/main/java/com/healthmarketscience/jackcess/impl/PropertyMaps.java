@@ -103,6 +103,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     return map;
   }
 
+  @Override
   public Iterator<PropertyMapImpl> iterator() {
     return _maps.values().iterator();
   }

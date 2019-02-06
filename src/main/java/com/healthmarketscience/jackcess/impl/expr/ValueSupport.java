@@ -18,9 +18,10 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
@@ -38,9 +39,11 @@ public class ValueSupport
     @Override public boolean isNull() {
       return true;
     }
+    @Override
     public Type getType() {
       return Type.NULL;
     }
+    @Override
     public Object get() {
       return null;
     }
@@ -99,36 +102,42 @@ public class ValueSupport
     return new BigDecimalValue(normalize(s));
   }
 
-  public static Value toDateValue(LocaleContext ctx, Value.Type type, double dd)
-  {
-    return toValue(type, new Date(
-                       ColumnImpl.fromDateDouble(dd, ctx.getCalendar())));
+  static Value toDateValueIfPossible(Value.Type dateType, double dd) {
+    if(DefaultDateFunctions.isValidDateDouble(dd)) {
+      return ValueSupport.toValue(
+          dateType, ColumnImpl.ldtFromLocalDateDouble(dd));
+    }
+    return ValueSupport.toValue(dd);
   }
 
-  public static Value toValue(Calendar cal) {
-    return new DateTimeValue(getDateTimeType(cal), cal.getTime());
+  public static Value toValue(LocalDate ld) {
+    return new DateTimeValue(
+        Value.Type.DATE, LocalDateTime.of(ld, ColumnImpl.BASE_LT));
   }
 
-  public static Value.Type getDateTimeType(Calendar cal) {
-    boolean hasTime = ((cal.get(Calendar.HOUR_OF_DAY) != 0) ||
-                       (cal.get(Calendar.MINUTE) != 0) ||
-                       (cal.get(Calendar.SECOND) != 0));
+  public static Value toValue(LocalTime lt) {
+    return new DateTimeValue(
+        Value.Type.TIME, LocalDateTime.of(ColumnImpl.BASE_LD, lt));
+  }
 
-    boolean hasDate =
-      ((cal.get(Calendar.YEAR) != ExpressionTokenizer.BASE_DATE_YEAR) ||
-       ((cal.get(Calendar.MONTH) + 1) != ExpressionTokenizer.BASE_DATE_MONTH) ||
-       (cal.get(Calendar.DAY_OF_MONTH) != ExpressionTokenizer.BASE_DATE_DAY));
+  public static Value toValue(LocalDateTime ldt) {
+    return new DateTimeValue(getDateTimeType(ldt), ldt);
+  }
+
+  public static Value.Type getDateTimeType(LocalDateTime ldt) {
+    boolean hasDate = !ColumnImpl.BASE_LD.equals(ldt.toLocalDate());
+    boolean hasTime = !ColumnImpl.BASE_LT.equals(ldt.toLocalTime());
 
     return (hasDate ?
             (hasTime ? Value.Type.DATE_TIME : Value.Type.DATE) :
             Value.Type.TIME);
   }
 
-  public static Value toValue(Value.Type type, Date d) {
-    return new DateTimeValue(type, d);
+  public static Value toValue(Value.Type type, LocalDateTime ldt) {
+    return new DateTimeValue(type, ldt);
   }
 
-  public static DateFormat getDateFormatForType(LocaleContext ctx, Value.Type type) {
+  public static DateTimeFormatter getDateFormatForType(LocaleContext ctx, Value.Type type) {
     String fmtStr = null;
     switch(type) {
     case DATE:
@@ -143,7 +152,7 @@ public class ValueSupport
     default:
       throw new EvalException("Unexpected date/time type " + type);
     }
-    return ctx.createDateFormat(fmtStr);
+    return ctx.createDateFormatter(fmtStr);
   }
 
   /**

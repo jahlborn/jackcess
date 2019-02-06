@@ -34,7 +34,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  * with nested filesystems!), and jackcess only supports a small portion of
  * it.  That said, jackcess should support the bulk of the common
  * functionality.
- * <p/>
+ * <p>
  * The main Blob methods will interact with the <i>entire</i> OLE field data
  * which, in most cases, contains additional wrapper information.  In order to
  * access the ultimate "content" contained within the OLE data, the {@link
@@ -42,15 +42,15 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  * variety of formats, so additional sub-interfaces are available to interact
  * with it.  The most specific sub-interface can be determined by the {@link
  * ContentType} of the Content.
- * <p/>
+ * <p>
  * Once an OleBlob is no longer useful, <i>it should be closed</i> using
  * {@link #free} or {@link #close} methods (after which, the instance will no
  * longer be functional).
- * <p/>
+ * <p>
  * Note, the OleBlob implementation is read-only (through the interface).  In
  * order to modify blob contents, create a new OleBlob instance using {@link
  * OleBlob.Builder} and write it to the access database.
- * <p/>
+ * <p>
  * <b>Example for interpreting an existing OLE field:</b>
  * <pre>
  *   OleBlob oleBlob = null;
@@ -66,7 +66,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  *     if(oleBlob != null) { oleBlob.close(); }
  *   }     
  * </pre>
- * <p/>
+ * <p>
  * <b>Example for creating new, embedded ole data:</b>
  * <pre>
  *   OleBlob oleBlob = null;
@@ -79,7 +79,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  *     if(oleBlob != null) { oleBlob.close(); }
  *   }     
  * </pre>
- * <p/>
+ * <p>
  * <b>Example for creating new, linked ole data:</b>
  * <pre>
  *   OleBlob oleBlob = null;

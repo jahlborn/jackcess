@@ -294,8 +294,8 @@ public class PropertyExpressionTest extends TestCase
 
   public static void testCustomEvalConfig() throws Exception
   {
-    TemporalConfig tempConf = new TemporalConfig("yyyy/M/d", "M/d",
-                                                 "yyyy-MMM-d",
+    TemporalConfig tempConf = new TemporalConfig("[uuuu/]M/d",
+                                                 "uuuu-MMM-d",
                                                  "hh.mm.ss a",
                                                  "HH.mm.ss", '/', '.',
                                                  Locale.US);

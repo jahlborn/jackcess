@@ -27,6 +27,10 @@ import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -53,6 +57,7 @@ import org.junit.Assert;
  *
  * @author James Ahlborn
  */
+@SuppressWarnings("deprecation")
 public class TestUtil
 {
   public static final TimeZone TEST_TZ =
@@ -86,7 +91,7 @@ public class TestUtil
     throws Exception
   {
     FileChannel channel = (inMem ? MemFileChannel.newChannel(
-                               file, DatabaseImpl.RW_CHANNEL_MODE)
+                               file, MemFileChannel.RW_CHANNEL_MODE)
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
       .setAutoSync(getTestAutoSync()).setChannel(channel).open();
@@ -376,6 +381,22 @@ public class TestUtil
       throw new AssertionError("Expected " + expTime + " (" + expected +
                                "), found " + foundTime + " (" + found + ")");
     }
+  }
+
+  static void assertSameDate(Date expected, LocalDateTime found)
+  {
+    if((expected == null) && (found == null)) {
+      return;
+    }
+    if((expected == null) || (found == null)) {
+      throw new AssertionError("Expected " + expected + ", found " + found);
+    }
+
+    LocalDateTime expectedLdt = LocalDateTime.ofInstant(
+        Instant.ofEpochMilli(expected.getTime()),
+        ZoneId.systemDefault());
+
+    Assert.assertEquals(expectedLdt, found);
   }
 
   static void copyFile(File srcFile, File dstFile)

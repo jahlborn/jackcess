@@ -27,7 +27,7 @@ import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 import com.healthmarketscience.jackcess.query.Query;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -73,6 +73,7 @@ public abstract class QueryImpl implements Query
   /**
    * Returns the name of the query.
    */
+  @Override
   public String getName() {
     return _name;
   }
@@ -80,10 +81,12 @@ public abstract class QueryImpl implements Query
   /**
    * Returns the type of the query.
    */
+  @Override
   public Type getType() {
     return _type;
   }
 
+  @Override
   public boolean isHidden() {
     return((_objectFlag & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
   }
@@ -91,10 +94,12 @@ public abstract class QueryImpl implements Query
   /**
    * Returns the unique object id of the query.
    */
+  @Override
   public int getObjectId() {
     return _objectId;
   }
 
+  @Override
   public int getObjectFlag() {
     return _objectFlag;
   }
@@ -170,6 +175,7 @@ public abstract class QueryImpl implements Query
     }
   }
 
+  @Override
   public List<String> getParameters() 
   {
     return (new RowFormatter(getParameterRows()) {
@@ -299,6 +305,7 @@ public abstract class QueryImpl implements Query
       }).format();
   }
 
+  @Override
   public String getOwnerAccessType() {
     return(hasFlag(OWNER_ACCESS_SELECT_TYPE) ?
            "WITH OWNERACCESS OPTION" : DEFAULT_TYPE);
@@ -316,6 +323,7 @@ public abstract class QueryImpl implements Query
   /**
    * Returns the actual SQL string which this query data represents.
    */
+  @Override
   public String toSQLString() 
   {
     StringBuilder builder = new StringBuilder();

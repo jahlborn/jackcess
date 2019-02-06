@@ -17,11 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.LocalDateTime;
 
-import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
+import com.healthmarketscience.jackcess.expr.Value;
 
 /**
  *
@@ -29,34 +29,42 @@ import com.healthmarketscience.jackcess.expr.LocaleContext;
  */
 public abstract class BaseValue implements Value
 {
+  @Override
   public boolean isNull() {
     return(getType() == Type.NULL);
   }
 
+  @Override
   public boolean getAsBoolean(LocaleContext ctx) {
     throw invalidConversion(Type.LONG);
   }
 
+  @Override
   public String getAsString(LocaleContext ctx) {
     throw invalidConversion(Type.STRING);
   }
 
-  public Date getAsDateTime(LocaleContext ctx) {
-    return (Date)getAsDateTimeValue(ctx).get();
+  @Override
+  public LocalDateTime getAsLocalDateTime(LocaleContext ctx) {
+    return (LocalDateTime)getAsDateTimeValue(ctx).get();
   }
 
+  @Override
   public Value getAsDateTimeValue(LocaleContext ctx) {
     throw invalidConversion(Type.DATE_TIME);
   }
 
+  @Override
   public Integer getAsLongInt(LocaleContext ctx) {
     throw invalidConversion(Type.LONG);
   }
 
+  @Override
   public Double getAsDouble(LocaleContext ctx) {
     throw invalidConversion(Type.DOUBLE);
   }
 
+  @Override
   public BigDecimal getAsBigDecimal(LocaleContext ctx) {
     throw invalidConversion(Type.BIG_DEC);
   }

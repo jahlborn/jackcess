@@ -36,21 +36,25 @@ public class UpdateQueryImpl extends QueryImpl implements UpdateQuery
     super(name, rows, objectId, objectFlag, Type.UPDATE);
   }
 
+  @Override
   public List<String> getTargetTables() 
   {
     return super.getFromTables();
   }
 
+  @Override
   public String getRemoteDbPath() 
   {
     return super.getFromRemoteDbPath();
   }
 
+  @Override
   public String getRemoteDbType() 
   {
     return super.getFromRemoteDbType();
   }
 
+  @Override
   public List<String> getNewValues()
   {
     return (new RowFormatter(getColumnRows()) {

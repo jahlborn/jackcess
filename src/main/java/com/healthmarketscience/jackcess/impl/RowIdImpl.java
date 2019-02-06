@@ -19,7 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.Serializable;
 
 import com.healthmarketscience.jackcess.RowId;
-import org.apache.commons.lang.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.CompareToBuilder;
 
 
 /**
@@ -98,6 +98,7 @@ public class RowIdImpl implements RowId, Serializable
     return _type;
   }
 
+  @Override
   public int compareTo(RowId other) {
     return compareTo((RowIdImpl)other);
   }

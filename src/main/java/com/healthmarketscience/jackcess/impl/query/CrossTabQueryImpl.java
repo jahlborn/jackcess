@@ -59,6 +59,7 @@ public class CrossTabQueryImpl extends BaseSelectQueryImpl
                                          CROSSTAB_PIVOT_FLAG));
   }
 
+  @Override
   public String getTransformExpression() {
     Row row = getTransformRow();
     if(row.expression == null) {
@@ -69,6 +70,7 @@ public class CrossTabQueryImpl extends BaseSelectQueryImpl
     return toAlias(builder, row.name1).toString();
   }
 
+  @Override
   public String getPivotExpression() {
     return getPivotRow().expression;
   }

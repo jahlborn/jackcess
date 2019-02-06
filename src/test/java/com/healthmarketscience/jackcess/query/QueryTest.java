@@ -29,9 +29,8 @@ import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
 import junit.framework.TestCase;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
-import static org.apache.commons.lang.SystemUtils.LINE_SEPARATOR;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -53,22 +52,22 @@ public class QueryTest extends TestCase
     String expr2 = "Select * from Table2";
 
     UnionQuery query = (UnionQuery)newQuery(
-        Query.Type.UNION, 
+        Query.Type.UNION,
         newRow(TABLE_ATTRIBUTE, expr1, null, UNION_PART1),
         newRow(TABLE_ATTRIBUTE, expr2, null, UNION_PART2));
     setFlag(query, 3);
 
     assertEquals(multiline("Select * from Table1",
-                           "UNION Select * from Table2;"), 
+                           "UNION Select * from Table2;"),
                  query.toSQLString());
 
     setFlag(query, 1);
 
     assertEquals(multiline("Select * from Table1",
-                           "UNION ALL Select * from Table2;"), 
+                           "UNION ALL Select * from Table2;"),
                  query.toSQLString());
 
-    addRows(query, newRow(ORDERBY_ATTRIBUTE, "Table1.id", 
+    addRows(query, newRow(ORDERBY_ATTRIBUTE, "Table1.id",
                                null, null));
 
     assertEquals(multiline("Select * from Table1",
@@ -112,7 +111,7 @@ public class QueryTest extends TestCase
   public void testUpdateQuery() throws Exception
   {
     UpdateQuery query = (UpdateQuery)newQuery(
-        Query.Type.UPDATE, 
+        Query.Type.UPDATE,
         newRow(TABLE_ATTRIBUTE, null, "Table1", null),
         newRow(COLUMN_ATTRIBUTE, "\"some string\"", null, "Table1.id"),
         newRow(COLUMN_ATTRIBUTE, "42", null, "Table1.col1"));
@@ -122,7 +121,7 @@ public class QueryTest extends TestCase
                   "SET Table1.id = \"some string\", Table1.col1 = 42;"),
         query.toSQLString());
 
-    addRows(query, newRow(WHERE_ATTRIBUTE, "(Table1.col2 < 13)", 
+    addRows(query, newRow(WHERE_ATTRIBUTE, "(Table1.col2 < 13)",
                                null, null));
 
     assertEquals(
@@ -135,14 +134,14 @@ public class QueryTest extends TestCase
   public void testSelectQuery() throws Exception
   {
     SelectQuery query = (SelectQuery)newQuery(
-        Query.Type.SELECT, 
+        Query.Type.SELECT,
         newRow(TABLE_ATTRIBUTE, null, "Table1", null));
     setFlag(query, 1);
 
     assertEquals(multiline("SELECT *",
                            "FROM Table1;"),
                  query.toSQLString());
-    
+
     doTestColumns(query);
     doTestSelectFlags(query);
     doTestParameters(query);
@@ -168,7 +167,7 @@ public class QueryTest extends TestCase
     }
 
     addRows(query, newRow(TYPE_ATTRIBUTE, null, -1, null, null));
-    
+
     try {
       query.getTypeRow();
       fail("IllegalStateException should have been thrown");
@@ -265,7 +264,7 @@ public class QueryTest extends TestCase
         newRow(COLUMN_ATTRIBUTE, "54", APPEND_VALUE_FLAG, null, null),
         newRow(COLUMN_ATTRIBUTE, "'hello'", APPEND_VALUE_FLAG, null, null));
 
-    assertEquals(multiline("INSERT INTO Table2", 
+    assertEquals(multiline("INSERT INTO Table2",
                            "VALUES (54, 'hello');"), query.toSQLString());
 
     query = (AppendQuery)newQuery(
@@ -274,7 +273,7 @@ public class QueryTest extends TestCase
         newRow(COLUMN_ATTRIBUTE, "54", APPEND_VALUE_FLAG, null, "ID"),
         newRow(COLUMN_ATTRIBUTE, "'hello'", APPEND_VALUE_FLAG, null, "Field 3"));
 
-    assertEquals(multiline("INSERT INTO Table2 (ID, [Field 3])", 
+    assertEquals(multiline("INSERT INTO Table2 (ID, [Field 3])",
                            "VALUES (54, 'hello');"), query.toSQLString());
   }
 
@@ -291,27 +290,27 @@ public class QueryTest extends TestCase
   private void doTestSelectFlags(SelectQuery query) throws Exception
   {
     setFlag(query, 3);
-    
+
     assertEquals(multiline("SELECT DISTINCT Table1.id, Table1.col AS [Some.Alias], *",
                            "FROM Table1;"),
                  query.toSQLString());
 
     setFlag(query, 9);
-    
+
     assertEquals(multiline("SELECT DISTINCTROW Table1.id, Table1.col AS [Some.Alias], *",
                            "FROM Table1;"),
                  query.toSQLString());
 
     setFlag(query, 7);
-    
+
     assertEquals(multiline("SELECT DISTINCT Table1.id, Table1.col AS [Some.Alias], *",
                            "FROM Table1",
                            "WITH OWNERACCESS OPTION;"),
                  query.toSQLString());
 
-    replaceRows(query, 
+    replaceRows(query,
                 newRow(FLAG_ATTRIBUTE, null, 49, null, "5", null));
-    
+
     assertEquals(multiline("SELECT TOP 5 PERCENT Table1.id, Table1.col AS [Some.Alias], *",
                            "FROM Table1;"),
                  query.toSQLString());
@@ -354,7 +353,7 @@ public class QueryTest extends TestCase
 
     assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
                            "FROM Table1, Table2 AS [Another Table], [Select val from Table3].val AS Table3Val;"),
-                 query.toSQLString());    
+                 query.toSQLString());
   }
 
   private void doTestRemoteDb(SelectQuery query) throws Exception
@@ -387,7 +386,7 @@ public class QueryTest extends TestCase
     assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
                            "FROM [Select val from Table3].val AS Table3Val, Table1 INNER JOIN Table2 AS [Another Table] ON (Table1.id = [Another Table].id);"),
                  query.toSQLString());
-    
+
     addRows(query, newRow(JOIN_ATTRIBUTE, "(Table1.id = Table3Val.id)", 2, "Table1", "Table3Val"));
 
     assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
@@ -417,13 +416,13 @@ public class QueryTest extends TestCase
 
   private void doTestWhereExpression(SelectQuery query) throws Exception
   {
-    addRows(query, newRow(WHERE_ATTRIBUTE, "(Table1.col2 < 13)", 
+    addRows(query, newRow(WHERE_ATTRIBUTE, "(Table1.col2 < 13)",
                           null, null));
 
     assertEquals(multiline("SELECT Table1.id, Table1.col AS [Some.Alias]",
                            "FROM Table1, Table2 AS [Another Table], [Select val from Table3].val AS Table3Val",
                            "WHERE (Table1.col2 < 13);"),
-                 query.toSQLString());    
+                 query.toSQLString());
   }
 
   private void doTestGroupings(SelectQuery query) throws Exception
@@ -435,7 +434,7 @@ public class QueryTest extends TestCase
                            "FROM Table1, Table2 AS [Another Table], [Select val from Table3].val AS Table3Val",
                            "WHERE (Table1.col2 < 13)",
                            "GROUP BY Table1.id, SUM(Table1.val);"),
-                 query.toSQLString());    
+                 query.toSQLString());
   }
 
   private void doTestHavingExpression(SelectQuery query) throws Exception
@@ -447,7 +446,7 @@ public class QueryTest extends TestCase
                            "WHERE (Table1.col2 < 13)",
                            "GROUP BY Table1.id, SUM(Table1.val)",
                            "HAVING (SUM(Table1.val) = 500);"),
-                 query.toSQLString());    
+                 query.toSQLString());
   }
 
   private void doTestOrderings(SelectQuery query) throws Exception
@@ -461,7 +460,7 @@ public class QueryTest extends TestCase
                            "GROUP BY Table1.id, SUM(Table1.val)",
                            "HAVING (SUM(Table1.val) = 500)",
                            "ORDER BY Table1.id, Table2.val DESC;"),
-                 query.toSQLString());    
+                 query.toSQLString());
   }
 
   public void testComplexJoins() throws Exception
@@ -484,7 +483,7 @@ public class QueryTest extends TestCase
 
     addJoinRows(query, 1, 2, 1,
                 2, 1, 1);
-    
+
     assertEquals(multiline("SELECT *",
                            "FROM Table3, Table4, Table5, Table6, Table7, Table8, Table9, Table10, Table1 INNER JOIN Table2 ON (Table2.f3 = Table1.f3) AND (Table1.f0 = Table2.f0);"),
                  query.toSQLString());
@@ -498,7 +497,7 @@ public class QueryTest extends TestCase
     } catch(IllegalStateException e) {
       // success
     }
-    
+
     addJoinRows(query, 1, 2, 1,
                 3, 4, 1,
                 5, 6, 1,
@@ -613,7 +612,7 @@ public class QueryTest extends TestCase
 
   private static void setFlag(Query query, Number newFlagNum)
   {
-    replaceRows(query, 
+    replaceRows(query,
                 newRow(FLAG_ATTRIBUTE, null, newFlagNum, null, null, null));
   }
 
@@ -646,7 +645,7 @@ public class QueryTest extends TestCase
 
   private static String multiline(String... strs)
   {
-    return StringUtils.join(strs, LINE_SEPARATOR);
+    return StringUtils.join(strs, System.lineSeparator());
   }
 
 }

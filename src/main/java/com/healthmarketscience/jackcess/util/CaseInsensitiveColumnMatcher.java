@@ -41,6 +41,7 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
   public CaseInsensitiveColumnMatcher() {
   }
 
+  @Override
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {

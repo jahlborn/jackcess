@@ -16,6 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +56,7 @@ public class DatabaseReadWriteTest extends TestCase
       db.close();
     }
   }
-  
+
   public void testWriteAndReadInMem() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -61,7 +64,7 @@ public class DatabaseReadWriteTest extends TestCase
       db.close();
     }
   }
-  
+
   private static void doTestWriteAndRead(Database db) throws Exception {
       createTestTable(db);
       Object[] row = createTestRow();
@@ -117,7 +120,7 @@ public class DatabaseReadWriteTest extends TestCase
     }
   }
 
-  public void testUpdateRow() throws Exception 
+  public void testUpdateRow() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -250,11 +253,18 @@ public class DatabaseReadWriteTest extends TestCase
     final long timeRange = 100000000L;
     final long timeStep = 37L;
 
-    for(long time = testTime - timeRange; time < testTime + timeRange; 
+    for(long time = testTime - timeRange; time < testTime + timeRange;
         time += timeStep) {
       double accTime = ColumnImpl.toLocalDateDouble(time);
       long newTime = ColumnImpl.fromLocalDateDouble(accTime);
       assertEquals(time, newTime);
+
+      Instant inst = Instant.ofEpochMilli(time);
+      LocalDateTime ldt = LocalDateTime.ofInstant(inst, ZoneOffset.UTC);
+
+      accTime = ColumnImpl.toDateDouble(ldt);
+      LocalDateTime newLdt = ColumnImpl.ldtFromLocalDateDouble(accTime);
+      assertEquals(ldt, newLdt);
     }
   }
 }

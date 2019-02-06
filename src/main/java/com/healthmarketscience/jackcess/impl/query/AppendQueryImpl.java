@@ -36,10 +36,12 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
     super(name, rows, objectId, objectFlag, Type.APPEND);
   }
 
+  @Override
   public String getTargetTable() {
     return getTypeRow().name1;
   }
 
+  @Override
   public List<String> getTargetColumns() {
     return new RowFormatter(getTargetRows()) {
         @Override protected void format(StringBuilder builder, Row row) {
@@ -48,14 +50,17 @@ public class AppendQueryImpl extends BaseSelectQueryImpl implements AppendQuery
       }.format();
   }
 
+  @Override
   public String getRemoteDbPath() {
     return getTypeRow().name2;
   }
 
+  @Override
   public String getRemoteDbType() {
     return getTypeRow().expression;
   }
 
+  @Override
   public List<String> getValues() {
     return new RowFormatter(getValueRows()) {
         @Override protected void format(StringBuilder builder, Row row) {

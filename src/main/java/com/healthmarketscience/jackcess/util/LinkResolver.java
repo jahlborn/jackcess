@@ -36,6 +36,7 @@ public interface LinkResolver
    * @usage _general_field_
    */
   public static final LinkResolver DEFAULT = new LinkResolver() {
+      @Override
       public Database resolveLinkedDatabase(Database linkerDb,
                                             String linkeeFileName)
         throws IOException

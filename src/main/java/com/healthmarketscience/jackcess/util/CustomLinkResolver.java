@@ -17,10 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.util;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Random;
 
 import com.healthmarketscience.jackcess.Database;
@@ -64,11 +65,11 @@ public abstract class CustomLinkResolver implements LinkResolver
   /** temp dbs default to the filesystem, not in memory */
   public static final boolean DEFAULT_IN_MEMORY = false;
   /** temp dbs end up in the system temp dir by default */
-  public static final File DEFAULT_TEMP_DIR = null;
+  public static final Path DEFAULT_TEMP_DIR = null;
 
   private final FileFormat _defaultFormat;
   private final boolean _defaultInMemory;
-  private final File _defaultTempDir;
+  private final Path _defaultTempDir;
 
   /**
    * Creates a CustomLinkResolver using the default behavior for creating temp
@@ -93,7 +94,7 @@ public abstract class CustomLinkResolver implements LinkResolver
    *                       directory)
    */
   protected CustomLinkResolver(FileFormat defaultFormat, boolean defaultInMemory,
-                               File defaultTempDir)
+                               Path defaultTempDir)
   {
     _defaultFormat = defaultFormat;
     _defaultInMemory = defaultInMemory;
@@ -108,7 +109,7 @@ public abstract class CustomLinkResolver implements LinkResolver
     return _defaultInMemory;
   }
 
-  protected File getDefaultTempDirectory() {
+  protected Path getDefaultTempDirectory() {
     return _defaultTempDir;
   }
 
@@ -132,6 +133,7 @@ public abstract class CustomLinkResolver implements LinkResolver
    * @see #createTempDb
    * @see LinkResolver#DEFAULT
    */
+  @Override
   public Database resolveLinkedDatabase(Database linkerDb, String linkeeFileName)
     throws IOException
   {
@@ -161,24 +163,26 @@ public abstract class CustomLinkResolver implements LinkResolver
    * @return the temp db for holding the linked table info
    */
   protected Database createTempDb(Object customFile, FileFormat format,
-                                  boolean inMemory, File tempDir,
+                                  boolean inMemory, Path tempDir,
                                   boolean readOnly)
     throws IOException
   {
-    File dbFile = null;
+    Path dbFile = null;
     FileChannel channel = null;
     boolean success = false;
     try {
 
       if(inMemory) {
-        dbFile = new File(MEM_DB_PREFIX + DB_ID.nextLong() +
-                          format.getFileExtension());
+        dbFile = Paths.get(MEM_DB_PREFIX + DB_ID.nextLong() +
+                           format.getFileExtension());
         channel = MemFileChannel.newChannel();
       } else {
-        dbFile = File.createTempFile(FILE_DB_PREFIX, format.getFileExtension(),
-                                     tempDir);
-        channel = new RandomAccessFile(dbFile, DatabaseImpl.RW_CHANNEL_MODE)
-          .getChannel();
+        dbFile = ((tempDir != null) ?
+                  Files.createTempFile(tempDir, FILE_DB_PREFIX,
+                                       format.getFileExtension()) :
+                  Files.createTempFile(FILE_DB_PREFIX,
+                                       format.getFileExtension()));
+        channel = FileChannel.open(dbFile, DatabaseImpl.RW_CHANNEL_OPTS);
       }
 
       TempDatabaseImpl.initDbChannel(channel, format);
@@ -196,9 +200,12 @@ public abstract class CustomLinkResolver implements LinkResolver
     }
   }
 
-  private static void deleteDbFile(File dbFile) {
-    if((dbFile != null) && (dbFile.getName().startsWith(FILE_DB_PREFIX))) {
-      dbFile.delete();
+  private static void deleteDbFile(Path dbFile) {
+    if((dbFile != null) &&
+       dbFile.getFileName().toString().startsWith(FILE_DB_PREFIX)) {
+      try {
+        Files.deleteIfExists(dbFile);
+      } catch(IOException ignores) {}
     }
   }
 
@@ -256,7 +263,7 @@ public abstract class CustomLinkResolver implements LinkResolver
     private final Object _customFile;
 
     protected TempDatabaseImpl(CustomLinkResolver resolver, Object customFile,
-                               File file, FileChannel channel,
+                               Path file, FileChannel channel,
                                FileFormat fileFormat, boolean readOnly)
       throws IOException
     {
@@ -283,7 +290,7 @@ public abstract class CustomLinkResolver implements LinkResolver
       try {
         super.close();
       } finally {
-        deleteDbFile(getFile());
+        deleteDbFile(getPath());
         closeCustomFile(_customFile);
       }
     }

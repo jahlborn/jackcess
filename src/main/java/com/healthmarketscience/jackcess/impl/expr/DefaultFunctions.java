@@ -18,10 +18,9 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.text.DateFormat;
 import java.text.DecimalFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -54,6 +53,7 @@ public class DefaultFunctions
   }
 
   public static final FunctionLookup LOOKUP = new FunctionLookup() {
+    @Override
     public Function getFunction(String name) {
       return FUNCS.get(DatabaseImpl.toLookupName(name));
     }
@@ -310,16 +310,14 @@ public class DefaultFunctions
         return ValueSupport.NULL_VAL;
       }
 
-      Date d = param1.getAsDateTime(ctx);
+      LocalDateTime ldt = param1.getAsLocalDateTime(ctx);
 
       int fmtType = getOptionalIntParam(ctx, params, 1, 0);
       TemporalConfig.Type tempType = null;
       switch(fmtType) {
       case 0:
         // vbGeneralDate
-        Calendar cal = ctx.getCalendar();
-        cal.setTime(d);
-        Value.Type valType = ValueSupport.getDateTimeType(cal);
+        Value.Type valType = ValueSupport.getDateTimeType(ldt);
         switch(valType) {
         case DATE:
           tempType = TemporalConfig.Type.SHORT_DATE;
@@ -351,9 +349,9 @@ public class DefaultFunctions
         throw new EvalException("Unknown format " + fmtType);
       }
 
-      DateFormat sdf = ctx.createDateFormat(
+      DateTimeFormatter dtf = ctx.createDateFormatter(
           ctx.getTemporalConfig().getDateTimeFormat(tempType));
-      return ValueSupport.toValue(sdf.format(d));
+      return ValueSupport.toValue(dtf.format(ldt));
     }
   });
 

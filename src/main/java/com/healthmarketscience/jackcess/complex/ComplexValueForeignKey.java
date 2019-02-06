@@ -18,10 +18,13 @@ package com.healthmarketscience.jackcess.complex;
 
 import java.io.IOException;
 import java.io.ObjectStreamException;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.DateTimeType;
 
 
 /**
@@ -40,33 +43,33 @@ import com.healthmarketscience.jackcess.Column;
  */
 public abstract class ComplexValueForeignKey extends Number
 {
-  private static final long serialVersionUID = 20130319L;  
+  private static final long serialVersionUID = 20130319L;
 
   @Override
   public byte byteValue() {
     return (byte)get();
   }
-  
+
   @Override
   public short shortValue() {
     return (short)get();
   }
-  
+
   @Override
   public int intValue() {
     return get();
   }
-  
+
   @Override
   public long longValue() {
     return get();
   }
-  
+
   @Override
   public float floatValue() {
     return get();
   }
-  
+
   @Override
   public double doubleValue() {
     return get();
@@ -78,12 +81,12 @@ public abstract class ComplexValueForeignKey extends Number
     // of jackcess)
     return Integer.valueOf(get());
   }
-  
+
   @Override
   public int hashCode() {
     return get();
   }
-  
+
   @Override
   public boolean equals(Object o) {
     return ((this == o) ||
@@ -94,7 +97,7 @@ public abstract class ComplexValueForeignKey extends Number
   @Override
   public String toString() {
     return String.valueOf(get());
-  }  
+  }
 
   public abstract int get();
 
@@ -122,23 +125,48 @@ public abstract class ComplexValueForeignKey extends Number
   public abstract Version addVersion(String value)
     throws IOException;
 
+  /**
+   * @deprecated see {@link DateTimeType} for details
+   */
+  @Deprecated
   public abstract Version addVersion(String value, Date modifiedDate)
+    throws IOException;
+
+  public abstract Version addVersion(String value, LocalDateTime modifiedDate)
     throws IOException;
 
   public abstract Attachment addAttachment(byte[] data)
     throws IOException;
 
+  /**
+   * @deprecated see {@link DateTimeType} for details
+   */
+  @Deprecated
   public abstract Attachment addAttachment(
       String url, String name, String type, byte[] data,
       Date timeStamp, Integer flags)
     throws IOException;
 
+  public abstract Attachment addAttachment(
+      String url, String name, String type, byte[] data,
+      LocalDateTime timeStamp, Integer flags)
+    throws IOException;
+
   public abstract Attachment addEncodedAttachment(byte[] encodedData)
+    throws IOException;
+
+  /**
+   * @deprecated see {@link DateTimeType} for details
+   */
+  @Deprecated
+  public abstract Attachment addEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
+      Date timeStamp, Integer flags)
     throws IOException;
 
   public abstract Attachment addEncodedAttachment(
       String url, String name, String type, byte[] encodedData,
-      Date timeStamp, Integer flags)
+      LocalDateTime timeStamp, Integer flags)
     throws IOException;
 
   public abstract Attachment updateAttachment(Attachment attachment)

@@ -19,17 +19,17 @@ package com.healthmarketscience.jackcess.util;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
-import org.apache.commons.lang.ObjectUtils;
 
 
 /**
  * The RowFilter class encapsulates a filter test for a table row.  This can
  * be used by the {@link #apply(Iterable)} method to create an Iterable over a
  * table which returns only rows matching some criteria.
- * 
+ *
  * @author Patricia Donaldson, Xerox Corporation
  * @usage _general_class_
  */
@@ -59,22 +59,22 @@ public abstract class RowFilter
 
   /**
    * Creates a filter based on a row pattern.
-   * 
+   *
    * @param rowPattern Map from column names to the values to be matched.
    *                   A table row will match the target if
-   *                   {@code ObjectUtils.equals(rowPattern.get(s), row.get(s))}
+   *                   {@code Objects.equals(rowPattern.get(s), row.get(s))}
    *                   for all column names in the pattern map.
    * @return a filter which matches table rows which match the values in the
    *         row pattern
    */
-  public static RowFilter matchPattern(final Map<String,?> rowPattern) 
+  public static RowFilter matchPattern(final Map<String,?> rowPattern)
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Row row) 
+        public boolean matches(Row row)
         {
           for(Map.Entry<String,?> e : rowPattern.entrySet()) {
-            if(!ObjectUtils.equals(e.getValue(), row.get(e.getKey()))) {
+            if(!Objects.equals(e.getValue(), row.get(e.getKey()))) {
               return false;
             }
           }
@@ -89,18 +89,18 @@ public abstract class RowFilter
    * @param columnPattern column to be matched
    * @param valuePattern value to be matched.
    *                     A table row will match the target if
-   *                     {@code ObjectUtils.equals(valuePattern, row.get(columnPattern.getName()))}.
+   *                     {@code Objects.equals(valuePattern, row.get(columnPattern.getName()))}.
    * @return a filter which matches table rows which match the value in the
    *         row pattern
    */
-  public static RowFilter matchPattern(final Column columnPattern, 
-                                       final Object valuePattern) 
+  public static RowFilter matchPattern(final Column columnPattern,
+                                       final Object valuePattern)
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Row row) 
+        public boolean matches(Row row)
         {
-          return ObjectUtils.equals(valuePattern, columnPattern.getRowValue(row));
+          return Objects.equals(valuePattern, columnPattern.getRowValue(row));
         }
       };
   }
@@ -118,7 +118,7 @@ public abstract class RowFilter
   {
     return new RowFilter() {
         @Override
-        public boolean matches(Row row) 
+        public boolean matches(Row row)
         {
           return !filter.matches(row);
         }
@@ -140,7 +140,7 @@ public abstract class RowFilter
   public static Iterable<Row> apply(RowFilter rowFilter,
                                     Iterable<? extends Row> iterable)
   {
-    return((rowFilter != null) ? rowFilter.apply(iterable) : 
+    return((rowFilter != null) ? rowFilter.apply(iterable) :
            (Iterable<Row>)iterable);
   }
 
@@ -152,7 +152,7 @@ public abstract class RowFilter
   {
     private final Iterable<? extends Row> _iterable;
 
-    private FilterIterable(Iterable<? extends Row> iterable) 
+    private FilterIterable(Iterable<? extends Row> iterable)
     {
       _iterable = iterable;
     }
@@ -163,12 +163,14 @@ public abstract class RowFilter
      * iterable, returning only rows for which the {@link RowFilter#matches}
      * method returns {@code true}
      */
-    public Iterator<Row> iterator() 
+    @Override
+    public Iterator<Row> iterator()
     {
       return new Iterator<Row>() {
         private final Iterator<? extends Row> _iter = _iterable.iterator();
         private Row _next;
 
+        @Override
         public boolean hasNext() {
           while(_iter.hasNext()) {
             _next = _iter.next();
@@ -180,6 +182,7 @@ public abstract class RowFilter
           return false;
         }
 
+        @Override
         public Row next() {
           if(_next == null) {
             throw new NoSuchElementException();
@@ -187,6 +190,7 @@ public abstract class RowFilter
           return _next;
         }
 
+        @Override
         public void remove() {
           throw new UnsupportedOperationException();
         }

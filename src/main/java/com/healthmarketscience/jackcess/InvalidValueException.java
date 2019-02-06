@@ -29,4 +29,8 @@ public class InvalidValueException extends JackcessException
   public InvalidValueException(String msg) {
     super(msg);
   }
+
+  public InvalidValueException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
 }

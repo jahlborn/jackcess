@@ -52,7 +52,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -97,6 +97,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       the variable length offset table */
   private static final Comparator<ColumnImpl> VAR_LEN_COLUMN_COMPARATOR =
     new Comparator<ColumnImpl>() {
+      @Override
       public int compare(ColumnImpl c1, ColumnImpl c2) {
         return ((c1.getVarLenTableIndex() < c2.getVarLenTableIndex()) ? -1 :
                 ((c1.getVarLenTableIndex() > c2.getVarLenTableIndex()) ? 1 :
@@ -107,6 +108,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   /** comparator which sorts columns based on their display index */
   private static final Comparator<ColumnImpl> DISPLAY_ORDER_COMPARATOR =
     new Comparator<ColumnImpl>() {
+      @Override
       public int compare(ColumnImpl c1, ColumnImpl c2) {
         return ((c1.getDisplayIndex() < c2.getDisplayIndex()) ? -1 :
                 ((c1.getDisplayIndex() > c2.getDisplayIndex()) ? 1 :
@@ -320,14 +322,17 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  @Override
   public String getName() {
     return _name;
   }
 
+  @Override
   public boolean isHidden() {
     return((_flags & DatabaseImpl.HIDDEN_OBJECT_FLAG) != 0);
   }
 
+  @Override
   public boolean isSystem() {
     return(_tableType != TYPE_USER);
   }
@@ -339,10 +344,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _maxColumnCount;
   }
 
+  @Override
   public int getColumnCount() {
     return _columns.size();
   }
 
+  @Override
   public DatabaseImpl getDatabase() {
     return _database;
   }
@@ -361,11 +368,13 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return getDatabase().getPageChannel();
   }
 
+  @Override
   public ErrorHandler getErrorHandler() {
     return((_tableErrorHandler != null) ? _tableErrorHandler :
            getDatabase().getErrorHandler());
   }
 
+  @Override
   public void setErrorHandler(ErrorHandler newErrorHandler) {
     _tableErrorHandler = newErrorHandler;
   }
@@ -374,11 +383,13 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _tableDefPageNumber;
   }
 
+  @Override
   public boolean isAllowAutoNumberInsert() {
     return ((_allowAutoNumInsert != null) ? (boolean)_allowAutoNumInsert :
             getDatabase().isAllowAutoNumberInsert());
   }
 
+  @Override
   public void setAllowAutoNumberInsert(Boolean allowAutoNumInsert) {
     _allowAutoNumInsert = allowAutoNumInsert;
   }
@@ -432,10 +443,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _longValueBufferH;
   }
 
+  @Override
   public List<ColumnImpl> getColumns() {
     return Collections.unmodifiableList(_columns);
   }
 
+  @Override
   public ColumnImpl getColumn(String name) {
     for(ColumnImpl column : _columns) {
       if(column.getName().equalsIgnoreCase(name)) {
@@ -455,6 +468,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return false;
   }
 
+  @Override
   public PropertyMap getProperties() throws IOException {
     if(_props == null) {
       _props = getPropertyMaps().getDefault();
@@ -474,6 +488,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _propertyMaps;
   }
 
+  @Override
   public void propertiesUpdated() throws IOException {
     // propagate update to columns
     for(ColumnImpl col : _columns) {
@@ -487,10 +502,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
     _calcColEval.reSort();
   }
 
+  @Override
   public List<IndexImpl> getIndexes() {
     return Collections.unmodifiableList(_indexes);
   }
 
+  @Override
   public IndexImpl getIndex(String name) {
     for(IndexImpl index : _indexes) {
       if(index.getName().equalsIgnoreCase(name)) {
@@ -501,6 +518,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
             "Index with name " + name + " does not exist on this table"));
   }
 
+  @Override
   public IndexImpl getPrimaryKeyIndex() {
     for(IndexImpl index : _indexes) {
       if(index.isPrimaryKey()) {
@@ -511,6 +529,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
             "No primary key index found"));
   }
 
+  @Override
   public IndexImpl getForeignKeyIndex(Table otherTable) {
     for(IndexImpl index : _indexes) {
       if(index.isForeignKey() && (index.getReference() != null) &&
@@ -592,6 +611,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _autoNumColumns;
   }
 
+  @Override
   public CursorImpl getDefaultCursor() {
     if(_defaultCursor == null) {
       _defaultCursor = CursorImpl.createCursor(this);
@@ -599,14 +619,17 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return _defaultCursor;
   }
 
+  @Override
   public CursorBuilder newCursor() {
     return new CursorBuilder(this);
   }
 
+  @Override
   public void reset() {
     getDefaultCursor().reset();
   }
 
+  @Override
   public Row deleteRow(Row row) throws IOException {
     deleteRow(row.getId());
     return row;
@@ -690,6 +713,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  @Override
   public Row getNextRow() throws IOException {
     return getDefaultCursor().getNextRow();
   }
@@ -1034,6 +1058,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  @Override
   public Iterator<Row> iterator() {
     return getDefaultCursor().iterator();
   }
@@ -2081,12 +2106,13 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return ByteUtil.getUnsignedVarInt(buffer, getFormat().SIZE_NAME_LENGTH);
   }
 
+  @Override
   public Object[] asRow(Map<String,?> rowMap) {
     return asRow(rowMap, null, false);
   }
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values
+   * Converts a map of columnName -&gt; columnValue to an array of row values
    * appropriate for a call to {@link #addRow(Object...)}, where the generated
    * RowId will be an extra value at the end of the array.
    * @see ColumnImpl#RETURN_ROW_ID
@@ -2096,6 +2122,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return asRow(rowMap, null, true);
   }
 
+  @Override
   public Object[] asUpdateRow(Map<String,?> rowMap) {
     return asRow(rowMap, Column.KEEP_VALUE, false);
   }
@@ -2110,7 +2137,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   }
 
   /**
-   * Converts a map of columnName -> columnValue to an array of row values.
+   * Converts a map of columnName -&gt; columnValue to an array of row values.
    */
   private Object[] asRow(Map<String,?> rowMap, Object defaultValue,
                          boolean returnRowId)
@@ -2137,10 +2164,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return row;
   }
 
+  @Override
   public Object[] addRow(Object... row) throws IOException {
     return addRows(Collections.singletonList(row), false).get(0);
   }
 
+  @Override
   public <M extends Map<String,Object>> M addRowFromMap(M row)
     throws IOException
   {
@@ -2152,12 +2181,14 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return row;
   }
 
+  @Override
   public List<? extends Object[]> addRows(List<? extends Object[]> rows)
     throws IOException
   {
     return addRows(rows, true);
   }
 
+  @Override
   public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows)
     throws IOException
   {
@@ -2387,6 +2418,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     return false;
   }
 
+  @Override
   public Row updateRow(Row row) throws IOException {
     return updateRowFromMap(
         getDefaultCursor().getRowState(), (RowIdImpl)row.getId(), row);
@@ -2998,6 +3030,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
+  @Override
   public int getRowCount() {
     return _rowCount;
   }
@@ -3360,6 +3393,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       _lastModCount = TableImpl.this._modCount;
     }
 
+    @Override
     public TableImpl getTable() {
       return TableImpl.this;
     }

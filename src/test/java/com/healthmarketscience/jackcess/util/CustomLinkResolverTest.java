@@ -16,9 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.util;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
@@ -149,7 +149,7 @@ public class CustomLinkResolverTest extends TestCase
 
     @Override
     protected Database createTempDb(Object customFile, FileFormat format,
-                                    boolean inMemory, File tempDir,
+                                    boolean inMemory, Path tempDir,
                                     boolean readOnly)
       throws IOException
     {

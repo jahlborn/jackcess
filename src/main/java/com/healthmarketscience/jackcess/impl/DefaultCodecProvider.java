@@ -48,6 +48,7 @@ public class DefaultCodecProvider implements CodecProvider
    * This implementation returns DUMMY_HANDLER for databases with no encoding
    * and UNSUPPORTED_HANDLER for databases with any encoding.
    */
+  @Override
   public CodecHandler createHandler(PageChannel channel, Charset charset)
     throws IOException
   {
@@ -80,14 +81,17 @@ public class DefaultCodecProvider implements CodecProvider
    */
   public static class DummyHandler implements CodecHandler
   {
+    @Override
     public boolean canEncodePartialPage() {
       return true;
     }
 
+    @Override
     public boolean canDecodeInline() {
       return true;
     }
 
+    @Override
     public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
                            int pageNumber) 
       throws IOException 
@@ -95,6 +99,7 @@ public class DefaultCodecProvider implements CodecProvider
       // does nothing
     }
 
+    @Override
     public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
                                  int pageOffset) 
       throws IOException
@@ -111,14 +116,17 @@ public class DefaultCodecProvider implements CodecProvider
    */
   public static class UnsupportedHandler implements CodecHandler
   {
+    @Override
     public boolean canEncodePartialPage() {
       return true;
     }
 
+    @Override
     public boolean canDecodeInline() {
       return true;
     }
 
+    @Override
     public void decodePage(ByteBuffer inPage, ByteBuffer outPage, 
                            int pageNumber) 
       throws IOException 
@@ -126,6 +134,7 @@ public class DefaultCodecProvider implements CodecProvider
       throw new UnsupportedCodecException("Decoding not supported.  Please choose a CodecProvider which supports reading the current database encoding.");
     }
 
+    @Override
     public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
                                  int pageOffset) 
       throws IOException

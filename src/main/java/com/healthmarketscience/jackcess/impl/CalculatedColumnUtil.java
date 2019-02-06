@@ -26,7 +26,7 @@ import com.healthmarketscience.jackcess.InvalidValueException;
 
 /**
  * Utility code for dealing with calculated columns.
- * <p/>
+ * <p>
  * These are the currently possible calculated types: FLOAT, DOUBLE, INT,
  * LONG, BIG_INT, GUID, SHORT_DATE_TIME, MONEY, BOOLEAN, NUMERIC, TEXT, MEMO.
  *

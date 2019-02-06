@@ -24,6 +24,7 @@ import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
@@ -87,9 +88,10 @@ public enum DataType {
    */
   DOUBLE((byte) 0x07, Types.DOUBLE, 8),
   /**
-   * Corresponds to a java {@link Date}.  Accepts a Date, any {@link Number}
-   * (using {@link Number#longValue}), or {@code null}.  Equivalent to SQL
-   * {@link Types#TIMESTAMP}, {@link Types#DATE}, {@link Types#TIME}.
+   * Corresponds to a java {@link Date} or {@link LocalDateTime}.  Accepts a
+   * Date, LocalDateTime (or related types), any {@link Number} (using {@link
+   * Number#longValue}), or {@code null}.  Equivalent to SQL {@link
+   * Types#TIMESTAMP}, {@link Types#DATE}, {@link Types#TIME}.
    */
   SHORT_DATE_TIME((byte) 0x08, Types.TIMESTAMP, 8),
   /**

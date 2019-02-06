@@ -21,8 +21,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
@@ -40,8 +40,8 @@ public class TableTest extends TestCase {
   private TestTable _testTable;
   private int _varLenIdx;
   private int _fixedOffset;
-  
-  
+
+
   public TableTest(String name) {
     super(name);
   }
@@ -52,14 +52,14 @@ public class TableTest extends TestCase {
     _varLenIdx = 0;
     _fixedOffset = 0;
   }
-  
+
   public void testCreateRow() throws Exception {
     reset();
     newTestColumn(DataType.INT, false);
     newTestColumn(DataType.TEXT, false);
     newTestColumn(DataType.TEXT, false);
     newTestTable();
-    
+
     int colCount = _columns.size();
     ByteBuffer buffer = createRow(9, "Tim", "McCune");
 
@@ -91,10 +91,10 @@ public class TableTest extends TestCase {
     newTestColumn(DataType.TEXT, true);
     newTestColumn(DataType.TEXT, true);
     newTestTable();
-    
+
     ByteBuffer[] bufCmp1 = encodeColumns(small, large);
     ByteBuffer[] bufCmp2 = encodeColumns(smallNotAscii, largeNotAscii);
-    
+
     assertEquals(buf1[0].remaining(),
                  (bufCmp1[0].remaining() + small.length() - 2));
     assertEquals(buf1[1].remaining(),
@@ -111,7 +111,7 @@ public class TableTest extends TestCase {
 
   }
 
-  private ByteBuffer createRow(Object... row) 
+  private ByteBuffer createRow(Object... row)
     throws IOException
   {
     return _testTable.createRow(row);
@@ -146,7 +146,7 @@ public class TableTest extends TestCase {
     return b;
   }
 
-  private TableImpl newTestTable() 
+  private TableImpl newTestTable()
     throws Exception
   {
     _testTable = new TestTable();
@@ -185,8 +185,8 @@ public class TableTest extends TestCase {
           return getFormat().CHARSET;
         }
         @Override
-        protected Calendar getCalendar() { 
-          return Calendar.getInstance();
+        public TimeZone getTimeZone() {
+          return TimeZone.getDefault();
         }
         @Override
         public boolean isCompressedUnicode() {

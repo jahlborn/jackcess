@@ -32,7 +32,7 @@ import com.healthmarketscience.jackcess.impl.TableCreator;
 
 /**
  * Builder style class for constructing a {@link Table}.
- * <p/>
+ * <p>
  * Example:
  * <pre>
  *   Table table = new TableBuilder("Test")

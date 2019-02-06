@@ -44,7 +44,7 @@ public abstract class BaseNumericValue extends BaseValue
   @Override
   public Value getAsDateTimeValue(LocaleContext ctx) {
     Value dateValue = DefaultDateFunctions.numberToDateValue(
-        ctx, getNumber().doubleValue());
+        getNumber().doubleValue());
     if(dateValue == null) {
       throw invalidConversion(Value.Type.DATE_TIME);
     }

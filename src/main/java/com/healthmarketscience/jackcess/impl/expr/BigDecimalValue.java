@@ -33,10 +33,12 @@ public class BigDecimalValue extends BaseNumericValue
     _val = val;
   }
 
+  @Override
   public Type getType() {
     return Type.BIG_DEC;
   }
 
+  @Override
   public Object get() {
     return _val;
   }

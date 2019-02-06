@@ -17,13 +17,11 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,11 +41,10 @@ import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.ParseException;
-import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 
 /**
@@ -68,8 +65,6 @@ public class Expressionator
   }
 
   public interface ParseContext extends LocaleContext {
-    public TemporalConfig getTemporalConfig();
-    public SimpleDateFormat createDateFormat(String formatStr);
     public FunctionLookup getFunctionLookup();
   }
 
@@ -1318,7 +1313,7 @@ public class Expressionator
     case DATE:
     case TIME:
     case DATE_TIME:
-      return ValueSupport.toValue(valType, (Date)value);
+      return ValueSupport.toValue(valType, (LocalDateTime)value);
     case LONG:
       return ValueSupport.toValue((Integer)value);
     case DOUBLE:
@@ -1690,22 +1685,27 @@ public class Expressionator
       return areConstant(_left, _right);
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getLeft() {
       return _left;
     }
 
+    @Override
     public void setLeft(Expr left) {
       _left = left;
     }
 
+    @Override
     public Expr getRight() {
       return _right;
     }
 
+    @Override
     public void setRight(Expr right) {
       _right = right;
     }
@@ -1753,14 +1753,17 @@ public class Expressionator
       return _expr.isConstant();
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getRight() {
       return _expr;
     }
 
+    @Override
     public void setRight(Expr right) {
       _expr = right;
     }
@@ -1859,14 +1862,17 @@ public class Expressionator
       return _expr.isConstant();
     }
 
+    @Override
     public OpType getOp() {
       return _op;
     }
 
+    @Override
     public Expr getLeft() {
       return _expr;
     }
 
+    @Override
     public void setLeft(Expr left) {
       _expr = left;
     }
@@ -1991,10 +1997,12 @@ public class Expressionator
       return _expr.isConstant() && areConstant(_startRangeExpr, _endRangeExpr);
     }
 
+    @Override
     public Expr getRight() {
       return _endRangeExpr;
     }
 
+    @Override
     public void setRight(Expr right) {
       _endRangeExpr = right;
     }
@@ -2037,22 +2045,27 @@ public class Expressionator
       _expr = expr;
     }
 
+    @Override
     public String toDebugString(LocaleContext ctx) {
       return _expr.toDebugString(ctx);
     }
 
+    @Override
     public String toRawString() {
       return _rawExprStr;
     }
 
+    @Override
     public String toCleanString(LocaleContext ctx) {
       return _expr.toCleanString(ctx);
     }
 
+    @Override
     public boolean isConstant() {
       return _expr.isConstant();
     }
 
+    @Override
     public void collectIdentifiers(Collection<Identifier> identifiers) {
       _expr.collectIdentifiers(identifiers);
     }
@@ -2081,7 +2094,7 @@ public class Expressionator
       case DATE:
       case TIME:
       case DATE_TIME:
-        return val.getAsDateTime(ctx);
+        return val.getAsLocalDateTime(ctx);
       case LONG:
         return val.getAsLongInt(ctx);
       case DOUBLE:
@@ -2117,6 +2130,7 @@ public class Expressionator
       _resultType = resultType;
     }
 
+    @Override
     public Object eval(EvalContext ctx) {
       return evalValue(_resultType, ctx);
     }
@@ -2132,6 +2146,7 @@ public class Expressionator
       super(rawExprStr, expr);
     }
 
+    @Override
     public Object eval(EvalContext ctx) {
       return evalCondition(ctx);
     }

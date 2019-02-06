@@ -17,11 +17,14 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.complex;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.AttachmentColumnInfo;
@@ -50,14 +53,15 @@ import com.healthmarketscience.jackcess.complex.VersionHistoryColumnInfo;
  *
  * @author James Ahlborn
  */
+@SuppressWarnings("deprecation")
 public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
 {
-  private static final long serialVersionUID = 20110805L;  
-  
+  private static final long serialVersionUID = 20110805L;
+
   private transient final Column _column;
   private final int _value;
   private transient List<? extends ComplexValue> _values;
-  
+
   public ComplexValueForeignKeyImpl(Column column, int value) {
     _column = column;
     _value = value;
@@ -72,12 +76,12 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
   public Column getColumn() {
     return _column;
   }
-  
+
   @Override
   public ComplexDataType getComplexType() {
     return getComplexInfo().getType();
   }
-  
+
   protected ComplexColumnInfo<? extends ComplexValue> getComplexInfo() {
     return _column.getComplexInfo();
   }
@@ -85,7 +89,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
   protected VersionHistoryColumnInfo getVersionInfo() {
     return (VersionHistoryColumnInfo)getComplexInfo();
   }
-  
+
   protected AttachmentColumnInfo getAttachmentInfo() {
     return (AttachmentColumnInfo)getComplexInfo();
   }
@@ -93,27 +97,27 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
   protected MultiValueColumnInfo getMultiValueInfo() {
     return (MultiValueColumnInfo)getComplexInfo();
   }
-    
+
   protected UnsupportedColumnInfo getUnsupportedInfo() {
     return (UnsupportedColumnInfo)getComplexInfo();
   }
-    
+
   @Override
   public int countValues() throws IOException {
     return getComplexInfo().countValues(get());
   }
-  
+
   public List<Row> getRawValues() throws IOException {
     return getComplexInfo().getRawValues(get());
-  }  
-  
+  }
+
   @Override
   public List<? extends ComplexValue> getValues() throws IOException {
     if(_values == null) {
       _values = getComplexInfo().getValues(this);
     }
     return _values;
-  }  
+  }
 
   @Override
   @SuppressWarnings("unchecked")
@@ -123,7 +127,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     }
     return (List<Version>)getValues();
   }
-  
+
   @Override
   @SuppressWarnings("unchecked")
   public List<Attachment> getAttachments() throws IOException {
@@ -132,7 +136,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     }
     return (List<Attachment>)getValues();
   }
-  
+
   @Override
   @SuppressWarnings("unchecked")
   public List<SingleValue> getMultiValues() throws IOException {
@@ -141,7 +145,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     }
     return (List<SingleValue>)getValues();
   }
-  
+
   @Override
   @SuppressWarnings("unchecked")
   public List<UnsupportedValue> getUnsupportedValues() throws IOException {
@@ -150,20 +154,29 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     }
     return (List<UnsupportedValue>)getValues();
   }
-  
+
   @Override
   public void reset() {
     // discard any cached values
     _values = null;
   }
-  
+
   @Override
   public Version addVersion(String value) throws IOException {
-    return addVersion(value, new Date());
+    return addVersionImpl(value, now());
   }
-  
+
   @Override
   public Version addVersion(String value, Date modifiedDate) throws IOException {
+    return addVersionImpl(value, modifiedDate);
+  }
+
+  @Override
+  public Version addVersion(String value, LocalDateTime modifiedDate) throws IOException {
+    return addVersionImpl(value, modifiedDate);
+  }
+
+  private Version addVersionImpl(String value, Object modifiedDate) throws IOException {
     reset();
     Version v = VersionHistoryColumnInfoImpl.newVersion(this, value, modifiedDate);
     getVersionInfo().addValue(v);
@@ -172,13 +185,30 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
 
   @Override
   public Attachment addAttachment(byte[] data) throws IOException {
-    return addAttachment(null, null, null, data, null, null);
+    return addAttachmentImpl(null, null, null, data, null, null);
   }
-  
+
   @Override
   public Attachment addAttachment(
       String url, String name, String type, byte[] data,
       Date timeStamp, Integer flags)
+    throws IOException
+  {
+    return addAttachmentImpl(url, name, type, data, timeStamp, flags);
+  }
+
+  @Override
+  public Attachment addAttachment(
+      String url, String name, String type, byte[] data,
+      LocalDateTime timeStamp, Integer flags)
+    throws IOException
+  {
+    return addAttachmentImpl(url, name, type, data, timeStamp, flags);
+  }
+
+  private Attachment addAttachmentImpl(
+      String url, String name, String type, byte[] data,
+      Object timeStamp, Integer flags)
     throws IOException
   {
     reset();
@@ -192,13 +222,32 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
   public Attachment addEncodedAttachment(byte[] encodedData)
     throws IOException
   {
-    return addEncodedAttachment(null, null, null, encodedData, null, null);
+    return addEncodedAttachmentImpl(null, null, null, encodedData, null, null);
   }
-   
+
   @Override
   public Attachment addEncodedAttachment(
       String url, String name, String type, byte[] encodedData,
       Date timeStamp, Integer flags)
+    throws IOException
+  {
+    return addEncodedAttachmentImpl(url, name, type, encodedData, timeStamp,
+                                    flags);
+  }
+
+  @Override
+  public Attachment addEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
+      LocalDateTime timeStamp, Integer flags)
+    throws IOException
+  {
+    return addEncodedAttachmentImpl(url, name, type, encodedData, timeStamp,
+                                    flags);
+  }
+
+  private Attachment addEncodedAttachmentImpl(
+      String url, String name, String type, byte[] encodedData,
+      Object timeStamp, Integer flags)
     throws IOException
   {
     reset();
@@ -207,21 +256,21 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     getAttachmentInfo().addValue(a);
     return a;
   }
- 
+
   @Override
   public Attachment updateAttachment(Attachment attachment) throws IOException {
     reset();
     getAttachmentInfo().updateValue(attachment);
     return attachment;
   }
-  
+
   @Override
   public Attachment deleteAttachment(Attachment attachment) throws IOException {
     reset();
     getAttachmentInfo().deleteValue(attachment);
     return attachment;
   }
-  
+
   @Override
   public SingleValue addMultiValue(Object value) throws IOException {
     reset();
@@ -229,21 +278,21 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     getMultiValueInfo().addValue(v);
     return v;
   }
-  
+
   @Override
   public SingleValue updateMultiValue(SingleValue value) throws IOException {
     reset();
     getMultiValueInfo().updateValue(value);
     return value;
   }
-  
+
   @Override
   public SingleValue deleteMultiValue(SingleValue value) throws IOException {
     reset();
     getMultiValueInfo().deleteValue(value);
     return value;
   }
-  
+
   @Override
   public UnsupportedValue addUnsupportedValue(Map<String,?> values)
     throws IOException
@@ -253,7 +302,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     getUnsupportedInfo().addValue(v);
     return v;
   }
-  
+
   @Override
   public UnsupportedValue updateUnsupportedValue(UnsupportedValue value)
     throws IOException
@@ -262,7 +311,7 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     getUnsupportedInfo().updateValue(value);
     return value;
   }
-  
+
   @Override
   public UnsupportedValue deleteUnsupportedValue(UnsupportedValue value)
     throws IOException
@@ -271,16 +320,24 @@ public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
     getUnsupportedInfo().deleteValue(value);
     return value;
   }
-  
+
   @Override
   public void deleteAllValues() throws IOException {
     reset();
     getComplexInfo().deleteAllValues(this);
   }
-  
+
   @Override
   public boolean equals(Object o) {
     return(super.equals(o) &&
            (_column == ((ComplexValueForeignKeyImpl)o)._column));
+  }
+
+  private Object now() {
+    Database db = getColumn().getDatabase();
+    if(db.getDateTimeType() == DateTimeType.DATE) {
+      return new Date();
+    }
+    return LocalDateTime.now(db.getZoneId());
   }
 }

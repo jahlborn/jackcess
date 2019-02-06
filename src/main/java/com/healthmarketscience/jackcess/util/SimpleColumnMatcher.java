@@ -19,12 +19,12 @@ package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import org.apache.commons.lang.ObjectUtils;
 
 /**
  * Simple concrete implementation of ColumnMatcher which tests for equality.
@@ -41,6 +41,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
   public SimpleColumnMatcher() {
   }
 
+  @Override
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
   {
@@ -48,7 +49,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
       return true;
     }
 
-    if((value1 != null) && (value2 != null) && 
+    if((value1 != null) && (value2 != null) &&
        (value1.getClass() != value2.getClass())) {
 
       // the values aren't the same type, try coercing them to "internal"
@@ -58,7 +59,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
         DatabaseImpl db = (DatabaseImpl)table.getDatabase();
         Object internalV1 = ColumnImpl.toInternalValue(dataType, value1, db);
         Object internalV2 = ColumnImpl.toInternalValue(dataType, value2, db);
-        
+
         return equals(internalV1, internalV2);
       } catch(IOException e) {
         // ignored, just go with the original result
@@ -73,7 +74,7 @@ public class SimpleColumnMatcher implements ColumnMatcher {
    */
   private static boolean equals(Object o1, Object o2)
   {
-    return (ObjectUtils.equals(o1, o2) || 
+    return (Objects.equals(o1, o2) ||
             ((o1 instanceof byte[]) && (o2 instanceof byte[]) &&
              Arrays.equals((byte[])o1, (byte[])o2)));
   }

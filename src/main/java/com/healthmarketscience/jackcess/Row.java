@@ -20,13 +20,14 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.util.OleBlob;
 
 
 /**
- * A row of data as column name->value pairs.  Values are strongly typed, and
+ * A row of data as column name-&gt;value pairs.  Values are strongly typed, and
  * column names are case sensitive.
  *
  * @author James Ahlborn
@@ -35,7 +36,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
 public interface Row extends Map<String,Object>
 {
   /**
-   * @return the id of this row 
+   * @return the id of this row
    */
   public RowId getId();
 
@@ -90,8 +91,22 @@ public interface Row extends Map<String,Object>
   /**
    * Convenience method which gets the value for the row with the given name,
    * casting it to a Date (DataType SHORT_DATE_TIME).
+   * @deprecated this is only valid for Database instances configured for the
+   *             legacy {@link DateTimeType#DATE}.  Prefer using
+   *             {@link DateTimeType#LOCAL_DATE_TIME} and the corresponding
+   *             {@link #getLocalDateTime} method. Using Date is being phased
+   *             out and will eventually be removed.
    */
+  @Deprecated
   public Date getDate(String name);
+
+  /**
+   * Convenience method which gets the value for the row with the given name,
+   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME).  This method
+   * will only work for Database instances configured for
+   * {@link DateTimeType#LOCAL_DATE_TIME}.
+   */
+  public LocalDateTime getLocalDateTime(String name);
 
   /**
    * Convenience method which gets the value for the row with the given name,
@@ -108,7 +123,7 @@ public interface Row extends Map<String,Object>
   /**
    * Convenience method which gets the value for the row with the given name,
    * converting it to an {@link OleBlob} (DataTypes OLE).
-   * </p>
+   * <p>
    * Note, <i>the OleBlob should be closed after use</i>.
    */
   public OleBlob getBlob(String name) throws IOException;

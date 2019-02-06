@@ -17,8 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
@@ -42,7 +42,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
 
   private final DatabaseImpl _db;
   private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
-  private Map<String,SimpleDateFormat> _sdfs;
+  private Map<String,DateTimeFormatter> _sdfs;
   private Map<String,DecimalFormat> _dfs;
   private TemporalConfig _temporal = TemporalConfig.US_TEMPORAL_CONFIG;
   private NumericConfig _numeric = NumericConfig.US_NUMERIC_CONFIG;
@@ -57,10 +57,12 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     return _db;
   }
 
+  @Override
   public TemporalConfig getTemporalConfig() {
     return _temporal;
   }
 
+  @Override
   public void setTemporalConfig(TemporalConfig temporal) {
     if(_temporal != temporal) {
       _temporal = temporal;
@@ -68,14 +70,17 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     }
   }
 
-  public Calendar getCalendar() {
-    return _db.getCalendar();
+  @Override
+  public ZoneId getZoneId() {
+    return _db.getZoneId();
   }
 
+  @Override
   public NumericConfig getNumericConfig() {
     return _numeric;
   }
 
+  @Override
   public void setNumericConfig(NumericConfig numeric) {
     if(_numeric != numeric) {
       _numeric = numeric;
@@ -83,35 +88,40 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
     }
   }
 
+  @Override
   public FunctionLookup getFunctionLookup() {
     return _funcs;
   }
 
+  @Override
   public void setFunctionLookup(FunctionLookup lookup) {
     _funcs = lookup;
   }
 
+  @Override
   public Bindings getBindings() {
     return _bindings;
   }
 
+  @Override
   public void setBindings(Bindings bindings) {
     _bindings = bindings;
   }
 
-  public SimpleDateFormat createDateFormat(String formatStr) {
+  @Override
+  public DateTimeFormatter createDateFormatter(String formatStr) {
     if(_sdfs == null) {
-      _sdfs = new SimpleCache<String,SimpleDateFormat>(MAX_CACHE_SIZE);
+      _sdfs = new SimpleCache<String,DateTimeFormatter>(MAX_CACHE_SIZE);
     }
-    SimpleDateFormat sdf = _sdfs.get(formatStr);
+    DateTimeFormatter sdf = _sdfs.get(formatStr);
     if(sdf == null) {
-      sdf = _db.createDateFormat(formatStr);
-      sdf.setDateFormatSymbols(_temporal.getDateFormatSymbols());
+      sdf = DateTimeFormatter.ofPattern(formatStr, _temporal.getLocale());
       _sdfs.put(formatStr, sdf);
     }
     return sdf;
   }
 
+  @Override
   public DecimalFormat createDecimalFormat(String formatStr) {
     if(_dfs == null) {
       _dfs = new SimpleCache<String,DecimalFormat>(MAX_CACHE_SIZE);
@@ -127,9 +137,5 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
 
   public float getRandom(Integer seed) {
     return _rndCtx.getRandom(seed);
-  }
-
-  void resetDateTimeConfig() {
-    _sdfs = null;
   }
 }

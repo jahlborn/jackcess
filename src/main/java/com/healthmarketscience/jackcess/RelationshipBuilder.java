@@ -32,7 +32,7 @@ import com.healthmarketscience.jackcess.impl.RelationshipImpl;
  * if integrity enforcement is enabled, there must already be a unique index
  * on the "from" Table for the relevant columns (same requirement as MS
  * Access).
- * <p/>
+ * <p>
  * Example:
  * <pre>
  *   Relationship rel = new RelationshipBuilder("FromTable", "ToTable")

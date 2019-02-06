@@ -22,14 +22,13 @@ import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.query.Query;
-import org.apache.commons.lang.SystemUtils;
 
 /**
  * Constants used by the query data parsing.
- * 
+ *
  * @author James Ahlborn
  */
-public class QueryFormat 
+public class QueryFormat
 {
 
   private QueryFormat() {}
@@ -90,7 +89,7 @@ public class QueryFormat
   public static final short APPEND_VALUE_FLAG = (short)0x8000;
 
   public static final short CROSSTAB_PIVOT_FLAG = 0x01;
-  public static final short CROSSTAB_NORMAL_FLAG = 0x02;  
+  public static final short CROSSTAB_NORMAL_FLAG = 0x02;
 
   public static final String UNION_PART1 = "X7YZ_____1";
   public static final String UNION_PART2 = "X7YZ_____2";
@@ -102,10 +101,10 @@ public class QueryFormat
   public static final Pattern IDENTIFIER_SEP_PAT = Pattern.compile("\\.");
   public static final char IDENTIFIER_SEP_CHAR = '.';
 
-  public static final String NEWLINE = SystemUtils.LINE_SEPARATOR;
+  public static final String NEWLINE = System.lineSeparator();
 
 
-  public static final Map<Short,String> PARAM_TYPE_MAP = 
+  public static final Map<Short,String> PARAM_TYPE_MAP =
     new HashMap<Short,String>();
   static {
     PARAM_TYPE_MAP.put((short)0, "Value");
@@ -123,7 +122,7 @@ public class QueryFormat
     PARAM_TYPE_MAP.put((short)DataType.GUID.getValue(), "Guid");
   }
 
-  public static final Map<Short,String> JOIN_TYPE_MAP = 
+  public static final Map<Short,String> JOIN_TYPE_MAP =
     new HashMap<Short,String>();
   static {
     JOIN_TYPE_MAP.put((short)1, " INNER JOIN ");
@@ -131,7 +130,7 @@ public class QueryFormat
     JOIN_TYPE_MAP.put((short)3, " RIGHT JOIN ");
   }
 
-  public static final Map<Short,Query.Type> TYPE_MAP = 
+  public static final Map<Short,Query.Type> TYPE_MAP =
     new HashMap<Short,Query.Type>();
   static {
     for(Query.Type type : Query.Type.values()) {

@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.Flushable;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.time.ZoneId;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -29,8 +31,8 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import com.healthmarketscience.jackcess.expr.EvalConfig;
-import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import com.healthmarketscience.jackcess.query.Query;
 import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.LinkResolver;
@@ -44,11 +46,11 @@ import com.healthmarketscience.jackcess.util.TableIterableBuilder;
  * Database has been opened, you can interact with the data via the relevant
  * {@link Table}.  When a Database instance is no longer useful, it should
  * <b>always</b> be closed ({@link #close}) to avoid corruption.
- * <p/>
+ * <p>
  * Database instances (and all the related objects) are <i>not</i>
  * thread-safe.  However, separate Database instances (and their respective
  * objects) can be used by separate threads without a problem.
- * <p/>
+ * <p>
  * Database instances do not implement any "transactional" support, and
  * therefore concurrent editing of the same database file by multiple Database
  * instances (or with outside programs such as MS Access) <i>will generally
@@ -104,7 +106,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     "com.healthmarketscience.jackcess.brokenNio";
 
   /** system property which can be used to set the default sort order for
-   *  table columns.  Value should be one {@link Table.ColumnOrder} enum
+   *  table columns.  Value should be one of {@link Table.ColumnOrder} enum
    *  values.
    * @usage _intermediate_field_
    */
@@ -131,6 +133,13 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    */
   public static final String ENABLE_EXPRESSION_EVALUATION_PROPERTY =
     "com.healthmarketscience.jackcess.enableExpressionEvaluation";
+
+  /** system property which can be used to set the default date/Time type.
+   * Value should be one of {@link DateTimeType} enum values.
+   * @usage _general_field_
+   */
+  public static final String DATE_TIME_TYPE_PROPERTY =
+    "com.healthmarketscience.jackcess.dateTimeType";
 
   /**
    * Enum which indicates which version of Access created the database.
@@ -179,6 +188,11 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public File getFile();
 
   /**
+   * Returns the File underlying this Database
+   */
+  public Path getPath();
+
+  /**
    * @return The names of all of the user tables
    * @usage _general_method_
    */
@@ -201,6 +215,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    *         database while an Iterator is in use.
    * @usage _general_method_
    */
+  @Override
   public Iterator<Table> iterator();
 
   /**
@@ -240,7 +255,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Finds all the relationships in the database in <i>non-system</i> tables.
-   * </p>
+   * <p>
    * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
    * database which could cause memory issues.
    * @usage _intermediate_method_
@@ -250,7 +265,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   /**
    * Finds <i>all</i> the relationships in the database, <i>including system
    * tables</i>.
-   * </p>
+   * <p>
    * Warning, this may load <i>all</i> the Tables (metadata, not data) in the
    * database which could cause memory issues.
    * @usage _intermediate_method_
@@ -319,6 +334,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * databases) to disk.
    * @usage _general_method_
    */
+  @Override
   public void flush() throws IOException;
 
   /**
@@ -329,6 +345,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * OutputStream or jdbc Connection).
    * @usage _general_method_
    */
+  @Override
   public void close() throws IOException;
 
   /**
@@ -377,16 +394,32 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public boolean isLinkedTable(Table table) throws IOException;
 
   /**
-   * Gets currently configured TimeZone (always non-{@code null}).
+   * Gets currently configured TimeZone (always non-{@code null} and aligned
+   * with the ZoneId).
    * @usage _intermediate_method_
    */
   public TimeZone getTimeZone();
 
   /**
-   * Sets a new TimeZone.  If {@code null}, resets to the default value.
+   * Sets a new TimeZone.  If {@code null}, resets to the default value.  Note
+   * that setting the TimeZone will alter the ZoneId as well.
    * @usage _intermediate_method_
    */
   public void setTimeZone(TimeZone newTimeZone);
+
+  /**
+   * Gets currently configured ZoneId (always non-{@code null} and aligned
+   * with the TimeZone).
+   * @usage _intermediate_method_
+   */
+  public ZoneId getZoneId();
+
+  /**
+   * Sets a new ZoneId.  If {@code null}, resets to the default value.  Note
+   * that setting the ZoneId will alter the TimeZone as well.
+   * @usage _intermediate_method_
+   */
+  public void setZoneId(ZoneId newZoneId);
 
   /**
    * Gets currently configured Charset (always non-{@code null}).
@@ -492,4 +525,16 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * Returns the EvalConfig for configuring expression evaluation.
    */
   public EvalConfig getEvalConfig();
+
+  /**
+   * Gets the currently configured DateTimeType.
+   * @usage _general_method_
+   */
+  public DateTimeType getDateTimeType();
+
+  /**
+   * Sets the DateTimeType.  If {@code null}, resets to the default value.
+   * @usage _general_method_
+   */
+  public void setDateTimeType(DateTimeType dateTimeType);
 }

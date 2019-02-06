@@ -108,22 +108,27 @@ public class UnsupportedColumnInfoImpl
       _values = values;
     }
 
+    @Override
     public Map<String,Object> getValues() {
       return _values;
     }
     
+    @Override
     public Object get(String columnName) {
       return getValues().get(columnName);
     }
 
+    @Override
     public void set(String columnName, Object value) {
       getValues().put(columnName, value);
     }
 
+    @Override
     public void update() throws IOException {
       getComplexValueForeignKey().updateUnsupportedValue(this);
     }
     
+    @Override
     public void delete() throws IOException {
       getComplexValueForeignKey().deleteUnsupportedValue(this);
     }

@@ -32,16 +32,16 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.OleUtil.*;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.poi.poifs.filesystem.DirectoryEntry;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
 /**
  * Utility code for working with OLE data which is in the compound storage
  * format.  This functionality relies on the optional POI library.
- * <p/>
+ * <p>
  * Note that all POI usage is restricted to this file so that the basic ole
  * support in OleUtil can be utilized without requiring POI.
  *
@@ -57,7 +57,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
   static {
     // force a poi class to be loaded to ensure that when this class is
     // loaded, we know that the poi classes are available
-    NPOIFSFileSystem.class.getName();
+    POIFSFileSystem.class.getName();
   }
 
   public CompoundOleUtil()
@@ -67,6 +67,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
   /**
    * Creates a nes CompoundContent for the given blob information.
    */
+  @Override
   public ContentImpl createCompoundPackageContent(
       OleBlobImpl blob, String prettyName, String className, String typeName,
       ByteBuffer blobBb, int dataBlockLen)
@@ -139,7 +140,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
     extends EmbeddedPackageContentImpl
     implements CompoundContent
   {
-    private NPOIFSFileSystem _fs;
+    private POIFSFileSystem _fs;
 
     private CompoundContentImpl(
         OleBlobImpl blob, String prettyName, String className,
@@ -148,17 +149,19 @@ public class CompoundOleUtil implements CompoundPackageFactory
       super(blob, prettyName, className, typeName, position, length);
     }
 
+    @Override
     public ContentType getType() {
       return ContentType.COMPOUND_STORAGE;
     }
 
-    private NPOIFSFileSystem getFileSystem() throws IOException {
+    private POIFSFileSystem getFileSystem() throws IOException {
       if(_fs == null) {
-        _fs = new NPOIFSFileSystem(MemFileChannel.newChannel(getStream(), "r"));
+        _fs = new POIFSFileSystem(MemFileChannel.newChannel(getStream(), "r"));
       }
       return _fs;
     }
 
+    @Override
     public Iterator<Entry> iterator() {
       try {
       return getEntries(new ArrayList<Entry>(), getFileSystem().getRoot(),
@@ -168,15 +171,18 @@ public class CompoundOleUtil implements CompoundPackageFactory
       }
     }
 
+    @Override
     public EntryImpl getEntry(String entryName) throws IOException {
       return new EntryImpl(entryName,
                            getDocumentEntry(entryName, getFileSystem().getRoot()));
     }
 
+    @Override
     public boolean hasContentsEntry() throws IOException {
       return getFileSystem().getRoot().hasEntry(CONTENTS_ENTRY);
     }
 
+    @Override
     public EntryImpl getContentsEntry() throws IOException {
       return getEntry(CONTENTS_ENTRY);
     }
@@ -230,30 +236,37 @@ public class CompoundOleUtil implements CompoundPackageFactory
         _docEntry = docEntry;
       }
 
+      @Override
       public ContentType getType() {
         return ContentType.UNKNOWN;
       }
 
+      @Override
       public String getName() {
         return _name;
       }
 
+      @Override
       public CompoundContentImpl getParent() {
         return CompoundContentImpl.this;
       }
 
+      @Override
       public OleBlobImpl getBlob() {
         return getParent().getBlob();
       }
 
+      @Override
       public long length() {
         return _docEntry.getSize();
       }
 
+      @Override
       public InputStream getStream() throws IOException {
         return new DocumentInputStream(_docEntry);
       }
 
+      @Override
       public void writeTo(OutputStream out) throws IOException {
         InputStream in = null;
         try {
