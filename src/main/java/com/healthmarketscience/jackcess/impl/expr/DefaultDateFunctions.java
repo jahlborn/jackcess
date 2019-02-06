@@ -535,7 +535,7 @@ public class DefaultDateFunctions
 
   private static TextStyle getTextStyle(EvalContext ctx, Value[] params,
                                         int idx) {
-    boolean abbreviate = getOptionalBooleanParam(ctx, params, 1);
+    boolean abbreviate = getOptionalBooleanParam(ctx, params, idx);
     return (abbreviate ? TextStyle.SHORT : TextStyle.FULL);
   }
 

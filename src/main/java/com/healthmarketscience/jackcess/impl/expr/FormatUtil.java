@@ -430,13 +430,13 @@ public class FormatUtil
 
     switch(curFormatType) {
     case FCT_GENERAL:
-      return parseCustomGeneralFormat(buf, args);
+      return parseCustomGeneralFormat(buf);
     case FCT_DATE:
       return parseCustomDateFormat(buf, args);
     case FCT_NUMBER:
       return parseCustomNumberFormat(buf, args);
     case FCT_TEXT:
-      return parseCustomTextFormat(buf, args);
+      return parseCustomTextFormat(buf);
     default:
       throw new EvalException("Invalid format type " + curFormatType);
     }
@@ -484,7 +484,7 @@ public class FormatUtil
     return FCT_GENERAL;
   }
 
-  private static Fmt parseCustomGeneralFormat(ExprBuf buf, Args args) {
+  private static Fmt parseCustomGeneralFormat(ExprBuf buf) {
 
     // a "general" format is actually a "yes/no" format which functions almost
     // exactly like a number format (without any number format specific chars)
@@ -604,7 +604,7 @@ public class FormatUtil
         }
         break;
       case FCT_DATE:
-        parseCustomDateFormatPattern(c, buf, dfbs, fmtState, args);
+        parseCustomDateFormatPattern(c, buf, dfbs, fmtState);
         break;
       default:
         dfbs.add(buildLiteralCharDFB(c));
@@ -634,7 +634,7 @@ public class FormatUtil
 
   private static void parseCustomDateFormatPattern(
       char c, ExprBuf buf, List<DateFormatBuilder> dfbs,
-      boolean[] fmtState, Args args) {
+      boolean[] fmtState) {
 
     if((c == DT_LIT_COLON_CHAR) || (c == DT_LIT_SLASH_CHAR)) {
       // date/time literal char, nothing more to do
@@ -979,7 +979,7 @@ public class FormatUtil
     return new DecimalBDFormat(df);
   }
 
-  private static Fmt parseCustomTextFormat(ExprBuf buf, Args args) {
+  private static Fmt parseCustomTextFormat(ExprBuf buf) {
 
     Fmt fmt = null;
 
