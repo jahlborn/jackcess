@@ -845,7 +845,11 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("409.090909090909", "=CStr(SYD(30000,7500,10,10))");
 
     assertEval("-1.63048347266756E-02", "=CStr(Rate(3,200,-610,0,-20,0.1))");
-    assertEval("7.70147248820165E-03", "=CStr(Rate(4*12,-200,8000))");
+    // the result of this varies slightly depending on the jvm impl, so we
+    // round it to fewer decimal places (7.70147248820165E-03 or
+    // 7.70147248820155E-03)
+    assertEval("7.701472488202E-03",
+               "=Format(CStr(Rate(4*12,-200,8000)), '#.############E+00')");
     assertEval("-1.09802980531205", "=CStr(Rate(60,93.22,5000,0.1))");
   }
 
