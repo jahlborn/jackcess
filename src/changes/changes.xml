@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="3.0.0" date="TBD" description="Update to Java 8">
+    <release version="3.0.0" date="2019-02-08" description="Update to Java 8">
       <action dev="jahlborn" type="update">
         Jackcess now requires a Java 8+ runtime.  As part of this update, all
         dependencies have been updated to their latest versions.
