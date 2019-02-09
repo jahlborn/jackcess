@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
@@ -185,6 +185,28 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <minmemory>128m</minmemory>
+          <maxmemory>512</maxmemory>
+          <links>
+            <list>https://docs.oracle.com/javase/8/docs/api/</list>
+            <list>http://docs.oracle.com/javaee/5/api/</list>
+          </links>
+          <source>1.8</source>
+          <show>public</show>
+          <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
+          <tags>
+            <tag>
+              <name>usage</name>
+              <placement>a</placement>
+              <head>Usage:</head>
+            </tag>
+          </tags>
+          <quiet>true</quiet>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>com.google.code.maven-replacer-plugin</groupId>
