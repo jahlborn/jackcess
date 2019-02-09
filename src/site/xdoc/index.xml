@@ -50,20 +50,6 @@
         </p>
       </subsection>
 
-      <subsection name="All New: Jackcess 2.0 (2013-08-26)">
-        <p>
-          <b>New crunchy outside, same yummy filling!</b>
-        </p>
-        <p>
-          The Jackcess project has gotten a facelift.  A long-overdue overhaul
-          of the public API has been completed, and the major version number
-          of the Jackess APi has been changed to 2.0 in order to indicate the
-          non-backwards compatible nature of the changes (although the
-          underlying functionality remains unchanged).  Read the
-          <a href="jackcess-2.html">Upgrade Guide</a> for full details.
-        </p>
-      </subsection>
-
     </section>
 
     <section name="Sample code">
