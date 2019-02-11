@@ -27,7 +27,7 @@ import com.healthmarketscience.jackcess.Column;
  *
  * @author James Ahlborn
  */
-public interface ColumnValidator 
+public interface ColumnValidator
 {
   /**
    * Validates and/or manipulates the given potential new value for the given

@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="3.0.1" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add ColumnFormatter utility which can apply Column "Format" property
+        for display of column values.
+      </action>
+    </release>
     <release version="3.0.0" date="2019-02-08" description="Update to Java 8">
       <action dev="jahlborn" type="update">
         Jackcess now requires a Java 8+ runtime.  As part of this update, all

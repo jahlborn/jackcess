@@ -41,6 +41,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
+import org.apache.commons.lang3.StringUtils;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.ExprBuf;
 
 /**
@@ -114,40 +115,41 @@ public class FormatUtil
   private static final Map<String,Fmt> PREDEF_FMTS = new HashMap<String,Fmt>();
 
   static {
-    PREDEF_FMTS.put("General Date", args -> ValueSupport.toValue(
+    putPredefFormat("General Date", args -> ValueSupport.toValue(
                         args.coerceToDateTimeValue().getAsString()));
-    PREDEF_FMTS.put("Long Date",
+    putPredefFormat("Long Date",
                     new PredefDateFmt(TemporalConfig.Type.LONG_DATE));
-    PREDEF_FMTS.put("Medium Date",
+    putPredefFormat("Medium Date",
                     new PredefDateFmt(TemporalConfig.Type.MEDIUM_DATE));
-    PREDEF_FMTS.put("Short Date",
+    putPredefFormat("Short Date",
                     new PredefDateFmt(TemporalConfig.Type.SHORT_DATE));
-    PREDEF_FMTS.put("Long Time",
+    putPredefFormat("Long Time",
                     new PredefDateFmt(TemporalConfig.Type.LONG_TIME));
-    PREDEF_FMTS.put("Medium Time",
+    putPredefFormat("Medium Time",
                     new PredefDateFmt(TemporalConfig.Type.MEDIUM_TIME));
-    PREDEF_FMTS.put("Short Time",
+    putPredefFormat("Short Time",
                     new PredefDateFmt(TemporalConfig.Type.SHORT_TIME));
 
-    PREDEF_FMTS.put("General Number", args -> ValueSupport.toValue(
+    putPredefFormat("General Number", args -> ValueSupport.toValue(
                         args.coerceToNumberValue().getAsString()));
-    PREDEF_FMTS.put("Currency",
+    putPredefFormat("Currency",
                     new PredefNumberFmt(NumericConfig.Type.CURRENCY));
-    PREDEF_FMTS.put("Euro", new PredefNumberFmt(NumericConfig.Type.EURO));
-    PREDEF_FMTS.put("Fixed",
+    putPredefFormat("Euro", new PredefNumberFmt(NumericConfig.Type.EURO));
+    putPredefFormat("Fixed",
                     new PredefNumberFmt(NumericConfig.Type.FIXED));
-    PREDEF_FMTS.put("Standard",
+    putPredefFormat("Standard",
                     new PredefNumberFmt(NumericConfig.Type.STANDARD));
-    PREDEF_FMTS.put("Percent",
+    putPredefFormat("Percent",
                     new PredefNumberFmt(NumericConfig.Type.PERCENT));
-    PREDEF_FMTS.put("Scientific", new ScientificPredefNumberFmt());
+    putPredefFormat("Scientific", new ScientificPredefNumberFmt());
 
-    PREDEF_FMTS.put("True/False", new PredefBoolFmt("True", "False"));
-    PREDEF_FMTS.put("Yes/No", new PredefBoolFmt("Yes", "No"));
-    PREDEF_FMTS.put("On/Off", new PredefBoolFmt("On", "Off"));
+    putPredefFormat("True/False", new PredefBoolFmt("True", "False"));
+    putPredefFormat("Yes/No", new PredefBoolFmt("Yes", "No"));
+    putPredefFormat("On/Off", new PredefBoolFmt("On", "Off"));
   }
 
   private static final Fmt NULL_FMT = args -> ValueSupport.EMPTY_STR_VAL;
+  private static final Fmt DUMMY_FMT = args -> args.getNonNullExpr();
 
   private static final char QUOTE_CHAR = '"';
   private static final char ESCAPE_CHAR = '\\';
@@ -282,6 +284,15 @@ public class FormatUtil
       _firstWeekType = firstWeekType;
     }
 
+    public Args setExpr(Value expr) {
+      _expr = expr;
+      return this;
+    }
+
+    public Value getNonNullExpr() {
+      return (_expr.isNull() ? ValueSupport.EMPTY_STR_VAL : _expr);
+    }
+
     public boolean isNullOrEmptyString() {
       return(_expr.isNull() ||
              // only a string value could ever be an empty string
@@ -385,37 +396,67 @@ public class FormatUtil
     public String getAsString() {
       return _expr.getAsString(_ctx);
     }
+
+    public Value format(Fmt fmt) {
+      Value origExpr = _expr;
+      try {
+        return fmt.format(this);
+      } catch(EvalException ee) {
+        // values which cannot be formatted as the target type are just
+        // returned "as is"
+        return origExpr;
+      }
+    }
   }
 
   private FormatUtil() {}
 
+  /**
+   * Utility for leveraging format support outside of expression evaluation.
+   */
+  public static class StandaloneFormatter
+  {
+    private final Fmt _fmt;
+    private final Args _args;
+
+    private StandaloneFormatter(Fmt fmt, Args args) {
+      _fmt = fmt;
+      _args = args;
+    }
+
+    public Value format(Value expr) {
+      return _args.setExpr(expr).format(_fmt);
+    }
+  }
 
   public static Value format(EvalContext ctx, Value expr, String fmtStr,
                              int firstDay, int firstWeekType) {
+    Args args = new Args(ctx, expr, firstDay, firstWeekType);
+    return args.format(createFormat(args, fmtStr));
+  }
 
-    try {
-      Args args = new Args(ctx, expr, firstDay, firstWeekType);
+  public static StandaloneFormatter createStandaloneFormatter(
+      EvalContext ctx, String fmtStr, int firstDay, int firstWeekType) {
+    Args args = new Args(ctx, null, firstDay, firstWeekType);
+    Fmt fmt = createFormat(args, fmtStr);
+    return new StandaloneFormatter(fmt, args);
+  }
 
-      Fmt predefFmt = PREDEF_FMTS.get(fmtStr);
-      if(predefFmt != null) {
-        if(args.isNullOrEmptyString()) {
-          // predefined formats return empty string for null
-          return ValueSupport.EMPTY_STR_VAL;
-        }
-        return predefFmt.format(args);
-      }
-
-      // TODO implement caching for custom formats?  put into Bindings.  use
-      // special "cache" prefix to know which caches to clear when evalconfig
-      // is altered (could also cache other Format* functions)
-
-      return parseCustomFormat(fmtStr, args).format(args);
-
-    } catch(EvalException ee) {
-      // values which cannot be formatted as the target type are just
-      // returned "as is"
-      return expr;
+  private static Fmt createFormat(Args args, String fmtStr) {
+    Fmt predefFmt = PREDEF_FMTS.get(fmtStr);
+    if(predefFmt != null) {
+      return predefFmt;
     }
+
+    if(StringUtils.isEmpty(fmtStr)) {
+      return DUMMY_FMT;
+    }
+
+    // TODO implement caching for custom formats?  put into Bindings.  use
+    // special "cache" prefix to know which caches to clear when evalconfig
+    // is altered (could also cache other Format* functions)
+
+    return parseCustomFormat(fmtStr, args);
   }
 
   private static Fmt parseCustomFormat(String fmtStr, Args args) {
@@ -1176,6 +1217,14 @@ public class FormatUtil
         DATE_FMT_BUILDERS.putIfAbsent(validPrefix, PARTIAL_PREFIX);
       }
     }
+  }
+
+  private static void putPredefFormat(String key, Fmt fmt) {
+    // predefined formats return empty string for null
+    Fmt wrapFmt = args -> (args.isNullOrEmptyString() ?
+                           ValueSupport.EMPTY_STR_VAL :
+                           fmt.format(args));
+    PREDEF_FMTS.put(key, wrapFmt);
   }
 
   private static final class PredefDateFmt implements Fmt

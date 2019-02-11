@@ -65,7 +65,7 @@ public class ColValidatorEvalContext extends ColEvalContext
 
   @Override
   public Value getThisColumnValue() {
-    return toValue(_val, getCol().getType());
+    return toValue(_val);
   }
 
   @Override

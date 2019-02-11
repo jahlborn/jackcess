@@ -72,7 +72,7 @@ public class CodecHandlerTest extends TestCase
   private static void doTestCodecHandler(boolean simple) throws Exception
   {
     for(Database.FileFormat ff : SUPPORTED_FILEFORMATS) {
-      Database db = TestUtil.create(ff);
+      Database db = TestUtil.createFile(ff);
       int pageSize = ((DatabaseImpl)db).getFormat().PAGE_SIZE;
       File dbFile = db.getFile();
       db.close();
@@ -163,7 +163,7 @@ public class CodecHandlerTest extends TestCase
     assertEquals(valuePrefix.length() + 100, value.length());
   }
 
-  private static void encodeFile(File dbFile, int pageSize, boolean simple) 
+  private static void encodeFile(File dbFile, int pageSize, boolean simple)
     throws Exception
   {
     long dbLen = dbFile.length();
@@ -174,7 +174,7 @@ public class CodecHandlerTest extends TestCase
 
       bb.clear();
       fileChannel.read(bb, offset);
-      
+
       int pageNumber = (int)(offset / pageSize);
       if(simple) {
         simpleEncode(bb.array(), bb.array(), pageNumber, 0, pageSize);
@@ -221,12 +221,12 @@ public class CodecHandlerTest extends TestCase
     }
   }
 
-  private static final class SimpleCodecHandler implements CodecHandler 
+  private static final class SimpleCodecHandler implements CodecHandler
   {
     private final TempBufferHolder _bufH = TempBufferHolder.newHolder(
         TempBufferHolder.Type.HARD, true);
     private final PageChannel _channel;
-    
+
     private SimpleCodecHandler(PageChannel channel) {
       _channel = channel;
     }
@@ -238,37 +238,37 @@ public class CodecHandlerTest extends TestCase
     public boolean canDecodeInline() {
       return true;
     }
-    
+
     public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
-                           int pageNumber) 
-      throws IOException 
+                           int pageNumber)
+      throws IOException
     {
       byte[] arr = inPage.array();
       simpleDecode(arr, arr, pageNumber);
     }
 
     public ByteBuffer encodePage(ByteBuffer page, int pageNumber,
-                                 int pageOffset) 
+                                 int pageOffset)
       throws IOException
     {
       ByteBuffer bb = _bufH.getPageBuffer(_channel);
       bb.clear();
-      simpleEncode(page.array(), bb.array(), pageNumber, pageOffset, 
+      simpleEncode(page.array(), bb.array(), pageNumber, pageOffset,
                    page.limit());
       return bb;
     }
   }
 
-  private static final class FullCodecHandler implements CodecHandler 
+  private static final class FullCodecHandler implements CodecHandler
   {
     private final TempBufferHolder _bufH = TempBufferHolder.newHolder(
         TempBufferHolder.Type.HARD, true);
     private final PageChannel _channel;
-    
+
     private FullCodecHandler(PageChannel channel) {
       _channel = channel;
     }
-    
+
     public boolean canEncodePartialPage() {
       return false;
     }
@@ -276,17 +276,17 @@ public class CodecHandlerTest extends TestCase
     public boolean canDecodeInline() {
       return true;
     }
-    
-    public void decodePage(ByteBuffer inPage, ByteBuffer outPage, 
-                           int pageNumber) 
-      throws IOException 
+
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
+                           int pageNumber)
+      throws IOException
     {
       byte[] arr = inPage.array();
       fullDecode(arr, arr, pageNumber);
     }
 
-    public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
-                                 int pageOffset) 
+    public ByteBuffer encodePage(ByteBuffer page, int pageNumber,
+                                 int pageOffset)
       throws IOException
     {
       assertEquals(0, pageOffset);

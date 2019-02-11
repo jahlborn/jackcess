@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
+import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
@@ -473,11 +474,11 @@ public class DefaultFunctions
     }
   });
 
-  private static boolean stringIsNumeric(EvalContext ctx, Value param) {
+  private static boolean stringIsNumeric(LocaleContext ctx, Value param) {
     return (maybeGetAsBigDecimal(ctx, param) != null);
   }
 
-  static BigDecimal maybeGetAsBigDecimal(EvalContext ctx, Value param) {
+  static BigDecimal maybeGetAsBigDecimal(LocaleContext ctx, Value param) {
     try {
       return param.getAsBigDecimal(ctx);
     } catch(EvalException ignored) {
@@ -490,7 +491,7 @@ public class DefaultFunctions
     return (maybeGetAsDateTimeValue(ctx, param) != null);
   }
 
-  static Value maybeGetAsDateTimeValue(EvalContext ctx, Value param) {
+  static Value maybeGetAsDateTimeValue(LocaleContext ctx, Value param) {
     try {
       // see if we can coerce to date/time
       return param.getAsDateTimeValue(ctx);

@@ -16,6 +16,8 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
+import com.healthmarketscience.jackcess.expr.Value;
+
 
 
 
@@ -39,5 +41,9 @@ public abstract class ColEvalContext extends BaseEvalContext
   @Override
   protected String withErrorContext(String msg) {
     return _col.withErrorContext(msg);
+  }
+
+  protected Value toValue(Object val) {
+    return toValue(val, _col.getType());
   }
 }

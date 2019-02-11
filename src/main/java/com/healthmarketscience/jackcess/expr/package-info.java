@@ -215,7 +215,7 @@ limitations under the License.
  *
  * <table border="1" width="25%" cellpadding="3" cellspacing="0">
  * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
- * <tr class="TableRowColor"><td>Format[$]</td><td>Partial</td></tr>
+ * <tr class="TableRowColor"><td>Format[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStr</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStrRev</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>LCase[$]</td><td>Y</td></tr>

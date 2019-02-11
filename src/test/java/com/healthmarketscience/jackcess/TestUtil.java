@@ -117,18 +117,24 @@ public class TestUtil
   public static Database create(FileFormat fileFormat, boolean keep)
     throws Exception
   {
-    return create(fileFormat, keep, false);
+    return create(fileFormat, keep, true);
   }
 
   public static Database createMem(FileFormat fileFormat) throws Exception {
-    return create(fileFormat, false, true);
+    return create(fileFormat);
+  }
+
+  public static Database createFile(FileFormat fileFormat) throws Exception {
+    return create(fileFormat, false, false);
   }
 
   private static Database create(FileFormat fileFormat, boolean keep,
                                  boolean inMem)
     throws Exception
   {
-    FileChannel channel = (inMem ? MemFileChannel.newChannel() : null);
+
+    FileChannel channel = ((inMem && !keep) ? MemFileChannel.newChannel() :
+                           null);
 
     if (fileFormat == FileFormat.GENERIC_JET4) {
       // while we don't support creating GENERIC_JET4 as a jackcess feature,
