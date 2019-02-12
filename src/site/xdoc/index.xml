@@ -27,7 +27,7 @@
           <code>LocalDateTime</code> and <code>Path</code>.  Databases can now
           optionally return <code>Date</code> values (legacy, backwards
           compatible) or <code>LocalDateTime</code> values.  See <a href="apidocs/com/healthmarketscience/jackcess/DateTimeType.html">DateTimeType</a>
-          for more details.
+          and the <a href="jackcess-3.html">Upgrade Guide</a> for more details
         </p>
       </subsection>
 
