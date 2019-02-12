@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Upgrading from Jackcess 2.x to 3.x</title>
+  </properties>
+  <body>
+    
+    <section name="Jackcess 3.0">
+      <subsection name="So what changed?">
+        <p>
+          Unlike the change from 1.x to 2.x, the change from 2.x to 3.x is
+          relatively non-impactful.  The major change was the requirement that
+          3.x requires Java 8+.  Other than that, the Jackcess API should be
+          binary compatible with existing code.  Some additional notes:
+        </p>
+        <ul>
+          <li><b>Dependencies have been updated.</b></li>
+          <ul>
+            <li>Commons-lang has been replaced with Commons-lang3.  This is
+            used internally so it should not really affect code using the
+            Jackcess API.</li>
+            <li>Log4j is no longer referenced at all.  The included logging
+            file is now configured for the java.util logging framework.  Of
+            course any bridge compatible with Commons-logging may still be
+            utilized.</li>
+            <li>The optional Apache POI dependency has been updated to
+                4.0 (if utilized for advanced OLE support).</li>
+          </ul>
+          <li><b>LocalDateTime is now the preferred date/time type.</b></li>
+          <ul>
+            <li>There are now parallel LocalDateTime based methods for all
+            Date based methods.  That said, use of these two collections of
+            methods is mutally exclusive.  By default, the backwards
+            compatible Date based methods are enabled.  The LocalDateTime
+            based methods can be enabled by setting the appropriate
+            <a href="apidocs/com/healthmarketscience/jackcess/DateTimeType.html">DateTimeType</a> on the Database.</li>
+          </ul>
+          <li><b>Path is now supported.</b></li>
+          <ul>
+            <li>There are now parallel Path based methods for all File based
+                methods.</li>
+          </ul>
+        </ul>
+
+        <h4>Working with Jackcess Encrypt</h4>
+        <p>
+          If you are using the <a href="https://jackcessencrypt.sourceforge.io/">Jackcess Encrypt</a> project, then you will need to
+          use a version compatible with the relevant Jackess API.
+          Fortunately, the major versions match, so it's pretty simple:
+        </p>
+        <ul>
+          <li>Jackcess 3.x -&gt; Jackcess Encrypt 3.y</li>
+          <li>Jackcess 2.x -&gt; Jackcess Encrypt 2.y</li>
+          <li>Jackcess 1.x -&gt; Jackcess Encrypt 1.y</li>
+        </ul>
+      </subsection>
+
+      <subsection name="What does this mean for 2.x?">
+        <p>
+          Moving forward, all new feature development will be in Jackcess 3.x.
+          Some bugfixes may be backported to a 2.x branch on a case by case
+          basis.  However, no new feature development will be done on the 2.x
+          branch.
+        </p>
+      </subsection>
+
+    </section>
+  </body>
+</document>
