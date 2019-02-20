@@ -1051,6 +1051,20 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   @Override
+  public Iterable<TableMetaData> newTableMetaDataIterable() {
+    return new Iterable<TableMetaData>() {
+      @Override
+      public Iterator<TableMetaData> iterator() {
+        try {
+          return _tableFinder.iterateTableMetaData();
+        } catch(IOException e) {
+          throw new RuntimeIOException(e);
+        }
+      }
+    };
+  }
+
+  @Override
   public TableImpl getTable(String name) throws IOException {
     return getTable(name, false);
   }
@@ -2426,6 +2440,72 @@ public class DatabaseImpl implements Database, DateTimeContext
       return false;
     }
 
+    public int getNextFreeSyntheticId() throws IOException {
+      int maxSynthId = findMaxSyntheticId();
+      if(maxSynthId >= -1) {
+        // bummer, no more ids available
+        throw new IllegalStateException(withErrorContext(
+                "Too many database objects!"));
+      }
+      return maxSynthId + 1;
+    }
+
+    public Iterator<TableMetaData> iterateTableMetaData() throws IOException {
+      return new Iterator<TableMetaData>() {
+        private final Iterator<Row> _iter =
+          getTableNamesCursor().newIterable().setColumnNames(
+              SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS).iterator();
+        private TableMetaData _next;
+
+        @Override
+        public boolean hasNext() {
+          if((_next == null) && _iter.hasNext()) {
+            _next = nextTableMetaData(_iter);
+          }
+          return (_next != null);
+        }
+
+        @Override
+        public TableMetaData next() {
+          if(!hasNext()) {
+            throw new NoSuchElementException();
+          }
+
+          TableMetaData next = _next;
+          _next = null;
+          return next;
+        }
+      };
+    }
+
+    private TableMetaData nextTableMetaData(Iterator<Row> detailIter) {
+
+      while(detailIter.hasNext()) {
+        Row row = detailIter.next();
+
+        Short type = row.getShort(CAT_COL_TYPE);
+        if(!isTableType(type)) {
+          continue;
+        }
+
+        int parentId = row.getInt(CAT_COL_PARENT_ID);
+        if(parentId != _tableParentId) {
+          continue;
+        }
+
+        String realName = row.getString(CAT_COL_NAME);
+        Integer pageNumber = row.getInt(CAT_COL_ID);
+        int flags = row.getInt(CAT_COL_FLAGS);
+        String linkedDbName = row.getString(CAT_COL_DATABASE);
+        String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
+
+        return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
+                               linkedTableName);
+      }
+
+      return null;
+    }
+
     protected abstract Cursor findRow(Integer parentId, String name)
       throws IOException;
 
@@ -2438,17 +2518,6 @@ public class DatabaseImpl implements Database, DateTimeContext
       throws IOException;
 
     protected abstract int findMaxSyntheticId() throws IOException;
-
-    public int getNextFreeSyntheticId() throws IOException
-    {
-      int maxSynthId = findMaxSyntheticId();
-      if(maxSynthId >= -1) {
-        // bummer, no more ids available
-        throw new IllegalStateException(withErrorContext(
-                "Too many database objects!"));
-      }
-      return maxSynthId + 1;
-    }
   }
 
   /**

@@ -1031,6 +1031,54 @@ public class DatabaseTest extends TestCase
     assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
   }
 
+  public void testIterateTableNames() throws Exception {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
+      final Database db = open(testDB);
+
+      Set<String> names = new HashSet<>();
+      int sysCount = 0;
+      for(TableMetaData tmd : db.newTableMetaDataIterable()) {
+        if(tmd.isSystem()) {
+          ++sysCount;
+          continue;
+        }
+        assertFalse(tmd.isLinked());
+        assertNull(tmd.getLinkedTableName());
+        assertNull(tmd.getLinkedDbName());
+        names.add(tmd.getName());
+      }
+
+      assertTrue(sysCount > 4);
+      assertEquals(new HashSet<>(Arrays.asList("Table1", "Table2", "Table3",
+                                               "Table4")),
+                   names);
+    }
+
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.LINKED)) {
+      final Database db = open(testDB);
+
+      Set<String> names = new HashSet<>();
+      for(TableMetaData tmd : db.newTableMetaDataIterable()) {
+        if(tmd.isSystem()) {
+          continue;
+        }
+        if("Table1".equals(tmd.getName())) {
+          assertFalse(tmd.isLinked());
+          assertNull(tmd.getLinkedTableName());
+          assertNull(tmd.getLinkedDbName());
+        } else {
+          assertTrue(tmd.isLinked());
+          assertEquals("Table1", tmd.getLinkedTableName());
+          assertEquals("Z:\\jackcess_test\\linkeeTest.accdb", tmd.getLinkedDbName());
+        }
+        names.add(tmd.getName());
+      }
+
+      assertEquals(new HashSet<>(Arrays.asList("Table1", "Table2")),
+                   names);
+    }
+  }
+
   private static void checkRawValue(String expected, Object val)
   {
     if(expected != null) {

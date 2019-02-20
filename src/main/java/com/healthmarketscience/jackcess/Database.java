@@ -226,6 +226,17 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public TableIterableBuilder newIterable();
 
   /**
+   * @return an Iterable which returns an unmodifiable Iterator of the the
+   *         TableMetaData for all tables in this Database.
+   * @throws RuntimeIOException if an IOException is thrown by one of the
+   *         operations, the actual exception will be contained within
+   * @throws ConcurrentModificationException if a table is added to the
+   *         database while an Iterator is in use.
+   * @usage _intermediate_method_
+   */
+  public Iterable<TableMetaData> newTableMetaDataIterable();
+
+  /**
    * @param name User table name (case-insensitive)
    * @return The Table, or null if it doesn't exist (or is a system table)
    * @usage _general_method_

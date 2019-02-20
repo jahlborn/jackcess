@@ -9,6 +9,11 @@
         Add ColumnFormatter utility which can apply Column "Format" property
         for display of column values.
       </action>
+      <action dev="jahlborn" type="update">
+        Add Database.newTableMetaDataIterable() which enables iterating
+        through table names without loading the entire collection into memory
+        at once.
+      </action>
     </release>
     <release version="3.0.0" date="2019-02-08" description="Update to Java 8">
       <action dev="jahlborn" type="update">
