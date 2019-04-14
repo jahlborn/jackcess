@@ -9,7 +9,7 @@
       <question>Does this work on Linux/Unix?</question>
       <answer>
         <p>Yep, Jackcess is pure Java.  It will work on any Java Virtual
-        Machine (1.5+).</p>
+        Machine (1.8+).</p>
       </answer>
     </faq>
 
@@ -64,7 +64,8 @@
           </tr>
           <tr>
             <td>Field/Table Properties (Validation rules, Input masks, etc)</td>
-            <td>No (but Jackcess does provide access to the Properties)</td>
+            <td>Expression evaluation is now optionally available as of 2.2.0
+                (currently beta).  Input masks are not handled.</td>
           </tr>
         </table>
         </div>
@@ -137,15 +138,8 @@
       <question>What version of the JDK does this require?</question>
       <answer>
         <p>
-          Version 1.0 requires JDK 1.4 or higher.  The version in SVN trunk
-          and all future releases will require JDK 1.5 or higher.
-        </p>
-        <p>
-          However, some users have contributed patches to make later versions
-          compatible with JDK 1.4.  Please check the contributions/ directory
-          in the source repository for any such patches.  Note that any code
-          in this directory is untested and unsupported, so please use at your
-          own risk and do not file bugs based on that code.
+          Version 3.0+ requires JDK 1.8 or higher.  2.x versions require JDK
+          1.5 or higher.
         </p>
       </answer>
     </faq>
@@ -195,35 +189,8 @@
           Update: As of the 1.1.21 release, the <u>text index handling
           supports the entire Basic Multilingual Plane 0</u> (i.e. any unicode
           character 0x0000-0xFFFF).  Consequently table names can (as of this
-          release) contain any character in this character set.  Therefore,
-          the rest of this answer should no longer be an issue, but keeping it
-          here for reference.
+          release) contain any character in this character set.
         </p>
-        <p>
-          Legacy: As of the 1.1.13 release, the text index handling supports
-          the entire ISO-8859-1 character set.  Consequently table names can
-          (as of this release) contain any character in this character set.
-        </p>
-        <p>
-          Legacy: Jackcess cannot currently update a text column index with
-          values which contain non-ascii characters.  This situation often
-          arises when tables are created with names which contain
-          international characters.  Access stores the table names in another
-          table which has an index on the table name column.  The index
-          encoding is not simple to reverse engineer, so it is not likely that
-          Jackcess will support this anytime soon.
-        </p>
-        <p>
-          Some suggestions (for older releases):
-        </p>
-        <ul>
-          <li>Use only ascii (or ISO-8859-1 as of 1.1.13) characters in table
-              names if at all possible</li>
-          <li>If tables with international characters are required, create the
-              tables using Access, then update the tables using jackcess.</li>
-          <li>For indexes on user created tables, populate the table without
-              indexes in jackcess, then add the index using Access.</li>
-        </ul>
       </answer>
     </faq>
 
@@ -295,18 +262,6 @@
         project</a> contains the <a href="https://jackcessencrypt.sourceforge.io/apidocs/com/healthmarketscience/jackcess/CryptCodecProvider.html">CryptCodecProvider</a>,
         which implements the Jackess CodecProvider interface and supports
         some forms of Access database encryption.
-      </answer>
-    </faq>
-
-    <faq id="hms">
-      <question>Who is Health Market Science?</question>
-      <answer>
-        <p>
-          HMS is a small company located in suburban Philadelphia.
-          Using proprietary matching and consolidation software,
-          HMS scientifically manufactures the most comprehensive
-          and accurate healthcare data sets in the market today.
-        </p>
       </answer>
     </faq>
 
