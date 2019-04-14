@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="3.0.1" date="TBD">
+    <release version="3.0.1" date="2019-04-13">
       <action dev="jahlborn" type="update">
         Add ColumnFormatter utility which can apply Column "Format" property
         for display of column values.
