@@ -307,6 +307,20 @@ public class DatabaseBuilder
   }
 
   /**
+   * Open an existing Database.  If the existing file is not writeable, the
+   * file will be opened read-only.  Auto-syncing is enabled for the returned
+   * Database.
+   *
+   * @param mdbFile File containing the database
+   *
+   * @see DatabaseBuilder for more flexible Database opening
+   * @usage _general_method_
+   */
+  public static Database open(Path mdbFile) throws IOException {
+    return new DatabaseBuilder(mdbFile).open();
+  }
+
+  /**
    * Create a new Database for the given fileFormat
    *
    * @param fileFormat version of new database.
