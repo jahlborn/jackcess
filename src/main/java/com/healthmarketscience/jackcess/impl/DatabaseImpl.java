@@ -942,7 +942,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   private void initRootPageInfo() throws IOException {
     ByteBuffer buffer = takeSharedBuffer();
     try {
-      _pageChannel.readPage(buffer, 0);
+      _pageChannel.readRootPage(buffer);
       _defaultSortOrder = ColumnImpl.readSortOrder(
           buffer, _format.OFFSET_SORT_ORDER, _format);
       _defaultCodePage = buffer.getShort(_format.OFFSET_CODE_PAGE);
@@ -1586,7 +1586,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   {
     ByteBuffer buffer = takeSharedBuffer();
     try {
-      _pageChannel.readPage(buffer, 0);
+      _pageChannel.readRootPage(buffer);
 
       byte[] pwdBytes = new byte[_format.SIZE_PASSWORD];
       buffer.position(_format.OFFSET_PASSWORD);

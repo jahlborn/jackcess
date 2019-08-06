@@ -29,22 +29,22 @@ import java.nio.channels.FileChannel;
  * @author Tim McCune
  */
 public class PageChannel implements Channel, Flushable {
-  
+
   static final int INVALID_PAGE_NUMBER = -1;
 
   static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
-  
+
   /** invalid page header, used when deallocating old pages.  data pages
       generally have 4 interesting bytes at the beginning which we want to
       reset. */
   private static final byte[] INVALID_PAGE_BYTE_HEADER =
     new byte[]{PageTypes.INVALID, (byte)0, (byte)0, (byte)0};
-  
+
   /** Global usage map always lives on page 1 */
   static final int PAGE_GLOBAL_USAGE_MAP = 1;
   /** Global usage map always lives at row 0 */
   static final int ROW_GLOBAL_USAGE_MAP = 0;
-  
+
   /** Channel containing the database */
   private final FileChannel _channel;
   /** whether or not the _channel should be closed by this class */
@@ -67,7 +67,7 @@ public class PageChannel implements Channel, Flushable {
   private TempPageHolder _fullPageEncodeBufferH;
   private TempBufferHolder _tempDecodeBufferH;
   private int _writeCount;
-  
+
   /**
    * Only used by unit tests
    */
@@ -117,7 +117,7 @@ public class PageChannel implements Channel, Flushable {
     _globalUsageMap = UsageMap.read(database, PAGE_GLOBAL_USAGE_MAP,
                                     ROW_GLOBAL_USAGE_MAP, true);
   }
-  
+
   public JetFormat getFormat() {
     return _format;
   }
@@ -177,7 +177,7 @@ public class PageChannel implements Channel, Flushable {
       throw new IllegalStateException("No write operation in progress");
     }
   }
-  
+
   /**
    * Returns the next page number based on the given file size.
    */
@@ -191,7 +191,7 @@ public class PageChannel implements Channel, Flushable {
   private long getPageOffset(int pageNumber) {
     return((long) pageNumber * (long) getFormat().PAGE_SIZE);
   }
-  
+
   /**
    * Validates that the given pageNumber is valid for this database.
    */
@@ -203,7 +203,7 @@ public class PageChannel implements Channel, Flushable {
       throw new IllegalStateException("invalid page number " + pageNumber);
     }
   }
-  
+
   /**
    * @param buffer Buffer to read the page into
    * @param pageNumber Number of the page to read in (starting at 0)
@@ -211,11 +211,16 @@ public class PageChannel implements Channel, Flushable {
   public void readPage(ByteBuffer buffer, int pageNumber)
     throws IOException
   {
+    if(pageNumber == 0) {
+      readRootPage(buffer);
+      return;
+    }
+
     validatePageNumber(pageNumber);
 
     ByteBuffer inPage = buffer;
     ByteBuffer outPage = buffer;
-    if((pageNumber != 0) && !_codecHandler.canDecodeInline()) {
+    if(!_codecHandler.canDecodeInline()) {
       inPage = _tempDecodeBufferH.getPageBuffer(this);
       outPage.clear();
     }
@@ -230,14 +235,30 @@ public class PageChannel implements Channel, Flushable {
                             pageNumber + ", only read " + bytesRead);
     }
 
-    if(pageNumber == 0) {
-      // de-mask header (note, page 0 never has additional encoding)
-      applyHeaderMask(buffer);
-    } else {
-      _codecHandler.decodePage(inPage, outPage, pageNumber);
-    }
+    _codecHandler.decodePage(inPage, outPage, pageNumber);
   }
-  
+
+  /**
+   * @param buffer Buffer to read the root page into
+   */
+  public void readRootPage(ByteBuffer buffer)
+    throws IOException
+  {
+    // special method for reading root page, can be done before PageChannel is
+    // fully initialized
+    buffer.clear();
+    int bytesRead = _channel.read(buffer, 0L);
+    buffer.flip();
+    if(bytesRead != getFormat().PAGE_SIZE) {
+      throw new IOException("Failed attempting to read " +
+                            getFormat().PAGE_SIZE + " bytes from page " +
+                            0 + ", only read " + bytesRead);
+    }
+
+    // de-mask header (note, page 0 never has additional encoding)
+    applyHeaderMask(buffer);
+  }
+
   /**
    * Write a page to disk
    * @param page Page to write
@@ -246,7 +267,7 @@ public class PageChannel implements Channel, Flushable {
   public void writePage(ByteBuffer page, int pageNumber) throws IOException {
     writePage(page, pageNumber, 0);
   }
-  
+
   /**
    * Write a page (or part of a page) to disk
    * @param page Page to write
@@ -259,7 +280,7 @@ public class PageChannel implements Channel, Flushable {
   {
     assertWriting();
     validatePageNumber(pageNumber);
-    
+
     page.rewind().position(pageOffset);
 
     int writeLen = page.remaining();
@@ -267,7 +288,7 @@ public class PageChannel implements Channel, Flushable {
       throw new IllegalArgumentException(
           "Page buffer is too large, size " + (writeLen + pageOffset));
     }
-    
+
     ByteBuffer encodedPage = page;
     if(pageNumber == 0) {
       // re-mask header
@@ -315,7 +336,7 @@ public class PageChannel implements Channel, Flushable {
       }
     }
   }
-  
+
   /**
    * Allocates a new page in the database.  Data in the page is undefined
    * until it is written in a call to {@link #writePage(ByteBuffer,int)}.
@@ -334,9 +355,9 @@ public class PageChannel implements Channel, Flushable {
                             " is not multiple of page size " +
                             getFormat().PAGE_SIZE);
     }
-    
+
     _forceBytes.rewind();
-    
+
     // push the buffer to the end of the page, so that a full page's worth of
     // data is written
     int pageOffset = (getFormat().PAGE_SIZE - _forceBytes.remaining());
@@ -358,15 +379,15 @@ public class PageChannel implements Channel, Flushable {
     assertWriting();
 
     validatePageNumber(pageNumber);
-    
+
     // don't write the whole page, just wipe out the header (which should be
     // enough to let us know if we accidentally try to use an invalid page)
     _invalidPageBytes.rewind();
     _channel.write(_invalidPageBytes, getPageOffset(pageNumber));
-    
+
     _globalUsageMap.addPageNumber(pageNumber);  //force is done here
   }
-  
+
   /**
    * @return A newly-allocated buffer that can be passed to readPage
    */
@@ -381,19 +402,19 @@ public class PageChannel implements Channel, Flushable {
   public static ByteBuffer createBuffer(int size) {
     return createBuffer(size, DEFAULT_BYTE_ORDER);
   }
-  
+
   /**
    * @return A newly-allocated buffer of the given size and byte order
    */
   public static ByteBuffer createBuffer(int size, ByteOrder order) {
     return ByteBuffer.allocate(size).order(order);
   }
-  
+
   @Override
   public void flush() throws IOException {
     _channel.force(true);
   }
-  
+
   @Override
   public void close() throws IOException {
     flush();
@@ -401,7 +422,7 @@ public class PageChannel implements Channel, Flushable {
       _channel.close();
     }
   }
-  
+
   @Override
   public boolean isOpen() {
     return _channel.isOpen();
@@ -419,7 +440,7 @@ public class PageChannel implements Channel, Flushable {
         buffer.put(pos, b);
       }
   }
-  
+
   /**
    * @return a duplicate of the current buffer narrowed to the given position
    *         and limit.  mark will be set at the current position.
