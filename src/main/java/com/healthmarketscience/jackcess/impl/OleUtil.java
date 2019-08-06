@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -43,7 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-public class OleUtil 
+public class OleUtil
 {
   /**
    * Interface used to allow optional inclusion of the poi library for working
@@ -57,9 +58,9 @@ public class OleUtil
   }
 
   private static final int PACKAGE_SIGNATURE = 0x1C15;
-  private static final Charset OLE_CHARSET = Charset.forName("US-ASCII");
-  private static final Charset OLE_UTF_CHARSET = Charset.forName("UTF-16LE");
-  private static final byte[] COMPOUND_STORAGE_SIGNATURE = 
+  private static final Charset OLE_CHARSET = StandardCharsets.US_ASCII;
+  private static final Charset OLE_UTF_CHARSET = StandardCharsets.UTF_16LE;
+  private static final byte[] COMPOUND_STORAGE_SIGNATURE =
     {(byte)0xd0,(byte)0xcf,(byte)0x11,(byte)0xe0,
      (byte)0xa1,(byte)0xb1,(byte)0x1a,(byte)0xe1};
   private static final String SIMPLE_PACKAGE_TYPE = "Package";
@@ -79,7 +80,7 @@ public class OleUtil
   };
 
   // regex pattern which matches all the crazy extra stuff in unicode
-  private static final Pattern UNICODE_ACCENT_PATTERN = 
+  private static final Pattern UNICODE_ACCENT_PATTERN =
     Pattern.compile("[\\p{InCombiningDiacriticalMarks}\\p{IsLm}\\p{IsSk}]+");
 
   private static final CompoundPackageFactory COMPOUND_FACTORY;
@@ -111,13 +112,13 @@ public class OleUtil
     throws IOException
   {
     try {
-      
+
       if(!WRITEABLE_TYPES.contains(oleBuilder.getType())) {
         throw new IllegalArgumentException(
             "Cannot currently create ole values of type " +
             oleBuilder.getType());
       }
-      
+
       long contentLen = oleBuilder.getContentLength();
       byte[] contentBytes = oleBuilder.getBytes();
       InputStream contentStream = oleBuilder.getStream();
@@ -132,12 +133,12 @@ public class OleUtil
         contentBytes = getZeroTermStrBytes(oleBuilder.getFilePath());
         contentLen = contentBytes.length;
         break;
-        
+
       case SIMPLE_PACKAGE:
         packageStreamHeader = writePackageStreamHeader(oleBuilder);
         packageStreamFooter = writePackageStreamFooter(oleBuilder);
         break;
-        
+
       case OTHER:
         // nothing more to do
         break;
@@ -148,19 +149,19 @@ public class OleUtil
       long payloadLen = packageStreamHeader.length + packageStreamFooter.length +
         contentLen;
       byte[] packageHeader = writePackageHeader(oleBuilder, payloadLen);
-            
+
       long totalOleLen = packageHeader.length + PACKAGE_FOOTER.length +
         payloadLen;
       if(totalOleLen > DataType.OLE.getMaxSize()) {
         throw new IllegalArgumentException("Content size of " + totalOleLen +
                                            " is too large for ole column");
       }
-      
+
       byte[] oleBytes = new byte[(int)totalOleLen];
       ByteBuffer bb = PageChannel.wrap(oleBytes);
       bb.put(packageHeader);
       bb.put(packageStreamHeader);
-      
+
       if(contentLen > 0L) {
         if(contentBytes != null) {
           bb.put(contentBytes);
@@ -175,9 +176,9 @@ public class OleUtil
 
       bb.put(packageStreamFooter);
       bb.put(PACKAGE_FOOTER);
-    
+
       return parseBlob(oleBytes);
-      
+
     } finally {
       ByteUtil.closeQuietly(oleBuilder.getStream());
     }
@@ -196,13 +197,13 @@ public class OleUtil
     }
     byte[] classNameBytes = getZeroTermStrBytes(className);
     byte[] typeNameBytes = getZeroTermStrBytes(typeName);
-    
+
     int packageHeaderLen = 20 + prettyNameBytes.length + classNameBytes.length;
 
     int oleHeaderLen = 24 + typeNameBytes.length;
 
     byte[] headerBytes = new byte[packageHeaderLen + oleHeaderLen];
-    
+
     ByteBuffer bb = PageChannel.wrap(headerBytes);
 
     // write outer package header
@@ -225,7 +226,7 @@ public class OleUtil
     bb.put(typeNameBytes);
     bb.putLong(0L);
     bb.putInt((int)contentLen);
-    
+
     return headerBytes;
   }
 
@@ -239,7 +240,7 @@ public class OleUtil
     if(oleBuilder.getType() == ContentType.SIMPLE_PACKAGE) {
 
       headerLen += 8 + filePathBytes.length;
-      
+
     } else {
 
       headerLen += 2;
@@ -260,7 +261,7 @@ public class OleUtil
       bb.putInt(PS_LINKED_FILE);
       bb.putShort((short)LINK_HEADER);
     }
-    
+
     return headerBytes;
   }
 
@@ -280,20 +281,20 @@ public class OleUtil
     bb.putInt(fileNameBytes.length/2);
     bb.put(fileNameBytes);
     bb.putInt(filePathBytes.length/2);
-    bb.put(filePathBytes);    
+    bb.put(filePathBytes);
 
     return footerBytes;
   }
-  
+
   /**
    * creates the appropriate ContentImpl for the given blob.
    */
-  private static ContentImpl parseContent(OleBlobImpl blob) 
-    throws IOException 
+  private static ContentImpl parseContent(OleBlobImpl blob)
+    throws IOException
   {
     ByteBuffer bb = PageChannel.wrap(blob.getBytes());
 
-    if((bb.remaining() < 2) || (bb.getShort() != PACKAGE_SIGNATURE)) {  
+    if((bb.remaining() < 2) || (bb.getShort() != PACKAGE_SIGNATURE)) {
       return new UnknownContentImpl(blob);
     }
 
@@ -303,7 +304,7 @@ public class OleUtil
     int prettyNameLen = bb.getShort();
     int classNameLen = bb.getShort();
     int prettyNameOff = bb.getShort();
-    int classNameOff = bb.getShort();       
+    int classNameOff = bb.getShort();
     /* int objSize = */ bb.getInt();
     String prettyName = readStr(bb, prettyNameOff, prettyNameLen);
     String className = readStr(bb, classNameOff, classNameLen);
@@ -337,7 +338,7 @@ public class OleUtil
       return COMPOUND_FACTORY.createCompoundPackageContent(
           blob, prettyName, className, typeName, bb, dataBlockLen);
     }
-    
+
     // this is either some other "special" (as yet unhandled) format, or it is
     // simply an embedded file (or it is compound data and poi isn't available)
     return new OtherContentImpl(blob, prettyName, className,
@@ -349,9 +350,9 @@ public class OleUtil
       ByteBuffer blobBb, int dataBlockLen) {
 
     int dataBlockPos = blobBb.position();
-    ByteBuffer bb = PageChannel.narrowBuffer(blobBb, dataBlockPos, 
+    ByteBuffer bb = PageChannel.narrowBuffer(blobBb, dataBlockPos,
                                              dataBlockPos + dataBlockLen);
-    
+
     int packageSig = bb.getShort();
     if(packageSig != PACKAGE_STREAM_SIGNATURE) {
       return new OtherContentImpl(blob, prettyName, className,
@@ -405,19 +406,19 @@ public class OleUtil
       return new SimplePackageContentImpl(
           blob, prettyName, className, typeName, dataPos, dataLen,
           fileName, filePath, localFilePath);
-    } 
+    }
 
     if(packageType == PS_LINKED_FILE) {
-      
+
       bb.getShort(); //unknown
       String linkStr = readZeroTermStr(bb);
 
-      return new LinkContentImpl(blob, prettyName, className, typeName, 
+      return new LinkContentImpl(blob, prettyName, className, typeName,
                                  fileName, linkStr, filePath);
     }
 
     return new OtherContentImpl(blob, prettyName, className,
-                                typeName, dataBlockPos, dataBlockLen);      
+                                typeName, dataBlockPos, dataBlockLen);
   }
 
   private static String readStr(ByteBuffer bb, int off, int len) {
@@ -436,7 +437,7 @@ public class OleUtil
     return readStr(bb, off, len);
   }
 
-  private static String readStr(ByteBuffer bb, int off, int len, 
+  private static String readStr(ByteBuffer bb, int off, int len,
                                 Charset charset) {
     String str = new String(bb.array(), off, len, charset);
     bb.position(off + len);
@@ -490,8 +491,8 @@ public class OleUtil
     }
 
     @Override
-    public InputStream getBinaryStream(long pos, long len) 
-      throws SQLException 
+    public InputStream getBinaryStream(long pos, long len)
+      throws SQLException
     {
       return new ByteArrayInputStream(_bytes, fromJdbcOffset(pos), (int)len);
     }
@@ -515,11 +516,11 @@ public class OleUtil
 
     @Override
     public long position(byte[] pattern, long start) throws SQLException {
-      int pos = ByteUtil.findRange(PageChannel.wrap(_bytes), 
+      int pos = ByteUtil.findRange(PageChannel.wrap(_bytes),
                                    fromJdbcOffset(start), pattern);
       return((pos >= 0) ? toJdbcOffset(pos) : pos);
     }
-    
+
     @Override
     public long position(Blob pattern, long start) throws SQLException {
       return position(pattern.getBytes(1L, (int)pattern.length()), start);
@@ -529,23 +530,23 @@ public class OleUtil
     public OutputStream setBinaryStream(long position) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
-    
+
     @Override
     public void truncate(long len) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
-    
+
     @Override
     public int setBytes(long pos, byte[] bytes) throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
-    
+
     @Override
     public int setBytes(long pos, byte[] bytes, int offset, int lesn)
       throws SQLException {
       throw new SQLFeatureNotSupportedException();
     }
-    
+
     @Override
     public void free() {
       close();
@@ -560,11 +561,11 @@ public class OleUtil
 
     private static int toJdbcOffset(int off) {
       return off + 1;
-    } 
+    }
 
     private static int fromJdbcOffset(long off) {
       return (int)off - 1;
-    } 
+    }
 
     @Override
     public String toString() {
@@ -595,7 +596,7 @@ public class OleUtil
     protected byte[] getBytes() throws IOException {
       return getBlob().getBytes();
     }
-    
+
     @Override
     public void close() {
       // base does nothing
@@ -604,7 +605,7 @@ public class OleUtil
     protected ToStringBuilder toString(ToStringBuilder sb) {
       sb.append("type", getType());
       return sb;
-    } 
+    }
   }
 
   static abstract class EmbeddedContentImpl extends ContentImpl
@@ -613,7 +614,7 @@ public class OleUtil
     private final int _position;
     private final int _length;
 
-    protected EmbeddedContentImpl(OleBlobImpl blob, int position, int length) 
+    protected EmbeddedContentImpl(OleBlobImpl blob, int position, int length)
     {
       super(blob);
       _position = position;
@@ -642,10 +643,10 @@ public class OleUtil
         sb.append("content", ByteBuffer.wrap(_blob._bytes, _position, _length));
       }
       return sb;
-    } 
+    }
   }
 
-  static abstract class EmbeddedPackageContentImpl 
+  static abstract class EmbeddedPackageContentImpl
     extends EmbeddedContentImpl
     implements PackageContent
   {
@@ -685,10 +686,10 @@ public class OleUtil
         .append("typeName", _typeName);
       super.toString(sb);
       return sb;
-    } 
+    }
   }
 
-  private static final class LinkContentImpl 
+  private static final class LinkContentImpl
     extends EmbeddedPackageContentImpl
     implements LinkContent
   {
@@ -698,13 +699,13 @@ public class OleUtil
 
     private LinkContentImpl(OleBlobImpl blob, String prettyName,
                             String className, String typeName,
-                            String fileName, String linkPath, 
-                            String filePath) 
+                            String fileName, String linkPath,
+                            String filePath)
     {
       super(blob, prettyName, className, typeName, -1, -1);
       _fileName = fileName;
       _linkPath = linkPath;
-      _filePath = filePath;      
+      _filePath = filePath;
     }
 
     @Override
@@ -742,7 +743,7 @@ public class OleUtil
     }
   }
 
-  private static final class SimplePackageContentImpl 
+  private static final class SimplePackageContentImpl
     extends EmbeddedPackageContentImpl
     implements SimplePackageContent
   {
@@ -754,11 +755,11 @@ public class OleUtil
                                      String className, String typeName,
                                      int position, int length,
                                      String fileName, String filePath,
-                                     String localFilePath) 
+                                     String localFilePath)
     {
       super(blob, prettyName, className, typeName, position, length);
       _fileName = fileName;
-      _filePath = filePath;      
+      _filePath = filePath;
       _localFilePath = localFilePath;
     }
 
@@ -792,16 +793,16 @@ public class OleUtil
     }
   }
 
-  private static final class OtherContentImpl 
+  private static final class OtherContentImpl
     extends EmbeddedPackageContentImpl
     implements OtherContent
   {
     private OtherContentImpl(
         OleBlobImpl blob, String prettyName, String className,
-        String typeName, int position, int length) 
+        String typeName, int position, int length)
     {
       super(blob, prettyName, className, typeName, position, length);
-    }        
+    }
 
     @Override
     public ContentType getType() {
@@ -833,5 +834,5 @@ public class OleUtil
         .toString();
     }
   }
-  
+
 }
