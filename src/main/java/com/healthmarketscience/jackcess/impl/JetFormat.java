@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -544,7 +545,7 @@ public abstract class JetFormat {
     protected boolean defineReadOnly() { return true; }
 
     @Override
-    protected boolean defineIndexesSupported() { return false; }
+    protected boolean defineIndexesSupported() { return true; }
 
     @Override
     protected CodecType defineCodecType() {
@@ -740,7 +741,7 @@ public abstract class JetFormat {
 
     @Override
     protected ColumnImpl.SortOrder defineDefaultSortOrder() {
-      return ColumnImpl.GENERAL_LEGACY_SORT_ORDER;
+      return ColumnImpl.GENERAL_97_SORT_ORDER;
     }
 
     @Override
@@ -973,7 +974,7 @@ public abstract class JetFormat {
     protected boolean defineLegacyNumericIndexes() { return true; }
 
     @Override
-    protected Charset defineCharset() { return Charset.forName("UTF-16LE"); }
+    protected Charset defineCharset() { return StandardCharsets.UTF_16LE; }
 
     @Override
     protected ColumnImpl.SortOrder defineDefaultSortOrder() {
