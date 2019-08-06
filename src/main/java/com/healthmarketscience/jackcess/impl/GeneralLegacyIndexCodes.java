@@ -52,20 +52,20 @@ public class GeneralLegacyIndexCodes {
   // international char is replaced with ascii char.
   // pattern for international chars in the extra bytes:
   // [ 02 (for each normal char) ] [ <symbol_code> (for each inat char) ]
-  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;  
+  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;
 
   // see Index.writeCrazyCodes for details on writing crazy codes
   static final byte CRAZY_CODE_START = (byte)0x80;
   static final byte CRAZY_CODE_1 = (byte)0x02;
   static final byte CRAZY_CODE_2 = (byte)0x03;
-  static final byte[] CRAZY_CODES_SUFFIX = 
+  static final byte[] CRAZY_CODES_SUFFIX =
     new byte[]{(byte)0xFF, (byte)0x02, (byte)0x80, (byte)0xFF, (byte)0x80};
   static final byte CRAZY_CODES_UNPRINT_SUFFIX = (byte)0xFF;
 
   // stash the codes in some resource files
-  private static final String CODES_FILE = 
+  private static final String CODES_FILE =
     DatabaseImpl.RESOURCE_PATH + "index_codes_genleg.txt";
-  private static final String EXT_CODES_FILE = 
+  private static final String EXT_CODES_FILE =
     DatabaseImpl.RESOURCE_PATH + "index_codes_ext_genleg.txt";
 
   /**
@@ -267,7 +267,7 @@ public class GeneralLegacyIndexCodes {
     private static final CharHandler[] _values = loadCodes(
         CODES_FILE, FIRST_CHAR, LAST_CHAR);
   }
-  
+
   private static final class ExtCodes
   {
     /** handlers for the rest of the chars in BMP 0.  use nested class to
@@ -276,9 +276,9 @@ public class GeneralLegacyIndexCodes {
         EXT_CODES_FILE, FIRST_EXT_CHAR, LAST_EXT_CHAR);
   }
 
-  static final GeneralLegacyIndexCodes GEN_LEG_INSTANCE = 
+  static final GeneralLegacyIndexCodes GEN_LEG_INSTANCE =
     new GeneralLegacyIndexCodes();
-  
+
   GeneralLegacyIndexCodes() {
   }
 
@@ -316,7 +316,7 @@ public class GeneralLegacyIndexCodes {
       reader = new BufferedReader(
           new InputStreamReader(
               DatabaseImpl.getResourceAsStream(codesFilePath), "US-ASCII"));
-      
+
       int start = asUnsignedChar(firstChar);
       int end = asUnsignedChar(lastChar);
       for(int i = start; i <= end; ++i) {
@@ -357,7 +357,7 @@ public class GeneralLegacyIndexCodes {
   /**
    * Returns a SimpleCharHandler parsed from the given index code strings.
    */
-  private static CharHandler parseSimpleCodes(String[] codeStrings) 
+  private static CharHandler parseSimpleCodes(String[] codeStrings)
   {
     if(codeStrings.length != 1) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -397,7 +397,7 @@ public class GeneralLegacyIndexCodes {
    * Returns a UnprintableExtCharHandler parsed from the given index code
    * strings.
    */
-  private static CharHandler parseUnprintableExtCodes(String[] codeStrings) 
+  private static CharHandler parseUnprintableExtCodes(String[] codeStrings)
   {
     if(codeStrings.length != 1) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -415,7 +415,7 @@ public class GeneralLegacyIndexCodes {
    * Returns a InternationalExtCharHandler parsed from the given index code
    * strings.
    */
-  private static CharHandler parseInternationalExtCodes(String[] codeStrings) 
+  private static CharHandler parseInternationalExtCodes(String[] codeStrings)
   {
     if(codeStrings.length != 3) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -484,7 +484,7 @@ public class GeneralLegacyIndexCodes {
     // record pprevious entry length so we can do any post-processing
     // necessary for this entry (handling descending)
     int prevLength = bout.getLength();
-    
+
     // now, convert each character to a "code" of one or more bytes
     ExtraCodesStream extraCodes = null;
     ByteStream unprintableCodes = null;
@@ -526,12 +526,12 @@ public class GeneralLegacyIndexCodes {
         if(unprintableCodes == null) {
           unprintableCodes = new ByteStream();
         }
-          
+
         // keep track of the unprintable codes for later
         writeUnprintableCodes(curCharOffset, bytes, unprintableCodes,
                               extraCodes);
       }
-      
+
       byte crazyFlag = ch.getCrazyFlag();
       if(crazyFlag != 0) {
         if(crazyCodes == null) {
@@ -580,7 +580,7 @@ public class GeneralLegacyIndexCodes {
 
           // write another end flag
           bout.write(END_TEXT);
-        
+
           unprintableCodes.writeTo(bout);
         }
       }
@@ -592,14 +592,99 @@ public class GeneralLegacyIndexCodes {
       // we actually write the end byte before flipping the bytes, and write
       // another one after flipping
       bout.write(END_EXTRA_TEXT);
-      
+
       // flip the bytes that we have written thus far for this text value
-      IndexData.flipBytes(bout.getBytes(), prevLength, 
+      IndexData.flipBytes(bout.getBytes(), prevLength,
                           (bout.getLength() - prevLength));
     }
 
     // write end extra text
-    bout.write(END_EXTRA_TEXT);    
+    bout.write(END_EXTRA_TEXT);
+  }
+
+  /**
+   * Converts a 97 index value for a text column into the entry value (which
+   * is based on a variety of nifty codes).
+   */
+  void writeNonNull97IndexTextValue(
+      Object value, ByteStream bout, boolean isAscending)
+    throws IOException
+  {
+    // NOTE, this should probably be in Gen97TextColumnDescriptor but it was
+    // easier to add here than make everything private non-private.
+
+    // first, convert to string
+    String str = ColumnImpl.toCharSequence(value).toString();
+
+    // all text columns (including memos) are only indexed up to the max
+    // number of chars in a VARCHAR column
+    if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
+      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
+    }
+
+    // record pprevious entry length so we can do any post-processing
+    // necessary for this entry (handling descending)
+    int prevLength = bout.getLength();
+
+    // now, convert each character to a "code" of one or more bytes
+    ExtraCodesStream extraCodes = null;
+    int charOffset = 0;
+    for(int i = 0; i < str.length(); ++i) {
+
+      char c = str.charAt(i);
+      CharHandler ch = getCharHandler(c);
+
+      int curCharOffset = charOffset;
+      byte[] bytes = ch.getInlineBytes();
+      if(bytes != null) {
+        // write the "inline" codes immediately
+        bout.write(bytes);
+
+        // only increment the charOffset for chars with inline codes
+        ++charOffset;
+      }
+
+      if(ch.getType() == Type.SIMPLE) {
+        // common case, skip further code handling
+        continue;
+      }
+
+      bytes = ch.getExtraBytes();
+      byte extraCodeModifier = ch.getExtraByteModifier();
+      if((bytes != null) || (extraCodeModifier != 0)) {
+        if(extraCodes == null) {
+          extraCodes = new ExtraCodesStream(str.length());
+        }
+
+        // keep track of the extra codes for later
+        writeExtraCodes(curCharOffset, bytes, extraCodeModifier, extraCodes);
+      }
+    }
+
+    // FIXME, how to handle extra codes for non ascending?
+    boolean hasExtraCodes = trimExtraCodes(
+        extraCodes, (byte)0, INTERNATIONAL_EXTRA_PLACEHOLDER);
+    if(hasExtraCodes) {
+
+      extraCodes.writeTo(bout);
+
+    } else {
+
+      // handle descending order by inverting the bytes
+      if(!isAscending) {
+
+        // we actually write the end byte before flipping the bytes, and write
+        // another one after flipping
+        bout.write(END_EXTRA_TEXT);
+
+        // flip the bytes that we have written thus far for this text value
+        IndexData.flipBytes(bout.getBytes(), prevLength,
+                            (bout.getLength() - prevLength));
+      }
+
+      // write end extra text
+      bout.write(END_EXTRA_TEXT);
+    }
   }
 
   /**
@@ -619,7 +704,7 @@ public class GeneralLegacyIndexCodes {
     }
 
     if(bytes != null) {
-      
+
       // write the actual extra codes and update the number of chars
       extraCodes.write(bytes);
       extraCodes.incrementNumChars(1);
@@ -696,7 +781,7 @@ public class GeneralLegacyIndexCodes {
     // write offset as big-endian short
     unprintableCodes.write((offset >> 8) & 0xFF);
     unprintableCodes.write(offset & 0xFF);
-          
+
     unprintableCodes.write(UNPRINTABLE_MIDFIX);
     unprintableCodes.write(bytes);
   }
@@ -748,7 +833,7 @@ public class GeneralLegacyIndexCodes {
   private static final class ExtraCodesStream extends ByteStream
   {
     private int _numChars;
-    private int _unprintablePrefixLen; 
+    private int _unprintablePrefixLen;
 
     private ExtraCodesStream(int length) {
       super(length);
@@ -757,7 +842,7 @@ public class GeneralLegacyIndexCodes {
     public int getNumChars() {
       return _numChars;
     }
-    
+
     public void incrementNumChars(int inc) {
       _numChars += inc;
     }
