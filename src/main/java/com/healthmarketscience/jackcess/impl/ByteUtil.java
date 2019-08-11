@@ -710,7 +710,10 @@ public final class ByteUtil {
     }
 
     protected void ensureNewCapacity(int numBytes) {
-      int newLength = _length + numBytes;
+      ensureCapacity(_length + numBytes);
+    }
+
+    protected void ensureCapacity(int newLength) {
       if(newLength > _bytes.length) {
         byte[] temp = new byte[newLength * 2];
         System.arraycopy(_bytes, 0, temp, 0, _length);
@@ -742,6 +745,10 @@ public final class ByteUtil {
 
     public void set(int offset, byte b) {
       _bytes[offset] = b;
+    }
+
+    public void setBits(int offset, byte b) {
+      _bytes[offset] |= b;
     }
 
     public void writeFill(int length, byte b) {
