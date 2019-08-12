@@ -150,28 +150,24 @@ public class General97IndexCodes extends GeneralLegacyIndexCodes
       }
     }
 
-    // FIXME, how to handle extra codes for non ascending?
     if(extraCodes != null) {
 
+      // write the extra codes to the end
       extraCodes.writeNibble(EXT_CODES_BOUNDS_NIBBLE);
       extraCodes.writeTo(bout);
 
     } else {
 
-      // handle descending order by inverting the bytes
-      if(!isAscending) {
-
-        // we actually write the end byte before flipping the bytes, and write
-        // another one after flipping
-        bout.write(END_EXTRA_TEXT);
-
-        // flip the bytes that we have written thus far for this text value
-        IndexData.flipBytes(bout.getBytes(), prevLength,
-                            (bout.getLength() - prevLength));
-      }
-
       // write end extra text
       bout.write(END_EXTRA_TEXT);
+    }
+
+    // handle descending order by inverting the bytes
+    if(!isAscending) {
+
+      // flip the bytes that we have written thus far for this text value
+      IndexData.flipBytes(bout.getBytes(), prevLength,
+                          (bout.getLength() - prevLength));
     }
   }
 
