@@ -1515,11 +1515,14 @@ public class IndexData {
     case TEXT:
     case MEMO:
       ColumnImpl.SortOrder sortOrder = col.getTextSortOrder();
+      if(ColumnImpl.GENERAL_SORT_ORDER.equals(sortOrder)) {
+        return new GenTextColumnDescriptor(col, flags);
+      }
       if(ColumnImpl.GENERAL_LEGACY_SORT_ORDER.equals(sortOrder)) {
         return new GenLegTextColumnDescriptor(col, flags);
       }
-      if(ColumnImpl.GENERAL_SORT_ORDER.equals(sortOrder)) {
-        return new GenTextColumnDescriptor(col, flags);
+      if(ColumnImpl.GENERAL_97_SORT_ORDER.equals(sortOrder)) {
+        return new Gen97TextColumnDescriptor(col, flags);
       }
       // unsupported sort order
       setUnsupportedReason("unsupported collating sort order " + sortOrder +
@@ -1910,6 +1913,27 @@ public class IndexData {
       throws IOException
     {
       GeneralIndexCodes.GEN_INSTANCE.writeNonNullIndexTextValue(
+          value, bout, isAscending());
+    }
+  }
+
+  /**
+   * ColumnDescriptor for "general 97" sort order text based columns.
+   */
+  private static final class Gen97TextColumnDescriptor
+    extends ColumnDescriptor
+  {
+    private Gen97TextColumnDescriptor(ColumnImpl column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+
+    @Override
+    protected void writeNonNullValue(Object value, ByteStream bout)
+      throws IOException
+    {
+      General97IndexCodes.GEN_97_INSTANCE.writeNonNullIndexTextValue(
           value, bout, isAscending());
     }
   }
