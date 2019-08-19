@@ -30,15 +30,15 @@ import java.nio.charset.Charset;
 public class DefaultCodecProvider implements CodecProvider
 {
   /** common instance of DefaultCodecProvider */
-  public static final CodecProvider INSTANCE = 
+  public static final CodecProvider INSTANCE =
     new DefaultCodecProvider();
 
   /** common instance of {@link DummyHandler} */
-  public static final CodecHandler DUMMY_HANDLER = 
+  public static final CodecHandler DUMMY_HANDLER =
     new DummyHandler();
 
   /** common instance of {@link UnsupportedHandler} */
-  public static final CodecHandler UNSUPPORTED_HANDLER = 
+  public static final CodecHandler UNSUPPORTED_HANDLER =
     new UnsupportedHandler();
 
 
@@ -62,7 +62,7 @@ public class DefaultCodecProvider implements CodecProvider
     case OFFICE:
       // check for an encode key.  if 0, not encoded
       ByteBuffer bb = channel.createPageBuffer();
-      channel.readPage(bb, 0);
+      channel.readRootPage(bb);
       int codecKey = bb.getInt(format.OFFSET_ENCODING_KEY);
       return((codecKey == 0) ? DUMMY_HANDLER : UNSUPPORTED_HANDLER);
 
@@ -93,15 +93,15 @@ public class DefaultCodecProvider implements CodecProvider
 
     @Override
     public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
-                           int pageNumber) 
-      throws IOException 
+                           int pageNumber)
+      throws IOException
     {
       // does nothing
     }
 
     @Override
-    public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
-                                 int pageOffset) 
+    public ByteBuffer encodePage(ByteBuffer page, int pageNumber,
+                                 int pageOffset)
       throws IOException
     {
       // does nothing
@@ -127,16 +127,16 @@ public class DefaultCodecProvider implements CodecProvider
     }
 
     @Override
-    public void decodePage(ByteBuffer inPage, ByteBuffer outPage, 
-                           int pageNumber) 
-      throws IOException 
+    public void decodePage(ByteBuffer inPage, ByteBuffer outPage,
+                           int pageNumber)
+      throws IOException
     {
       throw new UnsupportedCodecException("Decoding not supported.  Please choose a CodecProvider which supports reading the current database encoding.");
     }
 
     @Override
-    public ByteBuffer encodePage(ByteBuffer page, int pageNumber, 
-                                 int pageOffset) 
+    public ByteBuffer encodePage(ByteBuffer page, int pageNumber,
+                                 int pageOffset)
       throws IOException
     {
       throw new UnsupportedCodecException("Encoding not supported.  Please choose a CodecProvider which supports writing the current database encoding.");

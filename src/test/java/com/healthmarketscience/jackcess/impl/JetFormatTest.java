@@ -3,6 +3,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
 import java.sql.SQLException;
@@ -67,6 +68,9 @@ public class JetFormatTest extends TestCase {
     public String toString() { return _basename; }
   }
 
+  /** charset for access 97 dbs */
+  public static final Charset A97_CHARSET = Charset.forName("windows-1252");
+
   /** Defines currently supported db file formats.  (can be modified at
       runtime via the system property
       "com.healthmarketscience.jackcess.testFormats") */
@@ -109,12 +113,15 @@ public class JetFormatTest extends TestCase {
 
     private final File dbFile;
     private final FileFormat expectedFileFormat;
+    private final Charset _charset;
 
     private TestDB(File databaseFile,
-                   FileFormat expectedDBFileFormat) {
+                   FileFormat expectedDBFileFormat,
+                   Charset charset) {
 
       dbFile = databaseFile;
       expectedFileFormat = expectedDBFileFormat;
+      _charset = charset;
     }
 
     public final File getFile() { return dbFile; }
@@ -125,6 +132,10 @@ public class JetFormatTest extends TestCase {
 
     public final JetFormat getExpectedFormat() {
       return DatabaseImpl.getFileFormatDetails(expectedFileFormat).getFormat();
+    }
+
+    public final Charset getExpectedCharset() {
+      return _charset;
     }
 
     @Override
@@ -162,7 +173,12 @@ public class JetFormatTest extends TestCase {
           throw new RuntimeException(e);
         }
 
-        supportedTestDBs.add(new TestDB(testFile, fileFormat));
+        Charset charset = null;
+        if(fileFormat == FileFormat.V1997) {
+          charset = A97_CHARSET;
+        }
+
+        supportedTestDBs.add(new TestDB(testFile, fileFormat, charset));
       }
       return supportedTestDBs;
     }

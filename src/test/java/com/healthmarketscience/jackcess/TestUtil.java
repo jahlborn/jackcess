@@ -26,11 +26,11 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -90,11 +90,19 @@ public class TestUtil
   public static Database open(FileFormat fileFormat, File file, boolean inMem)
     throws Exception
   {
+    return open(fileFormat, file, inMem, null);
+  }
+
+  public static Database open(FileFormat fileFormat, File file, boolean inMem,
+                              Charset charset)
+    throws Exception
+  {
     FileChannel channel = (inMem ? MemFileChannel.newChannel(
                                file, MemFileChannel.RW_CHANNEL_MODE)
                            : null);
     final Database db = new DatabaseBuilder(file).setReadOnly(true)
-      .setAutoSync(getTestAutoSync()).setChannel(channel).open();
+      .setAutoSync(getTestAutoSync()).setChannel(channel)
+      .setCharset(charset).open();
     Assert.assertEquals("Wrong JetFormat.",
                  DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
                  ((DatabaseImpl)db).getFormat());
@@ -103,11 +111,13 @@ public class TestUtil
   }
 
   public static Database open(TestDB testDB) throws Exception {
-    return open(testDB.getExpectedFileFormat(), testDB.getFile());
+    return open(testDB.getExpectedFileFormat(), testDB.getFile(), false,
+                testDB.getExpectedCharset());
   }
 
   public static Database openMem(TestDB testDB) throws Exception {
-    return open(testDB.getExpectedFileFormat(), testDB.getFile(), true);
+    return open(testDB.getExpectedFileFormat(), testDB.getFile(), true,
+                testDB.getExpectedCharset());
   }
 
   public static Database create(FileFormat fileFormat) throws Exception {

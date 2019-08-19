@@ -160,18 +160,25 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   private static final short GENERAL_SORT_ORDER_VALUE = 1033;
 
   /**
+   * the "general" text sort order, version (access 1997)
+   * @usage _intermediate_field_
+   */
+  public static final SortOrder GENERAL_97_SORT_ORDER =
+    new SortOrder(GENERAL_SORT_ORDER_VALUE, (short)-1);
+
+  /**
    * the "general" text sort order, legacy version (access 2000-2007)
    * @usage _intermediate_field_
    */
   public static final SortOrder GENERAL_LEGACY_SORT_ORDER =
-    new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)0);
+    new SortOrder(GENERAL_SORT_ORDER_VALUE, (short)0);
 
   /**
    * the "general" text sort order, latest version (access 2010+)
    * @usage _intermediate_field_
    */
   public static final SortOrder GENERAL_SORT_ORDER =
-    new SortOrder(GENERAL_SORT_ORDER_VALUE, (byte)1);
+    new SortOrder(GENERAL_SORT_ORDER_VALUE, (short)1);
 
   /** pattern matching textual guid strings (allows for optional surrounding
       '{' and '}') */
@@ -2077,22 +2084,26 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
                                  JetFormat format)
   {
     short value = buffer.getShort(position);
-    byte version = 0;
-    if(format.SIZE_SORT_ORDER == 4) {
-      version = buffer.get(position + 3);
-    }
 
     if(value == 0) {
       // probably a file we wrote, before handling sort order
       return format.DEFAULT_SORT_ORDER;
     }
 
+    short version = format.DEFAULT_SORT_ORDER.getVersion();
+    if(format.SIZE_SORT_ORDER == 4) {
+      version = buffer.get(position + 3);
+    }
+
     if(value == GENERAL_SORT_ORDER_VALUE) {
+      if(version == GENERAL_SORT_ORDER.getVersion()) {
+        return GENERAL_SORT_ORDER;
+      }
       if(version == GENERAL_LEGACY_SORT_ORDER.getVersion()) {
         return GENERAL_LEGACY_SORT_ORDER;
       }
-      if(version == GENERAL_SORT_ORDER.getVersion()) {
-        return GENERAL_SORT_ORDER;
+      if(version == GENERAL_97_SORT_ORDER.getVersion()) {
+        return GENERAL_97_SORT_ORDER;
       }
     }
     return new SortOrder(value, version);
@@ -2128,7 +2139,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     buffer.putShort(sortOrder.getValue());
     if(format.SIZE_SORT_ORDER == 4) {
       buffer.put((byte)0x00); // unknown
-      buffer.put(sortOrder.getVersion());
+      buffer.put((byte)sortOrder.getVersion());
     }
   }
 
@@ -2563,9 +2574,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   public static final class SortOrder
   {
     private final short _value;
-    private final byte _version;
+    private final short _version;
 
-    public SortOrder(short value, byte version) {
+    public SortOrder(short value, short version) {
       _value = value;
       _version = version;
     }
@@ -2574,7 +2585,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       return _value;
     }
 
-    public byte getVersion() {
+    public short getVersion() {
       return _version;
     }
 

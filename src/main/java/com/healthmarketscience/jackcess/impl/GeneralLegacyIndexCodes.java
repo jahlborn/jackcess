@@ -52,20 +52,20 @@ public class GeneralLegacyIndexCodes {
   // international char is replaced with ascii char.
   // pattern for international chars in the extra bytes:
   // [ 02 (for each normal char) ] [ <symbol_code> (for each inat char) ]
-  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;  
+  static final byte INTERNATIONAL_EXTRA_PLACEHOLDER = (byte)0x02;
 
   // see Index.writeCrazyCodes for details on writing crazy codes
   static final byte CRAZY_CODE_START = (byte)0x80;
   static final byte CRAZY_CODE_1 = (byte)0x02;
   static final byte CRAZY_CODE_2 = (byte)0x03;
-  static final byte[] CRAZY_CODES_SUFFIX = 
+  static final byte[] CRAZY_CODES_SUFFIX =
     new byte[]{(byte)0xFF, (byte)0x02, (byte)0x80, (byte)0xFF, (byte)0x80};
   static final byte CRAZY_CODES_UNPRINT_SUFFIX = (byte)0xFF;
 
   // stash the codes in some resource files
-  private static final String CODES_FILE = 
+  private static final String CODES_FILE =
     DatabaseImpl.RESOURCE_PATH + "index_codes_genleg.txt";
-  private static final String EXT_CODES_FILE = 
+  private static final String EXT_CODES_FILE =
     DatabaseImpl.RESOURCE_PATH + "index_codes_ext_genleg.txt";
 
   /**
@@ -96,6 +96,11 @@ public class GeneralLegacyIndexCodes {
     INTERNATIONAL_EXT("Z") {
       @Override public CharHandler parseCodes(String[] codeStrings) {
         return parseInternationalExtCodes(codeStrings);
+      }
+    },
+    SIGNIFICANT("G") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        return parseSignificantCodes(codeStrings);
       }
     },
     IGNORED("X") {
@@ -138,13 +143,16 @@ public class GeneralLegacyIndexCodes {
     public byte getCrazyFlag() {
       return 0;
     }
+    public boolean isSignificantChar() {
+      return false;
+    }
   }
 
   /**
    * CharHandler for Type.SIMPLE
    */
   private static final class SimpleCharHandler extends CharHandler {
-    private byte[] _bytes;
+    private final byte[] _bytes;
     private SimpleCharHandler(byte[] bytes) {
       _bytes = bytes;
     }
@@ -160,8 +168,8 @@ public class GeneralLegacyIndexCodes {
    * CharHandler for Type.INTERNATIONAL
    */
   private static final class InternationalCharHandler extends CharHandler {
-    private byte[] _bytes;
-    private byte[] _extraBytes;
+    private final byte[] _bytes;
+    private final byte[] _extraBytes;
     private InternationalCharHandler(byte[] bytes, byte[] extraBytes) {
       _bytes = bytes;
       _extraBytes = extraBytes;
@@ -181,7 +189,7 @@ public class GeneralLegacyIndexCodes {
    * CharHandler for Type.UNPRINTABLE
    */
   private static final class UnprintableCharHandler extends CharHandler {
-    private byte[] _unprintBytes;
+    private final byte[] _unprintBytes;
     private UnprintableCharHandler(byte[] unprintBytes) {
       _unprintBytes = unprintBytes;
     }
@@ -197,7 +205,7 @@ public class GeneralLegacyIndexCodes {
    * CharHandler for Type.UNPRINTABLE_EXT
    */
   private static final class UnprintableExtCharHandler extends CharHandler {
-    private byte _extraByteMod;
+    private final byte _extraByteMod;
     private UnprintableExtCharHandler(Byte extraByteMod) {
       _extraByteMod = extraByteMod;
     }
@@ -213,9 +221,9 @@ public class GeneralLegacyIndexCodes {
    * CharHandler for Type.INTERNATIONAL_EXT
    */
   private static final class InternationalExtCharHandler extends CharHandler {
-    private byte[] _bytes;
-    private byte[] _extraBytes;
-    private byte _crazyFlag;
+    private final byte[] _bytes;
+    private final byte[] _extraBytes;
+    private final byte _crazyFlag;
     private InternationalExtCharHandler(byte[] bytes, byte[] extraBytes,
                                         byte crazyFlag) {
       _bytes = bytes;
@@ -233,6 +241,25 @@ public class GeneralLegacyIndexCodes {
     }
     @Override public byte getCrazyFlag() {
       return _crazyFlag;
+    }
+  }
+
+  /**
+   * CharHandler for Type.SIGNIFICANT
+   */
+  private static final class SignificantCharHandler extends CharHandler {
+    private final byte[] _bytes;
+    private SignificantCharHandler(byte[] bytes) {
+      _bytes = bytes;
+    }
+    @Override public Type getType() {
+      return Type.SIGNIFICANT;
+    }
+    @Override public byte[] getInlineBytes() {
+      return _bytes;
+    }
+    @Override public boolean isSignificantChar() {
+      return true;
     }
   }
 
@@ -267,7 +294,7 @@ public class GeneralLegacyIndexCodes {
     private static final CharHandler[] _values = loadCodes(
         CODES_FILE, FIRST_CHAR, LAST_CHAR);
   }
-  
+
   private static final class ExtCodes
   {
     /** handlers for the rest of the chars in BMP 0.  use nested class to
@@ -276,9 +303,9 @@ public class GeneralLegacyIndexCodes {
         EXT_CODES_FILE, FIRST_EXT_CHAR, LAST_EXT_CHAR);
   }
 
-  static final GeneralLegacyIndexCodes GEN_LEG_INSTANCE = 
+  static final GeneralLegacyIndexCodes GEN_LEG_INSTANCE =
     new GeneralLegacyIndexCodes();
-  
+
   GeneralLegacyIndexCodes() {
   }
 
@@ -316,7 +343,7 @@ public class GeneralLegacyIndexCodes {
       reader = new BufferedReader(
           new InputStreamReader(
               DatabaseImpl.getResourceAsStream(codesFilePath), "US-ASCII"));
-      
+
       int start = asUnsignedChar(firstChar);
       int end = asUnsignedChar(lastChar);
       for(int i = start; i <= end; ++i) {
@@ -357,7 +384,7 @@ public class GeneralLegacyIndexCodes {
   /**
    * Returns a SimpleCharHandler parsed from the given index code strings.
    */
-  private static CharHandler parseSimpleCodes(String[] codeStrings) 
+  private static CharHandler parseSimpleCodes(String[] codeStrings)
   {
     if(codeStrings.length != 1) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -397,7 +424,7 @@ public class GeneralLegacyIndexCodes {
    * Returns a UnprintableExtCharHandler parsed from the given index code
    * strings.
    */
-  private static CharHandler parseUnprintableExtCodes(String[] codeStrings) 
+  private static CharHandler parseUnprintableExtCodes(String[] codeStrings)
   {
     if(codeStrings.length != 1) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -415,7 +442,7 @@ public class GeneralLegacyIndexCodes {
    * Returns a InternationalExtCharHandler parsed from the given index code
    * strings.
    */
-  private static CharHandler parseInternationalExtCodes(String[] codeStrings) 
+  private static CharHandler parseInternationalExtCodes(String[] codeStrings)
   {
     if(codeStrings.length != 3) {
       throw new IllegalStateException("Unexpected code strings " +
@@ -427,6 +454,18 @@ public class GeneralLegacyIndexCodes {
     return new InternationalExtCharHandler(codesToBytes(codeStrings[0], true),
                                            codesToBytes(codeStrings[1], false),
                                            crazyFlag);
+  }
+
+  /**
+   * Returns a SignificantCharHandler parsed from the given index code strings.
+   */
+  private static CharHandler parseSignificantCodes(String[] codeStrings)
+  {
+    if(codeStrings.length != 1) {
+      throw new IllegalStateException("Unexpected code strings " +
+                                      Arrays.asList(codeStrings));
+    }
+    return new SignificantCharHandler(codesToBytes(codeStrings[0], true));
   }
 
   /**
@@ -481,10 +520,10 @@ public class GeneralLegacyIndexCodes {
       str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
     }
 
-    // record pprevious entry length so we can do any post-processing
+    // record previous entry length so we can do any post-processing
     // necessary for this entry (handling descending)
     int prevLength = bout.getLength();
-    
+
     // now, convert each character to a "code" of one or more bytes
     ExtraCodesStream extraCodes = null;
     ByteStream unprintableCodes = null;
@@ -526,12 +565,12 @@ public class GeneralLegacyIndexCodes {
         if(unprintableCodes == null) {
           unprintableCodes = new ByteStream();
         }
-          
+
         // keep track of the unprintable codes for later
         writeUnprintableCodes(curCharOffset, bytes, unprintableCodes,
                               extraCodes);
       }
-      
+
       byte crazyFlag = ch.getCrazyFlag();
       if(crazyFlag != 0) {
         if(crazyCodes == null) {
@@ -580,7 +619,7 @@ public class GeneralLegacyIndexCodes {
 
           // write another end flag
           bout.write(END_TEXT);
-        
+
           unprintableCodes.writeTo(bout);
         }
       }
@@ -592,14 +631,14 @@ public class GeneralLegacyIndexCodes {
       // we actually write the end byte before flipping the bytes, and write
       // another one after flipping
       bout.write(END_EXTRA_TEXT);
-      
+
       // flip the bytes that we have written thus far for this text value
-      IndexData.flipBytes(bout.getBytes(), prevLength, 
+      IndexData.flipBytes(bout.getBytes(), prevLength,
                           (bout.getLength() - prevLength));
     }
 
     // write end extra text
-    bout.write(END_EXTRA_TEXT);    
+    bout.write(END_EXTRA_TEXT);
   }
 
   /**
@@ -619,7 +658,7 @@ public class GeneralLegacyIndexCodes {
     }
 
     if(bytes != null) {
-      
+
       // write the actual extra codes and update the number of chars
       extraCodes.write(bytes);
       extraCodes.incrementNumChars(1);
@@ -696,7 +735,7 @@ public class GeneralLegacyIndexCodes {
     // write offset as big-endian short
     unprintableCodes.write((offset >> 8) & 0xFF);
     unprintableCodes.write(offset & 0xFF);
-          
+
     unprintableCodes.write(UNPRINTABLE_MIDFIX);
     unprintableCodes.write(bytes);
   }
@@ -748,7 +787,7 @@ public class GeneralLegacyIndexCodes {
   private static final class ExtraCodesStream extends ByteStream
   {
     private int _numChars;
-    private int _unprintablePrefixLen; 
+    private int _unprintablePrefixLen;
 
     private ExtraCodesStream(int length) {
       super(length);
@@ -757,7 +796,7 @@ public class GeneralLegacyIndexCodes {
     public int getNumChars() {
       return _numChars;
     }
-    
+
     public void incrementNumChars(int inc) {
       _numChars += inc;
     }

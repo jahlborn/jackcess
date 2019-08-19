@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.impl.IndexCursorImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 
 
@@ -82,7 +83,7 @@ public class CursorBuilder {
     _beforeFirst = true;
     return this;
   }
-  
+
   /**
    * Sets the cursor so that it will start at the end (unless a savepoint is
    * given).
@@ -167,7 +168,7 @@ public class CursorBuilder {
     setEndRow(specificRow);
     return this;
   }
-  
+
   /**
    * Sets the starting and ending row for a range based index cursor to the
    * given entry (where the given values correspond to the index's columns).
@@ -181,7 +182,7 @@ public class CursorBuilder {
     return this;
   }
 
-  
+
   /**
    * Sets the starting row for a range based index cursor.
    * <p>
@@ -191,7 +192,7 @@ public class CursorBuilder {
     _startRow = startRow;
     return this;
   }
-  
+
   /**
    * Sets the starting row for a range based index cursor to the given entry
    * (where the given values correspond to the index's columns).
@@ -224,7 +225,7 @@ public class CursorBuilder {
     _endRow = endRow;
     return this;
   }
-  
+
   /**
    * Sets the ending row for a range based index cursor to the given entry
    * (where the given values correspond to the index's columns).
@@ -257,6 +258,13 @@ public class CursorBuilder {
   }
 
   /**
+   * Sets the ColumnMatcher to an instance of CaseInsensitiveColumnMatcher
+   */
+  public CursorBuilder setCaseInsensitive() {
+    return setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE);
+  }
+
+  /**
    * Returns a new cursor for the table, constructed to the given
    * specifications.
    */
@@ -280,7 +288,7 @@ public class CursorBuilder {
     }
     return cursor;
   }
-  
+
   /**
    * Returns a new index cursor for the table, constructed to the given
    * specifications.
@@ -304,7 +312,7 @@ public class CursorBuilder {
    * Note, index based table traversal may not include all rows, as certain
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
-   * 
+   *
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    */
@@ -323,7 +331,7 @@ public class CursorBuilder {
   {
     return createCursor(table.getPrimaryKeyIndex());
   }
-  
+
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
    * range.
@@ -331,7 +339,7 @@ public class CursorBuilder {
    * Note, index based table traversal may not include all rows, as certain
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
-   * 
+   *
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    * @param startRow the first row of data for the cursor (inclusive), or
@@ -348,7 +356,7 @@ public class CursorBuilder {
       .setEndRow(endRow)
       .toIndexCursor();
   }
-  
+
   /**
    * Creates an indexed cursor for the given table, narrowed to the given
    * range.
@@ -356,7 +364,7 @@ public class CursorBuilder {
    * Note, index based table traversal may not include all rows, as certain
    * types of indexes do not include all entries (namely, some indexes ignore
    * null entries, see {@link Index#shouldIgnoreNulls}).
-   * 
+   *
    * @param index index for the table which will define traversal order as
    *              well as enhance certain lookups
    * @param startRow the first row of data for the cursor, or {@code null} for
@@ -388,7 +396,7 @@ public class CursorBuilder {
    * <p>
    * Warning, this method <i>always</i> starts searching from the beginning of
    * the Table (you cannot use it to find successive matches).
-   * 
+   *
    * @param table the table to search
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
@@ -402,12 +410,12 @@ public class CursorBuilder {
     }
     return null;
   }
-  
+
   /**
    * Convenience method for finding a specific row (as defined by the cursor)
    * where the index entries match the given values.  See {@link
    * IndexCursor#findRowByEntry(Object...)} for details on the entryValues.
-   * 
+   *
    * @param index the index to search
    * @param entryValues the column values for the index's columns.
    * @return the matching row or {@code null} if a match could not be found.
@@ -417,12 +425,12 @@ public class CursorBuilder {
   {
     return createCursor(index).findRowByEntry(entryValues);
   }
-  
+
   /**
    * Convenience method for finding a specific row by the primary key of the
    * table.  See {@link IndexCursor#findRowByEntry(Object...)} for details on
    * the entryValues.
-   * 
+   *
    * @param table the table to search
    * @param entryValues the column values for the table's primary key columns.
    * @return the matching row or {@code null} if a match could not be found.
@@ -432,7 +440,7 @@ public class CursorBuilder {
   {
     return findRowByEntry(table.getPrimaryKeyIndex(), entryValues);
   }
-  
+
   /**
    * Convenience method for finding a specific row in a table which matches a
    * given row "pattern".  See {@link Cursor#findFirstRow(Column,Object)} for
@@ -442,7 +450,7 @@ public class CursorBuilder {
    * match or a matching row with {@code null} for the desired value.  If
    * distinguishing this situation is important, you will need to use a Cursor
    * directly instead of this convenience method.
-   * 
+   *
    * @param table the table to search
    * @param column column whose value should be returned
    * @param columnPattern column being matched by the valuePattern
@@ -460,7 +468,7 @@ public class CursorBuilder {
     }
     return null;
   }
-  
+
   /**
    * Convenience method for finding a specific row in an indexed table which
    * matches a given row "pattern".  See {@link Cursor#findFirstRow(Map)} for
@@ -468,7 +476,7 @@ public class CursorBuilder {
    * <p>
    * Warning, this method <i>always</i> starts searching from the beginning of
    * the Table (you cannot use it to find successive matches).
-   * 
+   *
    * @param index index to assist the search
    * @param rowPattern pattern to be used to find the row
    * @return the matching row or {@code null} if a match could not be found.
@@ -482,7 +490,7 @@ public class CursorBuilder {
     }
     return null;
   }
-  
+
   /**
    * Convenience method for finding a specific row in a table which matches a
    * given row "pattern".  See {@link Cursor#findFirstRow(Column,Object)} for
@@ -492,7 +500,7 @@ public class CursorBuilder {
    * match or a matching row with {@code null} for the desired value.  If
    * distinguishing this situation is important, you will need to use a Cursor
    * directly instead of this convenience method.
-   * 
+   *
    * @param index index to assist the search
    * @param column column whose value should be returned
    * @param columnPattern column being matched by the valuePattern
