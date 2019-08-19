@@ -63,7 +63,7 @@ public class IndexCodesTest extends TestCase {
 
   public void testIndexCodes() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES)) {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES, true)) {
       Database db = openMem(testDB);
 
       for(Table t : db) {
@@ -86,6 +86,14 @@ public class IndexCodesTest extends TestCase {
     while(cursor.moveToNextRow()) {
 
       Row row = cursor.getCurrentRow();
+
+      Object data = row.get("data");
+      if((testDB.getExpectedFileFormat() == Database.FileFormat.V1997) &&
+         (data instanceof String) && ((String)data).contains("\uFFFD")) {
+        // this row has a character not supported in the v1997 charset
+        continue;
+      }
+
       Cursor.Position curPos = cursor.getSavepoint().getCurrentPosition();
       boolean success = false;
       try {
