@@ -11,9 +11,9 @@
       <subsection name="So what changed?">
         <p>
           Unlike the change from 1.x to 2.x, the change from 2.x to 3.x is
-          relatively non-impactful.  The major change was the requirement that
-          3.x requires Java 8+.  Other than that, the Jackcess API should be
-          binary compatible with existing code.  Some additional notes:
+          relatively non-impactful.  The major change was that 3.x requires
+          Java 8+.  Other than that, the Jackcess API should be binary
+          compatible with existing code.  Some additional notes:
         </p>
         <ul>
           <li><b>Dependencies have been updated.</b></li>
