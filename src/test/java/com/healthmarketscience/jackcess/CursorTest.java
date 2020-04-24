@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
@@ -1102,11 +1103,10 @@ public class CursorTest extends TestCase {
       Index idx = t1.getIndex("Table2Table1");
       IndexCursor cursor = CursorBuilder.createCursor(idx);
 
-      List<String> expectedData = new ArrayList<String>();
-      for(Row row : cursor.newEntryIterable(1)
-            .addColumnNames("data")) {
-        expectedData.add(row.getString("data"));
-      }
+      List<String> expectedData = cursor.newEntryIterable(1)
+            .addColumnNames("data")
+        .stream().map(r -> r.getString("data"))
+        .collect(Collectors.toList());
 
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
@@ -1155,13 +1155,11 @@ public class CursorTest extends TestCase {
       Table t1 = db.getTable("Table1");
       Cursor cursor = CursorBuilder.createCursor(t1);
 
-      List<String> expectedData = new ArrayList<String>();
-      for(Row row : cursor.newIterable().setColumnNames(
-              Arrays.asList("otherfk1", "data"))) {
-        if(row.get("otherfk1").equals(1)) {
-          expectedData.add(row.getString("data"));
-        }
-      }
+      List<String> expectedData = cursor.newIterable().setColumnNames(
+              Arrays.asList("otherfk1", "data")).stream()
+        .filter(r -> r.get("otherfk1").equals(1))
+        .map(r -> r.getString("data"))
+        .collect(Collectors.toList());
 
       assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 

@@ -19,6 +19,8 @@ package com.healthmarketscience.jackcess.util;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.IndexCursor;
@@ -109,5 +111,12 @@ public class EntryIterableBuilder implements Iterable<Row>
   @Override
   public Iterator<Row> iterator() {
     return ((IndexCursorImpl)_cursor).entryIterator(this);
-  }  
+  }
+
+  /**
+   * @return a Stream using the default Iterator.
+   */
+  public Stream<Row> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
 }

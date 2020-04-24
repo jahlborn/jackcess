@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
@@ -144,6 +146,13 @@ public interface Cursor extends Iterable<Row>
   public Iterator<Row> iterator();
 
   /**
+   * @return a Stream using the default Iterator.
+   */
+  default public Stream<Row> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
+
+  /**
    * Convenience method for constructing a new IterableBuilder for this
    * cursor.  An IterableBuilder provides a variety of options for more
    * flexible iteration.
@@ -174,7 +183,7 @@ public interface Cursor extends Iterable<Row>
    * @throws IllegalStateException if the current row is not valid (at
    *         beginning or end of table), or deleted.
    */
-  public <M extends Map<String,Object>> M updateCurrentRowFromMap(M row) 
+  public <M extends Map<String,Object>> M updateCurrentRowFromMap(M row)
     throws IOException;
 
   /**
@@ -190,7 +199,7 @@ public interface Cursor extends Iterable<Row>
    * @return The next row in this table (Column name -&gt; Column value), or
    *         {@code null} if no next row is found
    */
-  public Row getNextRow(Collection<String> columnNames) 
+  public Row getNextRow(Collection<String> columnNames)
     throws IOException;
 
   /**
@@ -206,7 +215,7 @@ public interface Cursor extends Iterable<Row>
    * @return The previous row in this table (Column name -&gt; Column value), or
    *         {@code null} if no previous row is found
    */
-  public Row getPreviousRow(Collection<String> columnNames) 
+  public Row getPreviousRow(Collection<String> columnNames)
     throws IOException;
 
   /**
@@ -222,11 +231,11 @@ public interface Cursor extends Iterable<Row>
    *         otherwise
    */
   public boolean moveToPreviousRow() throws IOException;
-  
+
   /**
    * Moves to the row with the given rowId.  If the row is not found (or an
    * exception is thrown), the cursor is restored to its previous state.
-   * 
+   *
    * @return {@code true} if a valid row was found with the given id,
    *         {@code false} if no row was found
    */
@@ -356,14 +365,14 @@ public interface Cursor extends Iterable<Row>
    * Savepoint.
    */
   public interface Id
-  {    
+  {
   }
 
   /**
    * Value object which maintains the current position of the cursor.
    */
   public interface Position
-  {    
+  {
     /**
      * Returns the unique RowId of the position of the cursor.
      */

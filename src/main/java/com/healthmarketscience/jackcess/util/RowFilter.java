@@ -20,6 +20,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Row;
@@ -33,7 +36,7 @@ import com.healthmarketscience.jackcess.Row;
  * @author Patricia Donaldson, Xerox Corporation
  * @usage _general_class_
  */
-public abstract class RowFilter
+public abstract class RowFilter implements Predicate<Row>
 {
 
   /**
@@ -42,6 +45,15 @@ public abstract class RowFilter
    * @param row current row to test for inclusion in the filter
    */
   public abstract boolean matches(Row row);
+
+  /**
+   * Adaptation of this class for {@link Predicate} support.  Uses the
+   * {@link #matches} method.
+   */
+  @Override
+  public boolean test(Row row) {
+    return matches(row);
+  }
 
   /**
    * Returns an iterable which filters the given iterable based on this
@@ -56,6 +68,15 @@ public abstract class RowFilter
     return new FilterIterable(iterable);
   }
 
+  /**
+   * Convenience method to apply this filter to the given iterable and return
+   * it as a Stream.
+   */
+  public Stream<Row> filter(Iterable<? extends Row> iterable) {
+    return StreamSupport.stream(
+        new FilterIterable(iterable).spliterator(), false)
+      .filter(this);
+  }
 
   /**
    * Creates a filter based on a row pattern.

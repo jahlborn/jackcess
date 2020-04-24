@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Map of properties for a database object.
@@ -129,6 +131,13 @@ public interface PropertyMap extends Iterable<PropertyMap.Property>
    * Saves the current state of this map.
    */
   public void save() throws IOException;
+
+  /**
+   * @return a Stream using the default Iterator.
+   */
+  default public Stream<PropertyMap.Property> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
 
   /**
    * Info about a property defined in a PropertyMap.

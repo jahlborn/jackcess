@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
@@ -219,6 +221,13 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public Iterator<Table> iterator();
 
   /**
+   * @return a Stream using the default Iterator.
+   */
+  default public Stream<Table> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
+
+  /**
    * Convenience method for constructing a new TableIterableBuilder for this
    * cursor.  A TableIterableBuilder provides a variety of options for more
    * flexible iteration of Tables.
@@ -235,6 +244,14 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _intermediate_method_
    */
   public Iterable<TableMetaData> newTableMetaDataIterable();
+
+  /**
+   * @return a Stream using the {@link #newTableMetaDataIterable}
+   */
+  default public Stream<TableMetaData> newTableMetaDataStream() {
+    return StreamSupport.stream(
+        newTableMetaDataIterable().spliterator(), false);
+  }
 
   /**
    * @param name User table name (case-insensitive)

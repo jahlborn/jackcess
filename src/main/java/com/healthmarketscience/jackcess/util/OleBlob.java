@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Blob;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.impl.OleUtil;
 
@@ -64,7 +66,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  *     }
  *   } finally {
  *     if(oleBlob != null) { oleBlob.close(); }
- *   }     
+ *   }
  * </pre>
  * <p>
  * <b>Example for creating new, embedded ole data:</b>
@@ -77,7 +79,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  *     db.addRow(1, oleBlob);
  *   } finally {
  *     if(oleBlob != null) { oleBlob.close(); }
- *   }     
+ *   }
  * </pre>
  * <p>
  * <b>Example for creating new, linked ole data:</b>
@@ -90,7 +92,7 @@ import com.healthmarketscience.jackcess.impl.OleUtil;
  *     db.addRow(1, oleBlob);
  *   } finally {
  *     if(oleBlob != null) { oleBlob.close(); }
- *   }     
+ *   }
  * </pre>
  *
  * @author James Ahlborn
@@ -102,11 +104,11 @@ public interface OleBlob extends Blob, Closeable
   public enum ContentType {
     /** the blob contents are a link (file path) to some external content.
         Content will be an instance of LinkContent */
-    LINK, 
+    LINK,
     /** the blob contents are a simple wrapper around some embedded content
         and related file names/paths.  Content will be an instance
         SimplePackageContent */
-    SIMPLE_PACKAGE, 
+    SIMPLE_PACKAGE,
     /** the blob contents are a complex embedded data known as compound
         storage (aka OLE2).  Working with compound storage requires the
         optional POI library.  Content will be an instance of CompoundContent.
@@ -119,7 +121,7 @@ public interface OleBlob extends Blob, Closeable
     OTHER,
     /** the top-level blob wrapper is not understood (this may not be a valid
         ole instance).  Content will simply be an instance of Content (the
-        data can be accessed from the main blob instance) */ 
+        data can be accessed from the main blob instance) */
     UNKNOWN;
   }
 
@@ -137,8 +139,8 @@ public interface OleBlob extends Blob, Closeable
   public Content getContent() throws IOException;
 
 
-  public interface Content 
-  {    
+  public interface Content
+  {
     /**
      * Returns the type of this content.
      */
@@ -154,7 +156,7 @@ public interface OleBlob extends Blob, Closeable
    * Intermediate sub-interface for Content which has a nested package.
    */
   public interface PackageContent extends Content
-  {    
+  {
     public String getPrettyName() throws IOException;
 
     public String getClassName() throws IOException;
@@ -171,7 +173,7 @@ public interface OleBlob extends Blob, Closeable
 
     public InputStream getStream() throws IOException;
 
-    public void writeTo(OutputStream out) throws IOException;    
+    public void writeTo(OutputStream out) throws IOException;
   }
 
   /**
@@ -196,7 +198,7 @@ public interface OleBlob extends Blob, Closeable
    * the access database (but the original file source path can also be found
    * at {@link #getFilePath}).
    */
-  public interface SimplePackageContent 
+  public interface SimplePackageContent
     extends PackageContent, EmbeddedContent
   {
     public String getFileName();
@@ -229,6 +231,13 @@ public interface OleBlob extends Blob, Closeable
     public Entry getContentsEntry() throws IOException;
 
     /**
+     * @return a Stream using the default Iterator.
+     */
+    default public Stream<CompoundContent.Entry> stream() {
+      return StreamSupport.stream(spliterator(), false);
+    }
+
+    /**
      * A document entry in the compound storage.
      */
     public interface Entry extends EmbeddedContent
@@ -240,7 +249,7 @@ public interface OleBlob extends Blob, Closeable
        */
       public CompoundContent getParent();
     }
-  }  
+  }
 
   /**
    * Sub-interface for Content which has the {@link ContentType#OTHER} type.
@@ -269,7 +278,7 @@ public interface OleBlob extends Blob, Closeable
     private String _prettyName;
     private String _className;
     private String _typeName;
-    
+
     public ContentType getType() {
       return _type;
     }
@@ -301,11 +310,11 @@ public interface OleBlob extends Blob, Closeable
     public String getClassName() {
       return _className;
     }
-    
+
     public String getTypeName() {
       return _typeName;
     }
-    
+
     public Builder setSimplePackageBytes(byte[] bytes) {
       _bytes = bytes;
       _contentLen = bytes.length;

@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 
@@ -49,7 +51,7 @@ public interface Table extends Iterable<Row>
   public enum ColumnOrder {
     /** columns are ordered based on the order of the data in the table (this
         order does not change as columns are added to the table). */
-    DATA, 
+    DATA,
     /** columns are ordered based on the "display" order (this order can be
         changed arbitrarily) */
     DISPLAY;
@@ -209,7 +211,7 @@ public interface Table extends Iterable<Row>
    * @return the given row map, which will contain any autonumbers generated
    * @usage _general_method_
    */
-  public <M extends Map<String,Object>> M addRowFromMap(M row) 
+  public <M extends Map<String,Object>> M addRowFromMap(M row)
     throws IOException;
 
   /**
@@ -226,7 +228,7 @@ public interface Table extends Iterable<Row>
    * partially successful write.
    *
    * @see #addRow(Object...) for more details on row arrays
-   * 
+   *
    * @param rows List of Object[] row values.  the rows will be modified if
    *             this table contains an auto-number column, otherwise they
    *             will not be modified.
@@ -236,7 +238,7 @@ public interface Table extends Iterable<Row>
    *         generated
    * @usage _general_method_
    */
-  public List<? extends Object[]> addRows(List<? extends Object[]> rows) 
+  public List<? extends Object[]> addRows(List<? extends Object[]> rows)
     throws IOException;
 
   /**
@@ -249,12 +251,12 @@ public interface Table extends Iterable<Row>
    * Most exceptions thrown from this method will be wrapped with a {@link
    * BatchUpdateException} which gives useful information in the case of a
    * partially successful write.
-   * 
+   *
    * @return the given row map list, where the row maps will contain any
    *         autonumbers generated
    * @usage _general_method_
    */
-  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows) 
+  public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows)
     throws IOException;
 
   /**
@@ -287,6 +289,13 @@ public interface Table extends Iterable<Row>
    */
   @Override
   public Iterator<Row> iterator();
+
+  /**
+   * @return a Stream using the default Iterator.
+   */
+  default public Stream<Row> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
 
   /**
    * After calling this method, {@link #getNextRow} will return the first row

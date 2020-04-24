@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
@@ -571,10 +572,9 @@ public class DatabaseTest extends TestCase
         ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
 
-      Set<Integer> ids = new HashSet<Integer>();
-      for(Row row : t) {
-        ids.add(row.getInt("ID"));
-      }
+      Set<Integer> ids = t.stream()
+        .map(r -> r.getInt("ID"))
+        .collect(Collectors.toSet());
       assertEquals(1000, ids.size());
 
       assertTrue(((TableImpl)t).getOwnedPagesCursor().getUsageMap().toString()
@@ -666,10 +666,9 @@ public class DatabaseTest extends TestCase
         ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
 
-      List<Date> foundDates = new ArrayList<Date>();
-      for(Row row : table) {
-        foundDates.add(row.getDate("date"));
-      }
+      List<Date> foundDates = table.stream()
+        .map(r -> r.getDate("date"))
+        .collect(Collectors.toList());
 
       assertEquals(dates.size(), foundDates.size());
       for(int i = 0; i < dates.size(); ++i) {
@@ -706,10 +705,9 @@ public class DatabaseTest extends TestCase
         table.addRow("row " + dateStr, d);
       }
 
-      List<String> foundDates = new ArrayList<String>();
-      for(Row row : table) {
-        foundDates.add(sdf.format(row.getDate("date")));
-      }
+      List<String> foundDates = table.stream()
+        .map(r -> sdf.format(r.getDate("date")))
+        .collect(Collectors.toList());
 
       assertEquals(dates, foundDates);
 

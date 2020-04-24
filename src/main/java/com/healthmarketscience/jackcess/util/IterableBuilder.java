@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
@@ -139,7 +141,7 @@ public class IterableBuilder implements Iterable<Row>
     _columnNames.add(columnName);
   }
 
-  public IterableBuilder setMatchPattern(Column columnPattern, 
+  public IterableBuilder setMatchPattern(Column columnPattern,
                                          Object valuePattern) {
     _type = Type.COLUMN_MATCH;
     _matchPattern = new AbstractMap.SimpleImmutableEntry<Column,Object>(
@@ -147,7 +149,7 @@ public class IterableBuilder implements Iterable<Row>
     return this;
   }
 
-  public IterableBuilder setMatchPattern(String columnNamePattern, 
+  public IterableBuilder setMatchPattern(String columnNamePattern,
                                          Object valuePattern) {
     return setMatchPattern(_cursor.getTable().getColumn(columnNamePattern),
                            valuePattern);
@@ -159,7 +161,7 @@ public class IterableBuilder implements Iterable<Row>
     return this;
   }
 
-  public IterableBuilder addMatchPattern(String columnNamePattern, 
+  public IterableBuilder addMatchPattern(String columnNamePattern,
                                          Object valuePattern)
   {
     _type = Type.ROW_MATCH;
@@ -171,7 +173,7 @@ public class IterableBuilder implements Iterable<Row>
     }
     matchPattern.put(columnNamePattern, valuePattern);
     return this;
-  }    
+  }
 
   public IterableBuilder setColumnMatcher(ColumnMatcher columnMatcher) {
     _columnMatcher = columnMatcher;
@@ -181,5 +183,12 @@ public class IterableBuilder implements Iterable<Row>
   @Override
   public Iterator<Row> iterator() {
     return ((CursorImpl)_cursor).iterator(this);
+  }
+
+  /**
+   * @return a Stream using the default Iterator.
+   */
+  public Stream<Row> stream() {
+    return StreamSupport.stream(spliterator(), false);
   }
 }

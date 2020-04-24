@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Index;
@@ -63,9 +64,9 @@ public class JoinerTest extends TestCase {
       assertSame(t2t1, t2t1Join.getFromIndex());
       assertSame(t1, t2t1Join.getToTable());
       assertSame(t1t2, t2t1Join.getToIndex());
-      
+
       doTestJoiner(t2t1Join, createT2T1Data());
-      
+
       Index t3t1 = t1t3.getReferencedIndex();
       assertSame(t3, t3t1.getTable());
       Joiner t3t1Join = Joiner.create(t3t1);
@@ -74,11 +75,11 @@ public class JoinerTest extends TestCase {
       assertSame(t3t1, t3t1Join.getFromIndex());
       assertSame(t1, t3t1Join.getToTable());
       assertSame(t1t3, t3t1Join.getToIndex());
-      
-      doTestJoiner(t3t1Join, createT3T1Data());      
+
+      doTestJoiner(t3t1Join, createT3T1Data());
 
       doTestJoinerDelete(t2t1Join);
-    }    
+    }
   }
 
   private static void doTestJoiner(
@@ -92,11 +93,8 @@ public class JoinerTest extends TestCase {
     for(Row row : join.getFromTable()) {
       Integer id = row.getInt("id");
 
-      List<Row> joinedRows =
-        new ArrayList<Row>();
-      for(Row t1Row : join.findRows(row)) {
-        joinedRows.add(t1Row);
-      }
+      List<Row> joinedRows = join.findRows(row).stream()
+        .collect(Collectors.toList());
 
       List<Row> expectedRows = expectedData.get(id);
       assertEquals(expectedData.get(id), joinedRows);
@@ -110,18 +108,16 @@ public class JoinerTest extends TestCase {
         assertFalse(join.hasRows(row));
         assertNull(join.findFirstRow(row));
       }
-      
+
       List<Row> expectedRows2 = new ArrayList<Row>();
       for(Row tmpRow : expectedRows) {
         Row tmpRow2 = new RowImpl(tmpRow);
         tmpRow2.keySet().retainAll(colNames);
         expectedRows2.add(tmpRow2);
       }
-      
-      joinedRows = new ArrayList<Row>();
-      for(Row t1Row : join.findRows(row).setColumnNames(colNames)) {
-        joinedRows.add(t1Row);
-      }
+
+      joinedRows = join.findRows(row).setColumnNames(colNames)
+        .stream().collect(Collectors.toList());
 
       assertEquals(expectedRows2, joinedRows);
 
@@ -129,7 +125,7 @@ public class JoinerTest extends TestCase {
         assertEquals(expectedRows2.get(0), join.findFirstRow(row, colNames));
       } else {
         assertNull(join.findFirstRow(row, colNames));
-      }      
+      }
     }
   }
 
@@ -175,7 +171,7 @@ public class JoinerTest extends TestCase {
 
     return data;
   }
-  
+
   private static Map<Integer,List<Row>> createT3T1Data()
   {
     Map<Integer,List<Row>> data = new HashMap<Integer,List<Row>>();
@@ -202,5 +198,5 @@ public class JoinerTest extends TestCase {
 
     return data;
   }
-  
+
 }

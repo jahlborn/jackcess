@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.util;
 
 import java.util.Iterator;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
@@ -36,7 +38,7 @@ public class TableIterableBuilder implements Iterable<Table>
   private boolean _includeNormalTables = true;
   private boolean _includeSystemTables;
   private boolean _includeLinkedTables = true;
-  
+
   public TableIterableBuilder(Database db) {
     _db = db;
   }
@@ -44,20 +46,20 @@ public class TableIterableBuilder implements Iterable<Table>
   public boolean isIncludeNormalTables() {
     return _includeNormalTables;
   }
-  
+
   public boolean isIncludeSystemTables() {
     return _includeSystemTables;
   }
-  
+
   public boolean isIncludeLinkedTables() {
     return _includeLinkedTables;
   }
-  
+
   public TableIterableBuilder setIncludeNormalTables(boolean includeNormalTables) {
     _includeNormalTables = includeNormalTables;
     return this;
   }
-  
+
   public TableIterableBuilder setIncludeSystemTables(boolean includeSystemTables) {
     _includeSystemTables = includeSystemTables;
     return this;
@@ -77,7 +79,7 @@ public class TableIterableBuilder implements Iterable<Table>
     setIncludeSystemTables(false);
     return setIncludeLinkedTables(false);
   }
-  
+
   /**
    * Convenience method to set the flags to include only system tables.
    */
@@ -86,9 +88,16 @@ public class TableIterableBuilder implements Iterable<Table>
     setIncludeSystemTables(true);
     return setIncludeLinkedTables(false);
   }
-  
+
   @Override
   public Iterator<Table> iterator() {
     return ((DatabaseImpl)_db).iterator(this);
+  }
+
+  /**
+   * @return a Stream using the default Iterator.
+   */
+  public Stream<Table> stream() {
+    return StreamSupport.stream(spliterator(), false);
   }
 }
