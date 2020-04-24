@@ -190,11 +190,6 @@ public abstract class RowFilter
           return _next;
         }
 
-        @Override
-        public void remove() {
-          throw new UnsupportedOperationException();
-        }
-
       };
     }
 

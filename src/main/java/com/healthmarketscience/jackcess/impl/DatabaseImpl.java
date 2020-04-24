@@ -2343,11 +2343,6 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Table next() {
       if(!hasNext()) {
         throw new NoSuchElementException();
