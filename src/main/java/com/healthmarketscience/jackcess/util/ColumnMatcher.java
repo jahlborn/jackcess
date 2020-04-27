@@ -25,7 +25,8 @@ import com.healthmarketscience.jackcess.Table;
  * @author James Ahlborn
  * @usage _intermediate_class_
  */
-public interface ColumnMatcher 
+@FunctionalInterface
+public interface ColumnMatcher
 {
 
   /**

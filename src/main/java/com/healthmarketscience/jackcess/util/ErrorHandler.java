@@ -27,11 +27,12 @@ import com.healthmarketscience.jackcess.Table;
  * or Cursor level to customize error handling as desired.  The default
  * instance used is {@link #DEFAULT}, which just rethrows any exceptions
  * encountered.
- * 
+ *
  * @author James Ahlborn
  * @usage _intermediate_class_
  */
-public interface ErrorHandler 
+@FunctionalInterface
+public interface ErrorHandler
 {
   /**
    * default error handler used if none provided (just rethrows exception)
@@ -75,7 +76,7 @@ public interface ErrorHandler
   /**
    * Provides location information for an error.
    */
-  public interface Location 
+  public interface Location
   {
     /**
      * @return the table in which the error occurred

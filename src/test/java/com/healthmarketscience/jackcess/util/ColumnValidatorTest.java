@@ -37,7 +37,7 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  *
  * @author James Ahlborn
  */
-public class ColumnValidatorTest extends TestCase 
+public class ColumnValidatorTest extends TestCase
 {
 
   public ColumnValidatorTest(String name) {
@@ -71,19 +71,16 @@ public class ColumnValidatorTest extends TestCase
 
       // force table to be reloaded
       clearTableCache(db);
-      
-      final ColumnValidator cv = new ColumnValidator() {
-        public Object validate(Column col, Object v1) {
+
+      final ColumnValidator cv = (col, v1) -> {
           Number num = (Number)v1;
           if((num == null) || (num.intValue() < 0)) {
             throw new IllegalArgumentException("not gonna happen");
           }
           return v1;
-        }
-      };
-            
-      ColumnValidatorFactory fact = new ColumnValidatorFactory() {
-        public ColumnValidator createValidator(Column col) {
+        };
+
+      ColumnValidatorFactory fact = col -> {
           Table t = col.getTable();
           assertFalse(t.isSystem());
           if(!"Test".equals(t.getName())) {
@@ -95,13 +92,12 @@ public class ColumnValidatorTest extends TestCase
           }
 
           return null;
-        }
-      };
+        };
 
       db.setColumnValidatorFactory(fact);
 
       table = db.getTable("Test");
-      
+
       for(Column col : table.getColumns()) {
         ColumnValidator cur = col.getColumnValidator();
         assertNotNull(cur);
@@ -111,7 +107,7 @@ public class ColumnValidatorTest extends TestCase
           assertSame(SimpleColumnValidator.INSTANCE, cur);
         }
       }
-      
+
       Column idCol = table.getColumn("id");
       Column dataCol = table.getColumn("data");
       Column numCol = table.getColumn("num");
@@ -123,7 +119,7 @@ public class ColumnValidatorTest extends TestCase
         // success
       }
       assertSame(SimpleColumnValidator.INSTANCE, idCol.getColumnValidator());
-      
+
       try {
         table.addRow(Column.AUTO_NUMBER, "row4", -3);
         fail("IllegalArgumentException should have been thrown");
@@ -139,12 +135,12 @@ public class ColumnValidatorTest extends TestCase
             createExpectedRow("id", 2, "data", "row2", "num", 0),
             createExpectedRow("id", 3, "data", "row3", "num", 1),
             createExpectedRow("id", 4, "data", "row4", "num", 4));
-      
+
       assertTable(expectedRows, table);
 
       IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(table);
       assertNotNull(pkCursor.findRowByEntry(1));
-      
+
       pkCursor.setCurrentRowValue(dataCol, "row1_mod");
 
       assertEquals(createExpectedRow("id", 1, "data", "row1_mod", "num", -1),
@@ -174,15 +170,13 @@ public class ColumnValidatorTest extends TestCase
       assertEquals(createExpectedRow("id", 3, "data", "row3", "num", 1),
                    CursorBuilder.findRowByPrimaryKey(table, 3));
 
-      final ColumnValidator cv2 = new ColumnValidator() {
-        public Object validate(Column col, Object v1) {
+      final ColumnValidator cv2 = (col, v1) -> {
           Number num = (Number)v1;
           if((num == null) || (num.intValue() < 0)) {
             return 0;
           }
           return v1;
-        }
-      };
+        };
 
       numCol.setColumnValidator(cv2);
 
@@ -195,7 +189,7 @@ public class ColumnValidatorTest extends TestCase
             createExpectedRow("id", 3, "data", "row3", "num", 1),
             createExpectedRow("id", 4, "data", "row4", "num", 4),
             createExpectedRow("id", 5, "data", "row5", "num", 0));
-      
+
       assertTable(expectedRows, table);
 
       assertNotNull(pkCursor.findRowByEntry(3));
@@ -203,8 +197,8 @@ public class ColumnValidatorTest extends TestCase
 
       assertEquals(createExpectedRow("id", 3, "data", "row3", "num", 0),
                    pkCursor.getCurrentRow());
-      
+
       db.close();
     }
-  }  
+  }
 }

@@ -25,7 +25,8 @@ import com.healthmarketscience.jackcess.Column;
  *
  * @author James Ahlborn
  */
-public interface ColumnValidatorFactory 
+@FunctionalInterface
+public interface ColumnValidatorFactory
 {
   /**
    * Returns a ColumnValidator instance for the given column, or {@code null}

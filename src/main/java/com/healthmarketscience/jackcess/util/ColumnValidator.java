@@ -27,6 +27,7 @@ import com.healthmarketscience.jackcess.Column;
  *
  * @author James Ahlborn
  */
+@FunctionalInterface
 public interface ColumnValidator
 {
   /**
