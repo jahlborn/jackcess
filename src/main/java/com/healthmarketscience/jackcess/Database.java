@@ -129,8 +129,8 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public static final String ALLOW_AUTONUM_INSERT_PROPERTY =
     "com.healthmarketscience.jackcess.allowAutoNumberInsert";
 
-  /** system property which can be used to enable expression evaluation
-   * (currently experimental).  Defaults to {@code false}.
+  /** system property which can be used to disable expression evaluation
+   * if necessary.  Defaults to {@code true}.
    * @usage _general_field_
    */
   public static final String ENABLE_EXPRESSION_EVALUATION_PROPERTY =
@@ -514,14 +514,14 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * Gets the current expression evaluation policy.  Expression evaluation is
-   * currently an experimental feature, and is therefore disabled by default.
+   * enabled by default but can be disabled if necessary.
    */
   public boolean isEvaluateExpressions();
 
   /**
    * Sets the current expression evaluation policy.  Expression evaluation is
-   * currently an experimental feature, and is therefore disabled by default.
-   * If {@code null}, resets to the default value.
+   * enabled by default but can be disabled if necessary.  If {@code null},
+   * resets to the default value.
    * @usage _intermediate_method_
    */
   public void setEvaluateExpressions(Boolean evaluateExpressions);

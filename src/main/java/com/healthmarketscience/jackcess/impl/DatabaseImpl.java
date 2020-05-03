@@ -2100,7 +2100,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /**
    * Returns the default enable expression evaluation policy.  This defaults to
-   * {@code false}, but can be overridden using the system
+   * {@code true}, but can be overridden using the system
    * property {@value com.healthmarketscience.jackcess.Database#ENABLE_EXPRESSION_EVALUATION_PROPERTY}.
    * @usage _advanced_method_
    */
@@ -2110,7 +2110,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     if(prop != null) {
       return Boolean.TRUE.toString().equalsIgnoreCase(prop);
     }
-    return false;
+    return true;
   }
 
   /**

@@ -9,6 +9,12 @@
         Add support for Access 97 general collation order, enabling indexes to
         be used with Access 97 dbs.
       </action>
+      <action dev="jahlborn" type="add">
+        Add Stream support to all interfaces which are Iterable.
+      </action>
+      <action dev="jahlborn" type="update">
+        Enabled expression evaluation by default.
+      </action>
     </release>
     <release version="3.0.1" date="2019-04-13">
       <action dev="jahlborn" type="update">

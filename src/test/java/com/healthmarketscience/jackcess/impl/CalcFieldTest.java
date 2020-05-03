@@ -68,6 +68,8 @@ public class CalcFieldTest extends TestCase
 
       Database db = create(fileFormat);
 
+      db.setEvaluateExpressions(false);
+
       Table t = new TableBuilder("Test")
         .putProperty("awesome_table", true)
         .addColumn(new ColumnBuilder("id", DataType.LONG)
@@ -89,7 +91,7 @@ public class CalcFieldTest extends TestCase
       assertTrue(col.isCalculated());
       assertEquals("[id] & \"_\" & [data]", col.getProperties().getValue(
                        PropertyMap.EXPRESSION_PROP));
-      assertEquals(DataType.TEXT.getValue(), 
+      assertEquals(DataType.TEXT.getValue(),
                    col.getProperties().getValue(
                        PropertyMap.RESULT_TYPE_PROP));
 
@@ -163,7 +165,7 @@ public class CalcFieldTest extends TestCase
       assertEquals(expectedRows, rows);
 
       db.close();
-    }    
+    }
   }
 
 }

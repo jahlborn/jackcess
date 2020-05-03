@@ -67,7 +67,7 @@ public class IndexTest extends TestCase {
     assertTrue(ByteUtil.asUnsignedByte(b3) < ByteUtil.asUnsignedByte(b4));
     assertTrue(ByteUtil.asUnsignedByte(b4) < ByteUtil.asUnsignedByte(b5));
   }
-  
+
   public void testByteCodeComparator() {
     byte[] b0 = null;
     byte[] b1 = new byte[]{(byte)0x00};
@@ -85,7 +85,7 @@ public class IndexTest extends TestCase {
         IndexData.BYTE_CODE_COMPARATOR);
     sortedSet.addAll(expectedList);
     assertEquals(expectedList, new ArrayList<byte[]>(sortedSet));
-    
+
   }
 
   public void testPrimaryKey() throws Exception {
@@ -98,7 +98,7 @@ public class IndexTest extends TestCase {
                      index.isPrimaryKey());
         if(index.isPrimaryKey()) {
           pkIndex= index;
-        
+
         }
       }
       Map<String, Boolean> expectedPKs = new HashMap<String, Boolean>();
@@ -108,7 +108,7 @@ public class IndexTest extends TestCase {
       assertSame(pkIndex, table.getPrimaryKeyIndex());
     }
   }
-  
+
   public void testLogicalIndexes() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
@@ -234,6 +234,8 @@ public class IndexTest extends TestCase {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_PROPERTIES)) {
       Database db = openCopy(testDB);
 
+      db.setEvaluateExpressions(false);
+
       doTestIgnoreNulls(db, "TableIgnoreNulls1");
       doTestIgnoreNulls(db, "TableIgnoreNulls2");
 
@@ -254,7 +256,7 @@ public class IndexTest extends TestCase {
       temp.addRow(orig.asRow(row));
     }
 
-    assertEquals(origI.getIndexData().getEntryCount(), 
+    assertEquals(origI.getIndexData().getEntryCount(),
                  tempI.getIndexData().getEntryCount());
 
     Cursor origC = origI.newCursor().toCursor();
@@ -272,7 +274,7 @@ public class IndexTest extends TestCase {
       Cursor.Position origCurPos = origC.getSavepoint().getCurrentPosition();
       Map<String,Object> tempRow = tempC.getCurrentRow();
       Cursor.Position tempCurPos = tempC.getSavepoint().getCurrentPosition();
-      
+
       assertEquals(origRow, tempRow);
       assertEquals(IndexCodesTest.entryToString(origCurPos),
                    IndexCodesTest.entryToString(tempCurPos));
@@ -388,7 +390,7 @@ public class IndexTest extends TestCase {
 
       final Row row = c.getCurrentRow();
       // Row order is arbitrary, so v2007 row order difference is valid
-      if (testDB.getExpectedFileFormat().ordinal() >= 
+      if (testDB.getExpectedFileFormat().ordinal() >=
           Database.FileFormat.V2007.ordinal()) {
         TestUtil.checkTestDBTable1RowA(testDB, table, row);
       } else {
@@ -405,7 +407,7 @@ public class IndexTest extends TestCase {
       db.close();
     }
   }
-  
+
   public void testReplId() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
@@ -436,8 +438,8 @@ public class IndexTest extends TestCase {
 
       assertEquals(1, t.getIndexes().size());
       IndexImpl idx = (IndexImpl)t.getIndexes().get(0);
-      
-      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());       
+
+      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());
       assertEquals(1, idx.getColumns().size());
       assertEquals("id", idx.getColumns().get(0).getName());
       assertTrue(idx.getColumns().get(0).isAscending());
@@ -459,9 +461,9 @@ public class IndexTest extends TestCase {
         assertEquals("row" + i, row.get("data"));
       }
       assertFalse(c.moveToNextRow());
-    }    
+    }
   }
-  
+
   public void testIndexCreationSharedData() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -479,8 +481,8 @@ public class IndexTest extends TestCase {
 
       assertEquals(4, t.getIndexes().size());
       IndexImpl idx = (IndexImpl)t.getIndexes().get(0);
-      
-      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());       
+
+      assertEquals(IndexBuilder.PRIMARY_KEY_NAME, idx.getName());
       assertEquals(1, idx.getColumns().size());
       assertEquals("id", idx.getColumns().get(0).getName());
       assertTrue(idx.getColumns().get(0).isAscending());
@@ -512,7 +514,7 @@ public class IndexTest extends TestCase {
       assertFalse(c.moveToNextRow());
     }
   }
-  
+
   public void testGetForeignKeyIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
@@ -538,12 +540,12 @@ public class IndexTest extends TestCase {
       assertTrue(t3t1.getReference().isCascadeUpdates());
       assertFalse(t3t1.getReference().isCascadeDeletes());
       doCheckForeignKeyIndex(t1, t3t1, t3);
-      
+
       Index t1pk = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
       assertNotNull(t1pk);
       assertNull(((IndexImpl)t1pk).getReference());
       assertNull(t1pk.getReferencedIndex());
-    }    
+    }
   }
 
   public void testConstraintViolation() throws Exception
@@ -591,7 +593,7 @@ public class IndexTest extends TestCase {
       IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(t);
       assertCursor(expectedRows, pkCursor);
 
-      assertCursor(expectedRows, 
+      assertCursor(expectedRows,
                    CursorBuilder.createCursor(t.getIndex("data_ind")));
 
       List<Object[]> batch = new ArrayList<Object[]>();
@@ -614,10 +616,10 @@ public class IndexTest extends TestCase {
       expectedRows.add(createExpectedRow("id", 6, "data", "row6"));
 
       assertTable(expectedRows, t);
-      
+
       assertCursor(expectedRows, pkCursor);
 
-      assertCursor(expectedRows, 
+      assertCursor(expectedRows,
                    CursorBuilder.createCursor(t.getIndex("data_ind")));
 
       pkCursor.findFirstRowByEntry(4);
@@ -631,16 +633,16 @@ public class IndexTest extends TestCase {
       } catch(ConstraintViolationException ce) {
         // success
       }
-      
+
       assertTable(expectedRows, t);
-      
+
       assertCursor(expectedRows, pkCursor);
 
-      assertCursor(expectedRows, 
+      assertCursor(expectedRows,
                    CursorBuilder.createCursor(t.getIndex("data_ind")));
 
       db.close();
-    }    
+    }
   }
 
   public void testAutoNumberRecover() throws Exception
@@ -667,7 +669,7 @@ public class IndexTest extends TestCase {
       } catch(ConstraintViolationException ce) {
         // success
       }
-      
+
       t.addRow(null, "row3");
 
       assertEquals(3, t.getRowCount());
@@ -686,7 +688,7 @@ public class IndexTest extends TestCase {
       IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(t);
       assertCursor(expectedRows, pkCursor);
 
-      assertCursor(expectedRows, 
+      assertCursor(expectedRows,
                    CursorBuilder.createCursor(t.getIndex("data_ind")));
 
       List<Object[]> batch = new ArrayList<Object[]>();
@@ -708,16 +710,16 @@ public class IndexTest extends TestCase {
       expectedRows.add(createExpectedRow("id", 5, "data", "row5"));
 
       assertTable(expectedRows, t);
-      
+
       assertCursor(expectedRows, pkCursor);
 
-      assertCursor(expectedRows, 
+      assertCursor(expectedRows,
                    CursorBuilder.createCursor(t.getIndex("data_ind")));
 
       db.close();
     }
   }
-  
+
   public void testBinaryIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.BINARY_INDEX)) {
@@ -746,7 +748,7 @@ public class IndexTest extends TestCase {
 
       boolean found = false;
       for(Row idxRow : ic.newEntryIterable(data)) {
-          
+
         assertTrue(Arrays.equals(data, idxRow.getBytes(colName)));
         if(id == idxRow.getInt("ID")) {
           found = true;

@@ -63,13 +63,14 @@ public class FKEnforcerTest extends TestCase
 
       db.close();
     }
-    
+
   }
 
   public void testEnforceForeignKeys() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
       Database db = openCopy(testDB);
+      db.setEvaluateExpressions(false);
       Table t1 = db.getTable("Table1");
       Table t2 = db.getTable("Table2");
       Table t3 = db.getTable("Table3");
@@ -132,7 +133,7 @@ public class FKEnforcerTest extends TestCase
 
       db.close();
     }
-    
+
   }
 
   private static Row createT1Row(
