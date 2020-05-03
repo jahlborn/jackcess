@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="3.0.2" date="TBD">
+    <release version="3.5.0" date="TBD">
       <action dev="jahlborn" type="update">
         Add support for Access 97 general collation order, enabling indexes to
         be used with Access 97 dbs.
