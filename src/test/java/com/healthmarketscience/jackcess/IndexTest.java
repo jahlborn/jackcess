@@ -350,6 +350,7 @@ public class IndexTest extends TestCase {
   public void testUniqueEntryCount() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       Database db = openCopy(testDB);
+      db.setDateTimeType(DateTimeType.DATE);
       Table table = db.getTable("Table1");
       IndexImpl indA = (IndexImpl)table.getIndex("PrimaryKey");
       IndexImpl indB = (IndexImpl)table.getIndex("B");

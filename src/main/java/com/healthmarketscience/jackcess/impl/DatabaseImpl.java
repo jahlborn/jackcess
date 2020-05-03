@@ -2115,13 +2115,13 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /**
    * Returns the default DateTimeType.  This defaults to
-   * {@link DateTimeType#DATE}, but can be overridden using the system
+   * {@link DateTimeType#LOCAL_DATE_TIME}, but can be overridden using the system
    * property {@value com.healthmarketscience.jackcess.Database#DATE_TIME_TYPE_PROPERTY}.
    * @usage _advanced_method_
    */
   public static DateTimeType getDefaultDateTimeType() {
     return getEnumSystemProperty(DateTimeType.class, DATE_TIME_TYPE_PROPERTY,
-                                 DateTimeType.DATE);
+                                 DateTimeType.LOCAL_DATE_TIME);
   }
 
   /**

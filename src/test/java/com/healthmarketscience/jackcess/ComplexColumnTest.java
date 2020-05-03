@@ -51,6 +51,7 @@ public class ComplexColumnTest extends TestCase
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
       Database db = openCopy(testDB);
+      db.setDateTimeType(DateTimeType.DATE);
       db.setTimeZone(TEST_TZ);
 
       Table t1 = db.getTable("Table1");

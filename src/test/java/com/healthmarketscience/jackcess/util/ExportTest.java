@@ -26,6 +26,7 @@ import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
@@ -52,6 +53,7 @@ public class ExportTest extends TestCase
 
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
+      db.setDateTimeType(DateTimeType.DATE);
       db.setTimeZone(TEST_TZ);
 
       Table t = new TableBuilder("test")

@@ -31,6 +31,7 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
@@ -65,6 +66,7 @@ public class IndexCodesTest extends TestCase {
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES, true)) {
       Database db = openMem(testDB);
+      db.setDateTimeType(DateTimeType.DATE);
 
       for(Table t : db) {
         for(Index index : t.getIndexes()) {

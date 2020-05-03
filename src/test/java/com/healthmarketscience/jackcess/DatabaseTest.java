@@ -160,6 +160,8 @@ public class DatabaseTest extends TestCase
   public void testGetNextRow() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
+      db.setDateTimeType(DateTimeType.DATE);
+
       assertEquals(4, db.getTableNames().size());
       final Table table = db.getTable("Table1");
 
@@ -623,6 +625,7 @@ public class DatabaseTest extends TestCase
   public void testWriteAndReadDate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
+      db.setDateTimeType(DateTimeType.DATE);
 
       Table table = new TableBuilder("test")
         .addColumn(new ColumnBuilder("name", DataType.TEXT))
@@ -693,6 +696,7 @@ public class DatabaseTest extends TestCase
 
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
+      db.setDateTimeType(DateTimeType.DATE);
       db.setTimeZone(tz);
 
       Table table = new TableBuilder("test")
@@ -716,6 +720,7 @@ public class DatabaseTest extends TestCase
 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OLD_DATES)) {
       Database db = openCopy(testDB);
+      db.setDateTimeType(DateTimeType.DATE);
 
       Table t = db.getTable("Table1");
 

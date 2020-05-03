@@ -15,6 +15,9 @@
       <action dev="jahlborn" type="update">
         Enabled expression evaluation by default.
       </action>
+      <action dev="jahlborn" type="update">
+        Change the default DateTimeType to LOCAL_DATE_TIME.
+      </action>
     </release>
     <release version="3.0.1" date="2019-04-13">
       <action dev="jahlborn" type="update">
