@@ -18,7 +18,8 @@
       <action dev="jahlborn" type="update">
         Change the default DateTimeType to LOCAL_DATE_TIME.
       </action>
-      <action dev="jahlborn" type="add">
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
+              issue="43">
         Add support for Predicate value patterns in cursor find methods. Add
         PatternColumnPredicate for creating Predicate instances which can
         match values using various pattern syntaxes.
