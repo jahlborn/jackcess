@@ -28,18 +28,15 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
  * Concrete implementation of ColumnMatcher which tests textual columns
  * case-insensitively ({@link DataType#TEXT} and {@link DataType#MEMO}), and
  * all other columns using simple equality.
- * 
+ *
  * @author James Ahlborn
  * @usage _general_class_
  */
 public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
 
-  public static final CaseInsensitiveColumnMatcher INSTANCE = 
+  public static final CaseInsensitiveColumnMatcher INSTANCE =
     new CaseInsensitiveColumnMatcher();
-  
 
-  public CaseInsensitiveColumnMatcher() {
-  }
 
   @Override
   public boolean matches(Table table, String columnName, Object value1,
@@ -47,7 +44,7 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
   {
     if(!table.getColumn(columnName).getType().isTextual()) {
       // use simple equality
-      return SimpleColumnMatcher.INSTANCE.matches(table, columnName, 
+      return SimpleColumnMatcher.INSTANCE.matches(table, columnName,
                                                   value1, value2);
     }
 
@@ -60,7 +57,7 @@ public class CaseInsensitiveColumnMatcher implements ColumnMatcher {
              ((cs1 != null) && (cs2 != null) &&
               cs1.toString().equalsIgnoreCase(cs2.toString())));
     } catch(IOException e) {
-      throw new RuntimeIOException("Could not read column " + columnName 
+      throw new RuntimeIOException("Could not read column " + columnName
                                    + " value", e);
     }
   }

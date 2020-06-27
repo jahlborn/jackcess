@@ -253,7 +253,10 @@ public interface Cursor extends Iterable<Row>
    * @param columnPattern column from the table for this cursor which is being
    *                      matched by the valuePattern
    * @param valuePattern value which is equal to the corresponding value in
-   *                     the matched row
+   *                     the matched row.  If this object is an instance of
+   *                     {@link java.util.function.Predicate}, it will be
+   *                     applied to the potential row value instead
+   *                     (overriding any configured ColumnMatcher)
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
@@ -269,7 +272,10 @@ public interface Cursor extends Iterable<Row>
    * @param columnPattern column from the table for this cursor which is being
    *                      matched by the valuePattern
    * @param valuePattern value which is equal to the corresponding value in
-   *                     the matched row
+   *                     the matched row.  If this object is an instance of
+   *                     {@link java.util.function.Predicate}, it will be
+   *                     applied to the potential row value instead
+   *                     (overriding any configured ColumnMatcher)
    * @return {@code true} if a valid row was found with the given value,
    *         {@code false} if no row was found
    */
@@ -286,7 +292,10 @@ public interface Cursor extends Iterable<Row>
    * the Table (you cannot use it to find successive matches).
    *
    * @param rowPattern column names and values which must be equal to the
-   *                   corresponding values in the matched row
+   *                   corresponding values in the matched row.  If a value is
+   *                   an instance of {@link java.util.function.Predicate}, it
+   *                   will be applied to the potential row value instead
+   *                   (overriding any configured ColumnMatcher)
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
@@ -299,7 +308,10 @@ public interface Cursor extends Iterable<Row>
    * is restored to its previous state.
    *
    * @param rowPattern column names and values which must be equal to the
-   *                   corresponding values in the matched row
+   *                   corresponding values in the matched row.  If a value is
+   *                   an instance of {@link java.util.function.Predicate}, it
+   *                   will be applied to the potential row value instead
+   *                   (overriding any configured ColumnMatcher)
    * @return {@code true} if a valid row was found with the given values,
    *         {@code false} if no row was found
    */
@@ -309,8 +321,11 @@ public interface Cursor extends Iterable<Row>
    * Returns {@code true} if the current row matches the given pattern.
    * @param columnPattern column from the table for this cursor which is being
    *                      matched by the valuePattern
-   * @param valuePattern value which is tested for equality with the
-   *                     corresponding value in the current row
+   * @param valuePattern value which is equal to the corresponding value in
+   *                     the matched row.  If this object is an instance of
+   *                     {@link java.util.function.Predicate}, it will be
+   *                     applied to the potential row value instead
+   *                     (overriding any configured ColumnMatcher)
    */
   public boolean currentRowMatches(Column columnPattern, Object valuePattern)
     throws IOException;
@@ -318,7 +333,10 @@ public interface Cursor extends Iterable<Row>
   /**
    * Returns {@code true} if the current row matches the given pattern.
    * @param rowPattern column names and values which must be equal to the
-   *                   corresponding values in the current row
+   *                   corresponding values in the matched row.  If a value is
+   *                   an instance of {@link java.util.function.Predicate}, it
+   *                   will be applied to the potential row value instead
+   *                   (overriding any configured ColumnMatcher)
    */
   public boolean currentRowMatches(Map<String,?> rowPattern) throws IOException;
 

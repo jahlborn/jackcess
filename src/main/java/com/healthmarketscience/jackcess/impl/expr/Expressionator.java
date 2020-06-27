@@ -391,7 +391,8 @@ public class Expressionator
                      SpecOp.NOT_BETWEEN});
 
   private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<Character>(
-      Arrays.asList('\\','.','%','=','+', '$','^','|','(',')','{','}','&'));
+      Arrays.asList('\\','.','%','=','+', '$','^','|','(',')','{','}','&',
+                    '[',']','*','?'));
   // this is a regular expression which will never match any string
   private static final Pattern UNMATCHABLE_REGEX = Pattern.compile("(?!)");
 
@@ -1243,7 +1244,11 @@ public class Expressionator
       .append("\"");
   }
 
-  private static Pattern likePatternToRegex(String pattern) {
+  /**
+   * Converts an ms access like pattern to a java regex, always matching case
+   * insensitively.
+   */
+  public static Pattern likePatternToRegex(String pattern) {
 
     StringBuilder sb = new StringBuilder(pattern.length());
 
@@ -1289,7 +1294,7 @@ public class Expressionator
         sb.append('[').append(charClass).append(']');
         i += (endPos - startPos) + 1;
 
-      } else if(REGEX_SPEC_CHARS.contains(c)) {
+      } else if(isRegexSpecialChar(c)) {
         // this char is special in regexes, so escape it
         sb.append('\\').append(c);
       } else {
@@ -1304,6 +1309,10 @@ public class Expressionator
     } catch(PatternSyntaxException ignored) {
       return UNMATCHABLE_REGEX;
     }
+  }
+
+  public static boolean isRegexSpecialChar(char c) {
+    return REGEX_SPEC_CHARS.contains(c);
   }
 
   private static Value toLiteralValue(Value.Type valType, Object value) {

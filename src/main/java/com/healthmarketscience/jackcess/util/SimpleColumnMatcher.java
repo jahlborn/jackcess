@@ -38,9 +38,6 @@ public class SimpleColumnMatcher implements ColumnMatcher {
 
   public static final SimpleColumnMatcher INSTANCE = new SimpleColumnMatcher();
 
-  public SimpleColumnMatcher() {
-  }
-
   @Override
   public boolean matches(Table table, String columnName, Object value1,
                          Object value2)
