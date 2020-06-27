@@ -18,18 +18,14 @@ package com.healthmarketscience.jackcess.util;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
