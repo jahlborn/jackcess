@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Upgrading from Jackcess 2.x to 3.x</title>
+  </properties>
+  <body>
+
+    <section name="Jackcess 3.5">
+      <subsection name="So what changed, now?">
+        <p>
+          Jackcess 3.5 is binary compatible with previous 3.x versions.
+          However, a few default settings have changed which will change the
+          behavior of Jackcess out of the box.  The old behavior is still
+          available, but you must now configure it explicitly.
+          <ul>
+            <li><b>DateTypeType default has been changed to
+            LOCAL_DATE_TIME.</b></li>
+            <ul>
+              <li>The Jackcess API was originally built using the Date type
+              for representing date/time values.  However, Access databases
+              are inherently "local" time (they contain no timezone info).
+              The LocalDateTime type in jdk8+ is a more accurate value for
+              relaying Access date/time values.  As of the 3.0 release, the
+              Jackcess API supported using <i>either</i> date/time type,
+              depending on the configured DateTimeType for the Database.
+              However, in order to maintain backwards compatibility, the
+              default was kept as DATE.  As of the 3.5 release, the default is
+              now LOCAL_DATE_TIME.  The legacy behavior is still available,
+              and can be enabled by configuring the DateTimeType appropriately
+              (either per Database or via system property).</li>
+            </ul>
+            <li><b>Expression evaluation is enabled by default.</b></li>
+            <ul>
+              <li>Optional expression evaluation was added back in the 2.2
+              release, but left disabled as the implementation matured.  The
+              support is mature enough now to enable this behavior by default.
+              Expression evaluation can still be disabled by configuring the
+              Database appropriately (either per Database or via system
+              property).</li>
+            </ul>
+          </ul>
+        </p>
+
+        <h4>Working with Jackcess Encrypt</h4>
+        <p>
+          If you are using the <a href="https://jackcessencrypt.sourceforge.io/">Jackcess Encrypt</a> project, then you will need to
+          use a version compatible with the relevant Jackess API.
+          The version 3.5 release maintains compatibility with the Jackcess
+          Encrypt 3.x releases.
+        </p>
+
+      </subsection>
+    </section>
+
+  </body>
+
+</document>

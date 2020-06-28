@@ -25,9 +25,10 @@ package com.healthmarketscience.jackcess;
  */
 public enum DateTimeType
 {
-  /** use legacy {@link java.util.Date} objects.  To maintain backwards
-      compatibility, this is the default type. */
+  /** Use legacy {@link java.util.Date} objects.  This was the default for
+      Jackcess before version 3.5. */
   DATE,
-  /** use jdk8+ {@link java.time.LocalDateTime} objects */
+  /** Use jdk8+ {@link java.time.LocalDateTime} objects.  This is the default
+      for Jackcess from version 3.5 onwards. */
   LOCAL_DATE_TIME;
 }
