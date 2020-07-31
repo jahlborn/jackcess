@@ -35,7 +35,7 @@
         <p>
           Have you ever wished that Jackcess could handle field "default
           values" (or other expressions)?  Wish no longer!  Expression
-          evaluations is now enabled by default as of the 3.5.0 release.  See
+          evaluation is now enabled by default as of the 3.5.0 release.  See
           the <a href="apidocs/com/healthmarketscience/jackcess/expr/package-summary.html#package_description">expression package</a> javadocs for more details.
         </p>
       </subsection>
