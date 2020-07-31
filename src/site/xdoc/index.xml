@@ -34,10 +34,9 @@
       <subsection name="Expression Evaluation (2018-09-08)">
         <p>
           Have you ever wished that Jackcess could handle field "default
-          values" (or other expressions)?  Wish no longer!  Experimental
-          support for expression evaluation has finally landed in the 2.2.0
-          release.  See the <a href="apidocs/com/healthmarketscience/jackcess/expr/package-summary.html#package_description">expression package</a>
-          javadocs for more details.
+          values" (or other expressions)?  Wish no longer!  Expression
+          evaluations is now enabled by default as of the 3.5.0 release.  See
+          the <a href="apidocs/com/healthmarketscience/jackcess/expr/package-summary.html#package_description">expression package</a> javadocs for more details.
         </p>
       </subsection>
 
