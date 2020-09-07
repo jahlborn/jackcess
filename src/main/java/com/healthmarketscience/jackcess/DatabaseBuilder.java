@@ -360,6 +360,87 @@ public class DatabaseBuilder
     return cal;
   }
 
+  /**
+   * Convenience method for constructing a DatabaseBuilder.
+   */
+  public static DatabaseBuilder newDatabase() {
+    return new DatabaseBuilder();
+  }
+
+  /**
+   * Convenience method for constructing a DatabaseBuilder.
+   */
+  public static DatabaseBuilder newDatabase(Path path) {
+    return new DatabaseBuilder(path);
+  }
+
+  /**
+   * Convenience method for constructing a DatabaseBuilder.
+   */
+  public static DatabaseBuilder newDatabase(File file) {
+    return new DatabaseBuilder(file);
+  }
+
+  /**
+   * Convenience method for constructing a TableBuilder.
+   */
+  public static TableBuilder newTable(String name) {
+    return new TableBuilder(name);
+  }
+
+  /**
+   * Convenience method for constructing a TableBuilder.
+   */
+  public static TableBuilder newTable(String name, boolean escapeIdentifiers) {
+    return new TableBuilder(name, escapeIdentifiers);
+  }
+
+  /**
+   * Convenience method for constructing a ColumnBuilder.
+   */
+  public static ColumnBuilder newColumn(String name) {
+    return new ColumnBuilder(name);
+  }
+
+  /**
+   * Convenience method for constructing a TableBuilder.
+   */
+  public static ColumnBuilder newColumn(String name, DataType type) {
+    return new ColumnBuilder(name, type);
+  }
+
+  /**
+   * Convenience method for constructing an IndexBuilder.
+   */
+  public static IndexBuilder newIndex(String name) {
+    return new IndexBuilder(name);
+  }
+
+  /**
+   * Convenience method for constructing a primary key IndexBuilder.
+   */
+  public static IndexBuilder newPrimaryKey(String... colNames) {
+    return new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+      .addColumns(colNames)
+      .setPrimaryKey();
+  }
+
+  /**
+   * Convenience method for constructing a RelationshipBuilder.
+   */
+  public static RelationshipBuilder newRelationship(
+      String fromTable, String toTable) {
+    return new RelationshipBuilder(fromTable, toTable);
+  }
+
+  /**
+   * Convenience method for constructing a RelationshipBuilder.
+   */
+  public static RelationshipBuilder newRelationship(
+      Table fromTable, Table toTable) {
+    return new RelationshipBuilder(fromTable, toTable);
+  }
+
   private static Path toPath(File file) {
     return ((file != null) ? file.toPath() : null);
   }

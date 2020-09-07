@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.healthmarketscience.jackcess.util.ErrorHandler;
+import com.healthmarketscience.jackcess.util.OleBlob;
 
 /**
  * A single database table.  A Table instance is retrieved from a {@link
@@ -324,4 +325,12 @@ public interface Table extends Iterable<Row>
    * Convenience method for constructing a new CursorBuilder for this Table.
    */
   public CursorBuilder newCursor();
+
+
+  /**
+   * Convenience method for constructing a new OleBlob.Builder.
+   */
+  default public OleBlob.Builder newBlob() {
+    return new OleBlob.Builder();
+  }
 }

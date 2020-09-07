@@ -66,7 +66,7 @@ public class OleBlobTest extends TestCase
 
       OleBlob blob = null;
       try {
-        blob = new OleBlob.Builder()
+        blob = t.newBlob()
           .setSimplePackage(sampleFile)
           .toBlob();
         t.addRow(1, blob);
@@ -75,7 +75,7 @@ public class OleBlobTest extends TestCase
       }
 
       try {
-        blob = new OleBlob.Builder()
+        blob = t.newBlob()
           .setLink(sampleFile)
           .toBlob();
         t.addRow(2, blob);
@@ -84,7 +84,7 @@ public class OleBlobTest extends TestCase
       }
 
       try {
-        blob = new OleBlob.Builder()
+        blob = t.newBlob()
           .setPackagePrettyName("Text File")
           .setPackageClassName("Text.File")
           .setPackageTypeName("TextFile")

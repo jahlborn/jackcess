@@ -28,6 +28,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  *
@@ -45,9 +46,9 @@ public class TableUpdaterTest extends TestCase
       Database db = create(fileFormat);
 
       doTestUpdating(db, false, true, null);
- 
+
       db.close();
-    }    
+    }
   }
 
   public void testTableUpdatingOneToOne() throws Exception {
@@ -55,9 +56,9 @@ public class TableUpdaterTest extends TestCase
       Database db = create(fileFormat);
 
       doTestUpdating(db, true, true, null);
- 
+
       db.close();
-    }    
+    }
   }
 
   public void testTableUpdatingNoEnforce() throws Exception {
@@ -65,9 +66,9 @@ public class TableUpdaterTest extends TestCase
       Database db = create(fileFormat);
 
       doTestUpdating(db, false, false, null);
- 
+
       db.close();
-    }    
+    }
   }
 
   public void testTableUpdatingNamedRelationship() throws Exception {
@@ -75,53 +76,51 @@ public class TableUpdaterTest extends TestCase
       Database db = create(fileFormat);
 
       doTestUpdating(db, false, true, "FKnun3jvv47l9kyl74h85y8a0if");
- 
+
       db.close();
-    }    
+    }
   }
 
-  private void doTestUpdating(Database db, boolean oneToOne, boolean enforce, String relationshipName) 
+  private void doTestUpdating(Database db, boolean oneToOne, boolean enforce, String relationshipName)
     throws Exception
   {
-    Table t1 = new TableBuilder("TestTable")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
+    Table t1 = newTable("TestTable")
+      .addColumn(newColumn("id", DataType.LONG))
       .toTable(db);
-      
-    Table t2 = new TableBuilder("TestTable2")
-      .addColumn(new ColumnBuilder("id2", DataType.LONG))
+
+    Table t2 = newTable("TestTable2")
+      .addColumn(newColumn("id2", DataType.LONG))
       .toTable(db);
 
     int t1idxs = 1;
-    new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-      .addColumns("id").setPrimaryKey()
+    newPrimaryKey("id")
       .addToTable(t1);
-    new ColumnBuilder("data", DataType.TEXT)
+    newColumn("data", DataType.TEXT)
       .addToTable(t1);
-    new ColumnBuilder("bigdata", DataType.MEMO)
+    newColumn("bigdata", DataType.MEMO)
       .addToTable(t1);
 
-    new ColumnBuilder("data2", DataType.TEXT)
+    newColumn("data2", DataType.TEXT)
       .addToTable(t2);
-    new ColumnBuilder("bigdata2", DataType.MEMO)
+    newColumn("bigdata2", DataType.MEMO)
       .addToTable(t2);
 
     int t2idxs = 0;
     if(oneToOne) {
       ++t2idxs;
-      new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-        .addColumns("id2").setPrimaryKey()
+      newPrimaryKey("id2")
         .addToTable(t2);
     }
 
-    RelationshipBuilder rb = new RelationshipBuilder("TestTable", "TestTable2")
+    RelationshipBuilder rb = newRelationship("TestTable", "TestTable2")
       .addColumns("id", "id2");
     if(enforce) {
       ++t1idxs;
-      ++t2idxs;      
+      ++t2idxs;
       rb.setReferentialIntegrity()
         .setCascadeDeletes();
     }
-    
+
     if (relationshipName != null) {
       rb.setName(relationshipName);
     }
@@ -168,7 +167,7 @@ public class TableUpdaterTest extends TestCase
       t2.addRow(10, "row10", "row-data10");
       if(enforce) {
         fail("ConstraintViolationException should have been thrown");
-      } 
+      }
     } catch(ConstraintViolationException cv) {
       // success
       if(!enforce) { throw cv; }
@@ -176,7 +175,7 @@ public class TableUpdaterTest extends TestCase
 
     Row r1 = CursorBuilder.findRowByPrimaryKey(t1, 5);
     t1.deleteRow(r1);
-   
+
     int id = 0;
     for(Row r : t1) {
       assertEquals(id, r.get("id"));
@@ -185,7 +184,7 @@ public class TableUpdaterTest extends TestCase
         ++id;
       }
     }
- 
+
     id = 0;
     for(Row r : t2) {
       assertEquals(id, r.get("id2"));
@@ -201,24 +200,24 @@ public class TableUpdaterTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t1 = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
+      Table t1 = newTable("TestTable")
+        .addColumn(newColumn("id", DataType.LONG))
         .toTable(db);
 
       try {
-        new ColumnBuilder("ID", DataType.TEXT)
+        newColumn("ID", DataType.TEXT)
           .addToTable(t1);
         fail("created table with no columns?");
       } catch(IllegalArgumentException e) {
         // success
       }
 
-      Table t2 = new TableBuilder("TestTable2")
-        .addColumn(new ColumnBuilder("id2", DataType.LONG))
+      Table t2 = newTable("TestTable2")
+        .addColumn(newColumn("id2", DataType.LONG))
         .toTable(db);
 
       try {
-        new RelationshipBuilder(t1, t2)
+        newRelationship(t1, t2)
           .toRelationship(db);
         fail("created rel with no columns?");
       } catch(IllegalArgumentException e) {
@@ -226,16 +225,16 @@ public class TableUpdaterTest extends TestCase
       }
 
       try {
-        new RelationshipBuilder("TestTable", "TestTable2")
+        newRelationship("TestTable", "TestTable2")
           .addColumns("id", "id")
           .toRelationship(db);
         fail("created rel with wrong columns?");
       } catch(IllegalArgumentException e) {
         // success
       }
- 
+
       db.close();
-    }    
+    }
   }
 
   public void testUpdateLargeTableDef() throws Exception
@@ -245,8 +244,8 @@ public class TableUpdaterTest extends TestCase
 
       final int numColumns = 89;
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("first", DataType.TEXT))
+      Table t = newTable("test")
+        .addColumn(newColumn("first", DataType.TEXT))
         .toTable(db);
 
       List<String> colNames = new ArrayList<String>();
@@ -255,7 +254,7 @@ public class TableUpdaterTest extends TestCase
         String colName = "MyColumnName" + i;
         colNames.add(colName);
         DataType type = (((i % 3) == 0) ? DataType.MEMO : DataType.TEXT);
-        new ColumnBuilder(colName, type)
+        newColumn(colName, type)
           .addToTable(t);
       }
 
@@ -274,5 +273,5 @@ public class TableUpdaterTest extends TestCase
 
       db.close();
     }
-  } 
+  }
 }

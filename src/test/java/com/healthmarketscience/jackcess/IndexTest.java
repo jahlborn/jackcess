@@ -35,6 +35,7 @@ import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  * @author James Ahlborn
@@ -430,11 +431,10 @@ public class IndexTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT))
-        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-                  .addColumns("id").setPrimaryKey())
+      Table t = newTable("TestTable")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data", DataType.TEXT))
+        .setPrimaryKey("id")
         .toTable(db);
 
       assertEquals(1, t.getIndexes().size());
@@ -470,14 +470,13 @@ public class IndexTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT))
-        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-                  .addColumns("id").setPrimaryKey())
-        .addIndex(new IndexBuilder("Index1").addColumns("id"))
-        .addIndex(new IndexBuilder("Index2").addColumns("id"))
-        .addIndex(new IndexBuilder("Index3").addColumns(false, "id"))
+      Table t = newTable("TestTable")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data", DataType.TEXT))
+        .setPrimaryKey("id")
+        .addIndex(newIndex("Index1").addColumns("id"))
+        .addIndex(newIndex("Index2").addColumns("id"))
+        .addIndex(newIndex("Index3").addColumns(false, "id"))
         .toTable(db);
 
       assertEquals(4, t.getIndexes().size());
@@ -554,12 +553,11 @@ public class IndexTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT))
-        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-                  .addColumns("id").setPrimaryKey())
-        .addIndex(new IndexBuilder("data_ind")
+      Table t = newTable("TestTable")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data", DataType.TEXT))
+        .setPrimaryKey("id")
+        .addIndex(newIndex("data_ind")
                   .addColumns("data").setUnique())
         .toTable(db);
 
@@ -651,12 +649,11 @@ public class IndexTest extends TestCase {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("TestTable")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT))
-        .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
-                  .addColumns("id").setPrimaryKey())
-        .addIndex(new IndexBuilder("data_ind")
+      Table t = newTable("TestTable")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("data", DataType.TEXT))
+        .setPrimaryKey("id")
+        .addIndex(newIndex("data_ind")
                   .addColumns("data").setUnique())
         .toTable(db);
 

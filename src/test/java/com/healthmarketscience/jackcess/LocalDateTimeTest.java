@@ -37,6 +37,7 @@ import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  *
@@ -54,9 +55,9 @@ public class LocalDateTimeTest extends TestCase
 
       db.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+      Table table = newTable("test")
+        .addColumn(newColumn("name", DataType.TEXT))
+        .addColumn(newColumn("date", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       // since jackcess does not really store millis, shave them off before
@@ -125,9 +126,9 @@ public class LocalDateTimeTest extends TestCase
       db.setZoneId(zoneId);
       db.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+      Table table = newTable("test")
+        .addColumn(newColumn("name", DataType.TEXT))
+        .addColumn(newColumn("date", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       for(String dateStr : dates) {
@@ -218,9 +219,9 @@ public class LocalDateTimeTest extends TestCase
       db.setZoneId(zoneId);
       db.setDateTimeType(DateTimeType.LOCAL_DATE_TIME);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+      Table table = newTable("test")
+        .addColumn(newColumn("name", DataType.TEXT))
+        .addColumn(newColumn("date", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       // since jackcess does not really store millis, shave them off before

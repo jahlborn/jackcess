@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="3.5.1" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add more static utility methods to DatabaseBuilder to enable more
+        succinct object construction code using static imports.
+      </action>
+    </release>
     <release version="3.5.0" date="2020-07-31">
       <action dev="jahlborn" type="update">
         Add support for Access 97 general collation order, enabling indexes to

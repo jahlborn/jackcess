@@ -36,6 +36,7 @@ import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  *
@@ -54,12 +55,12 @@ public class PropertyExpressionTest extends TestCase
       Database db = create(fileFormat);
       db.setEvaluateExpressions(true);
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data1", DataType.TEXT)
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("data1", DataType.TEXT)
                    .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
                                 "=\"FOO \" & \"BAR\""))
-        .addColumn(new ColumnBuilder("data2", DataType.LONG)
+        .addColumn(newColumn("data2", DataType.LONG)
                    .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
                                 "37"))
         .toTable(db);
@@ -118,15 +119,15 @@ public class PropertyExpressionTest extends TestCase
     Database db = create(FileFormat.V2016);
     db.setEvaluateExpressions(true);
 
-    Table t = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-      .addColumn(new ColumnBuilder("c1", DataType.LONG)
+    Table t = newTable("test")
+      .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+      .addColumn(newColumn("c1", DataType.LONG)
                  .setCalculatedInfo("[c2]+[c3]"))
-      .addColumn(new ColumnBuilder("c2", DataType.LONG)
+      .addColumn(newColumn("c2", DataType.LONG)
                  .setCalculatedInfo("[c3]*5"))
-      .addColumn(new ColumnBuilder("c3", DataType.LONG)
+      .addColumn(newColumn("c3", DataType.LONG)
                  .setCalculatedInfo("[c4]-6"))
-      .addColumn(new ColumnBuilder("c4", DataType.LONG))
+      .addColumn(newColumn("c4", DataType.LONG))
       .toTable(db);
 
     t.addRow(Column.AUTO_NUMBER, null, null, null, 16);
@@ -163,12 +164,12 @@ public class PropertyExpressionTest extends TestCase
       Database db = create(fileFormat);
       db.setEvaluateExpressions(true);
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data1", DataType.LONG)
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("data1", DataType.LONG)
                    .putProperty(PropertyMap.VALIDATION_RULE_PROP,
                                 ">37"))
-        .addColumn(new ColumnBuilder("data2", DataType.LONG)
+        .addColumn(newColumn("data2", DataType.LONG)
                    .putProperty(PropertyMap.VALIDATION_RULE_PROP,
                                 "between 7 and 10")
                    .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
@@ -236,10 +237,10 @@ public class PropertyExpressionTest extends TestCase
       Database db = create(fileFormat);
       db.setEvaluateExpressions(true);
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data1", DataType.LONG))
-        .addColumn(new ColumnBuilder("data2", DataType.LONG))
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("data1", DataType.LONG))
+        .addColumn(newColumn("data2", DataType.LONG))
         .putProperty(PropertyMap.VALIDATION_RULE_PROP,
                      "([data1] > 10) and ([data2] < 100)")
         .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
@@ -322,15 +323,15 @@ public class PropertyExpressionTest extends TestCase
 
       db.setEvaluateExpressions(true);
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data1", DataType.TEXT)
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("data1", DataType.TEXT)
                    .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
                                 "=FooFunc()"))
-        .addColumn(new ColumnBuilder("data2", DataType.TEXT)
+        .addColumn(newColumn("data2", DataType.TEXT)
                    .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
                                 "=Date()"))
-        .addColumn(new ColumnBuilder("data3", DataType.TEXT)
+        .addColumn(newColumn("data3", DataType.TEXT)
                    .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
                                 "=Time()"))
         .toTable(db);

@@ -38,6 +38,7 @@ import com.healthmarketscience.jackcess.util.RowFilterTest;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  * @author James Ahlborn
@@ -89,9 +90,9 @@ public class CursorTest extends TestCase {
   {
     Database db = createMem(fileFormat);
 
-    Table table = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
-      .addColumn(new ColumnBuilder("value", DataType.TEXT))
+    Table table = newTable("test")
+      .addColumn(newColumn("id", DataType.LONG))
+      .addColumn(newColumn("value", DataType.TEXT))
       .toTable(db);
 
     for(Map<String,Object> row : createTestTableData()) {
@@ -147,9 +148,9 @@ public class CursorTest extends TestCase {
   {
     Database db = createMem(fileFormat);
 
-    Table table = new TableBuilder("test")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
-      .addColumn(new ColumnBuilder("value", DataType.TEXT))
+    Table table = newTable("test")
+      .addColumn(newColumn("id", DataType.LONG))
+      .addColumn(newColumn("value", DataType.TEXT))
       .toTable(db);
 
     for(Map<String,Object> row : createDupeTestTableData()) {
@@ -1279,11 +1280,11 @@ public class CursorTest extends TestCase {
 
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT))
-        .addColumn(new ColumnBuilder("memo", DataType.MEMO))
-        .addIndex(new IndexBuilder("value_idx")
+      Table table = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("value", DataType.TEXT))
+        .addColumn(newColumn("memo", DataType.MEMO))
+        .addIndex(newIndex("value_idx")
                   .addColumns("value"))
         .toTable(db);
 
@@ -1337,13 +1338,13 @@ public class CursorTest extends TestCase {
 
       Database db = createMem(fileFormat);
 
-      TableImpl t = (TableImpl)new TableBuilder("Test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-        .addColumn(new ColumnBuilder("num2", DataType.LONG))
-        .addColumn(new ColumnBuilder("key3", DataType.TEXT))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT))
-        .addIndex(new IndexBuilder("idx3").addColumns("data1", "num2", "key3"))
+      TableImpl t = (TableImpl)newTable("Test")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data1", DataType.TEXT))
+        .addColumn(newColumn("num2", DataType.LONG))
+        .addColumn(newColumn("key3", DataType.TEXT))
+        .addColumn(newColumn("value", DataType.TEXT))
+        .addIndex(newIndex("idx3").addColumns("data1", "num2", "key3"))
         .toTable(db);
 
       Index idx = t.findIndexForColumns(Arrays.asList("data1"),
@@ -1366,7 +1367,7 @@ public class CursorTest extends TestCase {
                                        TableImpl.IndexFeature.EXACT_MATCH));
 
 
-      new IndexBuilder("idx2")
+      newIndex("idx2")
         .addColumns("data1", "num2")
         .addToTable(t);
 
@@ -1390,7 +1391,7 @@ public class CursorTest extends TestCase {
                                        TableImpl.IndexFeature.EXACT_MATCH));
 
 
-      new IndexBuilder("idx1")
+      newIndex("idx1")
         .addColumns("data1")
         .addToTable(t);
 
@@ -1421,13 +1422,13 @@ public class CursorTest extends TestCase {
 
       Database db = createMem(fileFormat);
 
-      TableImpl t = (TableImpl)new TableBuilder("Test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-        .addColumn(new ColumnBuilder("num2", DataType.LONG))
-        .addColumn(new ColumnBuilder("key3", DataType.TEXT))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT))
-        .addIndex(new IndexBuilder("idx3")
+      TableImpl t = (TableImpl)newTable("Test")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data1", DataType.TEXT))
+        .addColumn(newColumn("num2", DataType.LONG))
+        .addColumn(newColumn("key3", DataType.TEXT))
+        .addColumn(newColumn("value", DataType.TEXT))
+        .addIndex(newIndex("idx3")
                   .addColumns(true, "data1")
                   .addColumns(false, "num2")
                   .addColumns(true, "key3")
@@ -1448,13 +1449,13 @@ public class CursorTest extends TestCase {
       Index idx = t.getIndex("idx3");
       doPartialIndexLookup(idx);
 
-      idx = new IndexBuilder("idx2")
+      idx = newIndex("idx2")
                   .addColumns(true, "data1")
                   .addColumns(false, "num2")
         .addToTable(t);
       doPartialIndexLookup(idx);
 
-      idx = new IndexBuilder("idx1")
+      idx = newIndex("idx1")
                   .addColumns(true, "data1")
         .addToTable(t);
       doPartialIndexLookup(idx);
@@ -1466,7 +1467,7 @@ public class CursorTest extends TestCase {
   private static void doPartialIndexLookup(Index idx) throws Exception
   {
     int colCount = idx.getColumnCount();
-    IndexCursor c = new CursorBuilder(idx.getTable()).setIndex(idx).toIndexCursor();
+    IndexCursor c = idx.newCursor().toIndexCursor();
 
     doFindFirstByEntry(c, 21, "C");
     doFindFirstByEntry(c, null, "Z");

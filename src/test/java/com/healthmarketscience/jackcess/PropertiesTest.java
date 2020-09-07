@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  * @author James Ahlborn
@@ -279,7 +280,7 @@ public class PropertiesTest extends TestCase
 
 
       // modify but do not save
-      db = new DatabaseBuilder(dbFile).open();
+      db = open(dbFile);
 
       t = db.getTable("Table1");
 
@@ -299,7 +300,7 @@ public class PropertiesTest extends TestCase
 
 
       // modify and save
-      db = new DatabaseBuilder(dbFile).open();
+      db = open(dbFile);
 
       t = db.getTable("Table1");
 
@@ -326,7 +327,7 @@ public class PropertiesTest extends TestCase
 
 
       // reload saved props
-      db = new DatabaseBuilder(dbFile).open();
+      db = open(dbFile);
 
       t = db.getTable("Table1");
 
@@ -360,20 +361,20 @@ public class PropertiesTest extends TestCase
       }
 
       File file = TestUtil.createTempFile(false);
-      Database db = new DatabaseBuilder(file)
+      Database db = newDatabase(file)
         .setFileFormat(ff)
         .putUserDefinedProperty("testing", "123")
         .create();
 
       UUID u1 = UUID.randomUUID();
       UUID u2 = UUID.randomUUID();
-      Table t = new TableBuilder("Test")
+      Table t = newTable("Test")
         .putProperty("awesome_table", true)
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
+        .addColumn(newColumn("id", DataType.LONG)
                    .setAutoNumber(true)
                    .putProperty(PropertyMap.REQUIRED_PROP, true)
                    .putProperty(PropertyMap.GUID_PROP, u1))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT)
+        .addColumn(newColumn("data", DataType.TEXT)
                    .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false)
                    .putProperty(PropertyMap.GUID_PROP, u2))
         .toTable(db);
@@ -382,7 +383,7 @@ public class PropertiesTest extends TestCase
 
       db.close();
 
-      db = new DatabaseBuilder(file).open();
+      db = open(file);
 
       assertEquals("123", db.getUserDefinedProperties().getValue("testing"));
 
@@ -411,11 +412,11 @@ public class PropertiesTest extends TestCase
     for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("testReq")
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
+      Table t = newTable("testReq")
+        .addColumn(newColumn("id", DataType.LONG)
                    .setAutoNumber(true)
                    .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT)
+        .addColumn(newColumn("value", DataType.TEXT)
                    .putProperty(PropertyMap.REQUIRED_PROP, true))
         .toTable(db);
 
@@ -441,11 +442,11 @@ public class PropertiesTest extends TestCase
       assertTable(expectedRows, t);
 
 
-      t = new TableBuilder("testNz")
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
+      t = newTable("testNz")
+        .addColumn(newColumn("id", DataType.LONG)
                    .setAutoNumber(true)
                    .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT)
+        .addColumn(newColumn("value", DataType.TEXT)
                    .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false))
         .toTable(db);
 
@@ -471,11 +472,11 @@ public class PropertiesTest extends TestCase
       assertTable(expectedRows, t);
 
 
-      t = new TableBuilder("testReqNz")
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
+      t = newTable("testReqNz")
+        .addColumn(newColumn("id", DataType.LONG)
                    .setAutoNumber(true)
                    .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(new ColumnBuilder("value", DataType.TEXT))
+        .addColumn(newColumn("value", DataType.TEXT))
         .toTable(db);
 
       Column col = t.getColumn("value");

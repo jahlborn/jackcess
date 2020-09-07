@@ -48,6 +48,7 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 
 /**
@@ -65,16 +66,16 @@ public class DatabaseTest extends TestCase
       Database db = create(fileFormat);
 
       try {
-        new TableBuilder("test").toTable(db);
+        newTable("test").toTable(db);
         fail("created table with no columns?");
       } catch(IllegalArgumentException e) {
         // success
       }
 
       try {
-        new TableBuilder("test")
-          .addColumn(new ColumnBuilder("A", DataType.TEXT))
-          .addColumn(new ColumnBuilder("a", DataType.MEMO))
+        newTable("test")
+          .addColumn(newColumn("A", DataType.TEXT))
+          .addColumn(newColumn("a", DataType.MEMO))
           .toTable(db);
         fail("created table with duplicate column names?");
       } catch(IllegalArgumentException e) {
@@ -82,8 +83,8 @@ public class DatabaseTest extends TestCase
       }
 
       try {
-        new TableBuilder("test")
-          .addColumn(new ColumnBuilder("A", DataType.TEXT)
+        newTable("test")
+          .addColumn(newColumn("A", DataType.TEXT)
                      .setLengthInUnits(352))
           .toTable(db);
         fail("created table with invalid column length?");
@@ -92,22 +93,22 @@ public class DatabaseTest extends TestCase
       }
 
       try {
-        new TableBuilder("test")
-          .addColumn(new ColumnBuilder("A_" + createString(70), DataType.TEXT))
+        newTable("test")
+          .addColumn(newColumn("A_" + createString(70), DataType.TEXT))
           .toTable(db);
         fail("created table with too long column name?");
       } catch(IllegalArgumentException e) {
         // success
       }
 
-      new TableBuilder("test")
-        .addColumn(new ColumnBuilder("A", DataType.TEXT))
+      newTable("test")
+        .addColumn(newColumn("A", DataType.TEXT))
         .toTable(db);
 
 
       try {
-        new TableBuilder("Test")
-          .addColumn(new ColumnBuilder("A", DataType.TEXT))
+        newTable("Test")
+          .addColumn(newColumn("A", DataType.TEXT))
           .toTable(db);
         fail("create duplicate tables?");
       } catch(IllegalArgumentException e) {
@@ -295,7 +296,7 @@ public class DatabaseTest extends TestCase
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
     try {
-      new DatabaseBuilder(bogusFile).setReadOnly(true).
+      newDatabase(bogusFile).setReadOnly(true).
         setAutoSync(getTestAutoSync()).open();
       fail("FileNotFoundException should have been thrown");
     } catch(FileNotFoundException e) {
@@ -340,8 +341,8 @@ public class DatabaseTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("A", DataType.MONEY))
+      Table table = newTable("test")
+        .addColumn(newColumn("A", DataType.MONEY))
         .toTable(db);
 
       table.addRow(new BigDecimal("-2341234.03450"));
@@ -378,8 +379,8 @@ public class DatabaseTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("A", DataType.GUID))
+      Table table = newTable("test")
+        .addColumn(newColumn("A", DataType.GUID))
         .toTable(db);
 
       table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
@@ -420,13 +421,13 @@ public class DatabaseTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
 
-      ColumnBuilder col = new ColumnBuilder("A", DataType.NUMERIC)
+      ColumnBuilder col = newColumn("A", DataType.NUMERIC)
         .setScale(4).setPrecision(8).toColumn();
       assertTrue(col.getType().isVariableLength());
 
-      Table table = new TableBuilder("test")
+      Table table = newTable("test")
         .addColumn(col)
-        .addColumn(new ColumnBuilder("B", DataType.NUMERIC)
+        .addColumn(newColumn("B", DataType.NUMERIC)
                    .setScale(8).setPrecision(28))
         .toTable(db);
 
@@ -598,10 +599,10 @@ public class DatabaseTest extends TestCase
       for(int i = 0; i < numColumns; ++i) {
         String colName = "MyColumnName" + i;
         colNames.add(colName);
-        columns.add(new ColumnBuilder(colName, DataType.TEXT).toColumn());
+        columns.add(newColumn(colName, DataType.TEXT).toColumn());
       }
 
-      Table t = new TableBuilder("test")
+      Table t = newTable("test")
         .addColumns(columns)
         .toTable(db);
 
@@ -627,9 +628,9 @@ public class DatabaseTest extends TestCase
       Database db = createMem(fileFormat);
       db.setDateTimeType(DateTimeType.DATE);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+      Table table = newTable("test")
+        .addColumn(newColumn("name", DataType.TEXT))
+        .addColumn(newColumn("date", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       // since jackcess does not really store millis, shave them off before
@@ -699,9 +700,9 @@ public class DatabaseTest extends TestCase
       db.setDateTimeType(DateTimeType.DATE);
       db.setTimeZone(tz);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("date", DataType.SHORT_DATE_TIME))
+      Table table = newTable("test")
+        .addColumn(newColumn("name", DataType.TEXT))
+        .addColumn(newColumn("date", DataType.SHORT_DATE_TIME))
         .toTable(db);
 
       for(String dateStr : dates) {

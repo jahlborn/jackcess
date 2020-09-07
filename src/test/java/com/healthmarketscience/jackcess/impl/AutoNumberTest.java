@@ -23,14 +23,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -48,24 +47,24 @@ public class AutoNumberTest extends TestCase
   }
 
 
-  public void testAutoNumber() throws Exception 
+  public void testAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("a", DataType.LONG)
+      Table table = newTable("test")
+        .addColumn(newColumn("a", DataType.LONG)
                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("b", DataType.TEXT))
+        .addColumn(newColumn("b", DataType.TEXT))
         .toTable(db);
 
       doTestAutoNumber(table);
 
       db.close();
     }
-  }  
+  }
 
-  public void testAutoNumberPK() throws Exception 
+  public void testAutoNumberPK() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       Database db = openMem(testDB);
@@ -76,7 +75,7 @@ public class AutoNumberTest extends TestCase
 
       db.close();
     }
-  }  
+  }
 
   private static void doTestAutoNumber(Table table) throws Exception
   {
@@ -98,7 +97,7 @@ public class AutoNumberTest extends TestCase
     Object[] smallRow = {Column.AUTO_NUMBER};
     row = table.addRow(smallRow);
     assertNotSame(row, smallRow);
-    assertEquals(6, ((Integer)row[0]).intValue());    
+    assertEquals(6, ((Integer)row[0]).intValue());
 
     table.reset();
 
@@ -123,18 +122,18 @@ public class AutoNumberTest extends TestCase
               "a", 6,
               "b", null));
 
-    assertTable(expectedRows, table);    
+    assertTable(expectedRows, table);
   }
 
-  public void testAutoNumberGuid() throws Exception 
+  public void testAutoNumberGuid() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("a", DataType.GUID)
+      Table table = newTable("test")
+        .addColumn(newColumn("a", DataType.GUID)
                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("b", DataType.TEXT))
+        .addColumn(newColumn("b", DataType.TEXT))
         .toTable(db);
 
       Object[] row = {null, "row1"};
@@ -152,23 +151,23 @@ public class AutoNumberTest extends TestCase
 
       db.close();
     }
-  }  
+  }
 
   public void testInsertLongAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("a", DataType.LONG)
+      Table table = newTable("test")
+        .addColumn(newColumn("a", DataType.LONG)
                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("b", DataType.TEXT))
+        .addColumn(newColumn("b", DataType.TEXT))
         .toTable(db);
 
       doTestInsertLongAutoNumber(table);
 
       db.close();
-    }    
+    }
   }
 
   public void testInsertLongAutoNumberPK() throws Exception
@@ -176,17 +175,17 @@ public class AutoNumberTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("a", DataType.LONG)
+      Table table = newTable("test")
+        .addColumn(newColumn("a", DataType.LONG)
                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("b", DataType.TEXT))
+        .addColumn(newColumn("b", DataType.TEXT))
         .setPrimaryKey("a")
         .toTable(db);
 
       doTestInsertLongAutoNumber(table);
 
       db.close();
-    }    
+    }
   }
 
   private static void doTestInsertLongAutoNumber(Table table) throws Exception
@@ -232,7 +231,7 @@ public class AutoNumberTest extends TestCase
     assertEquals(13, ((Integer)row[0]).intValue());
 
     assertEquals(13, ((TableImpl)table).getLastLongAutoNumber());
-    
+
     try {
       table.addRow("not a number", "nope");
       fail("NumberFormatException should have been thrown");
@@ -265,19 +264,19 @@ public class AutoNumberTest extends TestCase
     row13.put("a", 55);
 
     // reset to db-level policy (which in this case is "false")
-    table.setAllowAutoNumberInsert(null);  
+    table.setAllowAutoNumberInsert(null);
 
     row13 = table.updateRow(row13);  // no change, as confirmed by...
     assertEquals(-1, row13.get("a"));
 
     assertEquals(45, ((TableImpl)table).getLastLongAutoNumber());
-    
+
   }
 
   public void testInsertComplexAutoNumber() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
-      
+
       Database db = openMem(testDB);
 
       Table t1 = db.getTable("Table1");
@@ -301,7 +300,7 @@ public class AutoNumberTest extends TestCase
       checkAllComplexAutoNums(lastAutoNum, row);
 
       assertEquals(lastAutoNum, ((TableImpl)t1).getLastComplexTypeAutoNumber());
-      
+
       row = t1.addRow("row5", 5, null, null, 5, 5);
       checkAllComplexAutoNums(5, row);
 
@@ -341,7 +340,7 @@ public class AutoNumberTest extends TestCase
       checkAllComplexAutoNums(14, row);
 
       assertEquals(14, ((TableImpl)t1).getLastComplexTypeAutoNumber());
-      
+
       Row row13 = CursorBuilder.findRow(
           t1, Collections.singletonMap("id", "row13"));
 
@@ -352,7 +351,7 @@ public class AutoNumberTest extends TestCase
       checkAllComplexAutoNums(45, row13);
 
       assertEquals(45, ((TableImpl)t1).getLastComplexTypeAutoNumber());
-      
+
       row13.put("attach-data", -1);
 
       try {
@@ -403,15 +402,15 @@ public class AutoNumberTest extends TestCase
       assertEquals(expected, ((Number)row.get("attach-data")).intValue());
   }
 
-  public void testInsertGuidAutoNumber() throws Exception 
+  public void testInsertGuidAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
 
-      Table table = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("a", DataType.GUID)
+      Table table = newTable("test")
+        .addColumn(newColumn("a", DataType.GUID)
                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("b", DataType.TEXT))
+        .addColumn(newColumn("b", DataType.TEXT))
         .toTable(db);
 
       db.setAllowAutoNumberInsert(true);
@@ -433,11 +432,11 @@ public class AutoNumberTest extends TestCase
 
       table.setAllowAutoNumberInsert(null);
       assertTrue(table.isAllowAutoNumberInsert());
-      
+
       Row row2 = CursorBuilder.findRow(
           table, Collections.singletonMap("b", "row2"));
       assertEquals("row2", row2.getString("b"));
-      
+
       String row2Guid = row2.getString("a");
       table.deleteRow(row2);
 
@@ -484,6 +483,6 @@ public class AutoNumberTest extends TestCase
 
       db.close();
     }
-  }  
+  }
 
 }

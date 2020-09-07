@@ -23,17 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.TableBuilder;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  *
@@ -58,18 +55,18 @@ public class BigIntTest extends TestCase
 
       Database db = create(fileFormat);
 
-      Table t = new TableBuilder("Test")
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
+      Table t = newTable("Test")
+        .addColumn(newColumn("id", DataType.LONG)
                    .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-        .addColumn(new ColumnBuilder("num1", DataType.BIG_INT))
-        .addIndex(new IndexBuilder("idx").addColumns("num1"))
+        .addColumn(newColumn("data1", DataType.TEXT))
+        .addColumn(newColumn("num1", DataType.BIG_INT))
+        .addIndex(newIndex("idx").addColumns("num1"))
         .toTable(db);
 
       long[] vals = new long[] {
         0L, -10L, 3844L, -45309590834L, 50392084913L, 65000L, -6489273L};
 
-      List<Map<String, Object>> expectedTable = 
+      List<Map<String, Object>> expectedTable =
         new ArrayList<Map<String, Object>>();
 
       int idx = 1;
@@ -83,7 +80,7 @@ public class BigIntTest extends TestCase
       }
 
       Collections.sort(expectedTable, new Comparator<Map<String, Object>>() {
-          public int compare(
+          @Override public int compare(
               Map<String, Object> r1,
               Map<String, Object> r2) {
             Long l1 = (Long)r1.get("num1");
@@ -91,8 +88,8 @@ public class BigIntTest extends TestCase
             return l1.compareTo(l2);
           }
         });
-      
-      Cursor c = new CursorBuilder(t).setIndexByName("idx").toIndexCursor();
+
+      Cursor c = t.newCursor().setIndexByName("idx").toIndexCursor();
 
       assertCursor(expectedTable, c);
 
