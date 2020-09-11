@@ -25,7 +25,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,7 +66,7 @@ public class ImportUtil
   public static List<ColumnBuilder> toColumns(ResultSetMetaData md)
     throws SQLException
   {
-      List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
+      List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
         ColumnBuilder column = new ColumnBuilder(md.getColumnLabel(i))
           .escapeName();
@@ -447,7 +446,7 @@ public class ImportUtil
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
-        List<ColumnBuilder> columns = new LinkedList<ColumnBuilder>();
+        List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
         Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
 
         for (int i = 0; i < columnNames.length; i++) {
