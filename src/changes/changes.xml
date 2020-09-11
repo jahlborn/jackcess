@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="3.5.1" date="TBD">
+    <release version="3.5.1" date="2020-09-10">
       <action dev="jahlborn" type="update">
         Add more static utility methods to DatabaseBuilder to enable more
         succinct object construction code using static imports.
