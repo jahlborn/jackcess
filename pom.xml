@@ -9,7 +9,7 @@
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>3.5.2.mods-SNAPSHOT</version>
+  <version>3.5.2-SNAPSHOT</version>
   <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
@@ -105,10 +105,10 @@
     <url>https://sourceforge.net/p/jackcess/bugs/</url>
   </issueManagement>
   <scm>
-    <connection>scm:svn:svn://svn.code.sf.net/p/jackcess/code/jackcess/branches/modules</connection>
+    <connection>scm:svn:svn://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</connection>
     <!-- read/write svn connection -->
-    <developerConnection>scm:svn:svn+ssh://svn.code.sf.net/p/jackcess/code/jackcess/branches/modules</developerConnection>
-    <url>http://svn.code.sf.net/p/jackcess/code/jackcess/branches/modules</url>
+    <developerConnection>scm:svn:svn+ssh://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</developerConnection>
+    <url>http://svn.code.sf.net/p/jackcess/code/jackcess/trunk/</url>
   </scm>
   <build>
     <defaultGoal>install</defaultGoal>
