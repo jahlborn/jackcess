@@ -142,6 +142,7 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
+            <Automatic-Module-Name>com.healthmarketscience.jackcess</Automatic-Module-Name>
           </instructions>
         </configuration>
         <executions>

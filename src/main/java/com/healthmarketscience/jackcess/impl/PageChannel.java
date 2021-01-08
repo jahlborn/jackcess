@@ -32,7 +32,8 @@ public class PageChannel implements Channel, Flushable {
 
   static final int INVALID_PAGE_NUMBER = -1;
 
-  static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
+  /** default byte order of access mdb files */
+  public static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
 
   /** invalid page header, used when deallocating old pages.  data pages
       generally have 4 interesting bytes at the beginning which we want to

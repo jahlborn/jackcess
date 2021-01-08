@@ -415,7 +415,7 @@ public class TestUtil
     Assert.assertEquals(expectedLdt, found);
   }
 
-  static void copyFile(File srcFile, File dstFile)
+  public static void copyFile(File srcFile, File dstFile)
     throws IOException
   {
     // FIXME should really be using commons io FileUtils here, but don't want
@@ -441,7 +441,7 @@ public class TestUtil
     }
   }
 
-  static File createTempFile(boolean keep) throws Exception {
+  public static File createTempFile(boolean keep) throws Exception {
     File tmp = File.createTempFile("databaseTest", ".mdb");
     if(keep) {
       System.out.println("Created " + tmp);
