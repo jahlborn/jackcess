@@ -19,6 +19,20 @@
         Questions</a> for more info.
       </p>
 
+      <subsection name="Java 9+ Compatibility (2021-TBD)">
+        <p>
+          While Jackcess still only requires Java 8+, as of the 4.0.0 release
+          it now includes an Automatic-Module-Name of
+          <code>com.healthmarketscience.jackcess</code> in its manifest.  That
+          allows it to be used in the module path for Java 9+ projects.  Note
+          that using jackcess as a module requires enabling the
+          <code>java.sql</code> module.
+        </p>
+        <p>
+          This release is binary compatible with the 3.x release series.
+        </p>
+      </subsection>
+
       <subsection name="Java 8+ Support (2019-02-08)">
         <p>
           Jackcess now requires Java 8+ as of the 3.0.0 release.  All third
