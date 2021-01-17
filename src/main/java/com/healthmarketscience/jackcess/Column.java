@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
@@ -34,7 +33,7 @@ import com.healthmarketscience.jackcess.util.ColumnValidator;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public interface Column 
+public interface Column
 {
   /**
    * Meaningless placeholder object for inserting values in an autonumber
@@ -43,14 +42,14 @@ public interface Column
    * @usage _general_field_
    */
   public static final Object AUTO_NUMBER = "<AUTO_NUMBER>";
-  
+
   /**
    * Meaningless placeholder object for updating rows which indicates that a
    * given column should keep its existing value.
    * @usage _general_field_
    */
   public static final Object KEEP_VALUE = "<KEEP_VALUE>";
-  
+
   /**
    * @usage _general_method_
    */
@@ -89,7 +88,7 @@ public interface Column
   /**
    * @usage _general_method_
    */
-  public int getSQLType() throws SQLException;
+  public int getSQLType() throws IOException;
 
   /**
    * @usage _general_method_
@@ -149,7 +148,7 @@ public interface Column
    * @usage _general_method_
    */
   public PropertyMap getProperties() throws IOException;
-  
+
   /**
    * Returns the column which tracks the version history for an "append only"
    * column.
@@ -162,7 +161,7 @@ public interface Column
    * @usage _intermediate_method_
    */
   public ColumnValidator getColumnValidator();
-  
+
   /**
    * Sets a new ColumnValidator.  If {@code null}, resets to the value
    * returned from the Database's ColumnValidatorFactory (if the factory
@@ -173,12 +172,12 @@ public interface Column
    * @usage _intermediate_method_
    */
   public void setColumnValidator(ColumnValidator newValidator);
-  
+
   public Object setRowValue(Object[] rowArray, Object value);
-  
+
   public Object setRowValue(Map<String,Object> rowMap, Object value);
-  
+
   public Object getRowValue(Object[] rowArray);
-  
+
   public Object getRowValue(Map<String,?> rowMap);
 }

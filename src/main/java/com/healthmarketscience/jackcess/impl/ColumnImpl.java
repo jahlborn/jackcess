@@ -29,9 +29,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -441,7 +438,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   }
 
   @Override
-  public int getSQLType() throws SQLException {
+  public int getSQLType() throws IOException {
     return _type.getSQLType();
   }
 
@@ -1836,14 +1833,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       return null;
     } else if(value instanceof CharSequence) {
       return (CharSequence)value;
-    } else if(value instanceof Clob) {
-      try {
-        Clob c = (Clob)value;
-        // note, start pos is 1-based
-        return c.getSubString(1L, (int)c.length());
-      } catch(SQLException e) {
-        throw (IOException)(new IOException(e.getMessage())).initCause(e);
-      }
+    } else if(SqlHelper.INSTANCE.isClob(value)) {
+      return SqlHelper.INSTANCE.getClobString(value);
     } else if(value instanceof Reader) {
       char[] buf = new char[8 * 1024];
       StringBuilder sout = new StringBuilder();
@@ -1869,18 +1860,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       return null;
     } else if(value instanceof byte[]) {
       return (byte[])value;
-    } else if(value instanceof OleUtil.OleBlobImpl) {
-      return ((OleUtil.OleBlobImpl)value).getBytes();
-    } else if(value instanceof Blob) {
-      try {
-        Blob b = (Blob)value;
-        // note, start pos is 1-based
-        return b.getBytes(1L, (int)b.length());
-      } catch(SQLException e) {
-        throw (IOException)(new IOException(e.getMessage())).initCause(e);
-      }
-    } else if(value instanceof RawData) {
-      return ((RawData)value).getBytes();
+    } else if(value instanceof InMemoryBlob) {
+      return ((InMemoryBlob)value).getBytes();
+    } else if(SqlHelper.INSTANCE.isBlob(value)) {
+      return SqlHelper.INSTANCE.getBlobBytes(value);
     }
 
     ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -2302,7 +2285,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   /**
    * Wrapper for raw column data which can be re-written.
    */
-  private static class RawData implements Serializable
+  private static final class RawData implements Serializable, InMemoryBlob
   {
     private static final long serialVersionUID = 0L;
 
@@ -2312,7 +2295,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       _bytes = bytes;
     }
 
-    private byte[] getBytes() {
+    @Override
+    public byte[] getBytes() {
       return _bytes;
     }
 
@@ -2787,5 +2771,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       Instant inst = Instant.ofEpochMilli(toDateLong(value));
       return LocalDateTime.ofInstant(inst, db.getZoneId());
     }
+  }
+
+  /** internal interface for types which hold bytes in memory */
+  static interface InMemoryBlob {
+    public byte[] getBytes() throws IOException;
   }
 }

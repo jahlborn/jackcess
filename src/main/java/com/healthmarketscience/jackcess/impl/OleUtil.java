@@ -463,7 +463,7 @@ public class OleUtil
   }
 
 
-  static final class OleBlobImpl implements OleBlob
+  static final class OleBlobImpl implements OleBlob, ColumnImpl.InMemoryBlob
   {
     private byte[] _bytes;
     private ContentImpl _content;
@@ -502,6 +502,7 @@ public class OleUtil
       return _bytes.length;
     }
 
+    @Override
     public byte[] getBytes() throws IOException {
       if(_bytes == null) {
         throw new IOException("blob is closed");
