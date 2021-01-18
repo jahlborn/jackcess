@@ -15,9 +15,8 @@
       <item name="Downloads" href="https://sourceforge.net/project/showfiles.php?group_id=134943"/>
       <item name="SourceForge Project" href="https://sourceforge.net/projects/jackcess/"/>
       <item name="Cookbook" href="cookbook.html"/>
-      <item name="Upgrading to Jackcess 3.5.x" href="jackcess-3_5.html"/>
-      <item name="Upgrading to Jackcess 3.x" href="jackcess-3.html"/>
-      <item name="Upgrading to Jackcess 2.x" href="jackcess-2.html"/>
+      <item name="Upgrading to Jackcess 4.x" href="jackcess-4.html"/>
+      <item name="Upgrading to Older Versions" href="jackcess_upgrades.html"/>
       <item name="FAQ" href="faq.html"/>
       <item name="Support" href="https://sourceforge.net/projects/jackcess/support"/>
       <item name="Jackcess Encrypt" href="https://jackcessencrypt.sourceforge.io/"/>

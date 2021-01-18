@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Upgrading from Jackcess 3.x (or 3.5.x) to 4.x</title>
+  </properties>
+  <body>
+
+    <section name="Jackcess 4.0">
+      <subsection name="Just give it to me straight">
+        <p>
+          Jackcess 4.x is largely binary compatible with the previous 3.x (and
+          3.5.x) versions.  In order to be more "module friendly", the
+          exceptions thrown from a few infrequently used methods have changed
+          from <code>SQLException</code> to <code>IOException</code>.  Other
+          than that, code compiled against the 3.x series should work fine
+          with the 4.x series.
+        </p>
+
+        <p>
+          Even though Jackcess is now Java 9+ module compatible, <i>it still
+          only requires Java 8+</i>.  However, Jackcess can now be safely used
+          in the module path of a Java 9+ project (with the module name of
+          <code>com.healthmarketscience.jackcess</code>).  There are a few
+          features which require additional core Java modules to be enabled
+          (but these modules are not required if the corresponding features
+          are not utilized).
+          <ul>
+            <li><b>java.sql</b></li>
+            <ul>
+              <li>This module is necessary if Jackcess will need to interact
+              with any of the classes from the <code>java.sql</code> package
+              (e.g. handling <code>Clob</code>/<code>Blob</code> or using
+              <code>ImportUtil</code>).</li>
+            </ul>
+            <li><b>java.scripting</b></li>
+            <ul>
+              <li>This module is necessary if expression evaluation is
+              enabled (the default) and the database includes expressions
+              (e.g. default values, calculated columns, validation
+              rules, etc.).</li>
+            </ul>
+          </ul>
+        </p>
+
+        <h4>Working with Jackcess Encrypt</h4>
+        <p>
+          If you are using the <a href="https://jackcessencrypt.sourceforge.io/">Jackcess Encrypt</a>
+          project, then you will need to use a version compatible with the
+          relevant Jackess API.  Fortunately, the major versions match, so
+          it's pretty simple:
+        </p>
+        <ul>
+          <li>Jackcess 4.x -&gt; Jackcess Encrypt 4.y</li>
+          <li>Jackcess 3.x -&gt; Jackcess Encrypt 3.y</li>
+          <li>Jackcess 2.x -&gt; Jackcess Encrypt 2.y</li>
+          <li>Jackcess 1.x -&gt; Jackcess Encrypt 1.y</li>
+        </ul>
+      </subsection>
+    </section>
+
+  </body>
+</document>

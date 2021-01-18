@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Upgrading to Older Versions</title>
+  </properties>
+  <body>
+
+    <section name="Upgrading to Older Versions">
+      <ul>
+        <li><a href="jackcess-3_5.html">Upgrading to Jackcess 3.5.x</a></li>
+        <li><a href="jackcess-3.html">Upgrading to Jackcess 3.x</a></li>
+        <li><a href="jackcess-2.html">Upgrading to Jackcess 2.x</a></li>
+      </ul>
+    </section>
+
+  </body>
+</document>
