@@ -89,10 +89,8 @@ if(row != null) {
           <li>Creating a new table and writing data into it:
             <source>Database db = DatabaseBuilder.create(Database.FileFormat.V2000, new File("new.mdb"));
 Table newTable = new TableBuilder("NewTable")
-  .addColumn(new ColumnBuilder("a")
-             .setSQLType(Types.INTEGER))
-  .addColumn(new ColumnBuilder("b")
-             .setSQLType(Types.VARCHAR))
+  .addColumn(new ColumnBuilder("a", DataType.LONG))
+  .addColumn(new ColumnBuilder("b", DataType.TEXT))
   .toTable(db);
 newTable.addRow(1, "foo");
 </source>
