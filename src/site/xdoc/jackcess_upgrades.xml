@@ -8,11 +8,14 @@
   <body>
 
     <section name="Upgrading to Older Versions">
-      <ul>
-        <li><a href="jackcess-3_5.html">Upgrading to Jackcess 3.5.x</a></li>
-        <li><a href="jackcess-3.html">Upgrading to Jackcess 3.x</a></li>
-        <li><a href="jackcess-2.html">Upgrading to Jackcess 2.x</a></li>
-      </ul>
+      <subsection name="Overview">
+        <table>
+          <tr><th>Document</th></tr>
+        <tr><td><a href="jackcess-3_5.html">Upgrading to Jackcess 3.5.x</a></td></tr>
+        <tr><td><a href="jackcess-3.html">Upgrading to Jackcess 3.x</a></td></tr>
+        <tr><td><a href="jackcess-2.html">Upgrading to Jackcess 2.x</a></td></tr>
+      </table>
+      </subsection>
     </section>
 
   </body>

@@ -15,7 +15,7 @@
           behavior of Jackcess out of the box.  The old behavior is still
           available, but you must now configure it explicitly.
           <ul>
-            <li><b>DateTypeType default has been changed to
+            <li><b>DateTimeType default has been changed to
             LOCAL_DATE_TIME.</b></li>
             <ul>
               <li>The Jackcess API was originally built using the Date type

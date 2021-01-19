@@ -24,7 +24,7 @@
           While Jackcess <i>still only requires Java 8+</i>, as of the 4.0.0
           release it now includes an Automatic-Module-Name of
           <code>com.healthmarketscience.jackcess</code> in its manifest.  This
-          allows it to be used in the module path for Java 9+ projects.
+          allows it to be used safely in the module path for Java 9+ projects.
         </p>
         <p>
           This release is binary compatible with the 3.x release series.
