@@ -857,10 +857,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       // too big)
       buffer.putLong(decVal.movePointRight(4).longValueExact());
     } catch(ArithmeticException e) {
-      throw (IOException)
-        new IOException(withErrorContext(
-                "Currency value '" + inValue + "' out of range"))
-        .initCause(e);
+      throw new IOException(
+          withErrorContext("Currency value '" + inValue + "' out of range"), e);
     }
   }
 
@@ -933,10 +931,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       }
       buffer.put(intValBytes);
     } catch(ArithmeticException e) {
-      throw (IOException)
-        new IOException(withErrorContext(
-                "Numeric value '" + inValue + "' out of range"))
-        .initCause(e);
+      throw new IOException(
+          withErrorContext("Numeric value '" + inValue + "' out of range"), e);
     }
   }
 

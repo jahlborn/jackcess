@@ -45,7 +45,7 @@ public class SqlHelperImpl extends SqlHelper {
       // note, start pos is 1-based
       return b.getBytes(1L, (int)b.length());
     } catch(SQLException e) {
-      throw (IOException)(new IOException(e.getMessage())).initCause(e);
+      throw new IOException(e.getMessage(), e);
     }
   }
 
@@ -61,7 +61,7 @@ public class SqlHelperImpl extends SqlHelper {
       // note, start pos is 1-based
       return c.getSubString(1L, (int)c.length());
     } catch(SQLException e) {
-      throw (IOException)(new IOException(e.getMessage())).initCause(e);
+      throw new IOException(e.getMessage(), e);
     }
   }
 

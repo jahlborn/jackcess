@@ -423,10 +423,8 @@ class CalculatedColumnUtil
         buffer.put(intValBytes);
 
       } catch(ArithmeticException e) {
-        throw (IOException)
-          new IOException(withErrorContext(
-              "Numeric value '" + inValue + "' out of range"))
-          .initCause(e);
+        throw new IOException(
+            withErrorContext("Numeric value '" + inValue + "' out of range"), e);
       }
     }
 

@@ -493,7 +493,7 @@ public class ImportUtil
       return table.getName();
 
     } catch(SQLException e) {
-      throw (IOException)new IOException(e.getMessage()).initCause(e);
+      throw new IOException(e.getMessage(), e);
     }
   }
 
