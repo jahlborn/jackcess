@@ -2149,8 +2149,9 @@ public class DatabaseImpl implements Database, DateTimeContext
   /**
    * Returns the password mask retrieved from the given header page and
    * format, or {@code null} if this format does not use a password mask.
+   * @usage _advanced_method_
    */
-  static byte[] getPasswordMask(ByteBuffer buffer, JetFormat format)
+  public static byte[] getPasswordMask(ByteBuffer buffer, JetFormat format)
   {
     // get extra password mask if necessary (the extra password mask is
     // generated from the database creation date stored in the header)

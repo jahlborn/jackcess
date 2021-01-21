@@ -17,7 +17,6 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -93,7 +92,7 @@ public class ColumnBuilder {
   /**
    * Sets the type for the new column based on the given SQL type.
    */
-  public ColumnBuilder setSQLType(int type) throws SQLException {
+  public ColumnBuilder setSQLType(int type) throws IOException {
     return setSQLType(type, 0, null);
   }
 
@@ -102,7 +101,7 @@ public class ColumnBuilder {
    * data length (in type specific units).
    */
   public ColumnBuilder setSQLType(int type, int lengthInUnits)
-    throws SQLException
+    throws IOException
   {
     return setSQLType(type, lengthInUnits, null);
   }
@@ -113,7 +112,7 @@ public class ColumnBuilder {
    */
   public ColumnBuilder setSQLType(int type, int lengthInUnits,
                                   Database.FileFormat fileFormat)
-    throws SQLException
+    throws IOException
   {
     return setType(DataType.fromSQLType(type, lengthInUnits, fileFormat));
   }

@@ -4,6 +4,21 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="4.0.0" date="TBD">
+      <action dev="jahlborn" type="update">
+        Add Automatic-Module-Name in order to make Jackcess safe to use in the
+        module path in Java 9+ environments.
+      </action>
+      <action dev="jahlborn" type="update">
+        Make a few classes and constants public in order to facilitate use in
+        different packages.
+      </action>
+      <action dev="jahlborn" type="update">
+        Alter access to java.sql classes so that usage is dependent on whether
+        or not the module is loaded in Java 9+ environments.  Tweak a few
+        methods to no longer throw SQLException.
+      </action>
+    </release>
     <release version="3.5.1" date="2020-09-10">
       <action dev="jahlborn" type="update">
         Add more static utility methods to DatabaseBuilder to enable more

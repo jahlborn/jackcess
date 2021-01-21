@@ -16,6 +16,13 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.util;
 
+import com.healthmarketscience.jackcess.ColumnBuilder;
+import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
@@ -28,14 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.TableBuilder;
-import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * Utility class for importing tables to an Access database from other
@@ -64,7 +63,7 @@ public class ImportUtil
    * @return a List of Columns
    */
   public static List<ColumnBuilder> toColumns(ResultSetMetaData md)
-    throws SQLException
+      throws SQLException, IOException
   {
       List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
@@ -494,7 +493,7 @@ public class ImportUtil
       return table.getName();
 
     } catch(SQLException e) {
-      throw (IOException)new IOException(e.getMessage()).initCause(e);
+      throw new IOException(e.getMessage(), e);
     }
   }
 

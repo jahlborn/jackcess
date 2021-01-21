@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +27,7 @@ import java.time.LocalDateTime;
 
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.SqlHelper;
 
 /**
  * Supported access data types.
@@ -356,11 +356,11 @@ public enum DataType {
     return _maxSize;
   }
 
-  public int getSQLType() throws SQLException {
+  public int getSQLType() throws IOException {
     if (_sqlType != null) {
       return _sqlType;
     }
-    throw new SQLException("Unsupported data type: " + toString());
+    throw new JackcessException("Unsupported data type: " + toString());
   }
 
   public int getMinScale() {
@@ -472,24 +472,24 @@ public enum DataType {
   }
 
   public static DataType fromSQLType(int sqlType)
-    throws SQLException
+    throws IOException
   {
     return fromSQLType(sqlType, 0, null);
   }
 
   public static DataType fromSQLType(int sqlType, int lengthInUnits)
-    throws SQLException
+    throws IOException
   {
     return fromSQLType(sqlType, lengthInUnits, null);
   }
 
   public static DataType fromSQLType(int sqlType, int lengthInUnits,
                                      Database.FileFormat fileFormat)
-    throws SQLException
+    throws IOException
   {
     DataType[] rtnArr = SQL_TYPES.get(sqlType);
     if(rtnArr == null) {
-      throw new SQLException("Unsupported SQL type: " + sqlType);
+      throw new JackcessException("Unsupported SQL type: " + sqlType);
     }
     JetFormat format =
       ((fileFormat != null) ?
@@ -533,8 +533,7 @@ public enum DataType {
                                     DataType altType)
   {
     try {
-      java.lang.reflect.Field sqlTypeField = Types.class.getField(typeName);
-      Integer value = (Integer)sqlTypeField.get(null);
+      Integer value = SqlHelper.INSTANCE.getNewSqlType(typeName);
       SQL_TYPES.put(value, new DataType[]{type});
       if(altType != null) {
         ALT_SQL_TYPES.put(value, altType);

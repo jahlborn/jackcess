@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -14,6 +13,7 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.JackcessException;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.PropertyMap;
@@ -292,7 +292,7 @@ public class JetFormatTest extends TestCase {
         Integer sqlType = null;
         try {
           sqlType = dt.getSQLType();
-        } catch(SQLException ignored) {}
+        } catch(JackcessException ignored) {}
 
         if(sqlType != null) {
           assertEquals(dt, DataType.fromSQLType(sqlType));
