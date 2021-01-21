@@ -19,7 +19,7 @@
         Questions</a> for more info.
       </p>
 
-      <subsection name="Java 9+ Compatibility (2021-TBD)">
+      <subsection name="Java 9+ Compatibility (2021-01-20)">
         <p>
           While Jackcess <i>still only requires Java 8+</i>, as of the 4.0.0
           release it now includes an Automatic-Module-Name of
