@@ -511,14 +511,8 @@ public class GeneralLegacyIndexCodes {
       Object value, ByteStream bout, boolean isAscending)
     throws IOException
   {
-    // first, convert to string
-    String str = ColumnImpl.toCharSequence(value).toString();
-
-    // all text columns (including memos) are only indexed up to the max
-    // number of chars in a VARCHAR column
-    if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
-      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
-    }
+    // convert to string
+    String str = toIndexCharSequence(value);
 
     // record previous entry length so we can do any post-processing
     // necessary for this entry (handling descending)
@@ -639,6 +633,32 @@ public class GeneralLegacyIndexCodes {
 
     // write end extra text
     bout.write(END_EXTRA_TEXT);
+  }
+
+  protected static String toIndexCharSequence(Object value)
+      throws IOException {
+
+    // first, convert to string
+    String str = ColumnImpl.toCharSequence(value).toString();
+
+    // all text columns (including memos) are only indexed up to the max
+    // number of chars in a VARCHAR column
+    int len = str.length();
+    if(len > MAX_TEXT_INDEX_CHAR_LENGTH) {
+      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
+      len = MAX_TEXT_INDEX_CHAR_LENGTH;
+    }
+
+    // trailing spaces are ignored for text index entries
+    if((len > 0) && (str.charAt(len - 1) == ' ')) {
+      do {
+        --len;
+      } while((len > 0) && (str.charAt(len - 1) == ' '));
+
+      str = str.substring(0, len);
+    }
+
+    return str;
   }
 
   /**

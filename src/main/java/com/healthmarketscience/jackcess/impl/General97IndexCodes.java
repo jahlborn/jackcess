@@ -99,14 +99,8 @@ public class General97IndexCodes extends GeneralLegacyIndexCodes
       Object value, ByteStream bout, boolean isAscending)
     throws IOException
   {
-    // first, convert to string
-    String str = ColumnImpl.toCharSequence(value).toString();
-
-    // all text columns (including memos) are only indexed up to the max
-    // number of chars in a VARCHAR column
-    if(str.length() > MAX_TEXT_INDEX_CHAR_LENGTH) {
-      str = str.substring(0, MAX_TEXT_INDEX_CHAR_LENGTH);
-    }
+    // convert to string
+    String str = toIndexCharSequence(value);
 
     // record previous entry length so we can do any post-processing
     // necessary for this entry (handling descending)
