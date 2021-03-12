@@ -13,3 +13,5 @@ repository which is hosted on SourceForge:
 Homepage: https://jackcess.sourceforge.io/
 
 Project: https://sourceforge.net/projects/jackcess/
+
+Download: https://sourceforge.net/projects/jackcess/files/latest/download[I]
