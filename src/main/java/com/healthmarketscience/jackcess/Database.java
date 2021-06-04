@@ -164,6 +164,8 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
     V2010(".accdb"),
     /** A database which was created by MS Access 2016+ */
     V2016(".accdb"),
+    /** A database which was created by MS Access 2019+ (Office 365) */
+    V2019(".accdb"),
     /** A database which was created by MS Money */
     MSISAM(".mny");
 

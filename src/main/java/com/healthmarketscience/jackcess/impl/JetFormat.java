@@ -59,8 +59,10 @@ public abstract class JetFormat {
   private static final byte CODE_VERSION_12 = 0x2;
   /** Version code for Jet version 14.0 */
   private static final byte CODE_VERSION_14 = 0x3;
-  /** Version code for Jet version 16.7 */
+  /** Version code for Jet version 16.0 */
   private static final byte CODE_VERSION_16 = 0x5;
+  /** Version code for Jet version 17.0 */
+  private static final byte CODE_VERSION_17 = 0x6;
 
   /** location of the engine name in the header */
   public static final int OFFSET_ENGINE_NAME = 0x4;
@@ -127,6 +129,9 @@ public abstract class JetFormat {
     private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_16 =
       Collections.singletonMap((String)null, Database.FileFormat.V2016);
 
+    private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_17 =
+      Collections.singletonMap((String)null, Database.FileFormat.V2019);
+
     private static final Map<String,Database.FileFormat> POSSIBLE_VERSION_MSISAM =
       Collections.singletonMap((String)null, Database.FileFormat.MSISAM);
 
@@ -160,8 +165,10 @@ public abstract class JetFormat {
   public static final JetFormat VERSION_12 = new Jet12Format();
   /** the JetFormat constants for the Jet database version "14.0" */
   public static final JetFormat VERSION_14 = new Jet14Format();
-  /** the JetFormat constants for the Jet database version "16.7" */
+  /** the JetFormat constants for the Jet database version "16.0" */
   public static final JetFormat VERSION_16 = new Jet16Format();
+  /** the JetFormat constants for the Jet database version "17.0" */
+  public static final JetFormat VERSION_17 = new Jet17Format();
 
   //These constants are populated by this class's constructor.  They can't be
   //populated by the subclass's constructor because they are final, and Java
@@ -306,6 +313,8 @@ public abstract class JetFormat {
       return VERSION_14;
     } else if (version == CODE_VERSION_16) {
       return VERSION_16;
+    } else if (version == CODE_VERSION_17) {
+      return VERSION_17;
     }
     throw new IOException("Unsupported " +
                           ((version < CODE_VERSION_3) ? "older" : "newer") +
@@ -1093,10 +1102,14 @@ public abstract class JetFormat {
     }
   }
 
-  private static final class Jet16Format extends Jet14Format {
+  private static class Jet16Format extends Jet14Format {
 
     private Jet16Format() {
       super("VERSION_16");
+    }
+
+    private Jet16Format(String name) {
+      super(name);
     }
 
     @Override
@@ -1112,6 +1125,23 @@ public abstract class JetFormat {
     @Override
     public boolean isSupportedCalculatedDataType(DataType type) {
       return V16_CALC_TYPES.contains(type);
+    }
+  }
+
+  private static final class Jet17Format extends Jet16Format {
+
+    private Jet17Format() {
+      super("VERSION_17");
+    }
+
+    @Override
+    public boolean isSupportedDataType(DataType type) {
+      return true;
+    }
+
+    @Override
+    protected Map<String,Database.FileFormat> getPossibleFileFormats() {
+      return PossibleFileFormats.POSSIBLE_VERSION_17;
     }
   }
 

@@ -773,6 +773,13 @@ public class DatabaseTest extends TestCase
           sysTables.add("f_12D7448B56564D8AAE333BCC9B3718E5_Data");
           sysTables.add("MSysResources");
         }
+        if(fileFormat.ordinal() >= FileFormat.V2019.ordinal()) {
+          sysTables.remove("f_12D7448B56564D8AAE333BCC9B3718E5_Data");
+          sysTables.add("f_8FA5340F56044616AE380F64A2FEC135_Data");
+          sysTables.add("MSysWSDPCacheComplexColumnMapping");
+          sysTables.add("MSysWSDPChangeTokenMapping");
+          sysTables.add("MSysWSDPRelationshipMapping");
+        }
       }
 
       assertEquals(sysTables, db.getSystemTableNames());

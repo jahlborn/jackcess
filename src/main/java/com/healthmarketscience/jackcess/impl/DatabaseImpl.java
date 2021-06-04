@@ -123,6 +123,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
     addFileFormatDetails(FileFormat.V2010, "empty2010", JetFormat.VERSION_14);
     addFileFormatDetails(FileFormat.V2016, "empty2016", JetFormat.VERSION_16);
+    addFileFormatDetails(FileFormat.V2019, "empty2019", JetFormat.VERSION_17);
     addFileFormatDetails(FileFormat.MSISAM, null, JetFormat.VERSION_MSISAM);
   }
 
@@ -189,7 +190,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static final int DB_PARENT_ID = 0xF000000;
 
   /** the maximum size of any of the included "empty db" resources */
-  private static final long MAX_EMPTYDB_SIZE = 370000L;
+  private static final long MAX_EMPTYDB_SIZE = 440000L;
 
   /** this object is a "system" object */
   static final int SYSTEM_OBJECT_FLAG = 0x80000000;
