@@ -11,6 +11,9 @@
       <action dev="jahlborn" type="update">
         Add basic support for access 2019+ dbs.
       </action>
+      <action dev="jahlborn" type="update">
+        Add support for extended date/time type in access 2019+ dbs.
+      </action>
     </release>
     <release version="4.0.0" date="2021-01-20">
       <action dev="jahlborn" type="update">

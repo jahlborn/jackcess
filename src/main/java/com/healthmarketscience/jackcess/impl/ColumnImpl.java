@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.Calendar;
@@ -108,6 +109,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   public static final LocalDate BASE_LD = LocalDate.of(1899, 12, 30);
   public static final LocalTime BASE_LT = LocalTime.of(0, 0);
   public static final LocalDateTime BASE_LDT = LocalDateTime.of(BASE_LD, BASE_LT);
+
+  private static final LocalDate BASE_EXT_LD = LocalDate.of(1, 1, 1);
+  private static final LocalTime BASE_EXT_LT = LocalTime.of(0, 0);
+  private static final LocalDateTime BASE_EXT_LDT =
+    LocalDateTime.of(BASE_EXT_LD, BASE_EXT_LT);
+  private static final byte[] EXT_LDT_TRAILER = {':', '7', 0x00};
 
   private static final DateTimeFactory DEF_DATE_TIME_FACTORY =
     new DefaultDateTimeFactory();
@@ -808,6 +815,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       return readNumericValue(buffer);
     case GUID:
       return readGUIDValue(buffer, order);
+    case EXT_DATE_TIME:
+      return readExtendedDateValue(buffer);
     case UNKNOWN_0D:
     case UNKNOWN_11:
       // treat like "binary" data
@@ -967,6 +976,37 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   }
 
   /**
+   * Decodes an "extended" date/time value.
+   */
+  private static Object readExtendedDateValue(ByteBuffer buffer) {
+    // format: <19digits>:<19digits>:7 0x00
+    long numDays = readExtDateLong(buffer, 19);
+    buffer.get();
+    long seconds = readExtDateLong(buffer, 12);
+    // there are 7 fractional digits
+    long nanos = readExtDateLong(buffer, 7) * 100L;
+    ByteUtil.forward(buffer, EXT_LDT_TRAILER.length);
+
+    return BASE_EXT_LDT
+      .plusDays(numDays)
+      .plusSeconds(seconds)
+      .plusNanos(nanos);
+  }
+
+  /**
+   * Reads the given number of ascii encoded characters as a long value.
+   */
+  private static long readExtDateLong(ByteBuffer buffer, int numChars) {
+    long val = 0L;
+    for(int i = 0; i < numChars; ++i) {
+      char digit = (char)buffer.get();
+      long inc = digit - '0';
+      val = (val * 10L) + inc;
+    }
+    return val;
+  }
+
+  /**
    * Returns a java long time value converted from an access date double.
    * @usage _advanced_method_
    */
@@ -1035,6 +1075,51 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   }
 
   /**
+   * Writes an "extended" date/time value.
+   */
+  private void writeExtendedDateValue(ByteBuffer buffer, Object value)
+    throws InvalidValueException
+  {
+    LocalDateTime ldt = BASE_EXT_LDT;
+    if(value != null) {
+      ldt = toLocalDateTime(value, this);
+    }
+
+    LocalDate ld = ldt.toLocalDate();
+    LocalTime lt = ldt.toLocalTime();
+
+    long numDays = BASE_EXT_LD.until(ld, ChronoUnit.DAYS);
+    long numSeconds = BASE_EXT_LT.until(lt, ChronoUnit.SECONDS);
+    long nanos = lt.getNano();
+
+    // format: <19digits>:<19digits>:7 0x00
+    writeExtDateLong(buffer, numDays, 19);
+    buffer.put((byte)':');
+    writeExtDateLong(buffer, numSeconds, 12);
+    // there are 7 fractional digits
+    writeExtDateLong(buffer, (nanos / 100L), 7);
+
+    buffer.put(EXT_LDT_TRAILER);
+  }
+
+  /**
+   * Writes the given long value as the given number of ascii encoded
+   * characters.
+   */
+  private static void writeExtDateLong(
+      ByteBuffer buffer, long val, int numChars) {
+    // we write the desired number of digits in reverse order
+    int end = buffer.position();
+    int start = end + numChars - 1;
+    for(int i = start; i >= end; --i) {
+      char digit = (char)('0' + (char)(val % 10L));
+      buffer.put(i, (byte)digit);
+      val /= 10L;
+    }
+    ByteUtil.forward(buffer, numChars);
+  }
+
+  /**
    * Returns an access date double converted from a java Date/Calendar/Number
    * time value.
    * @usage _advanced_method_
@@ -1059,6 +1144,15 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   }
 
   private static LocalDateTime toLocalDateTime(
+      Object value, DateTimeContext dtc) {
+    if(value instanceof TemporalAccessor) {
+      return temporalToLocalDateTime((TemporalAccessor)value, dtc);
+    }
+    Instant inst = Instant.ofEpochMilli(toDateLong(value));
+    return LocalDateTime.ofInstant(inst, dtc.getZoneId());
+  }
+
+  private static LocalDateTime temporalToLocalDateTime(
       TemporalAccessor value, DateTimeContext dtc) {
 
     // handle some common Temporal types
@@ -1117,7 +1211,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     if(value instanceof Instant) {
       return (Instant)value;
     }
-    return toLocalDateTime(value, dtc).atZone(dtc.getZoneId()).toInstant();
+    return temporalToLocalDateTime(value, dtc).atZone(dtc.getZoneId())
+      .toInstant();
   }
 
   static double toLocalDateDouble(long time) {
@@ -1463,6 +1558,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       break;
     case BIG_INT:
       buffer.putLong(toNumber(obj).longValue());
+      break;
+    case EXT_DATE_TIME:
+      writeExtendedDateValue(buffer, obj);
       break;
     case UNSUPPORTED_FIXEDLEN:
       byte[] bytes = toByteArray(obj);
@@ -2188,6 +2286,8 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     case BIG_INT:
       return ((value instanceof Long) ? value :
               toNumber(value, db).longValue());
+    case EXT_DATE_TIME:
+      return toLocalDateTime(value, db);
     default:
       // some variation of binary data
       return toByteArray(value);
@@ -2756,16 +2856,12 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
         value = Instant.ofEpochMilli(toDateLong(value));
       }
       return ColumnImpl.toDateDouble(
-          toLocalDateTime((TemporalAccessor)value, dtc));
+          temporalToLocalDateTime((TemporalAccessor)value, dtc));
     }
 
     @Override
     public Object toInternalValue(DatabaseImpl db, Object value) {
-      if(value instanceof TemporalAccessor) {
-        return toLocalDateTime((TemporalAccessor)value, db);
-      }
-      Instant inst = Instant.ofEpochMilli(toDateLong(value));
-      return LocalDateTime.ofInstant(inst, db.getZoneId());
+      return toLocalDateTime(value, db);
     }
   }
 

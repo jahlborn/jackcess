@@ -155,6 +155,18 @@ public abstract class JetFormat {
     V16_CALC_TYPES.addAll(V14_CALC_TYPES);
   }
 
+  private static final Set<DataType> V16_UNSUPP_TYPES =
+    EnumSet.of(DataType.EXT_DATE_TIME);
+  private static final Set<DataType> V12_UNSUPP_TYPES =
+    EnumSet.of(DataType.BIG_INT);
+  private static final Set<DataType> V3_UNSUPP_TYPES =
+    EnumSet.of(DataType.COMPLEX_TYPE);
+
+  static {
+    V12_UNSUPP_TYPES.addAll(V16_UNSUPP_TYPES);
+    V3_UNSUPP_TYPES.addAll(V12_UNSUPP_TYPES);
+  }
+
   /** the JetFormat constants for the Jet database version "3" */
   public static final JetFormat VERSION_3 = new Jet3Format();
   /** the JetFormat constants for the Jet database version "4" */
@@ -769,8 +781,7 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return ((type != DataType.COMPLEX_TYPE) &&
-              (type != DataType.BIG_INT));
+      return !V3_UNSUPP_TYPES.contains(type);
     }
 
     @Override
@@ -1006,8 +1017,7 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return ((type != DataType.COMPLEX_TYPE) &&
-              (type != DataType.BIG_INT));
+      return !V3_UNSUPP_TYPES.contains(type);
     }
 
     @Override
@@ -1063,7 +1073,7 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return (type != DataType.BIG_INT);
+      return !V12_UNSUPP_TYPES.contains(type);
     }
 
     @Override
@@ -1114,7 +1124,7 @@ public abstract class JetFormat {
 
     @Override
     public boolean isSupportedDataType(DataType type) {
-      return true;
+      return !V16_UNSUPP_TYPES.contains(type);
     }
 
     @Override

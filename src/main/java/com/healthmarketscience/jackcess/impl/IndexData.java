@@ -73,6 +73,11 @@ public class IndexData {
 
   protected static final byte[] EMPTY_PREFIX = new byte[0];
 
+  private static final byte[] ASC_EXT_DATE_TRAILER =
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
+  private static final byte[] DESC_EXT_DATE_TRAILER =
+    flipBytes(ByteUtil.copyOf(ASC_EXT_DATE_TRAILER, ASC_EXT_DATE_TRAILER.length));
+
   static final short COLUMN_UNUSED = -1;
 
   public static final byte ASCENDING_COLUMN_FLAG = (byte)0x01;
@@ -1550,6 +1555,8 @@ public class IndexData {
       return new GuidColumnDescriptor(col, flags);
     case BINARY:
       return new BinaryColumnDescriptor(col, flags);
+    case EXT_DATE_TIME:
+      return new ExtDateColumnDescriptor(col, flags);
 
     default:
       // we can't modify this index at this point in time
@@ -1980,6 +1987,46 @@ public class IndexData {
     }
   }
 
+  /**
+   * ColumnDescriptor for extended date/time based columns.
+   */
+  private static final class ExtDateColumnDescriptor extends ColumnDescriptor
+  {
+    private ExtDateColumnDescriptor(ColumnImpl column, byte flags)
+      throws IOException
+    {
+      super(column, flags);
+    }
+
+    @Override
+    protected void writeNonNullValue(Object value, ByteStream bout)
+      throws IOException
+    {
+      byte[] valueBytes = encodeNumberColumnValue(value, getColumn());
+
+      // entry (which is 42 bytes of data) is encoded in blocks of 8 bytes
+      // separated by '\t' char
+
+      // note that for desc, all bytes are flipped _except_ separator char
+      byte[] trailer = ASC_EXT_DATE_TRAILER;
+      if(!isAscending()) {
+        flipBytes(valueBytes);
+        trailer = DESC_EXT_DATE_TRAILER;
+      }
+
+      // first 5 blocks are all value data
+      int valIdx = 0;
+      for(int i = 0; i < 5; ++i) {
+        bout.write(valueBytes, valIdx, 8);
+        bout.write((byte)0x09);
+        valIdx += 8;
+      }
+
+      // last two data bytes and then the trailer
+      bout.write(valueBytes, valIdx, 2);
+      bout.write(trailer);
+    }
+  }
 
   /**
    * ColumnDescriptor for columns which we cannot currently write.

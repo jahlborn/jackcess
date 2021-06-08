@@ -162,6 +162,14 @@ public enum DataType {
    */
   BIG_INT((byte) 0x13, Types.BIGINT, 8),
   /**
+   * Corresponds to a java {@link LocalDateTime} (with 7 digits of nanosecond
+   * precision).  Accepts a Date, LocalDateTime (or related types), any
+   * {@link Number} (using {@link Number#longValue}), or {@code null}.
+   * Equivalent to SQL {@link Types#TIMESTAMP}, {@link Types#DATE},
+   * {@link Types#TIME}.
+   */
+  EXT_DATE_TIME((byte) 0x14, null, 42),
+  /**
    * Dummy type for a fixed length type which is not currently supported.
    * Handled like a fixed length {@link #BINARY}.
    */
