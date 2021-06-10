@@ -26,8 +26,8 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -97,17 +97,7 @@ public class TestUtil
                               Charset charset)
     throws Exception
   {
-    FileChannel channel = (inMem ? MemFileChannel.newChannel(
-                               file, MemFileChannel.RW_CHANNEL_MODE)
-                           : null);
-    final Database db = new DatabaseBuilder(file).setReadOnly(true)
-      .setAutoSync(getTestAutoSync()).setChannel(channel)
-      .setCharset(charset).open();
-    Assert.assertEquals("Wrong JetFormat.",
-                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
-                 ((DatabaseImpl)db).getFormat());
-    Assert.assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
-    return db;
+    return openDB(fileFormat, file, inMem, charset, true);
   }
 
   public static Database open(TestDB testDB) throws Exception {
@@ -116,8 +106,8 @@ public class TestUtil
   }
 
   public static Database openMem(TestDB testDB) throws Exception {
-    return open(testDB.getExpectedFileFormat(), testDB.getFile(), true,
-                testDB.getExpectedCharset());
+    return openDB(testDB.getExpectedFileFormat(), testDB.getFile(), true,
+                    testDB.getExpectedCharset(), false);
   }
 
   public static Database create(FileFormat fileFormat) throws Exception {
@@ -196,14 +186,26 @@ public class TestUtil
   {
     File tmp = createTempFile(keep);
     copyFile(file, tmp);
-    Database db = new DatabaseBuilder(tmp).setAutoSync(getTestAutoSync()).open();
+    return openDB(fileFormat, tmp, false, null, false);
+  }
+
+  private static Database openDB(
+      FileFormat fileFormat, File file, boolean inMem, Charset charset,
+      boolean readOnly)
+    throws Exception
+  {
+    FileChannel channel = (inMem ? MemFileChannel.newChannel(
+                               file, MemFileChannel.RW_CHANNEL_MODE)
+                           : null);
+    final Database db = new DatabaseBuilder(file).setReadOnly(readOnly)
+      .setAutoSync(getTestAutoSync()).setChannel(channel)
+      .setCharset(charset).open();
     Assert.assertEquals("Wrong JetFormat.",
-                 DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
-                 ((DatabaseImpl)db).getFormat());
+                        DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
+                        ((DatabaseImpl)db).getFormat());
     Assert.assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
     return db;
   }
-
 
   static Object[] createTestRow(String col1Val) {
     return new Object[] {col1Val, "R", "McCune", 1234, (byte) 0xad, 555.66d,

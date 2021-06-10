@@ -400,17 +400,27 @@ public class DatabaseImpl implements Database, DateTimeContext
     boolean success = false;
     try {
 
+      boolean wrapChannelRO = false;
       if(!readOnly) {
-
         // verify that format supports writing
         JetFormat jetFormat = JetFormat.getFormat(channel);
 
         if(jetFormat.READ_ONLY) {
-          // wrap the channel with a read-only version to enforce
-          // non-writability
-          channel = new ReadOnlyFileChannel(channel);
+          // force read-only mode
+          wrapChannelRO = true;
           readOnly = true;
         }
+      } else if(!closeChannel) {
+        // we are in read-only mode but the channel was opened externally, so
+        // we don't know if it is enforcing read-only status.  wrap it just to
+        // be safe
+        wrapChannelRO = true;
+      }
+
+      if(wrapChannelRO) {
+        // wrap the channel with a read-only version to enforce
+        // non-writability
+        channel = new ReadOnlyFileChannel(channel);
       }
 
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
