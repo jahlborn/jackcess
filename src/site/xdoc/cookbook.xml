@@ -195,7 +195,7 @@
           As of version 2.1.5, Jackcess supports:
         </p>
         <ul>
-          <li>Creating databases for Access all versions 2000-2016</li>
+          <li>Creating databases for Access all versions 2000-2019</li>
           <li>Creating columns for all simple data types</li>
           <li>Creating tables with single-table Indexes</li>
           <li>Creating tables with (index backed) foreign-key constraints
