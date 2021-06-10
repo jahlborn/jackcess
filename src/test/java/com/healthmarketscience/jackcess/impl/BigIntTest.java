@@ -79,14 +79,10 @@ public class BigIntTest extends TestCase
                               "num1", lng));
       }
 
-      Collections.sort(expectedTable, new Comparator<Map<String, Object>>() {
-          @Override public int compare(
-              Map<String, Object> r1,
-              Map<String, Object> r2) {
-            Long l1 = (Long)r1.get("num1");
-            Long l2 = (Long)r2.get("num1");
-            return l1.compareTo(l2);
-          }
+      Collections.sort(expectedTable, (r1, r2) -> {
+          Long l1 = (Long)r1.get("num1");
+          Long l2 = (Long)r2.get("num1");
+          return l1.compareTo(l2);
         });
 
       Cursor c = t.newCursor().setIndexByName("idx").toIndexCursor();

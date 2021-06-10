@@ -102,9 +102,9 @@ public interface Row extends Map<String,Object>
 
   /**
    * Convenience method which gets the value for the row with the given name,
-   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME).  This method
-   * will only work for Database instances configured for
-   * {@link DateTimeType#LOCAL_DATE_TIME}.
+   * casting it to a LocalDateTime (DataType SHORT_DATE_TIME or
+   * EXT_DATE_TIME).  This method will only work for Database instances
+   * configured for {@link DateTimeType#LOCAL_DATE_TIME}.
    */
   public LocalDateTime getLocalDateTime(String name);
 
