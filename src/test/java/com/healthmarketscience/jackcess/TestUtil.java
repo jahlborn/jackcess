@@ -317,6 +317,15 @@ public class TestUtil
     dumpTable(table, new PrintWriter(System.out, true));
   }
 
+  public static void dumpProperties(Table table) throws Exception {
+    System.out.println("TABLE_PROPS: " + table.getName() + ": " +
+                       table.getProperties());
+    for(Column c : table.getColumns()) {
+      System.out.println("COL_PROPS: " + c.getName() + ": " +
+                         c.getProperties());
+    }
+  }
+
   static void dumpDatabase(Database mdb, boolean systemTables,
                            PrintWriter writer) throws Exception
   {
