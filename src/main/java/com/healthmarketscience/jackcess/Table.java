@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,21 @@ public interface Table extends Iterable<Row>
    * @usage _general_method_
    */
   public PropertyMap getProperties() throws IOException;
+
+  /**
+   * @return the created date for this table if available
+   * @usage _general_method_
+   */
+  public LocalDateTime getCreatedDate() throws IOException;
+
+  /**
+   * Note: jackcess <i>does not automatically update the modified date of a
+   * Table</i>.
+   *
+   * @return the last updated date for this table if available
+   * @usage _general_method_
+   */
+  public LocalDateTime getUpdatedDate() throws IOException;
 
   /**
    * @return All of the Indexes on this table (unmodifiable List)

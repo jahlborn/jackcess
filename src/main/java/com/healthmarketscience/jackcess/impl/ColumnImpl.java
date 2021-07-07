@@ -1143,7 +1143,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     return dtc.getDateTimeFactory().toDateDouble(value, dtc);
   }
 
-  private static LocalDateTime toLocalDateTime(
+  static LocalDateTime toLocalDateTime(
       Object value, DateTimeContext dtc) {
     if(value instanceof TemporalAccessor) {
       return temporalToLocalDateTime((TemporalAccessor)value, dtc);

@@ -32,6 +32,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -257,6 +258,10 @@ public class DatabaseImpl implements Database, DateTimeContext
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
+  /** the columns to read when grabbing dates */
+  private static Collection<String> SYSTEM_CATALOG_DATE_COLUMNS =
+    new HashSet<String>(Arrays.asList(CAT_COL_ID,
+                                      CAT_COL_DATE_CREATE, CAT_COL_DATE_UPDATE));
 
   /** regex matching characters which are invalid in identifier names */
   private static final Pattern INVALID_IDENTIFIER_CHARS =
@@ -1533,6 +1538,24 @@ public class DatabaseImpl implements Database, DateTimeContext
     return readProperties(
         objectId, _tableFinder.getObjectRow(
             objectId, SYSTEM_CATALOG_PROPS_COLUMNS), owner);
+  }
+
+  LocalDateTime getCreateDateForObject(int objectId) throws IOException {
+    return getDateForObject(objectId, CAT_COL_DATE_CREATE);
+  }
+
+  LocalDateTime getUpdateDateForObject(int objectId) throws IOException {
+    return getDateForObject(objectId, CAT_COL_DATE_UPDATE);
+  }
+
+  private LocalDateTime getDateForObject(int objectId, String dateCol)
+    throws IOException {
+    Row row = _tableFinder.getObjectRow(objectId, SYSTEM_CATALOG_DATE_COLUMNS);
+    if(row == null) {
+      return null;
+    }
+    Object date = row.get(dateCol);
+    return ((date != null) ? ColumnImpl.toLocalDateTime(date, this) : null);
   }
 
   private Integer getDbParentId() throws IOException {

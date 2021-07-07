@@ -1090,6 +1090,25 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  public void testTableDates() throws Exception {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
+      Table table = open(testDB).getTable("Table1");
+      String expectedCreateDate = null;
+      String expectedUpdateDate = null;
+      if(testDB.getExpectedFileFormat() == FileFormat.V1997) {
+        expectedCreateDate = "2010-03-05T14:48:26.420";
+        expectedUpdateDate = "2010-03-05T14:48:26.607";
+      } else {
+        expectedCreateDate = "2004-05-28T17:51:48.701";
+        expectedUpdateDate = "2006-07-24T09:56:19.701";
+      }
+      System.out.println("FOO " + testDB.getExpectedFileFormat() + " " +
+                         table.getCreatedDate() + " " +
+                         table.getUpdatedDate());
+      assertEquals(expectedCreateDate, table.getCreatedDate().toString());
+      assertEquals(expectedUpdateDate, table.getUpdatedDate().toString());
+    }
+  }
   private static void checkRawValue(String expected, Object val)
   {
     if(expected != null) {

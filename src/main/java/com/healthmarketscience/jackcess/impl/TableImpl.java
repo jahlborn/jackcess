@@ -22,6 +22,7 @@ import java.io.StringWriter;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -474,6 +475,16 @@ public class TableImpl implements Table, PropertyMaps.Owner
       _props = getPropertyMaps().getDefault();
     }
     return _props;
+  }
+
+  @Override
+  public LocalDateTime getCreatedDate() throws IOException {
+    return getDatabase().getCreateDateForObject(_tableDefPageNumber);
+  }
+
+  @Override
+  public LocalDateTime getUpdatedDate() throws IOException {
+    return getDatabase().getUpdateDateForObject(_tableDefPageNumber);
   }
 
   /**
