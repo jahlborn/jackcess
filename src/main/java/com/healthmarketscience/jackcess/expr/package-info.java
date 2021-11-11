@@ -15,11 +15,11 @@ limitations under the License.
 */
 
 /**
- * Jackcess has support for evaluating Access expressions (beta support as of
- * the 2.2.0 release).  This functionality is currently disabled by default
- * but can be globally enabled via the system property
- * "com.healthmarketscience.jackcess.enableExpressionEvaluation" or
- * selectively enabled on a per database basis using {@link com.healthmarketscience.jackcess.Database#setEvaluateExpressions(Boolean)}.
+ * Jackcess has support for evaluating Access expressions.  This functionality
+ * is enabled by default (as of the 3.5.0 release) but can be globally
+ * disabled via the system property "com.healthmarketscience.jackcess.enableExpressionEvaluation" or
+ * selectively disabled on a per database basis using
+ * {@link com.healthmarketscience.jackcess.Database#setEvaluateExpressions(Boolean)}.
  * <p>
  * The expression evaluation engine implementation does its best to follow all
  * the warts and idiosyncracies of Access expression evaluation (both those

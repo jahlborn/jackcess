@@ -64,8 +64,7 @@
           </tr>
           <tr>
             <td>Field/Table Properties (Validation rules, Input masks, etc)</td>
-            <td>Expression evaluation is now optionally available as of 2.2.0
-                (currently beta).  Input masks are not handled.</td>
+            <td>On by default, can be selectively disabled.  Input masks are not handled.</td>
           </tr>
         </table>
         </div>
