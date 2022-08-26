@@ -67,6 +67,7 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import com.healthmarketscience.jackcess.TableDefinition;
 import com.healthmarketscience.jackcess.TableMetaData;
 import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
@@ -186,6 +187,8 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static final String CAT_COL_DATABASE = "Database";
   /** System catalog column name of the remote table name */
   private static final String CAT_COL_FOREIGN_NAME = "ForeignName";
+  /** System catalog column name of the remote connection name */
+  private static final String CAT_COL_CONNECT_NAME = "Connect";
 
   /** top-level parentid for a database */
   private static final int DB_PARENT_ID = 0xF000000;
@@ -236,6 +239,8 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static final String OBJECT_NAME_USERDEF_PROPS = "UserDefined";
   /** System object type for table definitions */
   static final Short TYPE_TABLE = 1;
+  /** System object type for linked odbc tables */
+  private static final Short TYPE_LINKED_ODBC_TABLE = 4;
   /** System object type for query definitions */
   private static final Short TYPE_QUERY = 5;
   /** System object type for linked table definitions */
@@ -254,7 +259,8 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static Collection<String> SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID,
-                                      CAT_COL_DATABASE, CAT_COL_FOREIGN_NAME));
+                                      CAT_COL_DATABASE, CAT_COL_FOREIGN_NAME,
+                                      CAT_COL_CONNECT_NAME));
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
     new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
@@ -266,6 +272,9 @@ public class DatabaseImpl implements Database, DateTimeContext
   /** regex matching characters which are invalid in identifier names */
   private static final Pattern INVALID_IDENTIFIER_CHARS =
     Pattern.compile("[\\p{Cntrl}.!`\\]\\[]");
+
+  /** regex to match a password in an ODBC string */
+  private static final Pattern ODBC_PWD_PATTERN = Pattern.compile("\\bPWD=[^;]+");
 
   /** the File of the database */
   private final Path _file;
@@ -332,7 +341,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   private boolean _evaluateExpressions;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
-  /** cache of in-use tables */
+  /** cache of in-use tables (or table definitions) */
   private final TableCache _tableCache = new TableCache();
   /** handler for reading/writing properteies */
   private PropertyMaps.Handler _propsHandler;
@@ -670,9 +679,10 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     // common case, local table name == remote table name
     TableInfo tableInfo = lookupTable(table.getName());
-    if((tableInfo != null) && tableInfo.isLinked() &&
-       matchesLinkedTable(table, ((LinkedTableInfo)tableInfo).linkedTableName,
-                          ((LinkedTableInfo)tableInfo).linkedDbName)) {
+    if((tableInfo != null) &&
+       (tableInfo.getType() == TableMetaData.Type.LINKED) &&
+       matchesLinkedTable(table, tableInfo.getLinkedTableName(),
+                          tableInfo.getLinkedDbName())) {
       return true;
     }
 
@@ -983,8 +993,8 @@ public class DatabaseImpl implements Database, DateTimeContext
    * Read the system catalog
    */
   private void readSystemCatalog() throws IOException {
-    _systemCatalog = readTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
-                               SYSTEM_OBJECT_FLAGS);
+    _systemCatalog = loadTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
+                               SYSTEM_OBJECT_FLAGS, TYPE_TABLE);
 
     try {
       _tableFinder = new DefaultTableFinder(
@@ -1096,24 +1106,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    * @usage _advanced_method_
    */
   public TableImpl getTable(int tableDefPageNumber) throws IOException {
-
-    // first, check for existing table
-    TableImpl table = _tableCache.get(tableDefPageNumber);
-    if(table != null) {
-      return table;
-    }
-
-    // lookup table info from system catalog
-    Row objectRow = _tableFinder.getObjectRow(
-        tableDefPageNumber, SYSTEM_CATALOG_COLUMNS);
-    if(objectRow == null) {
-      return null;
-    }
-
-    String name = objectRow.getString(CAT_COL_NAME);
-    int flags = objectRow.getInt(CAT_COL_FLAGS);
-
-    return readTable(name, tableDefPageNumber, flags);
+    return loadTable(null, tableDefPageNumber, 0, null);
   }
 
   /**
@@ -1147,14 +1140,14 @@ public class DatabaseImpl implements Database, DateTimeContext
   private TableImpl getTable(TableInfo tableInfo, boolean includeSystemTables)
     throws IOException
   {
-    if(tableInfo.isLinked()) {
+    if(tableInfo.getType() == TableMetaData.Type.LINKED) {
 
       if(_linkedDbs == null) {
         _linkedDbs = new HashMap<String,Database>();
       }
 
-      String linkedDbName = ((LinkedTableInfo)tableInfo).linkedDbName;
-      String linkedTableName = ((LinkedTableInfo)tableInfo).linkedTableName;
+      String linkedDbName = tableInfo.getLinkedDbName();
+      String linkedTableName = tableInfo.getLinkedTableName();
       Database linkedDb = _linkedDbs.get(linkedDbName);
       if(linkedDb == null) {
         linkedDb = getLinkResolver().resolveLinkedDatabase(this, linkedDbName);
@@ -1165,8 +1158,8 @@ public class DatabaseImpl implements Database, DateTimeContext
                                                includeSystemTables);
     }
 
-    return readTable(tableInfo.tableName, tableInfo.pageNumber,
-                     tableInfo.flags);
+    return loadTable(tableInfo.tableName, tableInfo.pageNumber,
+                     tableInfo.flags, tableInfo.tableType);
   }
 
   /**
@@ -1384,9 +1377,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
   }
 
-  private String createRelationshipName(RelationshipCreator creator)
-    throws IOException
-  {
+  private String createRelationshipName(RelationshipCreator creator) {
     // ensure that the final identifier name does not get too long
     // - the primary name is limited to ((max / 2) - 3)
     // - the total name is limited to (max - 3)
@@ -1833,7 +1824,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   /**
    * Reads a table with the given name from the given pageNumber.
    */
-  private TableImpl readTable(String name, int pageNumber, int flags)
+  private TableImpl loadTable(String name, int pageNumber, int flags, Short type)
     throws IOException
   {
     // first, check for existing table
@@ -1842,6 +1833,30 @@ public class DatabaseImpl implements Database, DateTimeContext
       return table;
     }
 
+    if(name == null) {
+      // lookup table info from system catalog
+      Row objectRow = _tableFinder.getObjectRow(
+          pageNumber, SYSTEM_CATALOG_COLUMNS);
+      if(objectRow == null) {
+        return null;
+      }
+
+      name = objectRow.getString(CAT_COL_NAME);
+      flags = objectRow.getInt(CAT_COL_FLAGS);
+      type = objectRow.getShort(CAT_COL_TYPE);
+    }
+
+    // need to load table from db
+    return _tableCache.put(readTable(name, pageNumber, flags, type));
+  }
+
+  /**
+   * Reads a table with the given name from the given pageNumber.
+   */
+  private TableImpl readTable(
+      String name, int pageNumber, int flags, Short type)
+    throws IOException
+  {
     ByteBuffer buffer = takeSharedBuffer();
     try {
       // need to load table from db
@@ -1852,8 +1867,9 @@ public class DatabaseImpl implements Database, DateTimeContext
             "Looking for " + name + " at page " + pageNumber +
             ", but page type is " + pageType));
       }
-      return _tableCache.put(
-          new TableImpl(this, buffer, pageNumber, name, flags));
+      return (!TYPE_LINKED_ODBC_TABLE.equals(type) ?
+              new TableImpl(this, buffer, pageNumber, name, flags) :
+              new TableDefinitionImpl(this, buffer, pageNumber, name, flags));
     } finally {
       releaseSharedBuffer(buffer);
     }
@@ -1991,9 +2007,22 @@ public class DatabaseImpl implements Database, DateTimeContext
   {
     _tableLookup.put(toLookupName(tableName),
                      createTableInfo(tableName, pageNumber, 0, type,
-                                     linkedDbName, linkedTableName));
+                                     linkedDbName, linkedTableName, null));
     // clear this, will be created next time needed
     _tableNames = null;
+  }
+
+  private static TableInfo createTableInfo(
+      String tableName, Short type, Row row) {
+
+    Integer pageNumber = row.getInt(CAT_COL_ID);
+    int flags = row.getInt(CAT_COL_FLAGS);
+    String linkedDbName = row.getString(CAT_COL_DATABASE);
+    String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
+    String connectName = row.getString(CAT_COL_CONNECT_NAME);
+
+    return createTableInfo(tableName, pageNumber, flags, type, linkedDbName,
+                           linkedTableName, connectName);
   }
 
   /**
@@ -2001,13 +2030,16 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   private static TableInfo createTableInfo(
       String tableName, Integer pageNumber, int flags, Short type,
-      String linkedDbName, String linkedTableName)
+      String linkedDbName, String linkedTableName, String connectName)
   {
     if(TYPE_LINKED_TABLE.equals(type)) {
-      return new LinkedTableInfo(pageNumber, tableName, flags, linkedDbName,
-                                 linkedTableName);
+      return new LinkedTableInfo(pageNumber, tableName, flags, type,
+                                 linkedDbName, linkedTableName);
+    } else if(TYPE_LINKED_ODBC_TABLE.equals(type)) {
+      return new LinkedODBCTableInfo(pageNumber, tableName, flags, type,
+                                     connectName, linkedTableName);
     }
-    return new TableInfo(pageNumber, tableName, flags);
+    return new TableInfo(pageNumber, tableName, flags, type);
   }
 
   /**
@@ -2224,7 +2256,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   private static boolean isTableType(Short objType) {
-    return(TYPE_TABLE.equals(objType) || TYPE_LINKED_TABLE.equals(objType));
+    return(TYPE_TABLE.equals(objType) || isAnyLinkedTableType(objType));
   }
 
   public static FileFormatDetails getFileFormatDetails(FileFormat fileFormat) {
@@ -2268,6 +2300,11 @@ public class DatabaseImpl implements Database, DateTimeContext
     return defaultValue;
   }
 
+  private static boolean isAnyLinkedTableType(Short type) {
+    return (TYPE_LINKED_TABLE.equals(type) ||
+            TYPE_LINKED_ODBC_TABLE.equals(type));
+  }
+
   /**
    * Utility class for storing table page number and actual name.
    */
@@ -2276,11 +2313,19 @@ public class DatabaseImpl implements Database, DateTimeContext
     public final Integer pageNumber;
     public final String tableName;
     public final int flags;
+    public final Short tableType;
 
-    private TableInfo(Integer newPageNumber, String newTableName, int newFlags) {
+    private TableInfo(Integer newPageNumber, String newTableName, int newFlags,
+                      Short newTableType) {
       pageNumber = newPageNumber;
       tableName = newTableName;
       flags = newFlags;
+      tableType = newTableType;
+    }
+
+    @Override
+    public Type getType() {
+      return Type.LOCAL;
     }
 
     @Override
@@ -2309,8 +2354,18 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
+    public String getConnectionName() {
+      return null;
+    }
+
+    @Override
     public Table open(Database db) throws IOException {
       return ((DatabaseImpl)db).getTable(this, true);
+    }
+
+    @Override
+    public TableDefinition getTableDefinition(Database db) throws IOException {
+      return null;
     }
 
     @Override
@@ -2323,9 +2378,16 @@ public class DatabaseImpl implements Database, DateTimeContext
         if(isLinked()) {
           sb.append("isLinked", isLinked())
             .append("linkedTableName", getLinkedTableName())
-            .append("linkedDbName", getLinkedDbName());
+            .append("linkedDbName", getLinkedDbName())
+            .append("connectionName", maskPassword(getConnectionName()));
         }
         return sb.toString();
+    }
+
+    private static String maskPassword(String connectionName) {
+      return ((connectionName != null) ?
+              ODBC_PWD_PATTERN.matcher(connectionName).replaceAll("PWD=XXXXXX") :
+              null);
     }
   }
 
@@ -2334,15 +2396,21 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   private static class LinkedTableInfo extends TableInfo
   {
-    private final String linkedDbName;
-    private final String linkedTableName;
+    private final String _linkedDbName;
+    private final String _linkedTableName;
 
     private LinkedTableInfo(Integer newPageNumber, String newTableName,
-                            int newFlags, String newLinkedDbName,
+                            int newFlags, Short newTableType,
+                            String newLinkedDbName,
                             String newLinkedTableName) {
-      super(newPageNumber, newTableName, newFlags);
-      linkedDbName = newLinkedDbName;
-      linkedTableName = newLinkedTableName;
+      super(newPageNumber, newTableName, newFlags, newTableType);
+      _linkedDbName = newLinkedDbName;
+      _linkedTableName = newLinkedTableName;
+    }
+
+    @Override
+    public Type getType() {
+      return Type.LINKED;
     }
 
     @Override
@@ -2352,12 +2420,62 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     @Override
     public String getLinkedTableName() {
-      return linkedTableName;
+      return _linkedTableName;
     }
 
     @Override
     public String getLinkedDbName() {
-      return linkedDbName;
+      return _linkedDbName;
+    }
+  }
+
+  /**
+   * Utility class for storing linked ODBC table info
+   */
+  private static class LinkedODBCTableInfo extends TableInfo
+  {
+    private final String _linkedTableName;
+    private final String _connectionName;
+
+    private LinkedODBCTableInfo(Integer newPageNumber, String newTableName,
+                                int newFlags, Short newTableType,
+                                String connectName,
+                                String newLinkedTableName) {
+      super(newPageNumber, newTableName, newFlags, newTableType);
+      _linkedTableName = newLinkedTableName;
+      _connectionName = connectName;
+    }
+
+    @Override
+    public Type getType() {
+      return Type.LINKED_ODBC;
+    }
+
+    @Override
+    public boolean isLinked() {
+      return true;
+    }
+
+    @Override
+    public String getLinkedTableName() {
+      return _linkedTableName;
+    }
+
+    @Override
+    public String getConnectionName() {
+      return _connectionName;
+    }
+
+    @Override
+    public Table open(Database db) throws IOException {
+      return null;
+    }
+
+    @Override
+    public TableDefinition getTableDefinition(Database db) throws IOException {
+      return (((pageNumber != null) && (pageNumber > 0)) ?
+              ((DatabaseImpl)db).getTable(this, true) :
+              null);
     }
   }
 
@@ -2448,7 +2566,7 @@ public class DatabaseImpl implements Database, DateTimeContext
           } else if(systemTables) {
             tableNames.add(tableName);
           }
-        } else if(TYPE_LINKED_TABLE.equals(type) && linkedTables) {
+        } else if(linkedTables && isAnyLinkedTableType(type)) {
           tableNames.add(tableName);
         }
       }
@@ -2524,13 +2642,8 @@ public class DatabaseImpl implements Database, DateTimeContext
         }
 
         String realName = row.getString(CAT_COL_NAME);
-        Integer pageNumber = row.getInt(CAT_COL_ID);
-        int flags = row.getInt(CAT_COL_FLAGS);
-        String linkedDbName = row.getString(CAT_COL_DATABASE);
-        String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
 
-        return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
-                               linkedTableName);
+        return createTableInfo(realName, type, row);
       }
 
       return null;
@@ -2595,20 +2708,15 @@ public class DatabaseImpl implements Database, DateTimeContext
 
       Row row = _systemCatalogCursor.getCurrentRow(
           SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS);
-      Integer pageNumber = row.getInt(CAT_COL_ID);
-      String realName = row.getString(CAT_COL_NAME);
-      int flags = row.getInt(CAT_COL_FLAGS);
       Short type = row.getShort(CAT_COL_TYPE);
 
       if(!isTableType(type)) {
         return null;
       }
 
-      String linkedDbName = row.getString(CAT_COL_DATABASE);
-      String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
+      String realName = row.getString(CAT_COL_NAME);
 
-      return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
-                             linkedTableName);
+      return createTableInfo(realName, type, row);
     }
 
     @Override
@@ -2686,13 +2794,7 @@ public class DatabaseImpl implements Database, DateTimeContext
           continue;
         }
 
-        Integer pageNumber = row.getInt(CAT_COL_ID);
-        int flags = row.getInt(CAT_COL_FLAGS);
-        String linkedDbName = row.getString(CAT_COL_DATABASE);
-        String linkedTableName = row.getString(CAT_COL_FOREIGN_NAME);
-
-        return createTableInfo(realName, pageNumber, flags, type, linkedDbName,
-                               linkedTableName);
+        return createTableInfo(realName, type, row);
       }
 
       return null;

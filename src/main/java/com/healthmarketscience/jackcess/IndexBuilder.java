@@ -38,7 +38,7 @@ import com.healthmarketscience.jackcess.impl.TableUpdater;
  * @see TableBuilder
  * @usage _general_class_
  */
-public class IndexBuilder 
+public class IndexBuilder
 {
   /** name typically used by MS Access for the primary key index */
   public static final String PRIMARY_KEY_NAME = "PrimaryKey";
@@ -138,7 +138,7 @@ public class IndexBuilder
   public IndexBuilder setUnique() {
     _flags |= IndexData.UNIQUE_INDEX_FLAG;
     return this;
-  }    
+  }
 
   /**
    * Sets this index to encforce required.
@@ -146,7 +146,7 @@ public class IndexBuilder
   public IndexBuilder setRequired() {
     _flags |= IndexData.REQUIRED_INDEX_FLAG;
     return this;
-  }    
+  }
 
   /**
    * Sets this index to ignore null values.
@@ -154,7 +154,7 @@ public class IndexBuilder
   public IndexBuilder setIgnoreNulls() {
     _flags |= IndexData.IGNORE_NULLS_INDEX_FLAG;
     return this;
-  }    
+  }
 
   /**
    * @usage _advanced_method_
@@ -209,6 +209,14 @@ public class IndexBuilder
    * attributes.
    */
   public Index addToTable(Table table) throws IOException {
+    return addToTableDefinition(table);
+  }
+
+  /**
+   * Adds a new Index to the given TableDefinition with the currently
+   * configured attributes.
+   */
+  public Index addToTableDefinition(TableDefinition table) throws IOException {
       return new TableUpdater((TableImpl)table).addIndex(this);
   }
 

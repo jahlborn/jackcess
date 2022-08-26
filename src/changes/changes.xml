@@ -6,7 +6,11 @@
   <body>
     <release version="4.0.2" date="TBD">
       <action dev="jahlborn" type="update">
-        Add Table methods to access the creation and last modified dates.
+        Add Table methods to get the creation and last modified dates.
+      </action>
+      <action dev="jahlborn" type="update" issue="45">
+        Add support for linked odbc tables.  TableMetaData provides access to
+        connection string and local TableDefinition if available.
       </action>
     </release>
     <release version="4.0.1" date="2021-06-21">

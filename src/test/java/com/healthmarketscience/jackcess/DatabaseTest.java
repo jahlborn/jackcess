@@ -38,17 +38,16 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 
 /**
@@ -865,123 +864,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
-  public void testLinkedTables() throws Exception {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.LINKED)) {
-      Database db = openCopy(testDB);
-
-      try {
-        db.getTable("Table2");
-        fail("FileNotFoundException should have been thrown");
-      } catch(FileNotFoundException e) {
-        // success
-      }
-
-      TableMetaData tmd = db.getTableMetaData("Table2");
-      assertEquals("Table2", tmd.getName());
-      assertTrue(tmd.isLinked());
-      assertFalse(tmd.isSystem());
-      assertEquals("Table1", tmd.getLinkedTableName());
-      assertEquals("Z:\\jackcess_test\\linkeeTest.accdb", tmd.getLinkedDbName());
-
-      tmd = db.getTableMetaData("FooTable");
-      assertNull(tmd);
-
-      assertTrue(db.getLinkedDatabases().isEmpty());
-
-      final String linkeeDbName = "Z:\\jackcess_test\\linkeeTest.accdb";
-      final File linkeeFile = new File("src/test/data/linkeeTest.accdb");
-      db.setLinkResolver(new LinkResolver() {
-        public Database resolveLinkedDatabase(Database linkerdb, String dbName)
-          throws IOException {
-          assertEquals(linkeeDbName, dbName);
-          return DatabaseBuilder.open(linkeeFile);
-        }
-      });
-
-      Table t2 = db.getTable("Table2");
-
-      assertEquals(1, db.getLinkedDatabases().size());
-      Database linkeeDb = db.getLinkedDatabases().get(linkeeDbName);
-      assertNotNull(linkeeDb);
-      assertEquals(linkeeFile, linkeeDb.getFile());
-      assertEquals("linkeeTest.accdb", ((DatabaseImpl)linkeeDb).getName());
-
-      List<? extends Map<String, Object>> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "ID", 1,
-                "Field1", "bar"));
-
-      assertTable(expectedRows, t2);
-
-      db.createLinkedTable("FooTable", linkeeDbName, "Table2");
-
-      tmd = db.getTableMetaData("FooTable");
-      assertEquals("FooTable", tmd.getName());
-      assertTrue(tmd.isLinked());
-      assertFalse(tmd.isSystem());
-      assertEquals("Table2", tmd.getLinkedTableName());
-      assertEquals("Z:\\jackcess_test\\linkeeTest.accdb", tmd.getLinkedDbName());
-
-      Table t3 = db.getTable("FooTable");
-
-      assertEquals(1, db.getLinkedDatabases().size());
-
-      expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "ID", 1,
-                "Field1", "buzz"));
-
-      assertTable(expectedRows, t3);
-
-      tmd = db.getTableMetaData("Table1");
-      assertEquals("Table1", tmd.getName());
-      assertFalse(tmd.isLinked());
-      assertFalse(tmd.isSystem());
-      assertNull(tmd.getLinkedTableName());
-      assertNull(tmd.getLinkedDbName());
-
-      Table t1 = tmd.open(db);
-
-      assertFalse(db.isLinkedTable(null));
-      assertTrue(db.isLinkedTable(t2));
-      assertTrue(db.isLinkedTable(t3));
-      assertFalse(db.isLinkedTable(t1));
-
-      List<Table> tables = getTables(db.newIterable());
-      assertEquals(3, tables.size());
-      assertTrue(tables.contains(t1));
-      assertTrue(tables.contains(t2));
-      assertTrue(tables.contains(t3));
-      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-
-      tables = getTables(db.newIterable().setIncludeNormalTables(false));
-      assertEquals(2, tables.size());
-      assertFalse(tables.contains(t1));
-      assertTrue(tables.contains(t2));
-      assertTrue(tables.contains(t3));
-      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-
-      tables = getTables(db.newIterable().withLocalUserTablesOnly());
-      assertEquals(1, tables.size());
-      assertTrue(tables.contains(t1));
-      assertFalse(tables.contains(t2));
-      assertFalse(tables.contains(t3));
-      assertFalse(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-
-      tables = getTables(db.newIterable().withSystemTablesOnly());
-      assertTrue(tables.size() > 5);
-      assertFalse(tables.contains(t1));
-      assertFalse(tables.contains(t2));
-      assertFalse(tables.contains(t3));
-      assertTrue(tables.contains(((DatabaseImpl)db).getSystemCatalog()));
-
-      db.close();
-    }
-  }
-
-  private static List<Table> getTables(Iterable<Table> tableIter)
+  static List<Table> getTables(Iterable<Table> tableIter)
   {
     List<Table> tableList = new ArrayList<Table>();
     for(Table t : tableIter) {
@@ -1102,9 +985,6 @@ public class DatabaseTest extends TestCase
         expectedCreateDate = "2004-05-28T17:51:48.701";
         expectedUpdateDate = "2006-07-24T09:56:19.701";
       }
-      System.out.println("FOO " + testDB.getExpectedFileFormat() + " " +
-                         table.getCreatedDate() + " " +
-                         table.getUpdatedDate());
       assertEquals(expectedCreateDate, table.getCreatedDate().toString());
       assertEquals(expectedUpdateDate, table.getUpdatedDate().toString());
     }

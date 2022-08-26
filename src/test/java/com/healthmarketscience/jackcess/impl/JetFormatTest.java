@@ -53,6 +53,7 @@ public class JetFormatTest extends TestCase {
     COMPLEX("complexDataTest"),
     UNSUPPORTED("unsupportedFieldsTest"),
     LINKED("linkerTest"),
+    LINKED_ODBC("odbcLinkerTest"),
     BLOB("testOle"),
     CALC_FIELD("calcFieldTest"),
     BINARY_INDEX("binIdxTest"),

@@ -491,6 +491,14 @@ public class ColumnBuilder {
    * attributes.
    */
   public Column addToTable(Table table) throws IOException {
+    return addToTableDefinition(table);
+  }
+
+  /**
+   * Adds a new Column to the given TableDefinition with the currently
+   * configured attributes.
+   */
+  public Column addToTableDefinition(TableDefinition table) throws IOException {
       return new TableUpdater((TableImpl)table).addColumn(this);
   }
 

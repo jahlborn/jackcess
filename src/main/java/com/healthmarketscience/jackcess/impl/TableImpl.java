@@ -2231,8 +2231,8 @@ public class TableImpl implements Table, PropertyMaps.Owner
    * rows have been written, and every time a data page is filled.
    * @param rows List of Object[] row values
    */
-  private List<? extends Object[]> addRows(List<? extends Object[]> rows,
-                                           final boolean isBatchWrite)
+  protected List<? extends Object[]> addRows(List<? extends Object[]> rows,
+                                             final boolean isBatchWrite)
     throws IOException
   {
     if(rows.isEmpty()) {

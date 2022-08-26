@@ -44,7 +44,7 @@ import com.healthmarketscience.jackcess.util.OleBlob;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public interface Table extends Iterable<Row>
+public interface Table extends Iterable<Row>, TableDefinition
 {
   /**
    * enum which controls the ordering of the columns in a table.
@@ -63,28 +63,33 @@ public interface Table extends Iterable<Row>
    * @return The name of the table
    * @usage _general_method_
    */
+  @Override
   public String getName();
 
   /**
    * Whether or not this table has been marked as hidden.
    * @usage _general_method_
    */
+  @Override
   public boolean isHidden();
 
   /**
    * Whether or not this table is a system (internal) table.
    * @usage _general_method_
    */
+  @Override
   public boolean isSystem();
 
   /**
    * @usage _general_method_
    */
+  @Override
   public int getColumnCount();
 
   /**
    * @usage _general_method_
    */
+  @Override
   public Database getDatabase();
 
   /**
@@ -120,24 +125,28 @@ public interface Table extends Iterable<Row>
    * @return All of the columns in this table (unmodifiable List)
    * @usage _general_method_
    */
+  @Override
   public List<? extends Column> getColumns();
 
   /**
    * @return the column with the given name
    * @usage _general_method_
    */
+  @Override
   public Column getColumn(String name);
 
   /**
    * @return the properties for this table
    * @usage _general_method_
    */
+  @Override
   public PropertyMap getProperties() throws IOException;
 
   /**
    * @return the created date for this table if available
    * @usage _general_method_
    */
+  @Override
   public LocalDateTime getCreatedDate() throws IOException;
 
   /**
@@ -147,12 +156,14 @@ public interface Table extends Iterable<Row>
    * @return the last updated date for this table if available
    * @usage _general_method_
    */
+  @Override
   public LocalDateTime getUpdatedDate() throws IOException;
 
   /**
    * @return All of the Indexes on this table (unmodifiable List)
    * @usage _intermediate_method_
    */
+  @Override
   public List<? extends Index> getIndexes();
 
   /**
@@ -160,6 +171,7 @@ public interface Table extends Iterable<Row>
    * @throws IllegalArgumentException if there is no index with the given name
    * @usage _intermediate_method_
    */
+  @Override
   public Index getIndex(String name);
 
   /**
@@ -168,6 +180,7 @@ public interface Table extends Iterable<Row>
    *         table
    * @usage _intermediate_method_
    */
+  @Override
   public Index getPrimaryKeyIndex();
 
   /**
@@ -176,6 +189,7 @@ public interface Table extends Iterable<Row>
    *         table and the given table
    * @usage _intermediate_method_
    */
+  @Override
   public Index getForeignKeyIndex(Table otherTable);
 
   /**

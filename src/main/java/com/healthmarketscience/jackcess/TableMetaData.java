@@ -26,8 +26,17 @@ import java.io.IOException;
  * @author James Ahlborn
  * @usage _intermediate_class_
  */
-public interface TableMetaData 
+public interface TableMetaData
 {
+  public enum Type {
+    LOCAL, LINKED, LINKED_ODBC;
+  }
+
+  /**
+   * The type of table
+   */
+  public Type getType();
+
   /**
    * The name of the table (as it is stored in the database)
    */
@@ -37,7 +46,7 @@ public interface TableMetaData
    * {@code true} if this is a linked table, {@code false} otherwise.
    */
   public boolean isLinked();
-  
+
   /**
    * {@code true} if this is a system table, {@code false} otherwise.
    */
@@ -56,7 +65,19 @@ public interface TableMetaData
   public String getLinkedDbName();
 
   /**
+   * The connection of this the linked database if this is a linked ODBC
+   * table, {@code null} otherwise.
+   */
+  public String getConnectionName();
+
+  /**
    * Opens this table from the given Database instance.
    */
   public Table open(Database db) throws IOException;
+
+  /**
+   * Gets the local table definition from the given Database instance if
+   * available.  Only useful for linked ODBC tables.
+   */
+  public TableDefinition getTableDefinition(Database db) throws IOException;
 }
