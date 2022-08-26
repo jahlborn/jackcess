@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.2" date="TBD">
+    <release version="4.0.2" date="2022-08-26">
       <action dev="jahlborn" type="update">
         Add Table methods to get the creation and last modified dates.
       </action>
