@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="4.0.3" date="TBD">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="156">
+        Fix edge case which can cause table to be considered corrupt.
+      </action>
+    </release>
     <release version="4.0.2" date="2022-08-26">
       <action dev="jahlborn" type="update">
         Add Table methods to get the creation and last modified dates.
