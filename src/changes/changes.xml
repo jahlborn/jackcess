@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.3" date="TBD">
+    <release version="4.0.3" date="2022-10-29">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="156">
         Fix edge case which can cause table to be considered corrupt.
       </action>
