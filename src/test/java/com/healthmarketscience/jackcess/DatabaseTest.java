@@ -989,6 +989,31 @@ public class DatabaseTest extends TestCase
       assertEquals(expectedUpdateDate, table.getUpdatedDate().toString());
     }
   }
+
+  public void testBrokenIndex() throws Exception {
+    TestDB testDb = TestDB.getSupportedForBasename(Basename.TEST).get(0);
+    try (Database db = new DatabaseBuilder(testDb.getFile())
+         .setReadOnly(true).setIgnoreBrokenSystemCatalogIndex(true).open()) {
+      Table test = db.getTable("Table1");
+      assertNotNull(test);
+      verifyFinderType(db, "FallbackTableFinder");
+    }
+    try (Database db = openMem(testDb)) {
+      Table test = db.getTable("Table1");
+      assertNotNull(test);
+      verifyFinderType(db, "DefaultTableFinder");
+    }
+  }
+
+  private static void verifyFinderType(Database db, String clazzName)
+    throws Exception{
+    java.lang.reflect.Field f = db.getClass().getDeclaredField("_tableFinder");
+    f.setAccessible(true);
+    Object finder = f.get(db);
+    assertNotNull(finder);
+    assertEquals(clazzName, finder.getClass().getSimpleName());
+  }
+
   private static void checkRawValue(String expected, Object val)
   {
     if(expected != null) {

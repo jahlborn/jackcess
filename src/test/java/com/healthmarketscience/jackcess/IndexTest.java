@@ -342,7 +342,7 @@ public class IndexTest extends TestCase {
       if(expectedSuccess) {
         assertNull(failure);
       } else {
-        assertTrue(failure != null);
+        assertNotNull(failure);
         assertTrue(failure.getMessage().contains("uniqueness"));
       }
     }

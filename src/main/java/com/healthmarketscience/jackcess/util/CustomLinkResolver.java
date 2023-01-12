@@ -268,7 +268,7 @@ public abstract class CustomLinkResolver implements LinkResolver
       throws IOException
     {
       super(file, channel, true, false, fileFormat, null, null, null,
-            readOnly);
+            readOnly, false);
       _resolver = resolver;
       _customFile = customFile;
     }

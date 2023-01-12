@@ -35,7 +35,7 @@ public class BigIndexTest extends TestCase {
   public BigIndexTest(String name) {
     super(name);
   }
-  
+
   public void testComplexIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX, true)) {
@@ -99,12 +99,12 @@ public class BigIndexTest extends TestCase {
           }
         }
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         db.flush();
         t = null;
         System.gc();
-        
+
         t = (TableImpl)db.getTable("Table1");
         index = t.getIndex("col1");
 
@@ -130,7 +130,7 @@ public class BigIndexTest extends TestCase {
 
         assertEquals(2000, rowCount);
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         // delete an entry in the middle
         Cursor cursor = CursorBuilder.createCursor(index);
@@ -147,7 +147,7 @@ public class BigIndexTest extends TestCase {
           cursor.deleteCurrentRow();
         }
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         List<String> found = new ArrayList<String>();
         for(Row row : CursorBuilder.createCursor(index)) {
@@ -166,7 +166,7 @@ public class BigIndexTest extends TestCase {
         assertFalse(cursor.moveToNextRow());
         assertFalse(cursor.moveToPreviousRow());
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         // add 50 (pseudo) random entries to the table
         rand = new Random(42L);
@@ -179,14 +179,14 @@ public class BigIndexTest extends TestCase {
           t.addRow(nextVal, "this is some row data " + nextInt);
         }
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         cursor = CursorBuilder.createCursor(index);
         while(cursor.moveToNextRow()) {
           cursor.deleteCurrentRow();
         }
 
-        index.getIndexData().validate();
+        index.getIndexData().validate(false);
 
         db.close();
 

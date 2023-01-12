@@ -200,10 +200,14 @@ public class TestUtil
     final Database db = new DatabaseBuilder(file).setReadOnly(readOnly)
       .setAutoSync(getTestAutoSync()).setChannel(channel)
       .setCharset(charset).open();
-    Assert.assertEquals("Wrong JetFormat.",
-                        DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
-                        ((DatabaseImpl)db).getFormat());
-    Assert.assertEquals("Wrong FileFormat.", fileFormat, db.getFileFormat());
+    if(fileFormat != null) {
+      Assert.assertEquals(
+          "Wrong JetFormat.",
+          DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
+          ((DatabaseImpl)db).getFormat());
+      Assert.assertEquals(
+          "Wrong FileFormat.", fileFormat, db.getFileFormat());
+    }
     return db;
   }
 

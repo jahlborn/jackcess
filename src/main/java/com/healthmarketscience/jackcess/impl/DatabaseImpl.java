@@ -393,7 +393,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   public static DatabaseImpl open(
       Path mdbFile, boolean readOnly, FileChannel channel,
       boolean autoSync, Charset charset, TimeZone timeZone,
-      CodecProvider provider)
+      CodecProvider provider, boolean ignoreSystemCatalogIndex)
     throws IOException
   {
     boolean closeChannel = false;
@@ -439,7 +439,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
                                          null, charset, timeZone, provider,
-                                         readOnly);
+                                         readOnly, ignoreSystemCatalogIndex);
       success = true;
       return db;
 
@@ -499,7 +499,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       channel.force(true);
       DatabaseImpl db = new DatabaseImpl(mdbFile, channel, closeChannel, autoSync,
                                          fileFormat, charset, timeZone, null,
-                                         false);
+                                         false, false);
       success = true;
       return db;
     } finally {
@@ -554,7 +554,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   protected DatabaseImpl(Path file, FileChannel channel, boolean closeChannel,
                          boolean autoSync, FileFormat fileFormat, Charset charset,
                          TimeZone timeZone, CodecProvider provider,
-                         boolean readOnly)
+                         boolean readOnly, boolean ignoreSystemCatalogIndex)
     throws IOException
   {
     _file = file;
@@ -578,7 +578,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     // needed
     _pageChannel.initialize(this, provider);
     _buffer = _pageChannel.createPageBuffer();
-    readSystemCatalog();
+    readSystemCatalog(ignoreSystemCatalogIndex);
   }
 
   @Override
@@ -992,27 +992,40 @@ public class DatabaseImpl implements Database, DateTimeContext
   /**
    * Read the system catalog
    */
-  private void readSystemCatalog() throws IOException {
+  private void readSystemCatalog(boolean ignoreSystemCatalogIndex)
+    throws IOException {
     _systemCatalog = loadTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
                                SYSTEM_OBJECT_FLAGS, TYPE_TABLE);
 
-    try {
-      _tableFinder = new DefaultTableFinder(
-          _systemCatalog.newCursor()
+    if(!ignoreSystemCatalogIndex) {
+      try {
+        _tableFinder = new DefaultTableFinder(
+            _systemCatalog.newCursor()
             .setIndexByColumnNames(CAT_COL_PARENT_ID, CAT_COL_NAME)
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toIndexCursor());
-    } catch(IllegalArgumentException e) {
+      } catch(IllegalArgumentException e) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(withErrorContext(
+                        "Could not find expected index on table " +
+                        _systemCatalog.getName()));
+        }
+        // use table scan instead
+        _tableFinder = new FallbackTableFinder(
+            _systemCatalog.newCursor()
+            .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
+            .toCursor());
+      }
+    } else {
       if(LOG.isDebugEnabled()) {
         LOG.debug(withErrorContext(
-                "Could not find expected index on table " +
-                _systemCatalog.getName()));
+                      "Ignoring index on table " + _systemCatalog.getName()));
       }
       // use table scan instead
       _tableFinder = new FallbackTableFinder(
           _systemCatalog.newCursor()
-            .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
-            .toCursor());
+          .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
+          .toCursor());
     }
 
     _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID,

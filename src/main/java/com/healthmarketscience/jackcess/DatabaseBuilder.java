@@ -77,7 +77,8 @@ public class DatabaseBuilder
   private Map<String,PropertyMap.Property> _summaryProps;
   /** database user-defined (if any) */
   private Map<String,PropertyMap.Property> _userProps;
-
+  /** flag indicating that the system catalog index is borked */
+  private boolean _ignoreBrokenSystemCatalogIndex;
 
   public DatabaseBuilder() {
     this((Path)null);
@@ -261,11 +262,22 @@ public class DatabaseBuilder
   }
 
   /**
+   * Sets flag which, if {@code true}, will make the database ignore the index
+   * on the system catalog when looking up tables.  This will make table
+   * retrieval slower, but can be used to workaround broken indexes.
+   */
+  public DatabaseBuilder setIgnoreBrokenSystemCatalogIndex(boolean ignore) {
+    _ignoreBrokenSystemCatalogIndex = ignore;
+    return this;
+  }
+
+  /**
    * Opens an existingnew Database using the configured information.
    */
   public Database open() throws IOException {
     return DatabaseImpl.open(_mdbFile, _readOnly, _channel, _autoSync, _charset,
-                             _timeZone, _codecProvider);
+                             _timeZone, _codecProvider,
+                             _ignoreBrokenSystemCatalogIndex);
   }
 
   /**
