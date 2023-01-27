@@ -4,12 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.5" date="TBD">
+    <release version="4.0.5" date="2023-01-26">
       <action dev="jahlborn" type="add" system="SourceForge2Features"
               issue="46">
         Add option to DatabaseBuilder for ignoring broken system catalog
         indexes.  This is a workaround to allow jackcess to read tables from
-        the database even if the index is non-functional..
+        the database even if the index is non-functional.
       </action>
     </release>
     <release version="4.0.4" date="2022-10-29">
