@@ -685,7 +685,9 @@ public class IndexData {
   {
     if(newEntry != null) {
       dataPage.addEntry(idx, newEntry);
-      if(!isDupeEntry) {
+      // if we are adding a duplicate entry, or replacing an existing entry,
+      // then the unique entry count doesn't change
+      if(!isDupeEntry && (oldEntry == null)) {
         ++_uniqueEntryCount;
       }
       ++_modCount;
