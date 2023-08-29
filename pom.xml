@@ -193,7 +193,7 @@
           <maxmemory>512</maxmemory>
           <links>
             <list>https://docs.oracle.com/javase/8/docs/api/</list>
-            <list>http://docs.oracle.com/javaee/5/api/</list>
+            <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>1.8</source>
           <show>public</show>
@@ -298,7 +298,7 @@
           <maxmemory>512</maxmemory>
           <links>
             <list>https://docs.oracle.com/javase/8/docs/api/</list>
-            <list>http://docs.oracle.com/javaee/5/api/</list>
+            <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>1.8</source>
           <show>public</show>
