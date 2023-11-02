@@ -31,24 +31,21 @@ import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.FunctionSupport;
 import com.healthmarketscience.jackcess.impl.expr.ValueSupport;
-import junit.framework.TestCase;
 
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class PropertyExpressionTest extends TestCase
+public class PropertyExpressionTest
 {
-
-  public PropertyExpressionTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testDefaultValue() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -114,6 +111,7 @@ public class PropertyExpressionTest extends TestCase
     }
   }
 
+  @Test
   public void testCalculatedValue() throws Exception
   {
     Database db = create(FileFormat.V2016);
@@ -158,142 +156,125 @@ public class PropertyExpressionTest extends TestCase
     db.close();
   }
 
+  @Test
   public void testColumnValidator() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      db.setEvaluateExpressions(true);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (Database db = create(fileFormat))
+      {
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.LONG)
-                   .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                                ">37"))
-        .addColumn(newColumn("data2", DataType.LONG)
-                   .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                                "between 7 and 10")
-                   .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
-                                "You failed"))
-        .toTable(db);
+        Table t = newTable("test")
+                .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+                .addColumn(newColumn("data1", DataType.LONG)
+                        .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                                     ">37"))
+                .addColumn(newColumn("data2", DataType.LONG)
+                        .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                                     "between 7 and 10")
+                        .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
+                                     "You failed"))
+                .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, 42, 8);
+        t.addRow(Column.AUTO_NUMBER, 42, 8);
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 20);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
+        InvalidValueException ive = assertThrows(InvalidValueException.class,
+                                                 () -> t.addRow(Column.AUTO_NUMBER, 42, 20));
         assertTrue(ive.getMessage().contains("You failed"));
-      }
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 3, 8);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
+        ive = assertThrows(InvalidValueException.class, () -> t.addRow(Column.AUTO_NUMBER, 3, 8));
         assertFalse(ive.getMessage().contains("You failed"));
-      }
 
-      t.addRow(Column.AUTO_NUMBER, 54, 9);
+        t.addRow(Column.AUTO_NUMBER, 54, 9);
 
-      setProp(t, "data1", PropertyMap.VALIDATION_RULE_PROP, null);
-      setProp(t, "data2", PropertyMap.VALIDATION_RULE_PROP, "<100");
-      setProp(t, "data2", PropertyMap.VALIDATION_TEXT_PROP, "Too big");
+        setProp(t, "data1", PropertyMap.VALIDATION_RULE_PROP, null);
+        setProp(t, "data2", PropertyMap.VALIDATION_RULE_PROP, "<100");
+        setProp(t, "data2", PropertyMap.VALIDATION_TEXT_PROP, "Too big");
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 200);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
+        ive = assertThrows(InvalidValueException.class, () -> t.addRow(Column.AUTO_NUMBER, 42, 200));
         assertTrue(ive.getMessage().contains("Too big"));
+
+        t.addRow(Column.AUTO_NUMBER, 1, 9);
+
+        List<Row> expectedRows
+                = createExpectedTable(
+                        createExpectedRow(
+                                "id", 1,
+                                "data1", 42,
+                                "data2", 8),
+                        createExpectedRow(
+                                "id", 2,
+                                "data1", 54,
+                                "data2", 9),
+                        createExpectedRow(
+                                "id", 3,
+                                "data1", 1,
+                                "data2", 9));
+
+        assertTable(expectedRows, t);
       }
-
-      t.addRow(Column.AUTO_NUMBER, 1, 9);
-
-      List<Row> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "data1", 42,
-                "data2", 8),
-            createExpectedRow(
-                "id", 2,
-                "data1", 54,
-                "data2", 9),
-            createExpectedRow(
-                "id", 3,
-                "data1", 1,
-                "data2", 9));
-
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 
+  @Test
   public void testRowValidator() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      db.setEvaluateExpressions(true);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.LONG))
-        .addColumn(newColumn("data2", DataType.LONG))
-        .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                     "([data1] > 10) and ([data2] < 100)")
-        .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
-                     "You failed")
-        .toTable(db);
+        Table t = newTable("test")
+                .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+                .addColumn(newColumn("data1", DataType.LONG))
+                .addColumn(newColumn("data2", DataType.LONG))
+                .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                             "([data1] > 10) and ([data2] < 100)")
+                .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
+                             "You failed")
+                .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, 42, 8);
+        t.addRow(Column.AUTO_NUMBER, 42, 8);
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 1, 20);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
+        InvalidValueException ive = assertThrows(InvalidValueException.class,
+                                                 () -> t.addRow(Column.AUTO_NUMBER, 1, 20));
         assertTrue(ive.getMessage().contains("You failed"));
-      }
 
-      t.addRow(Column.AUTO_NUMBER, 54, 9);
+        t.addRow(Column.AUTO_NUMBER, 54, 9);
 
-      setTableProp(t, PropertyMap.VALIDATION_RULE_PROP, "[data2]<100");
-      setTableProp(t, PropertyMap.VALIDATION_TEXT_PROP, "Too big");
+        setTableProp(t, PropertyMap.VALIDATION_RULE_PROP, "[data2]<100");
+        setTableProp(t, PropertyMap.VALIDATION_TEXT_PROP, "Too big");
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 200);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
+        ive = assertThrows(InvalidValueException.class, () -> t.addRow(Column.AUTO_NUMBER, 42, 200));
         assertTrue(ive.getMessage().contains("Too big"));
+
+        t.addRow(Column.AUTO_NUMBER, 1, 9);
+
+        List<Row> expectedRows
+                = createExpectedTable(
+                        createExpectedRow(
+                                "id", 1,
+                                "data1", 42,
+                                "data2", 8),
+                        createExpectedRow(
+                                "id", 2,
+                                "data1", 54,
+                                "data2", 9),
+                        createExpectedRow(
+                                "id", 3,
+                                "data1", 1,
+                                "data2", 9));
+
+        assertTable(expectedRows, t);
+
       }
-
-      t.addRow(Column.AUTO_NUMBER, 1, 9);
-
-      List<Row> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "data1", 42,
-                "data2", 8),
-            createExpectedRow(
-                "id", 2,
-                "data1", 54,
-                "data2", 9),
-            createExpectedRow(
-                "id", 3,
-                "data1", 1,
-                "data2", 9));
-
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 
-  public static void testCustomEvalConfig() throws Exception
+  @Test
+  public void testCustomEvalConfig() throws Exception
   {
     TemporalConfig tempConf = new TemporalConfig("[uuuu/]M/d",
                                                  "uuuu-MMM-d",

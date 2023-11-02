@@ -37,13 +37,14 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.BaseEvalContext;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExpressionatorTest extends TestCase
+public class ExpressionatorTest
 {
   private static final double[] DBLS = {
     -10.3d,-9.0d,-8.234d,-7.11111d,-6.99999d,-5.5d,-4.0d,-3.4159265d,-2.84d,
@@ -53,11 +54,7 @@ public class ExpressionatorTest extends TestCase
   private static final int TRUE_NUM = -1;
   private static final int FALSE_NUM = 0;
 
-  public ExpressionatorTest(String name) {
-    super(name);
-  }
-
-
+  @Test
   public void testParseSimpleExprs() throws Exception
   {
     validateExpr("\"A\"", "<ELiteralValue>{\"A\"}");
@@ -111,6 +108,7 @@ public class ExpressionatorTest extends TestCase
     }
   }
 
+  @Test
   public void testOrderOfOperations() throws Exception
   {
     validateExpr("\"A\" Eqv \"B\"",
@@ -149,6 +147,7 @@ public class ExpressionatorTest extends TestCase
 
   }
 
+  @Test
   public void testSimpleMathExpressions() throws Exception
   {
     for(int i = -10; i <= 10; ++i) {
@@ -283,6 +282,7 @@ public class ExpressionatorTest extends TestCase
     }
   }
 
+  @Test
   public void testComparison() throws Exception
   {
     assertEquals(TRUE_NUM, eval("='blah'<'fuzz'"));
@@ -314,6 +314,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(TRUE_NUM, eval("=Not(True Eqv False)"));
   }
 
+  @Test
   public void testDateArith() throws Exception
   {
     assertEquals(LocalDateTime.of(2003,1,2,7,0), eval("=#01/02/2003# + #7:00:00 AM#"));
@@ -327,6 +328,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals("1/2/2003 1:10:00 PM", eval("=CStr(#01/02/2003# + #13:10:00#)"));
   }
 
+  @Test
   public void testNull() throws Exception
   {
     assertNull(eval("=37 + Null"));
@@ -362,6 +364,7 @@ public class ExpressionatorTest extends TestCase
     assertNull(eval("=Null In (23, Null, 45)"));
   }
 
+  @Test
   public void testTrickyMathExpressions() throws Exception
   {
     assertEquals(37, eval("=30+7"));
@@ -379,6 +382,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(toBD(-101d), eval("=-10E-1-10e+1"));
   }
 
+  @Test
   public void testTypeCoercion() throws Exception
   {
     assertEquals("foobar", eval("=\"foo\" + \"bar\""));
@@ -406,6 +410,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(128208, eval("=#1/1/2017# * 3"));
   }
 
+  @Test
   public void testLikeExpression() throws Exception
   {
     validateExpr("Like \"[abc]*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc]*\"([abc].*)}",
@@ -421,6 +426,7 @@ public class ExpressionatorTest extends TestCase
     assertFalse(evalCondition("Like \"[abc*\"", ""));
   }
 
+  @Test
   public void testLiteralDefaultValue() throws Exception
   {
     assertEquals("-28 blah ", eval("=CDbl(9)-37 & \" blah \"",
@@ -432,6 +438,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(-28d, eval("CDbl(9)-37", Value.Type.DOUBLE));
   }
 
+  @Test
   public void testParseSomeExprs() throws Exception
   {
     BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"));
@@ -473,6 +480,7 @@ public class ExpressionatorTest extends TestCase
     br.close();
   }
 
+  @Test
   public void testInvalidExpressions() throws Exception
   {
     doTestEvalFail("", "empty");
@@ -490,14 +498,10 @@ public class ExpressionatorTest extends TestCase
     doTestEvalFail("=(3 + 5) Rnd()", "multiple expressions");
   }
 
-  private static void doTestEvalFail(String exprStr, String msgStr) {
-    try {
-      eval(exprStr);
-      fail("ParseException should have been thrown");
-    } catch(ParseException pe) {
-      // success
-      assertTrue(pe.getMessage().contains(msgStr));
-    }
+  private static void doTestEvalFail(String exprStr, String msgStr)
+  {
+    final ParseException pe = assertThrows(ParseException.class, () -> eval(exprStr));
+    assertTrue(pe.getMessage().contains(msgStr));
   }
 
   private static void validateExpr(String exprStr, String debugStr) {
@@ -531,18 +535,13 @@ public class ExpressionatorTest extends TestCase
     return expr.eval(tc);
   }
 
-  private static void evalFail(
-      String exprStr, Class<? extends Exception> failure)
+  private static void evalFail(String exprStr, Class<? extends Exception> failure)
   {
-    TestContext tc = new TestContext();
-    Expression expr = Expressionator.parse(
-        Expressionator.Type.DEFAULT_VALUE, exprStr, null, tc);
-    try {
-      expr.eval(tc);
-      fail(failure + " should have been thrown");
-    } catch(Exception e) {
-      assertTrue(failure.isInstance(e));
-    }
+    final TestContext tc = new TestContext();
+    Expression expr = Expressionator.parse(Expressionator.Type.DEFAULT_VALUE, exprStr, null, tc);
+
+    final Exception e = assertThrows(Exception.class, () -> expr.eval(tc));
+    assertTrue(failure.isInstance(e));
   }
 
   private static Boolean evalCondition(String exprStr, String thisVal) {

@@ -34,110 +34,76 @@ import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class ErrorHandlerTest extends TestCase 
+public class ErrorHandlerTest
 {
-
-  public ErrorHandlerTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testErrorHandler() throws Exception
   {
-    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+    for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
+        final Table table
+                = new TableBuilder("test")
+                        .addColumn(new ColumnBuilder("col", DataType.TEXT))
+                        .addColumn(new ColumnBuilder("val", DataType.LONG))
+                        .toTable(db);
 
-      Table table =
-        new TableBuilder("test")
-        .addColumn(new ColumnBuilder("col", DataType.TEXT))
-        .addColumn(new ColumnBuilder("val", DataType.LONG))
-        .toTable(db);
+        table.addRow("row1", 1);
+        table.addRow("row2", 2);
+        table.addRow("row3", 3);
 
-      table.addRow("row1", 1);
-      table.addRow("row2", 2);
-      table.addRow("row3", 3);
+        assertTable(createExpectedTable(createExpectedRow("col", "row1", "val", 1),
+                                        createExpectedRow("col", "row2", "val", 2),
+                                        createExpectedRow("col", "row3", "val", 3)),
+                    table);
 
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", 1),
-                      createExpectedRow("col", "row2",
-                                        "val", 2),
-                      createExpectedRow("col", "row3",
-                                        "val", 3)),
-                  table);
+        replaceColumn(table, "val");
 
+        table.reset();
 
-      replaceColumn(table, "val");
+        assertThrows(IOException.class, () -> table.getNextRow());
 
-      table.reset();
-      try {
-        table.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
+        table.reset();
+        table.setErrorHandler(new ReplacementErrorHandler());
+
+        assertTable(createExpectedTable(createExpectedRow("col", "row1", "val", null),
+                                        createExpectedRow("col", "row2", "val", null),
+                                        createExpectedRow("col", "row3", "val", null)),
+                    table);
+
+        Cursor c1 = CursorBuilder.createCursor(table);
+        Cursor c2 = CursorBuilder.createCursor(table);
+        Cursor c3 = CursorBuilder.createCursor(table);
+
+        c2.setErrorHandler(new DebugErrorHandler("#error"));
+        c3.setErrorHandler(ErrorHandler.DEFAULT);
+
+        assertCursor(createExpectedTable(createExpectedRow("col", "row1", "val", null),
+                                         createExpectedRow("col", "row2", "val", null),
+                                         createExpectedRow("col", "row3", "val", null)),
+                     c1);
+
+        assertCursor(createExpectedTable(createExpectedRow("col", "row1", "val", "#error"),
+                                         createExpectedRow("col", "row2", "val", "#error"),
+                                         createExpectedRow("col", "row3", "val", "#error")),
+                     c2);
+
+        assertThrows(IOException.class, () -> c3.getNextRow());
+
+        table.setErrorHandler(null);
+        c1.setErrorHandler(null);
+        c1.reset();
+
+        assertThrows(IOException.class, () -> c1.getNextRow());
       }
-
-      table.reset();
-      table.setErrorHandler(new ReplacementErrorHandler());
-
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  table);
-
-      Cursor c1 = CursorBuilder.createCursor(table);
-      Cursor c2 = CursorBuilder.createCursor(table);
-      Cursor c3 = CursorBuilder.createCursor(table);
-
-      c2.setErrorHandler(new DebugErrorHandler("#error"));
-      c3.setErrorHandler(ErrorHandler.DEFAULT);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  c1);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row2",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row3",
-                                        "val", "#error")),
-                  c2);
-
-      try {
-        c3.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-      table.setErrorHandler(null);
-      c1.setErrorHandler(null);
-      c1.reset();
-      try {
-        c1.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-
-      db.close();
     }
   }
 

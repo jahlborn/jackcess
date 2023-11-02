@@ -29,21 +29,18 @@ import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ColumnValidatorTest extends TestCase
+public class ColumnValidatorTest
 {
-
-  public ColumnValidatorTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testValidate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -96,9 +93,9 @@ public class ColumnValidatorTest extends TestCase
 
       db.setColumnValidatorFactory(fact);
 
-      table = db.getTable("Test");
+      final Table test = db.getTable("Test");
 
-      for(Column col : table.getColumns()) {
+      for(Column col : test.getColumns()) {
         ColumnValidator cur = col.getColumnValidator();
         assertNotNull(cur);
         if("num".equals(col.getName())) {
@@ -108,26 +105,19 @@ public class ColumnValidatorTest extends TestCase
         }
       }
 
-      Column idCol = table.getColumn("id");
-      Column dataCol = table.getColumn("data");
-      Column numCol = table.getColumn("num");
+      Column idCol = test.getColumn("id");
+      Column dataCol = test.getColumn("data");
+      Column numCol = test.getColumn("num");
 
-      try {
-        idCol.setColumnValidator(cv);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class, () -> idCol.setColumnValidator(cv));
+
       assertSame(SimpleColumnValidator.INSTANCE, idCol.getColumnValidator());
 
-      try {
-        table.addRow(Column.AUTO_NUMBER, "row4", -3);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        assertEquals("not gonna happen", e.getMessage());
-      }
+      IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                                                () -> test.addRow(Column.AUTO_NUMBER, "row4", -3));
+      assertEquals("not gonna happen", e.getMessage());
 
-      table.addRow(Column.AUTO_NUMBER, "row4", 4);
+      test.addRow(Column.AUTO_NUMBER, "row4", 4);
 
       List<? extends Map<String, Object>> expectedRows =
         createExpectedTable(
@@ -136,9 +126,9 @@ public class ColumnValidatorTest extends TestCase
             createExpectedRow("id", 3, "data", "row3", "num", 1),
             createExpectedRow("id", 4, "data", "row4", "num", 4));
 
-      assertTable(expectedRows, table);
+      assertTable(expectedRows, test);
 
-      IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(table);
+      IndexCursor pkCursor = CursorBuilder.createPrimaryKeyCursor(test);
       assertNotNull(pkCursor.findRowByEntry(1));
 
       pkCursor.setCurrentRowValue(dataCol, "row1_mod");
@@ -146,29 +136,22 @@ public class ColumnValidatorTest extends TestCase
       assertEquals(createExpectedRow("id", 1, "data", "row1_mod", "num", -1),
                    pkCursor.getCurrentRow());
 
-      try {
-        pkCursor.setCurrentRowValue(numCol, -2);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        assertEquals("not gonna happen", e.getMessage());
-      }
+      e = assertThrows(IllegalArgumentException.class,
+                       () -> pkCursor.setCurrentRowValue(numCol, -2));
+      assertEquals("not gonna happen", e.getMessage());
 
       assertEquals(createExpectedRow("id", 1, "data", "row1_mod", "num", -1),
                    pkCursor.getCurrentRow());
 
-      Row row3 = CursorBuilder.findRowByPrimaryKey(table, 3);
+      Row row3 = CursorBuilder.findRowByPrimaryKey(test, 3);
 
       row3.put("num", -2);
 
-      try {
-        table.updateRow(row3);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        assertEquals("not gonna happen", e.getMessage());
-      }
+      e = assertThrows(IllegalArgumentException.class, () -> test.updateRow(row3));
+      assertEquals("not gonna happen", e.getMessage());
 
       assertEquals(createExpectedRow("id", 3, "data", "row3", "num", 1),
-                   CursorBuilder.findRowByPrimaryKey(table, 3));
+                   CursorBuilder.findRowByPrimaryKey(test, 3));
 
       final ColumnValidator cv2 = (col, v1) -> {
           Number num = (Number)v1;
@@ -180,7 +163,7 @@ public class ColumnValidatorTest extends TestCase
 
       numCol.setColumnValidator(cv2);
 
-      table.addRow(Column.AUTO_NUMBER, "row5", -5);
+      test.addRow(Column.AUTO_NUMBER, "row5", -5);
 
       expectedRows =
         createExpectedTable(
@@ -190,7 +173,7 @@ public class ColumnValidatorTest extends TestCase
             createExpectedRow("id", 4, "data", "row4", "num", 4),
             createExpectedRow("id", 5, "data", "row5", "num", 0));
 
-      assertTable(expectedRows, table);
+      assertTable(expectedRows, test);
 
       assertNotNull(pkCursor.findRowByEntry(3));
       pkCursor.setCurrentRowValue(numCol, -10);

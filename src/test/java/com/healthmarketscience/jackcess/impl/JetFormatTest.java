@@ -17,8 +17,9 @@ import com.healthmarketscience.jackcess.JackcessException;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.PropertyMap;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -26,8 +27,8 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
  *         Date: Mar 5, 2010
  *         Time: 12:44:21 PM
  */
-public class JetFormatTest extends TestCase {
-
+public class JetFormatTest
+{
   public static final File DIR_TEST_DATA = new File("src/test/data");
 
   /**
@@ -201,32 +202,30 @@ public class JetFormatTest extends TestCase {
     TestDB.getSupportedForBasename(Basename.TEST, true);
 
 
-  public void testGetFormat() throws Exception {
-    try {
-      JetFormat.getFormat(null);
-      fail("npe");
-    } catch (NullPointerException e) {
-      // success
-    }
+  @Test
+  public void testGetFormat() throws Exception
+  {
+    assertThrows(NullPointerException.class, () -> JetFormat.getFormat(null));
 
-    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
+    for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ)
+    {
 
-      final FileChannel channel = DatabaseImpl.openChannel(
-          testDB.dbFile.toPath(), false, false);
-      try {
-
+      final FileChannel channel = DatabaseImpl.openChannel(testDB.dbFile.toPath(), false, false);
+      try
+      {
         JetFormat fmtActual = JetFormat.getFormat(channel);
-        assertEquals("Unexpected JetFormat for dbFile: " +
-                     testDB.dbFile.getAbsolutePath(),
-                     testDB.getExpectedFormat(), fmtActual);
-
-      } finally {
+        assertEquals(testDB.getExpectedFormat(),
+                     fmtActual,
+                     "Unexpected JetFormat for dbFile: " + testDB.dbFile.getAbsolutePath());
+      }
+      finally
+      {
         channel.close();
       }
-
     }
   }
 
+  @Test
   public void testReadOnlyFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -259,6 +258,7 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testFileFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -286,6 +286,7 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testSqlTypes() throws Exception {
 
     JetFormat v2000 = JetFormat.VERSION_4;

@@ -34,19 +34,16 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class LongValueTest extends TestCase
+public class LongValueTest
 {
-
-  public LongValueTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testReadLongValue() throws Exception {
 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2, true)) {

@@ -26,21 +26,18 @@ import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class TableUpdaterTest extends TestCase
+public class TableUpdaterTest
 {
-
-  public TableUpdaterTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testTableUpdating() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -51,6 +48,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingOneToOne() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -61,6 +59,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingNoEnforce() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -71,6 +70,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingNamedRelationship() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -84,11 +84,11 @@ public class TableUpdaterTest extends TestCase
   private void doTestUpdating(Database db, boolean oneToOne, boolean enforce, String relationshipName)
     throws Exception
   {
-    Table t1 = newTable("TestTable")
+    final Table t1 = newTable("TestTable")
       .addColumn(newColumn("id", DataType.LONG))
       .toTable(db);
 
-    Table t2 = newTable("TestTable2")
+    final Table t2 = newTable("TestTable2")
       .addColumn(newColumn("id2", DataType.LONG))
       .toTable(db);
 
@@ -195,48 +195,37 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testInvalidUpdate() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
+        Table t1 = newTable("TestTable")
+                .addColumn(newColumn("id", DataType.LONG))
+                .toTable(db);
 
-      Table t1 = newTable("TestTable")
-        .addColumn(newColumn("id", DataType.LONG))
-        .toTable(db);
+        assertThrows(IllegalArgumentException.class,
+                     () -> newColumn("ID", DataType.TEXT).addToTable(t1),
+                     "created table with no columns?");
 
-      try {
-        newColumn("ID", DataType.TEXT)
-          .addToTable(t1);
-        fail("created table with no columns?");
-      } catch(IllegalArgumentException e) {
-        // success
+        Table t2 = newTable("TestTable2")
+                .addColumn(newColumn("id2", DataType.LONG))
+                .toTable(db);
+
+        assertThrows(IllegalArgumentException.class,
+                     () -> newRelationship(t1, t2).toRelationship(db),
+                     "created rel with no columns?");
+
+        assertThrows(IllegalArgumentException.class,
+                     () -> newRelationship("TestTable", "TestTable2").addColumns("id", "id") .toRelationship(db),
+                     "created rel with wrong columns?");
       }
-
-      Table t2 = newTable("TestTable2")
-        .addColumn(newColumn("id2", DataType.LONG))
-        .toTable(db);
-
-      try {
-        newRelationship(t1, t2)
-          .toRelationship(db);
-        fail("created rel with no columns?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      try {
-        newRelationship("TestTable", "TestTable2")
-          .addColumns("id", "id")
-          .toRelationship(db);
-        fail("created rel with wrong columns?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testUpdateLargeTableDef() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

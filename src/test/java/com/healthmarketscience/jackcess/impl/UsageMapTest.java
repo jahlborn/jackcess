@@ -11,17 +11,20 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Dan Rollo
  *         Date: Mar 5, 2010
  *         Time: 2:21:22 PM
  */
-public final class UsageMapTest extends TestCase {
+public final class UsageMapTest
+{
 
+  @Test
   public void testRead() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       final int expectedFirstPage;
@@ -55,12 +58,11 @@ public final class UsageMapTest extends TestCase {
                                             PageChannel.PAGE_GLOBAL_USAGE_MAP,
                                             PageChannel.ROW_GLOBAL_USAGE_MAP,
                                             true);
-    assertEquals("Unexpected FirstPageNumber.", expectedFirstPage, 
-                 usageMap.getFirstPageNumber());
-    assertEquals("Unexpected LastPageNumber.", expectedLastPage, 
-                 usageMap.getLastPageNumber());
+    assertEquals(expectedFirstPage, usageMap.getFirstPageNumber(), "Unexpected FirstPageNumber.");
+    assertEquals(expectedLastPage, usageMap.getLastPageNumber(), "Unexpected LastPageNumber.");
   }
 
+  @Test
   public void testGobalReferenceUsageMap() throws Exception
   {
     Database db = openCopy(

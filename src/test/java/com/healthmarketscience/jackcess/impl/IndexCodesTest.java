@@ -37,16 +37,16 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class IndexCodesTest extends TestCase {
-
-  private static final Map<Character,String> SPECIAL_CHARS =
-    new HashMap<Character,String>();
+public class IndexCodesTest
+{
+  private static final Map<Character,String> SPECIAL_CHARS = new HashMap<>();
   static {
     SPECIAL_CHARS.put('\b', "\\b");
     SPECIAL_CHARS.put('\t', "\\t");
@@ -58,10 +58,7 @@ public class IndexCodesTest extends TestCase {
     SPECIAL_CHARS.put('\\', "\\\\");
   }
 
-  public IndexCodesTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testIndexCodes() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES, true)) {
@@ -160,6 +157,7 @@ public class IndexCodesTest extends TestCase {
   //
   //////
 
+  @Test
   public void testNothing() throws Exception {
     // keep this so build doesn't fail if other tests are disabled
   }

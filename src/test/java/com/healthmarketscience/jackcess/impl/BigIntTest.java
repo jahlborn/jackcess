@@ -18,7 +18,6 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -27,22 +26,18 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class BigIntTest extends TestCase
+public class BigIntTest
 {
-
-  public BigIntTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testBigInt() throws Exception {
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

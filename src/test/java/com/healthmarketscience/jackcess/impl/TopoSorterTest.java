@@ -22,20 +22,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class TopoSorterTest extends TestCase
+public class TopoSorterTest
 {
-
-  public TopoSorterTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testTopoSort() throws Exception
   {
     doTopoTest(Arrays.asList("A", "B", "C"),
@@ -46,27 +42,19 @@ public class TopoSorterTest extends TestCase
                "B", "C",
                "A", "B");
 
-    try {
-      doTopoTest(Arrays.asList("B", "A", "C"),
-                 Arrays.asList("C", "B", "A"),
-                 "B", "C",
-                 "A", "B",
-                 "C", "A");
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException expected) {
-      // success
-      assertTrue(expected.getMessage().startsWith("Cycle"));
-    }
+    IllegalStateException expected = assertThrows(IllegalStateException.class,
+                                                  () -> doTopoTest(Arrays.asList("B", "A", "C"),
+                                                                   Arrays.asList("C", "B", "A"),
+                                                                   "B", "C",
+                                                                   "A", "B",
+                                                                   "C", "A"));
+    assertTrue(expected.getMessage().startsWith("Cycle"));
 
-    try {
-      doTopoTest(Arrays.asList("B", "A", "C"),
-                 Arrays.asList("C", "B", "A"),
-                 "B", "D");
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException expected) {
-      // success
-      assertTrue(expected.getMessage().startsWith("Unknown descendent"));
-    }
+    expected = assertThrows(IllegalStateException.class,
+                            () -> doTopoTest(Arrays.asList("B", "A", "C"),
+                                             Arrays.asList("C", "B", "A"),
+                                             "B", "D"));
+    assertTrue(expected.getMessage().startsWith("Unknown descendent"));
 
     doTopoTest(Arrays.asList("B", "D", "A", "C"),
                Arrays.asList("D", "A", "B", "C"),
@@ -107,7 +95,7 @@ public class TopoSorterTest extends TestCase
                                  List<String> expected,
                                  String... descs) {
 
-    List<String> values = new ArrayList<String>();
+    List<String> values = new ArrayList<>();
     values.addAll(original);
 
     TestTopoSorter tsorter = new TestTopoSorter(values, false);

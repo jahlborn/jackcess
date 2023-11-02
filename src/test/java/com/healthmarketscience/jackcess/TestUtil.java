@@ -50,7 +50,7 @@ import com.healthmarketscience.jackcess.impl.JetFormatTest.TestDB;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Utilty code for the test cases.
@@ -201,12 +201,10 @@ public class TestUtil
       .setAutoSync(getTestAutoSync()).setChannel(channel)
       .setCharset(charset).open();
     if(fileFormat != null) {
-      Assert.assertEquals(
-          "Wrong JetFormat.",
-          DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
-          ((DatabaseImpl)db).getFormat());
-      Assert.assertEquals(
-          "Wrong FileFormat.", fileFormat, db.getFileFormat());
+      assertEquals(DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
+                   ((DatabaseImpl)db).getFormat(),
+                   "Wrong JetFormat.");
+      assertEquals(fileFormat, db.getFileFormat(), "Wrong FileFormat.");
     }
     return db;
   }
@@ -259,8 +257,8 @@ public class TestUtil
   static void assertRowCount(int expectedRowCount, Table table)
     throws Exception
   {
-    Assert.assertEquals(expectedRowCount, countRows(table));
-    Assert.assertEquals(expectedRowCount, table.getRowCount());
+    assertEquals(expectedRowCount, countRows(table));
+    assertEquals(expectedRowCount, table.getRowCount());
   }
 
   public static int countRows(Table table) throws Exception {
@@ -288,9 +286,9 @@ public class TestUtil
     for(Map<String, Object> row : cursor) {
       foundTable.add(row);
     }
-    Assert.assertEquals(expectedTable.size(), foundTable.size());
+    assertEquals(expectedTable.size(), foundTable.size());
     for(int i = 0; i < expectedTable.size(); ++i) {
-      Assert.assertEquals(expectedTable.get(i), foundTable.get(i));
+      assertEquals(expectedTable.get(i), foundTable.get(i));
     }
   }
 
@@ -427,7 +425,7 @@ public class TestUtil
         Instant.ofEpochMilli(expected.getTime()),
         ZoneId.systemDefault());
 
-    Assert.assertEquals(expectedLdt, found);
+    assertEquals(expectedLdt, found);
   }
 
   public static void copyFile(File srcFile, File dstFile)
@@ -500,42 +498,42 @@ public class TestUtil
 
   static void checkTestDBTable1RowABCDEFG(final TestDB testDB, final Table table, final Row row)
           throws IOException {
-    Assert.assertEquals("testDB: " + testDB + "; table: " + table, "abcdefg", row.get("A"));
-    Assert.assertEquals("hijklmnop", row.get("B"));
-    Assert.assertEquals(new Byte((byte) 2), row.get("C"));
-    Assert.assertEquals(new Short((short) 222), row.get("D"));
-    Assert.assertEquals(new Integer(333333333), row.get("E"));
-    Assert.assertEquals(new Double(444.555d), row.get("F"));
+    assertEquals("abcdefg", row.get("A"), "testDB: " + testDB + "; table: " + table);
+    assertEquals("hijklmnop", row.get("B"));
+    assertEquals(new Byte((byte) 2), row.get("C"));
+    assertEquals(new Short((short) 222), row.get("D"));
+    assertEquals(new Integer(333333333), row.get("E"));
+    assertEquals(new Double(444.555d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
     cal.setTime(row.getDate("G"));
-    Assert.assertEquals(Calendar.SEPTEMBER, cal.get(Calendar.MONTH));
-    Assert.assertEquals(21, cal.get(Calendar.DAY_OF_MONTH));
-    Assert.assertEquals(1974, cal.get(Calendar.YEAR));
-    Assert.assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
-    Assert.assertEquals(0, cal.get(Calendar.MINUTE));
-    Assert.assertEquals(0, cal.get(Calendar.SECOND));
-    Assert.assertEquals(0, cal.get(Calendar.MILLISECOND));
-    Assert.assertEquals(Boolean.TRUE, row.get("I"));
+    assertEquals(Calendar.SEPTEMBER, cal.get(Calendar.MONTH));
+    assertEquals(21, cal.get(Calendar.DAY_OF_MONTH));
+    assertEquals(1974, cal.get(Calendar.YEAR));
+    assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
+    assertEquals(0, cal.get(Calendar.MINUTE));
+    assertEquals(0, cal.get(Calendar.SECOND));
+    assertEquals(0, cal.get(Calendar.MILLISECOND));
+    assertEquals(Boolean.TRUE, row.get("I"));
   }
 
   static void checkTestDBTable1RowA(final TestDB testDB, final Table table, final Row row)
           throws IOException {
-    Assert.assertEquals("testDB: " + testDB + "; table: " + table, "a", row.get("A"));
-    Assert.assertEquals("b", row.get("B"));
-    Assert.assertEquals(new Byte((byte) 0), row.get("C"));
-    Assert.assertEquals(new Short((short) 0), row.get("D"));
-    Assert.assertEquals(new Integer(0), row.get("E"));
-    Assert.assertEquals(new Double(0d), row.get("F"));
+    assertEquals("a", row.get("A"), "testDB: " + testDB + "; table: " + table);
+    assertEquals("b", row.get("B"));
+    assertEquals(new Byte((byte) 0), row.get("C"));
+    assertEquals(new Short((short) 0), row.get("D"));
+    assertEquals(new Integer(0), row.get("E"));
+    assertEquals(new Double(0d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
     cal.setTime(row.getDate("G"));
-    Assert.assertEquals(Calendar.DECEMBER, cal.get(Calendar.MONTH));
-    Assert.assertEquals(12, cal.get(Calendar.DAY_OF_MONTH));
-    Assert.assertEquals(1981, cal.get(Calendar.YEAR));
-    Assert.assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
-    Assert.assertEquals(0, cal.get(Calendar.MINUTE));
-    Assert.assertEquals(0, cal.get(Calendar.SECOND));
-    Assert.assertEquals(0, cal.get(Calendar.MILLISECOND));
-    Assert.assertEquals(Boolean.FALSE, row.get("I"));
+    assertEquals(Calendar.DECEMBER, cal.get(Calendar.MONTH));
+    assertEquals(12, cal.get(Calendar.DAY_OF_MONTH));
+    assertEquals(1981, cal.get(Calendar.YEAR));
+    assertEquals(0, cal.get(Calendar.HOUR_OF_DAY));
+    assertEquals(0, cal.get(Calendar.MINUTE));
+    assertEquals(0, cal.get(Calendar.SECOND));
+    assertEquals(0, cal.get(Calendar.MILLISECOND));
+    assertEquals(Boolean.FALSE, row.get("I"));
   }
 
 }

@@ -36,19 +36,16 @@ import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *  @author Rob Di Marco
  */
-public class ImportTest extends TestCase
+public class ImportTest
 {
-
-  public ImportTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testImportFromFile() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
@@ -177,6 +174,7 @@ public class ImportTest extends TestCase
     }
   }
 
+  @Test
   public void testImportFromFileWithOnlyHeaders() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
@@ -201,6 +199,7 @@ public class ImportTest extends TestCase
     }
   }
 
+  @Test
   public void testCopySqlHeaders() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {

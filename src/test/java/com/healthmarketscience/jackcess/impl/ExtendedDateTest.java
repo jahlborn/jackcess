@@ -35,20 +35,16 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExtendedDateTest extends TestCase
+public class ExtendedDateTest
 {
-
-  public ExtendedDateTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testReadExtendedDate() throws Exception {
 
     DateTimeFormatter dtfNoTime = DateTimeFormatter.ofPattern("M/d/yyy");
@@ -67,9 +63,9 @@ public class ExtendedDateTest extends TestCase
           String str1 = dtfNoTime.format(ldt);
           String str2 = dtfFull.format(ldt);
 
-          Assert.assertTrue(str1.equals(str) || str2.equals(str));
+          assertTrue(str1.equals(str) || str2.equals(str));
         } else {
-          Assert.assertNull(str);
+          assertNull(str);
         }
 
       }
@@ -83,6 +79,7 @@ public class ExtendedDateTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteExtendedDate() throws Exception {
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

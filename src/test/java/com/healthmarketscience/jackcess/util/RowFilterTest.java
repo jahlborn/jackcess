@@ -23,24 +23,21 @@ import java.util.List;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class RowFilterTest extends TestCase 
+public class RowFilterTest
 {
   private static final String ID_COL = "id";
   private static final String COL1 = "col1";
   private static final String COL2 = "col2";
   private static final String COL3 = "col3";
-  
 
-  public RowFilterTest(String name) {
-    super(name);
-  }
-
+  @Test
   @SuppressWarnings("unchecked")
   public void testFilter() throws Exception 
   {

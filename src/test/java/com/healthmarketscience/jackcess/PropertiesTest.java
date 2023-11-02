@@ -25,26 +25,22 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import com.healthmarketscience.jackcess.InvalidValueException;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class PropertiesTest extends TestCase
+public class PropertiesTest
 {
-
-  public PropertiesTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testPropertyMaps() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);
@@ -104,6 +100,7 @@ public class PropertiesTest extends TestCase
                                colMap.get("buzz")), props);
   }
 
+  @Test
   public void testInferTypes() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);
@@ -122,6 +119,7 @@ public class PropertiesTest extends TestCase
                  defMap.put("intprop", 37).getType());
   }
 
+  @Test
   public void testReadProperties() throws Exception
   {
     byte[] nameMapBytes = null;
@@ -190,6 +188,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testParseProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS_FOR_READ) {
@@ -230,6 +229,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -263,6 +263,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testModifyProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -351,6 +352,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testCreateDbProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS) {
@@ -407,116 +409,85 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testEnforceProperties() throws Exception
   {
-    for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
+        final Table testReq = newTable("testReq")
+                .addColumn(newColumn("id", DataType.LONG)
+                        .setAutoNumber(true)
+                        .putProperty(PropertyMap.REQUIRED_PROP, true))
+                .addColumn(newColumn("value", DataType.TEXT)
+                        .putProperty(PropertyMap.REQUIRED_PROP, true))
+                .toTable(db);
 
-      Table t = newTable("testReq")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .toTable(db);
+        testReq.addRow(Column.AUTO_NUMBER, "v1");
 
-      t.addRow(Column.AUTO_NUMBER, "v1");
+        assertThrows(InvalidValueException.class, () -> testReq.addRow(Column.AUTO_NUMBER, null));
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, null);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
+        testReq.addRow(Column.AUTO_NUMBER, "");
+
+        List<? extends Map<String, Object>> expectedRows
+                = createExpectedTable(
+                        createExpectedRow(
+                                "id", 1,
+                                "value", "v1"),
+                        createExpectedRow(
+                                "id", 2,
+                                "value", ""));
+        assertTable(expectedRows, testReq);
+
+        final Table testNz = newTable("testNz")
+                .addColumn(newColumn("id", DataType.LONG)
+                        .setAutoNumber(true)
+                        .putProperty(PropertyMap.REQUIRED_PROP, true))
+                .addColumn(newColumn("value", DataType.TEXT)
+                        .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false))
+                .toTable(db);
+
+        testNz.addRow(Column.AUTO_NUMBER, "v1");
+
+        assertThrows(InvalidValueException.class, () -> testNz.addRow(Column.AUTO_NUMBER, ""));
+
+        testNz.addRow(Column.AUTO_NUMBER, null);
+
+        expectedRows = createExpectedTable(createExpectedRow("id", 1, "value", "v1"),
+                                           createExpectedRow("id", 2, "value", null));
+        assertTable(expectedRows, testNz);
+
+        final Table testReqNz = newTable("testReqNz")
+                .addColumn(newColumn("id", DataType.LONG)
+                        .setAutoNumber(true)
+                        .putProperty(PropertyMap.REQUIRED_PROP, true))
+                .addColumn(newColumn("value", DataType.TEXT))
+                .toTable(db);
+
+        Column col = testReqNz.getColumn("value");
+        PropertyMap props = col.getProperties();
+        props.put(PropertyMap.REQUIRED_PROP, true);
+        props.put(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
+        props.save();
+
+        testReqNz.addRow(Column.AUTO_NUMBER, "v1");
+
+        assertThrows(InvalidValueException.class, () -> testReqNz.addRow(Column.AUTO_NUMBER, ""));
+
+        assertThrows(InvalidValueException.class, () -> testReqNz.addRow(Column.AUTO_NUMBER, null));
+
+        testReqNz.addRow(Column.AUTO_NUMBER, "v2");
+
+        expectedRows = createExpectedTable(createExpectedRow("id", 1, "value", "v1"),
+                                           createExpectedRow("id", 2, "value", "v2"));
+        assertTable(expectedRows, testReqNz);
+
       }
-
-      t.addRow(Column.AUTO_NUMBER, "");
-
-      List<? extends Map<String, Object>> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", ""));
-      assertTable(expectedRows, t);
-
-
-      t = newTable("testNz")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT)
-                   .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false))
-        .toTable(db);
-
-      t.addRow(Column.AUTO_NUMBER, "v1");
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, "");
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
-
-      t.addRow(Column.AUTO_NUMBER, null);
-
-      expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", null));
-      assertTable(expectedRows, t);
-
-
-      t = newTable("testReqNz")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT))
-        .toTable(db);
-
-      Column col = t.getColumn("value");
-      PropertyMap props = col.getProperties();
-      props.put(PropertyMap.REQUIRED_PROP, true);
-      props.put(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
-      props.save();
-
-      t.addRow(Column.AUTO_NUMBER, "v1");
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, "");
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, null);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
-
-      t.addRow(Column.AUTO_NUMBER, "v2");
-
-      expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", "v2"));
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 
+  @Test
   public void testEnumValues() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);

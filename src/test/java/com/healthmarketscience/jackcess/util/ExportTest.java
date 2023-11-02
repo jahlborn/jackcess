@@ -30,22 +30,19 @@ import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExportTest extends TestCase
+public class ExportTest
 {
   private static final String NL = System.lineSeparator();
 
-
-  public ExportTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testExportToFile() throws Exception
   {
     DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");

@@ -18,21 +18,17 @@ package com.healthmarketscience.jackcess.impl.expr;
 
 
 import java.math.BigDecimal;
-
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
  *
  * @author James Ahlborn
  */
-public class NumberFormatterTest extends TestCase
+public class NumberFormatterTest
 {
-
-  public NumberFormatterTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testDoubleFormat() throws Exception
   {
     assertEquals("894984737284944", NumberFormatter.format(894984737284944d));
@@ -60,6 +56,7 @@ public class NumberFormatterTest extends TestCase
     assertEquals("1.#QNAN", NumberFormatter.format(Double.NaN));
   }
 
+  @Test
   public void testFloatFormat() throws Exception
   {
     assertEquals("8949847", NumberFormatter.format(8949847f));
@@ -87,6 +84,7 @@ public class NumberFormatterTest extends TestCase
     assertEquals("1.#QNAN", NumberFormatter.format(Float.NaN));
   }
 
+  @Test
   public void testDecimalFormat() throws Exception
   {
     assertEquals("9874539485972.2342342234234", NumberFormatter.format(new BigDecimal("9874539485972.2342342234234")));

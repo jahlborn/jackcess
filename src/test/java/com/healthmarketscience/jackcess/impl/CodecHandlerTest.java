@@ -34,14 +34,15 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import com.healthmarketscience.jackcess.TestUtil;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class CodecHandlerTest extends TestCase
+public class CodecHandlerTest
 {
   private static final CodecProvider SIMPLE_PROVIDER = new CodecProvider() {
     public CodecHandler createHandler(PageChannel channel, Charset charset)
@@ -59,10 +60,7 @@ public class CodecHandlerTest extends TestCase
   };
 
 
-  public CodecHandlerTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testCodecHandler() throws Exception
   {
     doTestCodecHandler(true);

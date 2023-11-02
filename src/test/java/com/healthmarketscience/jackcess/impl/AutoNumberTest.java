@@ -33,20 +33,16 @@ import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class AutoNumberTest extends TestCase
+public class AutoNumberTest
 {
-
-  public AutoNumberTest(String name) throws Exception {
-    super(name);
-  }
-
-
+  @Test
   public void testAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -64,6 +60,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testAutoNumberPK() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
@@ -125,6 +122,7 @@ public class AutoNumberTest extends TestCase
     assertTable(expectedRows, table);
   }
 
+  @Test
   public void testAutoNumberGuid() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -153,6 +151,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testInsertLongAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -170,6 +169,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testInsertLongAutoNumberPK() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -232,12 +232,7 @@ public class AutoNumberTest extends TestCase
 
     assertEquals(13, ((TableImpl)table).getLastLongAutoNumber());
 
-    try {
-      table.addRow("not a number", "nope");
-      fail("NumberFormatException should have been thrown");
-    } catch(NumberFormatException e) {
-      // success
-    }
+    assertThrows(NumberFormatException.class, () -> table.addRow("not a number", "nope"));
 
     assertEquals(13, ((TableImpl)table).getLastLongAutoNumber());
 
@@ -273,6 +268,7 @@ public class AutoNumberTest extends TestCase
 
   }
 
+  @Test
   public void testInsertComplexAutoNumber() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -311,76 +307,50 @@ public class AutoNumberTest extends TestCase
 
       assertEquals(13, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      try {
-        t1.addRow("nope", "not a number");
-        fail("NumberFormatException should have been thrown");
-      } catch(NumberFormatException e) {
-        // success
-      }
+      assertThrows(NumberFormatException.class, () -> t1.addRow("nope", "not a number"));
 
       assertEquals(13, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      try {
-        t1.addRow("uh-uh", -10);
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
+      assertThrows(IOException.class, () -> t1.addRow("uh-uh", -10));
 
       assertEquals(13, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      try {
-        t1.addRow("wut", 6, null, null, 40, 42);
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
+      assertThrows(IOException.class, () -> t1.addRow("wut", 6, null, null, 40, 42));
 
       row = t1.addRow("morerows");
       checkAllComplexAutoNums(14, row);
 
       assertEquals(14, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      Row row13 = CursorBuilder.findRow(
-          t1, Collections.singletonMap("id", "row13"));
+      final Row row13 = CursorBuilder.findRow(t1, Collections.singletonMap("id", "row13"));
 
       row13.put("VersionHistory_F5F8918F-0A3F-4DA9-AE71-184EE5012880", "45");
       row13.put("multi-value-data", "45");
       row13.put("attach-data", "45");
-      row13 = t1.updateRow(row13);
-      checkAllComplexAutoNums(45, row13);
+      final Row row14 = t1.updateRow(row13);
+      checkAllComplexAutoNums(45, row14);
 
       assertEquals(45, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      row13.put("attach-data", -1);
+      row14.put("attach-data", -1);
 
-      try {
-        t1.updateRow(row13);
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
+      assertThrows(IOException.class, () -> t1.updateRow(row14));
 
       assertEquals(45, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      row13.put("attach-data", 55);
+      row14.put("attach-data", 55);
 
-      try {
-        t1.updateRow(row13);
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
+      assertThrows(IOException.class, () -> t1.updateRow(row14));
 
       assertEquals(45, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
-      row13.put("VersionHistory_F5F8918F-0A3F-4DA9-AE71-184EE5012880", 55);
-      row13.put("multi-value-data", 55);
+      row14.put("VersionHistory_F5F8918F-0A3F-4DA9-AE71-184EE5012880", 55);
+      row14.put("multi-value-data", 55);
 
       db.setAllowAutoNumberInsert(null);
 
-      row13 = t1.updateRow(row13);
-      checkAllComplexAutoNums(45, row13);
+      final Row row15 = t1.updateRow(row14);
+      checkAllComplexAutoNums(45, row15);
 
       assertEquals(45, ((TableImpl)t1).getLastComplexTypeAutoNumber());
 
@@ -397,91 +367,90 @@ public class AutoNumberTest extends TestCase
 
   private static void checkAllComplexAutoNums(int expected, Row row)
   {
-      assertEquals(expected, ((Number)row.get("VersionHistory_F5F8918F-0A3F-4DA9-AE71-184EE5012880")).intValue());
-      assertEquals(expected, ((Number)row.get("multi-value-data")).intValue());
-      assertEquals(expected, ((Number)row.get("attach-data")).intValue());
+    assertEquals(expected, ((Number)row.get("VersionHistory_F5F8918F-0A3F-4DA9-AE71-184EE5012880")).intValue());
+    assertEquals(expected, ((Number)row.get("multi-value-data")).intValue());
+    assertEquals(expected, ((Number)row.get("attach-data")).intValue());
   }
 
+  @Test
   public void testInsertGuidAutoNumber() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = createMem(fileFormat);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = createMem(fileFormat))
+      {
 
-      Table table = newTable("test")
-        .addColumn(newColumn("a", DataType.GUID)
-                  .setAutoNumber(true))
-        .addColumn(newColumn("b", DataType.TEXT))
-        .toTable(db);
+        Table table = newTable("test")
+                .addColumn(newColumn("a", DataType.GUID)
+                        .setAutoNumber(true))
+                .addColumn(newColumn("b", DataType.TEXT))
+                .toTable(db);
 
-      db.setAllowAutoNumberInsert(true);
-      table.setAllowAutoNumberInsert(false);
-      assertFalse(table.isAllowAutoNumberInsert());
+        db.setAllowAutoNumberInsert(true);
+        table.setAllowAutoNumberInsert(false);
+        assertFalse(table.isAllowAutoNumberInsert());
 
-      Object[] row = {null, "row1"};
-      assertSame(row, table.addRow(row));
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
-      row = table.addRow(13, "row2");
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
-      row = table.addRow("flubber", "row3");
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
+        Object[] row =
+        {
+          null, "row1"
+        };
+        assertSame(row, table.addRow(row));
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
+        row = table.addRow(13, "row2");
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
+        row = table.addRow("flubber", "row3");
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
 
-      Object[] smallRow = {Column.AUTO_NUMBER};
-      row = table.addRow(smallRow);
-      assertNotSame(row, smallRow);
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
+        Object[] smallRow =
+        {
+          Column.AUTO_NUMBER
+        };
+        row = table.addRow(smallRow);
+        assertNotSame(row, smallRow);
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
 
-      table.setAllowAutoNumberInsert(null);
-      assertTrue(table.isAllowAutoNumberInsert());
+        table.setAllowAutoNumberInsert(null);
+        assertTrue(table.isAllowAutoNumberInsert());
 
-      Row row2 = CursorBuilder.findRow(
-          table, Collections.singletonMap("b", "row2"));
-      assertEquals("row2", row2.getString("b"));
+        Row row2 = CursorBuilder.findRow(
+                table, Collections.singletonMap("b", "row2"));
+        assertEquals("row2", row2.getString("b"));
 
-      String row2Guid = row2.getString("a");
-      table.deleteRow(row2);
+        String row2Guid = row2.getString("a");
+        table.deleteRow(row2);
 
-      row = table.addRow(Column.AUTO_NUMBER, "row4");
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
+        row = table.addRow(Column.AUTO_NUMBER, "row4");
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
 
-      row = table.addRow(row2Guid, "row2-redux");
-      assertEquals(row2Guid, row[0]);
+        row = table.addRow(row2Guid, "row2-redux");
+        assertEquals(row2Guid, row[0]);
 
-      row2 = CursorBuilder.findRow(
-          table, Collections.singletonMap("a", row2Guid));
-      assertEquals("row2-redux", row2.getString("b"));
+        row2 = CursorBuilder.findRow(
+                table, Collections.singletonMap("a", row2Guid));
+        assertEquals("row2-redux", row2.getString("b"));
 
-      try {
-        table.addRow("not a guid", "nope");
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
+        assertThrows(IOException.class, () -> table.addRow("not a guid", "nope"));
+
+        row = table.addRow(Column.AUTO_NUMBER, "row5");
+        assertTrue(ColumnImpl.isGUIDValue(row[0]));
+
+        row2Guid = UUID.randomUUID().toString();
+        row2.put("a", row2Guid);
+
+        final Row row3 = table.updateRow(row2);
+        assertEquals(row2Guid, row3.get("a"));
+
+        row3.put("a", "not a guid");
+
+        assertThrows(IOException.class, () -> table.updateRow(row3));
+
+        table.setAllowAutoNumberInsert(false);
+
+        final Row row4 = table.updateRow(row3);
+        assertTrue(ColumnImpl.isGUIDValue(row4.get("a")));
+        assertFalse(row2Guid.equals(row4.get("a")));
+
       }
-
-      row = table.addRow(Column.AUTO_NUMBER, "row5");
-      assertTrue(ColumnImpl.isGUIDValue(row[0]));
-
-      row2Guid = UUID.randomUUID().toString();
-      row2.put("a", row2Guid);
-
-      row2 = table.updateRow(row2);
-      assertEquals(row2Guid, row2.get("a"));
-
-      row2.put("a", "not a guid");
-
-      try {
-        table.updateRow(row2);
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-      table.setAllowAutoNumberInsert(false);
-
-      row2 = table.updateRow(row2);
-      assertTrue(ColumnImpl.isGUIDValue(row2.get("a")));
-      assertFalse(row2Guid.equals(row2.get("a")));
-
-      db.close();
     }
   }
 

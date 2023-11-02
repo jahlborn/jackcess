@@ -30,19 +30,16 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class PatternColumnPredicateTest extends TestCase
+public class PatternColumnPredicateTest
 {
-
-  public PatternColumnPredicateTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testRegexPredicate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createTestDb(fileFormat);

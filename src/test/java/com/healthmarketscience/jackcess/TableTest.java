@@ -28,23 +28,19 @@ import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PageChannel;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Tim McCune
  */
-public class TableTest extends TestCase {
-
+public class TableTest
+{
   private final PageChannel _pageChannel = new PageChannel(true) {};
   private List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
   private TestTable _testTable;
   private int _varLenIdx;
   private int _fixedOffset;
-
-
-  public TableTest(String name) {
-    super(name);
-  }
 
   private void reset() {
     _testTable = null;
@@ -53,6 +49,7 @@ public class TableTest extends TestCase {
     _fixedOffset = 0;
   }
 
+  @Test
   public void testCreateRow() throws Exception {
     reset();
     newTestColumn(DataType.INT, false);
@@ -73,6 +70,7 @@ public class TableTest extends TestCase {
     assertEquals((byte) 7, buffer.get(30));
   }
 
+  @Test
   public void testUnicodeCompression() throws Exception {
     reset();
     newTestColumn(DataType.TEXT, false);

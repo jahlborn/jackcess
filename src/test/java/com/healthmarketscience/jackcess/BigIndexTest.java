@@ -20,22 +20,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author james
  */
-public class BigIndexTest extends TestCase {
-
-  public BigIndexTest(String name) {
-    super(name);
-  }
-
+public class BigIndexTest
+{
+  @Test
   public void testComplexIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX, true)) {
@@ -50,6 +47,7 @@ public class BigIndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testBigIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.BIG_INDEX)) {
@@ -119,8 +117,7 @@ public class BigIndexTest extends TestCase {
           if(val == null) {
             val = firstValue;
           }
-          assertTrue("" + prevValue + " <= " + val + " " + rowCount,
-                     prevValue.compareTo(val) <= 0);
+          assertTrue(prevValue.compareTo(val) <= 0, "" + prevValue + " <= " + val + " " + rowCount);
           if(firstTwo.size() < 2) {
             firstTwo.add(origVal);
           }

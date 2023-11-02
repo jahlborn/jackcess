@@ -30,9 +30,10 @@ import com.healthmarketscience.jackcess.complex.Version;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.PageChannel;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -40,13 +41,9 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  * @author James Ahlborn
  */
 @SuppressWarnings("deprecation")
-public class ComplexColumnTest extends TestCase
+public class ComplexColumnTest
 {
-
-  public ComplexColumnTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testVersions() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -110,12 +107,7 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
 
-      try {
-        v.update();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
+      assertThrows(UnsupportedOperationException.class, () -> v.update());
 
       checkVersions(3, row3ValFk, "new-value",
                     "new-value", upTime,
@@ -123,12 +115,7 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
 
-      try {
-        v.delete();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
+      assertThrows(UnsupportedOperationException.class, () -> v.delete());
 
       checkVersions(3, row3ValFk, "new-value",
                     "new-value", upTime,
@@ -136,12 +123,8 @@ public class ComplexColumnTest extends TestCase
                     "row3-memo-revised", new Date(1315876953077L),
                     "row3-memo", new Date(1315876879126L));
 
-      try {
-        v.getComplexValueForeignKey().deleteAllValues();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
+      assertThrows(UnsupportedOperationException.class,
+                   () -> v.getComplexValueForeignKey().deleteAllValues());
 
       checkVersions(3, row3ValFk, "new-value",
                     "new-value", upTime,
@@ -153,6 +136,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testAttachments() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -238,6 +222,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testMultiValues() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -316,6 +301,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testUnsupported() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {

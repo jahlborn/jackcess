@@ -36,29 +36,29 @@ import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class CursorTest extends TestCase {
+public class CursorTest
+{
 
   static final List<TestDB> INDEX_CURSOR_DBS =
     TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
 
 
-  public CursorTest(String name) throws Exception {
-    super(name);
-  }
-
-  @Override
+  @BeforeEach
   protected void setUp() {
     TestUtil.setTestAutoSync(false);
   }
 
-  @Override
+  @AfterEach
   protected void tearDown() {
     TestUtil.clearTestAutoSync();
   }
@@ -188,6 +188,7 @@ public class CursorTest extends TestCase {
       .toCursor();
   }
 
+  @Test
   public void testRowId() throws Exception {
     // test special cases
     RowIdImpl rowId1 = new RowIdImpl(1, 2);
@@ -204,6 +205,7 @@ public class CursorTest extends TestCase {
                  sortedRowIds);
   }
 
+  @Test
   public void testSimple() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -231,6 +233,7 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRows, foundRows);
   }
 
+  @Test
   public void testMove() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -290,6 +293,7 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRow, cursor.getCurrentRow());
   }
 
+  @Test
   public void testMoveNoReset() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -333,6 +337,7 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRows, foundRows);
   }
 
+  @Test
   public void testSearch() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -417,6 +422,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testReverse() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -446,6 +452,7 @@ public class CursorTest extends TestCase {
     assertEquals(expectedRows, foundRows);
   }
 
+  @Test
   public void testLiveAddition() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -487,6 +494,7 @@ public class CursorTest extends TestCase {
   }
 
 
+  @Test
   public void testLiveDeletion() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -580,6 +588,7 @@ public class CursorTest extends TestCase {
     assertTrue(cursor4.isCurrentRowDeleted());
   }
 
+  @Test
   public void testSimpleIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -596,6 +605,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testMoveIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -609,6 +619,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testReverseIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -622,6 +633,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testSearchIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -635,6 +647,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testLiveAdditionIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -650,6 +663,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testLiveDeletionIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -667,6 +681,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testSimpleIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -687,6 +702,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testMoveIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -707,6 +723,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testSearchIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -724,6 +741,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testReverseIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -744,6 +762,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testLiveAdditionIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -762,6 +781,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testLiveDeletionIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
@@ -782,6 +802,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testFindAllIndex() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createDupeTestTable(fileFormat);
@@ -795,6 +816,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testFindAll() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createDupeTestTable(indexCursorDB);
@@ -906,6 +928,7 @@ public class CursorTest extends TestCase {
     assertTrue(rows.isEmpty());
   }
 
+  @Test
   public void testId() throws Exception
   {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
@@ -923,19 +946,9 @@ public class CursorTest extends TestCase {
       tCursor.restoreSavepoint(tSave);
       iCursor.restoreSavepoint(iSave);
 
-      try {
-        tCursor.restoreSavepoint(iSave);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class, () -> tCursor.restoreSavepoint(iSave));
 
-      try {
-        iCursor.restoreSavepoint(tSave);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class, () -> iCursor.restoreSavepoint(tSave));
 
       Cursor tCursor2 = CursorBuilder.createCursor(table);
       Cursor iCursor2 = CursorBuilder.createCursor(idx);
@@ -947,6 +960,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testColumnMatcher() throws Exception {
 
 
@@ -1068,6 +1082,7 @@ public class CursorTest extends TestCase {
                      .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)));
   }
 
+  @Test
   public void testIndexCursor() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
@@ -1095,6 +1110,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testIndexCursorDelete() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
@@ -1117,20 +1133,10 @@ public class CursorTest extends TestCase {
           iter.hasNext(); ) {
         expectedData.add(iter.next().getString("data"));
         iter.remove();
-        try {
-          iter.remove();
-          fail("IllegalArgumentException should have been thrown");
-        } catch(IllegalStateException e) {
-          // success
-        }
+        assertThrows(IllegalStateException.class, () -> iter.remove());
 
-        if(!iter.hasNext()) {
-          try {
-            iter.next();
-            fail("NoSuchElementException should have been thrown");
-          } catch(NoSuchElementException e) {
-            // success
-          }
+        if (!iter.hasNext()) {
+          assertThrows(NoSuchElementException.class, () -> iter.next());
         }
       }
 
@@ -1148,6 +1154,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testCursorDelete() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
@@ -1171,21 +1178,11 @@ public class CursorTest extends TestCase {
         if(row.get("otherfk1").equals(1)) {
           expectedData.add(row.getString("data"));
           iter.remove();
-          try {
-            iter.remove();
-            fail("IllegalArgumentException should have been thrown");
-          } catch(IllegalStateException e) {
-            // success
-          }
+          assertThrows(IllegalStateException.class, () -> iter.remove());
         }
 
-        if(!iter.hasNext()) {
-          try {
-            iter.next();
-            fail("NoSuchElementException should have been thrown");
-          } catch(NoSuchElementException e) {
-            // success
-          }
+        if (!iter.hasNext()) {
+          assertThrows(NoSuchElementException.class, () -> iter.next());
         }
       }
 
@@ -1205,6 +1202,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testFindByRowId() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
       Database db = createTestTable(fileFormat);
@@ -1216,6 +1214,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testFindByRowIdIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       Database db = createTestIndexTable(indexCursorDB);
@@ -1275,6 +1274,7 @@ public class CursorTest extends TestCase {
     assertEquals(id - 1, cursor.getCurrentRow().get("id"));
   }
 
+  @Test
   public void testIterationEarlyExit() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
 
@@ -1301,15 +1301,10 @@ public class CursorTest extends TestCase {
       IndexCursor cursor = CursorBuilder.createCursor(
           table.getIndex("value_idx"));
 
-      try {
-        cursor.newIterable()
-          .addMatchPattern("value", "val-9")
-          .addMatchPattern("memo", "anything")
-          .iterator().hasNext();
-        fail("RuntimeIOException should have been thrown");
-      } catch(RuntimeIOException ignored) {
-        // success
-      }
+      assertThrows(RuntimeIOException.class, () -> cursor.newIterable()
+              .addMatchPattern("value", "val-9")
+              .addMatchPattern("memo", "anything")
+              .iterator().hasNext());
 
       List<Row> rows = new ArrayList<Row>();
       for (Row row : cursor.newIterable()
@@ -1332,6 +1327,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testPartialIndexFind() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
@@ -1416,6 +1412,7 @@ public class CursorTest extends TestCase {
     }
   }
 
+  @Test
   public void testPartialIndexLookup() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
@@ -1482,18 +1479,16 @@ public class CursorTest extends TestCase {
       doFindFirstByEntry(c, null, "C", 4, "K3");
     }
 
-    try {
-      if(colCount > 2) {
+    assertThrows(IllegalArgumentException.class, () ->
+    {
+      if (colCount > 2) {
         c.findFirstRowByEntry("C", 4, "K1", 14);
       } else if(colCount > 1) {
         c.findFirstRowByEntry("C", 4, "K1");
       } else {
         c.findFirstRowByEntry("C", 4);
       }
-      fail("IllegalArgumentException should have been thrown");
-    } catch(IllegalArgumentException expected) {
-      // scucess
-    }
+    });
 
     doFindByEntryRange(c, 11, 20, "B");
     doFindByEntry(c, new int[]{}, "Z");

@@ -36,19 +36,16 @@ import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class DatabaseReadWriteTest extends TestCase
+public class DatabaseReadWriteTest
 {
-
-  public DatabaseReadWriteTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testWriteAndRead() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -57,6 +54,7 @@ public class DatabaseReadWriteTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteAndReadInMem() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -92,6 +90,7 @@ public class DatabaseReadWriteTest extends TestCase
       }
   }
 
+  @Test
   public void testWriteAndReadInBatch() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -120,6 +119,7 @@ public class DatabaseReadWriteTest extends TestCase
     }
   }
 
+  @Test
   public void testUpdateRow() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -234,6 +234,7 @@ public class DatabaseReadWriteTest extends TestCase
     }
   }
 
+  @Test
   public void testDateMath()
   {
     long now = System.currentTimeMillis();

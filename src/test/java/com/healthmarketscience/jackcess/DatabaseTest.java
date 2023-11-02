@@ -47,77 +47,62 @@ import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
  * @author Tim McCune
  */
 @SuppressWarnings("deprecation")
-public class DatabaseTest extends TestCase
+public class DatabaseTest
 {
-  public DatabaseTest(String name) throws Exception {
-    super(name);
-  }
+  @Test
+  public void testInvalidTableDefs() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
 
-  public void testInvalidTableDefs() throws Exception {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+        assertThrows(IllegalArgumentException.class,
+                     () -> newTable("test").toTable(db),
+                     "created table with no columns?");
 
-      try {
-        newTable("test").toTable(db);
-        fail("created table with no columns?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
+        assertThrows(IllegalArgumentException.class,
+                     () -> newTable("test")
+                             .addColumn(newColumn("A", DataType.TEXT))
+                             .addColumn(newColumn("a", DataType.MEMO))
+                             .toTable(db),
+                     "created table with duplicate column names?");
 
-      try {
+        assertThrows(IllegalArgumentException.class,
+                     () -> newTable("test")
+                             .addColumn(newColumn("A", DataType.TEXT)
+                                     .setLengthInUnits(352))
+                             .toTable(db),
+                     "created table with invalid column length?");
+
+        assertThrows(IllegalArgumentException.class,
+                     () -> newTable("test")
+                             .addColumn(newColumn("A_" + createString(70), DataType.TEXT))
+                             .toTable(db),
+                     "created table with too long column name?");
+
         newTable("test")
-          .addColumn(newColumn("A", DataType.TEXT))
-          .addColumn(newColumn("a", DataType.MEMO))
-          .toTable(db);
-        fail("created table with duplicate column names?");
-      } catch(IllegalArgumentException e) {
-        // success
+                .addColumn(newColumn("A", DataType.TEXT))
+                .toTable(db);
+
+        assertThrows(IllegalArgumentException.class,
+                     () -> newTable("Test")
+                             .addColumn(newColumn("A", DataType.TEXT))
+                             .toTable(db),
+                     "create duplicate tables?");
       }
-
-      try {
-        newTable("test")
-          .addColumn(newColumn("A", DataType.TEXT)
-                     .setLengthInUnits(352))
-          .toTable(db);
-        fail("created table with invalid column length?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      try {
-        newTable("test")
-          .addColumn(newColumn("A_" + createString(70), DataType.TEXT))
-          .toTable(db);
-        fail("created table with too long column name?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      newTable("test")
-        .addColumn(newColumn("A", DataType.TEXT))
-        .toTable(db);
-
-
-      try {
-        newTable("Test")
-          .addColumn(newColumn("A", DataType.TEXT))
-          .toTable(db);
-        fail("create duplicate tables?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testReadDeletedRows() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL, true)) {
       Table table = open(testDB).getTable("Table");
@@ -130,6 +115,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testGetColumns() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
@@ -157,6 +143,7 @@ public class DatabaseTest extends TestCase
     assertEquals(dataType, column.getType());
   }
 
+  @Test
   public void testGetNextRow() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
@@ -181,6 +168,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testCreate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -189,6 +177,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDeleteCurrentRow() throws Exception {
 
     // make sure correct row is deleted
@@ -259,6 +248,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDeleteRow() throws Exception {
 
     // make sure correct row is deleted
@@ -291,18 +281,18 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testMissingFile() throws Exception {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
-    try {
-      newDatabase(bogusFile).setReadOnly(true).
-        setAutoSync(getTestAutoSync()).open();
-      fail("FileNotFoundException should have been thrown");
-    } catch(FileNotFoundException e) {
-    }
+
+    assertThrows(FileNotFoundException.class,
+                 () -> newDatabase(bogusFile).setReadOnly(true).setAutoSync(getTestAutoSync()).open());
+
     assertTrue(!bogusFile.exists());
   }
 
+  @Test
   public void testReadWithDeletedCols() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL_COL, true)) {
       Table table = open(testDB).getTable("Table1");
@@ -336,138 +326,135 @@ public class DatabaseTest extends TestCase
     }
   }
 
-  public void testCurrency() throws Exception {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+  @Test
+  public void testCurrency() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (Database db = create(fileFormat))
+      {
+        Table table = newTable("test")
+                .addColumn(newColumn("A", DataType.MONEY))
+                .toTable(db);
 
-      Table table = newTable("test")
-        .addColumn(newColumn("A", DataType.MONEY))
-        .toTable(db);
+        table.addRow(new BigDecimal("-2341234.03450"));
+        table.addRow(37L);
+        table.addRow("10000.45");
 
-      table.addRow(new BigDecimal("-2341234.03450"));
-      table.addRow(37L);
-      table.addRow("10000.45");
+        table.reset();
 
-      table.reset();
+        List<Object> foundValues = new ArrayList<Object>();
+        Map<String, Object> row = null;
+        while ((row = table.getNextRow()) != null)
+        {
+          foundValues.add(row.get("A"));
+        }
 
-      List<Object> foundValues = new ArrayList<Object>();
-      Map<String, Object> row = null;
-      while((row = table.getNextRow()) != null) {
-        foundValues.add(row.get("A"));
+        assertEquals(Arrays.asList(
+                new BigDecimal("-2341234.0345"),
+                new BigDecimal("37.0000"),
+                new BigDecimal("10000.4500")),
+                     foundValues);
+
+        assertThrows(IOException.class,
+                     () -> table.addRow(new BigDecimal("342523234145343543.3453")));
+
       }
-
-      assertEquals(Arrays.asList(
-                       new BigDecimal("-2341234.0345"),
-                       new BigDecimal("37.0000"),
-                       new BigDecimal("10000.4500")),
-                   foundValues);
-
-      try {
-        table.addRow(new BigDecimal("342523234145343543.3453"));
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // ignored
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testGUID() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
+        Table table = newTable("test")
+                .addColumn(newColumn("A", DataType.GUID))
+                .toTable(db);
 
-      Table table = newTable("test")
-        .addColumn(newColumn("A", DataType.GUID))
-        .toTable(db);
+        table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
+        table.addRow("{32a59f01-aa34-3e29-453f-4523453cd2e6}");
+        table.addRow("{11111111-1111-1111-1111-111111111111}");
+        table.addRow("   {FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}   ");
+        table.addRow(UUID.fromString("32a59f01-1234-3e29-4aaf-4523453cd2e6"));
 
-      table.addRow("{32A59F01-AA34-3E29-453F-4523453CD2E6}");
-      table.addRow("{32a59f01-aa34-3e29-453f-4523453cd2e6}");
-      table.addRow("{11111111-1111-1111-1111-111111111111}");
-      table.addRow("   {FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}   ");
-      table.addRow(UUID.fromString("32a59f01-1234-3e29-4aaf-4523453cd2e6"));
+        table.reset();
 
-      table.reset();
+        List<Object> foundValues = new ArrayList<Object>();
+        Map<String, Object> row = null;
+        while ((row = table.getNextRow()) != null)
+        {
+          foundValues.add(row.get("A"));
+        }
 
-      List<Object> foundValues = new ArrayList<Object>();
-      Map<String, Object> row = null;
-      while((row = table.getNextRow()) != null) {
-        foundValues.add(row.get("A"));
+        assertEquals(Arrays.asList(
+                "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
+                "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
+                "{11111111-1111-1111-1111-111111111111}",
+                "{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}",
+                "{32A59F01-1234-3E29-4AAF-4523453CD2E6}"),
+                     foundValues);
+
+        assertThrows(IOException.class, () -> table.addRow("3245234"));
       }
-
-      assertEquals(Arrays.asList(
-                       "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
-                       "{32A59F01-AA34-3E29-453F-4523453CD2E6}",
-                       "{11111111-1111-1111-1111-111111111111}",
-                       "{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}",
-                       "{32A59F01-1234-3E29-4AAF-4523453CD2E6}"),
-                   foundValues);
-
-      try {
-        table.addRow("3245234");
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // ignored
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testNumeric() throws Exception
   {
-    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS)
+    {
+      try (final Database db = create(fileFormat))
+      {
 
-      ColumnBuilder col = newColumn("A", DataType.NUMERIC)
-        .setScale(4).setPrecision(8).toColumn();
-      assertTrue(col.getType().isVariableLength());
+        ColumnBuilder col = newColumn("A", DataType.NUMERIC)
+                .setScale(4).setPrecision(8).toColumn();
+        assertTrue(col.getType().isVariableLength());
 
-      Table table = newTable("test")
-        .addColumn(col)
-        .addColumn(newColumn("B", DataType.NUMERIC)
-                   .setScale(8).setPrecision(28))
-        .toTable(db);
+        Table table = newTable("test")
+                .addColumn(col)
+                .addColumn(newColumn("B", DataType.NUMERIC)
+                        .setScale(8).setPrecision(28))
+                .toTable(db);
 
-      table.addRow(new BigDecimal("-1234.03450"),
-                   new BigDecimal("23923434453436.36234219"));
-      table.addRow(37L, 37L);
-      table.addRow("1000.45", "-3452345321000");
+        table.addRow(new BigDecimal("-1234.03450"),
+                     new BigDecimal("23923434453436.36234219"));
+        table.addRow(37L, 37L);
+        table.addRow("1000.45", "-3452345321000");
 
-      table.reset();
+        table.reset();
 
-      List<Object> foundSmallValues = new ArrayList<Object>();
-      List<Object> foundBigValues = new ArrayList<Object>();
-      Map<String, Object> row = null;
-      while((row = table.getNextRow()) != null) {
-        foundSmallValues.add(row.get("A"));
-        foundBigValues.add(row.get("B"));
+        List<Object> foundSmallValues = new ArrayList<>();
+        List<Object> foundBigValues = new ArrayList<>();
+        Map<String, Object> row = null;
+        while ((row = table.getNextRow()) != null)
+        {
+          foundSmallValues.add(row.get("A"));
+          foundBigValues.add(row.get("B"));
+        }
+
+        assertEquals(Arrays.asList(
+                new BigDecimal("-1234.0345"),
+                new BigDecimal("37.0000"),
+                new BigDecimal("1000.4500")),
+                     foundSmallValues);
+        assertEquals(Arrays.asList(
+                new BigDecimal("23923434453436.36234219"),
+                new BigDecimal("37.00000000"),
+                new BigDecimal("-3452345321000.00000000")),
+                     foundBigValues);
+
+        assertThrows(IOException.class,
+                     () -> table.addRow(new BigDecimal("3245234.234"),
+                                        new BigDecimal("3245234.234")));
       }
-
-      assertEquals(Arrays.asList(
-                       new BigDecimal("-1234.0345"),
-                       new BigDecimal("37.0000"),
-                       new BigDecimal("1000.4500")),
-                   foundSmallValues);
-      assertEquals(Arrays.asList(
-                       new BigDecimal("23923434453436.36234219"),
-                       new BigDecimal("37.00000000"),
-                       new BigDecimal("-3452345321000.00000000")),
-                   foundBigValues);
-
-      try {
-        table.addRow(new BigDecimal("3245234.234"),
-                     new BigDecimal("3245234.234"));
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // ignored
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testFixedNumeric() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.FIXED_NUMERIC)) {
@@ -515,6 +502,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testMultiPageTableDef() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -523,6 +511,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testOverflow() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OVERFLOW, true)) {
@@ -555,6 +544,7 @@ public class DatabaseTest extends TestCase
   }
 
 
+  @Test
   public void testUsageMapPromotion() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.PROMOTION)) {
       Database db = openMem(testDB);
@@ -587,6 +577,7 @@ public class DatabaseTest extends TestCase
   }
 
 
+  @Test
   public void testLargeTableDef() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -622,6 +613,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteAndReadDate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -684,6 +676,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testAncientDates() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");
@@ -736,6 +729,7 @@ public class DatabaseTest extends TestCase
 
   }
 
+  @Test
   public void testSystemTable() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -748,13 +742,13 @@ public class DatabaseTest extends TestCase
                         "MSysRelationships"));
 
       if (fileFormat == FileFormat.GENERIC_JET4) {
-        assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNull(db.getSystemTable("MSysAccessObjects"), "file format: " + fileFormat);
       } else if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
-        assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNotNull(db.getSystemTable("MSysAccessObjects"), "file format: " + fileFormat);
         sysTables.add("MSysAccessObjects");
       } else {
         // v2003+ template files have no "MSysAccessObjects" table
-        assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNull(db.getSystemTable("MSysAccessObjects"), "file format: " + fileFormat);
         sysTables.addAll(
             Arrays.asList("MSysNavPaneGroupCategories",
                           "MSysNavPaneGroups", "MSysNavPaneGroupToObjects",
@@ -799,6 +793,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testFixedText() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.FIXED_TEXT)) {
@@ -825,6 +820,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDbSortOrder() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -836,6 +832,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testUnsupportedColumns() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
 
@@ -873,6 +870,7 @@ public class DatabaseTest extends TestCase
     return tableList;
   }
 
+  @Test
   public void testTimeZone() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");
@@ -917,6 +915,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testToString()
   {
     RowImpl row = new RowImpl(new RowIdImpl(1, 1));
@@ -925,6 +924,7 @@ public class DatabaseTest extends TestCase
     assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
   }
 
+  @Test
   public void testIterateTableNames() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
@@ -973,6 +973,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testTableDates() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       Table table = open(testDB).getTable("Table1");
@@ -990,6 +991,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testBrokenIndex() throws Exception {
     TestDB testDb = TestDB.getSupportedForBasename(Basename.TEST).get(0);
     try (Database db = new DatabaseBuilder(testDb.getFile())

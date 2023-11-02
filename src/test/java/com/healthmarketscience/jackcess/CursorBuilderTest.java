@@ -16,20 +16,16 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import junit.framework.TestCase;
-
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class CursorBuilderTest extends TestCase {
-
-  public CursorBuilderTest(String name) throws Exception {
-    super(name);
-  }
-
+public class CursorBuilderTest
+{
   private static void assertCursor(
       Cursor expected, Cursor found)
   {
@@ -43,6 +39,7 @@ public class CursorBuilderTest extends TestCase {
                  found.getSavepoint().getCurrentPosition());
   }
 
+  @Test
   public void test() throws Exception
   {
     for (final TestDB indexCursorDB : CursorTest.INDEX_CURSOR_DBS) {
@@ -66,13 +63,8 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      try {
-        table.newCursor()
-          .setIndexByName("foo");
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException ignored) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class,
+                   () -> table.newCursor().setIndexByName("foo"));
 
       expected = CursorBuilder.createCursor(idx);
       found = table.newCursor()
@@ -80,21 +72,11 @@ public class CursorBuilderTest extends TestCase {
         .toCursor();
       assertCursor(expected, found);
 
-      try {
-        table.newCursor()
-          .setIndexByColumns(table.getColumn("value"));
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException ignored) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class,
+                   () -> table.newCursor().setIndexByColumns(table.getColumn("value")));
 
-      try {
-        table.newCursor()
-          .setIndexByColumns(table.getColumn("id"), table.getColumn("value"));
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException ignored) {
-        // success
-      }
+      assertThrows(IllegalArgumentException.class,
+                   () -> table.newCursor().setIndexByColumns(table.getColumn("id"), table.getColumn("value")));
 
       expected = CursorBuilder.createCursor(table);
       expected.beforeFirst();

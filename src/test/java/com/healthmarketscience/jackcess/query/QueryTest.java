@@ -28,24 +28,21 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
-import junit.framework.TestCase;
 import org.apache.commons.lang3.StringUtils;
 
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
  * @author James Ahlborn
  */
-public class QueryTest extends TestCase
+public class QueryTest
 {
-
-  public QueryTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testUnionQuery() throws Exception
   {
     String expr1 = "Select * from Table1";
@@ -77,15 +74,10 @@ public class QueryTest extends TestCase
 
     removeRows(query, TABLE_ATTRIBUTE);
 
-    try {
-      query.toSQLString();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
-
+    assertThrows(IllegalStateException.class, () -> query.toSQLString());
   }
 
+  @Test
   public void testPassthroughQuery() throws Exception
   {
     String expr = "Select * from Table1";
@@ -98,6 +90,7 @@ public class QueryTest extends TestCase
     assertEquals(constr, query.getConnectionString());
   }
 
+  @Test
   public void testDataDefinitionQuery() throws Exception
   {
     String expr = "Drop table Table1";
@@ -108,6 +101,7 @@ public class QueryTest extends TestCase
     assertEquals(expr, query.toSQLString());
   }
 
+  @Test
   public void testUpdateQuery() throws Exception
   {
     UpdateQuery query = (UpdateQuery)newQuery(
@@ -131,6 +125,7 @@ public class QueryTest extends TestCase
         query.toSQLString());
   }
 
+  @Test
   public void testSelectQuery() throws Exception
   {
     SelectQuery query = (SelectQuery)newQuery(
@@ -154,40 +149,32 @@ public class QueryTest extends TestCase
     doTestOrderings(query);
   }
 
+  @Test
   public void testBadQueries() throws Exception
   {
     List<Row> rowList = new ArrayList<Row>();
     rowList.add(newRow(TYPE_ATTRIBUTE, null, -1, null, null));
     QueryImpl query = QueryImpl.create(-1, "TestQuery", rowList, 13);
-    try {
-      query.toSQLString();
-      fail("UnsupportedOperationException should have been thrown");
-    } catch(UnsupportedOperationException e) {
-      // success
-    }
+
+    assertThrows(UnsupportedOperationException.class, () -> query.toSQLString());
 
     addRows(query, newRow(TYPE_ATTRIBUTE, null, -1, null, null));
 
-    try {
-      query.getTypeRow();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
+    assertThrows(IllegalStateException.class, () -> query.getTypeRow());
 
-    try {
-      new QueryImpl("TestQuery", rowList, 13, Query.Type.UNION.getObjectFlag(),
-                    Query.Type.UNION) {
-        @Override protected void toSQLString(StringBuilder builder) {
-          throw new UnsupportedOperationException();
-        }};
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
-
+    assertThrows(IllegalStateException.class,
+                 () -> new QueryImpl("TestQuery", rowList, 13, Query.Type.UNION.getObjectFlag(),
+                                  Query.Type.UNION)
+    {
+      @Override
+      protected void toSQLString(StringBuilder builder)
+      {
+        throw new UnsupportedOperationException();
+      }
+    });
   }
 
+  @Test
   public void testReadQueries() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.QUERY, true)) {
@@ -256,6 +243,7 @@ public class QueryTest extends TestCase
     }
   }
 
+  @Test
   public void testAppendQuery() throws Exception
   {
     AppendQuery query = (AppendQuery)newQuery(
@@ -336,12 +324,7 @@ public class QueryTest extends TestCase
                  query.toSQLString());
 
     addRows(query, newRow(PARAMETER_ATTRIBUTE, null, -1, "BadVal", null));
-    try {
-      query.toSQLString();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
+    assertThrows(IllegalStateException.class, () -> query.toSQLString());
 
     removeRows(query, PARAMETER_ATTRIBUTE);
   }
@@ -395,12 +378,7 @@ public class QueryTest extends TestCase
 
     addRows(query, newRow(JOIN_ATTRIBUTE, "(Table1.id = Table3Val.id)", 5, "Table1", "Table3Val"));
 
-    try {
-      query.toSQLString();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
+    assertThrows(IllegalStateException.class, () -> query.toSQLString());
 
     removeLastRows(query, 1);
     query.toSQLString();
@@ -463,6 +441,7 @@ public class QueryTest extends TestCase
                  query.toSQLString());
   }
 
+  @Test
   public void testComplexJoins() throws Exception
   {
     SelectQuery query = (SelectQuery)newQuery(
@@ -491,12 +470,7 @@ public class QueryTest extends TestCase
     addJoinRows(query, 1, 2, 1,
                 2, 1, 2);
 
-    try {
-      query.toSQLString();
-      fail("IllegalStateException should have been thrown");
-    } catch(IllegalStateException e) {
-      // success
-    }
+    assertThrows(IllegalStateException.class, () -> query.toSQLString());
 
     addJoinRows(query, 1, 2, 1,
                 3, 4, 1,

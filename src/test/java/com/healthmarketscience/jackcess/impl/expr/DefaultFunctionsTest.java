@@ -21,22 +21,19 @@ import java.time.LocalDateTime;
 import java.util.Calendar;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 
 /**
  *
  * @author James Ahlborn
  */
-public class DefaultFunctionsTest extends TestCase
+public class DefaultFunctionsTest
 {
-
-  public DefaultFunctionsTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testFuncs() throws Exception
   {
     assertEval("foo", "=IIf(10 > 1, \"foo\", \"bar\")");
@@ -58,12 +55,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("-42", "=Str$(-42)");
     assertNull(eval("=Str(Null)"));
 
-    try {
-      eval("=Str$(Null)");
-      fail("EvalException should have been thrown");
-    } catch(EvalException expected) {
-      // success
-    }
+    assertThrows(EvalException.class, () -> eval("=Str$(Null)"));
 
     assertEval(-1, "=CBool(\"1\")");
     assertEval(13, "=CByte(\"13\")");
@@ -184,19 +176,11 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("bar", "=Switch(False,'foo', True, 'bar', True, 'blah')");
     assertEval("blah", "=Switch(False,'foo', False, 'bar', True, 'blah')");
 
-    try {
-      eval("=StrReverse('blah', 1)");
-      fail("EvalException should have been thrown");
-    } catch(EvalException e) {
-      assertTrue(e.getMessage().contains("Invalid function call"));
-    }
+    EvalException e = assertThrows(EvalException.class, () -> eval("=StrReverse('blah', 1)"));
+    assertTrue(e.getMessage().contains("Invalid function call"));
 
-    try {
-      eval("=StrReverse()");
-      fail("EvalException should have been thrown");
-    } catch(EvalException e) {
-      assertTrue(e.getMessage().contains("Invalid function call"));
-    }
+    e = assertThrows(EvalException.class, () -> eval("=StrReverse()"));
+    assertTrue(e.getMessage().contains("Invalid function call"));
 
     assertEval(1615198d, "=Val('    1615 198th Street N.E.')");
     assertEval(-1d, "=Val('  &HFFFFwhatever')");
@@ -266,6 +250,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("13:37", "=FormatDateTime(#1/1/1973 1:37:25 PM#,4)");
   }
 
+  @Test
   public void testFormat() throws Exception
   {
     assertEval("12345.6789", "=Format(12345.6789, 'General Number')");
@@ -330,6 +315,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval("19:00", "=Format(#01/02/2003 7:00:00 PM#, 'Short Time')");
   }
 
+  @Test
   public void testCustomFormat() throws Exception
   {
     assertEval("07:00 a", "=Format(#01/10/2003 7:00:00 AM#, 'hh:nn a/p')");
@@ -578,6 +564,7 @@ public class DefaultFunctionsTest extends TestCase
     }
   }
 
+  @Test
   public void testNumberFuncs() throws Exception
   {
     assertEval(1, "=Abs(1)");
@@ -619,6 +606,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval(-4, "=Round(-4, 2)");
   }
 
+  @Test
   public void testDateFuncs() throws Exception
   {
     assertEval("1/2/2003", "=CStr(DateValue(#01/02/2003 7:00:00 AM#))");
@@ -775,6 +763,7 @@ public class DefaultFunctionsTest extends TestCase
     assertEval(-83421497, "=DateDiff('s',#11/3/2018 2:15:30 PM#,#3/13/2016 1:37:13 AM#)");
   }
 
+  @Test
   public void testFinancialFuncs() throws Exception
   {
     assertEval("-9.57859403981306", "=CStr(NPer(0.12/12,-100,-1000))");
