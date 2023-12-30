@@ -264,6 +264,23 @@
       </answer>
     </faq>
 
+    <faq id="read-during-write">
+      <question>Can Jackcess open an Access database read-only while it is
+                being edited by another application?</question>
+      <answer>
+        <p>
+          Using Jackcess read-only on the db would not corrupt the db file
+          itself. That said, you risk that jackcess will throw spurious
+          exceptions or find invalid or "corrupt" data while attempting to
+          read the database because the database file may not be internally
+          consistent at all times. So, at the very least, you will need to
+          expect reads to occasionally fail. Depending on what "reliability"
+          you require of the data, you might also need to handle reading data
+          which is not 100% correct.
+        </p>
+      </answer>
+    </faq>
+    
     <faq id="bugs">
       <question>It doesn't work!</question>
       <answer>
