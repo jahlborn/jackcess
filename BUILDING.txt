@@ -1,4 +1,12 @@
 To build from source:
 1) Install Maven (http://maven.apache.org/).
-2) mvn install
+2) mvn clean install
+3) Find output in "target" directory.
+
+Alternately:
+1)  Use the included "maven wrapper" (no separate installation necessary) 
+2a) For linux/macos (or similar):
+      ./mvnw clean install
+2b) For windows:
+      mvnw.cmd clean install
 3) Find output in "target" directory.
