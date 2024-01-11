@@ -10,12 +10,6 @@
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
   <version>4.0.6-SNAPSHOT</version>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-  </properties>
-
   <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
@@ -334,4 +328,8 @@
       <url>scp://shell.sourceforge.net/home/project-web/jackcess/htdocs</url>
     </site>
   </distributionManagement>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
 </project>
