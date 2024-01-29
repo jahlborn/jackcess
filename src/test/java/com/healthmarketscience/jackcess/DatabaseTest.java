@@ -684,11 +684,9 @@ public class DatabaseTest extends TestCase
     }
   }
 
-  public void testAncientDates() throws Exception
+  public void testAncientDatesWrite() throws Exception
   {
-    TimeZone tz = TimeZone.getTimeZone("America/New_York");
     SimpleDateFormat sdf = DatabaseBuilder.createDateFormat("yyyy-MM-dd");
-    sdf.getCalendar().setTimeZone(tz);
 
     List<String> dates = Arrays.asList("1582-10-15", "1582-10-14",
                                        "1492-01-10", "1392-01-10");
@@ -697,7 +695,6 @@ public class DatabaseTest extends TestCase
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
       db.setDateTimeType(DateTimeType.DATE);
-      db.setTimeZone(tz);
 
       Table table = newTable("test")
         .addColumn(newColumn("name", DataType.TEXT))
@@ -718,8 +715,23 @@ public class DatabaseTest extends TestCase
       db.close();
     }
 
+  }
+
+  /**
+   * Test ancient date handling against test database {@code oldDates*.accdb}.
+   */
+  public void testAncientDatesRead() throws Exception
+  {
+    TimeZone tz = TimeZone.getTimeZone("America/New_York");
+    SimpleDateFormat sdf = DatabaseBuilder.createDateFormat("yyyy-MM-dd");
+    sdf.getCalendar().setTimeZone(tz);
+
+    List<String> dates = Arrays.asList("1582-10-15", "1582-10-14",
+                                       "1492-01-10", "1392-01-10");
+
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OLD_DATES)) {
       Database db = openCopy(testDB);
+      db.setTimeZone(tz); // explicitly set database time zone
       db.setDateTimeType(DateTimeType.DATE);
 
       Table t = db.getTable("Table1");

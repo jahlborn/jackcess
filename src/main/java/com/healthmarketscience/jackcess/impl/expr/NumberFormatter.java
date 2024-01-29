@@ -23,6 +23,8 @@ import java.text.DecimalFormat;
 import java.text.FieldPosition;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  *
@@ -91,11 +93,22 @@ public class NumberFormatter
     }
   };
 
-  private final TypeFormatter _fltFmt = new TypeFormatter(FLT_SIG_DIGITS);
-  private final TypeFormatter _dblFmt = new TypeFormatter(DBL_SIG_DIGITS);
-  private final TypeFormatter _decFmt = new TypeFormatter(DEC_SIG_DIGITS);
+  private final TypeFormatter _fltFmt;
+  private final TypeFormatter _dblFmt;
+  private final TypeFormatter _decFmt;
 
-  private NumberFormatter() {}
+  private NumberFormatter() {
+    this(Locale.getDefault());
+  }
+
+  /**
+   * Creates a number formatter for the specified locale.
+   */
+  NumberFormatter(Locale locale) { // visible for testing
+    _fltFmt = new TypeFormatter(FLT_SIG_DIGITS, Objects.requireNonNull(locale, "locale required"));
+    _dblFmt = new TypeFormatter(DBL_SIG_DIGITS, locale);
+    _decFmt = new TypeFormatter(DEC_SIG_DIGITS, locale);
+  }
 
   public static String format(float f) {
     return INSTANCE.get().formatImpl(f);
@@ -109,7 +122,7 @@ public class NumberFormatter
     return INSTANCE.get().formatImpl(bd);
   }
 
-  private String formatImpl(float f) {
+  final String formatImpl(float f) {
 
     if(Float.isNaN(f)) {
       return NAN_STR;
@@ -121,7 +134,7 @@ public class NumberFormatter
     return _fltFmt.format(new BigDecimal(f, FLT_MATH_CONTEXT));
   }
 
-  private String formatImpl(double d) {
+  final String formatImpl(double d) {
 
     if(Double.isNaN(d)) {
       return NAN_STR;
@@ -133,30 +146,38 @@ public class NumberFormatter
     return _dblFmt.format(new BigDecimal(d, DBL_MATH_CONTEXT));
   }
 
-  private String formatImpl(BigDecimal bd) {
+  final String formatImpl(BigDecimal bd) {
     return _decFmt.format(bd.round(DEC_MATH_CONTEXT));
-  }
-
-  private static ScientificFormat createScientificFormat(int prec) {
-    DecimalFormat df = new DecimalFormat("0.#E00");
-    df.setMaximumIntegerDigits(1);
-    df.setMaximumFractionDigits(prec);
-    df.setRoundingMode(ROUND_MODE);
-    return new ScientificFormat(df);
   }
 
   private static final class TypeFormatter
   {
-    private final DecimalFormat _df = new DecimalFormat("0.#");
-    private final ScientificFormat _dfS;
     private final int _prec;
+    private final DecimalFormat _df;
+    private final ScientificFormat _dfS;
 
     private TypeFormatter(int prec) {
+      this(prec, Locale.getDefault());
+    }
+
+    /**
+     * Creates a type formatter for the specified precision (significant digits) and locale.
+     */
+    private TypeFormatter(int prec, Locale locale) {
+      Objects.requireNonNull(locale, "locale required");
       _prec = prec;
+      _df = (DecimalFormat) NumberFormat.getNumberInstance(locale);
+      _df.applyPattern("0.#");
       _df.setMaximumIntegerDigits(prec);
       _df.setMaximumFractionDigits(prec);
       _df.setRoundingMode(ROUND_MODE);
-      _dfS = createScientificFormat(prec);
+
+      DecimalFormat dfS = (DecimalFormat) NumberFormat.getNumberInstance(locale);
+      dfS.applyPattern("0.#E00");
+      dfS.setMaximumIntegerDigits(1);
+      dfS.setMaximumFractionDigits(prec);
+      dfS.setRoundingMode(ROUND_MODE);
+      _dfS = new ScientificFormat(dfS);
     }
 
     public String format(BigDecimal bd) {
