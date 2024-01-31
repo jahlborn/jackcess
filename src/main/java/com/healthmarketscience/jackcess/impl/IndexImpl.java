@@ -25,7 +25,7 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -366,7 +366,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this)
+    ToStringBuilder sb = ToStringBuilder.builder(this)
       .append("name", "(" + getTable().getName() + ") " + _name)
       .append("number", _indexNumber)
       .append("isPrimaryKey", isPrimaryKey())
@@ -515,7 +515,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
     @Override
     public String toString() {
-      return CustomToStringStyle.builder(this)
+      return ToStringBuilder.builder(this)
         .append("otherIndexNumber", _otherIndexNumber)
         .append("otherTablePageNum", _otherTablePageNumber)
         .append("isPrimaryTable", isPrimaryTable())

@@ -29,6 +29,8 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.PropertyMap;
+import com.healthmarketscience.jackcess.util.StringUtil;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 
 /**
  * Collection of PropertyMap instances read from a single property data block.
@@ -121,7 +123,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append(null, _maps.values())
       .toString();
   }
@@ -129,7 +131,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   public static String getTrimmedStringProperty(
       PropertyMap props, String propName)
   {
-    return DatabaseImpl.trimToNull((String)props.getValue(propName));
+    return StringUtil.trimToNull((String)props.getValue(propName));
   }
 
   /**

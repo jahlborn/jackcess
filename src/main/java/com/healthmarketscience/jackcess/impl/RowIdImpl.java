@@ -19,7 +19,6 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.Serializable;
 
 import com.healthmarketscience.jackcess.RowId;
-import org.apache.commons.lang3.builder.CompareToBuilder;
 
 
 /**
@@ -102,13 +101,16 @@ public class RowIdImpl implements RowId, Serializable
   public int compareTo(RowId other) {
     return compareTo((RowIdImpl)other);
   }
-  
+
   public int compareTo(RowIdImpl other) {
-    return new CompareToBuilder()
-      .append(getType(), other.getType())
-      .append(getPageNumber(), other.getPageNumber())
-      .append(getRowNumber(), other.getRowNumber())
-      .toComparison();
+    int compare = getType().compareTo(other.getType());
+    if (compare == 0) {
+      compare = Integer.compare(getPageNumber(), other.getPageNumber());
+    }
+    if (compare == 0) {
+      compare = Integer.compare(getRowNumber(), other.getRowNumber());
+    }
+    return compare;
   }
 
   @Override

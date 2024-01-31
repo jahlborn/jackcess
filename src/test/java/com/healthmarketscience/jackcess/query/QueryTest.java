@@ -29,7 +29,6 @@ import com.healthmarketscience.jackcess.TestUtil;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
 import junit.framework.TestCase;
-import org.apache.commons.lang3.StringUtils;
 
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 
@@ -645,7 +644,7 @@ public class QueryTest extends TestCase
 
   private static String multiline(String... strs)
   {
-    return StringUtils.join(strs, System.lineSeparator());
+    return String.join(System.lineSeparator(), strs);
   }
 
 }

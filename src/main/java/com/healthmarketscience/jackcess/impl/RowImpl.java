@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.util.OleBlob;
-
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 
 /**
  * A row of data as column-&gt;value pairs.
@@ -129,7 +129,7 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
 
   @Override
   public String toString() {
-    return CustomToStringStyle.valueBuilder("Row[" + _id + "]")
+    return ToStringBuilder.valueBuilder("Row[" + _id + "]")
       .append(null, this)
       .toString();
   }

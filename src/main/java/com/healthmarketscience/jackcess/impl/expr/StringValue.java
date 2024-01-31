@@ -22,7 +22,7 @@ import java.text.DecimalFormatSymbols;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
-import org.apache.commons.lang3.StringUtils;
+import com.healthmarketscience.jackcess.util.StringUtil;
 
 /**
  *
@@ -148,7 +148,7 @@ public class StringValue extends BaseValue
     // - convert decimal separator to '.'
     DecimalFormatSymbols syms = ctx.getNumericConfig().getDecimalFormatSymbols();
     char groupSepChar = syms.getGroupingSeparator();
-    tmpVal = StringUtils.remove(tmpVal, groupSepChar);
+    tmpVal = StringUtil.remove(tmpVal, String.valueOf(groupSepChar));
 
     char decSepChar = syms.getDecimalSeparator();
     if((decSepChar != ValueSupport.CANON_DEC_SEP) && (tmpVal.indexOf(decSepChar) >= 0)) {

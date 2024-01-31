@@ -38,7 +38,7 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import org.apache.commons.lang3.StringUtils;
+import com.healthmarketscience.jackcess.util.StringUtil;
 
 
 /**
@@ -90,7 +90,7 @@ class ExpressionTokenizer
       exprStr = exprStr.trim();
     }
 
-    if(StringUtils.isEmpty(exprStr)) {
+    if(StringUtil.isEmpty(exprStr)) {
       return null;
     }
 

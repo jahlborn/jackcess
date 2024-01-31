@@ -933,7 +933,8 @@ public class DatabaseTest extends TestCase
     RowImpl row = new RowImpl(new RowIdImpl(1, 1));
     row.put("id", 37);
     row.put("data", null);
-    assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
+    String str = row.toString();
+    assertEquals("Row[1:1][{id=37,data=<null>}]", str);
   }
 
   public void testIterateTableNames() throws Exception {

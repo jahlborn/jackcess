@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 
 /**
  * Information about a relationship between two tables in the database.
@@ -163,7 +164,7 @@ public class RelationshipImpl implements Relationship
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("name", _name)
       .append("fromTable", _fromTable.getName())
       .append("fromColumns", _fromColumns)

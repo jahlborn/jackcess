@@ -33,7 +33,7 @@ import java.util.RandomAccess;
 
 import static com.healthmarketscience.jackcess.impl.IndexData.*;
 import com.healthmarketscience.jackcess.impl.IndexData.DataPage;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 
 /**
  * Manager of the index pages for a IndexData.
@@ -1025,7 +1025,7 @@ public class IndexPageCache
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this);
+    ToStringBuilder sb = ToStringBuilder.builder(this);
     if(_rootPage == null) {
       sb.append("pages", "(uninitialized)");
     } else {
@@ -1203,7 +1203,7 @@ public class IndexPageCache
 
     @Override
     public String toString() {
-      return CustomToStringStyle.builder("DPExtra")
+      return ToStringBuilder.builder("DPExtra")
         .append(null, _entryView)
         .toString();
     }

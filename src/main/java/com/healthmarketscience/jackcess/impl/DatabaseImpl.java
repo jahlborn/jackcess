@@ -34,53 +34,14 @@ import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.regex.Pattern;
 
-import com.healthmarketscience.jackcess.ColumnBuilder;
-import com.healthmarketscience.jackcess.Cursor;
-import com.healthmarketscience.jackcess.CursorBuilder;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.DatabaseBuilder;
-import com.healthmarketscience.jackcess.DateTimeType;
-import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.IndexCursor;
-import com.healthmarketscience.jackcess.PropertyMap;
-import com.healthmarketscience.jackcess.Relationship;
-import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RuntimeIOException;
-import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.TableBuilder;
-import com.healthmarketscience.jackcess.TableDefinition;
-import com.healthmarketscience.jackcess.TableMetaData;
+import com.healthmarketscience.jackcess.*;
 import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
-import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
-import com.healthmarketscience.jackcess.util.ColumnValidatorFactory;
-import com.healthmarketscience.jackcess.util.ErrorHandler;
-import com.healthmarketscience.jackcess.util.LinkResolver;
-import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
-import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
-import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import com.healthmarketscience.jackcess.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -890,7 +851,7 @@ public class DatabaseImpl implements Database, DateTimeContext
         String accessVersion = (String)getDatabaseProperties().getValue(
             PropertyMap.ACCESS_VERSION_PROP);
 
-        if(isBlank(accessVersion)) {
+        if(StringUtil.isBlank(accessVersion)) {
           // no access version, fall back to "generic"
           accessVersion = null;
         }
@@ -1980,7 +1941,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   private static void validateName(String name, int maxLength, String nameType)
   {
-    if(isBlank(name)) {
+    if(StringUtil.isBlank(name)) {
       throw new IllegalArgumentException(
           nameType + " must have non-blank name");
     }
@@ -1991,25 +1952,9 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
   }
 
-  /**
-   * Returns {@code true} if the given string is {@code null} or all blank
-   * space, {@code false} otherwise.
-   */
-  public static boolean isBlank(String name) {
-    return StringUtils.isBlank(name);
-  }
-
-  /**
-   * Returns the given string trimmed, or {@code null} if the string is {@code
-   * null} or empty.
-   */
-  public static String trimToNull(String str) {
-    return StringUtils.trimToNull(str);
-  }
-
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return StringUtil.reflectionToString(this);
   }
 
   /**
@@ -2383,7 +2328,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     @Override
     public String toString() {
-      ToStringBuilder sb = CustomToStringStyle.valueBuilder("TableMetaData")
+      ToStringBuilder sb = ToStringBuilder.valueBuilder("TableMetaData")
         .append("name", getName());
         if(isSystem()) {
           sb.append("isSystem", isSystem());
