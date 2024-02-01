@@ -131,6 +131,7 @@
                 <value>${jackcess.testFormats}</value>
               </property>
             </systemProperties>
+            <argLine>-Duser.language=en -Duser.region=US</argLine>
           </configuration>
         </plugin>
       </plugins>
