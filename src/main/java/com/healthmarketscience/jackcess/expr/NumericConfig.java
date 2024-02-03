@@ -16,9 +16,12 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
+
 import com.healthmarketscience.jackcess.impl.expr.FormatUtil;
+import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 
 /**
  * A NumericConfig encapsulates number formatting options for expression
@@ -44,6 +47,7 @@ public class NumericConfig
   private final boolean _useNegCurrencyParens;
   private final int _numGroupDigits;
   private final DecimalFormatSymbols _symbols;
+  private final NumberFormatter _numFmt;
   private final String _currencyFormat;
   private final String _fixedFormat;
   private final String _standardFormat;
@@ -60,6 +64,7 @@ public class NumericConfig
     _useNegCurrencyParens = useNegCurrencyParens;
     _numGroupDigits = numGroupDigits;
     _symbols = DecimalFormatSymbols.getInstance(locale);
+    _numFmt = new NumberFormatter(_symbols);
 
     _currencyFormat = FormatUtil.createNumberFormatPattern(
         FormatUtil.NumPatternType.CURRENCY, _numDecDigits, _incLeadingDigit,
@@ -122,5 +127,26 @@ public class NumericConfig
 
   public DecimalFormatSymbols getDecimalFormatSymbols() {
     return _symbols;
+  }
+
+  /**
+   * @return the given float formatted according to the current locale config
+   */
+  public String format(float f) {
+    return _numFmt.format(f);
+  }
+
+  /**
+   * @return the given double formatted according to the current locale config
+   */
+  public String format(double d) {
+    return _numFmt.format(d);
+  }
+
+  /**
+   * @return the given BigDecimal formatted according to the current locale config
+   */
+  public String format(BigDecimal bd) {
+    return _numFmt.format(bd);
   }
 }

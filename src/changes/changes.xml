@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="4.0.6" date="TBD">
+      <action dev="jahlborn" type="update">
+        Make NumberFormatter locale aware, using the currently configured
+        LocaleContext.
+      </action>
+    </release>
     <release version="4.0.5" date="2023-01-26">
       <action dev="jahlborn" type="add" system="SourceForge2Features"
               issue="46">

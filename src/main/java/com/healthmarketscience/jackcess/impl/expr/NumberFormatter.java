@@ -20,9 +20,11 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.FieldPosition;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
+
 
 /**
  *
@@ -83,33 +85,17 @@ public class NumberFormatter
   private static final String POS_INF_STR = "1.#INF";
   private static final String NEG_INf_STR = "-1.#INF";
 
-  private static final ThreadLocal<NumberFormatter> INSTANCE =
-    new ThreadLocal<NumberFormatter>() {
-    @Override
-    protected NumberFormatter initialValue() {
-      return new NumberFormatter();
-    }
-  };
+  private final TypeFormatter _fltFmt;
+  private final TypeFormatter _dblFmt;
+  private final TypeFormatter _decFmt;
 
-  private final TypeFormatter _fltFmt = new TypeFormatter(FLT_SIG_DIGITS);
-  private final TypeFormatter _dblFmt = new TypeFormatter(DBL_SIG_DIGITS);
-  private final TypeFormatter _decFmt = new TypeFormatter(DEC_SIG_DIGITS);
-
-  private NumberFormatter() {}
-
-  public static String format(float f) {
-    return INSTANCE.get().formatImpl(f);
+  public NumberFormatter(DecimalFormatSymbols syms) {
+    _fltFmt = new TypeFormatter(FLT_SIG_DIGITS, syms);
+    _dblFmt = new TypeFormatter(DBL_SIG_DIGITS, syms);
+    _decFmt = new TypeFormatter(DEC_SIG_DIGITS, syms);
   }
 
-  public static String format(double d) {
-    return INSTANCE.get().formatImpl(d);
-  }
-
-  public static String format(BigDecimal bd) {
-    return INSTANCE.get().formatImpl(bd);
-  }
-
-  private String formatImpl(float f) {
+  public String format(float f) {
 
     if(Float.isNaN(f)) {
       return NAN_STR;
@@ -121,7 +107,7 @@ public class NumberFormatter
     return _fltFmt.format(new BigDecimal(f, FLT_MATH_CONTEXT));
   }
 
-  private String formatImpl(double d) {
+  public String format(double d) {
 
     if(Double.isNaN(d)) {
       return NAN_STR;
@@ -133,12 +119,13 @@ public class NumberFormatter
     return _dblFmt.format(new BigDecimal(d, DBL_MATH_CONTEXT));
   }
 
-  private String formatImpl(BigDecimal bd) {
+  public String format(BigDecimal bd) {
     return _decFmt.format(bd.round(DEC_MATH_CONTEXT));
   }
 
-  private static ScientificFormat createScientificFormat(int prec) {
-    DecimalFormat df = new DecimalFormat("0.#E00");
+  private static ScientificFormat createScientificFormat(
+      int prec, DecimalFormatSymbols syms) {
+    DecimalFormat df = new DecimalFormat("0.#E00", syms);
     df.setMaximumIntegerDigits(1);
     df.setMaximumFractionDigits(prec);
     df.setRoundingMode(ROUND_MODE);
@@ -147,16 +134,17 @@ public class NumberFormatter
 
   private static final class TypeFormatter
   {
-    private final DecimalFormat _df = new DecimalFormat("0.#");
+    private final DecimalFormat _df;
     private final ScientificFormat _dfS;
     private final int _prec;
 
-    private TypeFormatter(int prec) {
+    private TypeFormatter(int prec, DecimalFormatSymbols syms) {
       _prec = prec;
+      _df = new DecimalFormat("0.#", syms);
       _df.setMaximumIntegerDigits(prec);
       _df.setMaximumFractionDigits(prec);
       _df.setRoundingMode(ROUND_MODE);
-      _dfS = createScientificFormat(prec);
+      _dfS = createScientificFormat(prec, syms);
     }
 
     public String format(BigDecimal bd) {

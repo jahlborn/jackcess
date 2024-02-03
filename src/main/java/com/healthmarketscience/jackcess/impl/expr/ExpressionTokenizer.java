@@ -167,7 +167,7 @@ class ExpressionTokenizer
       } else {
 
         if(isDigit(c)) {
-          Token numLit = maybeParseNumberLiteral(c, buf);
+          Token numLit = maybeParseNumberLiteral(c, buf, context);
           if(numLit != null) {
             tokens.add(numLit);
             continue;
@@ -362,7 +362,8 @@ class ExpressionTokenizer
                               suffStr, 0, suffStrLen));
   }
 
-  private static Token maybeParseNumberLiteral(char firstChar, ExprBuf buf) {
+  private static Token maybeParseNumberLiteral(
+      char firstChar, ExprBuf buf, ParseContext context) {
     StringBuilder sb = buf.getScratchBuffer().append(firstChar);
     boolean hasDigit = isDigit(firstChar);
 
@@ -370,6 +371,8 @@ class ExpressionTokenizer
     boolean foundNum = false;
     boolean isFp = false;
     int expPos = -1;
+    char decimalSep = context.getNumericConfig().getDecimalFormatSymbols()
+      .getDecimalSeparator();
 
     try {
 
@@ -379,9 +382,11 @@ class ExpressionTokenizer
           hasDigit = true;
           sb.append((char)c);
           buf.next();
-        } else if(c == '.') {
+        } else if(c == decimalSep) {
           isFp = true;
-          sb.append((char)c);
+          // we handle a localized decimal separator for input, but the code
+          // below will parse using non-locale symbols
+          sb.append('.');
           buf.next();
         } else if(hasDigit && (expPos < 0) && ((c == 'e') || (c == 'E'))) {
           isFp = true;

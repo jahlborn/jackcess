@@ -65,6 +65,6 @@ public class DoubleValue extends BaseNumericValue
 
   @Override
   public String getAsString(LocaleContext ctx) {
-    return NumberFormatter.format(_val);
+    return ctx.getNumericConfig().format(_val);
   }
 }

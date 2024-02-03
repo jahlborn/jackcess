@@ -580,37 +580,45 @@ public class ExpressionatorTest extends TestCase
       _thisVal = thisVal;
     }
 
+    @Override
     public Value.Type getResultType() {
       return null;
     }
 
+    @Override
     public TemporalConfig getTemporalConfig() {
       return TemporalConfig.US_TEMPORAL_CONFIG;
     }
 
+    @Override
     public DateTimeFormatter createDateFormatter(String formatStr) {
       DateTimeFormatter dtf = DateTimeFormatter.ofPattern(
           formatStr, TemporalConfig.US_TEMPORAL_CONFIG.getLocale());
       return dtf;
     }
 
+    @Override
     public ZoneId getZoneId() {
       return TestUtil.TEST_TZ.toZoneId();
     }
 
+    @Override
     public NumericConfig getNumericConfig() {
       return NumericConfig.US_NUMERIC_CONFIG;
     }
 
+    @Override
     public DecimalFormat createDecimalFormat(String formatStr) {
       return new DecimalFormat(
           formatStr, NumericConfig.US_NUMERIC_CONFIG.getDecimalFormatSymbols());
     }
 
+    @Override
     public FunctionLookup getFunctionLookup() {
       return DefaultFunctions.LOOKUP;
     }
 
+    @Override
     public Value getThisColumnValue() {
       if(_thisVal == null) {
         throw new UnsupportedOperationException();
@@ -618,22 +626,27 @@ public class ExpressionatorTest extends TestCase
       return _thisVal;
     }
 
+    @Override
     public Value getIdentifierValue(Identifier identifier) {
       throw new UnsupportedOperationException();
     }
 
+    @Override
     public float getRandom(Integer seed) {
       return _rndCtx.getRandom(seed);
     }
 
+    @Override
     public Bindings getBindings() {
       return _bindings;
     }
 
+    @Override
     public Object get(String key) {
       return _bindings.get(key);
     }
 
+    @Override
     public void put(String key, Object value) {
       _bindings.put(key, value);
     }

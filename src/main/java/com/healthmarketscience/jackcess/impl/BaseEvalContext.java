@@ -23,13 +23,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.Map;
 import javax.script.Bindings;
 
 import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
