@@ -116,13 +116,16 @@ public class MemFileChannel extends FileChannel
   public static MemFileChannel newChannel(File file, String mode)
     throws IOException
   {
-    FileChannel in = null;
-    try {
-      return newChannel(in = new RandomAccessFile(
-                            file, RO_CHANNEL_MODE).getChannel(),
-                        mode);
-    } finally {
-      ByteUtil.closeQuietly(in);
+    {
+      RandomAccessFile raf = null;
+      FileChannel in = null;
+      try {
+        raf = new RandomAccessFile(file, RO_CHANNEL_MODE);
+        return newChannel(in = raf.getChannel(), mode);
+      } finally {
+        ByteUtil.closeQuietly(in);
+        ByteUtil.closeQuietly(raf);
+      }
     }
   }
 

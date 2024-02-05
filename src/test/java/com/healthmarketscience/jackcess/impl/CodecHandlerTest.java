@@ -167,25 +167,26 @@ public class CodecHandlerTest extends TestCase
     throws Exception
   {
     long dbLen = dbFile.length();
-    FileChannel fileChannel = new RandomAccessFile(dbFile, "rw").getChannel();
-    ByteBuffer bb = ByteBuffer.allocate(pageSize)
-      .order(PageChannel.DEFAULT_BYTE_ORDER);
-    for(long offset = pageSize; offset < dbLen; offset += pageSize) {
+    try (RandomAccessFile randomAccessFile = new RandomAccessFile(dbFile, "rw");
+         FileChannel fileChannel = randomAccessFile.getChannel()) {
+      ByteBuffer bb = ByteBuffer.allocate(pageSize)
+        .order(PageChannel.DEFAULT_BYTE_ORDER);
+      for(long offset = pageSize; offset < dbLen; offset += pageSize) {
 
-      bb.clear();
-      fileChannel.read(bb, offset);
+        bb.clear();
+        fileChannel.read(bb, offset);
 
-      int pageNumber = (int)(offset / pageSize);
-      if(simple) {
-        simpleEncode(bb.array(), bb.array(), pageNumber, 0, pageSize);
-      } else {
-        fullEncode(bb.array(), bb.array(), pageNumber);
+        int pageNumber = (int)(offset / pageSize);
+        if(simple) {
+          simpleEncode(bb.array(), bb.array(), pageNumber, 0, pageSize);
+        } else {
+          fullEncode(bb.array(), bb.array(), pageNumber);
+        }
+
+        bb.rewind();
+        fileChannel.write(bb, offset);
       }
-
-      bb.rewind();
-      fileChannel.write(bb, offset);
     }
-    fileChannel.close();
   }
 
   private static void simpleEncode(byte[] inBuffer, byte[] outBuffer,

@@ -156,7 +156,6 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
     return new VersionImpl(INVALID_ID, complexValueFk, value, modifiedDate);
   }
 
-  @SuppressWarnings("deprecation")
   private static class VersionImpl extends ComplexValueImpl implements Version
   {
     private final String _value;

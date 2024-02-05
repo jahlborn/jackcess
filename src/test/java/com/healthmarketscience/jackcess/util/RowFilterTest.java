@@ -41,7 +41,6 @@ public class RowFilterTest extends TestCase
     super(name);
   }
 
-  @SuppressWarnings("unchecked")
   public void testFilter() throws Exception 
   {
     Row row0 = createExpectedRow(ID_COL, 0, COL1, "foo", COL2, 13, COL3, "bar");

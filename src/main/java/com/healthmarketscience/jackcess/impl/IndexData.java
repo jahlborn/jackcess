@@ -532,6 +532,7 @@ public class IndexData {
    * @param creator description of the indexes to write
    * @param buffer Buffer to write to
    */
+  @SuppressWarnings("resource")
   protected static void writeDefinition(
       TableMutator creator, ByteBuffer buffer,
       TableMutator.IndexDataState idxDataState, ByteBuffer rootPageBuffer)
@@ -2659,36 +2660,32 @@ public class IndexData {
       _between = between;
     }
 
-    public DataPage getDataPage() {
+    DataPage getDataPage() {
       return _dataPage;
     }
 
-    public int getIndex() {
+    int getIndex() {
       return _idx;
     }
 
-    public int getNextIndex() {
+    int getNextIndex() {
       // note, _idx does not need to be advanced if it was pointing at a
       // between position
       return(_between ? _idx : (_idx + 1));
     }
 
-    public int getPrevIndex() {
+    int getPrevIndex() {
       // note, we ignore the between flag here because the index will be
       // pointing at the correct next index in either the between or
       // non-between case
       return(_idx - 1);
     }
 
-    public Entry getEntry() {
+    Entry getEntry() {
       return _entry;
     }
 
-    public boolean isBetween() {
-      return _between;
-    }
-
-    public boolean equalsEntry(Entry entry) {
+    boolean equalsEntry(Entry entry) {
       return _entry.equals(entry);
     }
 

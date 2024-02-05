@@ -2319,7 +2319,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * re-write the value (will not lose precision).  Also, this implementation
    * is immutable.
    */
-  @SuppressWarnings("deprecation")
   private static final class DateExt extends Date
   {
     private static final long serialVersionUID = 0L;

@@ -53,7 +53,6 @@ import com.healthmarketscience.jackcess.complex.VersionHistoryColumnInfo;
  *
  * @author James Ahlborn
  */
-@SuppressWarnings("deprecation")
 public class ComplexValueForeignKeyImpl extends ComplexValueForeignKey
 {
   private static final long serialVersionUID = 20110805L;

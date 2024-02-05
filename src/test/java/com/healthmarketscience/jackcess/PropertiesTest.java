@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
-import com.healthmarketscience.jackcess.InvalidValueException;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;

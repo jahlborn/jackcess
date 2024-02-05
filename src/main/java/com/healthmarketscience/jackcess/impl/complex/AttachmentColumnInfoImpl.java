@@ -239,8 +239,6 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
                               null, timeStamp, flags, encodedData);
   }
 
-
-  @SuppressWarnings("deprecation")
   private static class AttachmentImpl extends ComplexValueImpl
     implements Attachment
   {
