@@ -73,7 +73,6 @@ public class Expressionator
   }
 
   private static final String FUNC_START_DELIM = "(";
-  private static final String FUNC_END_DELIM = ")";
   private static final String OPEN_PAREN = "(";
   private static final String CLOSE_PAREN = ")";
   private static final String FUNC_PARAM_SEP = ",";

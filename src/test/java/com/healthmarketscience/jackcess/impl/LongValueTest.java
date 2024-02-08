@@ -214,7 +214,7 @@ public class LongValueTest extends TestCase
   public void testUnicodeCompression() throws Exception
   {
     File dbFile = new File("src/test/data/V2003/testUnicodeCompV2003.mdb");
-    Database db = open(Database.FileFormat.V2003, new File("src/test/data/V2003/testUnicodeCompV2003.mdb"), true);
+    Database db = open(Database.FileFormat.V2003, dbFile, true);
 
     StringBuilder sb = new StringBuilder(127);
     for(int i = 1; i <= 0xFF; ++i) {

@@ -53,7 +53,6 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

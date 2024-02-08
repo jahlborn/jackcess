@@ -16,14 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -31,24 +24,13 @@ import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
+import java.util.stream.StreamSupport;
 
-import static com.healthmarketscience.jackcess.Database.*;
+import com.healthmarketscience.jackcess.Database.FileFormat;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
-import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.IndexData;
-import com.healthmarketscience.jackcess.impl.IndexImpl;
-import com.healthmarketscience.jackcess.impl.JetFormatTest;
+import com.healthmarketscience.jackcess.impl.*;
 import com.healthmarketscience.jackcess.impl.JetFormatTest.TestDB;
-import com.healthmarketscience.jackcess.impl.RowIdImpl;
-import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 import org.junit.Assert;
 
@@ -264,11 +246,8 @@ public class TestUtil
   }
 
   public static int countRows(Table table) throws Exception {
-    int rtn = 0;
-    for(Map<String, Object> row : CursorBuilder.createCursor(table)) {
-      rtn++;
-    }
-    return rtn;
+    Cursor cursor = CursorBuilder.createCursor(table);
+    return (int) StreamSupport.stream(cursor.spliterator(), false).count();
   }
 
   public static void assertTable(

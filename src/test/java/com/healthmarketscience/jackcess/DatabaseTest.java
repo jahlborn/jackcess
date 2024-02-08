@@ -199,7 +199,6 @@ public class DatabaseTest extends TestCase
       Map<String,Object> row2 = createTestRowMap("Tim2");
       Map<String,Object> row3 = createTestRowMap("Tim3");
       Table table = db.getTable("Test");
-      @SuppressWarnings("unchecked")
       List<Map<String,Object>> rows = Arrays.asList(row1, row2, row3);
       table.addRowsFromMaps(rows);
       assertRowCount(3, table);
