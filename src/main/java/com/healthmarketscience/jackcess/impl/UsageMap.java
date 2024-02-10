@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
+
 
 /**
  * Describes which database pages a particular table uses
@@ -428,7 +430,7 @@ public class UsageMap
       rangeToString(ranges, curRangeStart, prevPage);
     }
 
-    return CustomToStringStyle.valueBuilder(
+    return ToStringBuilder.valueBuilder(
         _handler.getClass().getSimpleName())
       .append("range", "(" + _startPage + "-" + _endPage + ")")
       .append("pageNumbers", ranges)

@@ -22,7 +22,6 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
@@ -434,7 +433,7 @@ public class ImportUtil
     throws IOException
   {
     String line = in.readLine();
-    if(DatabaseImpl.isBlank(line)) {
+    if(StringUtil.isBlank(line)) {
       return null;
     }
 

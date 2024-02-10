@@ -44,7 +44,7 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.Token;
 import com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.TokenType;
-import org.apache.commons.lang3.StringUtils;
+import com.healthmarketscience.jackcess.util.StringUtil;
 
 
 /**
@@ -1239,7 +1239,7 @@ public class Expressionator
 
   private static void literalStrToString(String str, StringBuilder sb) {
     sb.append("\"")
-      .append(StringUtils.replace(str, "\"", "\"\""))
+      .append(StringUtil.replace(str, "\"", "\"\""))
       .append("\"");
   }
 

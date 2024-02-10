@@ -16,12 +16,15 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.expr;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.util.StringUtil;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
@@ -386,8 +389,8 @@ public class DefaultTextFunctions
         break;
       case 3:
         // vbProperCase
-        str = org.apache.commons.lang3.text.WordUtils.capitalize(
-            str.toLowerCase());
+        str = Arrays.stream(str.toLowerCase().split(" "))
+          .map(StringUtil::capitalize).collect(Collectors.joining(" "));
         break;
       default:
         // do nothing

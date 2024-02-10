@@ -26,7 +26,6 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.impl.ColEvalContext;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.expr.FormatUtil;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * Utility for applying Column formatting to column values for display.  This
@@ -72,7 +71,7 @@ public class ColumnFormatter
    */
   public void setFormatString(String fmtStr) throws IOException {
     PropertyMap props = _col.getProperties();
-    if(!StringUtils.isEmpty(fmtStr)) {
+    if(!StringUtil.isEmpty(fmtStr)) {
       props.put(PropertyMap.FORMAT_PROP, fmtStr);
     } else {
       props.remove(PropertyMap.FORMAT_PROP);

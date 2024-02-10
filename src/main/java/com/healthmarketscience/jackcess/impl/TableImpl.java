@@ -53,6 +53,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -3089,14 +3090,14 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("type", (_tableType + (!isSystem() ? " (USER)" : " (SYSTEM)")))
       .append("name", _name)
       .append("rowCount", _rowCount)
       .append("columnCount", _columns.size())
       .append("indexCount(data)", _indexCount)
       .append("logicalIndexCount", _logicalIndexCount)
-      .append("validator", CustomToStringStyle.ignoreNull(_rowValidator))
+      .appendIgnoreNull("validator", _rowValidator)
       .append("columns", _columns)
       .append("indexes", _indexes)
       .append("ownedPages", _ownedPages)
@@ -3614,7 +3615,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("headerRowId", _headerRowId)
         .append("finalRowId", _finalRowId)
         .toString();

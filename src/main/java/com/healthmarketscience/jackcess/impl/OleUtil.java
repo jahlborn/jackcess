@@ -35,8 +35,9 @@ import java.util.regex.Pattern;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.util.OleBlob;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
+
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Utility code for working with OLE data.
@@ -108,7 +109,7 @@ public class OleUtil
   /**
    * Creates a new OlBlob instance using the given information.
    */
-  public static OleBlob createBlob(Builder oleBuilder)
+  public static OleBlob createBlob(OleBlob.Builder oleBuilder)
     throws IOException
   {
     try {
@@ -184,7 +185,7 @@ public class OleUtil
     }
   }
 
-  private static byte[] writePackageHeader(Builder oleBuilder,
+  private static byte[] writePackageHeader(OleBlob.Builder oleBuilder,
                                            long contentLen) {
 
     byte[] prettyNameBytes = getZeroTermStrBytes(oleBuilder.getPrettyName());
@@ -230,7 +231,7 @@ public class OleUtil
     return headerBytes;
   }
 
-  private static byte[] writePackageStreamHeader(Builder oleBuilder) {
+  private static byte[] writePackageStreamHeader(OleBlob.Builder oleBuilder) {
 
     byte[] fileNameBytes = getZeroTermStrBytes(oleBuilder.getFileName());
     byte[] filePathBytes = getZeroTermStrBytes(oleBuilder.getFilePath());
@@ -265,7 +266,7 @@ public class OleUtil
     return headerBytes;
   }
 
-  private static byte[] writePackageStreamFooter(Builder oleBuilder) {
+  private static byte[] writePackageStreamFooter(OleBlob.Builder oleBuilder) {
 
     // note, these are _not_ zero terminated
     byte[] fileNameBytes = oleBuilder.getFileName().getBytes(OLE_UTF_CHARSET);
@@ -570,7 +571,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      ToStringBuilder sb = CustomToStringStyle.builder(this);
+      ToStringBuilder sb = ToStringBuilder.builder(this);
       if(_content != null) {
         sb.append("content", _content);
       } else {
@@ -736,7 +737,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("fileName", _fileName)
         .append("linkPath", _linkPath)
         .append("filePath", _filePath)
@@ -786,7 +787,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("fileName", _fileName)
         .append("filePath", _filePath)
         .append("localFilePath", _localFilePath)
@@ -812,7 +813,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .toString();
     }
   }
@@ -830,7 +831,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("content", _blob._bytes)
         .toString();
     }

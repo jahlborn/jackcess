@@ -41,7 +41,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.NumericConfig;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
-import org.apache.commons.lang3.StringUtils;
+import com.healthmarketscience.jackcess.util.StringUtil;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionTokenizer.ExprBuf;
 
 /**
@@ -448,7 +448,7 @@ public class FormatUtil
       return predefFmt;
     }
 
-    if(StringUtils.isEmpty(fmtStr)) {
+    if(StringUtil.isEmpty(fmtStr)) {
       return DUMMY_FMT;
     }
 

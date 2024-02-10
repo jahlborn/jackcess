@@ -28,6 +28,7 @@ import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.RelationshipBuilder;
 import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.util.ToStringBuilder;
 
 /**
  * Helper class used to maintain state during relationship creation.
@@ -340,7 +341,7 @@ public class RelationshipCreator extends DBMutator
       colNames = getColumnNames(cols);
     }
 
-    return CustomToStringStyle.valueBuilder(tableName)
+    return ToStringBuilder.valueBuilder(tableName)
       .append(null, colNames)
       .toString();
   }
