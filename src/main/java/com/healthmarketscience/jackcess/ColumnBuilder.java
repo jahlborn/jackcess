@@ -304,7 +304,7 @@ public class ColumnBuilder {
   {
     DataType type = template.getType();
     setType(type);
-    setLength(template.getLength());
+    setLengthInUnits(template.getLengthInUnits());
     setAutoNumber(template.isAutoNumber());
     if(type.getHasScalePrecision()) {
       setScale(template.getScale());

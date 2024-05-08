@@ -9,6 +9,9 @@
         Make NumberFormatter locale aware, using the currently configured
         LocaleContext.
       </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="158">
+        Account for character sizes when copying column lengths.
+      </action>
     </release>
     <release version="4.0.5" date="2023-01-26">
       <action dev="jahlborn" type="add" system="SourceForge2Features"
