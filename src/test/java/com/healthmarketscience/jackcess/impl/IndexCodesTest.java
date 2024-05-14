@@ -64,7 +64,17 @@ public class IndexCodesTest extends TestCase {
 
   public void testIndexCodes() throws Exception
   {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_CODES, true)) {
+    doTestDb(Basename.INDEX_CODES);
+  }
+
+  public void testEmoticons() throws Exception
+  {
+    doTestDb(Basename.EMOTICONS);
+  }
+
+  private static void doTestDb(Basename dbBaseName) throws Exception
+  {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(dbBaseName, true)) {
       Database db = openMem(testDB);
       db.setDateTimeType(DateTimeType.DATE);
 

@@ -103,6 +103,12 @@ public class GeneralLegacyIndexCodes {
         return parseSignificantCodes(codeStrings);
       }
     },
+    SURROGATE("Q") {
+      @Override public CharHandler parseCodes(String[] codeStrings) {
+        // these are not parsed from the codes files
+        throw new UnsupportedOperationException();
+      }
+    },
     IGNORED("X") {
       @Override public CharHandler parseCodes(String[] codeStrings) {
         return IGNORED_CHAR_HANDLER;
@@ -128,7 +134,7 @@ public class GeneralLegacyIndexCodes {
    */
   abstract static class CharHandler {
     public abstract Type getType();
-    public byte[] getInlineBytes() {
+    public byte[] getInlineBytes(char c) {
       return null;
     }
     public byte[] getExtraBytes() {
@@ -159,7 +165,7 @@ public class GeneralLegacyIndexCodes {
     @Override public Type getType() {
       return Type.SIMPLE;
     }
-    @Override public byte[] getInlineBytes() {
+    @Override public byte[] getInlineBytes(char c) {
       return _bytes;
     }
   }
@@ -177,7 +183,7 @@ public class GeneralLegacyIndexCodes {
     @Override public Type getType() {
       return Type.INTERNATIONAL;
     }
-    @Override public byte[] getInlineBytes() {
+    @Override public byte[] getInlineBytes(char c) {
       return _bytes;
     }
     @Override public byte[] getExtraBytes() {
@@ -233,7 +239,7 @@ public class GeneralLegacyIndexCodes {
     @Override public Type getType() {
       return Type.INTERNATIONAL_EXT;
     }
-    @Override public byte[] getInlineBytes() {
+    @Override public byte[] getInlineBytes(char c) {
       return _bytes;
     }
     @Override public byte[] getExtraBytes() {
@@ -255,7 +261,7 @@ public class GeneralLegacyIndexCodes {
     @Override public Type getType() {
       return Type.SIGNIFICANT;
     }
-    @Override public byte[] getInlineBytes() {
+    @Override public byte[] getInlineBytes(char c) {
       return _bytes;
     }
     @Override public boolean isSignificantChar() {
@@ -270,17 +276,63 @@ public class GeneralLegacyIndexCodes {
     }
   };
 
-  /** alternate shared CharHandler instance for "surrogate" chars (which we do
-      not handle) */
-  static final CharHandler SURROGATE_CHAR_HANDLER = new CharHandler() {
+  /** the surrogate char bufs are computed on the fly.  re-use a buffer for
+      those */
+  private static final ThreadLocal<byte[]> SURROGATE_CHAR_BUF =
+    ThreadLocal.withInitial(() -> new byte[2]);
+  private static final byte[] SURROGATE_EXTRA_BYTES = {0x3f};
+
+  private static abstract class SurrogateCharHandler extends CharHandler {
     @Override public Type getType() {
-      return Type.IGNORED;
+      return Type.SURROGATE;
     }
-    @Override public byte[] getInlineBytes() {
-      throw new IllegalStateException(
-          "Surrogate pair chars are not handled");
+    @Override public byte[] getExtraBytes() {
+      return SURROGATE_EXTRA_BYTES;
     }
-  };
+    protected static byte[] toInlineBytes(int idxC) {
+      byte[] bytes = SURROGATE_CHAR_BUF.get();
+      bytes[0] = (byte)((idxC >>> 8) & 0xFF);
+      bytes[1] = (byte)(idxC & 0xFF);
+      return bytes;
+    }
+  }
+
+  /** shared CharHandler instance for "high surrogate" chars (which are
+      computed) */
+  static final CharHandler HIGH_SURROGATE_CHAR_HANDLER =
+    new SurrogateCharHandler() {
+      @Override public byte[] getInlineBytes(char c) {
+        // the high sorrogate bytes seems to be computed from a fixed offset
+        int idxC = asUnsignedChar(c) - 10238;
+        return toInlineBytes(idxC);
+      }
+    };
+
+  /** shared CharHandler instance for "low surrogate" chars (which are
+      computed) */
+  static final CharHandler LOW_SURROGATE_CHAR_HANDLER =
+    new SurrogateCharHandler() {
+      @Override public byte[] getInlineBytes(char c) {
+        // the low surrogate bytes are computed with a specific value based in
+        // its location in a 1024 character block.
+        int charOffset = (asUnsignedChar(c) - 0xdc00) % 1024;
+
+        int idxOffset = 0;
+        if(charOffset < 8) {
+          idxOffset = 9992;
+        } else if(charOffset < (8 + 254)) {
+          idxOffset = 9990;
+        } else if(charOffset < (8 + 254 + 254)) {
+          idxOffset = 9988;
+        } else if(charOffset < (8 + 254 + 254 + 254)) {
+          idxOffset = 9986;
+        } else  {
+          idxOffset = 9984;
+        }
+        int idxC = asUnsignedChar(c) - idxOffset;
+        return toInlineBytes(idxC);
+      }
+    };
 
   static final char FIRST_CHAR = (char)0x0000;
   static final char LAST_CHAR = (char)0x00FF;
@@ -349,9 +401,12 @@ public class GeneralLegacyIndexCodes {
       for(int i = start; i <= end; ++i) {
         char c = (char)i;
         CharHandler ch = null;
-        if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
+        if(Character.isHighSurrogate(c)) {
           // surrogate chars are not included in the codes files
-          ch = SURROGATE_CHAR_HANDLER;
+          ch = HIGH_SURROGATE_CHAR_HANDLER;
+        } else if(Character.isLowSurrogate(c)) {
+          // surrogate chars are not included in the codes files
+          ch = LOW_SURROGATE_CHAR_HANDLER;
         } else {
           String codeLine = reader.readLine();
           ch = parseCodes(prefixMap, codeLine);
@@ -529,7 +584,7 @@ public class GeneralLegacyIndexCodes {
       CharHandler ch = getCharHandler(c);
 
       int curCharOffset = charOffset;
-      byte[] bytes = ch.getInlineBytes();
+      byte[] bytes = ch.getInlineBytes(c);
       if(bytes != null) {
         // write the "inline" codes immediately
         bout.write(bytes);
@@ -667,7 +722,6 @@ public class GeneralLegacyIndexCodes {
   private static void writeExtraCodes(
       int charOffset, byte[] bytes, byte extraCodeModifier,
       ExtraCodesStream extraCodes)
-    throws IOException
   {
     // we fill in a placeholder value for any chars w/out extra codes
     int numChars = extraCodes.getNumChars();
@@ -712,7 +766,6 @@ public class GeneralLegacyIndexCodes {
    */
   private static boolean trimExtraCodes(ByteStream extraCodes,
                                         byte minTrimCode, byte maxTrimCode)
-    throws IOException
   {
     if(extraCodes == null) {
       return false;
@@ -730,7 +783,6 @@ public class GeneralLegacyIndexCodes {
   private static void writeUnprintableCodes(
       int charOffset, byte[] bytes, ByteStream unprintableCodes,
       ExtraCodesStream extraCodes)
-    throws IOException
   {
     // the offset seems to be calculated based on the number of bytes in the
     // "extra codes" part of the entry (even if there are no extra codes bytes
@@ -764,7 +816,6 @@ public class GeneralLegacyIndexCodes {
    * Encode the given crazy code bytes into the given byte stream.
    */
   private static void writeCrazyCodes(ByteStream crazyCodes, ByteStream bout)
-    throws IOException
   {
     // CRAZY_CODE_2 flags at the end are ignored, so ditch them
     trimExtraCodes(crazyCodes, CRAZY_CODE_2, CRAZY_CODE_2);

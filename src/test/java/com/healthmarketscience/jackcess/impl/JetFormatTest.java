@@ -58,7 +58,8 @@ public class JetFormatTest extends TestCase {
     CALC_FIELD("calcFieldTest"),
     BINARY_INDEX("binIdxTest"),
     OLD_DATES("oldDates"),
-    EXT_DATE("extDateTest");
+    EXT_DATE("extDateTest"),
+    EMOTICONS("testEmoticons");
 
     private final String _basename;
 

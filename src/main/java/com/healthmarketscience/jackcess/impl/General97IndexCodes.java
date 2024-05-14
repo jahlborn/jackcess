@@ -114,7 +114,7 @@ public class General97IndexCodes extends GeneralLegacyIndexCodes
       char c = str.charAt(i);
       CharHandler ch = getCharHandler(c);
 
-      byte[] bytes = ch.getInlineBytes();
+      byte[] bytes = ch.getInlineBytes(c);
       if(bytes != null) {
         // write the "inline" codes immediately
         bout.write(bytes);

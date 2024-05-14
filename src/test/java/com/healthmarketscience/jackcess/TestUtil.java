@@ -361,16 +361,25 @@ public class TestUtil
   }
 
   static void dumpIndex(Index index) throws Exception {
-    dumpIndex(index, new PrintWriter(System.out, true));
+    dumpIndex(index, Integer.MAX_VALUE);
   }
 
-  static void dumpIndex(Index index, PrintWriter writer) throws Exception {
+  static void dumpIndex(Index index, int limit) throws Exception {
+    dumpIndex(index, new PrintWriter(System.out, true), limit);
+  }
+
+  static void dumpIndex(Index index, PrintWriter writer, int limit)
+    throws Exception {
     writer.println("INDEX: " + index);
     IndexData.EntryCursor ec = ((IndexImpl)index).cursor();
     IndexData.Entry lastE = ec.getLastEntry();
     IndexData.Entry e = null;
+    int count = 0;
     while((e = ec.getNextEntry()) != lastE) {
       writer.println(e);
+      if((count++) > limit) {
+        break;
+      }
     }
   }
 
