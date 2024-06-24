@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.7" date="TBD">
+    <release version="4.0.7" date="2024-06-24">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="157">
         Add support for surrogate pairs in text indexes (e.g. emoticons).
       </action>
