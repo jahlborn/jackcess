@@ -197,7 +197,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    * @usage _advanced_method_
    */
   protected TableImpl(boolean testing, List<ColumnImpl> columns)
-    throws IOException
   {
     if(!testing) {
       throw new IllegalArgumentException();
@@ -835,7 +834,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
         // read fixed length value (non-boolean at this point)
         int dataStart = rowStart + format.OFFSET_COLUMN_FIXED_DATA_ROW_OFFSET;
         colDataPos = dataStart + column.getFixedDataOffset();
-        colDataLen = column.getType().getFixedSize(column.getLength());
+        colDataLen = column.getFixedDataSize();
 
       } else {
         int varDataStart;
@@ -938,7 +937,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    * Reads the null mask from the given row buffer.  Leaves limit unchanged.
    */
   private NullMask getRowNullMask(ByteBuffer rowBuffer)
-    throws IOException
   {
     // reset position to row start
     rowBuffer.reset();
@@ -1261,22 +1259,21 @@ public class TableImpl implements Table, PropertyMaps.Owner
                            (_columns.size() * format.SIZE_COLUMN_DEF_BLOCK));
 
       // figure out the data offsets for the new column
-      int fixedOffset = 0;
       int varOffset = 0;
-      if(column.isVariableLength()) {
-        // find the variable offset
-        for(ColumnImpl col : _varColumns) {
-          if(col.getVarLenTableIndex() >= varOffset) {
-            varOffset = col.getVarLenTableIndex() + 1;
-          }
+      // find the variable offset
+      for(ColumnImpl col : _varColumns) {
+        if(col.isVariableLength() && (col.getVarLenTableIndex() >= varOffset)) {
+          varOffset = col.getVarLenTableIndex() + 1;
         }
-      } else {
+      }
+
+      int fixedOffset = 0;
+      if(!column.isVariableLength() && !column.storeInNullMask()) {
         // find the fixed offset
         for(ColumnImpl col : _columns) {
           if(!col.isVariableLength() &&
              (col.getFixedDataOffset() >= fixedOffset)) {
-            fixedOffset = col.getFixedDataOffset() +
-              col.getType().getFixedSize(col.getLength());
+            fixedOffset = col.getFixedDataOffset() + col.getFixedDataSize();
           }
         }
       }
@@ -1603,7 +1600,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
   }
 
   private void validateTableDefUpdate(TableUpdater mutator, ByteBuffer tableBuffer)
-    throws IOException
   {
     if(!mutator.validateUpdatedTdef(tableBuffer)) {
       throw new IllegalStateException(
@@ -1611,7 +1607,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
   }
 
-  private void completeTableMutation(ByteBuffer tableBuffer) throws IOException
+  private void completeTableMutation(ByteBuffer tableBuffer)
   {
     // lastly, may need to clear table def buffer
     _tableDefBufferH.possiblyInvalidate(_tableDefPageNumber, tableBuffer);
@@ -1759,7 +1755,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    */
   private static void writeTableDefinitionHeader(
       TableCreator creator, ByteBuffer buffer, int totalTableDefSize)
-    throws IOException
   {
     List<ColumnBuilder> columns = creator.getColumns();
 
@@ -3016,7 +3011,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    * Restores all autonumber column values from a failed add row.
    */
   private void restoreAutoNumbersFromAdd(Object[] row)
-    throws IOException
   {
     if(_autoNumColumns.isEmpty()) {
       return;
@@ -3168,7 +3162,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    * ({@code null}) or the page is not a DATA page, 0 is returned.
    */
   static int getRowsOnDataPage(ByteBuffer rowBuffer, JetFormat format)
-    throws IOException
   {
     int rowsOnPage = 0;
     if((rowBuffer != null) && (rowBuffer.get(0) == PageTypes.DATA)) {
@@ -3298,7 +3291,6 @@ public class TableImpl implements Table, PropertyMaps.Owner
    */
   public static boolean rowFitsOnDataPage(
       int rowLength, ByteBuffer dataPage, JetFormat format)
-    throws IOException
   {
     int rowSpaceUsage = getRowSpaceUsage(rowLength, format);
     short freeSpaceInPage = dataPage.getShort(format.OFFSET_FREE_SPACE);
@@ -3520,7 +3512,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       return dupeRow(_rowValues, _rowValues.length);
     }
 
-    public NullMask getNullMask(ByteBuffer rowBuffer) throws IOException {
+    public NullMask getNullMask(ByteBuffer rowBuffer) {
       if(_nullMask == null) {
         _nullMask = getRowNullMask(rowBuffer);
       }

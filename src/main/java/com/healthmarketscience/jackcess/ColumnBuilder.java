@@ -389,6 +389,20 @@ public class ColumnBuilder {
   }
 
   /**
+   * @usage _advanced_method_
+   */
+  public boolean storeInNullMask() {
+    return (getType() == DataType.BOOLEAN);
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public int getFixedDataSize() {
+    return _type.getFixedSize(_length);
+  }
+
+  /**
    * Checks that this column definition is valid.
    *
    * @throws IllegalArgumentException if this column definition is invalid.

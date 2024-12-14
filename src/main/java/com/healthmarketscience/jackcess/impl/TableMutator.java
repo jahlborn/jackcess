@@ -61,7 +61,7 @@ public abstract class TableMutator extends DBMutator
         throw new UnsupportedOperationException(withErrorContext(
             "Complex column creation is not yet implemented"));
       }
-      
+
       column.validate(getFormat());
       if(!colNames.add(DatabaseImpl.toLookupName(column.getName()))) {
         throw new IllegalArgumentException(withErrorContext(
@@ -71,9 +71,9 @@ public abstract class TableMutator extends DBMutator
       setColumnSortOrder(column);
   }
 
-  protected void validateIndex(Set<String> colNames, Set<String> idxNames, 
+  protected void validateIndex(Set<String> colNames, Set<String> idxNames,
                                boolean[] foundPk, IndexBuilder index) {
-    
+
     index.validate(colNames, getFormat());
     if(!idxNames.add(DatabaseImpl.toLookupName(index.getName()))) {
       throw new IllegalArgumentException(withErrorContext(
@@ -93,15 +93,15 @@ public abstract class TableMutator extends DBMutator
     }
   }
 
-  protected void validateAutoNumberColumn(Set<DataType> autoTypes, 
-                                          ColumnBuilder column) 
+  protected void validateAutoNumberColumn(Set<DataType> autoTypes,
+                                          ColumnBuilder column)
   {
     if(!column.getType().isMultipleAutoNumberAllowed() &&
        !autoTypes.add(column.getType())) {
       throw new IllegalArgumentException(withErrorContext(
           "Can have at most one AutoNumber column of type " + column.getType() +
           " per table"));
-    }    
+    }
   }
 
   private void setColumnSortOrder(ColumnBuilder column) {
@@ -138,8 +138,11 @@ public abstract class TableMutator extends DBMutator
       _varOffset = (short)varOffset;
       _longVarOffset = (short)longVarOffset;
     }
-    
+
     public short getNextVariableOffset(ColumnBuilder col) {
+      if(!col.isVariableLength()) {
+        return _varOffset;
+      }
       if(!col.getType().isLongValue()) {
         return _varOffset++;
       }
@@ -147,8 +150,12 @@ public abstract class TableMutator extends DBMutator
     }
 
     public short getNextFixedOffset(ColumnBuilder col) {
+      if(col.storeInNullMask()) {
+        // booleans are stored in null mask, not in fixed data section
+        return 0;
+      }
       short offset = _fixedOffset;
-      _fixedOffset += col.getType().getFixedSize(col.getLength());
+      _fixedOffset += col.getFixedDataSize();
       return offset;
     }
   }
@@ -246,5 +253,5 @@ public abstract class TableMutator extends DBMutator
     public void setRootPageNumber(int newRootPageNumber) {
       _rootPageNumber = newRootPageNumber;
     }
-  }    
+  }
 }

@@ -42,7 +42,7 @@ public enum DataType {
    * (which is considered {@code false}).  Equivalent to SQL {@link
    * Types#BOOLEAN}.
    */
-  BOOLEAN((byte) 0x01, Types.BOOLEAN, 0),
+  BOOLEAN((byte) 0x01, Types.BOOLEAN, 1),
   /**
    * Corresponds to a java {@link Byte}.  Accepts any {@link Number} (using
    * {@link Number#byteValue}), Boolean as 1 or 0, any Object converted to a

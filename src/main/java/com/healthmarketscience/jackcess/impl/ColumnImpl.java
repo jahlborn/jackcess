@@ -284,15 +284,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
     _autoNumberGenerator = createAutoNumberGenerator();
 
-    if(_variableLength) {
-      _varLenTableIndex = args.buffer.getShort(
-          args.offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
-      _fixedDataOffset = 0;
-    } else {
-      _fixedDataOffset = args.buffer.getShort(
+    _varLenTableIndex = args.buffer.getShort(
+        args.offset + getFormat().OFFSET_COLUMN_VARIABLE_TABLE_INDEX);
+    _fixedDataOffset = args.buffer.getShort(
           args.offset + getFormat().OFFSET_COLUMN_FIXED_DATA_OFFSET);
-      _varLenTableIndex = 0;
-    }
   }
 
   /**
@@ -512,6 +507,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    */
   public int getFixedDataOffset() {
     return _fixedDataOffset;
+  }
+
+  protected int getFixedDataSize() {
+    return _type.getFixedSize(_columnLength);
   }
 
   protected Charset getCharset() {
@@ -1078,7 +1077,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * Writes an "extended" date/time value.
    */
   private void writeExtendedDateValue(ByteBuffer buffer, Object value)
-    throws InvalidValueException
   {
     LocalDateTime ldt = BASE_EXT_LDT;
     if(value != null) {
@@ -1495,7 +1493,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
   protected ByteBuffer writeFixedLengthField(Object obj, ByteOrder order)
     throws IOException
   {
-    int size = getType().getFixedSize(_columnLength);
+    int size = getFixedDataSize();
 
     ByteBuffer buffer = writeFixedLengthField(
         obj, PageChannel.createBuffer(size, order));
@@ -1582,7 +1580,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * Decodes a compressed or uncompressed text value.
    */
   String decodeTextValue(byte[] data)
-    throws IOException
   {
     // see if data is compressed.  the 0xFF, 0xFE sequence indicates that
     // compression is used (sort of, see algorithm below)
@@ -2040,7 +2037,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * @param buffer Buffer to write to
    */
   protected static void writeDefinitions(TableCreator creator, ByteBuffer buffer)
-    throws IOException
   {
     // we specifically put the "long variable" values after the normal
     // variable length values so that we have a better chance of fitting it
@@ -2059,7 +2055,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
   protected static void writeDefinition(
       TableMutator mutator, ColumnBuilder col, ByteBuffer buffer)
-    throws IOException
   {
     TableMutator.ColumnOffsets colOffsets = mutator.getColumnOffsets();
 
@@ -2067,11 +2062,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     buffer.putInt(TableImpl.MAGIC_TABLE_NUMBER);  //constant magic number
     buffer.putShort(col.getColumnNumber());  //Column Number
 
-    if(col.isVariableLength()) {
-      buffer.putShort(colOffsets.getNextVariableOffset(col));
-    } else {
-      buffer.putShort((short) 0);
-    }
+    buffer.putShort(colOffsets.getNextVariableOffset(col));
 
     buffer.putShort(col.getColumnNumber()); //Column Number again
 
@@ -2130,7 +2121,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
   protected static void writeColUsageMapDefinitions(
       TableCreator creator, ByteBuffer buffer)
-    throws IOException
   {
     // write long value column usage map references
     for(ColumnBuilder lvalCol : creator.getLongValueColumns()) {
@@ -2140,7 +2130,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
   protected static void writeColUsageMapDefinition(
       TableMutator creator, ColumnBuilder lvalCol, ByteBuffer buffer)
-    throws IOException
   {
     TableMutator.ColumnState colState = creator.getColumnState(lvalCol);
 
