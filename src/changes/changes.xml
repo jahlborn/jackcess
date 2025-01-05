@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.8" date="TBD">
+    <release version="4.0.8" date="2025-01-05">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="159">
         Fix adding fixed length columns to an existing table.
       </action>
