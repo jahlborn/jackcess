@@ -1457,6 +1457,16 @@ public class IndexPageCache
         }
         prevEntry = e;
       }
+
+      if(dpExtra._entryView.hasChildTail()) {
+        Entry tailE = dpExtra._entryView.getLast();
+        if(prevEntry.compareTo(tailE) >= 0) {
+          throw new IOException(withErrorContext(
+                  "Unexpected order in index entries, " + prevEntry +
+                  " >= " + tailE));
+        }
+      }
+
       if(entrySize != dpExtra._totalEntrySize) {
         throw new IllegalStateException(withErrorContext(
                 "Expected size " + entrySize +
@@ -1486,6 +1496,7 @@ public class IndexPageCache
       }
       Integer prevPageNumber = null;
       Integer nextPageNumber = null;
+      Entry prevLastEntry = FIRST_ENTRY;
       for(Entry e : dpExtra._entryView) {
         validateEntryForPage(dpMain, e);
         Integer subPageNumber = e.getSubPageNumber();
@@ -1515,13 +1526,21 @@ public class IndexPageCache
                       "Child tail status incorrect " + childMain));
             }
           }
-          Entry lastEntry = childMain.getExtra()._entryView.getLast();
+          DataPageExtra childExtra = childMain.getExtra();
+          Entry lastEntry = childExtra._entryView.getLast();
           if(e.compareTo(lastEntry) != 0) {
             throw new IllegalStateException(withErrorContext(
-                    "Invalid entry " + e + " but child is " + lastEntry));
+                    "Invalid last entry " + e + " but child is " + lastEntry));
+          }
+          Entry firstEntry = childExtra._entries.get(0);
+          if(prevLastEntry.compareTo(firstEntry) >= 0) {
+            throw new IllegalStateException(withErrorContext(
+                    "Invalid first entry " + firstEntry + " but prev last is " +
+                    prevLastEntry));
           }
           nextPageNumber = childMain._nextPageNumber;
           prevPageNumber = childMain._pageNumber;
+          prevLastEntry = lastEntry;
         } else {
           // if we aren't force loading, we may have gaps in the children so we
           // can't validate these for the current child
@@ -1546,6 +1565,7 @@ public class IndexPageCache
                   "Prev page " + prevMain + " does not ref " + dpMain));
         }
         validatePeerStatus(dpMain, prevMain);
+        validatePeerEntries(prevMain, dpMain);
       }
 
       DataPageMain nextMain =
@@ -1556,6 +1576,7 @@ public class IndexPageCache
                   "Next page " + nextMain + " does not ref " + dpMain));
         }
         validatePeerStatus(dpMain, nextMain);
+        validatePeerEntries(dpMain, nextMain);
       }
     }
 
@@ -1580,6 +1601,20 @@ public class IndexPageCache
                   "Mismatched node parents " + dpMain._parentPageNumber + " " +
                   peerMain._parentPageNumber));
         }
+      }
+    }
+
+    /**
+     * Validates the order of the entries of the peers.
+     */
+    private void validatePeerEntries(DataPageMain prevMain, DataPageMain nextMain)
+      throws IOException {
+      Entry lastE = prevMain.getExtra()._entryView.getLast();
+      Entry firstE = nextMain.getExtra()._entries.get(0);
+      if(lastE.compareTo(firstE) >= 0) {
+          throw new IOException(withErrorContext(
+                  "Unexpected peer order in index entries, " + lastE +
+                  " >= " + firstE));
       }
     }
 
