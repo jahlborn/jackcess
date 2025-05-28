@@ -1592,6 +1592,9 @@ public class IndexPageCache
         if(dpMain != null) {
           _knownPages.put(pageNumber, dpMain);
           _pendingPages.add(dpMain);
+        } else {
+          throw new IllegalStateException(
+              withErrorContext("Could not find index page " + pageNumber));
         }
       }
       return dpMain;

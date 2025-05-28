@@ -393,6 +393,7 @@ public class IndexData {
    * @usage _advanced_method_
    */
   public void validate(boolean forceLoad) throws IOException {
+    initialize();
     _pageCache.validate(forceLoad);
   }
 
