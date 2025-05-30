@@ -76,7 +76,7 @@ public class DefaultDateFunctions
   public static final Function DATE = registerFunc(new Func0("Date") {
     @Override
     protected Value eval0(EvalContext ctx) {
-      return ValueSupport.toValue(LocalDate.now());
+      return ValueSupport.toValue(LocalDate.now(ctx.getZoneId()));
     }
   });
 
