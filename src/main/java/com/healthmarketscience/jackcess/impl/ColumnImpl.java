@@ -265,7 +265,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * @usage _advanced_method_
    */
   ColumnImpl(InitArgs args)
-    throws IOException
   {
     _table = args.table;
     _name = args.name;

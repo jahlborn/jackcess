@@ -199,7 +199,6 @@ public class IndexData {
    */
   public static IndexData create(TableImpl table, ByteBuffer tableBuffer,
                                  int number, JetFormat format)
-    throws IOException
   {
     int uniqueEntryCountOffset =
       (format.OFFSET_INDEX_DEF_BLOCK +
@@ -588,7 +587,6 @@ public class IndexData {
   }
 
   private static ByteBuffer createRootPageBuffer(TableMutator creator)
-    throws IOException
   {
     ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
     writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE,
@@ -1152,7 +1150,6 @@ public class IndexData {
    */
   protected static void writeDataPage(ByteBuffer buffer, DataPage dataPage,
                                       int tdefPageNumber, JetFormat format)
-    throws IOException
   {
     buffer.put(dataPage.isLeaf() ?
                PageTypes.INDEX_LEAF :
@@ -1279,7 +1276,6 @@ public class IndexData {
    */
   private static Entry newEntry(ByteBuffer buffer, int entryLength,
                                 boolean isLeaf)
-    throws IOException
   {
     if(isLeaf) {
       return new Entry(buffer, entryLength);
@@ -1520,7 +1516,6 @@ public class IndexData {
    * Constructs a ColumnDescriptor of the relevant type for the given Column.
    */
   private ColumnDescriptor newColumnDescriptor(ColumnImpl col, byte flags)
-    throws IOException
   {
     switch(col.getType()) {
     case TEXT:
@@ -1626,7 +1621,6 @@ public class IndexData {
     private final byte _flags;
 
     private ColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       _column = column;
       _flags = flags;
@@ -1693,7 +1687,6 @@ public class IndexData {
   private static final class IntegerColumnDescriptor extends ColumnDescriptor
   {
     private IntegerColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1724,7 +1717,6 @@ public class IndexData {
     extends ColumnDescriptor
   {
     private FloatingPointColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1763,7 +1755,6 @@ public class IndexData {
     extends ColumnDescriptor
   {
     private LegacyFixedPointColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1813,7 +1804,6 @@ public class IndexData {
     extends LegacyFixedPointColumnDescriptor
   {
     private FixedPointColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1839,7 +1829,6 @@ public class IndexData {
   private static final class ByteColumnDescriptor extends ColumnDescriptor
   {
     private ByteColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1867,7 +1856,6 @@ public class IndexData {
   private static final class BooleanColumnDescriptor extends ColumnDescriptor
   {
     private BooleanColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1896,7 +1884,6 @@ public class IndexData {
     extends ColumnDescriptor
   {
     private GenLegTextColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1916,7 +1903,6 @@ public class IndexData {
   private static final class GenTextColumnDescriptor extends ColumnDescriptor
   {
     private GenTextColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1937,7 +1923,6 @@ public class IndexData {
     extends ColumnDescriptor
   {
     private Gen97TextColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1957,7 +1942,6 @@ public class IndexData {
   private static final class GuidColumnDescriptor extends ColumnDescriptor
   {
     private GuidColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1979,7 +1963,6 @@ public class IndexData {
   private static final class BinaryColumnDescriptor extends ColumnDescriptor
   {
     private BinaryColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -1999,7 +1982,6 @@ public class IndexData {
   private static final class ExtDateColumnDescriptor extends ColumnDescriptor
   {
     private ExtDateColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -2040,7 +2022,6 @@ public class IndexData {
   private final class ReadOnlyColumnDescriptor extends ColumnDescriptor
   {
     private ReadOnlyColumnDescriptor(ColumnImpl column, byte flags)
-      throws IOException
     {
       super(column, flags);
     }
@@ -2092,7 +2073,6 @@ public class IndexData {
      * Read an existing entry in from a buffer
      */
     private Entry(ByteBuffer buffer, int entryLen)
-      throws IOException
     {
       this(buffer, entryLen, 0);
     }
@@ -2101,7 +2081,6 @@ public class IndexData {
      * Read an existing entry in from a buffer
      */
     private Entry(ByteBuffer buffer, int entryLen, int extraTrailingLen)
-      throws IOException
     {
       // we need 4 trailing bytes for the rowId, plus whatever the caller
       // wants
@@ -2155,7 +2134,6 @@ public class IndexData {
      */
     protected void write(ByteBuffer buffer,
                          byte[] prefix)
-      throws IOException
     {
       if(prefix.length <= _entryBytes.length) {
 
@@ -2288,7 +2266,6 @@ public class IndexData {
      * Read an existing node entry in from a buffer
      */
     private NodeEntry(ByteBuffer buffer, int entryLen)
-      throws IOException
     {
       // we need 4 trailing bytes for the sub-page number
       super(buffer, entryLen, 4);
@@ -2313,7 +2290,7 @@ public class IndexData {
     }
 
     @Override
-    protected void write(ByteBuffer buffer, byte[] prefix) throws IOException {
+    protected void write(ByteBuffer buffer, byte[] prefix) {
       super.write(buffer, prefix);
       ByteUtil.putInt(buffer, _subPageNumber, ENTRY_BYTE_ORDER);
     }

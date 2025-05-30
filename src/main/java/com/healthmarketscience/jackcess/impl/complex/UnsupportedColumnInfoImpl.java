@@ -35,12 +35,12 @@ import com.healthmarketscience.jackcess.complex.UnsupportedValue;
  *
  * @author James Ahlborn
  */
-public class UnsupportedColumnInfoImpl 
-  extends ComplexColumnInfoImpl<UnsupportedValue> 
+public class UnsupportedColumnInfoImpl
+  extends ComplexColumnInfoImpl<UnsupportedValue>
   implements UnsupportedColumnInfo
 {
 
-  public UnsupportedColumnInfoImpl(Column column, int complexId, 
+  public UnsupportedColumnInfoImpl(Column column, int complexId,
                                    Table typeObjTable, Table flatTable)
     throws IOException
   {
@@ -73,7 +73,7 @@ public class UnsupportedColumnInfoImpl
   }
 
   @Override
-  protected Object[] asRow(Object[] row, UnsupportedValue value) 
+  protected Object[] asRow(Object[] row, UnsupportedValue value)
     throws IOException
   {
     super.asRow(row, value);
@@ -92,10 +92,10 @@ public class UnsupportedColumnInfoImpl
 
   public static UnsupportedValue newValue(
       ComplexValueForeignKey complexValueFk, Map<String,?> values) {
-    return new UnsupportedValueImpl(INVALID_ID, complexValueFk, 
+    return new UnsupportedValueImpl(INVALID_ID, complexValueFk,
                                     new LinkedHashMap<String,Object>(values));
   }
-  
+
   private static class UnsupportedValueImpl extends ComplexValueImpl
     implements UnsupportedValue
   {
@@ -112,7 +112,7 @@ public class UnsupportedColumnInfoImpl
     public Map<String,Object> getValues() {
       return _values;
     }
-    
+
     @Override
     public Object get(String columnName) {
       return getValues().get(columnName);
@@ -127,17 +127,17 @@ public class UnsupportedColumnInfoImpl
     public void update() throws IOException {
       getComplexValueForeignKey().updateUnsupportedValue(this);
     }
-    
+
     @Override
     public void delete() throws IOException {
       getComplexValueForeignKey().deleteUnsupportedValue(this);
     }
-    
+
     @Override
     public String toString()
     {
       return "UnsupportedValue(" + getComplexValueForeignKey() + "," + getId() +
         ") " + getValues();
-    } 
+    }
   }
 }

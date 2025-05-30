@@ -137,7 +137,7 @@ class CalculatedColumnUtil
   {
     private CalcColEvalContext _calcCol;
 
-    CalcColImpl(InitArgs args) throws IOException {
+    CalcColImpl(InitArgs args) {
       super(args);
     }
 
@@ -181,7 +181,7 @@ class CalculatedColumnUtil
   {
     private CalcColEvalContext _calcCol;
 
-    CalcBooleanColImpl(InitArgs args) throws IOException {
+    CalcBooleanColImpl(InitArgs args) {
       super(args);
     }
 
@@ -250,7 +250,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    public Object read(byte[] data, ByteOrder order) throws IOException {
+    public Object read(byte[] data, ByteOrder order) {
       return decodeTextValue(unwrapCalculatedValue(data));
     }
 

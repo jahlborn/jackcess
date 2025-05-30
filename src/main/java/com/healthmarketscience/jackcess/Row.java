@@ -16,11 +16,10 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import java.io.IOException;
-import java.util.Date;
-import java.util.Map;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.Map;
 
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.util.OleBlob;
@@ -126,5 +125,5 @@ public interface Row extends Map<String,Object>
    * <p>
    * Note, <i>the OleBlob should be closed after use</i>.
    */
-  public OleBlob getBlob(String name) throws IOException;
+  public OleBlob getBlob(String name);
 }

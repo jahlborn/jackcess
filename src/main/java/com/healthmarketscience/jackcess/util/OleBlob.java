@@ -419,7 +419,7 @@ public interface OleBlob extends Blob, Closeable
       return OleUtil.createBlob(this);
     }
 
-    public static OleBlob fromInternalData(byte[] bytes) throws IOException {
+    public static OleBlob fromInternalData(byte[] bytes) {
       return OleUtil.parseBlob(bytes);
     }
   }

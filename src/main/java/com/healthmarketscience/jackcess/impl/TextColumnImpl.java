@@ -16,7 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
 
 /**
  * ColumnImpl subclass which is used for Text data types.
@@ -24,16 +23,16 @@ import java.io.IOException;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class TextColumnImpl extends ColumnImpl 
+class TextColumnImpl extends ColumnImpl
 {
-  /** whether or not they are compressed */ 
+  /** whether or not they are compressed */
   private final boolean _compressedUnicode;
   /** the collating sort order for a text field */
   private final SortOrder _sortOrder;
   /** the code page for a text field (for certain db versions) */
   private final short _codePage;
 
-  TextColumnImpl(InitArgs args) throws IOException
+  TextColumnImpl(InitArgs args)
   {
     super(args);
 
@@ -43,7 +42,7 @@ class TextColumnImpl extends ColumnImpl
           getFormat());
       _codePage = readCodePage(args.buffer, args.offset, getFormat());
 
-      _compressedUnicode = 
+      _compressedUnicode =
         ((args.extFlags & COMPRESSED_UNICODE_EXT_FLAG_MASK) != 0);
   }
 
@@ -51,12 +50,12 @@ class TextColumnImpl extends ColumnImpl
   public boolean isCompressedUnicode() {
     return _compressedUnicode;
   }
-  
+
   @Override
   public short getTextCodePage() {
     return _codePage;
   }
-  
+
   @Override
   public SortOrder getTextSortOrder() {
     return _sortOrder;

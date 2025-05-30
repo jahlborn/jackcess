@@ -16,11 +16,10 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Date;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.LinkedHashMap;
 
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
@@ -122,7 +121,7 @@ public class RowImpl extends LinkedHashMap<String,Object> implements Row
   }
 
   @Override
-  public OleBlob getBlob(String name) throws IOException {
+  public OleBlob getBlob(String name) {
     byte[] bytes = getBytes(name);
     return ((bytes != null) ? OleBlob.Builder.fromInternalData(bytes) : null);
   }

@@ -36,9 +36,9 @@ import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
 
 /**
  * @author James Ahlborn
@@ -753,7 +753,7 @@ public class IndexCodesTest extends TestCase {
     }
   }
 
-  public static String toUnicodeStr(Object obj) throws Exception {
+  public static String toUnicodeStr(Object obj) {
     StringBuilder sb = new StringBuilder();
     for(char c : obj.toString().toCharArray()) {
       sb.append(toUnicodeStr(c)).append(" ");
@@ -761,7 +761,7 @@ public class IndexCodesTest extends TestCase {
     return sb.toString();
   }
 
-  private static String toUnicodeStr(char c) throws Exception {
+  private static String toUnicodeStr(char c) {
     String specialStr = SPECIAL_CHARS.get(c);
     if(specialStr != null) {
       return specialStr;

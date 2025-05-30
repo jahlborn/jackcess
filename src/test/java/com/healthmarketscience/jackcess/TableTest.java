@@ -198,7 +198,7 @@ public class TableTest extends TestCase {
   }
 
   private class TestTable extends TableImpl {
-    private TestTable() throws IOException {
+    private TestTable() {
       super(true, _columns);
     }
     public ByteBuffer createRow(Object... row) throws IOException {

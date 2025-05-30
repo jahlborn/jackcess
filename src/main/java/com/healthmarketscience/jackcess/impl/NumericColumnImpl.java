@@ -16,7 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
 
 /**
  * ColumnImpl subclass which is used for numeric data types.
@@ -24,14 +23,14 @@ import java.io.IOException;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class NumericColumnImpl extends ColumnImpl 
+class NumericColumnImpl extends ColumnImpl
 {
   /** Numeric precision */
   private final byte _precision;
   /** Numeric scale */
   private final byte _scale;
 
-  NumericColumnImpl(InitArgs args) throws IOException
+  NumericColumnImpl(InitArgs args)
   {
     super(args);
 
@@ -44,9 +43,9 @@ class NumericColumnImpl extends ColumnImpl
   public byte getPrecision() {
     return _precision;
   }
-  
+
   @Override
   public byte getScale() {
     return _scale;
-  }  
+  }
 }

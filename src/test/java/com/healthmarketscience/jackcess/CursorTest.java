@@ -27,6 +27,8 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -37,8 +39,6 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
 import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 
 /**
  * @author James Ahlborn
@@ -64,7 +64,6 @@ public class CursorTest extends TestCase {
   }
 
   private static List<Map<String,Object>> createTestTableData()
-    throws Exception
   {
     List<Map<String,Object>> expectedRows =
       new ArrayList<Map<String,Object>>();
@@ -217,7 +216,6 @@ public class CursorTest extends TestCase {
 
   private static void doTestSimple(Cursor cursor,
                                    List<Map<String, Object>> expectedRows)
-    throws Exception
   {
     if(expectedRows == null) {
       expectedRows = createTestTableData();
@@ -303,7 +301,6 @@ public class CursorTest extends TestCase {
   }
 
   private static void doTestMoveNoReset(Cursor cursor)
-    throws Exception
   {
     List<Map<String, Object>> expectedRows = createTestTableData();
     List<Map<String, Object>> foundRows = new ArrayList<Map<String, Object>>();
@@ -431,7 +428,6 @@ public class CursorTest extends TestCase {
 
   private static void doTestReverse(Cursor cursor,
                                     List<Map<String, Object>> expectedRows)
-    throws Exception
   {
     if(expectedRows == null) {
       expectedRows = createTestTableData();

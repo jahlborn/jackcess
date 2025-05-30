@@ -71,7 +71,6 @@ public class UsageMap
    */
   private UsageMap(DatabaseImpl database, ByteBuffer tableBuffer,
                    int pageNum, short rowStart)
-    throws IOException
   {
     _database = database;
     _tableBuffer = tableBuffer;
@@ -482,7 +481,7 @@ public class UsageMap
   {
     private final int _maxInlinePages;
 
-    protected InlineHandler() throws IOException
+    protected InlineHandler()
     {
       _maxInlinePages = (getInlineDataEnd() - getInlineDataStart()) * 8;
       int startPage = getTableBuffer().getInt(getRowStart() + 1);
@@ -623,7 +622,7 @@ public class UsageMap
    */
   private class GlobalInlineHandler extends InlineHandler
   {
-    private GlobalInlineHandler() throws IOException {
+    private GlobalInlineHandler() {
     }
 
     @Override

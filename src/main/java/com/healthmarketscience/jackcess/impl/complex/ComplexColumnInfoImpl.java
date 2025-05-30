@@ -45,7 +45,7 @@ import com.healthmarketscience.jackcess.impl.TableImpl;
  *
  * @author James Ahlborn
  */
-public abstract class ComplexColumnInfoImpl<V extends ComplexValue> 
+public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   implements ComplexColumnInfo<V>
 {
   private static final int INVALID_ID_VALUE = -1;
@@ -61,7 +61,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   private final Column _pkCol;
   private final Column _complexValFkCol;
   private IndexCursor _complexValIdCursor;
-  
+
   protected ComplexColumnInfoImpl(Column column, int complexTypeId,
                                   Table typeObjTable, Table flatTable)
     throws IOException
@@ -69,7 +69,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     _column = column;
     _complexTypeId = complexTypeId;
     _flatTable = flatTable;
-    
+
     // the flat table has all the "value" columns and 2 extra columns, a
     // primary key for each row, and a LONG value which is essentially a
     // foreign key to the main table.
@@ -101,7 +101,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   public void postTableLoadInit() throws IOException {
     // nothing to do in base class
   }
-  
+
   public Column getColumn() {
     return _column;
   }
@@ -121,14 +121,14 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   protected List<Column> getTypeColumns() {
     return _typeCols;
   }
-  
+
   @Override
   public int countValues(int complexValueFk) throws IOException {
     return getRawValues(complexValueFk,
                         Collections.singleton(_complexValFkCol.getName()))
       .size();
   }
-  
+
   @Override
   public List<Row> getRawValues(int complexValueFk)
     throws IOException
@@ -149,7 +149,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     return _complexValIdCursor.newEntryIterable(complexValueFk)
       .setColumnNames(columnNames).iterator();
   }
-  
+
   @Override
   public List<Row> getRawValues(int complexValueFk,
                                 Collection<String> columnNames)
@@ -165,7 +165,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     while(entryIter.hasNext()) {
       values.add(entryIter.next());
     }
-    
+
     return values;
   }
 
@@ -180,7 +180,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
     return toValues(complexValueFk, rawValues);
   }
-  
+
   protected List<V> toValues(ComplexValueForeignKey complexValueFk,
                              List<Row> rawValues)
     throws IOException
@@ -195,7 +195,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
   @Override
   public ComplexValue.Id addRawValue(Map<String,?> rawValue)
-    throws IOException 
+    throws IOException
   {
     Object[] row = ((TableImpl)_flatTable).asRowWithRowId(rawValue);
     _flatTable.addRow(row);
@@ -223,7 +223,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     _flatTable.updateRow(rawValue);
     return getValueId(rawValue);
   }
-  
+
   @Override
   public ComplexValue.Id updateValue(V value) throws IOException {
     ComplexValue.Id id = value.getId();
@@ -242,7 +242,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   public void deleteRawValue(Row rawValue) throws IOException {
     deleteRow(rawValue.getId());
   }
-  
+
   @Override
   public void deleteValue(V value) throws IOException {
     deleteRow(value.getId().getRowId());
@@ -279,11 +279,11 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   private void updateRow(ComplexValue.Id id, Object[] row) throws IOException {
     ((TableImpl)_flatTable).updateRow(id.getRowId(), row);
   }
-  
+
   private void deleteRow(RowId rowId) throws IOException {
     ((TableImpl)_flatTable).deleteRow(rowId);
   }
-  
+
   protected ComplexValueIdImpl getValueId(Row row) {
     int idVal = (Integer)getPrimaryKeyColumn().getRowValue(row);
     return new ComplexValueIdImpl(idVal, row.getId());
@@ -291,11 +291,11 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
   protected ComplexValueIdImpl getValueId(Object[] row) {
     int idVal = (Integer)getPrimaryKeyColumn().getRowValue(row);
-    return new ComplexValueIdImpl(idVal, 
+    return new ComplexValueIdImpl(idVal,
                                   ((TableImpl)_flatTable).getRowId(row));
   }
 
-  protected Object[] asRow(Object[] row, V value) 
+  protected Object[] asRow(Object[] row, V value)
     throws IOException
   {
   ComplexValue.Id id = value.getId();
@@ -312,7 +312,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     row[row.length - 1] = ColumnImpl.RETURN_ROW_ID;
     return row;
   }
-  
+
   @Override
   public String toString() {
     return CustomToStringStyle.valueBuilder(this)
@@ -321,7 +321,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       .toString();
   }
 
-  protected static void diffFlatColumns(Table typeObjTable, 
+  protected static void diffFlatColumns(Table typeObjTable,
                                         Table flatTable,
                                         List<Column> typeCols,
                                         List<Column> otherCols)
@@ -333,10 +333,10 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
         typeCols.add(col);
       } else {
         otherCols.add(col);
-      }  
-    } 
+      }
+    }
   }
-  
+
   @Override
   public abstract ComplexDataType getType();
 
@@ -344,7 +344,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       ComplexValueForeignKey complexValueFk,
       Row rawValues)
     throws IOException;
-  
+
   protected static abstract class ComplexValueImpl implements ComplexValue
   {
     private Id _id;
@@ -371,7 +371,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       }
       _id = id;
     }
-    
+
     @Override
     public ComplexValueForeignKey getComplexValueForeignKey() {
       return _complexValueFk;
@@ -394,7 +394,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     public Column getColumn() {
       return _complexValueFk.getColumn();
     }
-    
+
     @Override
     public int hashCode() {
       return ((_id.get() * 37) ^ _complexValueFk.hashCode());
@@ -414,7 +414,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
    */
   private static final class ComplexValueIdImpl extends ComplexValue.Id
   {
-    private static final long serialVersionUID = 20130318L;    
+    private static final long serialVersionUID = 20130318L;
 
     private final int _value;
     private final RowId _rowId;
@@ -423,7 +423,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       _value = value;
       _rowId = rowId;
     }
-    
+
     @Override
     public int get() {
       return _value;
@@ -434,5 +434,5 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       return _rowId;
     }
   }
-  
+
 }

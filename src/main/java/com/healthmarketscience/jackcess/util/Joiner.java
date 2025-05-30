@@ -38,13 +38,13 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
  * @author James Ahlborn
  * @usage _general_class_
  */
-public class Joiner 
+public class Joiner
 {
   private final Index _fromIndex;
   private final List<? extends Index.Column> _fromCols;
   private final IndexCursor _toCursor;
   private final Object[] _entryValues;
-  
+
   private Joiner(Index fromIndex, IndexCursor toCursor)
   {
     _fromIndex = fromIndex;
@@ -67,7 +67,7 @@ public class Joiner
   {
     return create(fromTable.getForeignKeyIndex(toTable));
   }
-  
+
   /**
    * Creates a new Joiner based on the given index which backs a foreign-key
    * relationship.  The table of the given index will be the "from" table and
@@ -88,29 +88,29 @@ public class Joiner
   /**
    * Creates a new Joiner that is the reverse of this Joiner (the "from" and
    * "to" tables are swapped).
-   */ 
+   */
   public Joiner createReverse()
     throws IOException
   {
     return create(getToTable(), getFromTable());
   }
-  
+
   public Table getFromTable() {
     return getFromIndex().getTable();
   }
-  
+
   public Index getFromIndex() {
     return _fromIndex;
   }
-  
+
   public Table getToTable() {
     return getToCursor().getTable();
   }
-  
+
   public Index getToIndex() {
     return getToCursor().getIndex();
   }
-  
+
   public IndexCursor getToCursor() {
     return _toCursor;
   }
@@ -151,7 +151,7 @@ public class Joiner
   {
     return findFirstRow(fromRow, null);
   }
-  
+
   /**
    * Returns selected columns from the first row in the "to" table based on
    * the given columns in the "from" table if any, {@code null} if there is no
@@ -179,7 +179,7 @@ public class Joiner
     toEntryValues(fromRow);
     return _toCursor.newEntryIterable(_entryValues);
   }
-  
+
   /**
    * Returns an Iterator with the selected columns over all the rows in the
    * "to" table based on the given columns in the "from" table.
@@ -196,13 +196,13 @@ public class Joiner
   /**
    * Deletes any rows in the "to" table based on the given columns in the
    * "from" table.
-   * 
+   *
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    * @return {@code true} if any "to" rows were deleted, {@code false}
    *         otherwise
    */
-  public boolean deleteRows(Map<String,?> fromRow) throws IOException {
+  public boolean deleteRows(Map<String,?> fromRow) {
     return deleteRowsImpl(findRows(fromRow)
                           .setColumnNames(Collections.<String>emptySet())
                           .iterator());
@@ -211,14 +211,14 @@ public class Joiner
   /**
    * Deletes any rows in the "to" table based on the given columns in the
    * "from" table.
-   * 
+   *
    * @param fromRow row from the "from" table (which must include the relevant
    *                columns for this join relationship)
    * @return {@code true} if any "to" rows were deleted, {@code false}
    *         otherwise
    * @usage _intermediate_method_
    */
-  public boolean deleteRows(Object[] fromRow) throws IOException {
+  public boolean deleteRows(Object[] fromRow) {
     return deleteRowsImpl(findRows(fromRow)
                           .setColumnNames(Collections.<String>emptySet())
                           .iterator());
@@ -229,7 +229,6 @@ public class Joiner
    * deleted.
    */
   private static boolean deleteRowsImpl(Iterator<Row> iter)
-    throws IOException 
   {
     boolean removed = false;
     while(iter.hasNext()) {
@@ -237,7 +236,7 @@ public class Joiner
       iter.remove();
       removed = true;
     }
-    return removed;    
+    return removed;
   }
 
   /**
@@ -282,7 +281,7 @@ public class Joiner
       sb.append(",").append(_fromCols.get(i).getName());
     }
     sb.append(fromType);
-    
+
     sb.append(" to ").append(getToTable().getName()).append("[");
     List<? extends Index.Column> toCols = _toCursor.getIndex().getColumns();
     sb.append(toCols.get(0).getName());
@@ -293,7 +292,7 @@ public class Joiner
       .append(" (Db=")
       .append(((DatabaseImpl)getFromTable().getDatabase()).getName())
       .append(")");
-    
+
     return sb.toString();
   }
 }

@@ -57,7 +57,7 @@ class LongValueColumnImpl extends ColumnImpl
   private LongValueBufferHolder _lvalBufferH;
   private int _maxLenInUnits = INVALID_LENGTH;
 
-  LongValueColumnImpl(InitArgs args) throws IOException
+  LongValueColumnImpl(InitArgs args)
   {
     super(args);
   }

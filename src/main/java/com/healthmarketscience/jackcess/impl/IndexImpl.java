@@ -32,16 +32,16 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Access table (logical) index.  Logical indexes are backed for IndexData,
  * where one or more logical indexes could be backed by the same data.
- * 
+ *
  * @author Tim McCune
  */
-public class IndexImpl implements Index, Comparable<IndexImpl> 
+public class IndexImpl implements Index, Comparable<IndexImpl>
 {
   protected static final Log LOG = LogFactory.getLog(IndexImpl.class);
-    
+
   /** index type for primary key indexes */
   public static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
-  
+
   /** index type for foreign key indexes */
   public static final byte FOREIGN_KEY_INDEX_TYPE = (byte)2;
 
@@ -72,15 +72,14 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   private String _name;
   /** foreign key reference info, if any */
   private final ForeignKeyReference _reference;
-  
+
   protected IndexImpl(ByteBuffer tableBuffer, List<IndexData> indexDatas,
-                      JetFormat format) 
-    throws IOException
+                      JetFormat format)
   {
     ByteUtil.forward(tableBuffer, format.SKIP_BEFORE_INDEX_SLOT); //Forward past Unknown
     _indexNumber = tableBuffer.getInt();
     int indexDataNumber = tableBuffer.getInt();
-      
+
     // read foreign key reference info
     byte relIndexType = tableBuffer.get();
     int relIndexNumber = tableBuffer.getInt();
@@ -89,8 +88,8 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     byte cascadeDeletesFlag = tableBuffer.get();
 
     _indexType = tableBuffer.get();
- 
-    if((_indexType == FOREIGN_KEY_INDEX_TYPE) && 
+
+    if((_indexType == FOREIGN_KEY_INDEX_TYPE) &&
        (relIndexNumber != INVALID_INDEX_NUMBER)) {
       _reference = new ForeignKeyReference(
           relIndexType, relIndexNumber, relTablePageNumber,
@@ -116,7 +115,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public TableImpl getTable() {
     return getIndexData().getTable();
   }
-  
+
   public JetFormat getFormat() {
     return getTable().getFormat();
   }
@@ -132,7 +131,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public byte getIndexFlags() {
     return getIndexData().getIndexFlags();
   }
-  
+
   public int getUniqueEntryCount() {
     return getIndexData().getUniqueEntryCount();
   }
@@ -145,7 +144,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public String getName() {
     return _name;
   }
-  
+
   void setName(String name) {
     _name = name;
   }
@@ -187,10 +186,10 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
         break;
       }
     }
-    
+
     if(refIndex == null) {
       throw new IOException(withErrorContext(
-              "Reference to missing index " + idxNumber + 
+              "Reference to missing index " + idxNumber +
               " on table " + refTable.getName()));
     }
 
@@ -198,7 +197,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     // index)
     ForeignKeyReference otherRef = refIndex.getReference();
     if((otherRef == null) ||
-       (otherRef.getOtherTablePageNumber() != 
+       (otherRef.getOtherTablePageNumber() !=
         getTable().getTableDefPageNumber()) ||
        (otherRef.getOtherIndexNumber() != _indexNumber)) {
       throw new IOException(withErrorContext(
@@ -218,12 +217,12 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public boolean isUnique() {
     return getIndexData().isUnique();
   }
-  
+
   @Override
   public boolean isRequired() {
     return getIndexData().isRequired();
   }
-  
+
   @Override
   public List<IndexData.ColumnDescriptor> getColumns() {
     return getIndexData().getColumns();
@@ -238,14 +237,14 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public CursorBuilder newCursor() {
     return getTable().newCursor().setIndex(this);
   }
-  
+
   /**
    * Whether or not the complete index state has been read.
    */
   public boolean isInitialized() {
     return getIndexData().isInitialized();
   }
-  
+
   /**
    * Forces initialization of this index (actual parsing of index pages).
    * normally, the index will not be initialized until the entries are
@@ -254,7 +253,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public void initialize() throws IOException {
     getIndexData().initialize();
   }
-      
+
   /**
    * Gets a new cursor for this index.
    * <p>
@@ -265,13 +264,13 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     return cursor(null, true, null, true);
   }
-  
+
   /**
    * Gets a new cursor for this index, narrowed to the range defined by the
    * given startRow and endRow.
    * <p>
    * Forces index initialization.
-   * 
+   *
    * @param startRow the first row of data for the cursor, or {@code null} for
    *                 the first entry
    * @param startInclusive whether or not startRow is inclusive or exclusive
@@ -300,7 +299,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     return getIndexData().constructIndexRowFromEntry(values);
   }
-    
+
   /**
    * Constructs an array of values appropriate for this index from the given
    * column values, possibly only providing a prefix subset of the index
@@ -326,7 +325,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     return constructIndexRow(Collections.singletonMap(colName, value));
   }
-  
+
   /**
    * Constructs an array of values appropriate for this index from the given
    * column value, which must be the first column of the index.  Any missing,
@@ -338,7 +337,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   {
     return constructPartialIndexRow(filler, Collections.singletonMap(colName, value));
   }
-  
+
   /**
    * Constructs an array of values appropriate for this index from the given
    * column values.
@@ -348,7 +347,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public Object[] constructIndexRow(Map<String,?> row)
   {
     return getIndexData().constructIndexRow(row);
-  }  
+  }
 
   /**
    * Constructs an array of values appropriate for this index from the given
@@ -362,7 +361,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
   public Object[] constructPartialIndexRow(Object filler, Map<String,?> row)
   {
     return getIndexData().constructPartialIndexRow(filler, row);
-  }  
+  }
 
   @Override
   public String toString() {
@@ -377,7 +376,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     sb.append("data", _data);
     return sb.toString();
   }
-  
+
   @Override
   public int compareTo(IndexImpl other) {
     if (_indexNumber > other.getIndexNumber()) {
@@ -396,7 +395,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
    */
   protected static void writeDefinitions(
       TableCreator creator, ByteBuffer buffer)
-    throws IOException
   {
     // write logical index information
     for(IndexBuilder idx : creator.getIndexes()) {
@@ -411,7 +409,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
 
   protected static void writeDefinition(
       TableMutator mutator, IndexBuilder idx, ByteBuffer buffer)
-    throws IOException
   {
     TableMutator.IndexDataState idxDataState = mutator.getIndexDataState(idx);
 
@@ -458,7 +455,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
                                          String idxName) {
     return msg + " (Db=" + db.getName() + ";Index=" + idxName + ")";
   }
-  
+
 
   /**
    * Information about a foreign key reference defined in an index (when
@@ -472,7 +469,7 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     private final boolean _cascadeUpdates;
     private final boolean _cascadeDeletes;
     private final boolean _cascadeNull;
-    
+
     public ForeignKeyReference(
         byte tableType, int otherIndexNumber, int otherTablePageNumber,
         boolean cascadeUpdates, boolean cascadeDeletes, boolean cascadeNull)
