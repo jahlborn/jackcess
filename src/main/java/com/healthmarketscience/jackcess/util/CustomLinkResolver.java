@@ -32,7 +32,7 @@ import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 
 /**
- * Utility base implementaton of LinkResolver which facilitates loading linked
+ * Utility base implementation of LinkResolver which facilitates loading linked
  * tables from files which are not access databases.  The LinkResolver API
  * ultimately presents linked table information to the primary database using
  * the jackcess {@link Database} and {@link Table} classes.  In order to
@@ -140,8 +140,8 @@ public abstract class CustomLinkResolver implements LinkResolver
     Object customFile = loadCustomFile(linkerDb, linkeeFileName);
     if(customFile != null) {
       // if linker is read-only, open linkee read-only
-      boolean readOnly = ((linkerDb instanceof DatabaseImpl) ?
-                          ((DatabaseImpl)linkerDb).isReadOnly() : false);
+      boolean readOnly = ((linkerDb instanceof DatabaseImpl) &&
+                          ((DatabaseImpl)linkerDb).isReadOnly());
       return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
                           getDefaultTempDirectory(), readOnly);
     }

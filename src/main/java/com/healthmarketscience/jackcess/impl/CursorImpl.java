@@ -215,10 +215,8 @@ public abstract class CursorImpl implements Cursor
   }
 
   protected boolean isAtBeginning(boolean moveForward) throws IOException {
-    if(getDirHandler(moveForward).getBeginningPosition().equals(_curPos)) {
-      return !recheckPosition(!moveForward);
-    }
-    return false;
+    return (getDirHandler(moveForward).getBeginningPosition().equals(_curPos) &&
+            !recheckPosition(!moveForward));
   }
 
   @Override

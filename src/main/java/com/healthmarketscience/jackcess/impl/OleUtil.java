@@ -486,19 +486,18 @@ public class OleUtil
     }
 
     @Override
-    public InputStream getBinaryStream() throws SQLException {
+    public InputStream getBinaryStream() {
       return new ByteArrayInputStream(_bytes);
     }
 
     @Override
     public InputStream getBinaryStream(long pos, long len)
-      throws SQLException
     {
       return new ByteArrayInputStream(_bytes, fromJdbcOffset(pos), (int)len);
     }
 
     @Override
-    public long length() throws SQLException {
+    public long length() {
       return _bytes.length;
     }
 
@@ -511,12 +510,12 @@ public class OleUtil
     }
 
     @Override
-    public byte[] getBytes(long pos, int len) throws SQLException {
+    public byte[] getBytes(long pos, int len) {
       return ByteUtil.copyOf(_bytes, fromJdbcOffset(pos), len);
     }
 
     @Override
-    public long position(byte[] pattern, long start) throws SQLException {
+    public long position(byte[] pattern, long start) {
       int pos = ByteUtil.findRange(PageChannel.wrap(_bytes),
                                    fromJdbcOffset(start), pattern);
       return((pos >= 0) ? toJdbcOffset(pos) : pos);

@@ -29,7 +29,7 @@ import java.util.List;
  *
  * @author James Ahlborn
  */
-public class ByteArrayBuilder 
+public class ByteArrayBuilder
 {
   private int _pos;
   private final List<Data> _data = new ArrayList<Data>();
@@ -109,8 +109,8 @@ public class ByteArrayBuilder
 
   private static abstract class Data
   {
-    private int _pos;
-    
+    private final int _pos;
+
     protected Data(int pos) {
       _pos = pos;
     }

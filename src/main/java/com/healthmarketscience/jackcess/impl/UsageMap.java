@@ -50,7 +50,7 @@ public class UsageMap
   /** Last page that this usage map applies to */
   private int _endPage;
   /** bits representing page numbers used, offset from _startPage */
-  private BitSet _pageNumbers = new BitSet();
+  private final BitSet _pageNumbers = new BitSet();
   /** Buffer that contains the usage map table declaration page */
   private final ByteBuffer _tableBuffer;
   /** modification count on the usage map, used to keep the cursors in

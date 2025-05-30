@@ -21,6 +21,8 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -35,7 +37,7 @@ import com.healthmarketscience.jackcess.util.MemFileChannel;
 import org.junit.Assert;
 
 /**
- * Utilty code for the test cases.
+ * Utility code for the test cases.
  *
  * @author James Ahlborn
  */
@@ -421,15 +423,7 @@ public class TestUtil
   public static void copyFile(File srcFile, File dstFile)
     throws IOException
   {
-    // FIXME should really be using commons io FileUtils here, but don't want
-    // to add dep for one simple test method
-    OutputStream ostream = new FileOutputStream(dstFile);
-    InputStream istream = new FileInputStream(srcFile);
-    try {
-      copyStream(istream, ostream);
-    } finally {
-      ostream.close();
-    }
+    Files.copy(srcFile.toPath(), dstFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
   }
 
   static void copyStream(InputStream istream, OutputStream ostream)
@@ -468,7 +462,7 @@ public class TestUtil
   public static byte[] toByteArray(File file)
     throws IOException
   {
-    return toByteArray(new FileInputStream(file), file.length());
+    return Files.readAllBytes(file.toPath());
   }
 
   public static byte[] toByteArray(InputStream in, long length)
@@ -487,7 +481,7 @@ public class TestUtil
   }
 
   static void checkTestDBTable1RowABCDEFG(final TestDB testDB, final Table table, final Row row)
-          throws IOException {
+  {
     Assert.assertEquals("testDB: " + testDB + "; table: " + table, "abcdefg", row.get("A"));
     Assert.assertEquals("hijklmnop", row.get("B"));
     Assert.assertEquals(new Byte((byte) 2), row.get("C"));
@@ -507,7 +501,7 @@ public class TestUtil
   }
 
   static void checkTestDBTable1RowA(final TestDB testDB, final Table table, final Row row)
-          throws IOException {
+  {
     Assert.assertEquals("testDB: " + testDB + "; table: " + table, "a", row.get("A"));
     Assert.assertEquals("b", row.get("B"));
     Assert.assertEquals(new Byte((byte) 0), row.get("C"));

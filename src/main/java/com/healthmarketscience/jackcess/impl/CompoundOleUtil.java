@@ -164,7 +164,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
     @Override
     public Iterator<Entry> iterator() {
       try {
-      return getEntries(new ArrayList<Entry>(), getFileSystem().getRoot(),
+      return getEntries(new ArrayList<>(), getFileSystem().getRoot(),
                         ENTRY_SEPARATOR).iterator();
       } catch(IOException e) {
         throw new RuntimeIOException(e);

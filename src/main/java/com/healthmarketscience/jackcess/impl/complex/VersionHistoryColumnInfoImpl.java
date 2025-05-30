@@ -99,19 +99,19 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   }
 
   @Override
-  public ComplexValue.Id updateValue(Version value) throws IOException {
+  public ComplexValue.Id updateValue(Version value) {
     throw new UnsupportedOperationException(
         "This column does not support value updates");
   }
 
   @Override
-  public void deleteValue(Version value) throws IOException {
+  public void deleteValue(Version value) {
     throw new UnsupportedOperationException(
         "This column does not support value deletes");
   }
 
   @Override
-  public void deleteAllValues(int complexValueFk) throws IOException {
+  public void deleteAllValues(int complexValueFk) {
     throw new UnsupportedOperationException(
         "This column does not support value deletes");
   }
@@ -119,7 +119,6 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
   @Override
   protected List<Version> toValues(ComplexValueForeignKey complexValueFk,
                                    List<Row> rawValues)
-    throws IOException
   {
     List<Version> versions = super.toValues(complexValueFk, rawValues);
 
@@ -224,13 +223,13 @@ public class VersionHistoryColumnInfoImpl extends ComplexColumnInfoImpl<Version>
     }
 
     @Override
-    public void update() throws IOException {
+    public void update() {
       throw new UnsupportedOperationException(
           "This column does not support value updates");
     }
 
     @Override
-    public void delete() throws IOException {
+    public void delete() {
       throw new UnsupportedOperationException(
           "This column does not support value deletes");
     }

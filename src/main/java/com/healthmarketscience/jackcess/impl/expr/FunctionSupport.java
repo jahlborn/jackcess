@@ -252,18 +252,12 @@ public class FunctionSupport
 
   public static boolean getOptionalBooleanParam(
       LocaleContext ctx, Value[] params, int idx) {
-    if(params.length > idx) {
-      return params[idx].getAsBoolean(ctx);
-    }
-    return false;
+    return ((params.length > idx) && params[idx].getAsBoolean(ctx));
   }
 
   public static double getOptionalDoubleParam(
       EvalContext ctx, Value[] params, int idx, double defValue) {
-    if(params.length > idx) {
-      return params[idx].getAsDouble(ctx);
-    }
-    return defValue;
+    return ((params.length > idx) ? params[idx].getAsDouble(ctx) : defValue);
   }
 
   public static int getOptionalIntParam(

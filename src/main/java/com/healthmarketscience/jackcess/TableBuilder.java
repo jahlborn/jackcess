@@ -61,7 +61,7 @@ public class TableBuilder {
      * All of the reserved words in Access that should be escaped when creating
      * table or column names
      */
-    private static final Set<String> VALUES = 
+    private static final Set<String> VALUES =
       new HashSet<String>(Arrays.asList(
        "add", "all", "alphanumeric", "alter", "and", "any", "application", "as",
        "asc", "assistant", "autoincrement", "avg", "between", "binary", "bit",
@@ -99,19 +99,19 @@ public class TableBuilder {
   /** name of the new table */
   private String _name;
   /** columns for the new table */
-  private List<ColumnBuilder> _columns = new ArrayList<ColumnBuilder>();
+  private final List<ColumnBuilder> _columns = new ArrayList<ColumnBuilder>();
   /** indexes for the new table */
-  private List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
+  private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
   /** whether or not table/column/index names are automatically escaped */
   private boolean _escapeIdentifiers;
   /** table properties (if any) */
   private Map<String,PropertyMap.Property> _props;
 
-  
+
   public TableBuilder(String name) {
     this(name, false);
   }
-  
+
   public TableBuilder(String name, boolean escapeIdentifiers) {
     _name = name;
     _escapeIdentifiers = escapeIdentifiers;
@@ -150,7 +150,7 @@ public class TableBuilder {
   public List<ColumnBuilder> getColumns() {
     return _columns;
   }
-  
+
   /**
    * Adds an IndexBuilder to the new table.
    */
@@ -180,7 +180,7 @@ public class TableBuilder {
   public List<IndexBuilder> getIndexes() {
     return _indexes;
   }
-  
+
   /**
    * Sets whether or not subsequently added columns will have their names
    * automatically escaped
@@ -199,7 +199,7 @@ public class TableBuilder {
              .addColumns(colNames).setPrimaryKey());
     return this;
   }
-  
+
   /**
    * Escapes the new table's name using {@link TableBuilder#escapeIdentifier}.
    */
@@ -217,7 +217,7 @@ public class TableBuilder {
   public TableBuilder putProperty(String name, Object value) {
     return putProperty(name, null, value);
   }
-  
+
   /**
    * Sets the table property with the given name and type to the given value.
    */
@@ -247,7 +247,7 @@ public class TableBuilder {
    */
   public static String escapeIdentifier(String s) {
     if (isReservedWord(s)) {
-      return ESCAPE_PREFIX + s; 
+      return ESCAPE_PREFIX + s;
     }
     return s;
   }

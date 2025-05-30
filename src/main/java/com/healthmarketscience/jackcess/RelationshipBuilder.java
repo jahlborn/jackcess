@@ -46,7 +46,7 @@ import com.healthmarketscience.jackcess.impl.RelationshipImpl;
  * @see TableBuilder
  * @usage _general_class_
  */
-public class RelationshipBuilder 
+public class RelationshipBuilder
 {
   private static final int JOIN_FLAGS =
     RelationshipImpl.LEFT_OUTER_JOIN_FLAG |
@@ -54,10 +54,10 @@ public class RelationshipBuilder
 
   /** relationship flags (default to "don't enforce") */
   private int _flags = RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG;
-  private String _fromTable;
-  private String _toTable;
-  private List<String> _fromCols = new ArrayList<String>();
-  private List<String> _toCols = new ArrayList<String>();
+  private final String _fromTable;
+  private final String _toTable;
+  private final List<String> _fromCols = new ArrayList<String>();
+  private final List<String> _toCols = new ArrayList<String>();
   private String _name = null;
 
   public RelationshipBuilder(Table fromTable, Table toTable) {
@@ -103,7 +103,7 @@ public class RelationshipBuilder
   public RelationshipBuilder setCascadeDeletes() {
     return setFlag(RelationshipImpl.CASCADE_DELETES_FLAG);
   }
-  
+
   /**
    * Enables updates to be cascaded from the "from" table to the "to" table.
    *
@@ -121,7 +121,7 @@ public class RelationshipBuilder
    */
   public RelationshipBuilder setCascadeNullOnDelete() {
     return setFlag(RelationshipImpl.CASCADE_NULL_FLAG);
-  }  
+  }
 
   /**
    * Sets the preferred join type for this relationship.
@@ -143,11 +143,11 @@ public class RelationshipBuilder
     }
     return this;
   }
-  
+
   /**
    * Sets a specific name for this relationship.
-   * 
-   * Default = null, meaning that the standard Access naming convention will be used. 
+   *
+   * Default = null, meaning that the standard Access naming convention will be used.
    */
   public RelationshipBuilder setName(String relationshipName) {
     _name = relationshipName;
@@ -169,7 +169,7 @@ public class RelationshipBuilder
   public String getToTable() {
     return _toTable;
   }
-  
+
   public List<String> getFromColumns() {
     return _fromCols;
   }
@@ -177,11 +177,11 @@ public class RelationshipBuilder
   public List<String> getToColumns() {
     return _toCols;
   }
-  
+
   public String getName() {
     return _name;
   }
-  
+
   /**
    * Creates a new Relationship in the given Database with the currently
    * configured attributes.

@@ -1478,8 +1478,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
               "unexpected inline var length type: " + getType()));
     }
 
-    ByteBuffer buffer = ByteBuffer.wrap(toByteArray(obj)).order(order);
-    return buffer;
+    return ByteBuffer.wrap(toByteArray(obj)).order(order);
   }
 
   /**
@@ -1962,9 +1961,9 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       ByteUtil.copy((InputStream)value, bout);
     } else {
       // if all else fails, serialize it
-      ObjectOutputStream oos = new ObjectOutputStream(bout);
-      oos.writeObject(value);
-      oos.close();
+      try(ObjectOutputStream oos = new ObjectOutputStream(bout)){
+        oos.writeObject(value);
+      }
     }
 
     return bout.toByteArray();
@@ -2749,7 +2748,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     protected Object internalValidate(Column col, Object val)
       throws IOException
     {
-      CharSequence valStr = ColumnImpl.toCharSequence(val);
+      CharSequence valStr = toCharSequence(val);
       // oddly enough null is allowed for non-zero len strings
       if((valStr != null) && valStr.length() == 0) {
         throw new InvalidValueException(

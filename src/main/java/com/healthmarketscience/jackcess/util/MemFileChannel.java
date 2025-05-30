@@ -240,14 +240,14 @@ public class MemFileChannel extends FileChannel
   }
 
   @Override
-  public int write(ByteBuffer src) throws IOException {
+  public int write(ByteBuffer src) {
     int bytesWritten = write(src, _position);
     _position += bytesWritten;
     return bytesWritten;
   }
 
   @Override
-  public int write(ByteBuffer src, long position) throws IOException {
+  public int write(ByteBuffer src, long position) {
     int numBytes = src.remaining();
     long newSize = position + numBytes;
     ensureCapacity(newSize);
@@ -270,12 +270,12 @@ public class MemFileChannel extends FileChannel
   }
 
   @Override
-  public long position() throws IOException {
+  public long position() {
     return _position;
   }
 
   @Override
-  public FileChannel position(long newPosition) throws IOException {
+  public FileChannel position(long newPosition) {
     if(newPosition < 0L) {
       throw new IllegalArgumentException("negative position");
     }
@@ -284,12 +284,12 @@ public class MemFileChannel extends FileChannel
   }
 
   @Override
-  public long size() throws IOException {
+  public long size() {
     return _size;
   }
 
   @Override
-  public FileChannel truncate(long newSize) throws IOException {
+  public FileChannel truncate(long newSize) {
     if(newSize < 0L) {
       throw new IllegalArgumentException("negative size");
     }
@@ -306,7 +306,7 @@ public class MemFileChannel extends FileChannel
   }
 
   @Override
-  public void force(boolean metaData) throws IOException {
+  public void force(boolean metaData) {
     // nothing to do
   }
 
@@ -415,7 +415,7 @@ public class MemFileChannel extends FileChannel
   }
 
   @Override
-  protected void implCloseChannel() throws IOException {
+  protected void implCloseChannel() {
     // release data
     _data = EMPTY_DATA;
     _size = _position = 0L;
@@ -467,7 +467,6 @@ public class MemFileChannel extends FileChannel
 
   @Override
   public long write(ByteBuffer[] srcs, int offset, int length)
-    throws IOException
   {
     long numBytes = 0L;
     for(int i = offset; i < offset + length; ++i) {
@@ -478,7 +477,6 @@ public class MemFileChannel extends FileChannel
 
   @Override
   public long read(ByteBuffer[] dsts, int offset, int length)
-    throws IOException
   {
     long numBytes = 0L;
     for(int i = offset; i < offset + length; ++i) {
@@ -492,21 +490,18 @@ public class MemFileChannel extends FileChannel
 
   @Override
   public MappedByteBuffer map(MapMode mode, long position, long size)
-    throws IOException
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public FileLock lock(long position, long size, boolean shared)
-    throws IOException
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public FileLock tryLock(long position, long size, boolean shared)
-    throws IOException
   {
     throw new UnsupportedOperationException();
   }
@@ -522,19 +517,18 @@ public class MemFileChannel extends FileChannel
     }
 
     @Override
-    public int write(ByteBuffer src, long position) throws IOException {
+    public int write(ByteBuffer src, long position) {
       throw new NonWritableChannelException();
     }
 
     @Override
-    public FileChannel truncate(long newSize) throws IOException {
+    public FileChannel truncate(long newSize) {
       throw new NonWritableChannelException();
     }
 
     @Override
     public long transferFrom(ReadableByteChannel src,
                              long position, long count)
-      throws IOException
     {
       throw new NonWritableChannelException();
     }

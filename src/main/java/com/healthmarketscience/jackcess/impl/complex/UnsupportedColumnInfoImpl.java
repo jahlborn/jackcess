@@ -99,7 +99,7 @@ public class UnsupportedColumnInfoImpl
   private static class UnsupportedValueImpl extends ComplexValueImpl
     implements UnsupportedValue
   {
-    private Map<String,Object> _values;
+    private final Map<String,Object> _values;
 
     private UnsupportedValueImpl(Id id, ComplexValueForeignKey complexValueFk,
                                  Map<String,Object> values)

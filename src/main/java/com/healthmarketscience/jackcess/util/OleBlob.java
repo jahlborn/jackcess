@@ -157,11 +157,11 @@ public interface OleBlob extends Blob, Closeable
    */
   public interface PackageContent extends Content
   {
-    public String getPrettyName() throws IOException;
+    public String getPrettyName();
 
-    public String getClassName() throws IOException;
+    public String getClassName();
 
-    public String getTypeName() throws IOException;
+    public String getTypeName();
   }
 
   /**

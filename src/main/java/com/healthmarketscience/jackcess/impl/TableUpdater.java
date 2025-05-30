@@ -42,7 +42,7 @@ public class TableUpdater extends TableMutator
   private IndexBuilder _index;
   private int _origTdefLen;
   private int _addedTdefLen;
-  private List<Integer> _nextPages = new ArrayList<Integer>(1);
+  private final List<Integer> _nextPages = new ArrayList<Integer>(1);
   private ColumnState _colState;
   private IndexDataState _idxDataState;
   private IndexImpl.ForeignKeyReference _fkReference;
@@ -64,7 +64,7 @@ public class TableUpdater extends TableMutator
   String getTableName() {
     return _table.getName();
   }
-  
+
   @Override
   public int getTdefPageNumber() {
     return _table.getTableDefPageNumber();
@@ -97,7 +97,7 @@ public class TableUpdater extends TableMutator
   @Override
   public IndexImpl.ForeignKeyReference getForeignKey(IndexBuilder idx) {
     return ((idx == _index) ? _fkReference : null);
-  }  
+  }
 
   int getAddedTdefLen() {
     return _addedTdefLen;
@@ -126,7 +126,7 @@ public class TableUpdater extends TableMutator
     _column = column;
 
     validateAddColumn();
-    
+
     // assign column number and do some assorted column bookkeeping
     short columnNumber = (short)_table.getMaxColumnCount();
     _column.setColumnNumber(columnNumber);
@@ -149,8 +149,8 @@ public class TableUpdater extends TableMutator
   }
 
   IndexImpl addIndex(IndexBuilder index, boolean isInternal, byte ignoreIdxFlags,
-                     byte ignoreColFlags) 
-    throws IOException 
+                     byte ignoreColFlags)
+    throws IOException
   {
     _index = index;
 
@@ -170,7 +170,7 @@ public class TableUpdater extends TableMutator
     } else {
       // if "internal" update, this is part of a larger operation which
       // already holds an exclusive write lock
-      getPageChannel().startWrite();      
+      getPageChannel().startWrite();
     }
     try {
 
@@ -205,11 +205,11 @@ public class TableUpdater extends TableMutator
           "Cannot add column to table with " +
           getFormat().MAX_COLUMNS_PER_TABLE + " columns"));
     }
-    
+
     Set<String> colNames = getColumnNames();
     // next, validate the column definition
     validateColumn(colNames, _column);
-    
+
     if(_column.isAutoNumber()) {
       // for most autonumber types, we can only have one of each type
       Set<DataType> autoTypes = EnumSet.noneOf(DataType.class);
@@ -222,7 +222,7 @@ public class TableUpdater extends TableMutator
   }
 
   private void validateAddIndex() {
-    
+
     if(_index == null) {
       throw new IllegalArgumentException(withErrorContext(
           "Cannot add index with no index"));
@@ -232,11 +232,11 @@ public class TableUpdater extends TableMutator
           "Cannot add index to table with " +
           getFormat().MAX_INDEXES_PER_TABLE + " indexes"));
     }
-    
+
     boolean foundPk[] = new boolean[1];
     Set<String> idxNames = getIndexNames(_table, foundPk);
     // next, validate the index definition
-    validateIndex(getColumnNames(), idxNames, foundPk, _index);    
+    validateIndex(getColumnNames(), idxNames, foundPk, _index);
   }
 
   private Set<String> getColumnNames() {
@@ -262,7 +262,7 @@ public class TableUpdater extends TableMutator
 
     _idxDataState = new IndexDataState();
     _idxDataState.addIndex(_index);
-    
+
     // search for an existing index which matches the given index (in terms of
     // the backing data)
     IndexData idxData = findIndexData(
@@ -285,7 +285,7 @@ public class TableUpdater extends TableMutator
     }
     return null;
   }
-  
+
   private static boolean sameIndexData(IndexBuilder idx1, IndexData idx2,
                                        byte ignoreIdxFlags, byte ignoreColFlags) {
     // index data can be combined if flags match and columns (and col flags)
@@ -298,7 +298,7 @@ public class TableUpdater extends TableMutator
     if(idx1.getColumns().size() != idx2.getColumnCount()) {
       return false;
     }
-    
+
     for(int i = 0; i < idx1.getColumns().size(); ++i) {
       IndexBuilder.Column col1 = idx1.getColumns().get(i);
       IndexData.ColumnDescriptor col2 = idx2.getColumns().get(i);
@@ -314,7 +314,7 @@ public class TableUpdater extends TableMutator
   private static boolean sameIndexData(
       IndexBuilder.Column col1, IndexData.ColumnDescriptor col2,
       int ignoreColFlags) {
-    return (col1.getName().equals(col2.getName()) && 
+    return (col1.getName().equals(col2.getName()) &&
             ((col1.getFlags() | ignoreColFlags) ==
              (col2.getFlags() | ignoreColFlags)));
   }

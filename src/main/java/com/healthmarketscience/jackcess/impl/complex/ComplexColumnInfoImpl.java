@@ -183,7 +183,6 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
   protected List<V> toValues(ComplexValueForeignKey complexValueFk,
                              List<Row> rawValues)
-    throws IOException
   {
     List<V> values = new ArrayList<V>();
     for(Row rawValue : rawValues) {
@@ -342,8 +341,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
   protected abstract V toValue(
       ComplexValueForeignKey complexValueFk,
-      Row rawValues)
-    throws IOException;
+      Row rawValues);
 
   protected static abstract class ComplexValueImpl implements ComplexValue
   {

@@ -57,7 +57,7 @@ class CalculatedColumnUtil
    * @param args column construction info
    * @usage _advanced_method_
    */
-  static ColumnImpl create(ColumnImpl.InitArgs args) throws IOException
+  static ColumnImpl create(ColumnImpl.InitArgs args)
   {
     switch(args.type) {
     case BOOLEAN:
@@ -202,7 +202,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    public Object read(byte[] data, ByteOrder order) throws IOException {
+    public Object read(byte[] data, ByteOrder order) {
       data = unwrapCalculatedValue(data);
       if(data.length == 0) {
         return Boolean.FALSE;
@@ -213,7 +213,6 @@ class CalculatedColumnUtil
     @Override
     protected ByteBuffer writeRealData(Object obj, int remainingRowLength,
                                        ByteOrder order)
-      throws IOException
     {
       return ByteBuffer.wrap(
           toBooleanValue(obj) ? CALC_BOOL_TRUE : CALC_BOOL_FALSE).order(order);
@@ -227,7 +226,7 @@ class CalculatedColumnUtil
   {
     private CalcColEvalContext _calcCol;
 
-    CalcTextColImpl(InitArgs args) throws IOException {
+    CalcTextColImpl(InitArgs args) {
       super(args);
     }
 
@@ -271,7 +270,7 @@ class CalculatedColumnUtil
   {
     private CalcColEvalContext _calcCol;
 
-    CalcMemoColImpl(InitArgs args) throws IOException {
+    CalcMemoColImpl(InitArgs args) {
       super(args);
     }
 
@@ -316,7 +315,7 @@ class CalculatedColumnUtil
   {
     private CalcColEvalContext _calcCol;
 
-    CalcNumericColImpl(InitArgs args) throws IOException {
+    CalcNumericColImpl(InitArgs args) {
       super(args);
     }
 
@@ -336,7 +335,7 @@ class CalculatedColumnUtil
     }
 
     @Override
-    public Object read(byte[] data, ByteOrder order) throws IOException {
+    public Object read(byte[] data, ByteOrder order) {
       data = unwrapCalculatedValue(data);
       if(data.length == 0) {
         // apparently "null" values can be written as actual data

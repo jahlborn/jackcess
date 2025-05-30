@@ -88,7 +88,6 @@ public class PageChannel implements Channel, Flushable {
    */
   public PageChannel(FileChannel channel, boolean closeChannel,
                      JetFormat format, boolean autoSync)
-    throws IOException
   {
     _channel = channel;
     _closeChannel = closeChannel;

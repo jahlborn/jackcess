@@ -188,7 +188,7 @@ public enum DataType {
   private static final Map<Integer, DataType> ALT_SQL_TYPES =
     new HashMap<Integer, DataType>();
   static {
-    for (DataType type : DataType.values()) {
+    for (DataType type : values()) {
       if (type._sqlType != null) {
         SQL_TYPES.put(type._sqlType, new DataType[]{type});
       }
@@ -219,7 +219,7 @@ public enum DataType {
 
   private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
   static {
-    for (DataType type : DataType.values()) {
+    for (DataType type : values()) {
       if(type.isUnsupported()) {
         continue;
       }

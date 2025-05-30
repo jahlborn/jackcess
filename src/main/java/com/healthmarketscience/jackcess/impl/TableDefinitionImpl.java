@@ -43,8 +43,7 @@ public class TableDefinitionImpl extends TableImpl
 
   @Override
   protected List<? extends Object[]> addRows(List<? extends Object[]> rows,
-                                             final boolean isBatchWrite)
-    throws IOException {
+                                             final boolean isBatchWrite) {
     // all row additions eventually flow through this method
     throw new UnsupportedOperationException(
         withErrorContext("TableDefinition has no data access"));

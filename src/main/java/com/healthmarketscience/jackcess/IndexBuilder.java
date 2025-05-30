@@ -141,7 +141,7 @@ public class IndexBuilder
   }
 
   /**
-   * Sets this index to encforce required.
+   * Sets this index to enforce required.
    */
   public IndexBuilder setRequired() {
     _flags |= IndexData.REQUIRED_INDEX_FLAG;
@@ -232,7 +232,7 @@ public class IndexBuilder
     /** name of the column to be indexed */
     private String _name;
     /** column flags (ordering) */
-    private byte _flags;
+    private final byte _flags;
 
     private Column(String name, boolean ascending) {
       _name = name;

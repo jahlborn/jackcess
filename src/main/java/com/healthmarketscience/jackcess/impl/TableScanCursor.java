@@ -26,7 +26,7 @@ import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
  *
  * @author James Ahlborn
  */
-public class TableScanCursor extends CursorImpl 
+public class TableScanCursor extends CursorImpl
 {
   /** first position for the TableScanCursor */
   private static final ScanPosition FIRST_SCAN_POSITION =
@@ -44,7 +44,7 @@ public class TableScanCursor extends CursorImpl
     new ReverseScanDirHandler();
   /** Cursor over the pages that this table owns */
   private final UsageMap.PageCursor _ownedPagesCursor;
-    
+
   public TableScanCursor(TableImpl table) {
     super(new IdImpl(table, null), table,
           FIRST_SCAN_POSITION, LAST_SCAN_POSITION);
@@ -60,7 +60,7 @@ public class TableScanCursor extends CursorImpl
   protected boolean isUpToDate() {
     return(super.isUpToDate() && _ownedPagesCursor.isUpToDate());
   }
-    
+
   @Override
   protected void reset(boolean moveForward) {
     _ownedPagesCursor.reset(moveForward);
@@ -82,7 +82,7 @@ public class TableScanCursor extends CursorImpl
   }
 
   @Override
-  protected PositionImpl getRowPosition(RowIdImpl rowId) throws IOException
+  protected PositionImpl getRowPosition(RowIdImpl rowId)
   {
     return new ScanPosition(rowId);
   }
@@ -93,27 +93,27 @@ public class TableScanCursor extends CursorImpl
     throws IOException
   {
     ScanDirHandler handler = getDirHandler(moveForward);
-      
+
     // figure out how many rows are left on this page so we can find the
     // next row
     RowIdImpl curRowId = curPos.getRowId();
     TableImpl.positionAtRowHeader(rowState, curRowId);
     int currentRowNumber = curRowId.getRowNumber();
-    
+
     // loop until we find the next valid row or run out of pages
     while(true) {
 
       currentRowNumber = handler.getAnotherRowNumber(currentRowNumber);
       curRowId = new RowIdImpl(curRowId.getPageNumber(), currentRowNumber);
       TableImpl.positionAtRowHeader(rowState, curRowId);
-        
+
       if(!rowState.isValid()) {
-          
+
         // load next page
         curRowId = new RowIdImpl(handler.getAnotherPageNumber(),
                                  RowIdImpl.INVALID_ROW_NUMBER);
         TableImpl.positionAtRowHeader(rowState, curRowId);
-          
+
         if(!rowState.isHeaderPageNumberValid()) {
           //No more owned pages.  No more rows.
           return handler.getEndPosition();
@@ -124,11 +124,11 @@ public class TableScanCursor extends CursorImpl
             rowState.getRowsOnHeaderPage());
 
       } else if(!rowState.isDeleted()) {
-          
+
         // we found a valid, non-deleted row, return it
         return new ScanPosition(curRowId);
       }
-        
+
     }
   }
 
@@ -141,7 +141,7 @@ public class TableScanCursor extends CursorImpl
     public abstract int getAnotherPageNumber();
     public abstract int getInitialRowNumber(int rowsOnPage);
   }
-    
+
   /**
    * Handles moving the table scan cursor forward.
    */
@@ -167,7 +167,7 @@ public class TableScanCursor extends CursorImpl
       return -1;
     }
   }
-    
+
   /**
    * Handles moving the table scan cursor backward.
    */
@@ -192,7 +192,7 @@ public class TableScanCursor extends CursorImpl
     public int getInitialRowNumber(int rowsOnPage) {
       return rowsOnPage;
     }
-  }    
+  }
 
   /**
    * Value object which maintains the current position of a TableScanCursor.
@@ -214,7 +214,7 @@ public class TableScanCursor extends CursorImpl
     protected boolean equalsImpl(Object o) {
       return getRowId().equals(((ScanPosition)o).getRowId());
     }
-    
+
     @Override
     public String toString() {
       return "RowId = " + getRowId();

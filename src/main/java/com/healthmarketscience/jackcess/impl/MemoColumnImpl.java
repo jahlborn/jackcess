@@ -16,7 +16,6 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import java.io.IOException;
 
 /**
  * ColumnImpl subclass which is used for Memo data types.
@@ -24,9 +23,9 @@ import java.io.IOException;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-class MemoColumnImpl extends LongValueColumnImpl 
+class MemoColumnImpl extends LongValueColumnImpl
 {
-  /** whether or not they are compressed */ 
+  /** whether or not they are compressed */
   private final boolean _compressedUnicode;
   /** the collating sort order for a text field */
   private final SortOrder _sortOrder;
@@ -37,19 +36,19 @@ class MemoColumnImpl extends LongValueColumnImpl
   private ColumnImpl _versionHistoryCol;
   /** whether or not this is a hyperlink column (only possible for columns
       of type MEMO) */
-  private boolean _hyperlink;
+  private final boolean _hyperlink;
 
-  MemoColumnImpl(InitArgs args) throws IOException
+  MemoColumnImpl(InitArgs args)
   {
     super(args);
 
       // co-located w/ precision/scale
       _sortOrder = readSortOrder(
-          args.buffer, args.offset + getFormat().OFFSET_COLUMN_SORT_ORDER, 
+          args.buffer, args.offset + getFormat().OFFSET_COLUMN_SORT_ORDER,
           getFormat());
       _codePage = readCodePage(args.buffer, args.offset, getFormat());
 
-      _compressedUnicode = 
+      _compressedUnicode =
         ((args.extFlags & COMPRESSED_UNICODE_EXT_FLAG_MASK) != 0);
 
       // only memo fields can be hyperlinks
@@ -60,12 +59,12 @@ class MemoColumnImpl extends LongValueColumnImpl
   public boolean isCompressedUnicode() {
     return _compressedUnicode;
   }
-  
+
   @Override
   public short getTextCodePage() {
     return _codePage;
   }
-  
+
   @Override
   public SortOrder getTextSortOrder() {
     return _sortOrder;
@@ -80,7 +79,7 @@ class MemoColumnImpl extends LongValueColumnImpl
   public void setVersionHistoryColumn(ColumnImpl versionHistoryCol) {
     _versionHistoryCol = versionHistoryCol;
   }
-  
+
   @Override
   public boolean isHyperlink() {
     return _hyperlink;

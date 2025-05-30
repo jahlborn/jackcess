@@ -43,24 +43,24 @@ public class RelationshipCreator extends DBMutator
 
   // for the purposes of choosing a backing index for a foreign key, there are
   // certain index flags that can be ignored (we don't care how they are set)
-  private final static byte IGNORED_PRIMARY_INDEX_FLAGS = 
+  private final static byte IGNORED_PRIMARY_INDEX_FLAGS =
     IndexData.IGNORE_NULLS_INDEX_FLAG | IndexData.REQUIRED_INDEX_FLAG;
-  private final static byte IGNORED_SECONDARY_INDEX_FLAGS = 
+  private final static byte IGNORED_SECONDARY_INDEX_FLAGS =
     IGNORED_PRIMARY_INDEX_FLAGS | IndexData.UNIQUE_INDEX_FLAG;
-  
+
   private TableImpl _primaryTable;
   private TableImpl _secondaryTable;
   private RelationshipBuilder _relationship;
-  private List<ColumnImpl> _primaryCols; 
+  private List<ColumnImpl> _primaryCols;
   private List<ColumnImpl> _secondaryCols;
   private int _flags;
   private String _name;
-    
-  public RelationshipCreator(DatabaseImpl database) 
+
+  public RelationshipCreator(DatabaseImpl database)
   {
     super(database);
   }
-  
+
   public String getName() {
     return _name;
   }
@@ -79,22 +79,21 @@ public class RelationshipCreator extends DBMutator
 
   public RelationshipImpl createRelationshipImpl(String name) {
     _name = name;
-    RelationshipImpl newRel = new RelationshipImpl(
-        name, _primaryTable, _secondaryTable, _flags, 
+    return new RelationshipImpl(
+        name, _primaryTable, _secondaryTable, _flags,
         _primaryCols, _secondaryCols);
-    return newRel;
   }
 
   /**
    * Creates the relationship in the database.
    * @usage _advanced_method_
    */
-  public RelationshipImpl createRelationship(RelationshipBuilder relationship) 
-    throws IOException 
+  public RelationshipImpl createRelationship(RelationshipBuilder relationship)
+    throws IOException
   {
     _relationship = relationship;
     _name = relationship.getName();
-    
+
     validate();
 
     _flags = _relationship.getFlags();
@@ -123,14 +122,14 @@ public class RelationshipCreator extends DBMutator
   private void addPrimaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_primaryTable);
     updater.setForeignKey(createFKReference(true));
-    updater.addIndex(createPrimaryIndex(), true, 
+    updater.addIndex(createPrimaryIndex(), true,
                      IGNORED_PRIMARY_INDEX_FLAGS, (byte)0);
   }
 
   private void addSecondaryIndex() throws IOException {
     TableUpdater updater = new TableUpdater(_secondaryTable);
     updater.setForeignKey(createFKReference(false));
-    updater.addIndex(createSecondaryIndex(), true, 
+    updater.addIndex(createSecondaryIndex(), true,
                      IGNORED_SECONDARY_INDEX_FLAGS, (byte)0);
   }
 
@@ -156,7 +155,7 @@ public class RelationshipCreator extends DBMutator
     boolean cascadeNull = ((_flags & RelationshipImpl.CASCADE_NULL_FLAG) != 0);
 
     return new IndexImpl.ForeignKeyReference(
-        tableType, otherIdxNum, otherTableNum, cascadeUpdates, cascadeDeletes, 
+        tableType, otherIdxNum, otherTableNum, cascadeUpdates, cascadeDeletes,
         cascadeNull);
   }
 
@@ -164,7 +163,7 @@ public class RelationshipCreator extends DBMutator
 
     _primaryTable = getDatabase().getTable(_relationship.getFromTable());
     _secondaryTable = getDatabase().getTable(_relationship.getToTable());
-    
+
     if((_primaryTable == null) || (_secondaryTable == null)) {
       throw new IllegalArgumentException(withErrorContext(
           "Two valid tables are required in relationship"));
@@ -177,8 +176,8 @@ public class RelationshipCreator extends DBMutator
 
     _primaryCols = getColumns(_primaryTable, _relationship.getFromColumns());
     _secondaryCols = getColumns(_secondaryTable, _relationship.getToColumns());
-    
-    if((_primaryCols == null) || (_primaryCols.isEmpty()) || 
+
+    if((_primaryCols == null) || (_primaryCols.isEmpty()) ||
        (_secondaryCols == null) || (_secondaryCols.isEmpty())) {
       throw new IllegalArgumentException(withErrorContext(
           "Missing columns in relationship"));
@@ -191,7 +190,7 @@ public class RelationshipCreator extends DBMutator
 
     for(int i = 0; i < _primaryCols.size(); ++i) {
       ColumnImpl pcol = _primaryCols.get(i);
-      ColumnImpl scol = _primaryCols.get(i);
+      ColumnImpl scol = _secondaryCols.get(i);
 
       if(pcol.getType() != scol.getType()) {
         throw new IllegalArgumentException(withErrorContext(
@@ -205,7 +204,7 @@ public class RelationshipCreator extends DBMutator
         throw new IllegalArgumentException(withErrorContext(
             "Cascade flags cannot be enabled if referential integrity is not enforced"));
       }
-      
+
       return;
     }
 
@@ -219,14 +218,14 @@ public class RelationshipCreator extends DBMutator
 
     // while relationships can have "dupe" columns, indexes (and therefore
     // integrity enforced relationships) cannot
-    if((new HashSet<String>(getColumnNames(_primaryCols)).size() != 
+    if((new HashSet<String>(getColumnNames(_primaryCols)).size() !=
         _primaryCols.size()) ||
-       (new HashSet<String>(getColumnNames(_secondaryCols)).size() != 
+       (new HashSet<String>(getColumnNames(_secondaryCols)).size() !=
         _secondaryCols.size())) {
       throw new IllegalArgumentException(withErrorContext(
           "Cannot have duplicate columns in an integrity enforced relationship"));
     }
-    
+
     // TODO: future, check for enforce cycles?
 
     // check referential integrity
@@ -261,13 +260,13 @@ public class RelationshipCreator extends DBMutator
       .setUnique()
       .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
-  
+
   private IndexBuilder createSecondaryIndex() {
     // secondary index uses relationship name
     return createIndex(_name, _secondaryCols)
       .setType(IndexImpl.FOREIGN_KEY_INDEX_TYPE);
   }
-  
+
   private static IndexBuilder createIndex(String name, List<ColumnImpl> cols) {
     IndexBuilder idx = new IndexBuilder(name);
     for(ColumnImpl col : cols) {
@@ -294,10 +293,10 @@ public class RelationshipCreator extends DBMutator
         c = 'a';
       }
       suffix = "" + c;
-    }    
+    }
   }
 
-  private static List<ColumnImpl> getColumns(TableImpl table, 
+  private static List<ColumnImpl> getColumns(TableImpl table,
                                              List<String> colNames) {
     List<ColumnImpl> cols = new ArrayList<ColumnImpl>();
     for(String colName : colNames) {
@@ -326,7 +325,7 @@ public class RelationshipCreator extends DBMutator
 
   private static IndexImpl getUniqueIndex(
       TableImpl table, List<ColumnImpl> cols) {
-    return table.findIndexForColumns(getColumnNames(cols), 
+    return table.findIndexForColumns(getColumnNames(cols),
                                      TableImpl.IndexFeature.EXACT_UNIQUE_ONLY);
   }
 
@@ -344,13 +343,13 @@ public class RelationshipCreator extends DBMutator
       .append(null, colNames)
       .toString();
   }
-  
+
   private String withErrorContext(String msg) {
     return msg + "(Rel=" +
-      getTableErrorContext(_primaryTable, _primaryCols, 
+      getTableErrorContext(_primaryTable, _primaryCols,
                            _relationship.getFromTable(),
                            _relationship.getFromColumns()) + " -> " +
-      getTableErrorContext(_secondaryTable, _secondaryCols, 
+      getTableErrorContext(_secondaryTable, _secondaryCols,
                            _relationship.getToTable(),
                            _relationship.getToColumns()) + ")";
   }

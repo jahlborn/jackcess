@@ -104,10 +104,9 @@ public class ValueSupport
 
   static Value toDateValueIfPossible(Value.Type dateType, double dd) {
     if(DefaultDateFunctions.isValidDateDouble(dd)) {
-      return ValueSupport.toValue(
-          dateType, ColumnImpl.ldtFromLocalDateDouble(dd));
+      return toValue(dateType, ColumnImpl.ldtFromLocalDateDouble(dd));
     }
-    return ValueSupport.toValue(dd);
+    return toValue(dd);
   }
 
   public static Value toValue(LocalDate ld) {

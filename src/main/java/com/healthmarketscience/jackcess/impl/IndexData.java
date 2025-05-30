@@ -1868,7 +1868,6 @@ public class IndexData {
 
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
-      throws IOException
     {
       bout.write(
           ColumnImpl.toBooleanValue(value) ?
@@ -2028,7 +2027,6 @@ public class IndexData {
 
     @Override
     protected void writeNonNullValue(Object value, ByteStream bout)
-      throws IOException
     {
       throw new UnsupportedOperationException(
           "Cannot write indexes of this type due to " + _unsupportedReason);

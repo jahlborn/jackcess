@@ -485,13 +485,12 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       }
 
       @Override
-      public Object read(byte[] data) throws IOException {
+      public Object read(byte[] data) {
         return ((data[0] != 0) ? Boolean.TRUE : Boolean.FALSE);
       }
 
       @Override
       public ByteBuffer write(Object obj, int remainingRowLength)
-        throws IOException
       {
         ByteBuffer buffer = PageChannel.createBuffer(1);
         buffer.put(((Number)booleanToInteger(obj)).byteValue());

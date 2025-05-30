@@ -861,7 +861,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   /**
-   * @returns the current handler for reading/writing properties, creating if
+   * @return the current handler for reading/writing properties, creating if
    * necessary
    */
   private PropertyMaps.Handler getPropsHandler() {
@@ -2156,10 +2156,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   public static boolean getDefaultEnforceForeignKeys()
   {
     String prop = System.getProperty(FK_ENFORCE_PROPERTY);
-    if(prop != null) {
-      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
-    }
-    return true;
+    return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
   /**
@@ -2171,10 +2168,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   public static boolean getDefaultAllowAutoNumberInsert()
   {
     String prop = System.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
-    if(prop != null) {
-      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
-    }
-    return false;
+    return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
   /**
@@ -2186,10 +2180,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   public static boolean getDefaultEvaluateExpressions()
   {
     String prop = System.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
-    if(prop != null) {
-      return Boolean.TRUE.toString().equalsIgnoreCase(prop);
-    }
-    return true;
+    return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
   /**
@@ -2480,7 +2471,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
-    public Table open(Database db) throws IOException {
+    public Table open(Database db) {
       return null;
     }
 
@@ -2497,7 +2488,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   private class TableIterator implements Iterator<Table>
   {
-    private Iterator<String> _tableNameIter;
+    private final Iterator<String> _tableNameIter;
 
     private TableIterator(Set<String> tableNames) {
       _tableNameIter = tableNames.iterator();
@@ -2787,7 +2778,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
-    public TableInfo lookupTable(String tableName) throws IOException {
+    public TableInfo lookupTable(String tableName) {
 
       for(Row row : _systemCatalogCursor.newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS)) {
@@ -2814,7 +2805,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
-    protected Cursor getTableNamesCursor() throws IOException {
+    protected Cursor getTableNamesCursor() {
       return _systemCatalogCursor;
     }
 
