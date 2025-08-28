@@ -1237,6 +1237,7 @@ public class Expressionator
     return true;
   }
 
+  @SuppressWarnings("deprecation")
   private static void literalStrToString(String str, StringBuilder sb) {
     sb.append("\"")
       .append(StringUtils.replace(str, "\"", "\"\""))
