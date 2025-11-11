@@ -22,6 +22,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.Value;
+import com.healthmarketscience.jackcess.impl.StringUtil;
 import static com.healthmarketscience.jackcess.impl.expr.DefaultFunctions.*;
 import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 
@@ -358,7 +359,6 @@ public class DefaultTextFunctions
     }
   });
 
-  @SuppressWarnings("deprecation")
   public static final Function STRCONV = registerStringFunc(new FuncVar("StrConv", 2, 3) {
     @Override
     protected Value evalVar(EvalContext ctx, Value[] params) {
@@ -386,8 +386,7 @@ public class DefaultTextFunctions
         break;
       case 3:
         // vbProperCase
-        str = org.apache.commons.lang3.text.WordUtils.capitalize(
-            str.toLowerCase());
+        str = StringUtil.capitalize(str.toLowerCase());
         break;
       default:
         // do nothing

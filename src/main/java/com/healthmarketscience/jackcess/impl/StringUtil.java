@@ -1,0 +1,65 @@
+// Copyright (c) 2025 James Ahlborn
+
+package com.healthmarketscience.jackcess.impl;
+
+/**
+ * @author James Ahlborn
+ */
+public final class StringUtil
+{
+  private StringUtil() {}
+
+  public static boolean isEmpty(String str) {
+    return ((str == null) || str.isEmpty());
+  }
+
+  public static boolean isBlank(String str) {
+    if(isEmpty(str)) {
+      return true;
+    }
+    int len = str.length();
+    for (int i = 0; i < len; i++) {
+      if (!Character.isWhitespace(str.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static String trimToNull(String str) {
+    if(str != null) {
+      str = str.trim();
+    }
+    return isEmpty(str) ? null : str;
+  }
+
+  public static String replace(String str, String target, String replacement) {
+    return isEmpty(str) ? str : str.replace(target, replacement);
+  }
+
+  public static String remove(String str, char c) {
+    if(isEmpty(str) || str.indexOf(c) < 0) {
+      return str;
+    }
+    return str.replace(String.valueOf(c), "");
+  }
+
+  public static String capitalize(String str) {
+    if (isEmpty(str)) {
+      return str;
+    }
+    char[] buffer = str.toCharArray();
+    boolean capitalizeNext = true;
+    for (int i = 0; i < buffer.length; i++) {
+      final char ch = buffer[i];
+      if (Character.isWhitespace(ch)) {
+        capitalizeNext = true;
+      } else if (capitalizeNext) {
+        buffer[i] = Character.toTitleCase(ch);
+        capitalizeNext = false;
+      }
+    }
+    return new String(buffer);
+  }
+
+}

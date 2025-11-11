@@ -32,13 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 import com.healthmarketscience.jackcess.expr.LocaleContext;
 import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import org.apache.commons.lang3.StringUtils;
+import com.healthmarketscience.jackcess.impl.StringUtil;
+import static com.healthmarketscience.jackcess.impl.expr.Expressionator.*;
 
 
 /**
@@ -90,7 +90,7 @@ class ExpressionTokenizer
       exprStr = exprStr.trim();
     }
 
-    if(StringUtils.isEmpty(exprStr)) {
+    if(StringUtil.isEmpty(exprStr)) {
       return null;
     }
 

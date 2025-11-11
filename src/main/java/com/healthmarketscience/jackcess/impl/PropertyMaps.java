@@ -129,7 +129,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   public static String getTrimmedStringProperty(
       PropertyMap props, String propName)
   {
-    return DatabaseImpl.trimToNull((String)props.getValue(propName));
+    return StringUtil.trimToNull((String)props.getValue(propName));
   }
 
   /**
