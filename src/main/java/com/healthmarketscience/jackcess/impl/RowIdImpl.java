@@ -17,9 +17,9 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.Serializable;
+import java.util.Comparator;
 
 import com.healthmarketscience.jackcess.RowId;
-import org.apache.commons.lang3.builder.CompareToBuilder;
 
 
 /**
@@ -29,7 +29,7 @@ import org.apache.commons.lang3.builder.CompareToBuilder;
  */
 public class RowIdImpl implements RowId, Serializable
 {
-  private static final long serialVersionUID = 20131014L;  
+  private static final long serialVersionUID = 20131014L;
 
   /** special page number which will sort before any other valid page
       number */
@@ -53,7 +53,7 @@ public class RowIdImpl implements RowId, Serializable
         than normal RowIds */
     ALWAYS_LAST;
   }
-  
+
   /** special rowId which will sort before any other valid rowId */
   public static final RowIdImpl FIRST_ROW_ID = new RowIdImpl(
       FIRST_PAGE_NUMBER, INVALID_ROW_NUMBER);
@@ -62,10 +62,15 @@ public class RowIdImpl implements RowId, Serializable
   public static final RowIdImpl LAST_ROW_ID = new RowIdImpl(
       LAST_PAGE_NUMBER, INVALID_ROW_NUMBER);
 
+  private static final Comparator<RowIdImpl> COMPARATOR =
+    Comparator.comparing(RowIdImpl::getType)
+      .thenComparing(RowIdImpl::getPageNumber)
+      .thenComparing(RowIdImpl::getRowNumber);
+
   private final int _pageNumber;
   private final int _rowNumber;
   private final Type _type;
-  
+
   /**
    * Creates a new <code>RowId</code> instance.
    *
@@ -102,13 +107,9 @@ public class RowIdImpl implements RowId, Serializable
   public int compareTo(RowId other) {
     return compareTo((RowIdImpl)other);
   }
-  
+
   public int compareTo(RowIdImpl other) {
-    return new CompareToBuilder()
-      .append(getType(), other.getType())
-      .append(getPageNumber(), other.getPageNumber())
-      .append(getRowNumber(), other.getRowNumber())
-      .toComparison();
+    return COMPARATOR.compare(this, other);
   }
 
   @Override
@@ -123,10 +124,10 @@ public class RowIdImpl implements RowId, Serializable
              (getPageNumber() == ((RowIdImpl)o).getPageNumber()) &&
              (getRowNumber() == ((RowIdImpl)o).getRowNumber())));
   }
-  
+
   @Override
   public String toString() {
     return getPageNumber() + ":" + getRowNumber();
   }
-  
+
 }
