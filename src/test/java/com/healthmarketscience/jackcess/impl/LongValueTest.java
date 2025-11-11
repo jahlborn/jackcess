@@ -199,11 +199,11 @@ public class LongValueTest extends TestCase
 
       String lval = createString(2000); // "--2000 chars long text--";
       String tval = createString(40); // "--40chars long text--";
-      newTable.addRow(new Integer(1), lval, tval);
+      newTable.addRow(Integer.valueOf(1), lval, tval);
 
       newTable = db.getTable("NewTable");
       Map<String, Object> readRow = newTable.getNextRow();
-      assertEquals(new Integer(1), readRow.get("a"));
+      assertEquals(Integer.valueOf(1), readRow.get("a"));
       assertEquals(lval, readRow.get("b"));
       assertEquals(tval, readRow.get("c"));
 

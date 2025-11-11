@@ -486,8 +486,8 @@ public class TestUtil
     Assert.assertEquals("hijklmnop", row.get("B"));
     Assert.assertEquals(new Byte((byte) 2), row.get("C"));
     Assert.assertEquals(new Short((short) 222), row.get("D"));
-    Assert.assertEquals(new Integer(333333333), row.get("E"));
-    Assert.assertEquals(new Double(444.555d), row.get("F"));
+    Assert.assertEquals(Integer.valueOf(333333333), row.get("E"));
+    Assert.assertEquals(Double.valueOf(444.555d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
     cal.setTime(row.getDate("G"));
     Assert.assertEquals(Calendar.SEPTEMBER, cal.get(Calendar.MONTH));
@@ -506,8 +506,8 @@ public class TestUtil
     Assert.assertEquals("b", row.get("B"));
     Assert.assertEquals(new Byte((byte) 0), row.get("C"));
     Assert.assertEquals(new Short((short) 0), row.get("D"));
-    Assert.assertEquals(new Integer(0), row.get("E"));
-    Assert.assertEquals(new Double(0d), row.get("F"));
+    Assert.assertEquals(Integer.valueOf(0), row.get("E"));
+    Assert.assertEquals(Double.valueOf(0d), row.get("F"));
     final Calendar cal = Calendar.getInstance();
     cal.setTime(row.getDate("G"));
     Assert.assertEquals(Calendar.DECEMBER, cal.get(Calendar.MONTH));
