@@ -26,6 +26,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.IndexCodesTest;
 import com.healthmarketscience.jackcess.impl.IndexData;
@@ -33,29 +35,27 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import org.junit.After;
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class IndexTest extends TestCase {
+public class IndexTest {
 
-  public IndexTest(String name) {
-    super(name);
-  }
-
-  @Override
-  protected void setUp() {
+  @Before
+  public void setUp() {
     TestUtil.setTestAutoSync(false);
   }
 
-  @Override
-  protected void tearDown() {
+  @After
+  public void tearDown() {
     TestUtil.clearTestAutoSync();
   }
 
+  @Test
   public void testByteOrder() throws Exception {
     byte b1 = (byte)0x00;
     byte b2 = (byte)0x01;
@@ -69,6 +69,7 @@ public class IndexTest extends TestCase {
     assertTrue(ByteUtil.asUnsignedByte(b4) < ByteUtil.asUnsignedByte(b5));
   }
 
+  @Test
   public void testByteCodeComparator() {
     byte[] b0 = null;
     byte[] b1 = new byte[]{(byte)0x00};
@@ -89,6 +90,7 @@ public class IndexTest extends TestCase {
 
   }
 
+  @Test
   public void testPrimaryKey() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       Table table = open(testDB).getTable("Table1");
@@ -110,6 +112,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testLogicalIndexes() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
@@ -171,6 +174,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testComplexIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMP_INDEX)) {
@@ -192,6 +196,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testEntryDeletion() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       Table table = openCopy(testDB).getTable("Table1");
@@ -230,6 +235,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testIgnoreNulls() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_PROPERTIES)) {
@@ -282,6 +288,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testUnique() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX_PROPERTIES)) {
@@ -348,6 +355,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testUniqueEntryCount() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       Database db = openCopy(testDB);
@@ -410,6 +418,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testReplId() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
@@ -426,6 +435,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testIndexCreation() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -465,6 +475,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testIndexCreationSharedData() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -515,6 +526,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testGetForeignKeyIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
@@ -548,6 +560,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testConstraintViolation() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -644,6 +657,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testAutoNumberRecover() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -718,6 +732,7 @@ public class IndexTest extends TestCase {
     }
   }
 
+  @Test
   public void testBinaryIndex() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.BINARY_INDEX)) {

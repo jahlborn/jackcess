@@ -25,23 +25,21 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 import com.healthmarketscience.jackcess.Table;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class BigIntTest extends TestCase
+public class BigIntTest
 {
 
-  public BigIntTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testBigInt() throws Exception {
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

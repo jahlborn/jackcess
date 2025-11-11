@@ -28,27 +28,25 @@ import com.healthmarketscience.jackcess.Database.FileFormat;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.CompoundOleUtil;
-import junit.framework.TestCase;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class OleBlobTest extends TestCase
+public class OleBlobTest
 {
 
-  public OleBlobTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testCreateBlob() throws Exception
   {
     File sampleFile = new File("src/test/data/sample-input.tab");
@@ -153,6 +151,7 @@ public class OleBlobTest extends TestCase
     }
   }
 
+  @Test
   public void testReadBlob() throws Exception
   {
     for(TestDB testDb : TestDB.getSupportedForBasename(Basename.BLOB, true)) {

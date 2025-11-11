@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
@@ -29,10 +30,10 @@ import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.PageChannel;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.PageChannel;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 
 /**
@@ -40,13 +41,10 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  * @author James Ahlborn
  */
 @SuppressWarnings("deprecation")
-public class ComplexColumnTest extends TestCase
+public class ComplexColumnTest
 {
 
-  public ComplexColumnTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testVersions() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -153,6 +151,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testAttachments() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -238,6 +237,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testMultiValues() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -316,6 +316,7 @@ public class ComplexColumnTest extends TestCase
     }
   }
 
+  @Test
   public void testUnsupported() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {

@@ -16,19 +16,15 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
-import junit.framework.TestCase;
-
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class CursorBuilderTest extends TestCase {
-
-  public CursorBuilderTest(String name) throws Exception {
-    super(name);
-  }
+public class CursorBuilderTest {
 
   private static void assertCursor(
       Cursor expected, Cursor found)
@@ -43,6 +39,7 @@ public class CursorBuilderTest extends TestCase {
                  found.getSavepoint().getCurrentPosition());
   }
 
+  @Test
   public void test() throws Exception
   {
     for (final TestDB indexCursorDB : CursorTest.INDEX_CURSOR_DBS) {

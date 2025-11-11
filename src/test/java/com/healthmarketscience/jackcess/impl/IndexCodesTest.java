@@ -38,12 +38,13 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class IndexCodesTest extends TestCase {
+public class IndexCodesTest {
 
   private static final Map<Character,String> SPECIAL_CHARS =
     new HashMap<Character,String>();
@@ -58,15 +59,13 @@ public class IndexCodesTest extends TestCase {
     SPECIAL_CHARS.put('\\', "\\\\");
   }
 
-  public IndexCodesTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testIndexCodes() throws Exception
   {
     doTestDb(Basename.INDEX_CODES);
   }
 
+  @Test
   public void testEmoticons() throws Exception
   {
     doTestDb(Basename.EMOTICONS);
@@ -170,6 +169,7 @@ public class IndexCodesTest extends TestCase {
   //
   //////
 
+  @Test
   public void testNothing() throws Exception {
     // keep this so build doesn't fail if other tests are disabled
   }

@@ -33,20 +33,18 @@ import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class AutoNumberTest extends TestCase
+public class AutoNumberTest
 {
 
-  public AutoNumberTest(String name) throws Exception {
-    super(name);
-  }
 
-
+  @Test
   public void testAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -64,6 +62,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testAutoNumberPK() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
@@ -125,6 +124,7 @@ public class AutoNumberTest extends TestCase
     assertTable(expectedRows, table);
   }
 
+  @Test
   public void testAutoNumberGuid() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -153,6 +153,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testInsertLongAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -170,6 +171,7 @@ public class AutoNumberTest extends TestCase
     }
   }
 
+  @Test
   public void testInsertLongAutoNumberPK() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -273,6 +275,7 @@ public class AutoNumberTest extends TestCase
 
   }
 
+  @Test
   public void testInsertComplexAutoNumber() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -402,6 +405,7 @@ public class AutoNumberTest extends TestCase
       assertEquals(expected, ((Number)row.get("attach-data")).intValue());
   }
 
+  @Test
   public void testInsertGuidAutoNumber() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

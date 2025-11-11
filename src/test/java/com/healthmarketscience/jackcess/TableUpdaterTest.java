@@ -23,24 +23,22 @@ import java.util.List;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.TableImpl;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class TableUpdaterTest extends TestCase
+public class TableUpdaterTest
 {
 
-  public TableUpdaterTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testTableUpdating() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -51,6 +49,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingOneToOne() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -61,6 +60,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingNoEnforce() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -71,6 +71,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testTableUpdatingNamedRelationship() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -195,6 +196,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testInvalidUpdate() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -237,6 +239,7 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testUpdateLargeTableDef() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

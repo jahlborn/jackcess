@@ -29,21 +29,19 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.impl.RowImpl;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.RowImpl;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class JoinerTest extends TestCase {
+public class JoinerTest {
 
-  public JoinerTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testJoiner() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {

@@ -19,7 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.expr.NumericConfig;
-import static junit.framework.TestCase.assertEquals;
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 /**

@@ -3,9 +3,9 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -13,12 +13,13 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.JackcessException;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 
 /**
@@ -26,7 +27,7 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
  *         Date: Mar 5, 2010
  *         Time: 12:44:21 PM
  */
-public class JetFormatTest extends TestCase {
+public class JetFormatTest {
 
   public static final File DIR_TEST_DATA = new File("src/test/data");
 
@@ -202,6 +203,7 @@ public class JetFormatTest extends TestCase {
     TestDB.getSupportedForBasename(Basename.TEST, true);
 
 
+  @Test
   public void testGetFormat() throws Exception {
     try {
       JetFormat.getFormat(null);
@@ -228,6 +230,7 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testReadOnlyFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -260,6 +263,7 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testFileFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -287,6 +291,7 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testSqlTypes() throws Exception {
 
     JetFormat v2000 = JetFormat.VERSION_4;

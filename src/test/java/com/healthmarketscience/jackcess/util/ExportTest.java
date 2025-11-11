@@ -22,30 +22,28 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import com.healthmarketscience.jackcess.impl.JetFormatTest;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import com.healthmarketscience.jackcess.impl.JetFormatTest;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExportTest extends TestCase
+public class ExportTest
 {
   private static final String NL = System.lineSeparator();
 
 
-  public ExportTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testExportToFile() throws Exception
   {
     DateFormat df = new SimpleDateFormat("yyyyMMdd HH:mm:ss");

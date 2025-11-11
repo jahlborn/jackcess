@@ -26,15 +26,17 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.util.LinkResolver;
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class LinkedTableTest extends TestCase
+public class LinkedTableTest
 {
 
+  @Test
   public void testLinkedTables() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.LINKED)) {
       Database db = openCopy(testDB);
@@ -155,6 +157,7 @@ public class LinkedTableTest extends TestCase
     }
   }
 
+  @Test
   public void testOdbcLinkedTables() throws Exception {
     for (final TestDB testDB :
            TestDB.getSupportedForBasename(Basename.LINKED_ODBC)) {

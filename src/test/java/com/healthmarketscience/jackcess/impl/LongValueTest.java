@@ -34,19 +34,17 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class LongValueTest extends TestCase
+public class LongValueTest
 {
 
-  public LongValueTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testReadLongValue() throws Exception {
 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.TEST2, true)) {
@@ -66,6 +64,7 @@ public class LongValueTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteLongValue() throws Exception {
 
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -115,9 +114,10 @@ public class LongValueTest extends TestCase
       assertNull(row.getBytes("C"));
 
       db.close();
-    }    
+    }
   }
 
+  @Test
   public void testManyMemos() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -187,6 +187,7 @@ public class LongValueTest extends TestCase
     }
   }
 
+  @Test
   public void testLongValueAsMiddleColumn() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -211,6 +212,7 @@ public class LongValueTest extends TestCase
     }
   }
 
+  @Test
   public void testUnicodeCompression() throws Exception
   {
     File dbFile = new File("src/test/data/V2003/testUnicodeCompV2003.mdb");
@@ -261,7 +263,7 @@ public class LongValueTest extends TestCase
     bytes = new byte[bb.remaining()];
     bb.get(bytes);
     assertEquals(longStr, col.read(bytes));
-    
+
 
     db.close();
   }

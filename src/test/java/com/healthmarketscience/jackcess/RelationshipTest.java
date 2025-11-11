@@ -22,26 +22,24 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RelationshipImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class RelationshipTest extends TestCase {
+public class RelationshipTest {
 
   private static final Comparator<Relationship> REL_COMP = new Comparator<Relationship>() {
     public int compare(Relationship r1, Relationship r2) {
       return String.CASE_INSENSITIVE_ORDER.compare(r1.getName(), r2.getName());
     }
   };
- 
-  public RelationshipTest(String name) throws Exception {
-    super(name);
-  }
 
+  @Test
   public void testTwoTables() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database db = open(testDB);
@@ -92,6 +90,7 @@ public class RelationshipTest extends TestCase {
     }
   }
 
+  @Test
   public void testOneTable() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database db = open(testDB);
@@ -104,10 +103,11 @@ public class RelationshipTest extends TestCase {
       expected.addAll(db.getRelationships(t2, t3));
 
       assertSameRelationships(expected, db.getRelationships(t2), false);
-      
+
     }
   }
 
+  @Test
   public void testNoTables() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
       Database db = open(testDB);
@@ -138,5 +138,5 @@ public class RelationshipTest extends TestCase {
       assertEquals(eRel.getName(), fRel.getName());
     }
   }
-  
+
 }

@@ -31,24 +31,23 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import static com.healthmarketscience.jackcess.Database.*;
 import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class LocalDateTimeTest extends TestCase
+public class LocalDateTimeTest
 {
-  public LocalDateTimeTest(String name) throws Exception {
-    super(name);
-  }
 
+  @Test
   public void testWriteAndReadLocalDate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -113,6 +112,7 @@ public class LocalDateTimeTest extends TestCase
     }
   }
 
+  @Test
   public void testAncientLocalDates() throws Exception
   {
     ZoneId zoneId = ZoneId.of("America/New_York");
@@ -164,6 +164,7 @@ public class LocalDateTimeTest extends TestCase
 
   }
 
+  @Test
   public void testZoneId() throws Exception
   {
     ZoneId zoneId = ZoneId.of("America/New_York");
@@ -212,6 +213,7 @@ public class LocalDateTimeTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteAndReadTemporals() throws Exception {
     ZoneId zoneId = ZoneId.of("America/New_York");
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

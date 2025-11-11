@@ -47,19 +47,18 @@ import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 
 /**
  * @author Tim McCune
  */
 @SuppressWarnings("deprecation")
-public class DatabaseTest extends TestCase
+public class DatabaseTest
 {
-  public DatabaseTest(String name) throws Exception {
-    super(name);
-  }
 
+  @Test
   public void testInvalidTableDefs() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -118,6 +117,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testReadDeletedRows() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL, true)) {
       Table table = open(testDB).getTable("Table");
@@ -130,6 +130,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testGetColumns() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
@@ -157,6 +158,7 @@ public class DatabaseTest extends TestCase
     assertEquals(dataType, column.getType());
   }
 
+  @Test
   public void testGetNextRow() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
@@ -181,6 +183,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testCreate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -189,6 +192,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDeleteCurrentRow() throws Exception {
 
     // make sure correct row is deleted
@@ -258,6 +262,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDeleteRow() throws Exception {
 
     // make sure correct row is deleted
@@ -290,6 +295,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testMissingFile() throws Exception {
     File bogusFile = new File("fooby-dooby.mdb");
     assertTrue(!bogusFile.exists());
@@ -302,6 +308,7 @@ public class DatabaseTest extends TestCase
     assertTrue(!bogusFile.exists());
   }
 
+  @Test
   public void testReadWithDeletedCols() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.DEL_COL, true)) {
       Table table = open(testDB).getTable("Table1");
@@ -335,6 +342,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testCurrency() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -372,6 +380,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testGUID() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -414,6 +423,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testNumeric() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -467,6 +477,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testFixedNumeric() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.FIXED_NUMERIC)) {
@@ -514,6 +525,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testMultiPageTableDef() throws Exception
   {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -522,6 +534,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testOverflow() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.OVERFLOW, true)) {
@@ -554,6 +567,7 @@ public class DatabaseTest extends TestCase
   }
 
 
+  @Test
   public void testUsageMapPromotion() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.PROMOTION)) {
       Database db = openMem(testDB);
@@ -586,6 +600,7 @@ public class DatabaseTest extends TestCase
   }
 
 
+  @Test
   public void testLargeTableDef() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
@@ -621,6 +636,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteAndReadDate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = createMem(fileFormat);
@@ -683,6 +699,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testAncientDatesWrite() throws Exception
   {
     SimpleDateFormat sdf = DatabaseBuilder.createDateFormat("yyyy-MM-dd");
@@ -719,6 +736,7 @@ public class DatabaseTest extends TestCase
   /**
    * Test ancient date handling against test database {@code oldDates*.accdb}.
    */
+  @Test
   public void testAncientDatesRead() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");
@@ -747,6 +765,7 @@ public class DatabaseTest extends TestCase
 
   }
 
+  @Test
   public void testSystemTable() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -810,6 +829,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testFixedText() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.FIXED_TEXT)) {
@@ -836,6 +856,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testDbSortOrder() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
@@ -847,6 +868,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testUnsupportedColumns() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
 
@@ -884,6 +906,7 @@ public class DatabaseTest extends TestCase
     return tableList;
   }
 
+  @Test
   public void testTimeZone() throws Exception
   {
     TimeZone tz = TimeZone.getTimeZone("America/New_York");
@@ -928,6 +951,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testToString()
   {
     RowImpl row = new RowImpl(new RowIdImpl(1, 1));
@@ -936,6 +960,7 @@ public class DatabaseTest extends TestCase
     assertEquals("Row[1:1][{id=37,data=<null>}]", row.toString());
   }
 
+  @Test
   public void testIterateTableNames() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       final Database db = open(testDB);
@@ -984,6 +1009,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testTableDates() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
       Table table = open(testDB).getTable("Table1");
@@ -1001,6 +1027,7 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  @Test
   public void testBrokenIndex() throws Exception {
     TestDB testDb = TestDB.getSupportedForBasename(Basename.TEST).get(0);
     try (Database db = new DatabaseBuilder(testDb.getFile())

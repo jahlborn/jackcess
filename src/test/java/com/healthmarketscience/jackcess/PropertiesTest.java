@@ -25,25 +25,23 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMaps;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class PropertiesTest extends TestCase
+public class PropertiesTest
 {
 
-  public PropertiesTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testPropertyMaps() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);
@@ -103,6 +101,7 @@ public class PropertiesTest extends TestCase
                                colMap.get("buzz")), props);
   }
 
+  @Test
   public void testInferTypes() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);
@@ -121,6 +120,7 @@ public class PropertiesTest extends TestCase
                  defMap.put("intprop", 37).getType());
   }
 
+  @Test
   public void testReadProperties() throws Exception
   {
     byte[] nameMapBytes = null;
@@ -189,6 +189,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testParseProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS_FOR_READ) {
@@ -229,6 +230,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -262,6 +264,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testModifyProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -350,6 +353,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testCreateDbProperties() throws Exception
   {
     for(FileFormat ff : SUPPORTED_FILEFORMATS) {
@@ -406,6 +410,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testEnforceProperties() throws Exception
   {
     for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -516,6 +521,7 @@ public class PropertiesTest extends TestCase
     }
   }
 
+  @Test
   public void testEnumValues() throws Exception
   {
     PropertyMaps maps = new PropertyMaps(10, null, null, null);

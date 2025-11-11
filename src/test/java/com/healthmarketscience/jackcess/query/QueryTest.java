@@ -26,26 +26,22 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.TestUtil;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl.Row;
-import junit.framework.TestCase;
 import org.apache.commons.lang3.StringUtils;
-
-import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
-
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 
 /**
  * @author James Ahlborn
  */
-public class QueryTest extends TestCase
+public class QueryTest
 {
 
-  public QueryTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testUnionQuery() throws Exception
   {
     String expr1 = "Select * from Table1";
@@ -86,6 +82,7 @@ public class QueryTest extends TestCase
 
   }
 
+  @Test
   public void testPassthroughQuery() throws Exception
   {
     String expr = "Select * from Table1";
@@ -98,6 +95,7 @@ public class QueryTest extends TestCase
     assertEquals(constr, query.getConnectionString());
   }
 
+  @Test
   public void testDataDefinitionQuery() throws Exception
   {
     String expr = "Drop table Table1";
@@ -108,6 +106,7 @@ public class QueryTest extends TestCase
     assertEquals(expr, query.toSQLString());
   }
 
+  @Test
   public void testUpdateQuery() throws Exception
   {
     UpdateQuery query = (UpdateQuery)newQuery(
@@ -131,6 +130,7 @@ public class QueryTest extends TestCase
         query.toSQLString());
   }
 
+  @Test
   public void testSelectQuery() throws Exception
   {
     SelectQuery query = (SelectQuery)newQuery(
@@ -154,6 +154,7 @@ public class QueryTest extends TestCase
     doTestOrderings(query);
   }
 
+  @Test
   public void testBadQueries() throws Exception
   {
     List<Row> rowList = new ArrayList<Row>();
@@ -188,6 +189,7 @@ public class QueryTest extends TestCase
 
   }
 
+  @Test
   public void testReadQueries() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.QUERY, true)) {
@@ -256,6 +258,7 @@ public class QueryTest extends TestCase
     }
   }
 
+  @Test
   public void testAppendQuery() throws Exception
   {
     AppendQuery query = (AppendQuery)newQuery(
@@ -463,6 +466,7 @@ public class QueryTest extends TestCase
                  query.toSQLString());
   }
 
+  @Test
   public void testComplexJoins() throws Exception
   {
     SelectQuery query = (SelectQuery)newQuery(

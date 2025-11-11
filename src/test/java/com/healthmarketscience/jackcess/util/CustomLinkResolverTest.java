@@ -26,21 +26,19 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class CustomLinkResolverTest extends TestCase
+public class CustomLinkResolverTest
 {
 
-  public CustomLinkResolverTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testCustomLinkResolver() throws Exception {
     for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);

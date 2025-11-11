@@ -29,17 +29,19 @@ import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ColumnFormatterTest extends TestCase
+public class ColumnFormatterTest
 {
 
+  @Test
   public void testFormat() throws Exception {
 
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

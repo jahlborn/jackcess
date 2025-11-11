@@ -22,31 +22,29 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteOrder;
 import java.util.List;
 
-import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  * @author James Ahlborn
  */
-public class ErrorHandlerTest extends TestCase 
+public class ErrorHandlerTest
 {
 
-  public ErrorHandlerTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testErrorHandler() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
@@ -165,7 +163,7 @@ public class ErrorHandlerTest extends TestCase
         f.set(destCol, f.get(srcCol));
       }
     }
-    
+
   }
 
   private static class BogusColumn extends ColumnImpl
@@ -173,7 +171,7 @@ public class ErrorHandlerTest extends TestCase
     private BogusColumn(Table table, String name) {
       super((TableImpl)table, name, DataType.LONG, 1, 0, 0);
     }
-    
+
     @Override
     public Object read(byte[] data, ByteOrder order) throws IOException {
       throw new IOException("bogus column");

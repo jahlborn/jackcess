@@ -23,19 +23,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class TopoSorterTest extends TestCase
+public class TopoSorterTest
 {
 
-  public TopoSorterTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testTopoSort() throws Exception
   {
     doTopoTest(Arrays.asList("A", "B", "C"),
@@ -138,7 +136,7 @@ public class TopoSorterTest extends TestCase
 
   private static class TestTopoSorter extends TopoSorter<String>
   {
-    private final Map<String,List<String>> _descMap = 
+    private final Map<String,List<String>> _descMap =
       new HashMap<String,List<String>>();
 
     protected TestTopoSorter(List<String> values, boolean reverse) {

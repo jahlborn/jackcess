@@ -31,21 +31,19 @@ import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class CalcFieldTest extends TestCase
+public class CalcFieldTest
 {
 
-  public CalcFieldTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testCreateCalcField() throws Exception {
 
     ColumnBuilder cb = new ColumnBuilder("calc_data", DataType.TEXT)
@@ -145,6 +143,7 @@ public class CalcFieldTest extends TestCase
     }
   }
 
+  @Test
   public void testReadCalcFields() throws Exception {
 
     for(TestDB testDB : TestDB.getSupportedForBasename(Basename.CALC_FIELD)) {

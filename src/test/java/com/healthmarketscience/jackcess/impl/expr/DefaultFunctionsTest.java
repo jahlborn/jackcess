@@ -24,7 +24,7 @@ import com.healthmarketscience.jackcess.expr.EvalException;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
 import junit.framework.AssertionFailedError;
-import static junit.framework.TestCase.*;
+import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**

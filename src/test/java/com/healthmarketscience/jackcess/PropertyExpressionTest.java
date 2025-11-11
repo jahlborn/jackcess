@@ -22,33 +22,30 @@ import java.util.Locale;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
+import static com.healthmarketscience.jackcess.Database.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.expr.EvalConfig;
 import com.healthmarketscience.jackcess.expr.EvalContext;
 import com.healthmarketscience.jackcess.expr.Function;
 import com.healthmarketscience.jackcess.expr.FunctionLookup;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.FunctionSupport;
 import com.healthmarketscience.jackcess.impl.expr.ValueSupport;
-import junit.framework.TestCase;
-
-import static com.healthmarketscience.jackcess.Database.*;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class PropertyExpressionTest extends TestCase
+public class PropertyExpressionTest
 {
 
-  public PropertyExpressionTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testDefaultValue() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -114,6 +111,7 @@ public class PropertyExpressionTest extends TestCase
     }
   }
 
+  @Test
   public void testCalculatedValue() throws Exception
   {
     Database db = create(FileFormat.V2016);
@@ -158,6 +156,7 @@ public class PropertyExpressionTest extends TestCase
     db.close();
   }
 
+  @Test
   public void testColumnValidator() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -231,6 +230,7 @@ public class PropertyExpressionTest extends TestCase
     }
   }
 
+  @Test
   public void testRowValidator() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {

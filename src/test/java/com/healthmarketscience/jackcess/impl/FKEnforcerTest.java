@@ -27,21 +27,19 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.Assert.*;
+import org.junit.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class FKEnforcerTest extends TestCase
+public class FKEnforcerTest
 {
 
-  public FKEnforcerTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testNoEnforceForeignKeys() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
@@ -66,6 +64,7 @@ public class FKEnforcerTest extends TestCase
 
   }
 
+  @Test
   public void testEnforceForeignKeys() throws Exception {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
