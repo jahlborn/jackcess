@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
@@ -34,8 +35,6 @@ import com.healthmarketscience.jackcess.impl.complex.AttachmentColumnInfoImpl;
 import com.healthmarketscience.jackcess.impl.complex.MultiValueColumnInfoImpl;
 import com.healthmarketscience.jackcess.impl.complex.UnsupportedColumnInfoImpl;
 import com.healthmarketscience.jackcess.impl.complex.VersionHistoryColumnInfoImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -43,9 +42,9 @@ import org.apache.commons.logging.LogFactory;
  *
  * @author James Ahlborn
  */
-public class ComplexColumnSupport 
+public class ComplexColumnSupport
 {
-  private static final Log LOG = LogFactory.getLog(ComplexColumnSupport.class);
+  private static final Logger LOG = System.getLogger(ComplexColumnSupport.class.getName());
 
   private static final String COL_COMPLEX_TYPE_OBJECT_ID = "ComplexTypeObjectID";
   private static final String COL_TABLE_ID = "ConceptualTableID";
@@ -94,7 +93,7 @@ public class ComplexColumnSupport
           "Could not find supporting tables (" + typeObjId + ", " + flatTableId
           + ") for complex column with id " + complexTypeId));
     }
-    
+
     // we inspect the structore of the "type table" to determine what kind of
     // complex info we are dealing with
     if(isMultiValueColumn(typeObjTable)) {
@@ -107,8 +106,8 @@ public class ComplexColumnSupport
       return new VersionHistoryColumnInfoImpl(column, complexTypeId, typeObjTable,
                                           flatTable);
     }
-    
-    LOG.warn(column.withErrorContext(
+
+    LOG.log(Logger.Level.WARNING, column.withErrorContext(
                  "Unsupported complex column type " + typeObjTable.getName()));
     return new UnsupportedColumnInfoImpl(column, complexTypeId, typeObjTable,
                                          flatTable);
@@ -137,7 +136,7 @@ public class ComplexColumnSupport
     int numDate = 0;
     int numOle= 0;
     int numLong = 0;
-    
+
     for(Column col : typeCols) {
       switch(col.getType()) {
       case TEXT:
@@ -175,7 +174,7 @@ public class ComplexColumnSupport
 
     int numMemo = 0;
     int numDate = 0;
-    
+
     for(Column col : typeCols) {
       switch(col.getType()) {
       case SHORT_DATE_TIME:

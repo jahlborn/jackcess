@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.System.Logger;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -81,8 +82,6 @@ import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -92,7 +91,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class DatabaseImpl implements Database, DateTimeContext
 {
-  private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
+  private static final Logger LOG = System.getLogger(DatabaseImpl.class.getName());
 
   /** this is the default "userId" used if we cannot find existing info.  this
       seems to be some standard "Admin" userId for access files */
@@ -1005,8 +1004,8 @@ public class DatabaseImpl implements Database, DateTimeContext
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toIndexCursor());
       } catch(IllegalArgumentException e) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(withErrorContext(
+        if(LOG.isLoggable(Logger.Level.DEBUG)) {
+          LOG.log(Logger.Level.DEBUG, withErrorContext(
                         "Could not find expected index on table " +
                         _systemCatalog.getName()));
         }
@@ -1017,8 +1016,8 @@ public class DatabaseImpl implements Database, DateTimeContext
             .toCursor());
       }
     } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(withErrorContext(
+      if(LOG.isLoggable(Logger.Level.DEBUG)) {
+        LOG.log(Logger.Level.DEBUG, withErrorContext(
                       "Ignoring index on table " + _systemCatalog.getName()));
       }
       // use table scan instead
@@ -1036,8 +1035,8 @@ public class DatabaseImpl implements Database, DateTimeContext
               "Did not find required parent table id"));
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(withErrorContext(
+    if (LOG.isLoggable(Logger.Level.DEBUG)) {
+      LOG.log(Logger.Level.DEBUG, withErrorContext(
           "Finished reading system catalog.  Tables: " + getTableNames()));
     }
   }
@@ -1470,7 +1469,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       QueryImpl.Row queryRow = new QueryImpl.Row(row);
       List<QueryImpl.Row> queryRows = queryRowMap.get(queryRow.objectId);
       if(queryRows == null) {
-        LOG.warn(withErrorContext(
+        LOG.log(Logger.Level.WARNING, withErrorContext(
                      "Found rows for query with id " + queryRow.objectId +
                      " missing from system catalog"));
         continue;
@@ -1902,8 +1901,8 @@ public class DatabaseImpl implements Database, DateTimeContext
         .setSpecificEntry(colValue)
         .toCursor();
     } catch(IllegalArgumentException e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(withErrorContext(
+      if(LOG.isLoggable(Logger.Level.DEBUG)) {
+        LOG.log(Logger.Level.DEBUG, withErrorContext(
             "Could not find expected index on table " + table.getName()));
       }
     }

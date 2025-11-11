@@ -23,6 +23,7 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.Reader;
 import java.io.Serializable;
+import java.lang.System.Logger;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -66,8 +67,6 @@ import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Access database column definition
@@ -77,7 +76,7 @@ import org.apache.commons.logging.LogFactory;
 public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeContext
 {
 
-  protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
+  protected static final Logger LOG = System.getLogger(ColumnImpl.class.getName());
 
   /**
    * Placeholder object for adding rows which indicates that the caller wants
@@ -317,7 +316,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     try {
       args.type = DataType.fromByte(colType);
     } catch(IOException e) {
-      LOG.warn(withErrorContext("Unsupported column type " + colType,
+      LOG.log(Logger.Level.WARNING, withErrorContext("Unsupported column type " + colType,
                                 table.getDatabase(), table.getName(), name));
       boolean variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
       args.type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
@@ -712,7 +711,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     case COMPLEX_TYPE:
       return new ComplexTypeAutoNumberGenerator();
     default:
-      LOG.warn(withErrorContext("Unknown auto number column type " + _type));
+      LOG.log(Logger.Level.WARNING, withErrorContext("Unknown auto number column type " + _type));
       return new UnsupportedAutoNumberGenerator(_type);
     }
   }

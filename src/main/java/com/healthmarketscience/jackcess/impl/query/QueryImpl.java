@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.query;
 
+import java.lang.System.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -28,20 +29,18 @@ import com.healthmarketscience.jackcess.impl.RowImpl;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 import com.healthmarketscience.jackcess.query.Query;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
  * Base class for classes which encapsulate information about an Access query.
  * The {@link #toSQLString()} method can be used to convert this object into
  * the actual SQL string which this query data represents.
- * 
+ *
  * @author James Ahlborn
  */
 public abstract class QueryImpl implements Query
 {
-  protected static final Log LOG = LogFactory.getLog(QueryImpl.class);  
+  protected static final Logger LOG = System.getLogger(QueryImpl.class.getName());
 
   private static final Row EMPTY_ROW = new Row();
 
@@ -51,8 +50,8 @@ public abstract class QueryImpl implements Query
   private final Type _type;
   private final int _objectFlag;
 
-  protected QueryImpl(String name, List<Row> rows, int objectId, int objectFlag, 
-                      Type type) 
+  protected QueryImpl(String name, List<Row> rows, int objectId, int objectFlag,
+                      Type type)
   {
     _name = name;
     _rows = rows;
@@ -176,7 +175,7 @@ public abstract class QueryImpl implements Query
   }
 
   @Override
-  public List<String> getParameters() 
+  public List<String> getParameters()
   {
     return (new RowFormatter(getParameterRows()) {
         @Override protected void format(StringBuilder builder, Row row) {
@@ -185,7 +184,7 @@ public abstract class QueryImpl implements Query
             throw new IllegalStateException(withErrorContext(
                 "Unknown param type " + row.flag));
           }
-              
+
           builder.append(row.name1).append(' ').append(typeName);
           if((TEXT_FLAG.equals(row.flag)) && (getIntValue(row.extra, 0) > 0)) {
             builder.append('(').append(row.extra).append(')');
@@ -194,7 +193,7 @@ public abstract class QueryImpl implements Query
       }).format();
   }
 
-  protected List<String> getFromTables() 
+  protected List<String> getFromTables()
   {
     // grab the list of query tables
     List<TableSource> tableExprs = new ArrayList<TableSource>();
@@ -216,7 +215,7 @@ public abstract class QueryImpl implements Query
     // combine the tables with any query joins
     List<Row> joins = getJoinRows();
     for(Row joinRow : joins) {
-        
+
       String fromTable = joinRow.name1;
       String toTable = joinRow.name2;
 
@@ -224,7 +223,7 @@ public abstract class QueryImpl implements Query
       TableSource toTs = null;
 
       // combine existing join expressions containing the target tables
-      for(Iterator<TableSource> joinIter = tableExprs.iterator(); 
+      for(Iterator<TableSource> joinIter = tableExprs.iterator();
           (joinIter.hasNext() && ((fromTs == null) || (toTs == null))); ) {
         TableSource ts = joinIter.next();
 
@@ -278,12 +277,12 @@ public abstract class QueryImpl implements Query
     return result;
   }
 
-  protected String getFromRemoteDbPath() 
+  protected String getFromRemoteDbPath()
   {
     return getRemoteDatabaseRow().name1;
   }
 
-  protected String getFromRemoteDbType() 
+  protected String getFromRemoteDbType()
   {
     return getRemoteDatabaseRow().expression;
   }
@@ -293,7 +292,7 @@ public abstract class QueryImpl implements Query
     return getWhereRow().expression;
   }
 
-  protected List<String> getOrderings() 
+  protected List<String> getOrderings()
   {
     return (new RowFormatter(getOrderByRows()) {
         @Override protected void format(StringBuilder builder, Row row) {
@@ -324,7 +323,7 @@ public abstract class QueryImpl implements Query
    * Returns the actual SQL string which this query data represents.
    */
   @Override
-  public String toSQLString() 
+  public String toSQLString()
   {
     StringBuilder builder = new StringBuilder();
     if(supportsStandardClauses()) {
@@ -339,7 +338,7 @@ public abstract class QueryImpl implements Query
       if(!DEFAULT_TYPE.equals(accessType)) {
         builder.append(NEWLINE).append(accessType);
       }
-      
+
       builder.append(';');
     }
     return builder.toString();
@@ -361,7 +360,7 @@ public abstract class QueryImpl implements Query
    *
    * @return a Query instance for the given query data
    */
-  public static QueryImpl create(int objectFlag, String name, List<Row> rows, 
+  public static QueryImpl create(int objectFlag, String name, List<Row> rows,
                                  int objectId)
   {
     // remove other object flags before testing for query type
@@ -403,7 +402,7 @@ public abstract class QueryImpl implements Query
                 "unknown query object flag " + objTypeFlag, name));
       }
     } catch(IllegalStateException e) {
-      LOG.warn(withErrorContext("Failed parsing query", name), e);
+      LOG.log(Logger.Level.WARNING, withErrorContext("Failed parsing query", name), e);
     }
 
     // return unknown query
@@ -446,7 +445,7 @@ public abstract class QueryImpl implements Query
   }
 
   protected static List<Row> filterRowsByFlag(
-      List<Row> rows, final short flag) 
+      List<Row> rows, final short flag)
   {
     return new RowFilter() {
         @Override protected boolean keep(Row row) {
@@ -456,7 +455,7 @@ public abstract class QueryImpl implements Query
   }
 
   protected static List<Row> filterRowsByNotFlag(
-      List<Row> rows, final short flag) 
+      List<Row> rows, final short flag)
   {
     return new RowFilter() {
         @Override protected boolean keep(Row row) {
@@ -478,12 +477,12 @@ public abstract class QueryImpl implements Query
     return ((i != null) ? (int)i : def);
   }
 
-  protected static StringBuilder toOptionalQuotedExpr(StringBuilder builder, 
+  protected static StringBuilder toOptionalQuotedExpr(StringBuilder builder,
                                                       String fullExpr,
                                                       boolean isIdentifier)
   {
-    String[] exprs = (isIdentifier ? 
-                      IDENTIFIER_SEP_PAT.split(fullExpr) : 
+    String[] exprs = (isIdentifier ?
+                      IDENTIFIER_SEP_PAT.split(fullExpr) :
                       new String[]{fullExpr});
     for(int i = 0; i < exprs.length; ++i) {
       String expr = exprs[i];
@@ -499,16 +498,16 @@ public abstract class QueryImpl implements Query
     return builder;
   }
 
-  protected static StringBuilder toQuotedExpr(StringBuilder builder, 
+  protected static StringBuilder toQuotedExpr(StringBuilder builder,
                                               String expr)
   {
-    return (!isQuoted(expr) ? 
+    return (!isQuoted(expr) ?
             builder.append('[').append(expr).append(']') :
             builder.append(expr));
   }
 
   protected static boolean isQuoted(String expr) {
-    return ((expr.length() >= 2) && 
+    return ((expr.length() >= 2) &&
             (expr.charAt(0) == '[') && (expr.charAt(expr.length() - 1) == ']'));
   }
 
@@ -548,8 +547,8 @@ public abstract class QueryImpl implements Query
 
   private static final class UnknownQueryImpl extends QueryImpl
   {
-    private UnknownQueryImpl(String name, List<Row> rows, int objectId, 
-                             int objectFlag) 
+    private UnknownQueryImpl(String name, List<Row> rows, int objectId,
+                             int objectFlag)
     {
       super(name, rows, objectId, objectFlag, Type.UNKNOWN);
     }

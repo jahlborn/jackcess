@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -34,8 +35,6 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Access table index data.  This is the actual data which backs a logical
@@ -46,7 +45,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class IndexData {
 
-  protected static final Log LOG = LogFactory.getLog(Index.class);
+  protected static final Logger LOG = System.getLogger(Index.class.getName());
 
   /** special entry which is less than any other entry */
   public static final Entry FIRST_ENTRY =
@@ -353,10 +352,10 @@ public class IndexData {
   private void setUnsupportedReason(String reason, ColumnImpl col) {
     _unsupportedReason = withErrorContext(reason);
     if(!col.getTable().isSystem()) {
-      LOG.warn(_unsupportedReason + ", making read-only");
+      LOG.log(Logger.Level.WARNING, _unsupportedReason + ", making read-only");
     } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(_unsupportedReason + ", making read-only");
+      if(LOG.isLoggable(Logger.Level.DEBUG)) {
+        LOG.log(Logger.Level.DEBUG, _unsupportedReason + ", making read-only");
       }
     }
   }
@@ -692,7 +691,7 @@ public class IndexData {
       }
       ++_modCount;
     } else {
-      LOG.warn(withErrorContext("Added duplicate index entry " + oldEntry));
+      LOG.log(Logger.Level.WARNING, withErrorContext("Added duplicate index entry " + oldEntry));
     }
   }
 
@@ -757,7 +756,7 @@ public class IndexData {
     if(removedEntry != null) {
       ++_modCount;
     } else {
-      LOG.warn(withErrorContext(
+      LOG.log(Logger.Level.WARNING, withErrorContext(
           "Failed removing index entry " + oldEntry + " for row: " +
           Arrays.asList(row)));
     }

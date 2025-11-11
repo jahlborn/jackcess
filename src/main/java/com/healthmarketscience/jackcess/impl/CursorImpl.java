@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -35,8 +36,6 @@ import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.IterableBuilder;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
@@ -56,7 +55,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class CursorImpl implements Cursor
 {
-  private static final Log LOG = LogFactory.getLog(CursorImpl.class);
+  private static final Logger LOG = System.getLogger(CursorImpl.class.getName());
 
   /** boolean value indicating forward movement */
   public static final boolean MOVE_FORWARD = true;
@@ -454,7 +453,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -510,7 +509,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -551,7 +550,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }

@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -26,8 +27,6 @@ import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Access table (logical) index.  Logical indexes are backed for IndexData,
@@ -37,7 +36,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class IndexImpl implements Index, Comparable<IndexImpl>
 {
-  protected static final Log LOG = LogFactory.getLog(IndexImpl.class);
+  protected static final Logger LOG = System.getLogger(IndexImpl.class.getName());
 
   /** index type for primary key indexes */
   public static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
