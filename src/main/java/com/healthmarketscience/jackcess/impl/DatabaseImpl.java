@@ -80,7 +80,6 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 
 /**
@@ -1991,7 +1990,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return ToStringBuilder.builder(this).reflectionToString();
   }
 
   /**
@@ -2356,7 +2355,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     @Override
     public String toString() {
-      ToStringBuilder sb = CustomToStringStyle.valueBuilder("TableMetaData")
+      ToStringBuilder sb = ToStringBuilder.valueBuilder("TableMetaData")
         .append("name", getName());
         if(isSystem()) {
           sb.append("isSystem", isSystem());

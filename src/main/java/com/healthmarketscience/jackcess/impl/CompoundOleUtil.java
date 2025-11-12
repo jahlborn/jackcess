@@ -32,7 +32,6 @@ import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.OleUtil.*;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.poi.poifs.filesystem.DirectoryEntry;
 import org.apache.poi.poifs.filesystem.DocumentEntry;
 import org.apache.poi.poifs.filesystem.DocumentInputStream;
@@ -212,7 +211,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
 
     @Override
     public String toString() {
-      ToStringBuilder sb = toString(CustomToStringStyle.builder(this));
+      ToStringBuilder sb = toString(ToStringBuilder.builder(this));
 
       try {
         sb.append("hasContentsEntry", hasContentsEntry());
@@ -278,7 +277,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
 
       @Override
       public String toString() {
-        return CustomToStringStyle.valueBuilder(this)
+        return ToStringBuilder.valueBuilder(this)
           .append("name", _name)
           .append("length", length())
           .toString();

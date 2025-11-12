@@ -66,7 +66,6 @@ import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
 import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Access database column definition
@@ -1743,7 +1742,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this)
+    ToStringBuilder sb = ToStringBuilder.builder(this)
       .append("name", "(" + _table.getName() + ") " + _name);
     byte typeValue = getOriginalDataType();
     sb.append("type", "0x" + Integer.toHexString(typeValue) +
@@ -1753,8 +1752,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
       .append("variableLength", _variableLength);
     if(_calculated) {
       sb.append("calculated", _calculated)
-        .append("expression",
-                CustomToStringStyle.ignoreNull(getCalculationContext()));
+        .appendIfNotNull("expression", getCalculationContext());
     }
     if(_type.isTextual()) {
       sb.append("compressedUnicode", isCompressedUnicode())
@@ -1776,11 +1774,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     if(_autoNumber) {
       sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
-    sb.append("complexInfo", CustomToStringStyle.ignoreNull(getComplexInfo()))
-      .append("validator", CustomToStringStyle.ignoreNull(
-                  ((_validator != SimpleColumnValidator.INSTANCE) ?
-                   _validator : null)))
-      .append("defaultValue", CustomToStringStyle.ignoreNull(_defValue));
+    sb.appendIfNotNull("complexInfo", getComplexInfo())
+      .appendIfNotNull("validator",
+                       ((_validator != SimpleColumnValidator.INSTANCE) ?
+                        _validator : null))
+      .appendIfNotNull("defaultValue", _defValue);
     return sb.toString();
   }
 
@@ -2384,7 +2382,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append(null, getBytes())
         .toString();
     }
@@ -2670,7 +2668,7 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append(null, _value + "(" + _version + ")")
         .toString();
     }

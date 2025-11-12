@@ -339,7 +339,7 @@ public class RelationshipCreator extends DBMutator
       colNames = getColumnNames(cols);
     }
 
-    return CustomToStringStyle.valueBuilder(tableName)
+    return ToStringBuilder.valueBuilder(tableName)
       .append(null, colNames)
       .toString();
   }

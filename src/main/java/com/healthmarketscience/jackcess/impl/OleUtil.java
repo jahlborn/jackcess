@@ -36,7 +36,6 @@ import java.util.regex.Pattern;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.util.OleBlob;
 import static com.healthmarketscience.jackcess.util.OleBlob.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Utility code for working with OLE data.
@@ -569,7 +568,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      ToStringBuilder sb = CustomToStringStyle.builder(this);
+      ToStringBuilder sb = ToStringBuilder.builder(this);
       if(_content != null) {
         sb.append("content", _content);
       } else {
@@ -735,7 +734,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("fileName", _fileName)
         .append("linkPath", _linkPath)
         .append("filePath", _filePath)
@@ -785,7 +784,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("fileName", _fileName)
         .append("filePath", _filePath)
         .append("localFilePath", _localFilePath)
@@ -811,7 +810,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .toString();
     }
   }
@@ -829,7 +828,7 @@ public class OleUtil
 
     @Override
     public String toString() {
-      return toString(CustomToStringStyle.builder(this))
+      return toString(ToStringBuilder.builder(this))
         .append("content", _blob._bytes)
         .toString();
     }

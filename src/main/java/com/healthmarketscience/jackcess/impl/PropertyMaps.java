@@ -121,7 +121,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append(null, _maps.values())
       .toString();
   }

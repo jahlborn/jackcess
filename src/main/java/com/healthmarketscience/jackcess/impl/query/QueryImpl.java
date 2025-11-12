@@ -26,9 +26,9 @@ import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 import com.healthmarketscience.jackcess.query.Query;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 
 /**
@@ -346,7 +346,7 @@ public abstract class QueryImpl implements Query
 
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return ToStringBuilder.builder(this).reflectionToString();
   }
 
   /**
@@ -632,7 +632,7 @@ public abstract class QueryImpl implements Query
 
     @Override
     public String toString() {
-      return ToStringBuilder.reflectionToString(this);
+      return ToStringBuilder.builder(this).reflectionToString();
     }
   }
 

@@ -34,7 +34,6 @@ import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * Access table index data.  This is the actual data which backs a logical
@@ -1106,7 +1105,7 @@ public class IndexData {
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this)
+    ToStringBuilder sb = ToStringBuilder.builder(this)
       .append("dataNumber", _number)
       .append("pageNumber", _rootPageNumber)
       .append("isBackingPrimaryKey", isBackingPrimaryKey())
@@ -1673,7 +1672,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.builder(this)
+      return ToStringBuilder.builder(this)
         .append("column", getColumn())
         .append("flags", getFlags() + " " + (isAscending() ? "(ASC)" : "(DSC)"))
         .toString();
@@ -2174,7 +2173,7 @@ public class IndexData {
     @Override
     public String toString() {
       return entryBytesToStringBuilder(
-          CustomToStringStyle.valueBuilder(this)
+          ToStringBuilder.valueBuilder(this)
           .append("rowId", _rowId))
         .toString();
     }
@@ -2303,7 +2302,7 @@ public class IndexData {
     @Override
     public String toString() {
       return entryBytesToStringBuilder(
-          CustomToStringStyle.valueBuilder(this)
+          ToStringBuilder.valueBuilder(this)
           .append("rowId", getRowId())
           .append("subPage", _subPageNumber))
         .toString();
@@ -2541,7 +2540,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("curPosition", _curPos)
         .append("prevPosition", _prevPos)
         .toString();
@@ -2700,7 +2699,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("page", _dataPage.getPageNumber())
         .append("idx", _idx)
         .append("entry", _entry)
@@ -2775,7 +2774,7 @@ public class IndexData {
         (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
         getChildTailPageNumber() + ")";
-      ToStringBuilder sb = CustomToStringStyle.valueBuilder(objName);
+      ToStringBuilder sb = ToStringBuilder.valueBuilder(objName);
 
       if((isLeaf() && !entries.isEmpty())) {
         sb.append("entryRange", "[" + entries.get(0) + ", " +
