@@ -26,7 +26,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 /**
  * <p>Builder for {@link Object#toString()} methods.</p>
@@ -48,45 +48,51 @@ public final class ToStringBuilder
   private final StringBuilder _buffer;
   private final Object _object;
   private final String _fieldSeparator;
-  private final boolean _fieldSeparatorAtStart;
+  private final boolean _fieldSeparatorSurround;
   private final String _fieldNameValueSeparator;
+  private final String _arraySeparator;
   private final String _contentStart;
   private final String _contentEnd;
   private final boolean _useIdentityHashCode;
+  private final Function<Object,String> _valueFormatter;
 
   private ToStringBuilder(
-      Object object, String fieldSeparator, boolean fieldSeparatorAtStart,
-      String fieldNameValueSeparator, String contentEnd, boolean useIdentityHashCode) {
+      Object object, String fieldSeparator, boolean fieldSeparatorSurround,
+      String fieldNameValueSeparator, String arraySeparator,
+      String contentStart, String contentEnd, boolean useIdentityHashCode) {
     _buffer = new StringBuilder(512);
     _object = object;
     _fieldSeparator = Optional.ofNullable(fieldSeparator).orElse(",");
-    _fieldSeparatorAtStart = fieldSeparatorAtStart;
+    _fieldSeparatorSurround = fieldSeparatorSurround;
     _fieldNameValueSeparator = Optional.ofNullable(fieldNameValueSeparator).orElse("=");
-    _contentStart = "[";
+    _arraySeparator = Optional.ofNullable(arraySeparator).orElse(",");
+    _contentStart = Optional.ofNullable(contentStart).orElse("[");
     _contentEnd = Optional.ofNullable(contentEnd).orElse("]");
     _useIdentityHashCode = useIdentityHashCode;
 
+    _valueFormatter = (_fieldSeparatorSurround &&
+                       (_fieldSeparator.length() > LINE_SEP.length()) &&
+                       _fieldSeparator.startsWith(LINE_SEP)) ?
+      this::indentValue : Object::toString;
+
     if (_object != null) {
-      _buffer.append((_object instanceof String) ?
-                     _object :
-                     getShortClassName(_object.getClass()));
+      register(_object);
+      _buffer.append(getShortClassName(_object));
       if (_useIdentityHashCode) {
-        _buffer.append('@').append(Integer.toHexString(System.identityHashCode(_object)));
+        appendIdentityHashCode(_object, _buffer);
       }
       _buffer.append(_contentStart);
-      if (_fieldSeparatorAtStart) {
-        _buffer.append(_fieldSeparator);
-      }
     }
   }
 
   public static ToStringBuilder valueBuilder(Object obj) {
-    return new ToStringBuilder(obj, null, false, null, null, false);
+    return new ToStringBuilder(obj, null, false, null, null, null, null, false);
   }
 
   public static ToStringBuilder builder(Object obj) {
-    return new ToStringBuilder(obj, LINE_SEP + "  ", true, ": ",
-                               LINE_SEP + "]", true);
+    String fieldSep = LINE_SEP + "  ";
+    return new ToStringBuilder(obj, fieldSep, true, ": ", "," + fieldSep,
+                               "[" + fieldSep, LINE_SEP + "]", true);
   }
 
   public ToStringBuilder append(String fieldName, Object value) {
@@ -94,11 +100,7 @@ public final class ToStringBuilder
       _buffer.append(fieldName).append(_fieldNameValueSeparator);
     }
 
-    if (value == null) {
-      _buffer.append(NULL_TEXT);
-    } else {
-      appendInternal(fieldName, value);
-    }
+    appendValue(value, _buffer);
 
     _buffer.append(_fieldSeparator);
     return this;
@@ -129,17 +131,18 @@ public final class ToStringBuilder
     } else {
       removeLastFieldSeparator();
       _buffer.append(_contentEnd);
+      unregister(_object);
     }
     return _buffer.toString();
   }
 
-  private void appendInternal(String fieldName, Object value) {
+  private void appendInternal(Object value, StringBuilder buffer) {
     boolean primitiveWrapper = (value instanceof Number) || (value instanceof Boolean)
       || (value instanceof Character);
 
     if (isRegistered(value) && !primitiveWrapper) {
-      _buffer.append(value.getClass().getName() + '@' +
-                     Integer.toHexString(System.identityHashCode(value)));
+      buffer.append(value.getClass().getName());
+      appendIdentityHashCode(value, buffer);
       return;
     }
 
@@ -149,47 +152,23 @@ public final class ToStringBuilder
 
       if (value instanceof byte[]) {
 
-        ByteBuffer bb = PageChannel.wrap((byte[]) value);
-        int len = bb.remaining();
-        _buffer.append("(").append(len).append(") ").append(
-            ByteUtil.toHexString(bb, bb.position(), Math.min(len, MAX_BYTE_DETAIL_LEN)));
-        if (len > MAX_BYTE_DETAIL_LEN) {
-          _buffer.append("...");
-        }
+        appendByteArrayInternal((byte[]) value, buffer);
 
       } else if (value.getClass().isArray()) {
 
-        Object arr = value;
-        _buffer.append('[');
-        for (int i = 0; i < Array.getLength(arr); i++) {
-          Object item = Array.get(arr, i);
-          if (i > 0) {
-            _buffer.append(_fieldSeparator);
-          }
-          if (item == null) {
-            _buffer.append(NULL_TEXT);
-          } else {
-            appendInternal(fieldName, item); // recursive call
-          }
-        }
-        _buffer.append(']');
+        appendArrayInternal(value, buffer);
 
       } else if (value instanceof Collection<?>) {
 
-        String str = ((Collection<?>) value).stream()
-          .map(v -> (v == null) ? NULL_TEXT : v.toString()).collect(Collectors.joining(","));
-        _buffer.append('[').append(str).append(']');
+        appendCollectionInternal((Collection<?>)value, buffer);
 
       } else if (value instanceof Map<?, ?>) {
 
-        String str = ((Map<?, ?>) value).entrySet().stream()
-          .map(e -> e.getKey() + "=" + ((e.getValue() == null) ? NULL_TEXT : e.getValue()))
-          .collect(Collectors.joining(","));
-        _buffer.append('{').append(str).append('}');
+        appendMapInternal((Map<?,?>)value, buffer);
 
       } else {
 
-        _buffer.append(value);
+        buffer.append(_valueFormatter.apply(value));
       }
 
     } finally {
@@ -197,24 +176,135 @@ public final class ToStringBuilder
     }
   }
 
-  protected void appendFieldsIn(final Class<?> clazz) {
+  private static void appendByteArrayInternal(byte[] bar, StringBuilder buffer) {
+    ByteBuffer bb = PageChannel.wrap(bar);
+    int len = bb.remaining();
+    buffer.append("(").append(len).append(") ").append(
+        ByteUtil.toHexString(bb, bb.position(), Math.min(len, MAX_BYTE_DETAIL_LEN)));
+    if (len > MAX_BYTE_DETAIL_LEN) {
+      buffer.append("...");
+    }
+  }
+
+  private void appendArrayInternal(Object arr, StringBuilder buffer) {
+
+    buffer.append('[');
+
+    int len = Array.getLength(arr);
+    if(len > 0) {
+      StringBuilder valueBuffer = new StringBuilder(512);
+      if(_fieldSeparatorSurround) {
+        valueBuffer.append(_fieldSeparator);
+      }
+      for (int i = 0; i < len; i++) {
+        if (i > 0) {
+          valueBuffer.append(_arraySeparator);
+        }
+        appendValue(Array.get(arr, i), valueBuffer);
+      }
+      buffer.append(_valueFormatter.apply(valueBuffer));
+      if(_fieldSeparatorSurround){
+        buffer.append(_fieldSeparator);
+      }
+    }
+
+    buffer.append(']');
+  }
+
+  private void appendCollectionInternal(Collection<?> col, StringBuilder buffer) {
+
+    buffer.append('[');
+
+    if(!col.isEmpty()) {
+      StringBuilder valueBuffer = new StringBuilder(512);
+      if(_fieldSeparatorSurround) {
+        valueBuffer.append(_fieldSeparator);
+      }
+      boolean isFirst = true;
+      for(Object v : col) {
+        if(!isFirst) {
+          valueBuffer.append(_arraySeparator);
+        }
+        appendValue(v, valueBuffer);
+        isFirst = false;
+      }
+      buffer.append(_valueFormatter.apply(valueBuffer));
+      if(_fieldSeparatorSurround) {
+        buffer.append(_fieldSeparator);
+      }
+    }
+
+    buffer.append(']');
+  }
+
+  private void appendMapInternal(Map<?,?> map, StringBuilder buffer) {
+
+    buffer.append('{');
+
+    if(!map.isEmpty()) {
+      StringBuilder valueBuffer = new StringBuilder(512);
+      if(_fieldSeparatorSurround) {
+        valueBuffer.append(_fieldSeparator);
+      }
+      boolean isFirst = true;
+      for(Map.Entry<?,?> e : map.entrySet()) {
+        if(!isFirst) {
+          valueBuffer.append(_arraySeparator);
+        }
+        valueBuffer.append(e.getKey()).append("=");
+        appendValue(e.getValue(), valueBuffer);
+        isFirst = false;
+      }
+      buffer.append(_valueFormatter.apply(valueBuffer));
+      if(_fieldSeparatorSurround) {
+        buffer.append(_fieldSeparator);
+      }
+    }
+
+    buffer.append('}');
+  }
+
+  private void appendValue(Object value, StringBuilder buffer) {
+    if (value == null) {
+      buffer.append(NULL_TEXT);
+    } else {
+      appendInternal(value, buffer);
+    }
+  }
+
+  private String indentValue(Object value) {
+    String valueStr = value.toString();
+    if(valueStr != null) {
+      valueStr = valueStr.replace(LINE_SEP, _fieldSeparator);
+    }
+    return valueStr;
+  }
+
+  private void appendFieldsIn(final Class<?> clazz) {
     Field[] fields = clazz.getDeclaredFields();
     Arrays.sort(fields, Comparator.comparing(Field::getName));
     AccessibleObject.setAccessible(fields, true);
     for (final Field field : fields) {
       String fieldName = field.getName();
       if (acceptReflectionField(field)) {
-        if(fieldName.startsWith("_")) {
-          fieldName = fieldName.substring(1);
-        }
         try {
-          append(fieldName, field.get(_object));
+          Object value = field.get(_object);
+          if(value != null) {
+            if(fieldName.startsWith("_")) {
+              fieldName = fieldName.substring(1);
+            }
+            append(fieldName, value);
+          }
         } catch (final IllegalAccessException ex) {
-          //this shouldn't happen. Would get a Security exception instead
+          // this shouldn't happen. Would get a Security exception instead
           throw new InternalError("Unexpected IllegalAccessException: " + ex.getMessage());
         }
       }
     }
+  }
+
+  private static void appendIdentityHashCode(Object value, StringBuilder buffer) {
+    buffer.append('@').append(Integer.toHexString(System.identityHashCode(value)));
   }
 
   private static boolean acceptReflectionField(final Field field) {
@@ -224,8 +314,12 @@ public final class ToStringBuilder
             !Modifier.isStatic(field.getModifiers()));
   }
 
-  private static String getShortClassName(Class<?> clazz) {
-    String nm = clazz.getSimpleName();
+  private static String getShortClassName(Object value) {
+    if(value instanceof String) {
+      // caller passed in explicit "class" name
+      return (String)value;
+    }
+    String nm = value.getClass().getSimpleName();
     if (nm.endsWith(IMPL_SUFF)) {
       nm = nm.substring(0, nm.length() - IMPL_SUFF.length());
     }
@@ -237,15 +331,12 @@ public final class ToStringBuilder
     int len = _buffer.length();
     int sepLen = _fieldSeparator.length();
     if (len > 0 && sepLen > 0 && len >= sepLen) {
-      boolean match = true;
       for (int i = 0; i < sepLen; i++) {
         if (_buffer.charAt(len - 1 - i) != _fieldSeparator.charAt(sepLen - 1 - i)) {
           return;
         }
       }
-      if (match) {
-        _buffer.setLength(len - sepLen);
-      }
+      _buffer.setLength(len - sepLen);
     }
   }
 
@@ -259,7 +350,6 @@ public final class ToStringBuilder
       Map<Object, Object> m = getRegistry();
       if (m == null) {
         REGISTRY.set(new WeakHashMap<>());
-
       }
       getRegistry().put(value, null);
     }

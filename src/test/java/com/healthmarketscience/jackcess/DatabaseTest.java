@@ -59,6 +59,21 @@ public class DatabaseTest
 {
 
   @Test
+  public void testDbToString() throws Exception {
+    Database db = create(FileFormat.V2010);
+    newTable("test")
+      .addColumn(newColumn("A", DataType.TEXT))
+      .toTable(db);
+    String dbStr = db.toString();
+    assertTrue(dbStr.contains(" accessControlEntries: Table"));
+    assertTrue(dbStr.contains(" columns: ["));
+    assertTrue(dbStr.contains(" indexes: ["));
+    assertTrue(dbStr.contains("  pageChannel: com.healthmarketscience.jackcess.impl.PageChannel"));
+    assertTrue(dbStr.contains("  enforceForeignKeys: true"));
+    db.close();
+  }
+
+  @Test
   public void testInvalidTableDefs() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       Database db = create(fileFormat);
