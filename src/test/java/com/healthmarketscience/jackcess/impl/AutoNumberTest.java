@@ -33,8 +33,8 @@ import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *

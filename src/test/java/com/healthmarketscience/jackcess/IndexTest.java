@@ -35,22 +35,22 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import org.junit.After;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
 public class IndexTest {
 
-  @Before
+  @BeforeEach
   public void setUp() {
     TestUtil.setTestAutoSync(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     TestUtil.clearTestAutoSync();
   }

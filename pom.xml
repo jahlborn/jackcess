@@ -9,7 +9,7 @@
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>4.0.11-SNAPSHOT</version>
+  <version>5.0.0-SNAPSHOT</version>
   <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <developers>
@@ -117,10 +117,11 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.4</version>
           <configuration>
-            <forkMode>once</forkMode>
-            <parallel>classes</parallel>
-            <threadCount>2</threadCount>
+            <forkCount>1C</forkCount>
+            <reuseForks>true</reuseForks>
+            <argLine>-Xmx1024m</argLine>
             <systemProperties>
               <property>
                 <name>java.util.logging.config.file</name>
@@ -248,12 +249,20 @@
     </plugins>
   </build>
   <dependencies>
+
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.14.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.14.1</version>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk-platform-logging</artifactId>

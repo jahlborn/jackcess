@@ -24,8 +24,8 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author james
@@ -117,8 +117,8 @@ public class BigIndexTest {
           if(val == null) {
             val = firstValue;
           }
-          assertTrue("" + prevValue + " <= " + val + " " + rowCount,
-                     prevValue.compareTo(val) <= 0);
+          assertTrue(prevValue.compareTo(val) <= 0,
+                     "" + prevValue + " <= " + val + " " + rowCount);
           if(firstTwo.size() < 2) {
             firstTwo.add(origVal);
           }

@@ -23,9 +23,9 @@ import java.util.Calendar;
 import com.healthmarketscience.jackcess.expr.EvalException;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.toBD;
-import junit.framework.AssertionFailedError;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import org.opentest4j.AssertionFailedError;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *

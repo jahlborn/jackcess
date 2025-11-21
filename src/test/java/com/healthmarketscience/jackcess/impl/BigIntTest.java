@@ -29,8 +29,8 @@ import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *

@@ -38,10 +38,10 @@ import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
-import org.junit.After;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
@@ -52,12 +52,12 @@ public class CursorTest {
     TestDB.getSupportedForBasename(Basename.INDEX_CURSOR);
 
 
-  @Before
+  @BeforeEach
   public void setUp() {
     TestUtil.setTestAutoSync(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     TestUtil.clearTestAutoSync();
   }

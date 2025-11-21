@@ -34,7 +34,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.impl.*;
 import com.healthmarketscience.jackcess.impl.JetFormatTest.TestDB;
 import com.healthmarketscience.jackcess.util.MemFileChannel;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Utility code for the test cases.
@@ -186,11 +186,11 @@ public class TestUtil
       .setCharset(charset).open();
     if(fileFormat != null) {
       assertEquals(
-          "Wrong JetFormat.",
           DatabaseImpl.getFileFormatDetails(fileFormat).getFormat(),
-          ((DatabaseImpl)db).getFormat());
+          ((DatabaseImpl)db).getFormat(),
+          "Wrong JetFormat.");
       assertEquals(
-          "Wrong FileFormat.", fileFormat, db.getFileFormat());
+          fileFormat, db.getFileFormat(), "Wrong FileFormat.");
     }
     return db;
   }
@@ -482,7 +482,7 @@ public class TestUtil
 
   static void checkTestDBTable1RowABCDEFG(final TestDB testDB, final Table table, final Row row)
   {
-    assertEquals("testDB: " + testDB + "; table: " + table, "abcdefg", row.get("A"));
+    assertEquals("abcdefg", row.get("A"), () -> "testDB: " + testDB + "; table: " + table);
     assertEquals("hijklmnop", row.get("B"));
     assertEquals(new Byte((byte) 2), row.get("C"));
     assertEquals(new Short((short) 222), row.get("D"));
@@ -502,7 +502,7 @@ public class TestUtil
 
   static void checkTestDBTable1RowA(final TestDB testDB, final Table table, final Row row)
   {
-    assertEquals("testDB: " + testDB + "; table: " + table, "a", row.get("A"));
+    assertEquals("a", row.get("A"), () -> "testDB: " + testDB + "; table: " + table);
     assertEquals("b", row.get("B"));
     assertEquals(new Byte((byte) 0), row.get("C"));
     assertEquals(new Short((short) 0), row.get("D"));

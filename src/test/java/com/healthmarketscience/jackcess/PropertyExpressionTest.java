@@ -35,8 +35,8 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.expr.DefaultFunctions;
 import com.healthmarketscience.jackcess.impl.expr.FunctionSupport;
 import com.healthmarketscience.jackcess.impl.expr.ValueSupport;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *

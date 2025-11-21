@@ -19,8 +19,8 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 
 import com.healthmarketscience.jackcess.expr.NumericConfig;
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 /**
  *

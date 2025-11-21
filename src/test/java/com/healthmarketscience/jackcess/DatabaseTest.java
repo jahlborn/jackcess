@@ -47,8 +47,8 @@ import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -793,13 +793,13 @@ public class DatabaseTest
                         "MSysRelationships"));
 
       if (fileFormat == FileFormat.GENERIC_JET4) {
-        assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNull(db.getSystemTable("MSysAccessObjects"), () -> "file format: " + fileFormat);
       } else if (fileFormat.ordinal() < FileFormat.V2003.ordinal()) {
-        assertNotNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNotNull(db.getSystemTable("MSysAccessObjects"), () -> "file format: " + fileFormat);
         sysTables.add("MSysAccessObjects");
       } else {
         // v2003+ template files have no "MSysAccessObjects" table
-        assertNull("file format: " + fileFormat, db.getSystemTable("MSysAccessObjects"));
+        assertNull(db.getSystemTable("MSysAccessObjects"), () -> "file format: " + fileFormat);
         sysTables.addAll(
             Arrays.asList("MSysNavPaneGroupCategories",
                           "MSysNavPaneGroups", "MSysNavPaneGroupToObjects",

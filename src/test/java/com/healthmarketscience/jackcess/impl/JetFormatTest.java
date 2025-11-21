@@ -18,8 +18,8 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
 import static com.healthmarketscience.jackcess.TestUtil.*;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -219,9 +219,9 @@ public class JetFormatTest {
       try {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
-        assertEquals("Unexpected JetFormat for dbFile: " +
-                     testDB.dbFile.getAbsolutePath(),
-                     testDB.getExpectedFormat(), fmtActual);
+        assertEquals(testDB.getExpectedFormat(), fmtActual,
+                     () -> "Unexpected JetFormat for dbFile: " +
+                           testDB.dbFile.getAbsolutePath());
 
       } finally {
         channel.close();

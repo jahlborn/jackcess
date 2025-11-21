@@ -24,8 +24,8 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Row;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
