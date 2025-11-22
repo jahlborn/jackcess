@@ -245,15 +245,15 @@ public class QueryTest
           "DataDefinitionQuery", multiline(
               "CREATE TABLE Table5 (col1 CHAR, col2 CHAR);\0"));
 
-      Database db = TestUtil.open(testDB);
+      try (Database db = TestUtil.open(testDB)) {
 
-      for(Query q : db.getQueries()) {
-        assertEquals(expectedQueries.remove(q.getName()), q.toSQLString());
+        for(Query q : db.getQueries()) {
+          assertEquals(expectedQueries.remove(q.getName()), q.toSQLString());
+        }
+
+        assertTrue(expectedQueries.isEmpty());
+
       }
-
-      assertTrue(expectedQueries.isEmpty());
-
-      db.close();
     }
   }
 

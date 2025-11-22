@@ -70,39 +70,40 @@ public class CodecHandlerTest
   private static void doTestCodecHandler(boolean simple) throws Exception
   {
     for(Database.FileFormat ff : SUPPORTED_FILEFORMATS) {
-      Database db = TestUtil.createFile(ff);
-      int pageSize = ((DatabaseImpl)db).getFormat().PAGE_SIZE;
-      File dbFile = db.getFile();
-      db.close();
+      File dbFile;
+      int pageSize;
+      try (Database db = TestUtil.createFile(ff)) {
+        pageSize = ((DatabaseImpl)db).getFormat().PAGE_SIZE;
+        dbFile = db.getFile();
+      }
 
       // apply encoding to file
       encodeFile(dbFile, pageSize, simple);
 
-      db = new DatabaseBuilder(dbFile)
+      try (Database db = new DatabaseBuilder(dbFile)
         .setCodecProvider(simple ? SIMPLE_PROVIDER : FULL_PROVIDER)
-        .open();
+        .open()) {
 
-      Table t1 = new TableBuilder("test1")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT).setLength(250))
-        .setPrimaryKey("id")
-        .addIndex(new IndexBuilder("data_idx").addColumns("data"))
-        .toTable(db);
+        Table t1 = new TableBuilder("test1")
+          .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(new ColumnBuilder("data", DataType.TEXT).setLength(250))
+          .setPrimaryKey("id")
+          .addIndex(new IndexBuilder("data_idx").addColumns("data"))
+          .toTable(db);
 
-      Table t2 = new TableBuilder("test2")
-        .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT).setLength(250))
-        .setPrimaryKey("id")
-        .addIndex(new IndexBuilder("data_idx").addColumns("data"))
-        .toTable(db);
+        Table t2 = new TableBuilder("test2")
+          .addColumn(new ColumnBuilder("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(new ColumnBuilder("data", DataType.TEXT).setLength(250))
+          .setPrimaryKey("id")
+          .addIndex(new IndexBuilder("data_idx").addColumns("data"))
+          .toTable(db);
 
-      int autonum = 1;
-      for(int i = 1; i < 2; ++i) {
-        writeData(t1, t2, autonum, autonum + 100);
-        autonum += 100;
+        int autonum = 1;
+        for(int i = 1; i < 2; ++i) {
+          writeData(t1, t2, autonum, autonum + 100);
+          autonum += 100;
+        }
       }
-
-      db.close();
     }
   }
 

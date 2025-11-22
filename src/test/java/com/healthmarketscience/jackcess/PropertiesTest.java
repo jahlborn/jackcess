@@ -126,66 +126,65 @@ public class PropertiesTest
     byte[] nameMapBytes = null;
 
     for(TestDB testDb : SUPPORTED_DBS_TEST_FOR_READ) {
-      Database db = open(testDb);
+      try (Database db = open(testDb)) {
 
-      TableImpl t = (TableImpl)db.getTable("Table1");
-      assertEquals(t.getTableDefPageNumber(),
-                   t.getPropertyMaps().getObjectId());
-      PropertyMap tProps = t.getProperties();
-      assertEquals(PropertyMaps.DEFAULT_NAME, tProps.getName());
-      int expectedNumProps = 3;
-      if(db.getFileFormat() != Database.FileFormat.V1997) {
-        assertEquals("{5A29A676-1145-4D1A-AE47-9F5415CDF2F1}",
-                     tProps.getValue(PropertyMap.GUID_PROP));
-        if(nameMapBytes == null) {
-          nameMapBytes = (byte[])tProps.getValue("NameMap");
-        } else {
-          assertTrue(Arrays.equals(nameMapBytes,
-                                   (byte[])tProps.getValue("NameMap")));
+        TableImpl t = (TableImpl)db.getTable("Table1");
+        assertEquals(t.getTableDefPageNumber(),
+                     t.getPropertyMaps().getObjectId());
+        PropertyMap tProps = t.getProperties();
+        assertEquals(PropertyMaps.DEFAULT_NAME, tProps.getName());
+        int expectedNumProps = 3;
+        if(db.getFileFormat() != Database.FileFormat.V1997) {
+          assertEquals("{5A29A676-1145-4D1A-AE47-9F5415CDF2F1}",
+                       tProps.getValue(PropertyMap.GUID_PROP));
+          if(nameMapBytes == null) {
+            nameMapBytes = (byte[])tProps.getValue("NameMap");
+          } else {
+            assertTrue(Arrays.equals(nameMapBytes,
+                                     (byte[])tProps.getValue("NameMap")));
+          }
+          expectedNumProps += 2;
         }
-        expectedNumProps += 2;
+        assertEquals(expectedNumProps, tProps.getSize());
+        assertEquals((byte)0, tProps.getValue("Orientation"));
+        assertEquals(Boolean.FALSE, tProps.getValue("OrderByOn"));
+        assertEquals((byte)2, tProps.getValue("DefaultView"));
+
+        PropertyMap colProps = t.getColumn("A").getProperties();
+        assertEquals("A", colProps.getName());
+        expectedNumProps = 9;
+        if(db.getFileFormat() != Database.FileFormat.V1997) {
+          assertEquals("{E9EDD90C-CE55-4151-ABE1-A1ACE1007515}",
+                       colProps.getValue(PropertyMap.GUID_PROP));
+          ++expectedNumProps;
+        }
+        assertEquals(expectedNumProps, colProps.getSize());
+        assertEquals((short)-1, colProps.getValue("ColumnWidth"));
+        assertEquals((short)0, colProps.getValue("ColumnOrder"));
+        assertEquals(Boolean.FALSE, colProps.getValue("ColumnHidden"));
+        assertEquals(Boolean.FALSE,
+                     colProps.getValue(PropertyMap.REQUIRED_PROP));
+        assertEquals(Boolean.FALSE,
+                     colProps.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
+        assertEquals((short)109, colProps.getValue("DisplayControl"));
+        assertEquals(Boolean.TRUE, colProps.getValue("UnicodeCompression"));
+        assertEquals((byte)0, colProps.getValue("IMEMode"));
+        assertEquals((byte)3, colProps.getValue("IMESentenceMode"));
+
+        PropertyMap dbProps = db.getDatabaseProperties();
+        assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
+                   .matches("[0-9]{2}[.][0-9]{2}"));
+
+        PropertyMap sumProps = db.getSummaryProperties();
+        assertEquals(3, sumProps.getSize());
+        assertEquals("test", sumProps.getValue(PropertyMap.TITLE_PROP));
+        assertEquals("tmccune", sumProps.getValue(PropertyMap.AUTHOR_PROP));
+        assertEquals("Health Market Science", sumProps.getValue(PropertyMap.COMPANY_PROP));
+
+        PropertyMap userProps = db.getUserDefinedProperties();
+        assertEquals(1, userProps.getSize());
+        assertEquals(Boolean.TRUE, userProps.getValue("ReplicateProject"));
       }
-      assertEquals(expectedNumProps, tProps.getSize());
-      assertEquals((byte)0, tProps.getValue("Orientation"));
-      assertEquals(Boolean.FALSE, tProps.getValue("OrderByOn"));
-      assertEquals((byte)2, tProps.getValue("DefaultView"));
-
-      PropertyMap colProps = t.getColumn("A").getProperties();
-      assertEquals("A", colProps.getName());
-      expectedNumProps = 9;
-      if(db.getFileFormat() != Database.FileFormat.V1997) {
-        assertEquals("{E9EDD90C-CE55-4151-ABE1-A1ACE1007515}",
-                     colProps.getValue(PropertyMap.GUID_PROP));
-        ++expectedNumProps;
-      }
-      assertEquals(expectedNumProps, colProps.getSize());
-      assertEquals((short)-1, colProps.getValue("ColumnWidth"));
-      assertEquals((short)0, colProps.getValue("ColumnOrder"));
-      assertEquals(Boolean.FALSE, colProps.getValue("ColumnHidden"));
-      assertEquals(Boolean.FALSE,
-                   colProps.getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals(Boolean.FALSE,
-                   colProps.getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
-      assertEquals((short)109, colProps.getValue("DisplayControl"));
-      assertEquals(Boolean.TRUE, colProps.getValue("UnicodeCompression"));
-      assertEquals((byte)0, colProps.getValue("IMEMode"));
-      assertEquals((byte)3, colProps.getValue("IMESentenceMode"));
-
-      PropertyMap dbProps = db.getDatabaseProperties();
-      assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
-                 .matches("[0-9]{2}[.][0-9]{2}"));
-
-      PropertyMap sumProps = db.getSummaryProperties();
-      assertEquals(3, sumProps.getSize());
-      assertEquals("test", sumProps.getValue(PropertyMap.TITLE_PROP));
-      assertEquals("tmccune", sumProps.getValue(PropertyMap.AUTHOR_PROP));
-      assertEquals("Health Market Science", sumProps.getValue(PropertyMap.COMPANY_PROP));
-
-      PropertyMap userProps = db.getUserDefinedProperties();
-      assertEquals(1, userProps.getSize());
-      assertEquals(Boolean.TRUE, userProps.getValue("ReplicateProject"));
-
-      db.close();
     }
   }
 
@@ -203,29 +202,28 @@ public class PropertiesTest
           continue;
         }
 
-        Database db = open(ff, f);
+        try (Database db = open(ff, f)) {
 
-        PropertyMap dbProps = db.getDatabaseProperties();
-        assertFalse(dbProps.isEmpty());
-        assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
-                   .matches("[0-9]{2}[.][0-9]{2}"));
+          PropertyMap dbProps = db.getDatabaseProperties();
+          assertFalse(dbProps.isEmpty());
+          assertTrue(((String)dbProps.getValue(PropertyMap.ACCESS_VERSION_PROP))
+                     .matches("[0-9]{2}[.][0-9]{2}"));
 
-        for(Row row : ((DatabaseImpl)db).getSystemCatalog()) {
-          int id = row.getInt("Id");
-          byte[] propBytes = row.getBytes("LvProp");
-          PropertyMaps propMaps = ((DatabaseImpl)db).getPropertiesForObject(
-              id, null);
-          int byteLen = ((propBytes != null) ? propBytes.length : 0);
-          if(byteLen == 0) {
-            assertTrue(propMaps.isEmpty());
-          } else if(propMaps.isEmpty()) {
-            assertTrue(byteLen < 80);
-          } else {
-            assertTrue(byteLen > 0);
+          for(Row row : ((DatabaseImpl)db).getSystemCatalog()) {
+            int id = row.getInt("Id");
+            byte[] propBytes = row.getBytes("LvProp");
+            PropertyMaps propMaps = ((DatabaseImpl)db).getPropertiesForObject(
+                id, null);
+            int byteLen = ((propBytes != null) ? propBytes.length : 0);
+            if(byteLen == 0) {
+              assertTrue(propMaps.isEmpty());
+            } else if(propMaps.isEmpty()) {
+              assertTrue(byteLen < 80);
+            } else {
+              assertTrue(byteLen > 0);
+            }
           }
         }
-
-        db.close();
       }
     }
   }
@@ -234,33 +232,32 @@ public class PropertiesTest
   public void testWriteProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
-      Database db = open(testDb);
+      try (Database db = open(testDb)) {
 
-      TableImpl t = (TableImpl)db.getTable("Table1");
+        TableImpl t = (TableImpl)db.getTable("Table1");
 
-      PropertyMap tProps = t.getProperties();
+        PropertyMap tProps = t.getProperties();
 
-      PropertyMaps maps = ((PropertyMapImpl)tProps).getOwner();
+        PropertyMaps maps = ((PropertyMapImpl)tProps).getOwner();
 
-      byte[] mapsBytes = maps.write();
+        byte[] mapsBytes = maps.write();
 
-      PropertyMaps maps2 = ((DatabaseImpl)db).readProperties(
-          mapsBytes, maps.getObjectId(), null);
+        PropertyMaps maps2 = ((DatabaseImpl)db).readProperties(
+            mapsBytes, maps.getObjectId(), null);
 
-      Iterator<PropertyMapImpl> iter = maps.iterator();
-      Iterator<PropertyMapImpl> iter2 = maps2.iterator();
+        Iterator<PropertyMapImpl> iter = maps.iterator();
+        Iterator<PropertyMapImpl> iter2 = maps2.iterator();
 
-      while(iter.hasNext() && iter2.hasNext()) {
-        PropertyMapImpl propMap = iter.next();
-        PropertyMapImpl propMap2 = iter2.next();
+        while(iter.hasNext() && iter2.hasNext()) {
+          PropertyMapImpl propMap = iter.next();
+          PropertyMapImpl propMap2 = iter2.next();
 
-        checkProperties(propMap, propMap2);
+          checkProperties(propMap, propMap2);
+        }
+
+        assertFalse(iter.hasNext());
+        assertFalse(iter2.hasNext());
       }
-
-      assertFalse(iter.hasNext());
-      assertFalse(iter2.hasNext());
-
-      db.close();
     }
   }
 
@@ -268,88 +265,89 @@ public class PropertiesTest
   public void testModifyProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
-      Database db = openCopy(testDb);
-      File dbFile = db.getFile();
+      PropertyMap origCProps;
+      PropertyMap origFProps;
+      PropertyMap origDProps;
+      File dbFile;
 
-      Table t = db.getTable("Table1");
+      try (Database db = openCopy(testDb)) {
+        dbFile = db.getFile();
 
-      // grab originals
-      PropertyMap origCProps = t.getColumn("C").getProperties();
-      PropertyMap origFProps = t.getColumn("F").getProperties();
-      PropertyMap origDProps = t.getColumn("D").getProperties();
+        Table t = db.getTable("Table1");
 
-      db.close();
+        // grab originals
+        origCProps = t.getColumn("C").getProperties();
+        origFProps = t.getColumn("F").getProperties();
+        origDProps = t.getColumn("D").getProperties();
+      }
 
 
       // modify but do not save
-      db = open(dbFile);
+      try (Database db = open(dbFile)) {
 
-      t = db.getTable("Table1");
+        Table t = db.getTable("Table1");
 
-      PropertyMap cProps = t.getColumn("C").getProperties();
-      PropertyMap fProps = t.getColumn("F").getProperties();
-      PropertyMap dProps = t.getColumn("D").getProperties();
+        PropertyMap cProps = t.getColumn("C").getProperties();
+        PropertyMap fProps = t.getColumn("F").getProperties();
+        PropertyMap dProps = t.getColumn("D").getProperties();
 
-      assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
-      assertEquals((short)109, dProps.getValue("DisplayControl"));
+        assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+        assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+        assertEquals((short)109, dProps.getValue("DisplayControl"));
 
-      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
-      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
-      dProps.remove("DisplayControl");
-
-      db.close();
+        cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
+        fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
+        dProps.remove("DisplayControl");
+      }
 
 
       // modify and save
-      db = open(dbFile);
+      try (Database db = open(dbFile)) {
 
-      t = db.getTable("Table1");
+        Table t = db.getTable("Table1");
 
-      cProps = t.getColumn("C").getProperties();
-      fProps = t.getColumn("F").getProperties();
-      dProps = t.getColumn("D").getProperties();
+        PropertyMap cProps = t.getColumn("C").getProperties();
+        PropertyMap fProps = t.getColumn("F").getProperties();
+        PropertyMap dProps = t.getColumn("D").getProperties();
 
-      assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
-      assertEquals((short)109, dProps.getValue("DisplayControl"));
+        assertFalse((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+        assertEquals("0", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+        assertEquals((short)109, dProps.getValue("DisplayControl"));
 
-      checkProperties(origCProps, cProps);
-      checkProperties(origFProps, fProps);
-      checkProperties(origDProps, dProps);
+        checkProperties(origCProps, cProps);
+        checkProperties(origFProps, fProps);
+        checkProperties(origDProps, dProps);
 
-      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
-      cProps.save();
-      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
-      fProps.save();
-      dProps.remove("DisplayControl");
-      dProps.save();
-
-      db.close();
+        cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, true);
+        cProps.save();
+        fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("42");
+        fProps.save();
+        dProps.remove("DisplayControl");
+        dProps.save();
+      }
 
 
       // reload saved props
-      db = open(dbFile);
+      try (Database db = open(dbFile)) {
 
-      t = db.getTable("Table1");
+        Table t = db.getTable("Table1");
 
-      cProps = t.getColumn("C").getProperties();
-      fProps = t.getColumn("F").getProperties();
-      dProps = t.getColumn("D").getProperties();
+        PropertyMap cProps = t.getColumn("C").getProperties();
+        PropertyMap fProps = t.getColumn("F").getProperties();
+        PropertyMap dProps = t.getColumn("D").getProperties();
 
-      assertTrue((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals("42", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
-      assertNull(dProps.getValue("DisplayControl"));
+        assertTrue((Boolean)cProps.getValue(PropertyMap.REQUIRED_PROP));
+        assertEquals("42", fProps.getValue(PropertyMap.DEFAULT_VALUE_PROP));
+        assertNull(dProps.getValue("DisplayControl"));
 
-      cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, false);
-      fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("0");
-      dProps.put("DisplayControl", DataType.INT, (short)109);
+        cProps.put(PropertyMap.REQUIRED_PROP, DataType.BOOLEAN, false);
+        fProps.get(PropertyMap.DEFAULT_VALUE_PROP).setValue("0");
+        dProps.put("DisplayControl", DataType.INT, (short)109);
 
-      checkProperties(origCProps, cProps);
-      checkProperties(origFProps, fProps);
-      checkProperties(origDProps, dProps);
-
-      db.close();
+        checkProperties(origCProps, cProps);
+        checkProperties(origFProps, fProps);
+        checkProperties(origDProps, dProps);
+      }
     }
   }
 
@@ -364,49 +362,49 @@ public class PropertiesTest
       }
 
       File file = TestUtil.createTempFile(false);
-      Database db = newDatabase(file)
-        .setFileFormat(ff)
-        .putUserDefinedProperty("testing", "123")
-        .create();
-
       UUID u1 = UUID.randomUUID();
       UUID u2 = UUID.randomUUID();
-      Table t = newTable("Test")
-        .putProperty("awesome_table", true)
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true)
-                   .putProperty(PropertyMap.GUID_PROP, u1))
-        .addColumn(newColumn("data", DataType.TEXT)
-                   .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false)
-                   .putProperty(PropertyMap.GUID_PROP, u2))
-        .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, "value");
+      try (Database db = newDatabase(file)
+        .setFileFormat(ff)
+        .putUserDefinedProperty("testing", "123")
+        .create()) {
 
-      db.close();
+        Table t = newTable("Test")
+          .putProperty("awesome_table", true)
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true)
+                     .putProperty(PropertyMap.REQUIRED_PROP, true)
+                     .putProperty(PropertyMap.GUID_PROP, u1))
+          .addColumn(newColumn("data", DataType.TEXT)
+                     .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false)
+                     .putProperty(PropertyMap.GUID_PROP, u2))
+          .toTable(db);
 
-      db = open(file);
+        t.addRow(Column.AUTO_NUMBER, "value");
+      }
 
-      assertEquals("123", db.getUserDefinedProperties().getValue("testing"));
+      try (Database db = open(file)) {
 
-      t = db.getTable("Test");
+        assertEquals("123", db.getUserDefinedProperties().getValue("testing"));
 
-      assertEquals(Boolean.TRUE,
-                   t.getProperties().getValue("awesome_table"));
+        Table t = db.getTable("Test");
 
-      Column c = t.getColumn("id");
-      assertEquals(Boolean.TRUE,
-                   c.getProperties().getValue(PropertyMap.REQUIRED_PROP));
-      assertEquals("{" + u1.toString().toUpperCase() + "}",
-                   c.getProperties().getValue(PropertyMap.GUID_PROP));
+        assertEquals(Boolean.TRUE,
+                     t.getProperties().getValue("awesome_table"));
 
-      c = t.getColumn("data");
-      assertEquals(Boolean.FALSE,
-                   c.getProperties().getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
-      assertEquals("{" + u2.toString().toUpperCase() + "}",
-                   c.getProperties().getValue(PropertyMap.GUID_PROP));
+        Column c = t.getColumn("id");
+        assertEquals(Boolean.TRUE,
+                     c.getProperties().getValue(PropertyMap.REQUIRED_PROP));
+        assertEquals("{" + u1.toString().toUpperCase() + "}",
+                     c.getProperties().getValue(PropertyMap.GUID_PROP));
 
+        c = t.getColumn("data");
+        assertEquals(Boolean.FALSE,
+                     c.getProperties().getValue(PropertyMap.ALLOW_ZERO_LEN_PROP));
+        assertEquals("{" + u2.toString().toUpperCase() + "}",
+                     c.getProperties().getValue(PropertyMap.GUID_PROP));
+      }
     }
   }
 
@@ -414,110 +412,109 @@ public class PropertiesTest
   public void testEnforceProperties() throws Exception
   {
     for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table t = newTable("testReq")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .toTable(db);
+        Table t = newTable("testReq")
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true)
+                     .putProperty(PropertyMap.REQUIRED_PROP, true))
+          .addColumn(newColumn("value", DataType.TEXT)
+                     .putProperty(PropertyMap.REQUIRED_PROP, true))
+          .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, "v1");
+        t.addRow(Column.AUTO_NUMBER, "v1");
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, null);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
+        try {
+          t.addRow(Column.AUTO_NUMBER, null);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException expected) {
+          // success
+        }
 
-      t.addRow(Column.AUTO_NUMBER, "");
-
-      List<? extends Map<String, Object>> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", ""));
-      assertTable(expectedRows, t);
-
-
-      t = newTable("testNz")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT)
-                   .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false))
-        .toTable(db);
-
-      t.addRow(Column.AUTO_NUMBER, "v1");
-
-      try {
         t.addRow(Column.AUTO_NUMBER, "");
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
 
-      t.addRow(Column.AUTO_NUMBER, null);
-
-      expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", null));
-      assertTable(expectedRows, t);
+        List<? extends Map<String, Object>> expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "value", "v1"),
+              createExpectedRow(
+                  "id", 2,
+                  "value", ""));
+        assertTable(expectedRows, t);
 
 
-      t = newTable("testReqNz")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true)
-                   .putProperty(PropertyMap.REQUIRED_PROP, true))
-        .addColumn(newColumn("value", DataType.TEXT))
-        .toTable(db);
+        t = newTable("testNz")
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true)
+                     .putProperty(PropertyMap.REQUIRED_PROP, true))
+          .addColumn(newColumn("value", DataType.TEXT)
+                     .putProperty(PropertyMap.ALLOW_ZERO_LEN_PROP, false))
+          .toTable(db);
 
-      Column col = t.getColumn("value");
-      PropertyMap props = col.getProperties();
-      props.put(PropertyMap.REQUIRED_PROP, true);
-      props.put(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
-      props.save();
+        t.addRow(Column.AUTO_NUMBER, "v1");
 
-      t.addRow(Column.AUTO_NUMBER, "v1");
+        try {
+          t.addRow(Column.AUTO_NUMBER, "");
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException expected) {
+          // success
+        }
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, "");
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
-      }
-
-      try {
         t.addRow(Column.AUTO_NUMBER, null);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException expected) {
-        // success
+
+        expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "value", "v1"),
+              createExpectedRow(
+                  "id", 2,
+                  "value", null));
+        assertTable(expectedRows, t);
+
+
+        t = newTable("testReqNz")
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true)
+                     .putProperty(PropertyMap.REQUIRED_PROP, true))
+          .addColumn(newColumn("value", DataType.TEXT))
+          .toTable(db);
+
+        Column col = t.getColumn("value");
+        PropertyMap props = col.getProperties();
+        props.put(PropertyMap.REQUIRED_PROP, true);
+        props.put(PropertyMap.ALLOW_ZERO_LEN_PROP, false);
+        props.save();
+
+        t.addRow(Column.AUTO_NUMBER, "v1");
+
+        try {
+          t.addRow(Column.AUTO_NUMBER, "");
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException expected) {
+          // success
+        }
+
+        try {
+          t.addRow(Column.AUTO_NUMBER, null);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException expected) {
+          // success
+        }
+
+        t.addRow(Column.AUTO_NUMBER, "v2");
+
+        expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "value", "v1"),
+              createExpectedRow(
+                  "id", 2,
+                  "value", "v2"));
+        assertTable(expectedRows, t);
       }
-
-      t.addRow(Column.AUTO_NUMBER, "v2");
-
-      expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "value", "v1"),
-            createExpectedRow(
-                "id", 2,
-                "value", "v2"));
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 

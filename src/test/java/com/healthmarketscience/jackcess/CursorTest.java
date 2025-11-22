@@ -206,12 +206,11 @@ public class CursorTest {
   @Test
   public void testSimple() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestSimple(cursor, null);
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestSimple(cursor, null);
+      }
     }
   }
 
@@ -233,13 +232,11 @@ public class CursorTest {
   @Test
   public void testMove() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestMove(cursor, null);
-
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestMove(cursor, null);
+      }
     }
   }
 
@@ -293,13 +290,11 @@ public class CursorTest {
   @Test
   public void testMoveNoReset() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestMoveNoReset(cursor);
-
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestMoveNoReset(cursor);
+      }
     }
   }
 
@@ -336,13 +331,11 @@ public class CursorTest {
   @Test
   public void testSearch() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestSearch(table, cursor, null, 42, -13);
-
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestSearch(table, cursor, null, 42, -13);
+      }
     }
   }
 
@@ -421,13 +414,11 @@ public class CursorTest {
   @Test
   public void testReverse() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestReverse(cursor, null);
-
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestReverse(cursor, null);
+      }
     }
   }
 
@@ -450,15 +441,13 @@ public class CursorTest {
   @Test
   public void testLiveAddition() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
 
-      Table table = db.getTable("test");
-
-      Cursor cursor1 = CursorBuilder.createCursor(table);
-      Cursor cursor2 = CursorBuilder.createCursor(table);
-      doTestLiveAddition(table, cursor1, cursor2, 11);
-
-      db.close();
+        Cursor cursor1 = CursorBuilder.createCursor(table);
+        Cursor cursor2 = CursorBuilder.createCursor(table);
+        doTestLiveAddition(table, cursor1, cursor2, 11);
+      }
     }
   }
 
@@ -492,17 +481,15 @@ public class CursorTest {
   @Test
   public void testLiveDeletion() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
 
-      Table table = db.getTable("test");
-
-      Cursor cursor1 = CursorBuilder.createCursor(table);
-      Cursor cursor2 = CursorBuilder.createCursor(table);
-      Cursor cursor3 = CursorBuilder.createCursor(table);
-      Cursor cursor4 = CursorBuilder.createCursor(table);
-      doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 1);
-
-      db.close();
+        Cursor cursor1 = CursorBuilder.createCursor(table);
+        Cursor cursor2 = CursorBuilder.createCursor(table);
+        Cursor cursor3 = CursorBuilder.createCursor(table);
+        Cursor cursor4 = CursorBuilder.createCursor(table);
+        doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 1);
+      }
     }
   }
 
@@ -586,93 +573,81 @@ public class CursorTest {
   @Test
   public void testSimpleIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
+        assertTable(createUnorderedTestTableData(), table);
 
-      assertTable(createUnorderedTestTableData(), table);
-
-      Cursor cursor = CursorBuilder.createCursor(idx);
-      doTestSimple(cursor, null);
-
-      db.close();
+        Cursor cursor = CursorBuilder.createCursor(idx);
+        doTestSimple(cursor, null);
+      }
     }
   }
 
   @Test
   public void testMoveIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
-
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(idx);
-      doTestMove(cursor, null);
-
-      db.close();
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
+        Cursor cursor = CursorBuilder.createCursor(idx);
+        doTestMove(cursor, null);
+      }
     }
   }
 
   @Test
   public void testReverseIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
-
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(idx);
-      doTestReverse(cursor, null);
-
-      db.close();
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
+        Cursor cursor = CursorBuilder.createCursor(idx);
+        doTestReverse(cursor, null);
+      }
     }
   }
 
   @Test
   public void testSearchIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
-
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(idx);
-      doTestSearch(table, cursor, idx, 42, -13);
-
-      db.close();
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
+        Cursor cursor = CursorBuilder.createCursor(idx);
+        doTestSearch(table, cursor, idx, 42, -13);
+      }
     }
   }
 
   @Test
   public void testLiveAdditionIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-
-      Cursor cursor1 = CursorBuilder.createCursor(idx);
-      Cursor cursor2 = CursorBuilder.createCursor(idx);
-      doTestLiveAddition(table, cursor1, cursor2, 11);
-
-      db.close();
+        Cursor cursor1 = CursorBuilder.createCursor(idx);
+        Cursor cursor2 = CursorBuilder.createCursor(idx);
+        doTestLiveAddition(table, cursor1, cursor2, 11);
+      }
     }
   }
 
   @Test
   public void testLiveDeletionIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-
-      Cursor cursor1 = CursorBuilder.createCursor(idx);
-      Cursor cursor2 = CursorBuilder.createCursor(idx);
-      Cursor cursor3 = CursorBuilder.createCursor(idx);
-      Cursor cursor4 = CursorBuilder.createCursor(idx);
-      doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 1);
-
-      db.close();
+        Cursor cursor1 = CursorBuilder.createCursor(idx);
+        Cursor cursor2 = CursorBuilder.createCursor(idx);
+        Cursor cursor3 = CursorBuilder.createCursor(idx);
+        Cursor cursor4 = CursorBuilder.createCursor(idx);
+        doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 1);
+      }
     }
   }
 
@@ -680,19 +655,17 @@ public class CursorTest {
   public void testSimpleIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+          List<Map<String,Object>> expectedRows =
+            createTestTableData(3, 9);
 
-        List<Map<String,Object>> expectedRows =
-          createTestTableData(3, 9);
-
-        doTestSimple(cursor, expectedRows);
-
-        db.close();
+          doTestSimple(cursor, expectedRows);
+        }
       }
     }
   }
@@ -701,19 +674,17 @@ public class CursorTest {
   public void testMoveIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+          List<Map<String,Object>> expectedRows =
+            createTestTableData(3, 9);
 
-        List<Map<String,Object>> expectedRows =
-          createTestTableData(3, 9);
-
-        doTestMove(cursor, expectedRows);
-
-        db.close();
+          doTestMove(cursor, expectedRows);
+        }
       }
     }
   }
@@ -722,16 +693,14 @@ public class CursorTest {
   public void testSearchIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor = createIndexSubRangeCursor(table, idx, i);
-
-        doTestSearch(table, cursor, idx, 2, 9);
-
-        db.close();
+          doTestSearch(table, cursor, idx, 2, 9);
+        }
       }
     }
   }
@@ -740,19 +709,17 @@ public class CursorTest {
   public void testReverseIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor = createIndexSubRangeCursor(table, idx, i);
+          List<Map<String,Object>> expectedRows =
+            createTestTableData(3, 9);
 
-        List<Map<String,Object>> expectedRows =
-          createTestTableData(3, 9);
-
-        doTestReverse(cursor, expectedRows);
-
-        db.close();
+          doTestReverse(cursor, expectedRows);
+        }
       }
     }
   }
@@ -761,17 +728,15 @@ public class CursorTest {
   public void testLiveAdditionIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
+          Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
-        Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
-
-        doTestLiveAddition(table, cursor1, cursor2, 8);
-
-        db.close();
+          doTestLiveAddition(table, cursor1, cursor2, 8);
+        }
       }
     }
   }
@@ -780,19 +745,17 @@ public class CursorTest {
   public void testLiveDeletionIndexSubRange() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
       for(int i = 0; i < 2; ++i) {
-        Database db = createTestIndexTable(indexCursorDB);
+        try (Database db = createTestIndexTable(indexCursorDB)) {
+          Table table = db.getTable("test");
+          Index idx = table.getIndexes().get(0);
 
-        Table table = db.getTable("test");
-        Index idx = table.getIndexes().get(0);
+          Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
+          Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
+          Cursor cursor3 = createIndexSubRangeCursor(table, idx, i);
+          Cursor cursor4 = createIndexSubRangeCursor(table, idx, i);
 
-        Cursor cursor1 = createIndexSubRangeCursor(table, idx, i);
-        Cursor cursor2 = createIndexSubRangeCursor(table, idx, i);
-        Cursor cursor3 = createIndexSubRangeCursor(table, idx, i);
-        Cursor cursor4 = createIndexSubRangeCursor(table, idx, i);
-
-        doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 4);
-
-        db.close();
+          doTestLiveDeletion(cursor1, cursor2, cursor3, cursor4, 4);
+        }
       }
     }
   }
@@ -800,29 +763,25 @@ public class CursorTest {
   @Test
   public void testFindAllIndex() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createDupeTestTable(fileFormat);
+      try (Database db = createDupeTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
 
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-
-      doTestFindAll(table, cursor, null);
-
-      db.close();
+        doTestFindAll(table, cursor, null);
+      }
     }
   }
 
   @Test
   public void testFindAll() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createDupeTestTable(indexCursorDB);
+      try (Database db = createDupeTestTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
+        Cursor cursor = CursorBuilder.createCursor(idx);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
-      Cursor cursor = CursorBuilder.createCursor(idx);
-
-      doTestFindAll(table, cursor, idx);
-
-      db.close();
+        doTestFindAll(table, cursor, idx);
+      }
     }
   }
 
@@ -927,41 +886,39 @@ public class CursorTest {
   public void testId() throws Exception
   {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
+        Cursor tCursor = CursorBuilder.createCursor(table);
+        Cursor iCursor = CursorBuilder.createCursor(idx);
 
-      Cursor tCursor = CursorBuilder.createCursor(table);
-      Cursor iCursor = CursorBuilder.createCursor(idx);
+        Cursor.Savepoint tSave = tCursor.getSavepoint();
+        Cursor.Savepoint iSave = iCursor.getSavepoint();
 
-      Cursor.Savepoint tSave = tCursor.getSavepoint();
-      Cursor.Savepoint iSave = iCursor.getSavepoint();
+        tCursor.restoreSavepoint(tSave);
+        iCursor.restoreSavepoint(iSave);
 
-      tCursor.restoreSavepoint(tSave);
-      iCursor.restoreSavepoint(iSave);
+        try {
+          tCursor.restoreSavepoint(iSave);
+          fail("IllegalArgumentException should have been thrown");
+        } catch(IllegalArgumentException e) {
+          // success
+        }
 
-      try {
-        tCursor.restoreSavepoint(iSave);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        // success
+        try {
+          iCursor.restoreSavepoint(tSave);
+          fail("IllegalArgumentException should have been thrown");
+        } catch(IllegalArgumentException e) {
+          // success
+        }
+
+        Cursor tCursor2 = CursorBuilder.createCursor(table);
+        Cursor iCursor2 = CursorBuilder.createCursor(idx);
+
+        tCursor2.restoreSavepoint(tSave);
+        iCursor2.restoreSavepoint(iSave);
       }
-
-      try {
-        iCursor.restoreSavepoint(tSave);
-        fail("IllegalArgumentException should have been thrown");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      Cursor tCursor2 = CursorBuilder.createCursor(table);
-      Cursor iCursor2 = CursorBuilder.createCursor(idx);
-
-      tCursor2.restoreSavepoint(tSave);
-      iCursor2.restoreSavepoint(iSave);
-
-      db.close();
     }
   }
 
@@ -970,18 +927,17 @@ public class CursorTest {
 
 
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
 
-      Table table = db.getTable("test");
+        doTestMatchers(table, SimpleColumnMatcher.INSTANCE, false);
+        doTestMatchers(table, CaseInsensitiveColumnMatcher.INSTANCE, true);
 
-      doTestMatchers(table, SimpleColumnMatcher.INSTANCE, false);
-      doTestMatchers(table, CaseInsensitiveColumnMatcher.INSTANCE, true);
-
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestMatcher(table, cursor, SimpleColumnMatcher.INSTANCE, false);
-      doTestMatcher(table, cursor, CaseInsensitiveColumnMatcher.INSTANCE,
-                    true);
-      db.close();
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestMatcher(table, cursor, SimpleColumnMatcher.INSTANCE, false);
+        doTestMatcher(table, cursor, CaseInsensitiveColumnMatcher.INSTANCE,
+                      true);
+      }
     }
   }
 
@@ -1091,27 +1047,25 @@ public class CursorTest {
   public void testIndexCursor() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX, true)) {
+      try (Database db = openMem(testDB)) {
+        Table t1 = db.getTable("Table1");
+        Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
+        IndexCursor cursor = CursorBuilder.createCursor(idx);
 
-      Database db = openMem(testDB);
-      Table t1 = db.getTable("Table1");
-      Index idx = t1.getIndex(IndexBuilder.PRIMARY_KEY_NAME);
-      IndexCursor cursor = CursorBuilder.createCursor(idx);
+        assertFalse(cursor.findFirstRowByEntry(-1));
+        cursor.findClosestRowByEntry(-1);
+        assertEquals(0, cursor.getCurrentRow().get("id"));
 
-      assertFalse(cursor.findFirstRowByEntry(-1));
-      cursor.findClosestRowByEntry(-1);
-      assertEquals(0, cursor.getCurrentRow().get("id"));
+        assertTrue(cursor.findFirstRowByEntry(1));
+        assertEquals(1, cursor.getCurrentRow().get("id"));
 
-      assertTrue(cursor.findFirstRowByEntry(1));
-      assertEquals(1, cursor.getCurrentRow().get("id"));
+        cursor.findClosestRowByEntry(2);
+        assertEquals(2, cursor.getCurrentRow().get("id"));
 
-      cursor.findClosestRowByEntry(2);
-      assertEquals(2, cursor.getCurrentRow().get("id"));
-
-      assertFalse(cursor.findFirstRowByEntry(4));
-      cursor.findClosestRowByEntry(4);
-      assertTrue(cursor.isAfterLast());
-
-      db.close();
+        assertFalse(cursor.findFirstRowByEntry(4));
+        cursor.findClosestRowByEntry(4);
+        assertTrue(cursor.isAfterLast());
+      }
     }
   }
 
@@ -1119,79 +1073,23 @@ public class CursorTest {
   public void testIndexCursorDelete() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+      try (Database db = openMem(testDB)) {
+        Table t1 = db.getTable("Table1");
+        Index idx = t1.getIndex("Table2Table1");
+        IndexCursor cursor = CursorBuilder.createCursor(idx);
 
-      Database db = openMem(testDB);
-      Table t1 = db.getTable("Table1");
-      Index idx = t1.getIndex("Table2Table1");
-      IndexCursor cursor = CursorBuilder.createCursor(idx);
+        List<String> expectedData = cursor.newEntryIterable(1)
+              .addColumnNames("data")
+          .stream().map(r -> r.getString("data"))
+          .collect(Collectors.toList());
 
-      List<String> expectedData = cursor.newEntryIterable(1)
-            .addColumnNames("data")
-        .stream().map(r -> r.getString("data"))
-        .collect(Collectors.toList());
+        assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
-      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
-
-      expectedData = new ArrayList<String>();
-      for(Iterator<? extends Row> iter =
-            cursor.newEntryIterable(1).iterator();
-          iter.hasNext(); ) {
-        expectedData.add(iter.next().getString("data"));
-        iter.remove();
-        try {
-          iter.remove();
-          fail("IllegalArgumentException should have been thrown");
-        } catch(IllegalStateException e) {
-          // success
-        }
-
-        if(!iter.hasNext()) {
-          try {
-            iter.next();
-            fail("NoSuchElementException should have been thrown");
-          } catch(NoSuchElementException e) {
-            // success
-          }
-        }
-      }
-
-      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
-
-      expectedData = new ArrayList<String>();
-      for(Row row : cursor.newEntryIterable(1)
-            .addColumnNames("data")) {
-        expectedData.add(row.getString("data"));
-      }
-
-      assertTrue(expectedData.isEmpty());
-
-      db.close();
-    }
-  }
-
-  @Test
-  public void testCursorDelete() throws Exception
-  {
-    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
-
-      Database db = openMem(testDB);
-      Table t1 = db.getTable("Table1");
-      Cursor cursor = CursorBuilder.createCursor(t1);
-
-      List<String> expectedData = cursor.newIterable().setColumnNames(
-              Arrays.asList("otherfk1", "data")).stream()
-        .filter(r -> r.get("otherfk1").equals(1))
-        .map(r -> r.getString("data"))
-        .collect(Collectors.toList());
-
-      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
-
-      expectedData = new ArrayList<String>();
-      for(Iterator<? extends Row> iter = cursor.iterator();
-          iter.hasNext(); ) {
-        Row row = iter.next();
-        if(row.get("otherfk1").equals(1)) {
-          expectedData.add(row.getString("data"));
+        expectedData = new ArrayList<String>();
+        for(Iterator<? extends Row> iter =
+              cursor.newEntryIterable(1).iterator();
+            iter.hasNext(); ) {
+          expectedData.add(iter.next().getString("data"));
           iter.remove();
           try {
             iter.remove();
@@ -1199,60 +1097,109 @@ public class CursorTest {
           } catch(IllegalStateException e) {
             // success
           }
-        }
 
-        if(!iter.hasNext()) {
-          try {
-            iter.next();
-            fail("NoSuchElementException should have been thrown");
-          } catch(NoSuchElementException e) {
-            // success
+          if(!iter.hasNext()) {
+            try {
+              iter.next();
+              fail("NoSuchElementException should have been thrown");
+            } catch(NoSuchElementException e) {
+              // success
+            }
           }
         }
-      }
 
-      assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+        assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
 
-      expectedData = new ArrayList<String>();
-      for(Row row : cursor.newIterable().setColumnNames(
-              Arrays.asList("otherfk1", "data"))) {
-        if(row.get("otherfk1").equals(1)) {
+        expectedData = new ArrayList<String>();
+        for(Row row : cursor.newEntryIterable(1)
+              .addColumnNames("data")) {
           expectedData.add(row.getString("data"));
         }
+
+        assertTrue(expectedData.isEmpty());
       }
+    }
+  }
 
-      assertTrue(expectedData.isEmpty());
+  @Test
+  public void testCursorDelete() throws Exception
+  {
+    for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
+      try (Database db = openMem(testDB)) {
+        Table t1 = db.getTable("Table1");
+        Cursor cursor = CursorBuilder.createCursor(t1);
 
-      db.close();
+        List<String> expectedData = cursor.newIterable().setColumnNames(
+                Arrays.asList("otherfk1", "data")).stream()
+          .filter(r -> r.get("otherfk1").equals(1))
+          .map(r -> r.getString("data"))
+          .collect(Collectors.toList());
+
+        assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+
+        expectedData = new ArrayList<String>();
+        for(Iterator<? extends Row> iter = cursor.iterator();
+            iter.hasNext(); ) {
+          Row row = iter.next();
+          if(row.get("otherfk1").equals(1)) {
+            expectedData.add(row.getString("data"));
+            iter.remove();
+            try {
+              iter.remove();
+              fail("IllegalArgumentException should have been thrown");
+            } catch(IllegalStateException e) {
+              // success
+            }
+          }
+
+          if(!iter.hasNext()) {
+            try {
+              iter.next();
+              fail("NoSuchElementException should have been thrown");
+            } catch(NoSuchElementException e) {
+              // success
+            }
+          }
+        }
+
+        assertEquals(Arrays.asList("baz11", "baz11-2"), expectedData);
+
+        expectedData = new ArrayList<String>();
+        for(Row row : cursor.newIterable().setColumnNames(
+                Arrays.asList("otherfk1", "data"))) {
+          if(row.get("otherfk1").equals(1)) {
+            expectedData.add(row.getString("data"));
+          }
+        }
+
+        assertTrue(expectedData.isEmpty());
+      }
     }
   }
 
   @Test
   public void testFindByRowId() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = createTestTable(fileFormat);
-
-      Table table = db.getTable("test");
-      Cursor cursor = CursorBuilder.createCursor(table);
-      doTestFindByRowId(cursor);
-      db.close();
+      try (Database db = createTestTable(fileFormat)) {
+        Table table = db.getTable("test");
+        Cursor cursor = CursorBuilder.createCursor(table);
+        doTestFindByRowId(cursor);
+      }
     }
   }
 
   @Test
   public void testFindByRowIdIndex() throws Exception {
     for (final TestDB indexCursorDB : INDEX_CURSOR_DBS) {
-      Database db = createTestIndexTable(indexCursorDB);
+      try (Database db = createTestIndexTable(indexCursorDB)) {
+        Table table = db.getTable("test");
+        Index idx = table.getIndexes().get(0);
 
-      Table table = db.getTable("test");
-      Index idx = table.getIndexes().get(0);
+        assertTable(createUnorderedTestTableData(), table);
 
-      assertTable(createUnorderedTestTableData(), table);
-
-      Cursor cursor = CursorBuilder.createCursor(idx);
-      doTestFindByRowId(cursor);
-
-      db.close();
+        Cursor cursor = CursorBuilder.createCursor(idx);
+        doTestFindByRowId(cursor);
+      }
     }
   }
 
@@ -1302,58 +1249,55 @@ public class CursorTest {
   @Test
   public void testIterationEarlyExit() throws Exception {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      try (Database db = createMem(fileFormat)) {
+        Table table = newTable("test")
+          .addColumn(newColumn("id", DataType.LONG))
+          .addColumn(newColumn("value", DataType.TEXT))
+          .addColumn(newColumn("memo", DataType.MEMO))
+          .addIndex(newIndex("value_idx")
+                    .addColumns("value"))
+          .toTable(db);
 
-      Database db = createMem(fileFormat);
+        for(int i = 0; i < 20; ++i) {
+          Object memo = "memo-" + i;
+          table.addRow(i, "val-" + (i/2), memo);
+        }
 
-      Table table = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG))
-        .addColumn(newColumn("value", DataType.TEXT))
-        .addColumn(newColumn("memo", DataType.MEMO))
-        .addIndex(newIndex("value_idx")
-                  .addColumns("value"))
-        .toTable(db);
+        // generate an "invalid" memo
+        byte[] b = new byte[12];
+        b[3] = (byte)0xC0;
+        table.addRow(20, "val-9", ColumnImpl.rawDataWrapper(b));
 
-      for(int i = 0; i < 20; ++i) {
-        Object memo = "memo-" + i;
-        table.addRow(i, "val-" + (i/2), memo);
+        IndexCursor cursor = CursorBuilder.createCursor(
+            table.getIndex("value_idx"));
+
+        try {
+          cursor.newIterable()
+            .addMatchPattern("value", "val-9")
+            .addMatchPattern("memo", "anything")
+            .iterator().hasNext();
+          fail("RuntimeIOException should have been thrown");
+        } catch(RuntimeIOException ignored) {
+          // success
+        }
+
+        List<Row> rows = new ArrayList<Row>();
+        for (Row row : cursor.newIterable()
+               .addMatchPattern("value", "val-5")
+               .addMatchPattern("memo", "memo-11")) {
+          rows.add(row);
+        }
+
+        assertEquals(rows, createExpectedTable(
+                         createExpectedRow("id", 11,
+                                           "value", "val-5",
+                                           "memo", "memo-11")));
+
+        assertFalse(cursor.newIterable()
+                    .addMatchPattern("value", "val-31")
+                    .addMatchPattern("memo", "anything")
+                    .iterator().hasNext());
       }
-
-      // generate an "invalid" memo
-      byte[] b = new byte[12];
-      b[3] = (byte)0xC0;
-      table.addRow(20, "val-9", ColumnImpl.rawDataWrapper(b));
-
-      IndexCursor cursor = CursorBuilder.createCursor(
-          table.getIndex("value_idx"));
-
-      try {
-        cursor.newIterable()
-          .addMatchPattern("value", "val-9")
-          .addMatchPattern("memo", "anything")
-          .iterator().hasNext();
-        fail("RuntimeIOException should have been thrown");
-      } catch(RuntimeIOException ignored) {
-        // success
-      }
-
-      List<Row> rows = new ArrayList<Row>();
-      for (Row row : cursor.newIterable()
-             .addMatchPattern("value", "val-5")
-             .addMatchPattern("memo", "memo-11")) {
-        rows.add(row);
-      }
-
-      assertEquals(rows, createExpectedTable(
-                       createExpectedRow("id", 11,
-                                         "value", "val-5",
-                                         "memo", "memo-11")));
-
-      assertFalse(cursor.newIterable()
-                  .addMatchPattern("value", "val-31")
-                  .addMatchPattern("memo", "anything")
-                  .iterator().hasNext());
-
-      db.close();
     }
   }
 
@@ -1361,84 +1305,81 @@ public class CursorTest {
   public void testPartialIndexFind() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      try (Database db = createMem(fileFormat)) {
+        TableImpl t = (TableImpl)newTable("Test")
+          .addColumn(newColumn("id", DataType.LONG))
+          .addColumn(newColumn("data1", DataType.TEXT))
+          .addColumn(newColumn("num2", DataType.LONG))
+          .addColumn(newColumn("key3", DataType.TEXT))
+          .addColumn(newColumn("value", DataType.TEXT))
+          .addIndex(newIndex("idx3").addColumns("data1", "num2", "key3"))
+          .toTable(db);
 
-      Database db = createMem(fileFormat);
+        Index idx = t.findIndexForColumns(Arrays.asList("data1"),
+                                          TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx3", idx.getName());
 
-      TableImpl t = (TableImpl)newTable("Test")
-        .addColumn(newColumn("id", DataType.LONG))
-        .addColumn(newColumn("data1", DataType.TEXT))
-        .addColumn(newColumn("num2", DataType.LONG))
-        .addColumn(newColumn("key3", DataType.TEXT))
-        .addColumn(newColumn("value", DataType.TEXT))
-        .addIndex(newIndex("idx3").addColumns("data1", "num2", "key3"))
-        .toTable(db);
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx3", idx.getName());
 
-      Index idx = t.findIndexForColumns(Arrays.asList("data1"),
-                                        TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx3", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx3", idx.getName());
 
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx3", idx.getName());
-
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx3", idx.getName());
-
-      assertNull(t.findIndexForColumns(Arrays.asList("num2"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-      assertNull(t.findIndexForColumns(Arrays.asList("data1"),
-                                       TableImpl.IndexFeature.EXACT_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("num2"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("data1"),
+                                         TableImpl.IndexFeature.EXACT_MATCH));
 
 
-      newIndex("idx2")
-        .addColumns("data1", "num2")
-        .addToTable(t);
+        newIndex("idx2")
+          .addColumns("data1", "num2")
+          .addToTable(t);
 
-      idx = t.findIndexForColumns(Arrays.asList("data1"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx2", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx2", idx.getName());
 
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx2", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx2", idx.getName());
 
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx3", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx3", idx.getName());
 
-      assertNull(t.findIndexForColumns(Arrays.asList("num2"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-      assertNull(t.findIndexForColumns(Arrays.asList("data1"),
-                                       TableImpl.IndexFeature.EXACT_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("num2"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("data1"),
+                                         TableImpl.IndexFeature.EXACT_MATCH));
 
 
-      newIndex("idx1")
-        .addColumns("data1")
-        .addToTable(t);
+        newIndex("idx1")
+          .addColumns("data1")
+          .addToTable(t);
 
-      idx = t.findIndexForColumns(Arrays.asList("data1"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx1", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx1", idx.getName());
 
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx2", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx2", idx.getName());
 
-      idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
-                                  TableImpl.IndexFeature.ANY_MATCH);
-      assertEquals("idx3", idx.getName());
+        idx = t.findIndexForColumns(Arrays.asList("data1", "num2", "key3"),
+                                    TableImpl.IndexFeature.ANY_MATCH);
+        assertEquals("idx3", idx.getName());
 
-      assertNull(t.findIndexForColumns(Arrays.asList("num2"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-      assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
-                                       TableImpl.IndexFeature.ANY_MATCH));
-
-      db.close();
+        assertNull(t.findIndexForColumns(Arrays.asList("num2"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+        assertNull(t.findIndexForColumns(Arrays.asList("data1", "key3"),
+                                         TableImpl.IndexFeature.ANY_MATCH));
+      }
     }
   }
 
@@ -1446,48 +1387,45 @@ public class CursorTest {
   public void testPartialIndexLookup() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
+      try (Database db = createMem(fileFormat)) {
+        TableImpl t = (TableImpl)newTable("Test")
+          .addColumn(newColumn("id", DataType.LONG))
+          .addColumn(newColumn("data1", DataType.TEXT))
+          .addColumn(newColumn("num2", DataType.LONG))
+          .addColumn(newColumn("key3", DataType.TEXT))
+          .addColumn(newColumn("value", DataType.TEXT))
+          .addIndex(newIndex("idx3")
+                    .addColumns(true, "data1")
+                    .addColumns(false, "num2")
+                    .addColumns(true, "key3")
+                    )
+          .toTable(db);
 
-      Database db = createMem(fileFormat);
-
-      TableImpl t = (TableImpl)newTable("Test")
-        .addColumn(newColumn("id", DataType.LONG))
-        .addColumn(newColumn("data1", DataType.TEXT))
-        .addColumn(newColumn("num2", DataType.LONG))
-        .addColumn(newColumn("key3", DataType.TEXT))
-        .addColumn(newColumn("value", DataType.TEXT))
-        .addIndex(newIndex("idx3")
-                  .addColumns(true, "data1")
-                  .addColumns(false, "num2")
-                  .addColumns(true, "key3")
-                  )
-        .toTable(db);
-
-      int id = 1;
-      for(String str : Arrays.asList("A", "B", "C", "D")) {
-        for(int i = 4; i >= 0; --i) {
-        // for(int i = 0; i < 5; ++i) {
-          for(int j = 1; j < 3; ++j) {
-            t.addRow(id, str, i, "K" + j, "value" + id);
-            ++id;
+        int id = 1;
+        for(String str : Arrays.asList("A", "B", "C", "D")) {
+          for(int i = 4; i >= 0; --i) {
+          // for(int i = 0; i < 5; ++i) {
+            for(int j = 1; j < 3; ++j) {
+              t.addRow(id, str, i, "K" + j, "value" + id);
+              ++id;
+            }
           }
         }
+
+        Index idx = t.getIndex("idx3");
+        doPartialIndexLookup(idx);
+
+        idx = newIndex("idx2")
+                    .addColumns(true, "data1")
+                    .addColumns(false, "num2")
+          .addToTable(t);
+        doPartialIndexLookup(idx);
+
+        idx = newIndex("idx1")
+                    .addColumns(true, "data1")
+          .addToTable(t);
+        doPartialIndexLookup(idx);
       }
-
-      Index idx = t.getIndex("idx3");
-      doPartialIndexLookup(idx);
-
-      idx = newIndex("idx2")
-                  .addColumns(true, "data1")
-                  .addColumns(false, "num2")
-        .addToTable(t);
-      doPartialIndexLookup(idx);
-
-      idx = newIndex("idx1")
-                  .addColumns(true, "data1")
-        .addToTable(t);
-      doPartialIndexLookup(idx);
-
-      db.close();
     }
   }
 

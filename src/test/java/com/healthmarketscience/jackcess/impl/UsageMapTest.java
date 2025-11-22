@@ -52,51 +52,51 @@ public final class UsageMapTest {
       final File dbFile, final int expectedFirstPage, final int expectedLastPage)
     throws IOException {
 
-    final Database db = DatabaseBuilder.open(dbFile);
-    final UsageMap usageMap = UsageMap.read((DatabaseImpl)db,
-                                            PageChannel.PAGE_GLOBAL_USAGE_MAP,
-                                            PageChannel.ROW_GLOBAL_USAGE_MAP,
-                                            true);
-    assertEquals(expectedFirstPage,
-                 usageMap.getFirstPageNumber(),
-                 "Unexpected FirstPageNumber.");
-    assertEquals(expectedLastPage,
-                 usageMap.getLastPageNumber(),
-                 "Unexpected LastPageNumber.");
+    try (final Database db = DatabaseBuilder.open(dbFile)) {
+      final UsageMap usageMap = UsageMap.read((DatabaseImpl)db,
+                                              PageChannel.PAGE_GLOBAL_USAGE_MAP,
+                                              PageChannel.ROW_GLOBAL_USAGE_MAP,
+                                              true);
+      assertEquals(expectedFirstPage,
+                   usageMap.getFirstPageNumber(),
+                   "Unexpected FirstPageNumber.");
+      assertEquals(expectedLastPage,
+                   usageMap.getLastPageNumber(),
+                   "Unexpected LastPageNumber.");
+    }
   }
 
   @Test
   public void testGobalReferenceUsageMap() throws Exception
   {
-    Database db = openCopy(
+    try (Database db = openCopy(
         Database.FileFormat.V2000,
-        new File("src/test/data/V2000/testRefGlobalV2000.mdb"));
+        new File("src/test/data/V2000/testRefGlobalV2000.mdb"))) {
 
-    Table t = new TableBuilder("Test2")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
-      .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-      .addColumn(new ColumnBuilder("data2", DataType.TEXT))
-      .toTable(db);
+      Table t = new TableBuilder("Test2")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("data2", DataType.TEXT))
+        .toTable(db);
 
 
-    ((DatabaseImpl)db).getPageChannel().startWrite();
-    try {
-      List<Object[]> rows = new ArrayList<Object[]>();
-      for(int i = 0; i < 300000; ++i) {
-        String s1 = "r" + i + "-" + createString(100);
-        String s2 = "r" + i + "-" + createString(200);
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        List<Object[]> rows = new ArrayList<Object[]>();
+        for(int i = 0; i < 300000; ++i) {
+          String s1 = "r" + i + "-" + createString(100);
+          String s2 = "r" + i + "-" + createString(200);
 
-        rows.add(new Object[]{i, s1, s2});
+          rows.add(new Object[]{i, s1, s2});
 
-        if((i % 2000) == 0) {
-          t.addRows(rows);
-          rows.clear();
+          if((i % 2000) == 0) {
+            t.addRows(rows);
+            rows.clear();
+          }
         }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
-    } finally {
-      ((DatabaseImpl)db).getPageChannel().finishWrite();
     }
-
-    db.close();
   }
 }

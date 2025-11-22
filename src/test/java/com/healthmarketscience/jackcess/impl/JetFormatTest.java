@@ -165,10 +165,8 @@ public class JetFormatTest {
         }
 
         // verify that the db is the file format expected
-        try {
-          Database db = new DatabaseBuilder(testFile).setReadOnly(true).open();
+        try (Database db = new DatabaseBuilder(testFile).setReadOnly(true).open()) {
           FileFormat dbFileFormat = db.getFileFormat();
-          db.close();
           if(dbFileFormat != fileFormat) {
             throw new IllegalStateException("Expected " + fileFormat +
                                             " was " + dbFileFormat);
@@ -214,17 +212,14 @@ public class JetFormatTest {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      final FileChannel channel = DatabaseImpl.openChannel(
-          testDB.dbFile.toPath(), false, false);
-      try {
+      try (FileChannel channel = DatabaseImpl.openChannel(
+          testDB.dbFile.toPath(), false, false)) {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
         assertEquals(testDB.getExpectedFormat(), fmtActual,
                      () -> "Unexpected JetFormat for dbFile: " +
                            testDB.dbFile.getAbsolutePath());
 
-      } finally {
-        channel.close();
       }
 
     }
@@ -235,10 +230,8 @@ public class JetFormatTest {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      Database db = null;
       Exception failure = null;
-      try {
-        db = openCopy(testDB);
+      try (Database db = openCopy(testDB)) {
 
         if(testDB.getExpectedFormat().READ_ONLY) {
           PropertyMap props = db.getUserDefinedProperties();
@@ -248,10 +241,6 @@ public class JetFormatTest {
 
       } catch(Exception e) {
         failure = e;
-      } finally {
-        if(db != null) {
-          db.close();
-        }
       }
 
       if(!testDB.getExpectedFormat().READ_ONLY) {
@@ -268,26 +257,14 @@ public class JetFormatTest {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      Database db = null;
-      try {
-        db = open(testDB);
+      try (Database db = open(testDB)) {
         assertEquals(testDB.getExpectedFileFormat(), db.getFileFormat());
-      } finally {
-        if(db != null) {
-          db.close();
-        }
       }
     }
 
-    Database db = null;
-    try {
-      db = open(Database.FileFormat.GENERIC_JET4,
-                new File(DIR_TEST_DATA, "adox_jet4.mdb"));
+    try (Database db = open(Database.FileFormat.GENERIC_JET4,
+                            new File(DIR_TEST_DATA, "adox_jet4.mdb"))) {
       assertEquals(Database.FileFormat.GENERIC_JET4, db.getFileFormat());
-    } finally {
-      if(db != null) {
-        db.close();
-      }
     }
   }
 

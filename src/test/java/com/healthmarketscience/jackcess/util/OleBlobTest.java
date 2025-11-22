@@ -55,99 +55,99 @@ public class OleBlobTest
     byte[] sampleFileBytes = toByteArray(sampleFile);
 
     for(FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table t = new TableBuilder("TestOle")
-        .addColumn(new ColumnBuilder("id", DataType.LONG))
-        .addColumn(new ColumnBuilder("ole", DataType.OLE))
-        .toTable(db);
+        Table t = new TableBuilder("TestOle")
+          .addColumn(new ColumnBuilder("id", DataType.LONG))
+          .addColumn(new ColumnBuilder("ole", DataType.OLE))
+          .toTable(db);
 
-      OleBlob blob = null;
-      try {
-        blob = t.newBlob()
-          .setSimplePackage(sampleFile)
-          .toBlob();
-        t.addRow(1, blob);
-      } finally {
-        ByteUtil.closeQuietly(blob);
-      }
-
-      try {
-        blob = t.newBlob()
-          .setLink(sampleFile)
-          .toBlob();
-        t.addRow(2, blob);
-      } finally {
-        ByteUtil.closeQuietly(blob);
-      }
-
-      try {
-        blob = t.newBlob()
-          .setPackagePrettyName("Text File")
-          .setPackageClassName("Text.File")
-          .setPackageTypeName("TextFile")
-          .setOtherBytes(sampleFileBytes)
-          .toBlob();
-        t.addRow(3, blob);
-      } finally {
-        ByteUtil.closeQuietly(blob);
-      }
-
-      for(Row row : t) {
+        OleBlob blob = null;
         try {
-          blob = row.getBlob("ole");
-          OleBlob.Content content = blob.getContent();
-          assertSame(blob, content.getBlob());
-          assertSame(content, blob.getContent());
-
-          switch(row.getInt("id")) {
-          case 1:
-            assertEquals(OleBlob.ContentType.SIMPLE_PACKAGE, content.getType());
-            OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
-            assertEquals(sampleFilePath, spc.getFilePath());
-            assertEquals(sampleFilePath, spc.getLocalFilePath());
-            assertEquals(sampleFileName, spc.getFileName());
-            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME,
-                         spc.getPrettyName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
-                         spc.getTypeName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
-                         spc.getClassName());
-            assertEquals(sampleFileBytes.length, spc.length());
-            assertTrue(Arrays.equals(sampleFileBytes,
-                                     toByteArray(spc.getStream(), spc.length())));
-            break;
-
-          case 2:
-            OleBlob.LinkContent lc = (OleBlob.LinkContent)content;
-            assertEquals(OleBlob.ContentType.LINK, lc.getType());
-            assertEquals(sampleFilePath, lc.getLinkPath());
-            assertEquals(sampleFilePath, lc.getFilePath());
-            assertEquals(sampleFileName, lc.getFileName());
-            assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, lc.getPrettyName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getTypeName());
-            assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getClassName());
-            break;
-
-          case 3:
-            OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
-            assertEquals(OleBlob.ContentType.OTHER, oc.getType());
-            assertEquals("Text File", oc.getPrettyName());
-            assertEquals("Text.File", oc.getClassName());
-            assertEquals("TextFile", oc.getTypeName());
-            assertEquals(sampleFileBytes.length, oc.length());
-            assertTrue(Arrays.equals(sampleFileBytes,
-                                     toByteArray(oc.getStream(), oc.length())));
-            break;
-          default:
-            throw new RuntimeException("unexpected id " + row);
-          }
+          blob = t.newBlob()
+            .setSimplePackage(sampleFile)
+            .toBlob();
+          t.addRow(1, blob);
         } finally {
           ByteUtil.closeQuietly(blob);
         }
-      }
 
-      db.close();
+        try {
+          blob = t.newBlob()
+            .setLink(sampleFile)
+            .toBlob();
+          t.addRow(2, blob);
+        } finally {
+          ByteUtil.closeQuietly(blob);
+        }
+
+        try {
+          blob = t.newBlob()
+            .setPackagePrettyName("Text File")
+            .setPackageClassName("Text.File")
+            .setPackageTypeName("TextFile")
+            .setOtherBytes(sampleFileBytes)
+            .toBlob();
+          t.addRow(3, blob);
+        } finally {
+          ByteUtil.closeQuietly(blob);
+        }
+
+        for(Row row : t) {
+          try {
+            blob = row.getBlob("ole");
+            OleBlob.Content content = blob.getContent();
+            assertSame(blob, content.getBlob());
+            assertSame(content, blob.getContent());
+
+            switch(row.getInt("id")) {
+            case 1:
+              assertEquals(OleBlob.ContentType.SIMPLE_PACKAGE, content.getType());
+              OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
+              assertEquals(sampleFilePath, spc.getFilePath());
+              assertEquals(sampleFilePath, spc.getLocalFilePath());
+              assertEquals(sampleFileName, spc.getFileName());
+              assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME,
+                           spc.getPrettyName());
+              assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
+                           spc.getTypeName());
+              assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME,
+                           spc.getClassName());
+              assertEquals(sampleFileBytes.length, spc.length());
+              assertTrue(Arrays.equals(sampleFileBytes,
+                                       toByteArray(spc.getStream(), spc.length())));
+              break;
+
+            case 2:
+              OleBlob.LinkContent lc = (OleBlob.LinkContent)content;
+              assertEquals(OleBlob.ContentType.LINK, lc.getType());
+              assertEquals(sampleFilePath, lc.getLinkPath());
+              assertEquals(sampleFilePath, lc.getFilePath());
+              assertEquals(sampleFileName, lc.getFileName());
+              assertEquals(OleBlob.Builder.PACKAGE_PRETTY_NAME, lc.getPrettyName());
+              assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getTypeName());
+              assertEquals(OleBlob.Builder.PACKAGE_TYPE_NAME, lc.getClassName());
+              break;
+
+            case 3:
+              OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
+              assertEquals(OleBlob.ContentType.OTHER, oc.getType());
+              assertEquals("Text File", oc.getPrettyName());
+              assertEquals("Text.File", oc.getClassName());
+              assertEquals("TextFile", oc.getTypeName());
+              assertEquals(sampleFileBytes.length, oc.length());
+              assertTrue(Arrays.equals(sampleFileBytes,
+                                       toByteArray(oc.getStream(), oc.length())));
+              break;
+            default:
+              throw new RuntimeException("unexpected id " + row);
+            }
+          } finally {
+            ByteUtil.closeQuietly(blob);
+          }
+        }
+
+      }
     }
   }
 
@@ -155,93 +155,93 @@ public class OleBlobTest
   public void testReadBlob() throws Exception
   {
     for(TestDB testDb : TestDB.getSupportedForBasename(Basename.BLOB, true)) {
-      Database db = open(testDb);
+      try (Database db = open(testDb)) {
 
-      Table t = db.getTable("Table1");
+        Table t = db.getTable("Table1");
 
-      for(Row row : t) {
+        for(Row row : t) {
 
-        OleBlob oleBlob = null;
-        try {
+          OleBlob oleBlob = null;
+          try {
 
-          String name = row.getString("name");
-          oleBlob = row.getBlob("ole_data");
-          OleBlob.Content content = oleBlob.getContent();
-          Attachment attach = null;
-          if(content.getType() != OleBlob.ContentType.LINK) {
-            attach = row.getForeignKey("attach_data").getAttachments().get(0);
-          }
-
-          switch(content.getType()) {
-          case LINK:
-            OleBlob.LinkContent lc = (OleBlob.LinkContent)content;
-            if("test_link".equals(name)) {
-              assertEquals("Z:\\jackcess_test\\ole\\test_data.txt", lc.getLinkPath());
-            } else {
-              assertEquals("Z:\\jackcess_test\\ole\\test_datau2.txt", lc.getLinkPath());
+            String name = row.getString("name");
+            oleBlob = row.getBlob("ole_data");
+            OleBlob.Content content = oleBlob.getContent();
+            Attachment attach = null;
+            if(content.getType() != OleBlob.ContentType.LINK) {
+              attach = row.getForeignKey("attach_data").getAttachments().get(0);
             }
-            break;
 
-          case SIMPLE_PACKAGE:
-            OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
-            byte[] packageBytes = toByteArray(spc.getStream(), spc.length());
-            assertTrue(Arrays.equals(attach.getFileData(), packageBytes));
-            break;
-
-          case COMPOUND_STORAGE:
-            OleBlob.CompoundContent cc = (OleBlob.CompoundContent)content;
-            if(cc.hasContentsEntry()) {
-              OleBlob.CompoundContent.Entry entry = cc.getContentsEntry();
-              byte[] entryBytes = toByteArray(entry.getStream(), entry.length());
-              assertTrue(Arrays.equals(attach.getFileData(), entryBytes));
-            } else {
-
-              if("test_word.doc".equals(name)) {
-                checkCompoundEntries(cc,
-                                     "/%02OlePres000", 466,
-                                     "/WordDocument", 4096,
-                                     "/%05SummaryInformation", 4096,
-                                     "/%05DocumentSummaryInformation", 4096,
-                                     "/%03AccessObjSiteData", 56,
-                                     "/%02OlePres001", 1620,
-                                     "/1Table", 6380,
-                                     "/%01CompObj", 114,
-                                     "/%01Ole", 20);
-                checkCompoundStorage(cc, attach);
-              } else if("test_excel.xls".equals(name)) {
-                checkCompoundEntries(cc,
-                                     "/%02OlePres000", 1326,
-                                     "/%03AccessObjSiteData", 56,
-                                     "/%05SummaryInformation", 200,
-                                     "/%05DocumentSummaryInformation", 264,
-                                     "/%02OlePres001", 4208,
-                                     "/%01CompObj", 107,
-                                     "/Workbook", 13040,
-                                     "/%01Ole", 20);
-                // the excel data seems to be modified when embedded as ole,
-                // so we can't reallly test it against the attachment data
+            switch(content.getType()) {
+            case LINK:
+              OleBlob.LinkContent lc = (OleBlob.LinkContent)content;
+              if("test_link".equals(name)) {
+                assertEquals("Z:\\jackcess_test\\ole\\test_data.txt", lc.getLinkPath());
               } else {
-                throw new RuntimeException("unexpected compound entry " + name);
+                assertEquals("Z:\\jackcess_test\\ole\\test_datau2.txt", lc.getLinkPath());
               }
+              break;
+
+            case SIMPLE_PACKAGE:
+              OleBlob.SimplePackageContent spc = (OleBlob.SimplePackageContent)content;
+              byte[] packageBytes = toByteArray(spc.getStream(), spc.length());
+              assertTrue(Arrays.equals(attach.getFileData(), packageBytes));
+              break;
+
+            case COMPOUND_STORAGE:
+              OleBlob.CompoundContent cc = (OleBlob.CompoundContent)content;
+              if(cc.hasContentsEntry()) {
+                OleBlob.CompoundContent.Entry entry = cc.getContentsEntry();
+                byte[] entryBytes = toByteArray(entry.getStream(), entry.length());
+                assertTrue(Arrays.equals(attach.getFileData(), entryBytes));
+              } else {
+
+                if("test_word.doc".equals(name)) {
+                  checkCompoundEntries(cc,
+                                       "/%02OlePres000", 466,
+                                       "/WordDocument", 4096,
+                                       "/%05SummaryInformation", 4096,
+                                       "/%05DocumentSummaryInformation", 4096,
+                                       "/%03AccessObjSiteData", 56,
+                                       "/%02OlePres001", 1620,
+                                       "/1Table", 6380,
+                                       "/%01CompObj", 114,
+                                       "/%01Ole", 20);
+                  checkCompoundStorage(cc, attach);
+                } else if("test_excel.xls".equals(name)) {
+                  checkCompoundEntries(cc,
+                                       "/%02OlePres000", 1326,
+                                       "/%03AccessObjSiteData", 56,
+                                       "/%05SummaryInformation", 200,
+                                       "/%05DocumentSummaryInformation", 264,
+                                       "/%02OlePres001", 4208,
+                                       "/%01CompObj", 107,
+                                       "/Workbook", 13040,
+                                       "/%01Ole", 20);
+                  // the excel data seems to be modified when embedded as ole,
+                  // so we can't reallly test it against the attachment data
+                } else {
+                  throw new RuntimeException("unexpected compound entry " + name);
+                }
+              }
+              break;
+
+            case OTHER:
+              OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
+              byte[] otherBytes = toByteArray(oc.getStream(), oc.length());
+              assertTrue(Arrays.equals(attach.getFileData(), otherBytes));
+              break;
+
+            default:
+              throw new RuntimeException("unexpected type " + content.getType());
             }
-            break;
 
-          case OTHER:
-            OleBlob.OtherContent oc = (OleBlob.OtherContent)content;
-            byte[] otherBytes = toByteArray(oc.getStream(), oc.length());
-            assertTrue(Arrays.equals(attach.getFileData(), otherBytes));
-            break;
-
-          default:
-            throw new RuntimeException("unexpected type " + content.getType());
+          } finally {
+            ByteUtil.closeQuietly(oleBlob);
           }
-
-        } finally {
-          ByteUtil.closeQuietly(oleBlob);
         }
-      }
 
-      db.close();
+      }
     }
   }
 
@@ -268,9 +268,9 @@ public class OleBlobTest
     File tmpData = File.createTempFile("attach_", ".dat");
 
     try {
-      FileOutputStream fout = new FileOutputStream(tmpData);
-      fout.write(attach.getFileData());
-      fout.close();
+      try (FileOutputStream fout = new FileOutputStream(tmpData)) {
+        fout.write(attach.getFileData());
+      }
 
       POIFSFileSystem attachFs = new POIFSFileSystem(tmpData, true);
 

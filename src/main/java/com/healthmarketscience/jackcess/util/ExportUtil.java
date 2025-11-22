@@ -39,7 +39,7 @@ import com.healthmarketscience.jackcess.impl.ByteUtil;
  * formats.  See the {@link Builder} for convenient configuration of the
  * export functionality.  Note that most scenarios for customizing output data
  * can be handled by implementing a custom {@link ExportFilter}.
- * 
+ *
  * @author Frank Gerbig
  * @usage _general_class_
  */
@@ -56,12 +56,12 @@ public class ExportUtil {
   /**
    * Copy all tables into new delimited text files <br>
    * Equivalent to: {@code exportAll(db, dir, "csv");}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param dir
    *          The directory where the new files will be created
-   * 
+   *
    * @see #exportAll(Database,File,String)
    * @see Builder
    */
@@ -74,14 +74,14 @@ public class ExportUtil {
    * Copy all tables into new delimited text files <br>
    * Equivalent to: {@code exportFile(db, name, f, false, null, '"',
    * SimpleExportFilter.INSTANCE);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param dir
    *          The directory where the new files will be created
    * @param ext
    *          The file extension of the new files
-   * 
+   *
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
@@ -97,7 +97,7 @@ public class ExportUtil {
    * Copy all tables into new delimited text files <br>
    * Equivalent to: {@code exportFile(db, name, f, false, null, '"',
    * SimpleExportFilter.INSTANCE);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param dir
@@ -106,7 +106,7 @@ public class ExportUtil {
    *          The file extension of the new files
    * @param header
    *          If <code>true</code> the first line contains the column names
-   * 
+   *
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
@@ -123,7 +123,7 @@ public class ExportUtil {
    * Copy all tables into new delimited text files <br>
    * Equivalent to: {@code exportFile(db, name, f, false, null, '"',
    * SimpleExportFilter.INSTANCE);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param dir
@@ -138,7 +138,7 @@ public class ExportUtil {
    *          The quote character
    * @param filter
    *          valid export filter
-   * 
+   *
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
@@ -156,20 +156,20 @@ public class ExportUtil {
    * Copy a table into a new delimited text file <br>
    * Equivalent to: {@code exportFile(db, name, f, false, null, '"',
    * SimpleExportFilter.INSTANCE);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param tableName
    *          Name of the table to export
    * @param f
    *          New file to create
-   * 
+   *
    * @see #exportFile(Database,String,File,boolean,String,char,ExportFilter)
    * @see Builder
    */
   public static void exportFile(Database db, String tableName,
       File f) throws IOException {
-    exportFile(db, tableName, f, false, DEFAULT_DELIMITER, DEFAULT_QUOTE_CHAR, 
+    exportFile(db, tableName, f, false, DEFAULT_DELIMITER, DEFAULT_QUOTE_CHAR,
         SimpleExportFilter.INSTANCE);
   }
 
@@ -177,7 +177,7 @@ public class ExportUtil {
    * Copy a table into a new delimited text file <br>
    * Nearly equivalent to: {@code exportWriter(db, name, new BufferedWriter(f),
    * header, delim, quote, filter);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param tableName
@@ -192,20 +192,15 @@ public class ExportUtil {
    *          The quote character
    * @param filter
    *          valid export filter
-   * 
+   *
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
   public static void exportFile(Database db, String tableName,
       File f, boolean header, String delim, char quote,
       ExportFilter filter) throws IOException {
-    BufferedWriter out = null;
-    try {
-      out = new BufferedWriter(new FileWriter(f));
+    try (BufferedWriter out = new BufferedWriter(new FileWriter(f))) {
       exportWriter(db, tableName, out, header, delim, quote, filter);
-      out.close();
-    } finally {
-      ByteUtil.closeQuietly(out);
     }
   }
 
@@ -213,27 +208,27 @@ public class ExportUtil {
    * Copy a table in this database into a new delimited text file <br>
    * Equivalent to: {@code exportWriter(db, name, out, false, null, '"',
    * SimpleExportFilter.INSTANCE);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param tableName
    *          Name of the table to export
    * @param out
    *          Writer to export to
-   * 
+   *
    * @see #exportWriter(Database,String,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
   public static void exportWriter(Database db, String tableName,
       BufferedWriter out) throws IOException {
-    exportWriter(db, tableName, out, false, DEFAULT_DELIMITER, 
+    exportWriter(db, tableName, out, false, DEFAULT_DELIMITER,
                  DEFAULT_QUOTE_CHAR, SimpleExportFilter.INSTANCE);
   }
 
   /**
    * Copy a table in this database into a new delimited text file. <br>
    * Equivalent to: {@code exportWriter(Cursor.createCursor(db.getTable(tableName)), out, header, delim, quote, filter);}
-   * 
+   *
    * @param db
    *          Database the table to export belongs to
    * @param tableName
@@ -248,14 +243,14 @@ public class ExportUtil {
    *          The quote character
    * @param filter
    *          valid export filter
-   * 
+   *
    * @see #exportWriter(Cursor,BufferedWriter,boolean,String,char,ExportFilter)
    * @see Builder
    */
   public static void exportWriter(Database db, String tableName,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
-      throws IOException 
+      throws IOException
   {
     exportWriter(CursorBuilder.createCursor(db.getTable(tableName)), out, header,
                  delim, quote, filter);
@@ -263,7 +258,7 @@ public class ExportUtil {
 
   /**
    * Copy a table in this database into a new delimited text file.
-   * 
+   *
    * @param cursor
    *          Cursor to export
    * @param out
@@ -282,14 +277,14 @@ public class ExportUtil {
   public static void exportWriter(Cursor cursor,
       BufferedWriter out, boolean header, String delim,
       char quote, ExportFilter filter)
-      throws IOException 
+      throws IOException
   {
     String delimiter = (delim == null) ? DEFAULT_DELIMITER : delim;
 
     // create pattern which will indicate whether or not a value needs to be
     // quoted or not (contains delimiter, separator, or newline)
     Pattern needsQuotePattern = Pattern.compile(
-        "(?:" + Pattern.quote(delimiter) + ")|(?:" + 
+        "(?:" + Pattern.quote(delimiter) + ")|(?:" +
         Pattern.quote("" + quote) + ")|(?:[\n\r])");
 
     List<? extends Column> origCols = cursor.getTable().getColumns();
@@ -366,7 +361,7 @@ public class ExportUtil {
   }
 
   private static void writeValue(BufferedWriter out, String value, char quote,
-                                 Pattern needsQuotePattern) 
+                                 Pattern needsQuotePattern)
     throws IOException
   {
     if(!needsQuotePattern.matcher(value).find()) {
@@ -478,10 +473,10 @@ public class ExportUtil {
      */
     public void exportWriter(BufferedWriter writer) throws IOException {
       if(_cursor != null) {
-        ExportUtil.exportWriter(_cursor, writer, _header, _delim, 
+        ExportUtil.exportWriter(_cursor, writer, _header, _delim,
                                 _quote, _filter);
       } else {
-        ExportUtil.exportWriter(_db, _tableName, writer, _header, _delim, 
+        ExportUtil.exportWriter(_db, _tableName, writer, _header, _delim,
                                 _quote, _filter);
       }
     }

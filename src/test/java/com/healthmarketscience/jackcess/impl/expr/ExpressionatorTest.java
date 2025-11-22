@@ -441,43 +441,43 @@ public class ExpressionatorTest
   @Test
   public void testParseSomeExprs() throws Exception
   {
-    BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"));
+    try (BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"))) {
 
-    TestContext tc = new TestContext() {
-      @Override
-      public Value getThisColumnValue() {
-        return ValueSupport.toValue(23.0);
+      TestContext tc = new TestContext() {
+        @Override
+        public Value getThisColumnValue() {
+          return ValueSupport.toValue(23.0);
+        }
+
+        @Override
+        public Value getIdentifierValue(Identifier identifier) {
+          return ValueSupport.toValue(23.0);
+        }
+      };
+
+      String line = null;
+      while((line = br.readLine()) != null) {
+        line = line.trim();
+        if(line.isEmpty()) {
+          continue;
+        }
+
+        String[] parts = line.split(";", 3);
+        Expressionator.Type type = Expressionator.Type.valueOf(parts[0]);
+        DataType dType =
+          (("null".equals(parts[1])) ? null : DataType.valueOf(parts[1]));
+        String exprStr = parts[2];
+
+        Value.Type resultType = ((dType != null) ?
+                                 BaseEvalContext.toValueType(dType) : null);
+
+        Expression expr = Expressionator.parse(
+            type, exprStr, resultType, tc);
+
+        expr.eval(tc);
       }
 
-      @Override
-      public Value getIdentifierValue(Identifier identifier) {
-        return ValueSupport.toValue(23.0);
-      }
-    };
-
-    String line = null;
-    while((line = br.readLine()) != null) {
-      line = line.trim();
-      if(line.isEmpty()) {
-        continue;
-      }
-
-      String[] parts = line.split(";", 3);
-      Expressionator.Type type = Expressionator.Type.valueOf(parts[0]);
-      DataType dType =
-        (("null".equals(parts[1])) ? null : DataType.valueOf(parts[1]));
-      String exprStr = parts[2];
-
-      Value.Type resultType = ((dType != null) ?
-                               BaseEvalContext.toValueType(dType) : null);
-
-      Expression expr = Expressionator.parse(
-          type, exprStr, resultType, tc);
-
-      expr.eval(tc);
     }
-
-    br.close();
   }
 
   @Test

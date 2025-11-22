@@ -123,23 +123,18 @@ public class TestUtil
     if (fileFormat == FileFormat.GENERIC_JET4) {
       // while we don't support creating GENERIC_JET4 as a jackcess feature,
       // we do want to be able to test these types of dbs
-      InputStream inStream = null;
-      OutputStream outStream = null;
-      try {
-        inStream = TestUtil.class.getClassLoader()
-          .getResourceAsStream("emptyJet4.mdb");
+      try (InputStream inStream = TestUtil.class.getClassLoader()
+          .getResourceAsStream("emptyJet4.mdb")) {
         File f = createTempFile(keep);
         if (channel != null) {
           JetFormatTest.transferDbFrom(channel, inStream);
         } else {
-          ByteUtil.copy(inStream, outStream = new FileOutputStream(f));
-          outStream.close();
+          try (OutputStream outStream = new FileOutputStream(f)) {
+            ByteUtil.copy(inStream, outStream);
+          }
         }
         return new DatabaseBuilder(f)
           .setAutoSync(getTestAutoSync()).setChannel(channel).open();
-      } finally {
-        ByteUtil.closeQuietly(inStream);
-        ByteUtil.closeQuietly(outStream);
       }
     }
 
@@ -470,13 +465,10 @@ public class TestUtil
   {
     // FIXME should really be using commons io IOUtils here, but don't want
     // to add dep for one simple test method
-    try {
-      DataInputStream din = new DataInputStream(in);
+    try (DataInputStream din = new DataInputStream(in)) {
       byte[] bytes = new byte[(int)length];
       din.readFully(bytes);
       return bytes;
-    } finally {
-      in.close();
     }
   }
 

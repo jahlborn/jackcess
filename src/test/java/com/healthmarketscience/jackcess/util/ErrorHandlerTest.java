@@ -48,94 +48,94 @@ public class ErrorHandlerTest
   public void testErrorHandler() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table table =
-        new TableBuilder("test")
-        .addColumn(new ColumnBuilder("col", DataType.TEXT))
-        .addColumn(new ColumnBuilder("val", DataType.LONG))
-        .toTable(db);
+        Table table =
+          new TableBuilder("test")
+          .addColumn(new ColumnBuilder("col", DataType.TEXT))
+          .addColumn(new ColumnBuilder("val", DataType.LONG))
+          .toTable(db);
 
-      table.addRow("row1", 1);
-      table.addRow("row2", 2);
-      table.addRow("row3", 3);
+        table.addRow("row1", 1);
+        table.addRow("row2", 2);
+        table.addRow("row3", 3);
 
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", 1),
-                      createExpectedRow("col", "row2",
-                                        "val", 2),
-                      createExpectedRow("col", "row3",
-                                        "val", 3)),
-                  table);
+        assertTable(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", 1),
+                        createExpectedRow("col", "row2",
+                                          "val", 2),
+                        createExpectedRow("col", "row3",
+                                          "val", 3)),
+                    table);
 
 
-      replaceColumn(table, "val");
+        replaceColumn(table, "val");
 
-      table.reset();
-      try {
-        table.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
+        table.reset();
+        try {
+          table.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+        table.reset();
+        table.setErrorHandler(new ReplacementErrorHandler());
+
+        assertTable(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", null),
+                        createExpectedRow("col", "row2",
+                                          "val", null),
+                        createExpectedRow("col", "row3",
+                                          "val", null)),
+                    table);
+
+        Cursor c1 = CursorBuilder.createCursor(table);
+        Cursor c2 = CursorBuilder.createCursor(table);
+        Cursor c3 = CursorBuilder.createCursor(table);
+
+        c2.setErrorHandler(new DebugErrorHandler("#error"));
+        c3.setErrorHandler(ErrorHandler.DEFAULT);
+
+        assertCursor(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", null),
+                        createExpectedRow("col", "row2",
+                                          "val", null),
+                        createExpectedRow("col", "row3",
+                                          "val", null)),
+                    c1);
+
+        assertCursor(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", "#error"),
+                        createExpectedRow("col", "row2",
+                                          "val", "#error"),
+                        createExpectedRow("col", "row3",
+                                          "val", "#error")),
+                    c2);
+
+        try {
+          c3.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+        table.setErrorHandler(null);
+        c1.setErrorHandler(null);
+        c1.reset();
+        try {
+          c1.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+
       }
-
-      table.reset();
-      table.setErrorHandler(new ReplacementErrorHandler());
-
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  table);
-
-      Cursor c1 = CursorBuilder.createCursor(table);
-      Cursor c2 = CursorBuilder.createCursor(table);
-      Cursor c3 = CursorBuilder.createCursor(table);
-
-      c2.setErrorHandler(new DebugErrorHandler("#error"));
-      c3.setErrorHandler(ErrorHandler.DEFAULT);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  c1);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row2",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row3",
-                                        "val", "#error")),
-                  c2);
-
-      try {
-        c3.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-      table.setErrorHandler(null);
-      c1.setErrorHandler(null);
-      c1.reset();
-      try {
-        c1.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-
-      db.close();
     }
   }
 

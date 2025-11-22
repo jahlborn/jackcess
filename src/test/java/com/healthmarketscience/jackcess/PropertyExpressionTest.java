@@ -49,184 +49,183 @@ public class PropertyExpressionTest
   public void testDefaultValue() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      db.setEvaluateExpressions(true);
+      try (Database db = create(fileFormat)) {
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.TEXT)
-                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
-                                "=\"FOO \" & \"BAR\""))
-        .addColumn(newColumn("data2", DataType.LONG)
-                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
-                                "37"))
-        .toTable(db);
+        Table t = newTable("test")
+          .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.TEXT)
+                     .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                  "=\"FOO \" & \"BAR\""))
+          .addColumn(newColumn("data2", DataType.LONG)
+                     .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                  "37"))
+          .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, null, 13);
-      t.addRow(Column.AUTO_NUMBER, "blah", null);
+        t.addRow(Column.AUTO_NUMBER, null, 13);
+        t.addRow(Column.AUTO_NUMBER, "blah", null);
 
-      setProp(t, "data1", PropertyMap.DEFAULT_VALUE_PROP, null);
-      setProp(t, "data2", PropertyMap.DEFAULT_VALUE_PROP, "42");
+        setProp(t, "data1", PropertyMap.DEFAULT_VALUE_PROP, null);
+        setProp(t, "data2", PropertyMap.DEFAULT_VALUE_PROP, "42");
 
-      t.addRow(Column.AUTO_NUMBER, null, null);
+        t.addRow(Column.AUTO_NUMBER, null, null);
 
-      List<Row> expectedRows =
-        createExpectedTable(
+        List<Row> expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "data1", "FOO BAR",
+                  "data2", 13),
+              createExpectedRow(
+                  "id", 2,
+                  "data1", "blah",
+                  "data2", 37),
+              createExpectedRow(
+                  "id", 3,
+                  "data1", null,
+                  "data2", 42));
+
+        assertTable(expectedRows, t);
+
+        setProp(t, "data2", PropertyMap.REQUIRED_PROP, true);
+
+        t.addRow(Column.AUTO_NUMBER, "blah", 13);
+        t.addRow(Column.AUTO_NUMBER, "blah", null);
+
+        expectedRows = new ArrayList<Row>(expectedRows);
+        expectedRows.add(
             createExpectedRow(
-                "id", 1,
-                "data1", "FOO BAR",
-                "data2", 13),
-            createExpectedRow(
-                "id", 2,
+                "id", 4,
                 "data1", "blah",
-                "data2", 37),
+                "data2", 13));
+        expectedRows.add(
             createExpectedRow(
-                "id", 3,
-                "data1", null,
+                "id", 5,
+                "data1", "blah",
                 "data2", 42));
 
-      assertTable(expectedRows, t);
+        assertTable(expectedRows, t);
 
-      setProp(t, "data2", PropertyMap.REQUIRED_PROP, true);
-
-      t.addRow(Column.AUTO_NUMBER, "blah", 13);
-      t.addRow(Column.AUTO_NUMBER, "blah", null);
-
-      expectedRows = new ArrayList<Row>(expectedRows);
-      expectedRows.add(
-          createExpectedRow(
-              "id", 4,
-              "data1", "blah",
-              "data2", 13));
-      expectedRows.add(
-          createExpectedRow(
-              "id", 5,
-              "data1", "blah",
-              "data2", 42));
-
-      assertTable(expectedRows, t);
-
-
-      db.close();
+      }
     }
   }
 
   @Test
   public void testCalculatedValue() throws Exception
   {
-    Database db = create(FileFormat.V2016);
-    db.setEvaluateExpressions(true);
+    try (Database db = create(FileFormat.V2016)) {
+      db.setEvaluateExpressions(true);
 
-    Table t = newTable("test")
-      .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-      .addColumn(newColumn("c1", DataType.LONG)
-                 .setCalculatedInfo("[c2]+[c3]"))
-      .addColumn(newColumn("c2", DataType.LONG)
-                 .setCalculatedInfo("[c3]*5"))
-      .addColumn(newColumn("c3", DataType.LONG)
-                 .setCalculatedInfo("[c4]-6"))
-      .addColumn(newColumn("c4", DataType.LONG))
-      .toTable(db);
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+        .addColumn(newColumn("c1", DataType.LONG)
+                   .setCalculatedInfo("[c2]+[c3]"))
+        .addColumn(newColumn("c2", DataType.LONG)
+                   .setCalculatedInfo("[c3]*5"))
+        .addColumn(newColumn("c3", DataType.LONG)
+                   .setCalculatedInfo("[c4]-6"))
+        .addColumn(newColumn("c4", DataType.LONG))
+        .toTable(db);
 
-    t.addRow(Column.AUTO_NUMBER, null, null, null, 16);
+      t.addRow(Column.AUTO_NUMBER, null, null, null, 16);
 
-    setProp(t, "c1", PropertyMap.EXPRESSION_PROP, "[c4]+2");
-    setProp(t, "c2", PropertyMap.EXPRESSION_PROP, "[c1]+[c3]");
-    setProp(t, "c3", PropertyMap.EXPRESSION_PROP, "[c1]*7");
+      setProp(t, "c1", PropertyMap.EXPRESSION_PROP, "[c4]+2");
+      setProp(t, "c2", PropertyMap.EXPRESSION_PROP, "[c1]+[c3]");
+      setProp(t, "c3", PropertyMap.EXPRESSION_PROP, "[c1]*7");
 
-    t.addRow(Column.AUTO_NUMBER, null, null, null, 7);
+      t.addRow(Column.AUTO_NUMBER, null, null, null, 7);
 
-    List<Row> expectedRows =
-      createExpectedTable(
-          createExpectedRow(
-              "id", 1,
-              "c1", 60,
-              "c2", 50,
-              "c3", 10,
-              "c4", 16),
-          createExpectedRow(
-              "id", 2,
-              "c1", 9,
-              "c2", 72,
-              "c3", 63,
-              "c4", 7));
+      List<Row> expectedRows =
+        createExpectedTable(
+            createExpectedRow(
+                "id", 1,
+                "c1", 60,
+                "c2", 50,
+                "c3", 10,
+                "c4", 16),
+            createExpectedRow(
+                "id", 2,
+                "c1", 9,
+                "c2", 72,
+                "c3", 63,
+                "c4", 7));
 
-    assertTable(expectedRows, t);
+      assertTable(expectedRows, t);
 
-    db.close();
+    }
   }
 
   @Test
   public void testColumnValidator() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      db.setEvaluateExpressions(true);
+      try (Database db = create(fileFormat)) {
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.LONG)
-                   .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                                ">37"))
-        .addColumn(newColumn("data2", DataType.LONG)
-                   .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                                "between 7 and 10")
-                   .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
-                                "You failed"))
-        .toTable(db);
+        Table t = newTable("test")
+          .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.LONG)
+                     .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                                  ">37"))
+          .addColumn(newColumn("data2", DataType.LONG)
+                     .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                                  "between 7 and 10")
+                     .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
+                                  "You failed"))
+          .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, 42, 8);
+        t.addRow(Column.AUTO_NUMBER, 42, 8);
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 20);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
-        assertTrue(ive.getMessage().contains("You failed"));
+        try {
+          t.addRow(Column.AUTO_NUMBER, 42, 20);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException ive) {
+          // success
+          assertTrue(ive.getMessage().contains("You failed"));
+        }
+
+        try {
+          t.addRow(Column.AUTO_NUMBER, 3, 8);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException ive) {
+          // success
+          assertFalse(ive.getMessage().contains("You failed"));
+        }
+
+        t.addRow(Column.AUTO_NUMBER, 54, 9);
+
+        setProp(t, "data1", PropertyMap.VALIDATION_RULE_PROP, null);
+        setProp(t, "data2", PropertyMap.VALIDATION_RULE_PROP, "<100");
+        setProp(t, "data2", PropertyMap.VALIDATION_TEXT_PROP, "Too big");
+
+        try {
+          t.addRow(Column.AUTO_NUMBER, 42, 200);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException ive) {
+          // success
+          assertTrue(ive.getMessage().contains("Too big"));
+        }
+
+        t.addRow(Column.AUTO_NUMBER, 1, 9);
+
+        List<Row> expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "data1", 42,
+                  "data2", 8),
+              createExpectedRow(
+                  "id", 2,
+                  "data1", 54,
+                  "data2", 9),
+              createExpectedRow(
+                  "id", 3,
+                  "data1", 1,
+                  "data2", 9));
+
+        assertTable(expectedRows, t);
+
       }
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, 3, 8);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
-        assertFalse(ive.getMessage().contains("You failed"));
-      }
-
-      t.addRow(Column.AUTO_NUMBER, 54, 9);
-
-      setProp(t, "data1", PropertyMap.VALIDATION_RULE_PROP, null);
-      setProp(t, "data2", PropertyMap.VALIDATION_RULE_PROP, "<100");
-      setProp(t, "data2", PropertyMap.VALIDATION_TEXT_PROP, "Too big");
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 200);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
-        assertTrue(ive.getMessage().contains("Too big"));
-      }
-
-      t.addRow(Column.AUTO_NUMBER, 1, 9);
-
-      List<Row> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "data1", 42,
-                "data2", 8),
-            createExpectedRow(
-                "id", 2,
-                "data1", 54,
-                "data2", 9),
-            createExpectedRow(
-                "id", 3,
-                "data1", 1,
-                "data2", 9));
-
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 
@@ -234,62 +233,62 @@ public class PropertyExpressionTest
   public void testRowValidator() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      db.setEvaluateExpressions(true);
+      try (Database db = create(fileFormat)) {
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.LONG))
-        .addColumn(newColumn("data2", DataType.LONG))
-        .putProperty(PropertyMap.VALIDATION_RULE_PROP,
-                     "([data1] > 10) and ([data2] < 100)")
-        .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
-                     "You failed")
-        .toTable(db);
+        Table t = newTable("test")
+          .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.LONG))
+          .addColumn(newColumn("data2", DataType.LONG))
+          .putProperty(PropertyMap.VALIDATION_RULE_PROP,
+                       "([data1] > 10) and ([data2] < 100)")
+          .putProperty(PropertyMap.VALIDATION_TEXT_PROP,
+                       "You failed")
+          .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, 42, 8);
+        t.addRow(Column.AUTO_NUMBER, 42, 8);
 
-      try {
-        t.addRow(Column.AUTO_NUMBER, 1, 20);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
-        assertTrue(ive.getMessage().contains("You failed"));
+        try {
+          t.addRow(Column.AUTO_NUMBER, 1, 20);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException ive) {
+          // success
+          assertTrue(ive.getMessage().contains("You failed"));
+        }
+
+        t.addRow(Column.AUTO_NUMBER, 54, 9);
+
+        setTableProp(t, PropertyMap.VALIDATION_RULE_PROP, "[data2]<100");
+        setTableProp(t, PropertyMap.VALIDATION_TEXT_PROP, "Too big");
+
+        try {
+          t.addRow(Column.AUTO_NUMBER, 42, 200);
+          fail("InvalidValueException should have been thrown");
+        } catch(InvalidValueException ive) {
+          // success
+          assertTrue(ive.getMessage().contains("Too big"));
+        }
+
+        t.addRow(Column.AUTO_NUMBER, 1, 9);
+
+        List<Row> expectedRows =
+          createExpectedTable(
+              createExpectedRow(
+                  "id", 1,
+                  "data1", 42,
+                  "data2", 8),
+              createExpectedRow(
+                  "id", 2,
+                  "data1", 54,
+                  "data2", 9),
+              createExpectedRow(
+                  "id", 3,
+                  "data1", 1,
+                  "data2", 9));
+
+        assertTable(expectedRows, t);
+
       }
-
-      t.addRow(Column.AUTO_NUMBER, 54, 9);
-
-      setTableProp(t, PropertyMap.VALIDATION_RULE_PROP, "[data2]<100");
-      setTableProp(t, PropertyMap.VALIDATION_TEXT_PROP, "Too big");
-
-      try {
-        t.addRow(Column.AUTO_NUMBER, 42, 200);
-        fail("InvalidValueException should have been thrown");
-      } catch(InvalidValueException ive) {
-        // success
-        assertTrue(ive.getMessage().contains("Too big"));
-      }
-
-      t.addRow(Column.AUTO_NUMBER, 1, 9);
-
-      List<Row> expectedRows =
-        createExpectedTable(
-            createExpectedRow(
-                "id", 1,
-                "data1", 42,
-                "data2", 8),
-            createExpectedRow(
-                "id", 2,
-                "data1", 54,
-                "data2", 9),
-            createExpectedRow(
-                "id", 3,
-                "data1", 1,
-                "data2", 9));
-
-      assertTable(expectedRows, t);
-
-      db.close();
     }
   }
 
@@ -314,40 +313,40 @@ public class PropertyExpressionTest
     bindings.put("someKey", "someVal");
 
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      EvalConfig ec = db.getEvalConfig();
-      ec.setTemporalConfig(tempConf);
-      ec.setFunctionLookup(lookup);
-      ec.setBindings(bindings);
+        EvalConfig ec = db.getEvalConfig();
+        ec.setTemporalConfig(tempConf);
+        ec.setFunctionLookup(lookup);
+        ec.setBindings(bindings);
 
-      db.setEvaluateExpressions(true);
+        db.setEvaluateExpressions(true);
 
-      Table t = newTable("test")
-        .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.TEXT)
-                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
-                                "=FooFunc()"))
-        .addColumn(newColumn("data2", DataType.TEXT)
-                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
-                                "=Date()"))
-        .addColumn(newColumn("data3", DataType.TEXT)
-                   .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
-                                "=Time()"))
-        .toTable(db);
+        Table t = newTable("test")
+          .addColumn(newColumn("id", DataType.LONG).setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.TEXT)
+                     .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                  "=FooFunc()"))
+          .addColumn(newColumn("data2", DataType.TEXT)
+                     .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                  "=Date()"))
+          .addColumn(newColumn("data3", DataType.TEXT)
+                     .putProperty(PropertyMap.DEFAULT_VALUE_PROP,
+                                  "=Time()"))
+          .toTable(db);
 
-      t.addRow(Column.AUTO_NUMBER, null, null);
+        t.addRow(Column.AUTO_NUMBER, null, null);
 
-      Row row = t.iterator().next();
+        Row row = t.iterator().next();
 
-      assertEquals(1, row.get("id"));
-      assertEquals("FOO_someVal", row.get("data1"));
-      assertTrue(((String)row.get("data2"))
-                 .matches("\\d{4}/\\d{1,2}/\\d{1,2}"));
-      assertTrue(((String)row.get("data3"))
-                 .matches("\\d{2}.\\d{2}.\\d{2} (AM|PM)"));
+        assertEquals(1, row.get("id"));
+        assertEquals("FOO_someVal", row.get("data1"));
+        assertTrue(((String)row.get("data2"))
+                   .matches("\\d{4}/\\d{1,2}/\\d{1,2}"));
+        assertTrue(((String)row.get("data3"))
+                   .matches("\\d{2}.\\d{2}.\\d{2} (AM|PM)"));
 
-      db.close();
+      }
     }
   }
 

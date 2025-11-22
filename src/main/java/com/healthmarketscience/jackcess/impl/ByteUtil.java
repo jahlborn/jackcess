@@ -535,12 +535,8 @@ public final class ByteUtil {
       int offset, int size)
     throws IOException
   {
-    PrintWriter writer = new PrintWriter(
-        new FileWriter(fileName));
-    try {
+    try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
       writer.println(toHexString(buffer, offset, size));
-    } finally {
-      writer.close();
     }
   }
 
