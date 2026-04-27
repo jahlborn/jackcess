@@ -165,7 +165,12 @@ public class IndexPageCache
             }
           } else {
             if(size > 1) {
-              promoteTail(cacheDataPage);
+              // only a leaf page can become a tail page
+              DataPageMain lastChild = dpMain.getChildPage(
+                  cacheDataPage._extra._entryView.getLast());
+              if(lastChild._leaf) {
+                promoteTail(cacheDataPage, lastChild);
+              }
             }
           }
         }
@@ -870,7 +875,7 @@ public class IndexPageCache
    *
    * @param cacheDataPage the page whose tail must be updated
    */
-  private void promoteTail(CacheDataPage cacheDataPage)
+  private void promoteTail(CacheDataPage cacheDataPage, DataPageMain lastMain)
     throws IOException
   {
     // there's not tail currently on this page, make last entry a tail
@@ -879,7 +884,6 @@ public class IndexPageCache
 
     setModified(cacheDataPage);
 
-    DataPageMain lastMain = dpMain.getChildPage(dpExtra._entryView.getLast());
     CacheDataPage lastDataPage = new CacheDataPage(lastMain);
 
     // move the "last" normal entry to the tail entry

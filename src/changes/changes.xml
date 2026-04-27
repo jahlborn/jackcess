@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="4.0.11" date="TEB">
+      <action dev="jahlborn" type="fix">
+        Fix possible edge-case corruption when updating indexes.
+      </action>
+    </release>
     <release version="4.0.10" date="2025-10-25">
       <action dev="jahlborn" type="update">
         Update commons lang3 dependency version.
