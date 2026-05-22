@@ -1016,23 +1016,22 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     boolean forceScan = ignoreSystemCatalogIndex;
     if(!forceScan) {
-      // Proactively check whether the (ParentId, Name) compound index on MSysObjects is
-      // read-only due to an unsupported collating sort order (e.g. Turkish / LCID 1055).
-      // If so, skip the index cursor and fall back to a table scan immediately, avoiding
-      // a misleading IllegalArgumentException at cursor-creation time.
-      for(IndexImpl idx : _systemCatalog.getIndexes()) {
-        List<IndexData.ColumnDescriptor> cols = idx.getColumns();
-        if(cols.size() == 2
-           && CAT_COL_PARENT_ID.equals(cols.get(0).getName())
-           && CAT_COL_NAME.equals(cols.get(1).getName())
-           && idx.getIndexData().getUnsupportedReason() != null) {
-          forceScan = true;
-          if(LOG.isDebugEnabled()) {
-            LOG.debug(withErrorContext(
-                "System catalog index unsupported (" +
-                idx.getIndexData().getUnsupportedReason() + "), forcing table scan"));
-          }
-          break;
+      // Proactively check whether the (ParentId, Name) compound index on
+      // MSysObjects is read-only due to an unsupported collating sort order
+      // (e.g. Turkish / LCID 1055).  If so, skip the index cursor and fall
+      // back to a table scan immediately, avoiding a misleading
+      // IllegalArgumentException at cursor-creation time.
+      IndexImpl catIdx = _systemCatalog.findIndexForColumns(
+          Arrays.asList(CAT_COL_PARENT_ID, CAT_COL_NAME),
+          TableImpl.IndexFeature.EXACT_MATCH);
+      if((catIdx != null) &&
+         (catIdx.getIndexData().getUnsupportedReason() != null)) {
+        forceScan = true;
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(withErrorContext(
+                        "System catalog index unsupported (" +
+                        catIdx.getIndexData().getUnsupportedReason() +
+                        "), forcing table scan"));
         }
       }
     }
