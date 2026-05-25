@@ -80,7 +80,6 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -907,7 +906,7 @@ public class DatabaseImpl implements Database, DateTimeContext
         String accessVersion = (String)getDatabaseProperties().getValue(
             PropertyMap.ACCESS_VERSION_PROP);
 
-        if(isBlank(accessVersion)) {
+        if(StringUtil.isBlank(accessVersion)) {
           // no access version, fall back to "generic"
           accessVersion = null;
         }
@@ -2070,7 +2069,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   private static void validateName(String name, int maxLength, String nameType)
   {
-    if(isBlank(name)) {
+    if(StringUtil.isBlank(name)) {
       throw new IllegalArgumentException(
           nameType + " must have non-blank name");
     }
@@ -2079,22 +2078,6 @@ public class DatabaseImpl implements Database, DateTimeContext
           nameType + " name is longer than max length of " + maxLength +
           ": " + name);
     }
-  }
-
-  /**
-   * Returns {@code true} if the given string is {@code null} or all blank
-   * space, {@code false} otherwise.
-   */
-  public static boolean isBlank(String name) {
-    return StringUtils.isBlank(name);
-  }
-
-  /**
-   * Returns the given string trimmed, or {@code null} if the string is {@code
-   * null} or empty.
-   */
-  public static String trimToNull(String str) {
-    return StringUtils.trimToNull(str);
   }
 
   @Override

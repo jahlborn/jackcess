@@ -181,6 +181,11 @@ public class DefaultFunctionsTest
     // StrConv with explicit locale ID (Turkish LCID 1055): dotted/dotless-i
     assertEval("\u0130STANBUL", "=StrConv('istanbul', 1, 1055)");
     assertEval("\u0131stanbul", "=StrConv('ISTANBUL', 2, 1055)");
+    // ProperCase: (Turkish LCID 1055): dotted/dotless-i
+    assertEval("\u0130stanbul Ankara",
+               "=StrConv('\u0130STANBUL ANKARA', 3, 1055)");
+    assertEval("\u0130stanbul Ankara",
+               "=StrConv('istanbul ankara', 3, 1055)");
 
     // StrConv with unknown locale ID throws
     try {
