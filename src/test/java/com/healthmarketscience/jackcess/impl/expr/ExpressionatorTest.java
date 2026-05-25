@@ -23,6 +23,7 @@ import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
@@ -521,13 +522,20 @@ public class ExpressionatorTest extends TestCase
   }
 
   static Object eval(String exprStr) {
-    return eval(exprStr, null);
+    return eval(exprStr, (Value.Type)null);
   }
 
   static Object eval(String exprStr, Value.Type resultType) {
     TestContext tc = new TestContext();
     Expression expr = Expressionator.parse(
         Expressionator.Type.DEFAULT_VALUE, exprStr, resultType, tc);
+    return expr.eval(tc);
+  }
+
+  static Object eval(String exprStr, Locale locale) {
+    TestContext tc = new TestContext(locale);
+    Expression expr = Expressionator.parse(
+        Expressionator.Type.DEFAULT_VALUE, exprStr, null, tc);
     return expr.eval(tc);
   }
 
@@ -569,15 +577,27 @@ public class ExpressionatorTest extends TestCase
     implements Expressionator.ParseContext, EvalContext
   {
     private final Value _thisVal;
+    private final Locale _locale;
     private final RandomContext _rndCtx = new RandomContext();
     private final Bindings _bindings = new SimpleBindings();
 
     private TestContext() {
-      this(null);
+      this((Value)null);
     }
 
     private TestContext(Value thisVal) {
       _thisVal = thisVal;
+      _locale = Locale.US;
+    }
+
+    private TestContext(Locale locale) {
+      _thisVal = null;
+      _locale = locale;
+    }
+
+    @Override
+    public Locale getLocale() {
+      return _locale;
     }
 
     @Override

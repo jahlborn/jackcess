@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.expr;
 import java.text.DecimalFormat;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /**
  * LocaleContext encapsulates all shared localization state for expression
@@ -28,6 +29,13 @@ import java.time.format.DateTimeFormatter;
  */
 public interface LocaleContext
 {
+  /**
+   * @return the currently configured Locale
+   */
+  public default Locale getLocale() {
+    return getTemporalConfig().getLocale();
+  }
+
   /**
    * @return the currently configured TemporalConfig (from the
    *         {@link EvalConfig})

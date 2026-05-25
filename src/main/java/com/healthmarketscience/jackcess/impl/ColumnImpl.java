@@ -43,7 +43,6 @@ import java.time.temporal.TemporalQueries;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -63,6 +62,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
+import com.healthmarketscience.jackcess.impl.expr.LocaleUtil;
 import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
@@ -2672,69 +2672,11 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
     @Override
     public String toString() {
-      String name = LcidNames.VALUES.get(_value);
+      LocaleUtil.LcidInfo info = LocaleUtil.getInfo(_value);
       String valueStr = _value + "(" + _version + ")";
       return CustomToStringStyle.valueBuilder(this)
-        .append(null, (name != null) ? (valueStr + ", " + name) : valueStr)
+        .append(null, (info != null) ? (valueStr + ", " + info) : valueStr)
         .toString();
-    }
-
-    /**
-     * Lazily-loaded map from Windows LCID to the English display name used in
-     * MS Access.  Contains only the LCIDs that are known to appear as sort
-     * orders in MS Access databases.
-     */
-    private static final class LcidNames {
-      private static final Map<Short, String> VALUES;
-      static {
-        Map<Short, String> map = new HashMap<Short, String>();
-        // General / English
-        map.put((short) 1033, "General");
-        // Western European languages
-        map.put((short) 1031, "German");
-        map.put((short) 1036, "French");
-        map.put((short) 1034, "Spanish");
-        map.put((short) 1040, "Italian");
-        map.put((short) 1043, "Dutch");
-        map.put((short) 1046, "Portuguese");
-        map.put((short) 1053, "Swedish");
-        map.put((short) 1030, "Danish");
-        map.put((short) 1044, "Norwegian");
-        map.put((short) 1035, "Finnish");
-        // Central/Eastern European
-        map.put((short) 1045, "Polish");
-        map.put((short) 1029, "Czech");
-        map.put((short) 1038, "Hungarian");
-        map.put((short) 1050, "Croatian");
-        map.put((short) 1051, "Slovak");
-        map.put((short) 1060, "Slovenian");
-        map.put((short) 1048, "Romanian");
-        map.put((short) 1026, "Bulgarian");
-        // Cyrillic
-        map.put((short) 1049, "Russian");
-        map.put((short) 1058, "Ukrainian");
-        // Baltic
-        map.put((short) 1061, "Estonian");
-        map.put((short) 1062, "Latvian");
-        map.put((short) 1063, "Lithuanian");
-        // Turkish and related
-        map.put((short) 1055, "Turkish");
-        map.put((short) 1068, "Azerbaijani");
-        // Greek
-        map.put((short) 1032, "Greek");
-        // East Asian
-        map.put((short) 1041, "Japanese");
-        map.put((short) 1042, "Korean");
-        map.put((short) 2052, "Chinese Simplified");
-        map.put((short) 1028, "Chinese Traditional");
-        // Arabic / Hebrew
-        map.put((short) 1025, "Arabic");
-        map.put((short) 1037, "Hebrew");
-        // Nordic
-        map.put((short) 1069, "Basque");
-        map.put((short) 1027, "Catalan");
-        VALUES = map;
-      }
     }
   }
 

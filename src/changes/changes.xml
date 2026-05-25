@@ -4,9 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.11" date="TEB">
+    <release version="4.0.11" date="TBD">
       <action dev="jahlborn" type="fix">
         Fix possible edge-case corruption when updating indexes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Make text functions locale sensitive.
       </action>
     </release>
     <release version="4.0.10" date="2025-10-25">
