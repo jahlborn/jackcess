@@ -11,6 +11,12 @@
       <action dev="jahlborn" type="update">
         Make text functions locale sensitive.
       </action>
+      <action dev="jahlborn" type="update">
+        Add optional support via system property for writing "broken" indexes
+        for unsupported sort orders.  This enables building the db using
+        jackcess and then later making the db indexes valid using ms access
+        compact and repair.
+      </action>
     </release>
     <release version="4.0.10" date="2025-10-25">
       <action dev="jahlborn" type="update">

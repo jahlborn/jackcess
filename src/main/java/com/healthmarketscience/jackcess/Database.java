@@ -143,6 +143,17 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public static final String DATE_TIME_TYPE_PROPERTY =
     "com.healthmarketscience.jackcess.dateTimeType";
 
+  /** (boolean) system property which can be used to allow writing indexes
+   * with unsupported text sort orders.  Defaults to {@code false}.  When
+   * enabled, instead of failing, an index with an unsupported text sort order
+   * will be written using the general legacy sort order.  This allows the
+   * database to be created with all the structure necessary by jackcess, and
+   * then the index can be fixed by using "compact and repair" in MS Access.
+   * @usage _intermediate_field_
+   */
+  public static final String WRITE_BROKEN_INDEX_PROPERTY =
+    "com.healthmarketscience.jackcess.writeBrokenIndex";
+
   /**
    * Enum which indicates which version of Access created the database.
    * @usage _general_class_
@@ -527,6 +538,20 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
    * @usage _intermediate_method_
    */
   public void setEvaluateExpressions(Boolean evaluateExpressions);
+
+  /**
+   * Gets the current write broken index policy.  See
+   * {@link #WRITE_BROKEN_INDEX_PROPERTY} for details.
+   * @usage _intermediate_method_
+   */
+  public boolean isWriteBrokenIndex();
+
+  /**
+   * Sets the current write broken index policy.  If {@code null}, resets to
+   * the default value.
+   * @usage _intermediate_method_
+   */
+  public void setWriteBrokenIndex(Boolean writeBrokenIndex);
 
   /**
    * Gets currently configured ColumnValidatorFactory (always non-{@code null}).

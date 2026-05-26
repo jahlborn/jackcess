@@ -107,11 +107,11 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /** the resource path to be used when loading classpath resources */
   static final String RESOURCE_PATH =
-    System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
+    SystemConfig.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
 
   /** whether or not this jvm has "broken" nio support */
   static final boolean BROKEN_NIO = Boolean.TRUE.toString().equalsIgnoreCase(
-      System.getProperty(BROKEN_NIO_PROPERTY));
+      SystemConfig.getProperty(BROKEN_NIO_PROPERTY));
 
   /** additional internal details about each FileFormat */
   private static final Map<Database.FileFormat,FileFormatDetails> FILE_FORMAT_DETAILS =
@@ -339,6 +339,8 @@ public class DatabaseImpl implements Database, DateTimeContext
   private boolean _allowAutoNumInsert;
   /** whether or not to evaluate expressions */
   private boolean _evaluateExpressions;
+  /** whether or not to allow writing indexes with unsupported sort orders */
+  private boolean _writeBrokenIndex;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables (or table definitions) */
@@ -582,6 +584,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     _enforceForeignKeys = getDefaultEnforceForeignKeys();
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
     _evaluateExpressions = getDefaultEvaluateExpressions();
+    _writeBrokenIndex = getDefaultWriteBrokenIndex();
     _fileFormat = fileFormat;
     setZoneInfo(timeZone, null);
     _dtf = ColumnImpl.getDateTimeFactory(getDefaultDateTimeType());
@@ -830,6 +833,19 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   @Override
+  public boolean isWriteBrokenIndex() {
+    return _writeBrokenIndex;
+  }
+
+  @Override
+  public void setWriteBrokenIndex(Boolean writeBrokenIndex) {
+    if(writeBrokenIndex == null) {
+      writeBrokenIndex = getDefaultWriteBrokenIndex();
+    }
+    _writeBrokenIndex = writeBrokenIndex;
+  }
+
+  @Override
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
   }
@@ -1023,8 +1039,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       IndexImpl catIdx = _systemCatalog.findIndexForColumns(
           Arrays.asList(CAT_COL_PARENT_ID, CAT_COL_NAME),
           TableImpl.IndexFeature.EXACT_MATCH);
-      if((catIdx != null) &&
-         (catIdx.getIndexData().getUnsupportedReason() != null)) {
+      if((catIdx != null) && !catIdx.getIndexData().isValid()) {
         forceScan = true;
         if(LOG.isDebugEnabled()) {
           LOG.debug(withErrorContext(
@@ -2173,7 +2188,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static TimeZone getDefaultTimeZone()
   {
-    String tzProp = System.getProperty(TIMEZONE_PROPERTY);
+    String tzProp = SystemConfig.getProperty(TIMEZONE_PROPERTY);
     if(tzProp != null) {
       tzProp = tzProp.trim();
       if(tzProp.length() > 0) {
@@ -2196,7 +2211,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static Charset getDefaultCharset(JetFormat format)
   {
-    String csProp = System.getProperty(CHARSET_PROPERTY_PREFIX + format);
+    String csProp = SystemConfig.getProperty(CHARSET_PROPERTY_PREFIX + format);
     if(csProp != null) {
       csProp = csProp.trim();
       if(csProp.length() > 0) {
@@ -2228,7 +2243,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultEnforceForeignKeys()
   {
-    String prop = System.getProperty(FK_ENFORCE_PROPERTY);
+    String prop = SystemConfig.getProperty(FK_ENFORCE_PROPERTY);
     return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
@@ -2240,7 +2255,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultAllowAutoNumberInsert()
   {
-    String prop = System.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
+    String prop = SystemConfig.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
     return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
@@ -2252,8 +2267,20 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultEvaluateExpressions()
   {
-    String prop = System.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
+    String prop = SystemConfig.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
     return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
+  }
+
+  /**
+   * Returns the default allow broken index policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#WRITE_BROKEN_INDEX_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultWriteBrokenIndex()
+  {
+    String prop = SystemConfig.getProperty(WRITE_BROKEN_INDEX_PROPERTY);
+    return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
   /**
@@ -2367,7 +2394,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static <E extends Enum<E>> E getEnumSystemProperty(
       Class<E> enumClass, String propName, E defaultValue)
   {
-    String prop = System.getProperty(propName);
+    String prop = SystemConfig.getProperty(propName);
     if(prop != null) {
       prop = prop.trim().toUpperCase();
       if(!prop.isEmpty()) {
