@@ -1016,6 +1016,18 @@ public class DatabaseTest extends TestCase
     }
   }
 
+  public void testUnsupportedSortOrderCatalog() throws Exception {
+    TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
+    try (Database db = new DatabaseBuilder(testDb.getFile())
+         .setReadOnly(true).open()) {
+      Table test = db.getTable("Table1");
+      assertNotNull(test);
+      Table test2 = db.getTable("Istanbul");
+      assertNotNull(test2);
+      verifyFinderType(db, "FallbackTableFinder");
+    }
+  }
+
   private static void verifyFinderType(Database db, String clazzName)
     throws Exception{
     java.lang.reflect.Field f = db.getClass().getDeclaredField("_tableFinder");
