@@ -108,6 +108,17 @@ public class IndexData {
     ALWAYS_LAST;
   }
 
+  /** Support status for an index */
+  private enum IndexStatus {
+    /** index is fully functional for both reads and writes */
+    VALID,
+    /** index was written with a fallback sort order; writes are allowed but
+        the index is not suitable for lookups */
+    BROKEN_WRITE,
+    /** index cannot be written */
+    READ_ONLY
+  }
+
   public static final Comparator<byte[]> BYTE_CODE_COMPARATOR =
     new Comparator<byte[]>() {
       @Override
@@ -175,7 +186,9 @@ public class IndexData {
   private final int _maxPageEntrySize;
   /** whether or not this index data is backing a primary key logical index */
   private boolean _primaryKey;
-  /** if non-null, the reason why we cannot create entries for this index */
+  /** current support status of this index */
+  private IndexStatus _status = IndexStatus.VALID;
+  /** if non-null, the reason why this index has a non-VALID status */
   private String _unsupportedReason;
   /** Cache which manages the index pages */
   private final IndexPageCache _pageCache;
@@ -348,19 +361,31 @@ public class IndexData {
     return _rootPageNumber;
   }
 
-  private void setUnsupportedReason(String reason, ColumnImpl col) {
+  private void setUnsupportedReason(String reason, IndexStatus status,
+                                    ColumnImpl col) {
+    _status = status;
     _unsupportedReason = withErrorContext(reason);
+    String suffix = (status == IndexStatus.READ_ONLY) ?
+      "making read-only" : "index not suitable for lookups";
     if(!col.getTable().isSystem()) {
-      LOG.log(Logger.Level.WARNING, _unsupportedReason + ", making read-only");
+      LOG.log(Logger.Level.WARNING, _unsupportedReason + ", " + suffix);
     } else {
       if(LOG.isLoggable(Logger.Level.DEBUG)) {
-        LOG.log(Logger.Level.DEBUG, _unsupportedReason + ", making read-only");
+        LOG.log(Logger.Level.DEBUG, _unsupportedReason + ", " + suffix);
       }
     }
   }
 
   String getUnsupportedReason() {
     return _unsupportedReason;
+  }
+
+  boolean isValid() {
+    return _status == IndexStatus.VALID;
+  }
+
+  boolean isReadOnly() {
+    return _status == IndexStatus.READ_ONLY;
   }
 
   protected int getMaxPageEntrySize() {
@@ -436,7 +461,7 @@ public class IndexData {
     // make sure we've parsed the entries
     initialize();
 
-    if(_unsupportedReason != null) {
+    if(isReadOnly()) {
       throw new UnsupportedOperationException(
           "Cannot write indexes of this type due to " + _unsupportedReason);
     }
@@ -1529,8 +1554,16 @@ public class IndexData {
         return new Gen97TextColumnDescriptor(col, flags);
       }
       // unsupported sort order
+      if(col.getTable().getDatabase().isWriteBrokenIndex()) {
+        // write using general legacy sort order so the db can be created with
+        // the necessary structure and then fixed via "compact and repair" in
+        // MS Access; mark broken so it is not used for lookups
+        setUnsupportedReason("unsupported collating sort order " + sortOrder +
+                             " for text index", IndexStatus.BROKEN_WRITE, col);
+        return new GenLegTextColumnDescriptor(col, flags);
+      }
       setUnsupportedReason("unsupported collating sort order " + sortOrder +
-                           " for text index", col);
+                           " for text index", IndexStatus.READ_ONLY, col);
       return new ReadOnlyColumnDescriptor(col, flags);
     case INT:
     case LONG:
@@ -1560,7 +1593,7 @@ public class IndexData {
     default:
       // we can't modify this index at this point in time
       setUnsupportedReason("unsupported data type " + col.getType() +
-                           " for index", col);
+                           " for index", IndexStatus.READ_ONLY, col);
       return new ReadOnlyColumnDescriptor(col, flags);
     }
   }

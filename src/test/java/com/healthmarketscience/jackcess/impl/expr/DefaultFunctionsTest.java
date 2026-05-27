@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl.expr;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Calendar;
+import java.util.Locale;
 
 import com.healthmarketscience.jackcess.expr.EvalException;
 import static com.healthmarketscience.jackcess.impl.expr.ExpressionatorTest.eval;
@@ -145,6 +146,11 @@ public class DefaultFunctionsTest
     assertEval("fooo", "=LCase(\"fOoO\")");
     assertEval(" FOO \" BAR ", "=UCase(\" foo \"\" bar \")");
 
+    // Turkish locale: dotted/dotless-i case conversion
+    Locale turkish = Locale.forLanguageTag("tr");
+    assertEquals("\u0130STANBUL", eval("=UCase('istanbul')", turkish));
+    assertEquals("\u0131stanbul", eval("=LCase('ISTANBUL')", turkish));
+
     assertEval("bl", "=Left(\"blah\", 2)");
     assertEval("", "=Left(\"blah\", 0)");
     assertEval("blah", "=Left(\"blah\", 17)");
@@ -171,6 +177,23 @@ public class DefaultFunctionsTest
     assertEval("foo", "=StrConv('foo', 2)");
     assertEval("foo", "=StrConv('FOO', 2)");
     assertEval("Foo Bar", "=StrConv('FOO bar', 3)");
+
+    // StrConv with explicit locale ID (Turkish LCID 1055): dotted/dotless-i
+    assertEval("\u0130STANBUL", "=StrConv('istanbul', 1, 1055)");
+    assertEval("\u0131stanbul", "=StrConv('ISTANBUL', 2, 1055)");
+    // ProperCase: (Turkish LCID 1055): dotted/dotless-i
+    assertEval("\u0130stanbul Ankara",
+               "=StrConv('\u0130STANBUL ANKARA', 3, 1055)");
+    assertEval("\u0130stanbul Ankara",
+               "=StrConv('istanbul ankara', 3, 1055)");
+
+    // StrConv with unknown locale ID throws
+    try {
+      eval("=StrConv('foo', 1, 9999)");
+      fail("EvalException should have been thrown");
+    } catch(EvalException expected) {
+      // expected
+    }
 
     assertEval("halb", "=StrReverse('blah')");
 

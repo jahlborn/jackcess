@@ -36,6 +36,7 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.StringUtil;
+import com.healthmarketscience.jackcess.impl.SystemConfig;
 
 /**
  * Utility class for importing tables to an Access database from other
@@ -52,7 +53,7 @@ public class ImportUtil
   private static final int COPY_TABLE_BATCH_SIZE = 200;
 
   /** the platform line separator */
-  static final String LINE_SEPARATOR = System.getProperty("line.separator");
+  static final String LINE_SEPARATOR = SystemConfig.getProperty("line.separator");
 
   private ImportUtil() {}
 

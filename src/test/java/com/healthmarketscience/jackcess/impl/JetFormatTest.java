@@ -60,7 +60,8 @@ public class JetFormatTest {
     BINARY_INDEX("binIdxTest"),
     OLD_DATES("oldDates"),
     EXT_DATE("extDateTest"),
-    EMOTICONS("testEmoticons");
+    EMOTICONS("testEmoticons"),
+    TURKISH("testTurkish");
 
     private final String _basename;
 

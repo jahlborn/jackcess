@@ -2296,8 +2296,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
           int rowSize = rowData.remaining();
           if (rowSize > getFormat().MAX_ROW_SIZE) {
-            throw new InvalidValueException(withErrorContext(
-                    "Row size " + rowSize + " is too large"));
+            throw createTooLargeException(rowSize);
           }
 
           // get page with space
@@ -2550,8 +2549,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
           keepRawVarValues);
 
       if (newRowData.limit() > getFormat().MAX_ROW_SIZE) {
-        throw new InvalidValueException(withErrorContext(
-                "Row size " + newRowData.limit() + " is too large"));
+        throw createTooLargeException(newRowData.limit());
       }
 
       if(!_indexDatas.isEmpty()) {
@@ -2890,8 +2888,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
           } catch(BufferOverflowException e) {
             // if the data is too big for the buffer, then we have gone over
             // the max row size
-            throw new InvalidValueException(withErrorContext(
-                    "Row size " + buffer.limit() + " is too large"));
+            throw createTooLargeException(buffer.limit());
           }
         }
 
@@ -2908,6 +2905,11 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
       // record where we stopped writing
       int eod = buffer.position();
+
+      if(buffer.remaining() < trailerSize) {
+        // we don't have enough space left for required trailer
+        throw createTooLargeException(eod + trailerSize);
+      }
 
       // insert padding if necessary
       padRowBuffer(buffer, minRowSize, trailerSize);
@@ -2930,6 +2932,13 @@ public class TableImpl implements Table, PropertyMaps.Owner
     nullMask.write(buffer);  //Null mask
     buffer.flip();
     return buffer;
+  }
+
+  private InvalidValueException createTooLargeException(int size) {
+    return new InvalidValueException(
+        withErrorContext(
+            "Row size " + size + " is too large (max " +
+            getFormat().MAX_ROW_SIZE + ")"));
   }
 
   /**

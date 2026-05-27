@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.text.DecimalFormat;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
@@ -44,6 +45,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   private FunctionLookup _funcs = DefaultFunctions.LOOKUP;
   private Map<String,DateTimeFormatter> _sdfs;
   private Map<String,DecimalFormat> _dfs;
+  private Locale _locale = Locale.US;
   private TemporalConfig _temporal = TemporalConfig.US_TEMPORAL_CONFIG;
   private NumericConfig _numeric = NumericConfig.US_NUMERIC_CONFIG;
   private final RandomContext _rndCtx = new RandomContext();
@@ -55,6 +57,16 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
 
   protected DatabaseImpl getDatabase() {
     return _db;
+  }
+
+  @Override
+  public Locale getLocale() {
+    return _locale;
+  }
+
+  @Override
+  public void setLocale(Locale locale) {
+    _locale = locale;
   }
 
   @Override

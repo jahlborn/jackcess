@@ -16,6 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.text.BreakIterator;
+import java.util.Locale;
+
 /**
  * String manipulation utilities.
  * @author James Ahlborn
@@ -59,22 +62,38 @@ public final class StringUtil
     return str.replace(String.valueOf(c), "");
   }
 
-  public static String capitalize(String str) {
-    if (isEmpty(str)) {
-      return str;
+  public static String capitalizeFully(String text, Locale locale) {
+    if (isEmpty(text)) {
+      return text;
     }
-    char[] buffer = str.toCharArray();
-    boolean capitalizeNext = true;
-    for (int i = 0; i < buffer.length; i++) {
-      final char ch = buffer[i];
-      if (Character.isWhitespace(ch)) {
-        capitalizeNext = true;
-      } else if (capitalizeNext) {
-        buffer[i] = Character.toTitleCase(ch);
-        capitalizeNext = false;
+
+    BreakIterator wordIterator = BreakIterator.getWordInstance(locale);
+    wordIterator.setText(text);
+
+    StringBuilder sb = new StringBuilder(text.length());
+    int start = wordIterator.first();
+
+    for (int end = wordIterator.next(); end != BreakIterator.DONE;
+         start = end, end = wordIterator.next()) {
+
+      String word = text.substring(start, end);
+
+      if (!Character.isLetterOrDigit(word.charAt(0))) {
+        sb.append(word);
+        continue;
       }
+
+      int cp = word.codePointAt(0);
+
+      String first = new String(Character.toChars(cp)).toUpperCase(locale);
+      first = new String(Character.toChars(
+                             Character.toTitleCase(first.codePointAt(0))));
+
+      sb.append(first)
+        .append(word.substring(Character.charCount(cp)).toLowerCase(locale));
     }
-    return new String(buffer);
+
+    return sb.toString();
   }
 
 }

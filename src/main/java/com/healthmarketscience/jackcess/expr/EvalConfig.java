@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.expr;
 
+import java.util.Locale;
 import javax.script.Bindings;
 import com.healthmarketscience.jackcess.Database;
 
@@ -29,6 +30,18 @@ import com.healthmarketscience.jackcess.Database;
  */
 public interface EvalConfig
 {
+  /**
+   * @return the currently configured Locale
+   */
+  public Locale getLocale();
+
+  /**
+   * Sets the Locale for use when evaluating expressions.  The default locale
+   * is {@link Locale#US}, so this may need to be modified when interacting
+   * with {@link Database} instances from other locales.
+   */
+  public void setLocale(Locale locale);
+
   /**
    * @return the currently configured TemporalConfig
    */

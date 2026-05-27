@@ -63,6 +63,7 @@ import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl;
+import com.healthmarketscience.jackcess.impl.expr.LocaleUtil;
 import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
@@ -2668,8 +2669,10 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
 
     @Override
     public String toString() {
+      LocaleUtil.LcidInfo info = LocaleUtil.getInfo(_value);
+      String valueStr = _value + "(" + _version + ")";
       return ToStringBuilder.valueBuilder(this)
-        .append(null, _value + "(" + _version + ")")
+        .append(null, (info != null) ? (valueStr + ", " + info) : valueStr)
         .toString();
     }
   }
@@ -2689,13 +2692,13 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     public final byte extFlags;
     public DataType type;
 
-    InitArgs(TableImpl table, ByteBuffer buffer, int offset, String name,
-             int displayIndex) {
-      this.table = table;
-      this.buffer = buffer;
-      this.offset = offset;
-      this.name = name;
-      this.displayIndex = displayIndex;
+    InitArgs(TableImpl newTable, ByteBuffer newBuffer, int newOffset,
+             String newName, int newDisplayIndex) {
+      this.table = newTable;
+      this.buffer = newBuffer;
+      this.offset = newOffset;
+      this.name = newName;
+      this.displayIndex = newDisplayIndex;
 
       this.colType = buffer.get(offset + table.getFormat().OFFSET_COLUMN_TYPE);
       this.flags = buffer.get(offset + table.getFormat().OFFSET_COLUMN_FLAGS);

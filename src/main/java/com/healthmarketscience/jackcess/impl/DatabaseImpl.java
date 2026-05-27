@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -82,6 +83,7 @@ import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
 
 
+
 /**
  *
  * @author Tim McCune
@@ -104,11 +106,11 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /** the resource path to be used when loading classpath resources */
   static final String RESOURCE_PATH =
-    System.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
+    SystemConfig.getProperty(RESOURCE_PATH_PROPERTY, DEFAULT_RESOURCE_PATH);
 
   /** whether or not this jvm has "broken" nio support */
   static final boolean BROKEN_NIO = Boolean.TRUE.toString().equalsIgnoreCase(
-      System.getProperty(BROKEN_NIO_PROPERTY));
+      SystemConfig.getProperty(BROKEN_NIO_PROPERTY));
 
   /** additional internal details about each FileFormat */
   private static final Map<Database.FileFormat,FileFormatDetails> FILE_FORMAT_DETAILS =
@@ -336,6 +338,8 @@ public class DatabaseImpl implements Database, DateTimeContext
   private boolean _allowAutoNumInsert;
   /** whether or not to evaluate expressions */
   private boolean _evaluateExpressions;
+  /** whether or not to allow writing indexes with unsupported sort orders */
+  private boolean _writeBrokenIndex;
   /** factory for ColumnValidators */
   private ColumnValidatorFactory _validatorFactory = SimpleColumnValidatorFactory.INSTANCE;
   /** cache of in-use tables (or table definitions) */
@@ -344,6 +348,22 @@ public class DatabaseImpl implements Database, DateTimeContext
   private PropertyMaps.Handler _propsHandler;
   /** ID of the Databases system object */
   private Integer _dbParentId;
+  /**
+   * Id of the "Databases" container object in the system catalog, resolved dynamically during
+   * {@link #readSystemCatalog} when the catalog index is unavailable (e.g. Turkish / LCID 1055).
+   * Preferred over the hardcoded {@link #DB_PARENT_ID} constant in {@link #getDbParentId()}
+   * because Turkish-collation databases may use a different catalog root id.
+   * {@code null} for normal databases.
+   */
+  private Integer _dynamicDbParentId;
+  /**
+   * ParentId of {@code MSysObjects} itself within the system catalog, resolved during
+   * {@link #readSystemCatalog} when the catalog index is unavailable (e.g. Turkish / LCID 1055).
+   * Used by {@link #getSystemTable} to scope lookups to the correct system-object parent instead
+   * of {@link #_tableParentId} (which only covers user tables).
+   * {@code null} for normal databases where the index-based {@link DefaultTableFinder} is used.
+   */
+  private Integer _msysParentId;
   /** owner of objects we create */
   private byte[] _newObjOwner;
   /** core database properties */
@@ -563,6 +583,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     _enforceForeignKeys = getDefaultEnforceForeignKeys();
     _allowAutoNumInsert = getDefaultAllowAutoNumberInsert();
     _evaluateExpressions = getDefaultEvaluateExpressions();
+    _writeBrokenIndex = getDefaultWriteBrokenIndex();
     _fileFormat = fileFormat;
     setZoneInfo(timeZone, null);
     _dtf = ColumnImpl.getDateTimeFactory(getDefaultDateTimeType());
@@ -811,6 +832,19 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   @Override
+  public boolean isWriteBrokenIndex() {
+    return _writeBrokenIndex;
+  }
+
+  @Override
+  public void setWriteBrokenIndex(Boolean writeBrokenIndex) {
+    if(writeBrokenIndex == null) {
+      writeBrokenIndex = getDefaultWriteBrokenIndex();
+    }
+    _writeBrokenIndex = writeBrokenIndex;
+  }
+
+  @Override
   public ColumnValidatorFactory getColumnValidatorFactory() {
     return _validatorFactory;
   }
@@ -994,7 +1028,28 @@ public class DatabaseImpl implements Database, DateTimeContext
     _systemCatalog = loadTable(TABLE_SYSTEM_CATALOG, PAGE_SYSTEM_CATALOG,
                                SYSTEM_OBJECT_FLAGS, TYPE_TABLE);
 
-    if(!ignoreSystemCatalogIndex) {
+    boolean forceScan = ignoreSystemCatalogIndex;
+    if(!forceScan) {
+      // Proactively check whether the (ParentId, Name) compound index on
+      // MSysObjects is read-only due to an unsupported collating sort order
+      // (e.g. Turkish / LCID 1055).  If so, skip the index cursor and fall
+      // back to a table scan immediately, avoiding a misleading
+      // IllegalArgumentException at cursor-creation time.
+      IndexImpl catIdx = _systemCatalog.findIndexForColumns(
+          Arrays.asList(CAT_COL_PARENT_ID, CAT_COL_NAME),
+          TableImpl.IndexFeature.EXACT_MATCH);
+      if((catIdx != null) && !catIdx.getIndexData().isValid()) {
+        forceScan = true;
+        if(LOG.isLoggable(Logger.Level.DEBUG)) {
+          LOG.log(Logger.Level.DEBUG, withErrorContext(
+                        "System catalog index unsupported (" +
+                        catIdx.getIndexData().getUnsupportedReason() +
+                        "), forcing table scan"));
+        }
+      }
+    }
+
+    if(!forceScan) {
       try {
         _tableFinder = new DefaultTableFinder(
             _systemCatalog.newCursor()
@@ -1007,28 +1062,68 @@ public class DatabaseImpl implements Database, DateTimeContext
                         "Could not find expected index on table " +
                         _systemCatalog.getName()));
         }
-        // use table scan instead
-        _tableFinder = new FallbackTableFinder(
-            _systemCatalog.newCursor()
-            .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
-            .toCursor());
+        forceScan = true;
       }
-    } else {
-      if(LOG.isLoggable(Logger.Level.DEBUG)) {
-        LOG.log(Logger.Level.DEBUG, withErrorContext(
-                      "Ignoring index on table " + _systemCatalog.getName()));
-      }
-      // use table scan instead
+    }
+
+    if(forceScan) {
       _tableFinder = new FallbackTableFinder(
           _systemCatalog.newCursor()
           .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
           .toCursor());
     }
 
-    _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID,
-                                               SYSTEM_OBJECT_NAME_TABLES);
+    // When the system catalog index is unavailable (forceScan) the hardcoded DB_PARENT_ID
+    // constant (0xF000000) may not match the actual catalog root ID in the database file.
+    // In that case we resolve _tableParentId, _dynamicDbParentId, and _msysParentId by
+    // scanning MSysObjects once. For normal databases the index cursor is used instead.
+    if(forceScan) {
+      for(Row row : CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
+              SYSTEM_CATALOG_COLUMNS)) {
+        String name = row.getString(CAT_COL_NAME);
+        if(SYSTEM_OBJECT_NAME_TABLES.equalsIgnoreCase(name) && _tableParentId == null) {
+          _tableParentId = row.getInt(CAT_COL_ID);
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _tableParentId=" + _tableParentId +
+                                     " from '" + SYSTEM_OBJECT_NAME_TABLES + "' row"));
+          }
+        } else if(SYSTEM_OBJECT_NAME_DATABASES.equalsIgnoreCase(name) &&
+                  _dynamicDbParentId == null) {
+          _dynamicDbParentId = row.getInt(CAT_COL_ID);
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _dynamicDbParentId=" + _dynamicDbParentId +
+                                     " from '" + SYSTEM_OBJECT_NAME_DATABASES + "' row"));
+          }
+        } else if(TABLE_SYSTEM_CATALOG.equalsIgnoreCase(name) && _msysParentId == null) {
+          _msysParentId = row.getInt(CAT_COL_PARENT_ID);
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _msysParentId=" + _msysParentId +
+                                     " from '" + TABLE_SYSTEM_CATALOG + "' row"));
+          }
+        }
+        if(_tableParentId != null && _dynamicDbParentId != null && _msysParentId != null) {
+          break; // all IDs resolved, no need to scan further
+        }
+      }
+    }
 
     if(_tableParentId == null) {
+      _tableParentId = _tableFinder.findObjectId(DB_PARENT_ID,
+                                                 SYSTEM_OBJECT_NAME_TABLES);
+    }
+
+    if(_tableParentId == null) {
+      if(LOG.isLoggable(Logger.Level.WARNING)) {
+        for(Row row : CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
+                SYSTEM_CATALOG_COLUMNS)) {
+          LOG.log(Logger.Level.WARNING, withErrorContext(
+              "MSysObjects row during failure scan: name=" + row.getString(CAT_COL_NAME) +
+              ", parentId=" + row.getInt(CAT_COL_PARENT_ID)));
+        }
+      }
       throw new IOException(withErrorContext(
               "Did not find required parent table id"));
     }
@@ -1491,6 +1586,15 @@ public class DatabaseImpl implements Database, DateTimeContext
   @Override
   public TableImpl getSystemTable(String tableName) throws IOException
   {
+    // For databases with an unsupported system catalog index (e.g. Turkish / LCID 1055)
+    // _msysParentId was resolved dynamically during readSystemCatalog(). Use it directly
+    // so that the lookup targets the correct parent scope instead of _tableParentId.
+    if(_msysParentId != null) {
+      TableInfo tableInfo = _tableFinder.lookupTable(tableName, _msysParentId);
+      if(tableInfo != null) {
+        return getTable(tableInfo, true);
+      }
+    }
     return getTable(tableName, true);
   }
 
@@ -1560,8 +1664,13 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   private Integer getDbParentId() throws IOException {
+    // Prefer the ID resolved dynamically from the MSysObjects scan during readSystemCatalog().
+    // This is necessary for databases where DB_PARENT_ID (0xF000000) does not match the
+    // actual catalog root, e.g. databases with a non-General collating sort order.
+    if(_dynamicDbParentId != null) {
+      return _dynamicDbParentId;
+    }
     if(_dbParentId == null) {
-      // need the parent id of the databases objects
       _dbParentId = _tableFinder.findObjectId(DB_PARENT_ID,
                                               SYSTEM_OBJECT_NAME_DATABASES);
       if(_dbParentId == null) {
@@ -2061,7 +2170,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    * @return a string usable in the _tableLookup map.
    */
   public static String toLookupName(String name) {
-    return ((name != null) ? name.toUpperCase() : null);
+    return ((name != null) ? name.toUpperCase(Locale.ROOT) : null);
   }
 
   /**
@@ -2081,7 +2190,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static TimeZone getDefaultTimeZone()
   {
-    String tzProp = System.getProperty(TIMEZONE_PROPERTY);
+    String tzProp = SystemConfig.getProperty(TIMEZONE_PROPERTY);
     if(tzProp != null) {
       tzProp = tzProp.trim();
       if(tzProp.length() > 0) {
@@ -2104,7 +2213,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static Charset getDefaultCharset(JetFormat format)
   {
-    String csProp = System.getProperty(CHARSET_PROPERTY_PREFIX + format);
+    String csProp = SystemConfig.getProperty(CHARSET_PROPERTY_PREFIX + format);
     if(csProp != null) {
       csProp = csProp.trim();
       if(csProp.length() > 0) {
@@ -2136,7 +2245,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultEnforceForeignKeys()
   {
-    String prop = System.getProperty(FK_ENFORCE_PROPERTY);
+    String prop = SystemConfig.getProperty(FK_ENFORCE_PROPERTY);
     return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
@@ -2148,7 +2257,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultAllowAutoNumberInsert()
   {
-    String prop = System.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
+    String prop = SystemConfig.getProperty(ALLOW_AUTONUM_INSERT_PROPERTY);
     return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
@@ -2160,8 +2269,20 @@ public class DatabaseImpl implements Database, DateTimeContext
    */
   public static boolean getDefaultEvaluateExpressions()
   {
-    String prop = System.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
+    String prop = SystemConfig.getProperty(ENABLE_EXPRESSION_EVALUATION_PROPERTY);
     return ((prop == null) || Boolean.TRUE.toString().equalsIgnoreCase(prop));
+  }
+
+  /**
+   * Returns the default allow broken index policy.  This defaults to
+   * {@code false}, but can be overridden using the system
+   * property {@value com.healthmarketscience.jackcess.Database#WRITE_BROKEN_INDEX_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static boolean getDefaultWriteBrokenIndex()
+  {
+    String prop = SystemConfig.getProperty(WRITE_BROKEN_INDEX_PROPERTY);
+    return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
   }
 
   /**
@@ -2275,7 +2396,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static <E extends Enum<E>> E getEnumSystemProperty(
       Class<E> enumClass, String propName, E defaultValue)
   {
-    String prop = System.getProperty(propName);
+    String prop = SystemConfig.getProperty(propName);
     if(prop != null) {
       prop = prop.trim().toUpperCase();
       if(!prop.isEmpty()) {
@@ -2578,7 +2699,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       if(maxSynthId >= -1) {
         // bummer, no more ids available
         throw new IllegalStateException(withErrorContext(
-                "Too many database objects!"));
+                "Too many database objects"));
       }
       return maxSynthId + 1;
     }
@@ -2645,6 +2766,9 @@ public class DatabaseImpl implements Database, DateTimeContext
     public abstract TableInfo lookupTable(String tableName)
       throws IOException;
 
+    public abstract TableInfo lookupTable(String tableName, Integer parentId)
+      throws IOException;
+
     protected abstract int findMaxSyntheticId() throws IOException;
   }
 
@@ -2686,8 +2810,14 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     @Override
     public TableInfo lookupTable(String tableName) throws IOException {
+      return lookupTable(tableName, _tableParentId);
+    }
 
-      if(findRow(_tableParentId, tableName) == null) {
+    @Override
+    public TableInfo lookupTable(String tableName, Integer parentId)
+      throws IOException
+    {
+      if(findRow(parentId, tableName) == null) {
         return null;
       }
 
@@ -2759,8 +2889,20 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     @Override
-    public TableInfo lookupTable(String tableName) {
+    public TableInfo lookupTable(String tableName) throws IOException {
+      return lookupTable(tableName, _tableParentId);
+    }
 
+    /**
+     * Scans the system catalog for a table with the given name under the given parent.
+     * If {@code parentId} is {@code null} the parent-id filter is skipped (wildcard scan),
+     * which is used by {@link DatabaseImpl#getSystemTable} when the system-object parent scope
+     * cannot be determined at call time.
+     */
+    @Override
+    public TableInfo lookupTable(String tableName, Integer parentId)
+      throws IOException
+    {
       for(Row row : _systemCatalogCursor.newIterable().setColumnNames(
               SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS)) {
 
@@ -2769,8 +2911,8 @@ public class DatabaseImpl implements Database, DateTimeContext
           continue;
         }
 
-        int parentId = row.getInt(CAT_COL_PARENT_ID);
-        if(parentId != _tableParentId) {
+        int rowParentId = row.getInt(CAT_COL_PARENT_ID);
+        if(parentId != null && rowParentId != parentId) {
           continue;
         }
 

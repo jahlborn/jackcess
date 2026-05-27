@@ -46,6 +46,7 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.SystemConfig;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
@@ -1046,6 +1047,52 @@ public class DatabaseTest
       Table test = db.getTable("Table1");
       assertNotNull(test);
       verifyFinderType(db, "DefaultTableFinder");
+    }
+  }
+
+  public void testUnsupportedSortOrderCatalog() throws Exception {
+    TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
+    try (Database db = new DatabaseBuilder(testDb.getFile())
+         .setReadOnly(true).open()) {
+      Table test = db.getTable("Table1");
+      assertNotNull(test);
+      Table testI = db.getTable("Istanbul");
+      assertNotNull(testI);
+      verifyFinderType(db, "FallbackTableFinder");
+    }
+  }
+
+  public void testAddTableUnsupportedSortOrderCatalog() throws Exception {
+    TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
+    try (Database db = openCopy(testDb)) {
+      try {
+        newTable("test2")
+          .addColumn(newColumn("A", DataType.TEXT))
+          .toTable(db);
+      } catch(UnsupportedOperationException e) {
+        assertTrue(e.getMessage().contains(
+                "unsupported collating sort order SortOrder[1055(0), Turkish]"));
+      }
+    }
+  }
+
+  @SuppressWarnings("try")
+  public void testAddTableBrokenSortOrderCatalog() throws Exception {
+    TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
+    try (AutoCloseable p = SystemConfig.withProperty(
+             Database.WRITE_BROKEN_INDEX_PROPERTY, "true");
+         Database db = openCopy(testDb)) {
+
+      newTable("test2")
+        .addColumn(newColumn("A", DataType.TEXT))
+        .toTable(db);
+
+      Table test = db.getTable("Table1");
+      assertNotNull(test);
+      Table testI = db.getTable("Istanbul");
+      assertNotNull(testI);
+      Table test2 = db.getTable("test2");
+      assertNotNull(test2);
     }
   }
 
