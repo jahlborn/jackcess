@@ -386,6 +386,43 @@ public class UsageMap
     reAddPages(oldStartPage, oldPageNumbers, newPageNumber);
   }
 
+  /**
+   * Promotes the global usage map from an inline map to a reference map.  This
+   * is done once the database grows beyond what an inline global usage map can
+   * represent (i.e. a page is allocated outside the inline map's range).  The
+   * new reference map is seeded so that every page up to the current
+   * allocation frontier is marked "used" and all higher pages remain "free"
+   * (the append-only global inline map only ever tracked free pages ahead of
+   * the allocation frontier).
+   *
+   * @param frontierPageNumber the page currently being allocated, which is the
+   *                           highest page in the database
+   */
+  private void promoteGlobalInlineHandlerToReferenceHandler(
+      int frontierPageNumber)
+    throws IOException
+  {
+    // clear out the main table (inline usage map data and start page) and
+    // switch the map type to reference.  note, the existing usage map row is
+    // large enough to hold the reference page pointers, so it does not need to
+    // be resized.
+    clearTableAndPages();
+    _tableBuffer.put(getRowStart(), MAP_TYPE_REFERENCE);
+    writeTable();
+
+    // install the global reference handler (which starts with no backing
+    // pages, so all pages are initially "free")
+    _handler = new GlobalReferenceHandler();
+
+    // seed the new map: mark every page from 0 up to (and including) the
+    // current frontier as "used".  all higher pages remain "free".  note, this
+    // may re-mark a few previously freed pages as used, but (as with the prior
+    // inline behavior) leaving small holes behind is acceptable.
+    for(int pageNumber = 0; pageNumber <= frontierPageNumber; ++pageNumber) {
+      _handler.addOrRemovePageNumber(pageNumber, false, true);
+    }
+  }
+
   private void reAddPages(int oldStartPage, BitSet oldPageNumbers,
                           int newPageNumber)
     throws IOException
@@ -614,8 +651,11 @@ public class UsageMap
   /**
    * Modified version of an "inline" usage map used for the global usage map.
    * When an inline usage map is used for the global usage map, we assume
-   * out-of-range bits are on.  We never promote the global usage map to a
-   * reference usage map (although ms access may).
+   * out-of-range bits are on.  Once the database outgrows what an inline map
+   * can represent (i.e. a page is allocated outside the inline range), we
+   * promote the global usage map to a reference usage map, as ms access does
+   * for larger databases.  (An inline map with a shifted start page is not a
+   * valid global usage map for a large database.)
    *
    * Note, this UsageMap does not implement all the methods "correctly".  Only
    * addPageNumber and removePageNumber should be called by PageChannel.
@@ -636,74 +676,18 @@ public class UsageMap
         int pageNumber, boolean add, boolean force)
       throws IOException
     {
-      // determine what our status is
-
       // for the global usage map, we can ignore out-of-range page addition
-      // since we assuming out-of-range bits are "on".  Note, we are leaving
-      // small holes in the database here (leaving behind some free pages),
-      // but it's not the end of the world.
+      // since we are assuming out-of-range bits are "on".  Note, we are
+      // leaving small holes in the database here (leaving behind some free
+      // pages), but it's not the end of the world.
 
       if(!add) {
 
-        int firstPage = getFirstPageNumber();
-        int lastPage = getLastPageNumber();
-
-        // we are using an inline map and assuming that anything not
-        // within the current range is "on".  so, if we attempt to set a
-        // bit which is before the current page, ignore it, we are not
-        // going back for it.
-        if((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ||
-           (pageNumber > lastPage)) {
-
-          // move to new start page, filling in as we move
-          moveToNewStartPageForRemove(firstPage, pageNumber);
-        }
+        // a page is being allocated outside the inline range.  the inline
+        // global map (anchored at page 0) can no longer describe the extent
+        // of the database, so promote it to a reference usage map.
+        promoteGlobalInlineHandlerToReferenceHandler(pageNumber);
       }
-    }
-
-    /**
-     * Shifts the inline usage map so that it now starts with the given
-     * firstPage (if valid), otherwise the newPageNumber.  Any page numbers
-     * added to the end of the usage map are set to "on".
-     * @param firstPage current first used page
-     * @param newPageNumber page number to remove once the map has been
-     *                      shifted to the new start page
-     */
-    private void moveToNewStartPageForRemove(int firstPage, int newPageNumber)
-      throws IOException
-    {
-      int oldEndPage = getEndPage();
-      int newStartPage =
-        toValidStartPage(
-            ((firstPage <= PageChannel.INVALID_PAGE_NUMBER) ? newPageNumber :
-             // just shift a little and discard any initial unused pages.
-             (newPageNumber - (getMaxInlinePages() / 2))));
-
-      // move the current data
-      moveToNewStartPage(newStartPage, PageChannel.INVALID_PAGE_NUMBER);
-
-      if(firstPage <= PageChannel.INVALID_PAGE_NUMBER) {
-
-        // this is the common case where we left everything behind
-        ByteUtil.fillRange(_tableBuffer, getInlineDataStart(),
-                           getInlineDataEnd());
-
-        // write out the updated table
-        writeTable();
-
-        // "add" all the page numbers
-        getPageNumbers().set(0, getMaxInlinePages());
-
-      } else {
-
-        // add every new page manually
-        for(int i = oldEndPage; i < getEndPage(); ++i) {
-          addPageNumber(i);
-        }
-      }
-
-      // lastly, remove the new page
-      removePageNumber(newPageNumber, false);
     }
   }
 
