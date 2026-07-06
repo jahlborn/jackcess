@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.11" date="TBD">
+    <release version="4.0.11" date="2026-07-06">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">
         Promote the global usage map to a reference map once a database grows
         beyond what an inline global usage map can represent (~2mb).  Large
