@@ -2,6 +2,7 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +10,7 @@ import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
@@ -21,7 +23,7 @@ import org.junit.jupiter.api.Test;
  *         Date: Mar 5, 2010
  *         Time: 2:21:22 PM
  */
-public final class UsageMapTest {
+public class UsageMapTest {
 
   @Test
   public void testRead() throws Exception {
@@ -98,5 +100,62 @@ public final class UsageMapTest {
         ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
     }
+  }
+
+  @Test
+  public void testPromoteGlobalUsageMapToReference() throws Exception
+  {
+    File dbFile = null;
+    int numRows = 20000;
+    try(Database db = createFile(Database.FileFormat.V2003)) {
+      dbFile = db.getFile();
+
+      Table t = new TableBuilder("Test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("data2", DataType.TEXT))
+        .toTable(db);
+
+      // add enough rows to grow the database well beyond the ~512 page limit of
+      // an inline global usage map, which should force the global usage map to
+      // be promoted to a reference usage map
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        List<Object[]> rows = new ArrayList<Object[]>();
+        for(int i = 0; i < numRows; ++i) {
+          rows.add(new Object[]{i, "r" + i + "-" + createString(100),
+                                "r" + i + "-" + createString(200)});
+          if((i % 2000) == 0) {
+            t.addRows(rows);
+            rows.clear();
+          }
+        }
+        t.addRows(rows);
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
+      }
+    }
+
+    // reopen and verify the global usage map is now a reference map which
+    // covers the entire database (starting from page 0), and that all the
+    // data is still readable
+    try(Database db2 = DatabaseBuilder.open(dbFile)) {
+      UsageMap gmap = UsageMap.read((DatabaseImpl)db2,
+                                    PageChannel.PAGE_GLOBAL_USAGE_MAP,
+                                    PageChannel.ROW_GLOBAL_USAGE_MAP, true);
+      assertEquals("GlobalReferenceHandler", getHandlerName(gmap),
+                   "global usage map should be promoted to a reference map");
+      assertEquals(0, gmap.getStartPage(),
+                   "global reference map should start at page 0");
+
+      int count = (int)db2.getTable("Test").stream().count();
+      assertEquals(numRows, count);
+    }
+  }
+
+  private static String getHandlerName(UsageMap usageMap) throws Exception {
+    Field f = UsageMap.class.getDeclaredField("_handler");
+    f.setAccessible(true);
+    return f.get(usageMap).getClass().getSimpleName();
   }
 }

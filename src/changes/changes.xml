@@ -4,7 +4,15 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.11" date="TBD">
+    <release version="4.0.11" date="2026-07-06">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">
+        Promote the global usage map to a reference map once a database grows
+        beyond what an inline global usage map can represent (~2mb).  Large
+        databases previously retained an inline global usage map (a sliding
+        window which no longer described the whole database), which ms access
+        would report as invalid/corrupt during operations such as sorting a
+        large table.
+      </action>
       <action dev="jahlborn" type="fix">
         Fix possible edge-case corruption when updating indexes.
       </action>
