@@ -105,7 +105,7 @@ public class QueryFormat
 
 
   public static final Map<Short,String> PARAM_TYPE_MAP =
-    new HashMap<Short,String>();
+    new HashMap<>();
   static {
     PARAM_TYPE_MAP.put((short)0, "Value");
     PARAM_TYPE_MAP.put((short)DataType.BOOLEAN.getValue(), "Bit");
@@ -123,7 +123,7 @@ public class QueryFormat
   }
 
   public static final Map<Short,String> JOIN_TYPE_MAP =
-    new HashMap<Short,String>();
+    new HashMap<>();
   static {
     JOIN_TYPE_MAP.put((short)1, " INNER JOIN ");
     JOIN_TYPE_MAP.put((short)2, " LEFT JOIN ");
@@ -131,7 +131,7 @@ public class QueryFormat
   }
 
   public static final Map<Short,Query.Type> TYPE_MAP =
-    new HashMap<Short,Query.Type>();
+    new HashMap<>();
   static {
     for(Query.Type type : Query.Type.values()) {
       if(type != Query.Type.UNKNOWN) {

@@ -202,7 +202,7 @@ public abstract class TableMutator extends DBMutator
    */
   static final class IndexDataState
   {
-    private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
+    private final List<IndexBuilder> _indexes = new ArrayList<>();
     private int _indexDataNumber;
     private byte _umapRowNumber;
     private int _umapPageNumber;

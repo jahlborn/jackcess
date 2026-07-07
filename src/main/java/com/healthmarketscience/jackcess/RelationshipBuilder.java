@@ -56,8 +56,8 @@ public class RelationshipBuilder
   private int _flags = RelationshipImpl.NO_REFERENTIAL_INTEGRITY_FLAG;
   private final String _fromTable;
   private final String _toTable;
-  private final List<String> _fromCols = new ArrayList<String>();
-  private final List<String> _toCols = new ArrayList<String>();
+  private final List<String> _fromCols = new ArrayList<>();
+  private final List<String> _toCols = new ArrayList<>();
   private String _name = null;
 
   public RelationshipBuilder(Table fromTable, Table toTable) {

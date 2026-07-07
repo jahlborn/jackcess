@@ -64,7 +64,7 @@ public class UnsupportedColumnInfoImpl
   {
     ComplexValue.Id id = getValueId(rawValue);
 
-    Map<String,Object> values = new LinkedHashMap<String,Object>();
+    Map<String,Object> values = new LinkedHashMap<>();
     for(Column col : getValueColumns()) {
       col.setRowValue(values, col.getRowValue(rawValue));
     }

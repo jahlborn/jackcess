@@ -384,7 +384,7 @@ public class GeneralLegacyIndexCodes {
     int numCodes = (asUnsignedChar(lastChar) - asUnsignedChar(firstChar)) + 1;
     CharHandler[] values = new CharHandler[numCodes];
 
-    Map<String,Type> prefixMap = new HashMap<String,Type>();
+    Map<String,Type> prefixMap = new HashMap<>();
     for(Type type : Type.values()) {
       prefixMap.put(type.getPrefixCode(), type);
     }

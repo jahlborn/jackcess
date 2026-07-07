@@ -18,8 +18,9 @@ package com.healthmarketscience.jackcess.util;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -199,7 +200,8 @@ public class ExportUtil {
   public static void exportFile(Database db, String tableName,
       File f, boolean header, String delim, char quote,
       ExportFilter filter) throws IOException {
-    try (BufferedWriter out = new BufferedWriter(new FileWriter(f))) {
+    try (BufferedWriter out =
+         Files.newBufferedWriter(f.toPath(), Charset.defaultCharset())) {
       exportWriter(db, tableName, out, header, delim, quote, filter);
     }
   }
@@ -288,14 +290,14 @@ public class ExportUtil {
         Pattern.quote("" + quote) + ")|(?:[\n\r])");
 
     List<? extends Column> origCols = cursor.getTable().getColumns();
-    List<Column> columns = new ArrayList<Column>(origCols);
+    List<Column> columns = new ArrayList<>(origCols);
     columns = filter.filterColumns(columns);
 
     Collection<String> columnNames = null;
     if(!origCols.equals(columns)) {
 
       // columns have been filtered
-      columnNames = new HashSet<String>();
+      columnNames = new HashSet<>();
       for (Column c : columns) {
         columnNames.add(c.getName());
       }

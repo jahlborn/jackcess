@@ -50,7 +50,7 @@ public class RandomContext
     if(_rnds == null) {
       // note, we don't use a SimpleCache here because if we discard a Random
       // instance, that will cause the values to be reset
-      _rnds = new HashMap<Integer,Source>();
+      _rnds = new HashMap<>();
     }
 
     Source rnd = _rnds.get(seed);

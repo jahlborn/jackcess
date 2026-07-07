@@ -4,6 +4,11 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="4.0.12" date="TBD">
+      <action dev="jahlborn" type="update">
+        Some code base modernization.  Note a minor exception widening in OleBlob.
+      </action>      
+    </release>
     <release version="4.0.11" date="2026-07-06">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">
         Promote the global usage map to a reference map once a database grows

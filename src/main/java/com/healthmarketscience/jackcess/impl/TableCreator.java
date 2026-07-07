@@ -44,10 +44,10 @@ public class TableCreator extends TableMutator
   private List<ColumnBuilder> _columns;
   private List<IndexBuilder> _indexes;
   private final List<IndexDataState> _indexDataStates = 
-    new ArrayList<IndexDataState>();
+    new ArrayList<>();
   private final Map<ColumnBuilder,ColumnState> _columnStates = 
-    new IdentityHashMap<ColumnBuilder,ColumnState>();
-  private final List<ColumnBuilder> _lvalCols = new ArrayList<ColumnBuilder>();
+    new IdentityHashMap<>();
+  private final List<ColumnBuilder> _lvalCols = new ArrayList<>();
   private int _tdefPageNumber = PageChannel.INVALID_PAGE_NUMBER;
   private int _umapPageNumber = PageChannel.INVALID_PAGE_NUMBER;
   private int _indexCount;
@@ -261,7 +261,7 @@ public class TableCreator extends TableMutator
           getFormat().MAX_COLUMNS_PER_TABLE + " columns"));
     }
     
-    Set<String> colNames = new HashSet<String>();
+    Set<String> colNames = new HashSet<>();
     // next, validate the column definitions
     for(ColumnBuilder column : _columns) {
       validateColumn(colNames, column);
@@ -285,7 +285,7 @@ public class TableCreator extends TableMutator
       }
 
       // now, validate the indexes
-      Set<String> idxNames = new HashSet<String>();
+      Set<String> idxNames = new HashSet<>();
       boolean foundPk[] = new boolean[1];
       for(IndexBuilder index : _indexes) {
         validateIndex(colNames, idxNames, foundPk, index);
@@ -295,7 +295,7 @@ public class TableCreator extends TableMutator
 
   private List<ColumnBuilder> getAutoNumberColumns() 
   {
-    List<ColumnBuilder> autoCols = new ArrayList<ColumnBuilder>(1);
+    List<ColumnBuilder> autoCols = new ArrayList<>(1);
     for(ColumnBuilder c : _columns) {
       if(c.isAutoNumber()) {
         autoCols.add(c);

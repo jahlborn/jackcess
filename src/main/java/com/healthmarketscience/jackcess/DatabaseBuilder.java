@@ -255,7 +255,7 @@ public class DatabaseBuilder
       Object value)
   {
     if(props == null) {
-      props = new HashMap<String,PropertyMap.Property>();
+      props = new HashMap<>();
     }
     props.put(name, PropertyMapImpl.createProperty(name, type, value));
     return props;

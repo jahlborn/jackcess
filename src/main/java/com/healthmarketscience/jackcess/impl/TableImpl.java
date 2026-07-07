@@ -132,21 +132,21 @@ public class TableImpl implements Table, PropertyMaps.Owner
   /** max Number of variable columns in the table */
   private short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
-  private final List<ColumnImpl> _columns = new ArrayList<ColumnImpl>();
+  private final List<ColumnImpl> _columns = new ArrayList<>();
   /** List of variable length columns in this table, ordered by offset */
-  private final List<ColumnImpl> _varColumns = new ArrayList<ColumnImpl>();
+  private final List<ColumnImpl> _varColumns = new ArrayList<>();
   /** List of autonumber columns in this table, ordered by column number */
-  private final List<ColumnImpl> _autoNumColumns = new ArrayList<ColumnImpl>(1);
+  private final List<ColumnImpl> _autoNumColumns = new ArrayList<>(1);
   /** handler for calculated columns */
   private final CalcColEvaluator _calcColEval = new CalcColEvaluator();
   /** List of indexes on this table (multiple logical indexes may be backed by
       the same index data) */
-  private final List<IndexImpl> _indexes = new ArrayList<IndexImpl>();
+  private final List<IndexImpl> _indexes = new ArrayList<>();
   /** List of index datas on this table (the actual backing data for an
       index) */
-  private final List<IndexData> _indexDatas = new ArrayList<IndexData>();
+  private final List<IndexData> _indexDatas = new ArrayList<>();
   /** List of columns in this table which are in one or more indexes */
-  private final Set<ColumnImpl> _indexColumns = new LinkedHashSet<ColumnImpl>();
+  private final Set<ColumnImpl> _indexColumns = new LinkedHashSet<>();
   /** Table name as stored in Database */
   private final String _name;
   /** Usage map of pages that this table owns */
@@ -1492,7 +1492,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     throws IOException
   {
     // grab the columns involved in this index
-    List<ColumnImpl> idxCols = new ArrayList<ColumnImpl>();
+    List<ColumnImpl> idxCols = new ArrayList<>();
     for(IndexData.ColumnDescriptor col : idxData.getColumns()) {
       idxCols.add(col.getColumn());
     }
@@ -1678,7 +1678,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
     // space (the numMaps should always be small enough to put them all on one
     // page).  pages will free space will probaby be newer pages (higher
     // numbers), so we sort in reverse order.
-    Set<Integer> knownPages = new TreeSet<Integer>(Collections.reverseOrder());
+    Set<Integer> knownPages = new TreeSet<>(Collections.reverseOrder());
     collectUsageMapPages(knownPages);
 
     ByteBuffer umapBuf = pageChannel.createPageBuffer();
@@ -1981,7 +1981,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     tableBuffer.position(colOffset +
                          (columnCount * getFormat().SIZE_COLUMN_HEADER));
-    List<String> colNames = new ArrayList<String>(columnCount);
+    List<String> colNames = new ArrayList<>(columnCount);
     for (int i = 0; i < columnCount; i++) {
       colNames.add(readName(tableBuffer));
     }
@@ -2196,7 +2196,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   public <M extends Map<String,Object>> List<M> addRowsFromMaps(List<M> rows)
     throws IOException
   {
-    List<Object[]> rowValuesList = new ArrayList<Object[]>(rows.size());
+    List<Object[]> rowValuesList = new ArrayList<>(rows.size());
     for(Map<String,Object> row : rows) {
       rowValuesList.add(asRow(row));
     }
@@ -2258,7 +2258,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
             // copy the input rows to a modifiable list so we can update the
             // elements
             if(dupeRows == null) {
-              dupeRows = new ArrayList<Object[]>(rows);
+              dupeRows = new ArrayList<>(rows);
               rows = dupeRows;
             }
             // we copied the row, so put the copy back into the rows list
@@ -2492,7 +2492,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       // will allow us to re-use pre-written var length data, which can save
       // space for things like long value columns.
       Map<ColumnImpl,byte[]> keepRawVarValues =
-        (!_varColumns.isEmpty() ? new HashMap<ColumnImpl,byte[]>() : null);
+        (!_varColumns.isEmpty() ? new HashMap<>() : null);
 
       // handle various value massaging activities
       for(ColumnImpl column : _columns) {
@@ -3629,7 +3629,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   {
     /** List of calculated columns in this table, ordered by calculation
         dependency */
-    private final List<ColumnImpl> _calcColumns = new ArrayList<ColumnImpl>(1);
+    private final List<ColumnImpl> _calcColumns = new ArrayList<>(1);
     private boolean _sorted;
 
     public void add(ColumnImpl col) {
@@ -3672,7 +3672,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
         protected void getDescendents(ColumnImpl from,
                                       List<ColumnImpl> descendents) {
 
-          Set<Identifier> identifiers = new LinkedHashSet<Identifier>();
+          Set<Identifier> identifiers = new LinkedHashSet<>();
           from.getCalculationContext().collectIdentifiers(identifiers);
 
           for(Identifier identifier : identifiers) {

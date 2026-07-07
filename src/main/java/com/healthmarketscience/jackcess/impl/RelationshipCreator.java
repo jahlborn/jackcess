@@ -298,7 +298,7 @@ public class RelationshipCreator extends DBMutator
 
   private static List<ColumnImpl> getColumns(TableImpl table,
                                              List<String> colNames) {
-    List<ColumnImpl> cols = new ArrayList<ColumnImpl>();
+    List<ColumnImpl> cols = new ArrayList<>();
     for(String colName : colNames) {
       cols.add(table.getColumn(colName));
     }
@@ -306,7 +306,7 @@ public class RelationshipCreator extends DBMutator
   }
 
   private static List<String> getColumnNames(List<ColumnImpl> cols) {
-    List<String> colNames = new ArrayList<String>();
+    List<String> colNames = new ArrayList<>();
     for(ColumnImpl col : cols) {
       colNames.add(col.getName());
     }

@@ -136,7 +136,7 @@ public class CursorBuilder {
    *         with the given columns
    */
   public CursorBuilder setIndexByColumns(Column... columns) {
-    List<String> colNames = new ArrayList<String>();
+    List<String> colNames = new ArrayList<>();
     for(Column col : columns) {
       colNames.add(col.getName());
     }

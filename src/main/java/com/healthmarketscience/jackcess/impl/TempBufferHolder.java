@@ -29,7 +29,7 @@ import java.nio.ByteOrder;
 public abstract class TempBufferHolder {
 
   private static final Reference<ByteBuffer> EMPTY_BUFFER_REF =
-    new SoftReference<ByteBuffer>(null);
+    new SoftReference<>(null);
 
   /**
    * The caching type for the buffer holder.
@@ -187,7 +187,7 @@ public abstract class TempBufferHolder {
     @Override
     protected void setNewBuffer(ByteBuffer newBuffer) {
       _buffer.clear();
-      _buffer = new SoftReference<ByteBuffer>(newBuffer);
+      _buffer = new SoftReference<>(newBuffer);
     }
 
     @Override

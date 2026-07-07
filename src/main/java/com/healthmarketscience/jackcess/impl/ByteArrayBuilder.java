@@ -32,7 +32,7 @@ import java.util.List;
 public class ByteArrayBuilder
 {
   private int _pos;
-  private final List<Data> _data = new ArrayList<Data>();
+  private final List<Data> _data = new ArrayList<>();
 
   public ByteArrayBuilder() {
   }

@@ -35,7 +35,7 @@ import com.healthmarketscience.jackcess.PropertyMap;
 public class PropertyMapImpl implements PropertyMap
 {
   private static final Map<String,PropDef> DEFAULT_TYPES =
-    new HashMap<String,PropDef>();
+    new HashMap<>();
 
   static {
     DEFAULT_TYPES.put(ACCESS_VERSION_PROP, new PropDef(DataType.TEXT, false));
@@ -65,7 +65,7 @@ public class PropertyMapImpl implements PropertyMap
   private final String _mapName;
   private final short _mapType;
   private final Map<String,Property> _props =
-    new LinkedHashMap<String,Property>();
+    new LinkedHashMap<>();
   private final PropertyMaps _owner;
 
   public PropertyMapImpl(String name, short type, PropertyMaps owner) {

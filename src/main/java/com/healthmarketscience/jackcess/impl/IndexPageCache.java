@@ -69,7 +69,7 @@ public class IndexPageCache
   };
   /** the currently modified index pages */
   private final List<CacheDataPage> _modifiedPages =
-    new ArrayList<CacheDataPage>();
+    new ArrayList<>();
 
   public IndexPageCache(IndexData indexData) {
     _indexData = indexData;
@@ -724,7 +724,7 @@ public class IndexPageCache
     // clear the root page
     rootMain._leaf = false;
     rootMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
-    rootExtra._entries = new ArrayList<Entry>();
+    rootExtra._entries = new ArrayList<>();
     rootExtra._entryPrefix = EMPTY_PREFIX;
     rootExtra._totalEntrySize = 0;
     rootExtra.setEntryView(rootMain);
@@ -754,7 +754,7 @@ public class IndexPageCache
     dpMain._prevPageNumber = INVALID_INDEX_PAGE_NUMBER;
     dpMain._nextPageNumber = INVALID_INDEX_PAGE_NUMBER;
     dpMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
-    dpExtra._entries = new ArrayList<Entry>();
+    dpExtra._entries = new ArrayList<>();
     dpExtra._entryPrefix = EMPTY_PREFIX;
     dpMain.setExtra(dpExtra);
 
@@ -1151,7 +1151,7 @@ public class IndexPageCache
     public void setExtra(DataPageExtra extra) throws IOException
     {
       extra.setEntryView(this);
-      _extra = new SoftReference<DataPageExtra>(extra);
+      _extra = new SoftReference<>(extra);
     }
 
     private void resolveParent() throws IOException {

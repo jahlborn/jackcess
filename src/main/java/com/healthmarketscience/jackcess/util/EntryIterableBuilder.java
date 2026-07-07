@@ -93,7 +93,7 @@ public class EntryIterableBuilder implements Iterable<Row>
 
   private void addColumnName(String columnName) {
     if(_columnNames == null) {
-      _columnNames = new HashSet<String>();
+      _columnNames = new HashSet<>();
     }
     _columnNames.add(columnName);
   }

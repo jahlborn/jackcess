@@ -123,7 +123,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   @Override
   public DateTimeFormatter createDateFormatter(String formatStr) {
     if(_sdfs == null) {
-      _sdfs = new SimpleCache<String,DateTimeFormatter>(MAX_CACHE_SIZE);
+      _sdfs = new SimpleCache<>(MAX_CACHE_SIZE);
     }
     DateTimeFormatter sdf = _sdfs.get(formatStr);
     if(sdf == null) {
@@ -136,7 +136,7 @@ public class DBEvalContext implements Expressionator.ParseContext, EvalConfig
   @Override
   public DecimalFormat createDecimalFormat(String formatStr) {
     if(_dfs == null) {
-      _dfs = new SimpleCache<String,DecimalFormat>(MAX_CACHE_SIZE);
+      _dfs = new SimpleCache<>(MAX_CACHE_SIZE);
     }
     DecimalFormat df = _dfs.get(formatStr);
     if(df == null) {

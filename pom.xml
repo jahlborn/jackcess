@@ -144,6 +144,15 @@
             </systemProperties>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-pmd-plugin</artifactId>
+          <configuration>
+            <rulesets>
+              <ruleset>${basedir}/src/site/pmd/custom-ruleset.xml</ruleset>
+            </rulesets>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>

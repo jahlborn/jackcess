@@ -91,7 +91,7 @@ public class CompoundOleUtil implements CompoundPackageFactory
     throws IOException
   {
     // split entry name into individual components and decode them
-    List<String> entryNames = new ArrayList<String>();
+    List<String> entryNames = new ArrayList<>();
     for(String str : entryName.split(ENTRY_SEPARATOR)) {
       if(str.length() == 0) {
         continue;

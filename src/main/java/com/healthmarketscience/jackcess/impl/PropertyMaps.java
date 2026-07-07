@@ -47,7 +47,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   /** maps the PropertyMap name (case-insensitive) to the PropertyMap
       instance */
   private final Map<String,PropertyMapImpl> _maps =
-    new LinkedHashMap<String,PropertyMapImpl>();
+    new LinkedHashMap<>();
   private final int _objectId;
   private final RowIdImpl _rowId;
   private final Handler _handler;
@@ -143,7 +143,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
     private final ColumnImpl _propCol;
     /** cache of PropColumns used to read/write property values */
     private final Map<DataType,PropColumn> _columns =
-      new HashMap<DataType,PropColumn>();
+      new HashMap<>();
 
     Handler(DatabaseImpl database) {
       _database = database;
@@ -219,7 +219,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
       bab.put(_database.getFormat().PROPERTY_MAP_TYPE);
 
       // grab the property names from all the maps
-      Set<String> propNames = new LinkedHashSet<String>();
+      Set<String> propNames = new LinkedHashSet<>();
       for(PropertyMapImpl propMap : maps) {
         for(PropertyMap.Property prop : propMap) {
           propNames.add(prop.getName());
@@ -283,7 +283,7 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
      * @return the property names parsed from the given data chunk
      */
     private List<String> readPropertyNames(ByteBuffer bbBlock) {
-      List<String> names = new ArrayList<String>();
+      List<String> names = new ArrayList<>();
       while(bbBlock.hasRemaining()) {
         names.add(readPropName(bbBlock));
       }

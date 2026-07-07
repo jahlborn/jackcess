@@ -442,7 +442,7 @@ public class UsageMap
   @Override
   public String toString() {
 
-    List<String> ranges = new ArrayList<String>();
+    List<String> ranges = new ArrayList<>();
     PageCursor pCursor = cursor();
     int curRangeStart = Integer.MIN_VALUE;
     int prevPage = Integer.MIN_VALUE;

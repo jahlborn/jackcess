@@ -114,7 +114,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /** additional internal details about each FileFormat */
   private static final Map<Database.FileFormat,FileFormatDetails> FILE_FORMAT_DETAILS =
-    new EnumMap<Database.FileFormat,FileFormatDetails>(Database.FileFormat.class);
+    new EnumMap<>(Database.FileFormat.class);
 
   static {
     addFileFormatDetails(FileFormat.V1997, null, JetFormat.VERSION_3);
@@ -252,20 +252,20 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /** the columns to read when reading system catalog normally */
   private static Collection<String> SYSTEM_CATALOG_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
+    new HashSet<>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID));
   /** the columns to read when finding table details */
   private static Collection<String> SYSTEM_CATALOG_TABLE_DETAIL_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
+    new HashSet<>(Arrays.asList(CAT_COL_NAME, CAT_COL_TYPE, CAT_COL_ID,
                                       CAT_COL_FLAGS, CAT_COL_PARENT_ID,
                                       CAT_COL_DATABASE, CAT_COL_FOREIGN_NAME,
                                       CAT_COL_CONNECT_NAME));
   /** the columns to read when getting object propertyes */
   private static Collection<String> SYSTEM_CATALOG_PROPS_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
+    new HashSet<>(Arrays.asList(CAT_COL_ID, CAT_COL_PROPS));
   /** the columns to read when grabbing dates */
   private static Collection<String> SYSTEM_CATALOG_DATE_COLUMNS =
-    new HashSet<String>(Arrays.asList(CAT_COL_ID,
+    new HashSet<>(Arrays.asList(CAT_COL_ID,
                                       CAT_COL_DATE_CREATE, CAT_COL_DATE_UPDATE));
 
   /** regex matching characters which are invalid in identifier names */
@@ -293,7 +293,7 @@ public class DatabaseImpl implements Database, DateTimeContext
    * MAX_CACHED_LOOKUP_TABLES).
    */
   private final Map<String, TableInfo> _tableLookup =
-    new SimpleCache<String,TableInfo>(MAX_CACHED_LOOKUP_TABLES);
+    new SimpleCache<>(MAX_CACHED_LOOKUP_TABLES);
   /** set of table names as stored in the mdb file, created on demand */
   private Set<String> _tableNames;
   /** Reads and writes database pages */
@@ -307,7 +307,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   /** ID of the Relationships system object */
   private Integer _relParentId;
   /** SIDs to use for the ACEs added for new relationships */
-  private final List<byte[]> _newRelSIDs = new ArrayList<byte[]>();
+  private final List<byte[]> _newRelSIDs = new ArrayList<>();
   /** System relationships table (initialized on first use) */
   private TableImpl _relationships;
   /** System queries table (initialized on first use) */
@@ -315,7 +315,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   /** System complex columns table (initialized on first use) */
   private TableImpl _complexCols;
   /** SIDs to use for the ACEs added for new tables */
-  private final List<byte[]> _newTableSIDs = new ArrayList<byte[]>();
+  private final List<byte[]> _newTableSIDs = new ArrayList<>();
   /** optional error handler to use when row errors are encountered */
   private ErrorHandler _dbErrorHandler;
   /** the file format of the database */
@@ -1151,7 +1151,7 @@ public class DatabaseImpl implements Database, DateTimeContext
                                     boolean linkedTables)
     throws IOException
   {
-    Set<String> tableNames = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    Set<String> tableNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
     _tableFinder.getTableNames(tableNames, normalTables, systemTables,
                                linkedTables);
     return tableNames;
@@ -1248,7 +1248,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     if(tableInfo.getType() == TableMetaData.Type.LINKED) {
 
       if(_linkedDbs == null) {
-        _linkedDbs = new HashMap<String,Database>();
+        _linkedDbs = new HashMap<>();
       }
 
       String linkedDbName = tableInfo.getLinkedDbName();
@@ -1405,7 +1405,7 @@ public class DatabaseImpl implements Database, DateTimeContext
   {
     initRelationships();
 
-    List<Relationship> relationships = new ArrayList<Relationship>();
+    List<Relationship> relationships = new ArrayList<>();
 
     if(table1 != null) {
       Cursor cursor = createCursorWithOptionalIndex(
@@ -1442,7 +1442,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     ColumnImpl toColCol = _relationships.getColumn(REL_COL_TO_COLUMN);
 
     int numCols = newRel.getFromColumns().size();
-    List<Object[]> rows = new ArrayList<Object[]>(numCols);
+    List<Object[]> rows = new ArrayList<>(numCols);
     for(int i = 0; i < numCols; ++i) {
       Object[] row = new Object[_relationships.getColumnCount()];
       ccol.setRowValue(row, numCols);
@@ -1502,7 +1502,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     // now ensure name is unique
-    Set<String> names = new HashSet<String>();
+    Set<String> names = new HashSet<>();
 
     // collect the names of all relationships for uniqueness check
     for(Row row :
@@ -1542,9 +1542,9 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     // find all the queries from the system catalog
-    List<Row> queryInfo = new ArrayList<Row>();
+    List<Row> queryInfo = new ArrayList<>();
     Map<Integer,List<QueryImpl.Row>> queryRowMap =
-      new HashMap<Integer,List<QueryImpl.Row>>();
+      new HashMap<>();
     for(Row row :
           CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
               SYSTEM_CATALOG_COLUMNS))
@@ -1571,7 +1571,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     // lastly, generate all the queries
-    List<Query> queries = new ArrayList<Query>();
+    List<Query> queries = new ArrayList<>();
     for(Row row : queryInfo) {
       String name = row.getString(CAT_COL_NAME);
       Integer id = row.getInt(CAT_COL_ID);
@@ -1904,7 +1904,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     ColumnImpl sidCol = acEntries.getColumn(ACE_COL_SID);
 
     // construct a collection of ACE entries
-    List<Object[]> aceRows = new ArrayList<Object[]>(sids.size());
+    List<Object[]> aceRows = new ArrayList<>(sids.size());
     for(byte[] sid : sids) {
       Object[] aceRow = new Object[acEntries.getColumnCount()];
       acmCol.setRowValue(aceRow, SYS_FULL_ACCESS_ACM);
@@ -2873,7 +2873,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     protected Cursor findRow(Integer parentId, String name)
       throws IOException
     {
-      Map<String,Object> rowPat = new HashMap<String,Object>();
+      Map<String,Object> rowPat = new HashMap<>();
       rowPat.put(CAT_COL_PARENT_ID, parentId);
       rowPat.put(CAT_COL_NAME, name);
       return (_systemCatalogCursor.findFirstRow(rowPat) ?
@@ -2973,9 +2973,9 @@ public class DatabaseImpl implements Database, DateTimeContext
   private static final class TableCache
   {
     private final Map<Integer,WeakTableReference> _tables =
-      new HashMap<Integer,WeakTableReference>();
+      new HashMap<>();
     private final ReferenceQueue<TableImpl> _queue =
-      new ReferenceQueue<TableImpl>();
+      new ReferenceQueue<>();
 
     public TableImpl get(Integer pageNumber) {
       WeakTableReference ref = _tables.get(pageNumber);

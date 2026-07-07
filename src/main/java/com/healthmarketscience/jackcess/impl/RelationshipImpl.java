@@ -77,9 +77,9 @@ public class RelationshipImpl implements Relationship
   {
     _name = name;
     _fromTable = fromTable;
-    _fromColumns = new ArrayList<Column>(fromCols);
+    _fromColumns = new ArrayList<>(fromCols);
     _toTable = toTable;
-    _toColumns = new ArrayList<Column>(toCols);
+    _toColumns = new ArrayList<>(toCols);
     _flags = flags;
   }
 
