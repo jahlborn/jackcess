@@ -49,7 +49,7 @@ public abstract class BaseEvalContext implements EvalContext
 {
   /** map of all non-string data types */
   private static final Map<DataType,Value.Type> TYPE_MAP =
-    new EnumMap<DataType,Value.Type>(DataType.class);
+    new EnumMap<>(DataType.class);
 
   static {
     TYPE_MAP.put(DataType.BOOLEAN,Value.Type.LONG);

@@ -42,7 +42,7 @@ public class TableUpdater extends TableMutator
   private IndexBuilder _index;
   private int _origTdefLen;
   private int _addedTdefLen;
-  private final List<Integer> _nextPages = new ArrayList<Integer>(1);
+  private final List<Integer> _nextPages = new ArrayList<>(1);
   private ColumnState _colState;
   private IndexDataState _idxDataState;
   private IndexImpl.ForeignKeyReference _fkReference;
@@ -240,7 +240,7 @@ public class TableUpdater extends TableMutator
   }
 
   private Set<String> getColumnNames() {
-    Set<String> colNames = new HashSet<String>();
+    Set<String> colNames = new HashSet<>();
     for(ColumnImpl column : _table.getColumns()) {
       colNames.add(DatabaseImpl.toLookupName(column.getName()));
     }
@@ -248,7 +248,7 @@ public class TableUpdater extends TableMutator
   }
 
   static Set<String> getIndexNames(TableImpl table, boolean[] foundPk) {
-    Set<String> idxNames = new HashSet<String>();
+    Set<String> idxNames = new HashSet<>();
     for(IndexImpl index : table.getIndexes()) {
       idxNames.add(DatabaseImpl.toLookupName(index.getName()));
       if(index.isPrimaryKey() && (foundPk != null)) {

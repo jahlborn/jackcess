@@ -62,7 +62,7 @@ public class TableBuilder {
      * table or column names
      */
     private static final Set<String> VALUES =
-      new HashSet<String>(Arrays.asList(
+      new HashSet<>(Arrays.asList(
        "add", "all", "alphanumeric", "alter", "and", "any", "application", "as",
        "asc", "assistant", "autoincrement", "avg", "between", "binary", "bit",
        "boolean", "by", "byte", "char", "character", "column", "compactdatabase",
@@ -99,9 +99,9 @@ public class TableBuilder {
   /** name of the new table */
   private String _name;
   /** columns for the new table */
-  private final List<ColumnBuilder> _columns = new ArrayList<ColumnBuilder>();
+  private final List<ColumnBuilder> _columns = new ArrayList<>();
   /** indexes for the new table */
-  private final List<IndexBuilder> _indexes = new ArrayList<IndexBuilder>();
+  private final List<IndexBuilder> _indexes = new ArrayList<>();
   /** whether or not table/column/index names are automatically escaped */
   private boolean _escapeIdentifiers;
   /** table properties (if any) */
@@ -223,7 +223,7 @@ public class TableBuilder {
    */
   public TableBuilder putProperty(String name, DataType type, Object value) {
     if(_props == null) {
-      _props = new HashMap<String,PropertyMap.Property>();
+      _props = new HashMap<>();
     }
     _props.put(name, PropertyMapImpl.createProperty(name, type, value));
     return this;

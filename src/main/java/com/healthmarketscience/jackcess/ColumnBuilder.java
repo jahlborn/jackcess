@@ -286,7 +286,7 @@ public class ColumnBuilder {
       return;
     }
     if(_props == null) {
-      _props = new HashMap<String,PropertyMap.Property>();
+      _props = new HashMap<>();
     }
     _props.put(name, prop);
   }
@@ -346,7 +346,7 @@ public class ColumnBuilder {
     _sortOrder = template._sortOrder;
 
     if(template._props != null) {
-      _props = new HashMap<String,PropertyMap.Property>(template._props);
+      _props = new HashMap<>(template._props);
     }
 
     return this;

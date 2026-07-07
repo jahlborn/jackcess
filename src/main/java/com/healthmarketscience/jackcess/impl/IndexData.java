@@ -167,9 +167,9 @@ public class IndexData {
   private int _uniqueEntryCount;
   /** List of columns and flags */
   private final List<ColumnDescriptor> _columns =
-    new ArrayList<ColumnDescriptor>();
+    new ArrayList<>();
   /** the logical indexes which this index data backs */
-  private final List<Index> _indexes = new ArrayList<Index>();
+  private final List<Index> _indexes = new ArrayList<>();
   /** flags for this index */
   private byte _indexFlags;
   /** Usage map of pages that this index owns */
@@ -226,7 +226,7 @@ public class IndexData {
       if(_indexes.size() == 1) {
         _name = _indexes.get(0).getName();
       } else if(!_indexes.isEmpty()) {
-        List<String> names = new ArrayList<String>(_indexes.size());
+        List<String> names = new ArrayList<>(_indexes.size());
         for(Index idx : _indexes) {
           names.add(idx.getName());
         }
@@ -1236,7 +1236,7 @@ public class IndexData {
     int lastStart = 0;
     int totalEntrySize = 0;
     byte[] entryPrefix = null;
-    List<Entry> entries = new ArrayList<Entry>();
+    List<Entry> entries = new ArrayList<>();
     TempBufferHolder tmpEntryBufferH =
       TempBufferHolder.newHolder(TempBufferHolder.Type.HARD, true,
                                  ENTRY_BYTE_ORDER);

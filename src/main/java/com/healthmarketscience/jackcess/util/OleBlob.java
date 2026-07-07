@@ -18,11 +18,10 @@ package com.healthmarketscience.jackcess.util;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.sql.Blob;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -345,10 +344,11 @@ public interface OleBlob extends Blob, Closeable
       return this;
     }
 
-    public Builder setSimplePackage(File f) throws FileNotFoundException {
+    public Builder setSimplePackage(File f) throws IOException {
       _fileName = f.getName();
       _filePath = f.getAbsolutePath();
-      return setSimplePackageStream(new FileInputStream(f), f.length());
+      return setSimplePackageStream(Files.newInputStream(f.toPath()),
+                                    f.length());
     }
 
     public Builder setLinkFileName(String fileName) {
@@ -396,8 +396,8 @@ public interface OleBlob extends Blob, Closeable
       return this;
     }
 
-    public Builder setOther(File f) throws FileNotFoundException {
-      return setOtherStream(new FileInputStream(f), f.length());
+    public Builder setOther(File f) throws IOException {
+      return setOtherStream(Files.newInputStream(f.toPath()), f.length());
     }
 
     public Builder setPackagePrettyName(String prettyName) {

@@ -18,13 +18,14 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Blob;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -730,7 +731,7 @@ public class OleUtil
 
     @Override
     public InputStream getLinkStream() throws IOException {
-      return new FileInputStream(getLinkPath());
+      return Files.newInputStream(Paths.get(getLinkPath()));
     }
 
     @Override

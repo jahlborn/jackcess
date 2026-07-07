@@ -18,13 +18,14 @@ package com.healthmarketscience.jackcess.impl;
 
 import java.io.Closeable;
 import java.io.DataInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 /**
@@ -536,7 +537,7 @@ public final class ByteUtil {
     throws IOException
   {
     PrintWriter writer = new PrintWriter(
-        new FileWriter(fileName));
+        Files.newBufferedWriter(Paths.get(fileName)));
     try {
       writer.println(toHexString(buffer, offset, size));
     } finally {

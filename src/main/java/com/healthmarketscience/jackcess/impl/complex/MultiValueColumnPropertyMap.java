@@ -135,7 +135,7 @@ public class MultiValueColumnPropertyMap implements PropertyMap
 
   @Override
   public Iterator<Property> iterator() {
-    final List<Iterator<Property>> iters = new ArrayList<Iterator<Property>>(2);
+    final List<Iterator<Property>> iters = new ArrayList<>(2);
     iters.add(_primary.iterator());
     iters.add(_complex.iterator());
 

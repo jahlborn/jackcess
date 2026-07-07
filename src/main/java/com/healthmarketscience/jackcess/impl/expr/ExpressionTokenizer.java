@@ -66,7 +66,7 @@ class ExpressionTokenizer
   }
 
   private static final byte[] CHAR_FLAGS = new byte[128];
-  private static final Set<String> TWO_CHAR_COMP_OPS = new HashSet<String>(
+  private static final Set<String> TWO_CHAR_COMP_OPS = new HashSet<>(
       Arrays.asList("<=", ">=", "<>"));
 
   static {
@@ -94,7 +94,7 @@ class ExpressionTokenizer
       return null;
     }
 
-    List<Token> tokens = new ArrayList<Token>();
+    List<Token> tokens = new ArrayList<>();
 
     ExprBuf buf = new ExprBuf(exprStr, context);
 
@@ -468,7 +468,7 @@ class ExpressionTokenizer
     private final ParseContext _ctx;
     private int _pos;
     private final Map<TemporalConfig.Type,DateTimeFormatter> _dateTimeFmts =
-      new EnumMap<TemporalConfig.Type,DateTimeFormatter>(
+      new EnumMap<>(
           TemporalConfig.Type.class);
     private final StringBuilder _scratch = new StringBuilder();
 

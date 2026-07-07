@@ -116,7 +116,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
   {
     if(_indexEntryPattern == null) {
       // init our set of index column names
-      _indexEntryPattern = new HashSet<String>();
+      _indexEntryPattern = new HashSet<>();
       for(IndexData.ColumnDescriptor col : getIndex().getColumns()) {
         _indexEntryPattern.add(col.getName());
       }

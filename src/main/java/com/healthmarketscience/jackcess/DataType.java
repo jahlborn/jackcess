@@ -183,10 +183,10 @@ public enum DataType {
 
   /** Map of SQL types to Access data types */
   private static final Map<Integer, DataType[]> SQL_TYPES =
-    new HashMap<Integer, DataType[]>();
+    new HashMap<>();
   /** Alternate map of SQL types to Access data types */
   private static final Map<Integer, DataType> ALT_SQL_TYPES =
-    new HashMap<Integer, DataType>();
+    new HashMap<>();
   static {
     for (DataType type : values()) {
       if (type._sqlType != null) {
@@ -217,7 +217,7 @@ public enum DataType {
     addNewSqlType("TIMESTAMP_WITH_TIMEZONE", SHORT_DATE_TIME, null);
   }
 
-  private static Map<Byte, DataType> DATA_TYPES = new HashMap<Byte, DataType>();
+  private static Map<Byte, DataType> DATA_TYPES = new HashMap<>();
   static {
     for (DataType type : values()) {
       if(type.isUnsupported()) {

@@ -19,8 +19,9 @@ package com.healthmarketscience.jackcess.util;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -67,7 +68,7 @@ public class ImportUtil
   public static List<ColumnBuilder> toColumns(ResultSetMetaData md)
       throws SQLException, IOException
   {
-      List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
+      List<ColumnBuilder> columns = new ArrayList<>();
       for (int i = 1; i <= md.getColumnCount(); i++) {
         ColumnBuilder column = new ColumnBuilder(md.getColumnLabel(i))
           .escapeName();
@@ -167,7 +168,7 @@ public class ImportUtil
       table = createUniqueTable(db, name, columns, md, filter);
     }
 
-    List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
+    List<Object[]> rows = new ArrayList<>(COPY_TABLE_BATCH_SIZE);
     int numColumns = md.getColumnCount();
 
     while (source.next()) {
@@ -297,7 +298,7 @@ public class ImportUtil
   {
     BufferedReader in = null;
     try {
-      in = new BufferedReader(new FileReader(f));
+      in = Files.newBufferedReader(f.toPath(), Charset.defaultCharset());
       return importReader(in, db, name, delim, quote, filter,
                           useExistingTable, header);
     } finally {
@@ -447,7 +448,7 @@ public class ImportUtil
       Table table = null;
       if(!useExistingTable || ((table = db.getTable(name)) == null)) {
 
-        List<ColumnBuilder> columns = new ArrayList<ColumnBuilder>();
+        List<ColumnBuilder> columns = new ArrayList<>();
         Object[] columnNames = splitLine(line, delimPat, quote, in, 0);
 
         for (int i = 0; i < columnNames.length; i++) {
@@ -463,7 +464,7 @@ public class ImportUtil
         header = true;
       }
 
-      List<Object[]> rows = new ArrayList<Object[]>(COPY_TABLE_BATCH_SIZE);
+      List<Object[]> rows = new ArrayList<>(COPY_TABLE_BATCH_SIZE);
       int numColumns = table.getColumnCount();
 
       if(!header) {
@@ -507,7 +508,7 @@ public class ImportUtil
                                     BufferedReader in, int numColumns)
     throws IOException
   {
-    List<String> tokens = new ArrayList<String>();
+    List<String> tokens = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
     Matcher m = delim.matcher(line);
     int idx = 0;

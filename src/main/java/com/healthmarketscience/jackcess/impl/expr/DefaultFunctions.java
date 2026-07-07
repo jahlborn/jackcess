@@ -43,7 +43,7 @@ import static com.healthmarketscience.jackcess.impl.expr.FunctionSupport.*;
 public class DefaultFunctions
 {
   private static final Map<String,Function> FUNCS =
-    new HashMap<String,Function>();
+    new HashMap<>();
 
   static {
     // load all default functions

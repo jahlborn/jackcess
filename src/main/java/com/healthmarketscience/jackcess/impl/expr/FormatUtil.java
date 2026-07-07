@@ -112,7 +112,7 @@ public class FormatUtil
     }
   }
 
-  private static final Map<String,Fmt> PREDEF_FMTS = new HashMap<String,Fmt>();
+  private static final Map<String,Fmt> PREDEF_FMTS = new HashMap<>();
 
   static {
     putPredefFormat("General Date", args -> ValueSupport.toValue(

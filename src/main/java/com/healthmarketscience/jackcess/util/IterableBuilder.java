@@ -136,7 +136,7 @@ public class IterableBuilder implements Iterable<Row>
 
   private void addColumnName(String columnName) {
     if(_columnNames == null) {
-      _columnNames = new HashSet<String>();
+      _columnNames = new HashSet<>();
     }
     _columnNames.add(columnName);
   }
@@ -144,7 +144,7 @@ public class IterableBuilder implements Iterable<Row>
   public IterableBuilder setMatchPattern(Column columnPattern,
                                          Object valuePattern) {
     _type = Type.COLUMN_MATCH;
-    _matchPattern = new AbstractMap.SimpleImmutableEntry<Column,Object>(
+    _matchPattern = new AbstractMap.SimpleImmutableEntry<>(
         columnPattern, valuePattern);
     return this;
   }
@@ -168,7 +168,7 @@ public class IterableBuilder implements Iterable<Row>
     @SuppressWarnings("unchecked")
     Map<String,Object> matchPattern = ((Map<String,Object>)_matchPattern);
     if(matchPattern == null) {
-      matchPattern = new HashMap<String,Object>();
+      matchPattern = new HashMap<>();
       _matchPattern = matchPattern;
     }
     matchPattern.put(columnNamePattern, valuePattern);

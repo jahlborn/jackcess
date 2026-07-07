@@ -197,7 +197,7 @@ public abstract class QueryImpl implements Query
   protected List<String> getFromTables() 
   {
     // grab the list of query tables
-    List<TableSource> tableExprs = new ArrayList<TableSource>();
+    List<TableSource> tableExprs = new ArrayList<>();
     for(Row table : getTableRows()) {
       StringBuilder builder = new StringBuilder();
 
@@ -270,7 +270,7 @@ public abstract class QueryImpl implements Query
     }
 
     // convert join objects to SQL strings
-    List<String> result = new AppendableList<String>();
+    List<String> result = new AppendableList<>();
     for(TableSource ts : tableExprs) {
       result.add(ts.toString());
     }
@@ -416,7 +416,7 @@ public abstract class QueryImpl implements Query
   }
 
   private static List<Row> getRowsByAttribute(List<Row> rows, Byte attribute) {
-    List<Row> result = new ArrayList<Row>();
+    List<Row> result = new ArrayList<>();
     for(Row row : rows) {
       if(attribute.equals(row.attribute)) {
         result.add(row);

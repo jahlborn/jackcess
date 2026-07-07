@@ -66,7 +66,7 @@ final class FKEnforcer
   }
 
   private void initColumns() {
-    Set<ColumnImpl> cols = new TreeSet<ColumnImpl>();
+    Set<ColumnImpl> cols = new TreeSet<>();
     for(IndexImpl idx : _table.getIndexes()) {
       IndexImpl.ForeignKeyReference ref = idx.getReference();
       if(ref != null) {
@@ -108,12 +108,12 @@ final class FKEnforcer
     }
 
     // initialize all the joiners
-    _primaryJoinersChkUp = new ArrayList<Joiner>(1);
-    _primaryJoinersChkDel = new ArrayList<Joiner>(1);
-    _primaryJoinersDoUp = new ArrayList<Joiner>(1);
-    _primaryJoinersDoDel = new ArrayList<Joiner>(1);
-    _primaryJoinersDoNull = new ArrayList<Joiner>(1);
-    _secondaryJoiners = new ArrayList<Joiner>(1);
+    _primaryJoinersChkUp = new ArrayList<>(1);
+    _primaryJoinersChkDel = new ArrayList<>(1);
+    _primaryJoinersDoUp = new ArrayList<>(1);
+    _primaryJoinersDoDel = new ArrayList<>(1);
+    _primaryJoinersDoNull = new ArrayList<>(1);
+    _secondaryJoiners = new ArrayList<>(1);
 
     for(IndexImpl idx : _table.getIndexes()) {
       IndexImpl.ForeignKeyReference ref = idx.getReference();

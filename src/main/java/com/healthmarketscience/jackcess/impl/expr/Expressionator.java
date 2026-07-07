@@ -78,7 +78,7 @@ public class Expressionator
   private static final String FUNC_PARAM_SEP = ",";
 
   private static final Map<String,WordType> WORD_TYPES =
-    new HashMap<String,WordType>();
+    new HashMap<>();
 
   static {
     setWordType(WordType.OP, "+", "-", "*", "/", "\\", "^", "&", "mod");
@@ -389,7 +389,7 @@ public class Expressionator
         new OpType[]{SpecOp.IN, SpecOp.NOT_IN, SpecOp.BETWEEN,
                      SpecOp.NOT_BETWEEN});
 
-  private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<Character>(
+  private static final Set<Character> REGEX_SPEC_CHARS = new HashSet<>(
       Arrays.asList('\\','.','%','=','+', '$','^','|','(',')','{','}','&',
                     '[',']','*','?'));
   // this is a regular expression which will never match any string
@@ -613,7 +613,7 @@ public class Expressionator
     // and only use '.'.  Apparently '!' is actually a special late-bind
     // operator (not sure it makes a difference for this code?), see:
     // http://bytecomb.com/the-bang-exclamation-operator-in-vba/
-    Deque<String> objNames = new LinkedList<String>();
+    Deque<String> objNames = new LinkedList<>();
     objNames.add(firstTok.getValueStr());
 
     Token t = null;
@@ -712,7 +712,7 @@ public class Expressionator
     }
 
     // find closing ")", handle nested parens
-    List<Expr> exprs = new ArrayList<Expr>(3);
+    List<Expr> exprs = new ArrayList<>(3);
     int level = 1;
     int startPos = buf.curPos();
     while(buf.hasNext()) {
@@ -1177,7 +1177,7 @@ public class Expressionator
 
   private static final Map<OpType, Integer> buildPrecedenceMap(
       OpType[]... opArrs) {
-    Map<OpType, Integer> prec = new HashMap<OpType, Integer>();
+    Map<OpType, Integer> prec = new HashMap<>();
 
     int level = 0;
     for(OpType[] ops : opArrs) {

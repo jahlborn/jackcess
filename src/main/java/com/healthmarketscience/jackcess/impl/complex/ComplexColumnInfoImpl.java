@@ -73,8 +73,8 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
     // the flat table has all the "value" columns and 2 extra columns, a
     // primary key for each row, and a LONG value which is essentially a
     // foreign key to the main table.
-    List<Column> typeCols = new ArrayList<Column>();
-    List<Column> otherCols = new ArrayList<Column>();
+    List<Column> typeCols = new ArrayList<>();
+    List<Column> otherCols = new ArrayList<>();
     diffFlatColumns(typeObjTable, flatTable, typeCols, otherCols);
 
     _typeCols = Collections.unmodifiableList(typeCols);
@@ -161,7 +161,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
       return Collections.emptyList();
     }
 
-    List<Row> values = new ArrayList<Row>();
+    List<Row> values = new ArrayList<>();
     while(entryIter.hasNext()) {
       values.add(entryIter.next());
     }
@@ -184,7 +184,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
   protected List<V> toValues(ComplexValueForeignKey complexValueFk,
                              List<Row> rawValues)
   {
-    List<V> values = new ArrayList<V>();
+    List<V> values = new ArrayList<>();
     for(Row rawValue : rawValues) {
       values.add(toValue(complexValueFk, rawValue));
     }

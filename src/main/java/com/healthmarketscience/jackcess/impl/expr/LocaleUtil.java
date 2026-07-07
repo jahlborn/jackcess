@@ -31,7 +31,7 @@ public class LocaleUtil
   private static final Map<Integer,LcidInfo> LCID_TO_INFO;
 
   static {
-    Map<Integer,LcidInfo> map = new HashMap<Integer,LcidInfo>();
+    Map<Integer,LcidInfo> map = new HashMap<>();
     // General / English
     add(map, 1033, "General", Locale.US);
     // Western European

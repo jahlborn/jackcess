@@ -54,7 +54,7 @@ public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
   implements AttachmentColumnInfo
 {
   /** some file formats which may not be worth re-compressing */
-  private static final Set<String> COMPRESSED_FORMATS = new HashSet<String>(
+  private static final Set<String> COMPRESSED_FORMATS = new HashSet<>(
       Arrays.asList("jpg", "zip", "gz", "bz2", "z", "7z", "cab", "rar",
                     "mp3", "mpg"));
 

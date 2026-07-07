@@ -51,7 +51,7 @@ public class IndexBuilder
       access 2000+) */
   private byte _flags = IndexData.UNKNOWN_INDEX_FLAG;
   /** the names and orderings of the indexed columns */
-  private final List<Column> _columns = new ArrayList<Column>();
+  private final List<Column> _columns = new ArrayList<>();
   /** 0-based index number */
   private int _indexNumber;
 
@@ -190,7 +190,7 @@ public class IndexBuilder
           "index has too many columns, max " + IndexData.MAX_COLUMNS));
     }
 
-    Set<String> idxColNames = new HashSet<String>();
+    Set<String> idxColNames = new HashSet<>();
     for(Column col : getColumns()) {
       String idxColName = col.getName().toUpperCase();
       if(!idxColNames.add(idxColName)) {

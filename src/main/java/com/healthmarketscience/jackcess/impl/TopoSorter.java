@@ -33,7 +33,7 @@ public abstract class TopoSorter<E>
   private final static int PERM_MARK = 2;
 
   private final List<E> _values;
-  private final List<Node<E>> _nodes = new ArrayList<Node<E>>();
+  private final List<Node<E>> _nodes = new ArrayList<>();
   private final boolean _reverse;
 
   protected TopoSorter(List<E> values, boolean reverse) {
@@ -44,7 +44,7 @@ public abstract class TopoSorter<E>
   public void sort() {
       
     for(E val : _values) {
-      Node<E> node = new Node<E>(val);
+      Node<E> node = new Node<>(val);
       getDescendents(val, node._descs);
 
       // build the internal list in reverse so that we maintain the "original"
@@ -104,7 +104,7 @@ public abstract class TopoSorter<E>
   private static class Node<E>
   {
     private final E _val;
-    private final List<E> _descs = new ArrayList<E>();
+    private final List<E> _descs = new ArrayList<>();
     private int _mark = UNMARKED;
 
     private Node(E val) {
