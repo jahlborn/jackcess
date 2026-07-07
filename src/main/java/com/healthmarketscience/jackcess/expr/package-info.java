@@ -94,8 +94,8 @@ limitations under the License.
  *
  * <h3>Conversion</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Asc</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>AscW</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Chr</td><td>Y</td></tr>
@@ -128,8 +128,8 @@ limitations under the License.
  *
  * <h3>Date/Time</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Day</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Date </td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>DateAdd</td><td>Y</td></tr>
@@ -154,8 +154,8 @@ limitations under the License.
  *
  * <h3>Financial</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>DDB</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>FV</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>IPmt</td><td>Y</td></tr>
@@ -170,8 +170,8 @@ limitations under the License.
  *
  * <h3>Inspection</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>IsDate</td><td>Partial</td></tr>
  * <tr class="TableRowColor"><td>IsEmpty</td><td></td></tr>
  * <tr class="TableRowColor"><td>IsError</td><td></td></tr>
@@ -185,8 +185,8 @@ limitations under the License.
  *
  * <h3>Math</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Abs</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Atn</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Cos</td><td>Y</td></tr>
@@ -204,8 +204,8 @@ limitations under the License.
  *
  * <h3>Program Flow</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Choose</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>IIf</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>Switch</td><td>Y</td></tr>
@@ -213,8 +213,8 @@ limitations under the License.
  *
  * <h3>Text</h3>
  *
- * <table border="1" width="25%" cellpadding="3" cellspacing="0">
- * <tr class="TableHeadingColor" align="left"><th>Function</th><th>Supported</th></tr>
+ * <table border="1" style="width:25%; border-spacing:0;">
+ * <tr class="TableHeadingColor" style="text-align:left;"><th>Function</th><th>Supported</th></tr>
  * <tr class="TableRowColor"><td>Format[$]</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStr</td><td>Y</td></tr>
  * <tr class="TableRowColor"><td>InStrRev</td><td>Y</td></tr>

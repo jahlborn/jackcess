@@ -3,7 +3,7 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>2.0.17-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
@@ -203,7 +203,7 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>https://docs.oracle.com/javase/11/docs/api/</list>
+            <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
             <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>11</source>
@@ -328,7 +328,7 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>https://docs.oracle.com/javase/11/docs/api/</list>
+            <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
             <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>11</source>
