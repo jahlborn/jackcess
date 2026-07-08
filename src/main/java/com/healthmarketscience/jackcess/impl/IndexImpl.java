@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -35,9 +36,13 @@ import org.apache.commons.logging.LogFactory;
  *
  * @author Tim McCune
  */
-public class IndexImpl implements Index, Comparable<IndexImpl>
+public class IndexImpl implements Index
 {
   protected static final Log LOG = LogFactory.getLog(IndexImpl.class);
+
+  /** comparator which sorts indexes based on their persisted index */
+  static final Comparator<IndexImpl> DEFAULT_ORDER_COMPARATOR =
+    Comparator.comparingInt(IndexImpl::getIndexNumber);
 
   /** index type for primary key indexes */
   public static final byte PRIMARY_KEY_INDEX_TYPE = (byte)1;
@@ -375,17 +380,6 @@ public class IndexImpl implements Index, Comparable<IndexImpl>
     }
     sb.append("data", _data);
     return sb.toString();
-  }
-
-  @Override
-  public int compareTo(IndexImpl other) {
-    if (_indexNumber > other.getIndexNumber()) {
-      return 1;
-    } else if (_indexNumber < other.getIndexNumber()) {
-      return -1;
-    } else {
-      return 0;
-    }
   }
 
   /**

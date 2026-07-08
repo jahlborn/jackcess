@@ -9,14 +9,7 @@
   <Match>
     <Class name="com.healthmarketscience.jackcess.DataType"/>
     <Method name="addNewSqlType"/>
-    <Bug pattern="REC_CATCH_EXCEPTION"/>
-  </Match>
-
-  <!-- Debug code -->
-  <Match>
-    <Class name="com.healthmarketscience.jackcess.impl.ByteUtil"/>
-    <Method name="toHexFile"/>
-    <Bug pattern="DM_DEFAULT_ENCODING"/>
+    <Bug pattern="REC_CATCH_EXCEPTION,DE_MIGHT_IGNORE"/>
   </Match>
 
   <!-- Streams kept open on purpose -->
@@ -25,17 +18,45 @@
     <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
   </Match>
 
-  <!-- Utility code which uses FileWriter/FileReader -->
+  <!-- Intentional: the default function classes register into DefaultFunctions
+       during initialization, forming a benign init cycle -->
   <Match>
-    <Class name="com.healthmarketscience.jackcess.util.ImportUtil"/>
-    <Method name="importFile"/>
-    <Bug pattern="DM_DEFAULT_ENCODING"/>
-  </Match>
-  <Match>
-    <Class name="com.healthmarketscience.jackcess.util.ExportUtil"/>
-    <Method name="exportFile"/>
-    <Bug pattern="DM_DEFAULT_ENCODING"/>
+    <Class name="~com\.healthmarketscience\.jackcess\.impl\.expr\.Default.*Functions"/>
+    <Bug pattern="IC_INIT_CIRCULARITY"/>
   </Match>
 
+  <!-- Intentional comparisons -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.impl.TableImpl"/>
+    <Or>
+      <Method name="findIndexForColumns"/>
+      <Method name="getInputAutoNumberRowValue"/>
+      <Method name="updateRow"/>
+    </Or>
+    <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ"/>
+  </Match>
 
+  <!-- Legit logic -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.impl.expr.DefaultFinancialFunctions"/>
+    <Method name="calculateRate"/>
+    <Bug pattern="FL_FLOATS_AS_LOOP_COUNTERS"/>
+  </Match>
+
+  <!-- Only need equals -->
+  <Match>
+    <Or>
+      <Class name="com.healthmarketscience.jackcess.impl.IndexData$NodeEntry"/>
+      <Class name="com.healthmarketscience.jackcess.impl.complex.ComplexValueForeignKeyImpl"/>
+    </Or>
+    <Bug pattern="HE_EQUALS_NO_HASHCODE"/>
+  </Match>
+
+  <!-- Safety catch for adding rows -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.impl.TableImpl"/>
+    <Method name="addRows"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+  
 </FindBugsFilter>

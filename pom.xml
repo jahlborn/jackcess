@@ -9,7 +9,7 @@
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>4.0.12-SNAPSHOT</version>
+  <version>4.0.11-SNAPSHOT</version>
   <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <licenses>
@@ -151,6 +151,14 @@
             <rulesets>
               <ruleset>${basedir}/src/site/pmd/custom-ruleset.xml</ruleset>
             </rulesets>
+            <excludeFromFailureFile>${basedir}/src/site/pmd/pmd-exclusions.properties</excludeFromFailureFile>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <configuration>
+            <excludeFilterFile>${basedir}/src/site/findbugs/exclude.xml</excludeFilterFile>
           </configuration>
         </plugin>
       </plugins>
@@ -299,11 +307,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
-        <configuration>
-          <rulesets>
-            <ruleset>${basedir}/src/site/pmd/custom-ruleset.xml</ruleset>
-          </rulesets>
-        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-changes-plugin</artifactId>
@@ -340,9 +343,6 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <configuration>
-          <excludeFilterFile>${basedir}/src/site/findbugs/exclude.xml</excludeFilterFile>
-        </configuration>
       </plugin>
     </plugins>
   </reporting>

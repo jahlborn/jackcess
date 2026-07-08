@@ -96,25 +96,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   /** comparator which sorts variable length columns based on their index into
       the variable length offset table */
   private static final Comparator<ColumnImpl> VAR_LEN_COLUMN_COMPARATOR =
-    new Comparator<ColumnImpl>() {
-      @Override
-      public int compare(ColumnImpl c1, ColumnImpl c2) {
-        return ((c1.getVarLenTableIndex() < c2.getVarLenTableIndex()) ? -1 :
-                ((c1.getVarLenTableIndex() > c2.getVarLenTableIndex()) ? 1 :
-                 0));
-      }
-    };
-
-  /** comparator which sorts columns based on their display index */
-  private static final Comparator<ColumnImpl> DISPLAY_ORDER_COMPARATOR =
-    new Comparator<ColumnImpl>() {
-      @Override
-      public int compare(ColumnImpl c1, ColumnImpl c2) {
-        return ((c1.getDisplayIndex() < c2.getDisplayIndex()) ? -1 :
-                ((c1.getDisplayIndex() > c2.getDisplayIndex()) ? 1 :
-                 0));
-      }
-    };
+    Comparator.comparingInt(ColumnImpl::getVarLenTableIndex);
 
   /** owning database */
   private final DatabaseImpl _database;
@@ -276,7 +258,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     // re-sort columns if necessary
     if(getDatabase().getColumnOrder() != ColumnOrder.DATA) {
-      Collections.sort(_columns, DISPLAY_ORDER_COMPARATOR);
+      Collections.sort(_columns, ColumnImpl.DISPLAY_ORDER_COMPARATOR);
     }
 
     for(ColumnImpl col : _columns) {
@@ -2000,7 +1982,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       }
     }
 
-    Collections.sort(_columns);
+    Collections.sort(_columns, ColumnImpl.DEFAULT_ORDER_COMPARATOR);
     initAutoNumberColumns();
     initCalculatedColumns();
 
@@ -2037,7 +2019,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       _indexes.get(i).setName(readName(tableBuffer));
     }
 
-    Collections.sort(_indexes);
+    Collections.sort(_indexes, IndexImpl.DEFAULT_ORDER_COMPARATOR);
   }
 
   private boolean readColumnUsageMaps(ByteBuffer tableBuffer)

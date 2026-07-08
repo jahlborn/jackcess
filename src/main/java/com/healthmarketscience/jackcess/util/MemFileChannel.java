@@ -36,7 +36,6 @@ import java.nio.file.StandardOpenOption;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 
 /**
  * FileChannel implementation which maintains the entire "file" in memory.
@@ -64,6 +63,10 @@ public class MemFileChannel extends FileChannel
   public static final String RW_CHANNEL_MODE = "rw";
 
   private static final byte[][] EMPTY_DATA = new byte[0][];
+
+  /** read/write channel access mode for existing files */
+  static final OpenOption[] RW_CHANNEL_OPTS =
+    {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
   // use largest possible Jet "page size" to ensure that reads/writes will
   // always be within a single chunk
@@ -161,7 +164,7 @@ public class MemFileChannel extends FileChannel
    * affect the original File source.
    */
   public static MemFileChannel newChannel(Path file) throws IOException {
-    return newChannel(file, DatabaseImpl.RW_CHANNEL_OPTS);
+    return newChannel(file, RW_CHANNEL_OPTS);
   }
 
   /**

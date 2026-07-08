@@ -104,7 +104,7 @@ public class QueryFormat
   public static final String NEWLINE = System.lineSeparator();
 
 
-  public static final Map<Short,String> PARAM_TYPE_MAP =
+  static final Map<Short,String> PARAM_TYPE_MAP =
     new HashMap<>();
   static {
     PARAM_TYPE_MAP.put((short)0, "Value");
@@ -122,7 +122,7 @@ public class QueryFormat
     PARAM_TYPE_MAP.put((short)DataType.GUID.getValue(), "Guid");
   }
 
-  public static final Map<Short,String> JOIN_TYPE_MAP =
+  static final Map<Short,String> JOIN_TYPE_MAP =
     new HashMap<>();
   static {
     JOIN_TYPE_MAP.put((short)1, " INNER JOIN ");
@@ -130,7 +130,7 @@ public class QueryFormat
     JOIN_TYPE_MAP.put((short)3, " RIGHT JOIN ");
   }
 
-  public static final Map<Short,Query.Type> TYPE_MAP =
+  static final Map<Short,Query.Type> TYPE_MAP =
     new HashMap<>();
   static {
     for(Query.Type type : Query.Type.values()) {
