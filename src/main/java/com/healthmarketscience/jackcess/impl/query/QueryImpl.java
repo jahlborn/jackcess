@@ -599,19 +599,19 @@ public abstract class QueryImpl implements Query
            tableRow.getBytes(COL_ORDER));
     }
 
-    public Row(RowId id, Byte attribute, String expression, Short flag,
-               Integer extra, String name1, String name2,
-               Integer objectId, byte[] order)
+    public Row(RowId id, Byte newAttribute, String newExpression,
+               Short newFlag, Integer newExtra, String newName1,
+               String newName2, Integer newObjectId, byte[] newOrder)
     {
-      this._id = id;
-      this.attribute = attribute;
-      this.expression = expression;
-      this.flag = flag;
-      this.extra = extra;
-      this.name1 = name1;
-      this.name2= name2;
-      this.objectId = objectId;
-      this.order = order;
+      _id = id;
+      attribute = newAttribute;
+      expression = newExpression;
+      flag = newFlag;
+      extra = newExtra;
+      name1 = newName1;
+      name2 = newName2;
+      objectId = newObjectId;
+      order = newOrder;
     }
 
     public com.healthmarketscience.jackcess.Row toTableRow()
@@ -680,16 +680,21 @@ public abstract class QueryImpl implements Query
   protected static class AppendableList<E> extends ArrayList<E>
   {
     private static final long serialVersionUID = 0L;
+    private static final String DEF_SEP = ", ";
+
+    private final String _sep;
 
     protected AppendableList() {
+      this(DEF_SEP);
+    }
+
+    protected AppendableList(String sep) {
+      _sep = sep;
     }
 
     protected AppendableList(Collection<? extends E> c) {
       super(c);
-    }
-
-    protected String getSeparator() {
-      return ", ";
+      _sep = DEF_SEP;
     }
 
     @Override
@@ -698,7 +703,7 @@ public abstract class QueryImpl implements Query
       for(Iterator<E> iter = iterator(); iter.hasNext(); ) {
         builder.append(iter.next().toString());
         if(iter.hasNext()) {
-          builder.append(getSeparator());
+          builder.append(_sep);
         }
       }
       return builder.toString();
@@ -767,13 +772,7 @@ public abstract class QueryImpl implements Query
     private final TableSource _to;
     private final short _jType;
     // combine all the join expressions with "AND"
-    private final List<String> _on = new AppendableList<String>() {
-      private static final long serialVersionUID = 0L;
-      @Override
-      protected String getSeparator() {
-        return ") AND (";
-      }
-    };
+    private final List<String> _on = new AppendableList<>(") AND (");
 
     private Join(TableSource from, TableSource to, short type, String on) {
       _from = from;

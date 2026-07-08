@@ -43,6 +43,7 @@ import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,7 @@ import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
  * @author Tim McCune
  * @usage _intermediate_class_
  */
-public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeContext
+public class ColumnImpl implements Column, DateTimeContext
 {
 
   protected static final Logger LOG = System.getLogger(ColumnImpl.class.getName());
@@ -86,6 +87,14 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
    * @usage _intermediate_field_
    */
   public static final Object RETURN_ROW_ID = "<RETURN_ROW_ID>";
+
+  /** comparator which sorts columns based on their persisted index */
+  static final Comparator<ColumnImpl> DEFAULT_ORDER_COMPARATOR =
+    Comparator.comparingInt(ColumnImpl::getColumnNumber);
+
+  /** comparator which sorts columns based on their display index */
+  static final Comparator<ColumnImpl> DISPLAY_ORDER_COMPARATOR =
+    Comparator.comparingInt(ColumnImpl::getDisplayIndex);
 
   /**
    * Access stores numeric dates in days.  Java stores them in milliseconds.
@@ -1808,22 +1817,6 @@ public class ColumnImpl implements Column, Comparable<ColumnImpl>, DateTimeConte
     CharBuffer cb = ((text instanceof CharBuffer) ?
                      (CharBuffer)text : CharBuffer.wrap(text));
     return charset.encode(cb);
-  }
-
-
-  /**
-   * Orders Columns by column number.
-   * @usage _general_method_
-   */
-  @Override
-  public int compareTo(ColumnImpl other) {
-    if (_columnNumber > other.getColumnNumber()) {
-      return 1;
-    } else if (_columnNumber < other.getColumnNumber()) {
-      return -1;
-    } else {
-      return 0;
-    }
   }
 
   /**

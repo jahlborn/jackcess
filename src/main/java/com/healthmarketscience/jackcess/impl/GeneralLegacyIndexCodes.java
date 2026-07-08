@@ -408,8 +408,7 @@ public class GeneralLegacyIndexCodes {
           // surrogate chars are not included in the codes files
           ch = LOW_SURROGATE_CHAR_HANDLER;
         } else {
-          String codeLine = reader.readLine();
-          ch = parseCodes(prefixMap, codeLine);
+          ch = parseCodes(prefixMap, reader.readLine());
         }
         values[(i - start)] = ch;
       }
@@ -431,6 +430,9 @@ public class GeneralLegacyIndexCodes {
   private static CharHandler parseCodes(Map<String,Type> prefixMap,
                                         String codeLine)
   {
+    if(codeLine == null) {
+      throw new IllegalStateException("Invalid codes file");
+    }
     String prefix = codeLine.substring(0, 1);
     String suffix = ((codeLine.length() > 1) ? codeLine.substring(1) : "");
     return prefixMap.get(prefix).parseCodes(suffix.split(",", -1));

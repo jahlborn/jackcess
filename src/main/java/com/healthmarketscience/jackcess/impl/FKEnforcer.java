@@ -42,7 +42,7 @@ import com.healthmarketscience.jackcess.util.Joiner;
  * @author James Ahlborn
  * @usage _advanced_class_
  */
-final class FKEnforcer 
+final class FKEnforcer
 {
   // fk constraints always work with indexes, which are always
   // case-insensitive
@@ -66,7 +66,7 @@ final class FKEnforcer
   }
 
   private void initColumns() {
-    Set<ColumnImpl> cols = new TreeSet<>();
+    Set<ColumnImpl> cols = new TreeSet<>(ColumnImpl.DEFAULT_ORDER_COMPARATOR);
     for(IndexImpl idx : _table.getIndexes()) {
       IndexImpl.ForeignKeyReference ref = idx.getReference();
       if(ref != null) {
@@ -178,7 +178,7 @@ final class FKEnforcer
     initialize();
 
     SharedState ss = _table.getDatabase().getFKEnforcerSharedState();
-    
+
     if(ss.isUpdating()) {
       // we only check the primary relationships for the "top-level" of an
       // update operation.  in nested levels we are only ever changing the fk
@@ -245,8 +245,8 @@ final class FKEnforcer
     }
   }
 
-  private static void requirePrimaryValues(Joiner joiner, Object[] row) 
-    throws IOException 
+  private static void requirePrimaryValues(Joiner joiner, Object[] row)
+    throws IOException
   {
     // ensure that the relevant rows exist in the primary tables for which
     // this table is a secondary table.  however, null values are allowed
@@ -257,8 +257,8 @@ final class FKEnforcer
     }
   }
 
-  private static void requireNoSecondaryValues(Joiner joiner, Object[] row) 
-    throws IOException 
+  private static void requireNoSecondaryValues(Joiner joiner, Object[] row)
+    throws IOException
   {
     // ensure that no rows exist in the secondary table for which this table is
     // the primary table.
@@ -327,7 +327,7 @@ final class FKEnforcer
     return false;
   }
 
-  private static boolean anyUpdates(Joiner joiner,Object[] oldRow, 
+  private static boolean anyUpdates(Joiner joiner,Object[] oldRow,
                                     Object[] newRow)
   {
     Table fromTable = joiner.getFromTable();
@@ -346,7 +346,7 @@ final class FKEnforcer
       if(col.getColumn().getRowValue(row) != null) {
         return false;
       }
-    } 
+    }
     return true;
   }
 
@@ -361,7 +361,7 @@ final class FKEnforcer
   /**
    * Shared state used by all FKEnforcers for a given Database.
    */
-  static final class SharedState 
+  static final class SharedState
   {
     /** current depth of cascading update calls across one or more tables */
     private int _updateDepth;
@@ -372,7 +372,7 @@ final class FKEnforcer
     public boolean isUpdating() {
       return (_updateDepth == 0);
     }
-    
+
     public void pushUpdate() {
       ++_updateDepth;
     }

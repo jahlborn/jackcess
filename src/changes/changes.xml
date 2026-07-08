@@ -4,9 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="4.0.12" date="TBD">
+    <release version="5.0.0" date="TBD">
       <action dev="jahlborn" type="update">
         Some code base modernization.  Note a minor exception widening in OleBlob.
+      </action>      
+      <action dev="jahlborn" type="update">
+        Removed RuntimeIOException in favor of built in UncheckedIOException.
       </action>      
     </release>
     <release version="4.0.11" date="2026-07-06">

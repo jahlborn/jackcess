@@ -206,13 +206,13 @@ public class DatabaseImpl implements Database, DateTimeContext
     SYSTEM_OBJECT_FLAG | ALT_SYSTEM_OBJECT_FLAG;
 
   /** read-only channel access mode */
-  public static final OpenOption[] RO_CHANNEL_OPTS =
+  static final OpenOption[] RO_CHANNEL_OPTS =
     {StandardOpenOption.READ};
   /** read/write channel access mode for existing files */
-  public static final OpenOption[] RW_CHANNEL_OPTS =
+  static final OpenOption[] RW_CHANNEL_OPTS =
     {StandardOpenOption.READ, StandardOpenOption.WRITE};
   /** read/write/create channel access mode for new files */
-  public static final OpenOption[] RWC_CHANNEL_OPTS =
+  static final OpenOption[] RWC_CHANNEL_OPTS =
   {StandardOpenOption.READ, StandardOpenOption.WRITE,
    StandardOpenOption.CREATE};
 
@@ -2379,10 +2379,11 @@ public class DatabaseImpl implements Database, DateTimeContext
   }
 
   private static String getName(Path file) {
-    if(file == null) {
+    Path namePath = ((file != null) ? file.getFileName() : null);
+    if(namePath == null) {
       return "<UNKNOWN.DB>";
     }
-    return file.getFileName().toString();
+    return namePath.toString();
   }
 
   private String withErrorContext(String msg) {

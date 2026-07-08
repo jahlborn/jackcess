@@ -182,7 +182,7 @@ public abstract class CustomLinkResolver implements LinkResolver
                                        format.getFileExtension()) :
                   Files.createTempFile(FILE_DB_PREFIX,
                                        format.getFileExtension()));
-        channel = FileChannel.open(dbFile, DatabaseImpl.RW_CHANNEL_OPTS);
+        channel = FileChannel.open(dbFile, MemFileChannel.RW_CHANNEL_OPTS);
       }
 
       TempDatabaseImpl.initDbChannel(channel, format);
@@ -201,8 +201,9 @@ public abstract class CustomLinkResolver implements LinkResolver
   }
 
   private static void deleteDbFile(Path dbFile) {
-    if((dbFile != null) &&
-       dbFile.getFileName().toString().startsWith(FILE_DB_PREFIX)) {
+    Path namePath = ((dbFile != null) ? dbFile.getFileName() : null);
+    if((namePath != null) &&
+       namePath.toString().startsWith(FILE_DB_PREFIX)) {
       try {
         Files.deleteIfExists(dbFile);
       } catch(IOException ignores) {}

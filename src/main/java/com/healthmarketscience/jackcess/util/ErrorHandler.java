@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.util;
 import java.io.IOException;
 
 import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.Table;
 
 /**
@@ -44,11 +45,14 @@ public interface ErrorHandler
                                    Location location, Exception error)
         throws IOException
       {
-        // really can only be RuntimeException or IOException
+        // should only ever be RuntimeException or IOException
         if(error instanceof IOException) {
           throw (IOException)error;
         }
-        throw (RuntimeException)error;
+        if(error instanceof RuntimeException) {
+          throw (RuntimeException)error;
+        }
+        throw new JackcessException(error);
       }
     };
 
