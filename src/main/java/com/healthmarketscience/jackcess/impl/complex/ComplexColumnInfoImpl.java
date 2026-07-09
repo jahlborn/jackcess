@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.complex;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,7 +31,6 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
@@ -263,8 +263,8 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
         entryIter.next();
         entryIter.remove();
       }
-    } catch(RuntimeIOException e) {
-      throw (IOException)e.getCause();
+    } catch(UncheckedIOException e) {
+      throw e.getCause();
     }
   }
 

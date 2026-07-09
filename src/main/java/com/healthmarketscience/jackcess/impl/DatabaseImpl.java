@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -66,7 +67,6 @@ import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.TableDefinition;
@@ -1162,7 +1162,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     try {
       return new TableIterator(getTableNames());
     } catch(IOException e) {
-      throw new RuntimeIOException(e);
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -1172,7 +1172,7 @@ public class DatabaseImpl implements Database, DateTimeContext
                                              builder.isIncludeSystemTables(),
                                              builder.isIncludeLinkedTables()));
     } catch(IOException e) {
-      throw new RuntimeIOException(e);
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -1189,7 +1189,7 @@ public class DatabaseImpl implements Database, DateTimeContext
         try {
           return _tableFinder.iterateTableMetaData();
         } catch(IOException e) {
-          throw new RuntimeIOException(e);
+          throw new UncheckedIOException(e);
         }
       }
     };
@@ -2610,7 +2610,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       try {
         return getTable(_tableNameIter.next(), true);
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
   }

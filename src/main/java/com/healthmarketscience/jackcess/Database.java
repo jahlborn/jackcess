@@ -224,7 +224,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
 
   /**
    * @return an unmodifiable Iterator of the user Tables in this Database.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
+   * @throws UncheckedIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    * @throws ConcurrentModificationException if a table is added to the
    *         database while an Iterator is in use.
@@ -250,7 +250,7 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   /**
    * @return an Iterable which returns an unmodifiable Iterator of the the
    *         TableMetaData for all tables in this Database.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
+   * @throws UncheckedIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    * @throws ConcurrentModificationException if a table is added to the
    *         database while an Iterator is in use.

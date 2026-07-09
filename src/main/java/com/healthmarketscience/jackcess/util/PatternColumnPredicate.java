@@ -17,10 +17,10 @@ limitations under the License.
 package com.healthmarketscience.jackcess.util;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.expr.Expressionator;
 
@@ -55,7 +55,7 @@ public class PatternColumnPredicate implements Predicate<Object>
 
       return _pattern.matcher(cs).matches();
     } catch(IOException e) {
-      throw new RuntimeIOException("Could not coerece column value to string", e);
+      throw new UncheckedIOException("Could not coerece column value to string", e);
     }
   }
 

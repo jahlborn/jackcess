@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess;
 
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1276,8 +1277,8 @@ public class CursorTest {
             .addMatchPattern("value", "val-9")
             .addMatchPattern("memo", "anything")
             .iterator().hasNext();
-          fail("RuntimeIOException should have been thrown");
-        } catch(RuntimeIOException ignored) {
+          fail("UncheckedIOException should have been thrown");
+        } catch(UncheckedIOException ignored) {
           // success
         }
 

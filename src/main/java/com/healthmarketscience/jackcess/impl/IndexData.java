@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -31,7 +32,6 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
 
@@ -1143,7 +1143,7 @@ public class IndexData {
       try {
         sb.append("entryCount", getEntryCount());
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
     sb.append("pageCache", _pageCache);
