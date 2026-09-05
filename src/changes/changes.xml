@@ -8,6 +8,10 @@
       <action dev="jahlborn" type="update">
         Some code base modernization.  Note a minor exception widening in OleBlob.
       </action>      
+      <action dev="jahlborn" type="fix">
+        Fix database corruption when adding column to table with deleted
+        variable length columns.
+      </action>      
     </release>
     <release version="4.0.11" date="2026-07-06">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">

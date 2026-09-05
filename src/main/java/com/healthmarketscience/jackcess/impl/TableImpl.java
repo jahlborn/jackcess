@@ -112,7 +112,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private final int _tableDefPageNumber;
   /** max Number of columns in the table (includes previous deletions) */
   private short _maxColumnCount;
-  /** max Number of variable columns in the table */
+  /** max Number of variable columns in the table (includes deletions) */
   private short _maxVarColumnCount;
   /** List of columns in this table, ordered by column number */
   private final List<ColumnImpl> _columns = new ArrayList<>();
@@ -1231,7 +1231,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       // update various bits of the table def
       ByteUtil.forward(tableBuffer, 29);
       tableBuffer.putShort((short)(_maxColumnCount + 1));
-      short varColCount = (short)(_varColumns.size() + (isVarCol ? 1 : 0));
+      short varColCount = (short)(_maxVarColumnCount + (isVarCol ? 1 : 0));
       tableBuffer.putShort(varColCount);
       tableBuffer.putShort((short)(_columns.size() + 1));
 
