@@ -39,21 +39,16 @@ public interface ErrorHandler
    * default error handler used if none provided (just rethrows exception)
    * @usage _general_field_
    */
-  public static final ErrorHandler DEFAULT = new ErrorHandler() {
-      @Override
-      public Object handleRowError(Column column, byte[] columnData,
-                                   Location location, Exception error)
-        throws IOException
-      {
-        // should only ever be RuntimeException or IOException
-        if(error instanceof IOException) {
-          throw (IOException)error;
-        }
-        if(error instanceof RuntimeException) {
-          throw (RuntimeException)error;
-        }
-        throw new JackcessException(error);
+  public static final ErrorHandler DEFAULT =
+    (column, columnData, location, error) -> {
+      // should only ever be RuntimeException or IOException
+      if(error instanceof IOException) {
+        throw (IOException)error;
       }
+      if(error instanceof RuntimeException) {
+        throw (RuntimeException)error;
+      }
+      throw new JackcessException(error);
     };
 
   /**

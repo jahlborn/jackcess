@@ -154,6 +154,18 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public static final String WRITE_BROKEN_INDEX_PROPERTY =
     "com.healthmarketscience.jackcess.writeBrokenIndex";
 
+  /** (boolean) system property which can be used to allow resolution of
+   * linked databases when no LinkResolver has been configured.  Defaults to
+   * {@code false}, in which case {@link LinkResolver#DEFAULT} refuses to open
+   * any linked database.  When enabled, {@link LinkResolver#UNRESTRICTED} is
+   * used instead, which opens whatever file name the linking database
+   * specifies.  Since that file name comes from the database file itself,
+   * only enable this when the linked database file names can be trusted.
+   * @usage _intermediate_field_
+   */
+  public static final String ALLOW_LINK_RESOLUTION_PROPERTY =
+    "com.healthmarketscience.jackcess.allowLinkResolution";
+
   /**
    * Enum which indicates which version of Access created the database.
    * @usage _general_class_
@@ -412,8 +424,11 @@ public interface Database extends Iterable<Table>, Closeable, Flushable
   public LinkResolver getLinkResolver();
 
   /**
-   * Sets a new LinkResolver.  If {@code null}, resets to the
-   * {@link LinkResolver#DEFAULT}.
+   * Sets a new LinkResolver.  If {@code null}, resets to the default resolver,
+   * which refuses to open linked databases unless the
+   * {@value #ALLOW_LINK_RESOLUTION_PROPERTY} system property is enabled.  Use
+   * {@link LinkResolver#UNRESTRICTED} only when the linked database file names
+   * can be trusted.
    * @usage _intermediate_method_
    */
   public void setLinkResolver(LinkResolver newLinkResolver);

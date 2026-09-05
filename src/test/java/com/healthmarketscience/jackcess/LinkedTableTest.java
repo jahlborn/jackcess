@@ -17,8 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.Map;
 
@@ -41,9 +41,9 @@ public class LinkedTableTest extends TestCase
 
       try {
         db.getTable("Table2");
-        fail("FileNotFoundException should have been thrown");
-      } catch(FileNotFoundException e) {
-        // success
+        fail("AccessDeniedException should have been thrown");
+      } catch(AccessDeniedException e) {
+        // success, link resolution is disabled by default
       }
 
       TableMetaData tmd = db.getTableMetaData("Table2");
