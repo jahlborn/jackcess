@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
@@ -220,6 +221,19 @@ public class IndexBuilder
       return new TableUpdater((TableImpl)table).addIndex(this);
   }
 
+  @Override
+  public String toString() {
+    return CustomToStringStyle.builder(this)
+      .append("name", _name)
+      .append("number", _indexNumber)
+      .append("type", _type)
+      .append("isPrimaryKey", isPrimaryKey())
+      .append("isUnique", isUnique())
+      .append("ignoreNulls", isIgnoreNulls())
+      .append("columns", _columns)
+      .toString();
+  }
+
   private String withErrorContext(String msg) {
     return msg + "(Index=" + getName() + ")";
   }
@@ -254,6 +268,14 @@ public class IndexBuilder
 
     public byte getFlags() {
       return _flags;
+    }
+
+    @Override
+    public String toString() {
+      return CustomToStringStyle.valueBuilder(this)
+        .append("name", _name)
+        .append("flags", getFlags() + " " + (isAscending() ? "(ASC)" : "(DSC)"))
+        .toString();
     }
   }
 

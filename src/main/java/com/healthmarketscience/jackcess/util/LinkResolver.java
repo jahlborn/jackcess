@@ -54,12 +54,12 @@ public interface LinkResolver
   /**
    * Link resolver which refuses to open any linked database.
    * <p>
-   * This is the resolver used if none is provided (unless the
+   * This is the resolver used if none is provided.  Enabling the
    * {@value com.healthmarketscience.jackcess.Database#ALLOW_LINK_RESOLUTION_PROPERTY}
-   * system property is enabled, in which case {@link #UNRESTRICTED} is used
-   * instead).  An application which uses linked databases must configure
-   * either {@link #UNRESTRICTED} or a resolver which enforces its own policy
-   * for which file names are acceptable.
+   * system property selects {@link #UNRESTRICTED} instead.  An application
+   * which uses linked databases must configure either {@link #UNRESTRICTED}
+   * or a resolver which enforces its own policy for which file names are
+   * acceptable.
    * @usage _general_field_
    */
   public static final LinkResolver DEFAULT = (linkerDb, linkeeFileName) -> {

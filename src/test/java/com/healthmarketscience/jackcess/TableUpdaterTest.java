@@ -24,6 +24,7 @@ import java.util.Map;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import junit.framework.TestCase;
@@ -273,5 +274,90 @@ public class TableUpdaterTest extends TestCase
 
       db.close();
     }
+  }
+
+  public void testCorruptTableDef() throws Exception
+  {
+    for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
+
+      // variable length column count which does not cover all the variable
+      // length columns.  writing a row would run off the end of the offset
+      // table.  an older version of jackcess could write this count when
+      // adding a column
+      checkCorruptTableDef(
+          fileFormat, t -> setTableField(t, "_maxVarColumnCount", (short)1),
+          "data2");
+
+      // column count which does not cover all the columns.  writing a row
+      // would run off the end of the null mask
+      checkCorruptTableDef(
+          fileFormat, t -> setTableField(t, "_maxColumnCount", (short)1),
+          "data1");
+
+      // fixed length column which ends beyond the maximum row size.  writing
+      // a row would run off the end of the row buffer
+      checkCorruptTableDef(
+          fileFormat, t -> setColumnField(t, "id", "_fixedDataOffset", 5000),
+          "id");
+    }
+  }
+
+  /** damages part of a table definition which has already been loaded */
+  private interface TableDefDamager
+  {
+    void damage(Table t) throws Exception;
+  }
+
+  private static void checkCorruptTableDef(
+      FileFormat fileFormat, TableDefDamager damager, String expectedColName)
+    throws Exception
+  {
+    Database db = create(fileFormat);
+
+    Table t = newTable("test")
+      .addColumn(newColumn("id", DataType.LONG))
+      .addColumn(newColumn("data1", DataType.TEXT))
+      .addColumn(newColumn("data2", DataType.TEXT))
+      .toTable(db);
+
+    damager.damage(t);
+
+    // the table def is validated when the table is loaded, so re-run the
+    // validation now that the def has been damaged
+    java.lang.reflect.Method m =
+      TableImpl.class.getDeclaredMethod("validateColumnDefs");
+    m.setAccessible(true);
+    m.invoke(t);
+
+    // rows can still be read
+    assertNull(t.getNextRow());
+
+    // but not written
+    try {
+      t.addRow(1, "foo", "bar");
+      fail("JackcessException should have been thrown");
+    } catch(JackcessException e) {
+      assertTrue(e.getMessage().contains("Table definition is corrupt"));
+      assertTrue(e.getMessage().contains(expectedColName));
+    }
+
+    db.close();
+  }
+
+  private static void setTableField(Table t, String fieldName, short value)
+    throws Exception
+  {
+    java.lang.reflect.Field f = TableImpl.class.getDeclaredField(fieldName);
+    f.setAccessible(true);
+    f.setShort(t, value);
+  }
+
+  private static void setColumnField(
+      Table t, String colName, String fieldName, int value)
+    throws Exception
+  {
+    java.lang.reflect.Field f = ColumnImpl.class.getDeclaredField(fieldName);
+    f.setAccessible(true);
+    f.setInt(t.getColumn(colName), value);
   }
 }

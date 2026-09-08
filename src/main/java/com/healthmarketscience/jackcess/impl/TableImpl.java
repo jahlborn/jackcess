@@ -169,6 +169,10 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private final FKEnforcer _fkEnforcer;
   /** table validator if any (and enabled) */
   private RowValidatorEvalContext _rowValidator;
+  /** description of an inconsistency between the table definition and the
+      column definitions, {@code null} if they agree.  rows cannot be written
+      to such a table, but they can still be read */
+  private String _writeDefError;
 
   /** default cursor for iterating through the table, kept here for basic
       table traversal */
@@ -247,6 +251,8 @@ public class TableImpl implements Table, PropertyMaps.Owner
     }
 
     readColumnDefinitions(tableBuffer, columnCount);
+
+    validateColumnDefs();
 
     readIndexDefinitions(tableBuffer);
 
@@ -1997,6 +2003,53 @@ public class TableImpl implements Table, PropertyMaps.Owner
     Collections.sort(_varColumns, VAR_LEN_COLUMN_COMPARATOR);
   }
 
+  /**
+   * Verifies that the column counts and sizes in the table definition cover
+   * the columns which are actually defined.  A damaged table definition can
+   * disagree, in which case writing a row would run off the end of the null
+   * mask, the variable length offset table or the row buffer.
+   * <p>
+   * Rows can still be read from such a table, so this only records the
+   * problem, which is reported when a row write is attempted.
+   */
+  private void validateColumnDefs() {
+    int maxRowSize = getFormat().MAX_ROW_SIZE;
+
+    for(ColumnImpl col : _columns) {
+
+      if(col.getColumnNumber() >= _maxColumnCount) {
+        setWriteDefError("column " + col.getName() + " has number " +
+                         col.getColumnNumber() + ", which is outside the " +
+                         "table column count " + _maxColumnCount);
+      } else if(col.isVariableLength()) {
+        if(col.getVarLenTableIndex() >= _maxVarColumnCount) {
+          setWriteDefError("variable length column " + col.getName() +
+                           " has offset index " + col.getVarLenTableIndex() +
+                           ", which is outside the table variable length " +
+                           "column count " + _maxVarColumnCount);
+        }
+      } else if((col.getFixedDataOffset() + col.getLength()) > maxRowSize) {
+        setWriteDefError("fixed length column " + col.getName() +
+                         " ends at offset " +
+                         (col.getFixedDataOffset() + col.getLength()) +
+                         ", which is beyond the maximum row size " +
+                         maxRowSize);
+      }
+    }
+  }
+
+  /**
+   * Records the first inconsistency found by {@link #validateColumnDefs}.
+   */
+  private void setWriteDefError(String reason) {
+    if(_writeDefError != null) {
+      return;
+    }
+    _writeDefError = "Table definition is corrupt, " + reason;
+    LOG.warn(withErrorContext(
+                 _writeDefError + ".  Table is read-only"));
+  }
+
   private void readIndexDefinitions(ByteBuffer tableBuffer) throws IOException
   {
     // read index column information
@@ -2769,6 +2822,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
                                Map<ColumnImpl,byte[]> rawVarValues)
     throws IOException
   {
+    if(_writeDefError != null) {
+      // we cannot lay out a row without a table definition which matches the
+      // columns
+      throw new JackcessException(withErrorContext(_writeDefError));
+    }
+
     buffer.putShort(_maxColumnCount);
     NullMask nullMask = new NullMask(_maxColumnCount);
 

@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
@@ -514,6 +515,24 @@ public class ColumnBuilder {
    */
   public Column addToTableDefinition(TableDefinition table) throws IOException {
       return new TableUpdater((TableImpl)table).addColumn(this);
+  }
+
+  @Override
+  public String toString() {
+    return CustomToStringStyle.builder(this)
+      .append("name", _name)
+      .append("type", _type)
+      .append("number", _columnNumber)
+      .append("length", CustomToStringStyle.ignoreNull(_length))
+      .append("precision", CustomToStringStyle.ignoreNull(_precision))
+      .append("scale", CustomToStringStyle.ignoreNull(_scale))
+      .append("autoNumber", _autoNumber)
+      .append("compressedUnicode", _compressedUnicode)
+      .append("calculated", _calculated)
+      .append("hyperlink", _hyperlink)
+      .append("textSortOrder", CustomToStringStyle.ignoreNull(_sortOrder))
+      .append("props", CustomToStringStyle.ignoreNull(_props))
+      .toString();
   }
 
   private String withErrorContext(String msg) {

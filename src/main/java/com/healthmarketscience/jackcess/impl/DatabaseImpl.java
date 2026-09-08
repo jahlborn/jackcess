@@ -2285,8 +2285,8 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   /**
    * Returns the LinkResolver used when none has been configured on the
-   * Database.  This defaults to {@link LinkResolver#DEFAULT}, which refuses to
-   * open linked databases, but can be changed to
+   * Database.  This defaults to {@link LinkResolver#DEFAULT}, which refuses
+   * to open linked databases.  It can be changed to
    * {@link LinkResolver#UNRESTRICTED} using the system property
    * {@value com.healthmarketscience.jackcess.Database#ALLOW_LINK_RESOLUTION_PROPERTY}.
    * @usage _advanced_method_

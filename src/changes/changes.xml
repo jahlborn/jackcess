@@ -13,6 +13,14 @@
         variable length columns.
       </action>
       <action dev="jahlborn" type="update">
+        Add toString to ColumnBuilder, TableBuilder and IndexBuilder.
+      </action>
+      <action dev="jahlborn" type="update">
+        Check that the column counts and sizes in a table definition cover the
+        columns which are actually defined when the table is loaded.  A
+        damaged table definition now becomes read-only.
+      </action>
+      <action dev="jahlborn" type="update">
         Linked databases are no longer resolved automatically.  The default
         LinkResolver now refuses to open linked databases.  Applications which
         use linked databases must configure LinkResolver.UNRESTRICTED (the
