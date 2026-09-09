@@ -1050,6 +1050,7 @@ public class DatabaseTest
     }
   }
 
+  @Test
   public void testUnsupportedSortOrderCatalog() throws Exception {
     TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
     try (Database db = new DatabaseBuilder(testDb.getFile())
@@ -1062,6 +1063,7 @@ public class DatabaseTest
     }
   }
 
+  @Test
   public void testAddTableUnsupportedSortOrderCatalog() throws Exception {
     TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
     try (Database db = openCopy(testDb)) {
@@ -1076,6 +1078,7 @@ public class DatabaseTest
     }
   }
 
+  @Test
   @SuppressWarnings("try")
   public void testAddTableBrokenSortOrderCatalog() throws Exception {
     TestDB testDb = TestDB.getSupportedForBasename(Basename.TURKISH).get(0);
