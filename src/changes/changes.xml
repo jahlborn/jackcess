@@ -5,9 +5,23 @@
   </properties>
   <body>
     <release version="4.0.12" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Truncate long text index entries the way ms access does, keeping the
+        leading 508 bytes of the key and ending it with a digest of the bytes
+        discarded.  Keys longer than 510 bytes were previously written in
+        full, so ms access could not use the index and jackcess could not
+        find the affected rows again.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix the index code suffix written for "international ext" characters
+        (which include hiragana and katakana).  The suffix length grows with
+        the number of characters using those codes, but a fixed length one was
+        always written, so index entries for 8 or more such characters were
+        wrong.
+      </action>
       <action dev="jahlborn" type="update">
         Some code base modernization.  Note a minor exception widening in OleBlob.
-      </action>      
+      </action>
       <action dev="jahlborn" type="fix">
         Fix database corruption when adding column to table with deleted
         variable length columns.

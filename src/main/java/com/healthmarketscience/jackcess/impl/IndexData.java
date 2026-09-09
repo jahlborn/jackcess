@@ -91,6 +91,19 @@ public class IndexData {
 
   private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
 
+  /** maximum length of the key portion of an index entry.  a longer key is
+      truncated, and the bytes truncation discards are replaced with a
+      KEY_DIGEST_LENGTH digest of them */
+  private static final int MAX_KEY_LENGTH = 510;
+  /** length of the digest which ends a truncated key */
+  private static final int KEY_DIGEST_LENGTH = 2;
+  /** number of leading key bytes a truncated key keeps verbatim */
+  private static final int KEPT_KEY_LENGTH = MAX_KEY_LENGTH - KEY_DIGEST_LENGTH;
+  /** polynomial behind KEY_DIGEST_TABLE, the CRC-16/ARC polynomial in its
+      MSB-first form */
+  private static final int KEY_DIGEST_POLY = 0x8005;
+  private static final int[] KEY_DIGEST_TABLE = createKeyDigestTable();
+
   /** type attributes for Entries which simplify comparisons */
   public enum EntryType {
     /** comparable type indicating this Entry should always compare less than
@@ -1407,7 +1420,53 @@ public class IndexData {
       col.writeValue(value, _entryBuffer);
     }
 
-    return _entryBuffer.toByteArray();
+    return truncateEntryBytes(_entryBuffer.toByteArray());
+  }
+
+  /**
+   * Truncates the given entry bytes if they exceed the maximum key length,
+   * replacing the discarded bytes with a digest of them.  Access stores long
+   * text keys this way, and search keys have to be built the same way to
+   * compare against them.
+   */
+  static byte[] truncateEntryBytes(byte[] entryBytes)
+  {
+    if(entryBytes.length <= MAX_KEY_LENGTH) {
+      return entryBytes;
+    }
+
+    // every discarded byte feeds the digest except the very last one
+    int digest = 0;
+    for(int i = KEPT_KEY_LENGTH; i < (entryBytes.length - 1); ++i) {
+      digest = ((digest >>> 8) ^ KEY_DIGEST_TABLE[digest & 0xFF] ^
+                (entryBytes[i] & 0xFF)) & 0xFFFF;
+    }
+
+    byte[] truncated = ByteUtil.copyOf(entryBytes, MAX_KEY_LENGTH);
+    truncated[KEPT_KEY_LENGTH] = (byte)(digest >>> 8);
+    truncated[KEPT_KEY_LENGTH + 1] = (byte)digest;
+
+    return truncated;
+  }
+
+  /**
+   * Builds the transition table for the truncated key digest.  Byte swapping
+   * the digest register turns the transition into the MSB-first CRC-16 step
+   * for KEY_DIGEST_POLY, so the table is that step with the register left in
+   * on-disk byte order.
+   */
+  private static int[] createKeyDigestTable()
+  {
+    int[] table = new int[256];
+    for(int i = 0; i < table.length; ++i) {
+      int reg = i << 8;
+      for(int j = 0; j < 8; ++j) {
+        reg = ((reg << 1) & 0xFFFF) ^
+          (((reg & 0x8000) != 0) ? KEY_DIGEST_POLY : 0);
+      }
+      table[i] = ((reg & 0xFF) << 8) | (reg >>> 8);
+    }
+    return table;
   }
 
   /**

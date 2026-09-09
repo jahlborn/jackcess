@@ -33,6 +33,7 @@ import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DateTimeType;
 import com.healthmarketscience.jackcess.Index;
+import com.healthmarketscience.jackcess.IndexBuilder;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
@@ -70,6 +71,121 @@ public class IndexCodesTest extends TestCase {
   public void testEmoticons() throws Exception
   {
     doTestDb(Basename.EMOTICONS);
+  }
+
+  /**
+   * Tests the "international ext" characters, whose codes end with a suffix
+   * whose length grows with the number of characters which took that path.
+   * The expected keys were read back out of the index pages Access built for
+   * U+3041 (crazy flag set) and U+3042 (crazy flag clear).
+   */
+  public void testInternationalExtCodes() throws Exception
+  {
+    try(Database db = create(Database.FileFormat.V2010)) {
+
+      IndexData.ColumnDescriptor col = getTextIndexColumn(db);
+
+      // one suffix repeat covers up to 7 chars, so these are the two
+      // boundaries either side of the first extra repeat
+      assertIndexKey("7f7f02010101a0ff0280ff8000", col, repeat('\u3041', 1));
+      assertIndexKey("7f7f02010101ff0280ff8000", col, repeat('\u3042', 1));
+      assertIndexKey(
+          "7f7f027f027f027f027f027f027f027f02010101aaaaa8ff028080ff808000",
+          col, repeat('\u3041', 8));
+      assertIndexKey(
+          "7f7f027f027f027f027f027f027f027f02010101ff028080ff808000",
+          col, repeat('\u3042', 8));
+      assertIndexKey(
+          "7f7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "010101aaaaaaaaaaa0ff02808080ff80808000",
+          col, repeat('\u3041', 16));
+    }
+  }
+
+  /**
+   * Tests that a key longer than the maximum is truncated the way Access
+   * truncates it, with a digest of the discarded bytes.  The expected key was
+   * read back out of the index page Access built.
+   */
+  public void testTruncatedKey() throws Exception
+  {
+    try(Database db = create(Database.FileFormat.V2010)) {
+
+      IndexData.ColumnDescriptor col = getTextIndexColumn(db);
+
+      // 200 chars of U+3041 encode to more than the maximum key length, so
+      // Access keeps the leading 508 bytes and ends the key with a digest of
+      // everything it discarded
+      byte[] fullKey = encodeIndexKey(col, repeat('\u3041', 200));
+      assertEquals(533, fullKey.length);
+
+      // the truncated form is what Access actually stores
+      assertEquals(
+          "7f7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f02" +
+          "7f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f027f" +
+          "027f027f02010101aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+          "aaaaaaaaaaaaaaaaa8ff0280808080808080808080808080808080808080808080" +
+          "80808080808080ff8080808080d06b",
+          toCompactHex(IndexData.truncateEntryBytes(fullKey)));
+    }
+  }
+
+  private static IndexData.ColumnDescriptor getTextIndexColumn(Database db)
+    throws Exception
+  {
+    Table t = new TableBuilder("test")
+      .addColumn(new ColumnBuilder("data", DataType.MEMO))
+      .addIndex(new IndexBuilder("dataidx").addColumns("data"))
+      .toTable(db);
+    IndexImpl idx = (IndexImpl)t.getIndex("dataidx");
+    return idx.getIndexData().getColumns().get(0);
+  }
+
+  private static void assertIndexKey(String expected,
+                                     IndexData.ColumnDescriptor col,
+                                     String value)
+    throws Exception
+  {
+    assertEquals("key for " + toUnicodeStr(value), expected,
+                 toCompactHex(encodeIndexKey(col, value)));
+  }
+
+  private static byte[] encodeIndexKey(IndexData.ColumnDescriptor col,
+                                       String value)
+    throws Exception
+  {
+    ByteUtil.ByteStream bout = new ByteUtil.ByteStream();
+    col.writeValue(value, bout);
+    return bout.toByteArray();
+  }
+
+  private static String repeat(char c, int num)
+  {
+    StringBuilder sb = new StringBuilder(num);
+    for(int i = 0; i < num; ++i) {
+      sb.append(c);
+    }
+    return sb.toString();
+  }
+
+  private static String toCompactHex(byte[] bytes)
+  {
+    StringBuilder sb = new StringBuilder(bytes.length * 2);
+    for(byte b : bytes) {
+      sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
   }
 
   private static void doTestDb(Basename dbBaseName) throws Exception
@@ -139,22 +255,6 @@ public class IndexCodesTest extends TestCase {
         // verify that the entries are indeed equal
         Cursor.Position curPos = cursor.getSavepoint().getCurrentPosition();
         assertEquals(entryToString(expectedPos), entryToString(curPos));
-        return;
-      }
-    }
-
-    // TODO long rows not handled completely yet in V2010
-    // seems to truncate entry at 508 bytes with some trailing 2 byte seq
-    if((testDB != null) &&
-       (testDB.getExpectedFileFormat() == Database.FileFormat.V2010)) {
-      String rowId = expectedRow.getString("name");
-      String tName = t.getName();
-      if(("Table11".equals(tName) || "Table11_desc".equals(tName)) &&
-         ("row10".equals(rowId) || "row11".equals(rowId) ||
-          "row12".equals(rowId))) {
-        System.out.println(
-            "TODO long rows not handled completely yet in V2010: " + tName +
-                           ", " + rowId);
         return;
       }
     }
