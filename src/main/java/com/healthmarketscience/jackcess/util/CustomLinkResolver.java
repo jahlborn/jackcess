@@ -43,8 +43,10 @@ import com.healthmarketscience.jackcess.impl.TableImpl;
  * <p>
  * The primary features of this utility:
  * <ul>
- * <li>Supports custom behavior for non-mdb files and default behavior for mdb
- *     files, see {@link #loadCustomFile}</li>
+ * <li>Supports custom behavior for non-mdb files, see {@link #loadCustomFile}.
+ *     Mdb files fall back to the default resolver, which refuses to open them
+ *     unless link resolution has been enabled, see
+ *     {@link #resolveLinkedDatabase}</li>
  * <li>Temp db can be an actual file or entirely in memory</li>
  * <li>Linked tables are loaded on-demand, see {@link #loadCustomTable}</li>
  * <li>Temp db files will be automatically deleted on close</li>
@@ -125,13 +127,19 @@ public abstract class CustomLinkResolver implements LinkResolver
    *                         getDefaultTempDirectory());
    *   }
    *
-   *   // not a custmom file, load using the default behavior
-   *   return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
+   *   // not a custom file, load using the default behavior
+   *   return DatabaseImpl.getDefaultLinkResolver()
+   *     .resolveLinkedDatabase(linkerDb, linkeeFileName);
    * </pre>
+   * The fallback is the resolver a Database uses when none has been
+   * configured, so it refuses to open the linked database.  Override this
+   * method and delegate to {@link LinkResolver#UNRESTRICTED} only when the
+   * linked database file names can be trusted.
    *
    * @see #loadCustomFile
    * @see #createTempDb
    * @see LinkResolver#DEFAULT
+   * @see LinkResolver#UNRESTRICTED
    */
   @Override
   public Database resolveLinkedDatabase(Database linkerDb, String linkeeFileName)
@@ -145,7 +153,8 @@ public abstract class CustomLinkResolver implements LinkResolver
       return createTempDb(customFile, getDefaultFormat(), isDefaultInMemory(),
                           getDefaultTempDirectory(), readOnly);
     }
-    return LinkResolver.DEFAULT.resolveLinkedDatabase(linkerDb, linkeeFileName);
+    return DatabaseImpl.getDefaultLinkResolver()
+      .resolveLinkedDatabase(linkerDb, linkeeFileName);
   }
 
   /**

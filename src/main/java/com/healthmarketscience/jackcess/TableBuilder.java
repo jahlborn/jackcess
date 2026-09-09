@@ -29,6 +29,7 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.TableCreator;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Builder style class for constructing a {@link Table}.
@@ -239,6 +240,17 @@ public class TableBuilder {
    */
   public Table toTable(Database db) throws IOException {
     return new TableCreator(((DatabaseImpl)db)).createTable(this);
+  }
+
+  @Override
+  public String toString() {
+    return ToStringBuilder.builder(this)
+      .append("name", _name)
+      .append("escapeIdentifiers", _escapeIdentifiers)
+      .append("columns", _columns)
+      .append("indexes", _indexes)
+      .appendIfNotNull("props", _props)
+      .toString();
   }
 
   /**

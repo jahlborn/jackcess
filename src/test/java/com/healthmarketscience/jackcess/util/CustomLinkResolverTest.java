@@ -16,8 +16,8 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.util;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 
 import com.healthmarketscience.jackcess.ColumnBuilder;
@@ -76,13 +76,14 @@ public class CustomLinkResolverTest
 
         assertNull(db.getTable("Table4"));
 
+        // a non-custom file falls through to the default resolver, which
+        // refuses to open linked databases
         try {
           db.getTable("Table3");
-          fail("FileNotFoundException should have been thrown");
-        } catch(FileNotFoundException e) {
+          fail("AccessDeniedException should have been thrown");
+        } catch(AccessDeniedException e) {
           // success
         }
-
       }
     }
   }

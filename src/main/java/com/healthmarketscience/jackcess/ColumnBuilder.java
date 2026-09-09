@@ -26,6 +26,7 @@ import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.TableUpdater;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
@@ -514,6 +515,24 @@ public class ColumnBuilder {
    */
   public Column addToTableDefinition(TableDefinition table) throws IOException {
       return new TableUpdater((TableImpl)table).addColumn(this);
+  }
+
+  @Override
+  public String toString() {
+    return ToStringBuilder.builder(this)
+      .append("name", _name)
+      .append("type", _type)
+      .append("number", _columnNumber)
+      .appendIfNotNull("length", _length)
+      .appendIfNotNull("precision", _precision)
+      .appendIfNotNull("scale", _scale)
+      .append("autoNumber", _autoNumber)
+      .append("compressedUnicode", _compressedUnicode)
+      .append("calculated", _calculated)
+      .append("hyperlink", _hyperlink)
+      .appendIfNotNull("textSortOrder", _sortOrder)
+      .appendIfNotNull("props", _props)
+      .toString();
   }
 
   private String withErrorContext(String msg) {

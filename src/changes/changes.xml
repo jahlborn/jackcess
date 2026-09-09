@@ -6,8 +6,48 @@
   <body>
     <release version="5.0.0" date="TBD">
       <action dev="jahlborn" type="update">
+        Update minimum java requirement to java 11.  Some code base cleanup
+        and modernization.
+      </action>
+    </release>
+    <release version="4.0.12" date="TBD">
+      <action dev="jahlborn" type="fix">
+        Truncate long text index entries the way ms access does, keeping the
+        leading 508 bytes of the key and ending it with a digest of the bytes
+        discarded.  Keys longer than 510 bytes were previously written in
+        full, so ms access could not use the index and jackcess could not
+        find the affected rows again.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix the index code suffix written for "international ext" characters
+        (which include hiragana and katakana).  The suffix length grows with
+        the number of characters using those codes, but a fixed length one was
+        always written, so index entries for 8 or more such characters were
+        wrong.
+      </action>
+      <action dev="jahlborn" type="update">
         Some code base modernization.  Note a minor exception widening in OleBlob.
-      </action>      
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix database corruption when adding column to table with deleted
+        variable length columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add toString to ColumnBuilder, TableBuilder and IndexBuilder.
+      </action>
+      <action dev="jahlborn" type="update">
+        Check that the column counts and sizes in a table definition cover the
+        columns which are actually defined when the table is loaded.  A
+        damaged table definition now becomes read-only.
+      </action>
+      <action dev="jahlborn" type="update">
+        Linked databases are no longer resolved automatically.  The default
+        LinkResolver now refuses to open linked databases.  Applications which
+        use linked databases must configure LinkResolver.UNRESTRICTED (the
+        previous behavior) or a resolver enforcing their own policy, or enable
+        the allowLinkResolution system property.  Note that this also affects
+        CustomLinkResolver, whose fallback for non-custom files now denies.
+      </action>
       <action dev="jahlborn" type="update">
         Removed RuntimeIOException in favor of built in UncheckedIOException.
       </action>      

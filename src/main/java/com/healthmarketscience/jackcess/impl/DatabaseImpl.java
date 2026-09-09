@@ -673,7 +673,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   @Override
   public LinkResolver getLinkResolver() {
-    return((_linkResolver != null) ? _linkResolver : LinkResolver.DEFAULT);
+    return((_linkResolver != null) ? _linkResolver : getDefaultLinkResolver());
   }
 
   @Override
@@ -2283,6 +2283,21 @@ public class DatabaseImpl implements Database, DateTimeContext
   {
     String prop = SystemConfig.getProperty(WRITE_BROKEN_INDEX_PROPERTY);
     return ((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop));
+  }
+
+  /**
+   * Returns the LinkResolver used when none has been configured on the
+   * Database.  This defaults to {@link LinkResolver#DEFAULT}, which refuses
+   * to open linked databases.  It can be changed to
+   * {@link LinkResolver#UNRESTRICTED} using the system property
+   * {@value com.healthmarketscience.jackcess.Database#ALLOW_LINK_RESOLUTION_PROPERTY}.
+   * @usage _advanced_method_
+   */
+  public static LinkResolver getDefaultLinkResolver()
+  {
+    String prop = SystemConfig.getProperty(ALLOW_LINK_RESOLUTION_PROPERTY);
+    return (((prop != null) && Boolean.TRUE.toString().equalsIgnoreCase(prop)) ?
+            LinkResolver.UNRESTRICTED : LinkResolver.DEFAULT);
   }
 
   /**

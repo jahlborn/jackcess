@@ -58,8 +58,15 @@ public class GeneralLegacyIndexCodes {
   static final byte CRAZY_CODE_START = (byte)0x80;
   static final byte CRAZY_CODE_1 = (byte)0x02;
   static final byte CRAZY_CODE_2 = (byte)0x03;
-  static final byte[] CRAZY_CODES_SUFFIX =
-    new byte[]{(byte)0xFF, (byte)0x02, (byte)0x80, (byte)0xFF, (byte)0x80};
+  // the suffix which follows the crazy codes is
+  // ff 02 [80 x numRepeats] ff [80 x numRepeats], where numRepeats grows with
+  // the number of chars on the crazy path, one repeat per (partial) group of
+  // CRAZY_CODES_PER_SUFFIX_REPEAT chars
+  static final byte CRAZY_CODES_SUFFIX_START = (byte)0xFF;
+  static final byte CRAZY_CODES_SUFFIX_MIDFIX = (byte)0x02;
+  static final byte CRAZY_CODES_SUFFIX_SEPARATOR = (byte)0xFF;
+  static final byte CRAZY_CODES_SUFFIX_REPEAT = (byte)0x80;
+  static final int CRAZY_CODES_PER_SUFFIX_REPEAT = 7;
   static final byte CRAZY_CODES_UNPRINT_SUFFIX = (byte)0xFF;
 
   // stash the codes in some resource files
@@ -819,6 +826,10 @@ public class GeneralLegacyIndexCodes {
    */
   private static void writeCrazyCodes(ByteStream crazyCodes, ByteStream bout)
   {
+    // the suffix length depends on how many chars took the crazy path, which
+    // is the code count before any trimming
+    int numCrazyChars = crazyCodes.getLength();
+
     // CRAZY_CODE_2 flags at the end are ignored, so ditch them
     trimExtraCodes(crazyCodes, CRAZY_CODE_2, CRAZY_CODE_2);
 
@@ -850,7 +861,32 @@ public class GeneralLegacyIndexCodes {
 
     // write crazy code suffix (note, we write this even if all the codes are
     // trimmed
-    bout.write(CRAZY_CODES_SUFFIX);
+    writeCrazyCodesSuffix(numCrazyChars, bout);
+  }
+
+  /**
+   * Encode the suffix which follows the crazy codes into the given byte
+   * stream.
+   */
+  private static void writeCrazyCodesSuffix(int numCrazyChars, ByteStream bout)
+  {
+    int numRepeats =
+      ((numCrazyChars + (CRAZY_CODES_PER_SUFFIX_REPEAT - 1)) /
+       CRAZY_CODES_PER_SUFFIX_REPEAT);
+
+    bout.write(CRAZY_CODES_SUFFIX_START);
+    bout.write(CRAZY_CODES_SUFFIX_MIDFIX);
+    writeCrazyCodesSuffixRepeats(numRepeats, bout);
+    bout.write(CRAZY_CODES_SUFFIX_SEPARATOR);
+    writeCrazyCodesSuffixRepeats(numRepeats, bout);
+  }
+
+  private static void writeCrazyCodesSuffixRepeats(int numRepeats,
+                                                   ByteStream bout)
+  {
+    for(int i = 0; i < numRepeats; ++i) {
+      bout.write(CRAZY_CODES_SUFFIX_REPEAT);
+    }
   }
 
   /**
