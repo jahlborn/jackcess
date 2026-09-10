@@ -5,6 +5,21 @@
   </properties>
   <body>
     <release version="4.0.12" date="TBD">
+      <action dev="jahlborn" type="update">
+        Determine the type of a complex column from the name of its "type"
+        table, which ms access reserves, rather than by counting the data
+        types of that table's columns.
+        one.
+      </action>
+      <action dev="jahlborn" type="update">
+        Find the foreign key column of a complex column's flat table from the
+        flag ms access sets on it, rather than by looking for the long column
+        which is not the autonumber.
+      </action>
+      <action dev="jahlborn" type="update">
+        Check the column name in MSysComplexColumns against the column being
+        loaded, which catches a bad complex id in a column definition.
+      </action>
       <action dev="jahlborn" type="fix">
         Truncate long text index entries the way ms access does, keeping the
         leading 508 bytes of the key and ending it with a digest of the bytes

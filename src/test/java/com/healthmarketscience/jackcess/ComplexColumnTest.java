@@ -29,6 +29,7 @@ import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
 import com.healthmarketscience.jackcess.impl.PageChannel;
 import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
@@ -343,6 +344,74 @@ public class ComplexColumnTest extends TestCase
           assertTrue(false);
         }
       }
+
+      db.close();
+    }
+  }
+
+  /**
+   * Every complex column's flat table marks its foreign key column with an ext
+   * flag, and that column is the one the complex info picks out.
+   */
+  public void testComplexValueForeignKeyColumn() throws Exception
+  {
+    for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
+      Database db = open(testDB);
+
+      Table t1 = db.getTable("Table1");
+      int numComplexCols = 0;
+
+      for(Column col : t1.getColumns()) {
+        if(col.getType() != DataType.COMPLEX_TYPE) {
+          continue;
+        }
+        ++numComplexCols;
+
+        ComplexColumnInfoImpl<?> complexInfo =
+          (ComplexColumnInfoImpl<?>)col.getComplexInfo();
+        Column fkCol = complexInfo.getComplexValueForeignKeyColumn();
+        Table flatTable = fkCol.getTable();
+
+        assertTrue(col.getName(), ((ColumnImpl)fkCol).isComplexValueForeignKey());
+
+        // and it is the only column of the flat table which is marked
+        for(Column flatCol : flatTable.getColumns()) {
+          assertEquals(flatCol.getName(),
+                       flatCol.getName().equals(fkCol.getName()),
+                       ((ColumnImpl)flatCol).isComplexValueForeignKey());
+        }
+
+        // the primary key is a different column, and is the autonumber
+        Column pkCol = complexInfo.getPrimaryKeyColumn();
+        assertFalse(pkCol.getName().equals(fkCol.getName()));
+        assertTrue(pkCol.isAutoNumber());
+      }
+
+      assertEquals(3, numComplexCols);
+
+      db.close();
+    }
+  }
+
+  /**
+   * The kind of complex column comes from the name of the type table, which
+   * access reserves.
+   */
+  public void testComplexTypeFromTypeTableName() throws Exception
+  {
+    for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
+      Database db = open(testDB);
+
+      Table t1 = db.getTable("Table1");
+
+      assertEquals(ComplexDataType.MULTI_VALUE,
+                   t1.getColumn("multi-value-data").getComplexInfo().getType());
+      assertEquals(ComplexDataType.ATTACHMENT,
+                   t1.getColumn("attach-data").getComplexInfo().getType());
+
+      Column verCol = t1.getColumn("append-memo-data").getVersionHistoryColumn();
+      assertEquals(ComplexDataType.VERSION_HISTORY,
+                   verCol.getComplexInfo().getType());
 
       db.close();
     }

@@ -44,6 +44,11 @@ public final class StringUtil
     return true;
   }
 
+  public static boolean startsWithIgnoreCase(String str, String prefix) {
+    return ((str != null) && (prefix != null) &&
+            str.regionMatches(true, 0, prefix, 0, prefix.length()));
+  }
+
   public static String trimToNull(String str) {
     if(str != null) {
       str = str.trim();
