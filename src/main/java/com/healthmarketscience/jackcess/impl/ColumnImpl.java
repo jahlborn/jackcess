@@ -166,6 +166,14 @@ public class ColumnImpl implements Column, DateTimeContext
   protected static final byte COMPRESSED_UNICODE_EXT_FLAG_MASK = (byte)0x01;
   private static final byte CALCULATED_EXT_FLAG_MASK = (byte)0xC0;
 
+  /**
+   * mask for the ext flag which marks the complex value foreign key column of
+   * a complex column's flat table.  Access refuses to open a table whose flat
+   * table does not carry this bit, so it can be relied upon.
+   * @usage _advanced_field_
+   */
+  public static final byte COMPLEX_FK_EXT_FLAG_MASK = (byte)0x08;
+
   static final byte NUMERIC_NEGATIVE_BYTE = (byte)0x80;
 
   /** the value for the "general" sort order */
@@ -216,6 +224,11 @@ public class ColumnImpl implements Column, DateTimeContext
   private final boolean _autoNumber;
   /** Whether or not the column is a calculated column */
   private final boolean _calculated;
+  /**
+   * Whether or not the column is the complex value foreign key of a complex
+   * column's flat table
+   */
+  private final boolean _complexValueForeignKey;
   /** Data type */
   private final DataType _type;
   /** Maximum column length */
@@ -260,6 +273,7 @@ public class ColumnImpl implements Column, DateTimeContext
     _variableLength = type.isVariableLength();
     _autoNumber = false;
     _calculated = false;
+    _complexValueForeignKey = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
     _columnIndex = colNumber;
@@ -288,6 +302,8 @@ public class ColumnImpl implements Column, DateTimeContext
     _autoNumber = ((args.flags &
                     (AUTO_NUMBER_FLAG_MASK | AUTO_NUMBER_GUID_FLAG_MASK)) != 0);
     _calculated = ((args.extFlags & CALCULATED_EXT_FLAG_MASK) != 0);
+    _complexValueForeignKey =
+      ((args.extFlags & COMPLEX_FK_EXT_FLAG_MASK) != 0);
 
     _autoNumberGenerator = createAutoNumberGenerator();
 
@@ -500,6 +516,16 @@ public class ColumnImpl implements Column, DateTimeContext
   @Override
   public boolean isCalculated() {
     return _calculated;
+  }
+
+  /**
+   * Returns {@code true} if this column is the complex value foreign key of a
+   * complex column's flat table, the column which points back at the row in
+   * the owning table.
+   * @usage _advanced_method_
+   */
+  public boolean isComplexValueForeignKey() {
+    return _complexValueForeignKey;
   }
 
   /**

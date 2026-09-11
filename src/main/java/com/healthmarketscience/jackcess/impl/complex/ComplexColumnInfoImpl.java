@@ -79,13 +79,24 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
     _typeCols = Collections.unmodifiableList(typeCols);
 
+    // access marks the complex value foreign key with an ext flag, which names
+    // it directly.  the autonumber test is the fallback for a flat table which
+    // does not carry the bit
     Column pkCol = null;
     Column complexValFkCol = null;
     for(Column col : otherCols) {
-      if(col.isAutoNumber()) {
-        pkCol = col;
-      } else if(col.getType() == DataType.LONG) {
+      if(((ColumnImpl)col).isComplexValueForeignKey()) {
         complexValFkCol = col;
+      } else if(col.isAutoNumber()) {
+        pkCol = col;
+      }
+    }
+
+    if(complexValFkCol == null) {
+      for(Column col : otherCols) {
+        if(!col.isAutoNumber() && (col.getType() == DataType.LONG)) {
+          complexValFkCol = col;
+        }
       }
     }
 

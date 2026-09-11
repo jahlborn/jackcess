@@ -49,6 +49,23 @@ public class ComplexColumnSupport
   private static final String COL_COMPLEX_TYPE_OBJECT_ID = "ComplexTypeObjectID";
   private static final String COL_TABLE_ID = "ConceptualTableID";
   private static final String COL_FLAT_TABLE_ID = "FlatTableID";
+  private static final String COL_COLUMN_NAME = "ColumnName";
+
+  /**
+   * Prefix of the type table of a multi-value or attachment complex column.
+   * These tables are shared, one per database, and ms access creates them
+   * whether or not anything uses them.
+   */
+  private static final String COMPLEX_TYPE_PREFIX = "MSysComplexType_";
+  /** the type table of every attachment complex column */
+  private static final String ATTACHMENT_TYPE_TABLE =
+    COMPLEX_TYPE_PREFIX + "Attachment";
+  /**
+   * Prefix of the type table of a version history complex column.  Unlike the
+   * others these are created per column, which is why the name carries a guid.
+   */
+  private static final String VERSION_HISTORY_TYPE_PREFIX =
+    "MSysComplexTypeVH_";
 
   private static final Set<DataType> MULTI_VALUE_TYPES = EnumSet.of(
       DataType.BYTE, DataType.INT, DataType.LONG, DataType.FLOAT,
@@ -82,6 +99,12 @@ public class ComplexColumnSupport
           "Found complex column for table " + tableId + " but expected table " +
           column.getTable().getTableDefPageNumber()));
     }
+    String colName = cColRow.getString(COL_COLUMN_NAME);
+    if((colName != null) && !colName.equalsIgnoreCase(column.getName())) {
+      throw new IOException(column.withErrorContext(
+          "Found complex column info for column " + colName +
+          " but expected column " + column.getName()));
+    }
     int flatTableId = cColRow.getInt(COL_FLAT_TABLE_ID);
     int typeObjId = cColRow.getInt(COL_COMPLEX_TYPE_OBJECT_ID);
 
@@ -94,8 +117,38 @@ public class ComplexColumnSupport
           + ") for complex column with id " + complexTypeId));
     }
 
-    // we inspect the structore of the "type table" to determine what kind of
-    // complex info we are dealing with
+    // access reserves the name of every "type table", so the name says which
+    // kind of complex column this is.  the attachment table has to be matched
+    // before the general prefix, which it also starts with
+    String typeName = typeObjTable.getName();
+
+    if(ATTACHMENT_TYPE_TABLE.equalsIgnoreCase(typeName)) {
+
+      return new AttachmentColumnInfoImpl(column, complexTypeId, typeObjTable,
+                                      flatTable);
+
+    } else if(StringUtil.startsWithIgnoreCase(
+                   typeName, VERSION_HISTORY_TYPE_PREFIX)) {
+
+      return new VersionHistoryColumnInfoImpl(column, complexTypeId, typeObjTable,
+                                          flatTable);
+
+    } else if(StringUtil.startsWithIgnoreCase(typeName, COMPLEX_TYPE_PREFIX)) {
+
+      // the name says multi-value, but the value still has to be of a type we
+      // can read
+      if(isMultiValueColumn(typeObjTable)) {
+        return new MultiValueColumnInfoImpl(column, complexTypeId, typeObjTable,
+                                        flatTable);
+      }
+
+      LOG.log(Logger.Level.WARNING, column.withErrorContext(
+                   "Unsupported multi-value column type " + typeName));
+      return new UnsupportedColumnInfoImpl(column, complexTypeId, typeObjTable,
+                                           flatTable);
+    }
+
+    // the name is not one we know, so fall back to the shape of the type table
     if(isMultiValueColumn(typeObjTable)) {
       return new MultiValueColumnInfoImpl(column, complexTypeId, typeObjTable,
                                       flatTable);
