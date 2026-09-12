@@ -124,8 +124,13 @@ public enum DataType {
   MEMO((byte) 0x0C, Types.LONGVARCHAR, null, true, true, 0, 0, 0x3FFFFFFF,
        JetFormat.TEXT_FIELD_UNIT_SIZE),
   /**
-   * Unknown data.  Handled like {@link #BINARY}.
+   * Not a column type.  The column factory in both the Jet and the ACE engine
+   * sends this code to its error path, so neither engine can create or read
+   * such a column.  The length limits given here have no basis.
+   *
+   * @deprecated this is not a data type and will be removed
    */
+  @Deprecated
   UNKNOWN_0D((byte) 0x0D, null, null, true, false, 0, 255, 255, 1),
   /**
    * Corresponds to a java {@link String} with the pattern
@@ -145,8 +150,12 @@ public enum DataType {
   NUMERIC((byte) 0x10, Types.NUMERIC, 17, true, false, 17, 17, 17,
           true, 0, 0, 28, 1, 18, 28, 1),
   /**
-   * Unknown data (seems to be an alternative {@link #OLE} type, used by
-   * MSysAccessObjects table).  Handled like a fixed length BINARY/OLE.
+   * "BigBinary" in the engine, a fixed length binary column longer than the
+   * 255 byte {@link #BINARY}.  Only the {@code Data} column of
+   * {@code MSysAccessObjects} uses it, which holds the forms, reports and VBA
+   * of the database.  Jet4 only, since Jet3 used {@link #BINARY} for that
+   * column and the ACE engine dropped the table.  Handled like a fixed length
+   * BINARY/OLE.
    */
   UNKNOWN_11((byte) 0x11, null, 3992),
   /**

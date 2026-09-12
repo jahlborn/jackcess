@@ -1,7 +1,5 @@
 Missing pieces:
 
-- fix long text index entries (for new general sort order)
-  * ???
 - implement table creation w/ complex columns
   * MEDIUM
 - implement table, column, index renaming

@@ -44,6 +44,10 @@ public class GeneralLegacyIndexCodes {
   // 01 01 01 <pos> 06  <code> )
   // <pos> = 7 + (4 * char_pos) | 0x8000 (as short)
   // <code> = char code
+  // in the engine, char_pos counts the two byte primary units written so far,
+  // a position in the primary output rather than a count of extra codes
+  // bytes.  the 06 is the type byte of the char's weight table entry and
+  // <code> is that entry's low byte
   static final int UNPRINTABLE_COUNT_START = 7;
   static final int UNPRINTABLE_COUNT_MULTIPLIER = 4;
   static final int UNPRINTABLE_OFFSET_FLAGS = 0x8000;
@@ -287,14 +291,37 @@ public class GeneralLegacyIndexCodes {
       those */
   private static final ThreadLocal<byte[]> SURROGATE_CHAR_BUF =
     ThreadLocal.withInitial(() -> new byte[2]);
-  private static final byte[] SURROGATE_EXTRA_BYTES = {0x3f};
 
-  private static abstract class SurrogateCharHandler extends CharHandler {
+  /**
+   * Supplies the handler for a surrogate char.  The surrogates are not in the
+   * codes files, and which handler a char takes depends on where it falls in
+   * the weight table, so the collations differ here.
+   */
+  interface SurrogateCharHandlers {
+    CharHandler get(char c);
+  }
+
+  /** the general legacy collation gives a surrogate no weight at all, so both
+      halves of a pair are ignored */
+  static final SurrogateCharHandlers IGNORED_SURROGATES =
+    c -> IGNORED_CHAR_HANDLER;
+
+  /**
+   * Base for the handlers of the surrogate chars, which are computed rather
+   * than read from the codes files.  Only the general collation weights them,
+   * so the general legacy collation has no subclass of this.
+   */
+  static abstract class SurrogateCharHandler extends CharHandler {
+    private final byte[] _extraBytes;
+
+    protected SurrogateCharHandler(byte extraByte) {
+      _extraBytes = new byte[]{extraByte};
+    }
     @Override public Type getType() {
       return Type.SURROGATE;
     }
     @Override public byte[] getExtraBytes() {
-      return SURROGATE_EXTRA_BYTES;
+      return _extraBytes;
     }
     protected static byte[] toInlineBytes(int idxC) {
       byte[] bytes = SURROGATE_CHAR_BUF.get();
@@ -303,43 +330,6 @@ public class GeneralLegacyIndexCodes {
       return bytes;
     }
   }
-
-  /** shared CharHandler instance for "high surrogate" chars (which are
-      computed) */
-  static final CharHandler HIGH_SURROGATE_CHAR_HANDLER =
-    new SurrogateCharHandler() {
-      @Override public byte[] getInlineBytes(char c) {
-        // the high sorrogate bytes seems to be computed from a fixed offset
-        int idxC = asUnsignedChar(c) - 10238;
-        return toInlineBytes(idxC);
-      }
-    };
-
-  /** shared CharHandler instance for "low surrogate" chars (which are
-      computed) */
-  static final CharHandler LOW_SURROGATE_CHAR_HANDLER =
-    new SurrogateCharHandler() {
-      @Override public byte[] getInlineBytes(char c) {
-        // the low surrogate bytes are computed with a specific value based in
-        // its location in a 1024 character block.
-        int charOffset = (asUnsignedChar(c) - 0xdc00) % 1024;
-
-        int idxOffset = 0;
-        if(charOffset < 8) {
-          idxOffset = 9992;
-        } else if(charOffset < (8 + 254)) {
-          idxOffset = 9990;
-        } else if(charOffset < (8 + 254 + 254)) {
-          idxOffset = 9988;
-        } else if(charOffset < (8 + 254 + 254 + 254)) {
-          idxOffset = 9986;
-        } else  {
-          idxOffset = 9984;
-        }
-        int idxC = asUnsignedChar(c) - idxOffset;
-        return toInlineBytes(idxC);
-      }
-    };
 
   static final char FIRST_CHAR = (char)0x0000;
   static final char LAST_CHAR = (char)0x00FF;
@@ -388,6 +378,18 @@ public class GeneralLegacyIndexCodes {
   static CharHandler[] loadCodes(String codesFilePath,
                                  char firstChar, char lastChar)
   {
+    return loadCodes(codesFilePath, firstChar, lastChar, IGNORED_SURROGATES);
+  }
+
+  /**
+   * Loads the CharHandlers for the given range of characters from the
+   * resource file with the given name, taking the handlers for the surrogate
+   * chars from the given source.
+   */
+  static CharHandler[] loadCodes(String codesFilePath,
+                                 char firstChar, char lastChar,
+                                 SurrogateCharHandlers surrogates)
+  {
     int numCodes = (asUnsignedChar(lastChar) - asUnsignedChar(firstChar)) + 1;
     CharHandler[] values = new CharHandler[numCodes];
 
@@ -408,12 +410,9 @@ public class GeneralLegacyIndexCodes {
       for(int i = start; i <= end; ++i) {
         char c = (char)i;
         CharHandler ch = null;
-        if(Character.isHighSurrogate(c)) {
+        if(Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
           // surrogate chars are not included in the codes files
-          ch = HIGH_SURROGATE_CHAR_HANDLER;
-        } else if(Character.isLowSurrogate(c)) {
-          // surrogate chars are not included in the codes files
-          ch = LOW_SURROGATE_CHAR_HANDLER;
+          ch = surrogates.get(c);
         } else {
           ch = parseCodes(prefixMap, reader.readLine());
         }

@@ -10,7 +10,7 @@
         and modernization.
       </action>
     </release>
-    <release version="4.0.12" date="TBD">
+    <release version="4.0.12" date="2026-09-12">
       <action dev="jahlborn" type="update">
         Determine the type of a complex column from the name of its "type"
         table, which ms access reserves, rather than by counting the data
@@ -54,6 +54,56 @@
         Check that the column counts and sizes in a table definition cover the
         columns which are actually defined when the table is loaded.  A
         damaged table definition now becomes read-only.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix the index entry written for a surrogate pair.  In the general sort
+        order the weight table gives the high surrogates four separate ranges,
+        one of which has no weight at all, and only the first was implemented,
+        so entries for characters above plane 1 did not match ms access.  In
+        the general legacy sort order ms access gives a surrogate no weight at
+        all, so every entry for a supplementary character was wrong there.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Write the level of an index page into its page header.  The level is
+        the depth of the page below the leaves of the index tree, 0 on a leaf
+        page and one more than its children on a node page.  Zero was written
+        on every page, so an index deep enough to need node pages claimed they
+        were all at the level of the leaves.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Identify a property map by its name and its block type together.  Ms
+        access keeps index properties in their own block and names an index
+        after its column by default, so a table commonly holds a column block
+        and an index block with the same name.  Keying on the name alone
+        reported the index properties as the column's, and rewriting the map
+        wrote one block instead of two, which discarded the index properties.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Keep the whole property flag byte when a property map is rewritten.
+        Ms access uses it as a bit field: bit 0 is the ddl flag and bit 7
+        tells the engine to store the value without running the handler bound
+        to the property name.  The byte was read as a boolean and written back
+        as 0 or 1, which invented the ddl flag on properties which did not
+        have it and dropped bit 7 from those which did.  PropertyMap.Property
+        isDdl now reports bit 0 rather than the whole byte.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Give a column added to an existing table an unused column id.  Ms
+        access assigns each column an id which it never reuses and never
+        renumbers, so a table which has had a column deleted has gaps in its
+        ids.  The physical column number was written as the id, which could
+        repeat an id already in use.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Mark an index over a complex column the way ms access does, with a 2
+        in the byte after the index flags.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Use the file formats which ms access stores uncompressed when writing
+        an attachment (jpg, jpeg, gif, png, zip, cab, docx, xlsx, xlsb and
+        pptx), and deflate everything else.  The previous list compressed png
+        and office files which ms access leaves alone, and left archives raw
+        which ms access deflates.
       </action>
       <action dev="jahlborn" type="update">
         Linked databases are no longer resolved automatically.  The default

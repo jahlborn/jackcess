@@ -85,6 +85,10 @@ public class IndexData {
   public static final byte REQUIRED_INDEX_FLAG = (byte)0x08;
   public static final byte UNKNOWN_INDEX_FLAG = (byte)0x80; // always seems to be set on indexes in access 2000+
 
+  /** the byte after the index flags, for an index over a complex column.
+      every other index has 0 there */
+  private static final byte COMPLEX_INDEX_MARKER = (byte)0x02;
+
   private static final int MAGIC_INDEX_NUMBER = 1923;
 
   private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
@@ -583,6 +587,7 @@ public class IndexData {
     // write column information (always MAX_COLUMNS entries)
     IndexBuilder idx = idxDataState.getFirstIndex();
     List<IndexBuilder.Column> idxColumns = idx.getColumns();
+    boolean isComplexIndex = false;
     for(int i = 0; i < MAX_COLUMNS; ++i) {
 
       short columnNumber = COLUMN_UNUSED;
@@ -596,6 +601,7 @@ public class IndexData {
 
         // find actual table column number
         columnNumber = creator.getColumnNumber(idxCol.getName());
+        isComplexIndex |= creator.isComplexColumn(idxCol.getName());
         if(columnNumber == COLUMN_UNUSED) {
           // should never happen as this is validated before
           throw new IllegalArgumentException(
@@ -617,12 +623,14 @@ public class IndexData {
                                        idxDataState.getRootPageNumber());
 
     buffer.putInt(idxDataState.getRootPageNumber());
-    buffer.putInt(0); // unknown
+    buffer.putInt(0); // 4 bytes access leaves as page residue
     buffer.put(idx.getFlags()); // index flags (unique, etc.)
-    ByteUtil.forward(buffer, 5); // unknown
+    buffer.put(isComplexIndex ? COMPLEX_INDEX_MARKER : 0);
+    ByteUtil.forward(buffer, 4); // constant zero
   }
 
   private static ByteBuffer createRootPageBuffer(TableMutator creator)
+    throws IOException
   {
     ByteBuffer rootPageBuffer = creator.getPageChannel().createPageBuffer();
     writeDataPage(rootPageBuffer, NEW_ROOT_DATA_PAGE,
@@ -1186,22 +1194,23 @@ public class IndexData {
    */
   protected static void writeDataPage(ByteBuffer buffer, DataPage dataPage,
                                       int tdefPageNumber, JetFormat format)
+    throws IOException
   {
     buffer.put(dataPage.isLeaf() ?
                PageTypes.INDEX_LEAF :
                PageTypes.INDEX_NODE );  //Page type
-    buffer.put((byte) 0x01);  //Unknown
+    buffer.put((byte) 0x01);  // constant 1 on every page type
     buffer.putShort((short) 0); //Free space
     buffer.putInt(tdefPageNumber);
 
-    buffer.putInt(0); //Unknown
+    buffer.putInt(0); // write stamp, see TableImpl.newDataPage
     buffer.putInt(dataPage.getPrevPageNumber()); //Prev page
     buffer.putInt(dataPage.getNextPageNumber()); //Next page
     buffer.putInt(dataPage.getChildTailPageNumber()); //ChildTail page
 
     byte[] entryPrefix = dataPage.getEntryPrefix();
     buffer.putShort((short) entryPrefix.length); // entry prefix byte count
-    buffer.put((byte) 0); //Unknown
+    buffer.put((byte)dataPage.getLevel()); // level in the index tree
 
     byte[] entryMask = new byte[format.SIZE_INDEX_ENTRY_MASK];
     // first entry includes the prefix
@@ -1236,6 +1245,7 @@ public class IndexData {
 
     boolean isLeaf = isLeafPage(buffer);
     dataPage.setLeaf(isLeaf);
+    dataPage.setLevel(readLevel(buffer, getFormat()));
 
     // note, "header" data is in LITTLE_ENDIAN format, entry data is in
     // BIG_ENDIAN format
@@ -1337,6 +1347,16 @@ public class IndexData {
     tmpEntryBuffer.flip();
 
     return tmpEntryBuffer;
+  }
+
+  /**
+   * Reads the level of an index page, 0 if the format does not record one.
+   */
+  private static int readLevel(ByteBuffer buffer, JetFormat format)
+  {
+    int levelOffset = format.OFFSET_INDEX_LEVEL;
+    return ((levelOffset >= 0) ? ByteUtil.getUnsignedByte(buffer, levelOffset)
+            : 0);
   }
 
   /**
@@ -2810,6 +2830,13 @@ public class IndexData {
     public abstract boolean isLeaf();
     public abstract void setLeaf(boolean isLeaf);
 
+    /**
+     * Returns the depth of this page below the leaves of the index tree, 0
+     * for a leaf page.
+     */
+    public abstract int getLevel() throws IOException;
+    public abstract void setLevel(int level);
+
     public abstract int getPrevPageNumber();
     public abstract void setPrevPageNumber(int pageNumber);
     public abstract int getNextPageNumber();
@@ -2890,6 +2917,11 @@ public class IndexData {
     public boolean isLeaf() { return true; }
     @Override
     public void setLeaf(boolean isLeaf) { }
+
+    @Override
+    public int getLevel() { return 0; }
+    @Override
+    public void setLevel(int level) { }
 
     @Override
     public int getPrevPageNumber() { return 0; }

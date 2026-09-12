@@ -117,6 +117,12 @@ public abstract class TableMutator extends DBMutator
 
   abstract short getColumnNumber(String colName);
 
+  /**
+   * @return {@code true} if the named column holds a complex type,
+   *         {@code false} if it does not or if there is no such column
+   */
+  abstract boolean isComplexColumn(String colName);
+
   public abstract ColumnState getColumnState(ColumnBuilder col);
 
   public abstract IndexDataState getIndexDataState(IndexBuilder idx);

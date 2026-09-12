@@ -63,7 +63,7 @@ public class PropertiesTest
     assertFalse(maps.isEmpty());
     assertEquals(2, maps.getSize());
 
-    assertSame(defMap, maps.get(PropertyMaps.DEFAULT_NAME));
+    assertSame(defMap, maps.getDefault());
     assertEquals(PropertyMaps.DEFAULT_NAME, defMap.getName());
     assertSame(colMap, maps.get("TESTCOL"));
     assertEquals("testcol", colMap.getName());

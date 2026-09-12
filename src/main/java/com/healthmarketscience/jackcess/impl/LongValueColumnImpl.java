@@ -296,9 +296,10 @@ class LongValueColumnImpl extends ColumnImpl
     def.putInt(lengthWithFlags);
 
     if(type == LONG_VALUE_TYPE_THIS_PAGE) {
-      // write long value inline
+      // write long value inline, which has neither a data pointer nor a
+      // write stamp
       def.putInt(0);
-      def.putInt(0);  //Unknown
+      def.putInt(0);
       def.put(value);
     } else {
 
@@ -381,7 +382,7 @@ class LongValueColumnImpl extends ColumnImpl
       // update def
       def.put(firstLvalRow);
       ByteUtil.put3ByteInt(def, firstLvalPageNum);
-      def.putInt(0);  //Unknown
+      def.putInt(0);  // write stamp, see TableImpl.newDataPage
 
     }
 
@@ -395,13 +396,13 @@ class LongValueColumnImpl extends ColumnImpl
   private void writeLongValueHeader(ByteBuffer lvalPage)
   {
     lvalPage.put(PageTypes.DATA); //Page type
-    lvalPage.put((byte) 1); //Unknown
+    lvalPage.put((byte) 1); // constant 1 on every page type
     lvalPage.putShort((short)getFormat().DATA_PAGE_INITIAL_FREE_SPACE); //Free space
     lvalPage.put((byte) 'L');
     lvalPage.put((byte) 'V');
     lvalPage.put((byte) 'A');
     lvalPage.put((byte) 'L');
-    lvalPage.putInt(0); //unknown
+    lvalPage.putInt(0); // write stamp, see TableImpl.newDataPage
     lvalPage.putShort((short)0); // num rows in page
   }
 
