@@ -1,0 +1,503 @@
+/*
+Copyright (c) 2011 James Ahlborn
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package com.healthmarketscience.jackcess.impl.complex;
+
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
+
+import com.healthmarketscience.jackcess.Column;
+import com.healthmarketscience.jackcess.Row;
+import com.healthmarketscience.jackcess.Table;
+import com.healthmarketscience.jackcess.complex.Attachment;
+import com.healthmarketscience.jackcess.complex.AttachmentColumnInfo;
+import com.healthmarketscience.jackcess.complex.ComplexDataType;
+import com.healthmarketscience.jackcess.complex.ComplexValue;
+import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
+import com.healthmarketscience.jackcess.impl.ByteUtil;
+import com.healthmarketscience.jackcess.impl.ColumnImpl;
+import com.healthmarketscience.jackcess.impl.JetFormat;
+import com.healthmarketscience.jackcess.impl.PageChannel;
+
+
+/**
+ * Complex column info for a column holding 0 or more attachments per row.
+ *
+ * @author James Ahlborn
+ */
+public class AttachmentColumnInfoImpl extends ComplexColumnInfoImpl<Attachment>
+  implements AttachmentColumnInfo
+{
+  /** the file formats which Access stores raw.  it deflates everything else,
+      including formats which are compressed already, such as gz and mp3 */
+  private static final Set<String> COMPRESSED_FORMATS = new HashSet<>(
+      Arrays.asList("jpg", "jpeg", "gif", "png", "zip", "cab", "docx",
+                    "xlsx", "xlsb", "pptx"));
+
+  private static final String FILE_NAME_COL_NAME = "FileName";
+  private static final String FILE_TYPE_COL_NAME = "FileType";
+
+  private static final int DATA_TYPE_RAW = 0;
+  private static final int DATA_TYPE_COMPRESSED = 1;
+
+  /** the second int of the content header.  Access always writes a 1 */
+  private static final int CONTENT_HEADER_FLAG = 1;
+  private static final int WRAPPER_HEADER_SIZE = 8;
+  private static final int CONTENT_HEADER_SIZE = 12;
+
+  private final Column _fileUrlCol;
+  private final Column _fileNameCol;
+  private final Column _fileTypeCol;
+  private final Column _fileDataCol;
+  private final Column _fileTimeStampCol;
+  private final Column _fileFlagsCol;
+
+  public AttachmentColumnInfoImpl(Column column, int complexId,
+                                  Table typeObjTable, Table flatTable)
+    throws IOException
+  {
+    super(column, complexId, typeObjTable, flatTable);
+
+    Column fileUrlCol = null;
+    Column fileNameCol = null;
+    Column fileTypeCol = null;
+    Column fileDataCol = null;
+    Column fileTimeStampCol = null;
+    Column fileFlagsCol = null;
+
+    for(Column col : getTypeColumns()) {
+      switch(col.getType()) {
+      case TEXT:
+        if(FILE_NAME_COL_NAME.equalsIgnoreCase(col.getName())) {
+          fileNameCol = col;
+        } else if(FILE_TYPE_COL_NAME.equalsIgnoreCase(col.getName())) {
+          fileTypeCol = col;
+        } else {
+          // if names don't match, assign in order: name, type
+          if(fileNameCol == null) {
+            fileNameCol = col;
+          } else if(fileTypeCol == null) {
+            fileTypeCol = col;
+          }
+        }
+        break;
+      case LONG:
+        fileFlagsCol = col;
+        break;
+      case SHORT_DATE_TIME:
+        fileTimeStampCol = col;
+        break;
+      case OLE:
+        fileDataCol = col;
+        break;
+      case MEMO:
+        fileUrlCol = col;
+        break;
+      default:
+        // ignore
+      }
+    }
+
+    _fileUrlCol = fileUrlCol;
+    _fileNameCol = fileNameCol;
+    _fileTypeCol = fileTypeCol;
+    _fileDataCol = fileDataCol;
+    _fileTimeStampCol = fileTimeStampCol;
+    _fileFlagsCol = fileFlagsCol;
+  }
+
+  public Column getFileUrlColumn() {
+    return _fileUrlCol;
+  }
+
+  public Column getFileNameColumn() {
+    return _fileNameCol;
+  }
+
+  public Column getFileTypeColumn() {
+    return _fileTypeCol;
+  }
+
+  public Column getFileDataColumn() {
+    return _fileDataCol;
+  }
+
+  public Column getFileTimeStampColumn() {
+    return _fileTimeStampCol;
+  }
+
+  public Column getFileFlagsColumn() {
+    return _fileFlagsCol;
+  }
+
+  @Override
+  public ComplexDataType getType()
+  {
+    return ComplexDataType.ATTACHMENT;
+  }
+
+  @Override
+  protected AttachmentImpl toValue(ComplexValueForeignKey complexValueFk,
+                                   Row rawValue) {
+    ComplexValue.Id id = getValueId(rawValue);
+    String url = (String)getFileUrlColumn().getRowValue(rawValue);
+    String name = (String)getFileNameColumn().getRowValue(rawValue);
+    String type = (String)getFileTypeColumn().getRowValue(rawValue);
+    Integer flags = (Integer)getFileFlagsColumn().getRowValue(rawValue);
+    Object ts = getFileTimeStampColumn().getRowValue(rawValue);
+    byte[] data = (byte[])getFileDataColumn().getRowValue(rawValue);
+
+    return new AttachmentImpl(id, complexValueFk, url, name, type, null,
+                              ts, flags, data);
+  }
+
+  @Override
+  protected Object[] asRow(Object[] row, Attachment attachment)
+    throws IOException
+  {
+    super.asRow(row, attachment);
+    getFileUrlColumn().setRowValue(row, attachment.getFileUrl());
+    getFileNameColumn().setRowValue(row, attachment.getFileName());
+    getFileTypeColumn().setRowValue(row, attachment.getFileType());
+    getFileFlagsColumn().setRowValue(row, attachment.getFileFlags());
+    getFileTimeStampColumn().setRowValue(row, attachment.getFileTimeStampObject());
+    getFileDataColumn().setRowValue(row, attachment.getEncodedFileData());
+    return row;
+  }
+
+  public static Attachment newAttachment(byte[] data) {
+    return newAttachment(INVALID_FK, data);
+  }
+
+  public static Attachment newAttachment(ComplexValueForeignKey complexValueFk,
+                                         byte[] data) {
+    return newAttachment(complexValueFk, null, null, null, data, null, null);
+  }
+
+  public static Attachment newAttachment(
+      String url, String name, String type, byte[] data,
+      Object timeStamp, Integer flags)
+  {
+    return newAttachment(INVALID_FK, url, name, type, data,
+                         timeStamp, flags);
+  }
+
+  public static Attachment newAttachment(
+      ComplexValueForeignKey complexValueFk, String url, String name,
+      String type, byte[] data, Object timeStamp, Integer flags)
+  {
+    return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
+                              data, timeStamp, flags, null);
+  }
+
+  public static Attachment newEncodedAttachment(byte[] encodedData) {
+    return newEncodedAttachment(INVALID_FK, encodedData);
+  }
+
+  public static Attachment newEncodedAttachment(
+      ComplexValueForeignKey complexValueFk, byte[] encodedData) {
+    return newEncodedAttachment(complexValueFk, null, null, null, encodedData,
+                                null, null);
+  }
+
+  public static Attachment newEncodedAttachment(
+      String url, String name, String type, byte[] encodedData,
+      Object timeStamp, Integer flags)
+  {
+    return newEncodedAttachment(INVALID_FK, url, name, type,
+                                encodedData, timeStamp, flags);
+  }
+
+  public static Attachment newEncodedAttachment(
+      ComplexValueForeignKey complexValueFk, String url, String name,
+      String type, byte[] encodedData, Object timeStamp, Integer flags)
+  {
+    return new AttachmentImpl(INVALID_ID, complexValueFk, url, name, type,
+                              null, timeStamp, flags, encodedData);
+  }
+
+
+  @SuppressWarnings("deprecation")
+  private static class AttachmentImpl extends ComplexValueImpl
+    implements Attachment
+  {
+    private String _url;
+    private String _name;
+    private String _type;
+    private byte[] _data;
+    private Object _timeStamp;
+    private Integer _flags;
+    private byte[] _encodedData;
+
+    private AttachmentImpl(Id id, ComplexValueForeignKey complexValueFk,
+                           String url, String name, String type, byte[] data,
+                           Object timeStamp, Integer flags, byte[] encodedData)
+    {
+      super(id, complexValueFk);
+      _url = url;
+      _name = name;
+      _type = type;
+      _data = data;
+      _timeStamp = timeStamp;
+      _flags = flags;
+      _encodedData = encodedData;
+    }
+
+    @Override
+    public byte[] getFileData() throws IOException {
+      if((_data == null) && (_encodedData != null)) {
+        _data = decodeData();
+      }
+      return _data;
+    }
+
+    @Override
+    public void setFileData(byte[] data) {
+      _data = data;
+      _encodedData = null;
+    }
+
+    @Override
+    public byte[] getEncodedFileData() throws IOException {
+      if((_encodedData == null) && (_data != null)) {
+        _encodedData = encodeData();
+      }
+      return _encodedData;
+    }
+
+    @Override
+    public void setEncodedFileData(byte[] data) {
+      _encodedData = data;
+      _data = null;
+    }
+
+    @Override
+    public String getFileName() {
+      return _name;
+    }
+
+    @Override
+    public void setFileName(String fileName) {
+      _name = fileName;
+    }
+
+    @Override
+    public String getFileUrl() {
+      return _url;
+    }
+
+    @Override
+    public void setFileUrl(String fileUrl) {
+      _url = fileUrl;
+    }
+
+    @Override
+    public String getFileType() {
+      return _type;
+    }
+
+    @Override
+    public void setFileType(String fileType) {
+      _type = fileType;
+    }
+
+    @Override
+    public Date getFileTimeStamp() {
+      return (Date)_timeStamp;
+    }
+
+    @Override
+    public void setFileTimeStamp(Date fileTimeStamp) {
+      _timeStamp = fileTimeStamp;
+    }
+
+    @Override
+    public LocalDateTime getFileLocalTimeStamp() {
+      return (LocalDateTime)_timeStamp;
+    }
+
+    @Override
+    public void setFileLocalTimeStamp(LocalDateTime fileTimeStamp) {
+      _timeStamp = fileTimeStamp;
+    }
+
+    @Override
+    public Object getFileTimeStampObject() {
+      return _timeStamp;
+    }
+
+    @Override
+    public Integer getFileFlags() {
+      return _flags;
+    }
+
+    @Override
+    public void setFileFlags(Integer fileFlags) {
+      _flags = fileFlags;
+    }
+
+    @Override
+    public void update() throws IOException {
+      getComplexValueForeignKey().updateAttachment(this);
+    }
+
+    @Override
+    public void delete() throws IOException {
+      getComplexValueForeignKey().deleteAttachment(this);
+    }
+
+    @Override
+    public String toString() {
+
+      String dataStr = null;
+      try {
+        dataStr = ByteUtil.toHexString(getFileData());
+      } catch(IOException e) {
+        dataStr = e.toString();
+      }
+
+      return "Attachment(" + getComplexValueForeignKey() + "," + getId() +
+        ") " + getFileUrl() + ", " + getFileName() + ", " + getFileType()
+        + ", " + getFileTimeStampObject() + ", " + getFileFlags()  + ", " +
+        dataStr;
+    }
+
+    /**
+     * Decodes the raw attachment file data to get the _actual_ content.
+     */
+    private byte[] decodeData() throws IOException {
+
+      if(_encodedData.length < WRAPPER_HEADER_SIZE) {
+        // nothing we can do
+        throw new IOException("Unknown encoded attachment data format");
+      }
+
+      // read initial header info
+      ByteBuffer bb = PageChannel.wrap(_encodedData);
+      int typeFlag = bb.getInt();
+      int dataLen = bb.getInt();
+
+      DataInputStream contentStream = null;
+      try {
+        InputStream bin = new ByteArrayInputStream(
+            _encodedData, WRAPPER_HEADER_SIZE,
+            _encodedData.length - WRAPPER_HEADER_SIZE);
+
+        if(typeFlag == DATA_TYPE_RAW) {
+          // nothing else to do
+        } else if(typeFlag == DATA_TYPE_COMPRESSED) {
+          // actual content is deflate compressed
+          bin = new InflaterInputStream(bin);
+        } else {
+          throw new IOException(
+              "Unknown encoded attachment data type " + typeFlag);
+        }
+
+        contentStream = new DataInputStream(bin);
+
+        // the content header is the header length, the CONTENT_HEADER_FLAG,
+        // the character count of the string which follows, and then the
+        // "file extension" of the data with a null terminator.  the extension
+        // is already a separate field in the attachment table, so skip it all
+        byte[] tmpBytes = new byte[4];
+        contentStream.readFully(tmpBytes);
+        int headerLen = PageChannel.wrap(tmpBytes).getInt();
+        ByteUtil.skipFully(contentStream, headerLen - 4);
+
+        // calculate actual data length and read it (note, header length
+        // includes the bytes for the length)
+        tmpBytes = new byte[dataLen - headerLen];
+        contentStream.readFully(tmpBytes);
+
+        return tmpBytes;
+
+      } finally {
+        ByteUtil.closeQuietly(contentStream);
+      }
+    }
+
+    /**
+     * Encodes the actual attachment file data to get the raw, stored format.
+     */
+    private byte[] encodeData() throws IOException {
+
+      // possibly compress data based on file type
+      String type = ((_type != null) ? _type.toLowerCase() : "");
+      boolean shouldCompress = !COMPRESSED_FORMATS.contains(type);
+
+      // encode extension, which ends w/ a null byte
+      type += '\0';
+      ByteBuffer typeBytes = ColumnImpl.encodeUncompressedText(
+          type, JetFormat.VERSION_12.CHARSET);
+      int headerLen = typeBytes.remaining() + CONTENT_HEADER_SIZE;
+
+      int dataLen = _data.length;
+      ByteUtil.ByteStream dataStream = new ByteUtil.ByteStream(
+          WRAPPER_HEADER_SIZE + headerLen + dataLen);
+
+      // write the wrapper header info
+      ByteBuffer bb = PageChannel.wrap(dataStream.getBytes());
+      bb.putInt(shouldCompress ? DATA_TYPE_COMPRESSED : DATA_TYPE_RAW);
+      bb.putInt(dataLen + headerLen);
+      dataStream.skip(WRAPPER_HEADER_SIZE);
+
+      OutputStream contentStream = dataStream;
+      Deflater deflater = null;
+      try {
+
+        if(shouldCompress) {
+          contentStream = new DeflaterOutputStream(
+              contentStream, deflater = new Deflater(3));
+        }
+
+        // write the header w/ the file extension
+        byte[] tmpBytes = new byte[CONTENT_HEADER_SIZE];
+        PageChannel.wrap(tmpBytes)
+          .putInt(headerLen)
+          .putInt(CONTENT_HEADER_FLAG)
+          .putInt(type.length());
+        contentStream.write(tmpBytes);
+        contentStream.write(typeBytes.array(), 0, typeBytes.remaining());
+
+        // write the _actual_ contents
+        contentStream.write(_data);
+        contentStream.close();
+        contentStream = null;
+
+        return dataStream.toByteArray();
+
+      } finally {
+        ByteUtil.closeQuietly(contentStream);
+        if(deflater != null) {
+          deflater.end();
+        }
+      }
+    }
+  }
+
+}

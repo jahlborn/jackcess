@@ -1,0 +1,375 @@
+<?xml version="1.0"?>
+
+<document>
+  <properties>
+    <author email="jahlborn@users.sf.net">James Ahlborn</author>
+    <title>Jackcess Cookbook</title>
+  </properties>
+  <body>
+    <section name="Introduction">
+      <p>
+        This cookbook will attempt to familiarize the reader with the various
+        nooks and crannies of the Jackcess 2.x API.  The API is large due to
+        the large feature-set that an Access Database provides, so this
+        cookbook will by no means be exhaustive.  However, this will hopefully
+        give the reader enough useful building blocks such that the rest of
+        the API can be discovered and utilized as necessary.
+      </p>
+      <p>
+        This cookbook is a cross between a tutorial and a reference, so the
+        reader should be able to skip to relevant sections without needing to
+        read the entire preceding text.
+      </p>
+      <p>
+        While this cookbook strives to present best practices for both the
+        Jackcess API and Java programming in general, at times, the code may
+        be trimmed for the sake of brevity.  For the same reason, pseudo-code
+        may be used in places where the actual code is not relevant to the
+        example.
+      </p>
+<macro name="toc">
+  <param name="section" value="0"/>
+  <param name="fromDepth" value="0"/>
+  <param name="toDepth" value="4"/>
+</macro>
+    </section>
+
+    <section name="The Basics">
+      <subsection name="Opening an existing Database">
+        <p>
+          So you have an Access Database and you want to do something with it.
+          You want to use Java, and you may not even be running on Windows (or
+          you tried the JDBC/ODBC bridge and it failed miserably).  Through
+          some Google-fu, you landed here at the Jackcess project.  Now what?
+        </p>
+        <p>
+          Well, the first thing you need to do is open the database.  The
+          entry point class in the Jackcess API is, surprisingly enough, the
+          <a href="apidocs/com/healthmarketscience/jackcess/Database.html">Database</a> class.
+        </p>
+        <source>
+  Database db = DatabaseBuilder.open(new File("mydb.mdb"));
+</source>
+        <p>
+          That's it, now you have a Database instance (maybe this isn't that
+          difficult after all).
+        </p>
+        <p>
+          Important note, <i>always</i> make sure you close a Database
+          instance when you are finished with it (preferably in a finally
+          block like any other important resource).  Failure to close the
+          Database instance could result in data loss or database corruption.
+        </p>
+      </subsection>
+      <subsection name="Reading a Table">
+        <p>
+          Okay, so you have a Database instance, now what?  Since pretty much
+          everything in an Access database lives in a table, grabbing a <a href="apidocs/com/healthmarketscience/jackcess/Table.html">Table</a>
+          would be the logical next step.
+        </p>
+        <source>
+  Table table = db.getTable("Test");
+</source>
+        <p>
+          Where's the data?  While a <a
+          href="apidocs/com/healthmarketscience/jackcess/Cursor.html">Cursor</a>
+          is the best way to interact with the data in a Table, for the sake
+          of simplicity when just getting started, we will use the simplified
+          iteration provided by the Table class itself.  When reading row
+          data, it is generally provided as a <a
+          href="apidocs/com/healthmarketscience/jackcess/Row.html">Row</a> where the keys are the column
+          names and the values are the strongly typed column values.
+        </p>
+        <source>
+  for(Row row : table) {
+    System.out.prinln("Look ma, a row: " + row);
+  }
+</source>
+        <p>
+          So, what's in a row?  Well, let's assume your "Test" table is
+          defined in the following way in Access:
+        </p>
+        <div class="indented">
+          <table border="1">
+            <tr>
+              <th>Field Name</th><th>Data Type</th>
+            </tr>
+            <tr>
+              <td>ID</td><td>AutoNumber (Long Integer)</td>
+            </tr>
+            <tr>
+              <td>Name</td><td>Text</td>
+            </tr>
+            <tr>
+              <td>Salary</td><td>Currency</td>
+            </tr>
+            <tr>
+              <td>StartDate</td><td>Date/Time</td>
+            </tr>
+          </table>
+        </div>
+        <p>
+          Then, given a row of data, we could inspect the various <a href="apidocs/com/healthmarketscience/jackcess/Column.html">Columns</a> and
+          their values like so:
+        </p>
+<source>
+  Row row = ...;
+  for(Column column : table.getColumns()) {
+    String columnName = column.getName();
+    Object value = row.get(columnName);
+    System.out.println("Column " + columnName + "(" + column.getType() + "): "
+                       + value + " (" + value.getClass() + ")");
+  }
+
+  // Example Output:
+  //
+  // Column ID(LONG): 27 (java.lang.Integer)
+  // Column Name(TEXT): Bob Smith (java.lang.String)
+  // Column Salary(MONEY): 50000.00 (java.math.BigDecimal)
+  // Column StartDate(SHORT_DATE_TIME): Mon Jan 05 09:00:00 EDT 2010 (java.util.Date)
+</source>
+        <p>
+          As you can see in this example (and as previously mentioned), the
+          row values are <i>strongly typed</i> Java objects.  In Jackcess, the
+          column types are represented by a Java enum named <a href="apidocs/com/healthmarketscience/jackcess/DataType.html">DataType</a>.
+          The DataType javadoc details the Java types used to return row
+          values as well as the value types which are acceptable inputs for
+          new rows (more on this later).  One other thing to note in this
+          example is that the column names in the row Map are <i>case
+          sensitive</i> strings (although other parts of the API strive to
+          mimic Access's love of case-insensitivity).
+        </p>
+      </subsection>
+      <subsection name="Adding a Row">
+        <p>
+          Awesome, so now we can read what's already there.  Of course, lots
+          of tools can do that.  Now we want to write some data.
+        </p>
+        <p>
+          The main hurdle to writing data is figuring out how to get the data
+          in the right columns.  The primary method for adding a row to a
+          Table is the <a href="apidocs/com/healthmarketscience/jackcess/Table.html#addRow(java.lang.Object...)">addRow(Object...)</a>
+          method.  This method should be called with the appropriate, strongly
+          typed Java object values <i>in the order of the Columns of the
+          Table</i>.  The order of the Columns on the Table instance <i>may
+          not be the same as the display order of the columns in Access</i>.
+          (Re-read those last two sentences again, as it will save you a lot of
+          grief moving forward).
+        </p>
+        <p>
+          Additionally, when adding rows, we never provide a value for any
+          "auto" columns.  You can provide a value (any value in fact), but it
+          will be ignored (in the example below, we use a useful constant which
+          makes the intent clear to any future developer).
+        </p>
+        <p>
+          So, assuming that the order of the Columns on the Table instance is
+          "ID", "Name", "Salary", and "StartDate", this is how we would add a
+          row to the "Test" table:
+        </p>
+<source>
+  String name = "bob";
+  BigDecimal salary = new BigDecimal("1000.00");
+  Date startDate = new Date();
+
+  table.addRow(Column.AUTO_NUMBER, name, salary, startDate);
+</source>
+        <p>
+          There you have it, a new row in your Access database.
+        </p>
+      </subsection>
+    </section>
+
+    <section name="Starting from Scratch">
+      <subsection name="Creating a new Database">
+        <p>
+          While updating existing content is nice, and necessary, many times
+          we want to create an entire new Database.  While Jackcess doesn't
+          support everything you may need when creating a new database, it
+          does support a wide range of functionality, and adds more all the
+          time.  (If you started using Jackcess a while ago, you should
+          definitely keep tabs on the <a href="changes-report.html">release notes</a>, as your knowledge of what
+          is possible may be out of date).
+        </p>
+        <p>
+          As of version 2.1.5, Jackcess supports:
+        </p>
+        <ul>
+          <li>Creating databases for Access all versions 2000-2019</li>
+          <li>Creating columns for all simple data types</li>
+          <li>Creating tables with single-table Indexes</li>
+          <li>Creating tables with (index backed) foreign-key constraints
+              (i.e. relationships with integrity enforcement enabled)</li>
+        </ul>
+        <p>
+          Some notable gaps:
+        </p>
+        <ul>
+          <li>Cannot currently create tables with "complex" columns
+              (attachment, multi-value, versioned memo)</li>
+        </ul>
+        <p>
+          As long as your needs fall into the aforementioned constraints (or
+          if you can fake it), then let's get started!
+        </p>
+        <p>
+          The first thing we need to choose is the desired <a href="apidocs/com/healthmarketscience/jackcess/Database.FileFormat.html">FileFormat</a>
+          of the new Database.  Armed with that information, we can start
+          putting the pieces together using the appropriate builder classes.
+          Notice that the result of creating the new Database is an open
+          Database instance.
+        </p>
+<source>
+  File file = new File("test.mdb");
+  Database db = new DatabaseBuilder(file)
+    .setFileFormat(Database.FileFormat.V2000)
+    .create();
+</source>
+      </subsection>
+      <subsection name="Creating a Table">
+        <p>
+          An empty Database isn't very useful, of course, so we probably want
+          to add a Table or two.  The following code will create the table
+          that we have used in the above examples.  Notice that, like Database
+          creation, the result of the Table creation is an open Table
+          instance.
+        </p>
+<source>
+  Table table = new TableBuilder("Test")
+    .addColumn(new ColumnBuilder("ID", DataType.LONG)
+               .setAutoNumber(true))
+    .addColumn(new ColumnBuilder("Name", DataType.TEXT))
+    .addColumn(new ColumnBuilder("Salary", DataType.MONEY))
+    .addColumn(new ColumnBuilder("StartDate", DataType.SHORT_DATE_TIME))
+    .toTable(db);
+</source>
+        <p>
+          That is a very simple Table.  In the real world, we often need Indexes
+          to speed up lookups and enforce uniqueness constraints.  Adding the
+          following to the previous example will make the "ID" column a primary
+          key and enable speedier lookups on the "Name" column.
+        </p>
+<source>
+  // ... new TableBuilder( ...
+    .addIndex(new IndexBuilder(IndexBuilder.PRIMARY_KEY_NAME)
+              .addColumns("ID").setPrimaryKey())
+    .addIndex(new IndexBuilder("NameIndex")
+              .addColumns("Name"))
+  // ... .toTable( ...
+</source>
+        <p>
+          Don't forget to close the Database when you are finished building it
+          and now you have a fresh, new Database on which to test some more
+          recipes.
+        </p>
+      </subsection>
+    </section>
+
+    <section name="Finding Stuff">
+      <subsection name="Cursors, what are they good for?">
+        <p>
+          Actually, a lot!  Now that we've covered the basics, let's move into
+          some intermediate level topics.  The first and foremost is the use
+          of the <a
+          href="apidocs/com/healthmarketscience/jackcess/Cursor.html">Cursor</a>.
+          As mentioned earlier, Cursors are the best way to interact with the
+          data in a Table (beyond trivial data entry).  If you are familiar
+          with databases in general, then cursors should be a familiar idea.
+          A Cursor is, in essence, the combination of a Table and a "bookmark"
+          pointing to a Row of data in the Table.  The various Cursor
+          operations either move the bookmark around within the Table or
+          provide read/write operations on the current Row.  While caching and
+          re-using Cursor instances will provide benefits with respect to both
+          speed and memory, they are "lightweight" enough to be used in an
+          on-demand capacity.
+        </p>
+        <p>
+          The simplest case involves a normal, un-indexed cursor for a given
+          table. The cursor will traverse the table in no particular row order
+          but it can still be used to find rows where column(s) match
+          specified values. For example...
+        </p>
+<source>
+  Table table = db.getTable("Test");
+  Cursor cursor = CursorBuilder.createCursor(table);
+  boolean found = cursor.findFirstRow(Collections.singletonMap("ID", 1));
+  if (found) {
+      System.out.println(String.format("Row found: Name = '%s'.",
+                                     cursor.getCurrentRowValue(table.getColumn("Name"))));
+  } else {
+      System.out.println("No matching row was found.");
+  }
+</source>
+        <p>
+          ...will search for the row where <code>"ID" == 1</code>. Since the
+          cursor does not use an index it will perform the equivalent of a
+          "table scan" while searching.
+        </p>
+        <p>
+          Cursors can also use an existing index on the table to (1) control
+          the order in which they traverse the table, and (2) find rows
+          faster. Since we defined the "ID" column as our Primary Key we can
+          also perform the above search like this...
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  IndexCursor cursor = CursorBuilder.createCursor(table.getPrimaryKeyIndex());
+  boolean found = cursor.findFirstRow(Collections.singletonMap("ID", 1));
+  // ... proceed as in previous example ...
+</source>
+        <p>
+            ...or by using the <code>CursorBuilder.findRowByPrimaryKey</code>
+            "convenience method" like this:
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  Row row = CursorBuilder.findRowByPrimaryKey(table, 1);
+  if (row != null) {
+      System.out.println(String.format("Row found: Name = '%s'.",
+                                     row.get("Name")));
+  } else {
+      System.out.println("No matching row was found.");
+  }
+</source>
+        <p>
+          Either of the two previous approaches will use the Primary Key index
+          to locate the row where <code>"ID" == 1</code>, potentially making
+          it much faster to execute.
+        </p>
+        <p>  
+          As mentioned above, an index-backed cursor will also retrieve rows
+          in index order, so if we wanted to retrieve all of the rows in
+          alphabetical order by <code>"Name"</code> we could use the
+          "NameIndex" index to create a cursor and then iterate through the
+          rows like this:
+        </p>
+<source>     
+  Table table = db.getTable("Test");
+  IndexCursor cursor = CursorBuilder.createCursor(table.getIndex("NameIndex"));
+  for(Row row : cursor) {
+    System.out.println(String.format("ID=%d, Name='%s'.",
+                                     row.get("ID"), row.get("Name")));
+  }
+</source>
+        <p>     
+          Or, if you wanted to iterate through all of the rows where
+          <code>"Name" == 'bob'</code> you could do:
+        </p>
+<source>     
+  Table table = db.getTable("Test");                                                                        
+  IndexCursor cursor = CursorBuilder.createCursor(table.getIndex("NameIndex"));                             
+  for(Row row : cursor.newEntryIterable("bob")) {
+    System.out.println(String.format("ID=%d, Name='%s'.", row.get("ID"), row.get("Name")));
+  }
+</source>
+      </subsection>
+    </section>
+
+    <!-- <section name="Miscellaneous Examples"> -->
+    <!--   <p> -->
+    <!--     FIXME, writeme -->
+    <!--   </p> -->
+    <!-- </section> -->
+
+  </body>
+</document>

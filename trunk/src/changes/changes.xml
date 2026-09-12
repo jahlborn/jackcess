@@ -1,0 +1,1233 @@
+<document>
+  <properties>
+    <title>Release notes</title>
+    <author email="javajedi@users.sf.net">Tim McCune</author>
+  </properties>
+  <body>
+    <release version="4.0.12" date="2026-09-12">
+      <action dev="jahlborn" type="update">
+        Determine the type of a complex column from the name of its "type"
+        table, which ms access reserves, rather than by counting the data
+        types of that table's columns.
+        one.
+      </action>
+      <action dev="jahlborn" type="update">
+        Find the foreign key column of a complex column's flat table from the
+        flag ms access sets on it, rather than by looking for the long column
+        which is not the autonumber.
+      </action>
+      <action dev="jahlborn" type="update">
+        Check the column name in MSysComplexColumns against the column being
+        loaded, which catches a bad complex id in a column definition.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Truncate long text index entries the way ms access does, keeping the
+        leading 508 bytes of the key and ending it with a digest of the bytes
+        discarded.  Keys longer than 510 bytes were previously written in
+        full, so ms access could not use the index and jackcess could not
+        find the affected rows again.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix the index code suffix written for "international ext" characters
+        (which include hiragana and katakana).  The suffix length grows with
+        the number of characters using those codes, but a fixed length one was
+        always written, so index entries for 8 or more such characters were
+        wrong.
+      </action>
+      <action dev="jahlborn" type="update">
+        Some code base modernization.  Note a minor exception widening in OleBlob.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix database corruption when adding column to table with deleted
+        variable length columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add toString to ColumnBuilder, TableBuilder and IndexBuilder.
+      </action>
+      <action dev="jahlborn" type="update">
+        Check that the column counts and sizes in a table definition cover the
+        columns which are actually defined when the table is loaded.  A
+        damaged table definition now becomes read-only.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix the index entry written for a surrogate pair.  In the general sort
+        order the weight table gives the high surrogates four separate ranges,
+        one of which has no weight at all, and only the first was implemented,
+        so entries for characters above plane 1 did not match ms access.  In
+        the general legacy sort order ms access gives a surrogate no weight at
+        all, so every entry for a supplementary character was wrong there.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Write the level of an index page into its page header.  The level is
+        the depth of the page below the leaves of the index tree, 0 on a leaf
+        page and one more than its children on a node page.  Zero was written
+        on every page, so an index deep enough to need node pages claimed they
+        were all at the level of the leaves.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Identify a property map by its name and its block type together.  Ms
+        access keeps index properties in their own block and names an index
+        after its column by default, so a table commonly holds a column block
+        and an index block with the same name.  Keying on the name alone
+        reported the index properties as the column's, and rewriting the map
+        wrote one block instead of two, which discarded the index properties.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Keep the whole property flag byte when a property map is rewritten.
+        Ms access uses it as a bit field: bit 0 is the ddl flag and bit 7
+        tells the engine to store the value without running the handler bound
+        to the property name.  The byte was read as a boolean and written back
+        as 0 or 1, which invented the ddl flag on properties which did not
+        have it and dropped bit 7 from those which did.  PropertyMap.Property
+        isDdl now reports bit 0 rather than the whole byte.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Give a column added to an existing table an unused column id.  Ms
+        access assigns each column an id which it never reuses and never
+        renumbers, so a table which has had a column deleted has gaps in its
+        ids.  The physical column number was written as the id, which could
+        repeat an id already in use.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Mark an index over a complex column the way ms access does, with a 2
+        in the byte after the index flags.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Use the file formats which ms access stores uncompressed when writing
+        an attachment (jpg, jpeg, gif, png, zip, cab, docx, xlsx, xlsb and
+        pptx), and deflate everything else.  The previous list compressed png
+        and office files which ms access leaves alone, and left archives raw
+        which ms access deflates.
+      </action>
+      <action dev="jahlborn" type="update">
+        Linked databases are no longer resolved automatically.  The default
+        LinkResolver now refuses to open linked databases.  Applications which
+        use linked databases must configure LinkResolver.UNRESTRICTED (the
+        previous behavior) or a resolver enforcing their own policy, or enable
+        the allowLinkResolution system property.  Note that this also affects
+        CustomLinkResolver, whose fallback for non-custom files now denies.
+      </action>
+    </release>
+    <release version="4.0.11" date="2026-07-06">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">
+        Promote the global usage map to a reference map once a database grows
+        beyond what an inline global usage map can represent (~2mb).  Large
+        databases previously retained an inline global usage map (a sliding
+        window which no longer described the whole database), which ms access
+        would report as invalid/corrupt during operations such as sorting a
+        large table.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix possible edge-case corruption when updating indexes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Make text functions locale sensitive.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add optional support via system property for writing "broken" indexes
+        for unsupported sort orders.  This enables building the db using
+        jackcess and then later making the db indexes valid using ms access
+        compact and repair.
+      </action>
+    </release>
+    <release version="4.0.10" date="2025-10-25">
+      <action dev="jahlborn" type="update">
+        Update commons lang3 dependency version.
+      </action>
+      <action dev="jahlborn" type="update">
+        Update apache poi dependency version.
+      </action>
+    </release>
+    <release version="4.0.8" date="2025-01-05">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="159">
+        Fix adding fixed length columns to an existing table.
+      </action>
+    </release>
+    <release version="4.0.7" date="2024-06-24">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="157">
+        Add support for surrogate pairs in text indexes (e.g. emoticons).
+      </action>
+    </release>
+    <release version="4.0.6" date="2024-05-11">
+      <action dev="jahlborn" type="update">
+        Make NumberFormatter locale aware, using the currently configured
+        LocaleContext.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="158">
+        Account for character sizes when copying column lengths.
+      </action>
+    </release>
+    <release version="4.0.5" date="2023-01-26">
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
+              issue="46">
+        Add option to DatabaseBuilder for ignoring broken system catalog
+        indexes.  This is a workaround to allow jackcess to read tables from
+        the database even if the index is non-functional.
+      </action>
+    </release>
+    <release version="4.0.4" date="2022-10-29">
+      <action dev="jahlborn" type="update">
+        Update parent pom to fix release process.
+      </action>
+    </release>
+    <release version="4.0.3" date="2022-10-29">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="156">
+        Fix edge case which can cause table to be considered corrupt.
+      </action>
+    </release>
+    <release version="4.0.2" date="2022-08-26">
+      <action dev="jahlborn" type="update">
+        Add Table methods to get the creation and last modified dates.
+      </action>
+      <action dev="jahlborn" type="update" issue="45">
+        Add support for linked odbc tables.  TableMetaData provides access to
+        connection string and local TableDefinition if available.
+      </action>
+    </release>
+    <release version="4.0.1" date="2021-06-21">
+      <action dev="jahlborn" type="fix">
+        Ignore trailing spaces when creating text index entries.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add basic support for access 2019+ dbs.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for extended date/time type in access 2019+ dbs.
+      </action>
+    </release>
+    <release version="4.0.0" date="2021-01-20">
+      <action dev="jahlborn" type="update">
+        Add Automatic-Module-Name in order to make Jackcess safe to use in the
+        module path in Java 9+ environments.
+      </action>
+      <action dev="jahlborn" type="update">
+        Make a few classes and constants public in order to facilitate use in
+        different packages.
+      </action>
+      <action dev="jahlborn" type="update">
+        Alter access to java.sql classes so that usage is dependent on whether
+        or not the module is loaded in Java 9+ environments.  Tweak a few
+        methods to no longer throw SQLException.
+      </action>
+    </release>
+    <release version="3.5.1" date="2020-09-10">
+      <action dev="jahlborn" type="update">
+        Add more static utility methods to DatabaseBuilder to enable more
+        succinct object construction code using static imports.
+      </action>
+    </release>
+    <release version="3.5.0" date="2020-07-31">
+      <action dev="jahlborn" type="update">
+        Add support for Access 97 general collation order, enabling indexes to
+        be used with Access 97 dbs.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add Stream support to all interfaces which are Iterable.
+      </action>
+      <action dev="jahlborn" type="update">
+        Enabled expression evaluation by default.
+      </action>
+      <action dev="jahlborn" type="update">
+        Change the default DateTimeType to LOCAL_DATE_TIME.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
+              issue="43">
+        Add support for Predicate value patterns in cursor find methods. Add
+        PatternColumnPredicate for creating Predicate instances which can
+        match values using various pattern syntaxes.
+      </action>
+    </release>
+    <release version="3.0.1" date="2019-04-13">
+      <action dev="jahlborn" type="update">
+        Add ColumnFormatter utility which can apply Column "Format" property
+        for display of column values.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add Database.newTableMetaDataIterable() which enables iterating
+        through table names without loading the entire collection into memory
+        at once.
+      </action>
+    </release>
+    <release version="3.0.0" date="2019-02-08" description="Update to Java 8">
+      <action dev="jahlborn" type="update">
+        Jackcess now requires a Java 8+ runtime.  As part of this update, all
+        dependencies have been updated to their latest versions.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for Java 8 Temporal types.  Date/time fields will now
+        accept as input most Temporal types (e.g. LocalDate, LocalTime,
+        LocalDateTime, etc).  Additionally, date/time fields can optionally be
+        changed to output LocalDateTime instead of Date.  This behavior is
+        configurable on a per-Database basis by setting the DateTimeType for
+        the database.  All Date based APIs now have a parallel LocalDateTime
+        API.  Note that only one of those will work depending on how
+        the Database is configured.  The legacy Date support will be the
+        default initially, but is deprecated and may be removed in the future.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for Path.  Existing File based APIs now have parallel
+        versions which utilize Path.
+      </action>
+      <action dev="jahlborn" type="update">
+        The Apache commons-lang dependency has been replaced with
+        commons-lang3.
+      </action>
+    </release>
+    <release version="2.2.3" date="2019-02-05">
+      <action dev="jahlborn" type="fix">
+        Fix parsing of escaped double quotes in expressions.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="152">
+        Use column label from ResultSetMetaData when importing.
+      </action>
+    </release>
+    <release version="2.2.2" date="2019-01-05">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="151">
+        Fix length in units calculation for Access 97 text fields.
+      </action>
+    </release>
+    <release version="2.2.1" date="2018-12-22">
+      <action dev="jahlborn" type="update">
+        Implement the majority of the missing standard functions:
+        FormatCurrency, FormatDateTime, FormatNumber, FormatPercent, Val,
+        DateAdd, DateDiff, DatePart, MonthName, WeekdayName, DDB, IPmt, PPmt,
+        Rate, SLN, SYD, Format, Replace, StrConv.  (Note that the internal API
+        for the expr package has changed in an incompatible way.  However,
+        since the API is still experimental, this was deemed acceptable for a
+        minor version.).  Note that many of the financial functions were
+        copied and adpated from the Apache POI and UCanAccess projects (which
+        are both under the Apache License 2.0).
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement more type coercion methods for expressions.  Add support for
+        hex/oct integer strings.  Add support for number strings with commas.
+        Add support for coercing numeric String to a date/time value.  Add
+        support for date/time values with implicit (current) year.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="150">
+        Ignore column validators for read-only dbs.  This will avoid
+        irrelevant failures when reading databases which have invalid column
+        properties.
+      </action>
+    </release>
+    <release version="2.2.0" date="2018-09-08"
+             description="Add support for expression evaluation">
+      <action dev="jahlborn" type="update">
+        Implement support for optional expression evaluation.  When enabled,
+        expressions will be evaluated for default values, calculated fields,
+        field validators, and record validators.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="31">
+        Default values will now be respected when expression evaluation is
+        enabled (currently disabled by default).
+      </action>
+    </release>
+    <release version="2.1.12" date="2018-06-25">
+      <action dev="jahlborn" type="update">
+        Add some additional property keys and relevant enums for values.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="147">
+        Create new usage map correctly when adding an index to an existing
+        table.
+      </action>
+    </release>
+    <release version="2.1.11" date="2018-03-04">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="145">
+        Expose the "ddl" attribute on properties.  Set the attribute
+        appropriately for known builtin properties.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="146">
+        Set ddl flag even if property type is explicitly provided.
+      </action>
+    </release>
+    <release version="2.1.10" date="2018-01-18">
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="37">
+        Add full support for access 2016 databases including the new "Large
+        Number" (aka Bigint) data type.
+      </action>
+    </release>
+    <release version="2.1.9" date="2017-10-09">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="141">
+        Handle more advanced query join constructs.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="144">
+        Fix writing of property maps without any properties.
+      </action>
+    </release>
+    <release version="2.1.8" date="2017-06-25">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="142">
+        Fix parsing of certain internal-use queries (such as those used as the
+        data source for the fields in a form).
+      </action>
+      <action dev="jahlborn" type="update" system="GitHubPullRequests"
+              issue="4">
+        Add option to specify relationship name, thanks to Gord Thompson.
+      </action>
+    </release>
+    <release version="2.1.7" date="2017-05-17">
+      <action dev="jahlborn" type="update">
+        Implement support for partial index lookups.  Efficient IndexCursor
+        lookups can now be done with multi-column indexes using only some of
+        the columns in the index.
+      </action>
+      <action dev="jahlborn" type="update" system="GitHubPullRequests"
+              issue="2">
+        Cover the GENERIC_JET4 format in unit tests, thanks to Gord Thompson.
+      </action>
+      <action dev="jahlborn" type="update" system="GitHubPullRequests"
+              issue="3">
+        Allow inserting negative auto number fields, thanks to Gord Thompson.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="36">
+        Add CustomLinkResolver which facilitates loading linked tables from
+        files which are not access databases.
+      </action>
+    </release>
+    <release version="2.1.6" date="2016-11-29">
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="34">
+        When opening a database for a format which is read-only, automatically
+        open the channel as read-only (instead of throwing an exception if
+        readOnly is false).
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="138">
+        Add support for global usage maps which are reference type maps.
+      </action>
+    </release>
+    <release version="2.1.5" date="2016-10-03">
+      <action dev="jahlborn" type="update">
+        Change multi-value complex columns so that they return all relevant
+        column properties.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add some initial support for Table metadata modification.  Columns and
+        Indexes can now be added to an existing table (using
+        ColumnBuilder.addToTable and IndexBuilder.addToTable respectively).
+      </action>
+      <action dev="jahlborn" type="update">
+        Add the ability to create Relationships using RelationshipBuilder.
+        With this support finally brings the ability to create foreign key
+        indexes (aka integrity enforcement in Relationships).
+      </action>
+    </release>
+    <release version="2.1.4" date="2016-05-18">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="131">
+        Fix missing column names in AppendQuery SQL strings.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="33">
+        Add Database.getTableMetaData method to enable getting basic info
+        about a Table (by name) without actually loading it.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="136">
+        Allow null values in foreign key fields when enforcing referential
+        integrity.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for cascade null on delete relationships.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for the required flag for an index.
+      </action>
+    </release>
+    <release version="2.1.3" date="2015-12-04">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="127">
+        Throw a prettier exception when maxing out the row size during row
+        creation.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="129">
+        Add FileFormat.GENERIC_JET4 in order to support getting the file
+        format for jet4 databases with no AccessVersion property (e.g. those
+        created programmatically using ADOX).
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2" issue="128">
+        Add some utility methods (DatabaseBuilder.createDateFormat and
+        DatabaseBuilder.toCompatibleCalendar) for handling Dates in an Access
+        compatible manner.
+      </action>
+      <action dev="jahlborn" type="update">
+        New site style!
+      </action>
+    </release>
+    <release version="2.1.2" date="2015-06-22">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="125">
+        Handle reading null calculated values.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="126">
+        Fix handling of dateTimes before the access epoch.
+      </action>
+    </release>
+    <release version="2.1.1" date="2015-05-14">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="123">
+        Load linked table info from system table when reading databases with
+        unsupported sort orders.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge2Features"
+              issue="32">
+        Allow optional direct insert/update of autonumber values.  This is
+        disabled by default, but can be selectively enabled per-jvm (using
+        system property), per-database, and per-table.
+      </action>
+    </release>
+    <release version="2.1.0" date="2015-04-16"
+             description="Relicense to Apache License">
+      <action dev="jahlborn" type="add">
+        OpenHMS relicenses to Apache License, 2.0!
+      </action>
+    </release>
+    <release version="2.0.9" date="2015-03-21">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="116">
+        Make ColumnBuilder.setMaxLength do the right thing regardless of
+        column type.
+      </action>
+      <action dev="jahlborn" type="update">
+        Handle input String boolean values.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="28">
+        Added Database.isLinkedTable method to identify if the given Table is
+        linked to the database.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="28">
+        Added TableIterableBuilder for advanced Table iteration.  This allows
+        selectively including different table types when iterating the tables
+        in a Database.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Lowered the log level for certain warnings related to system tables
+        which do not generally affect jackcess functionality.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Added contextual information to many errors and warnings.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features" issue="29">
+        Implement support for indexes on BINARY fields.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="120">
+        Remove useless warning for fixed length columns lengths with longer
+        length.  Cleanup some other stuff related to copying existing columns
+        in ColumnBuilder.
+      </action>
+    </release>
+    <release version="2.0.8" date="2014-12-26">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="113">
+        Add newer sql type to access type mappings if the jvm supports them.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2Patches" issue="17">
+        Fix table name quoting for append and make table queries.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2Patches" issue="18">
+        Don't double quote already quoted identifiers.
+      </action>
+      <action dev="jahlborn" type="update">
+        Better validation of identifier names (disallow invalid characters
+        according to Access naming rules).
+      </action>
+    </release>
+    <release version="2.0.7" date="2014-11-22">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="111">
+        Unicode compression support was not correct for all possibly
+        compressed characters.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="112">
+        Currency columns will now return an accurate scale and precision.
+      </action>
+    </release>
+    <release version="2.0.6" date="2014-10-04">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="109">
+        IndexCursor can early exit when searching based on indexed values.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="110">
+        Fix regression where empty memo values are returned as null.
+      </action>
+    </release>
+    <release version="2.0.5" date="2014-09-17">
+      <action dev="jahlborn" type="add">
+        Add Cursor.findRow(RowId) for moving to a specific Table row using
+        only the RowId.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="105">
+        Add support for reading and writing calculated column values.
+        Jackcess will not evaluate the actual expressions, but the column
+        values can be written directly.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add the ability to set properties in DatabaseBuilder, TableBuilder,
+        and ColumnBuilder.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add the ability to create tables with calculated fields.
+      </action>
+    </release>
+    <release version="2.0.4" date="2014-04-05">
+      <action dev="jahlborn" type="add">
+        Add ColumnValidator interface which allows column values to be easily
+        manipulated/validated as they are written into the database.
+      </action>
+    </release>
+    <release version="2.0.3" date="2014-01-30">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="100">
+        Fix NullPointerException in RowImpl.toString() when value is null.
+      </action>
+    </release>
+    <release version="2.0.2" date="2013-11-30">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="99">
+        Rework row add/update so that constraint violations do not leave
+        behind partially written rows.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add ConstraintViolationException to distinguish exceptions due to
+        violating database constraints from other random errors.
+      </action>
+    </release>
+    <release version="2.0.1" date="2013-10-13">
+      <action dev="jahlborn" type="add">
+        Add initial support for creating/parsing ole content.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="97">
+        Ignore invalid column usage map definitions.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Make reading long value columns more lenient (MEMO/OLE).
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge2Features"
+              issue="16">
+        Add support for modifying PropertyMaps.
+      </action>
+    </release>
+    <release version="2.0.0" date="2013-08-26"
+             description="Major API Revision">
+      <action dev="jahlborn" type="update">
+        Brand new API!  This release is not backwards compatible with 1.x
+        releases.  See Migration Guide at https://jackcess.sourceforge.io/jackcess-2.html
+        for more details.
+      </action>
+    </release>
+    <release version="1.2.14.3" date="2013-10-13">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="97">
+        Ignore invalid column usage map definitions.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Make reading long value columns more lenient (MEMO/OLE).
+      </action>
+    </release>
+    <release version="1.2.14.2" date="2013-08-25">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="96">
+        Fix reading of Properties with multiple value blocks.
+      </action>
+    </release>
+    <release version="1.2.14.1" date="2013-08-11">
+      <action dev="jahlborn" type="fix" system="SourceForge2Features"
+              issue="25">
+        Remove extra object flags before checking query type.
+      </action>
+    </release>
+    <release version="1.2.14" date="2013-07-23">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="95">
+        Implement handling of usagemaps for long value (MEMO/OLE) columns.
+      </action>
+    </release>
+    <release version="1.2.13" date="2013-06-18">
+      <action dev="jahlborn" type="fix">
+        Fix partial page updates when using CodecHandlers which can only do
+        full page encoding.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add more methods to Database for retrieving Relationships.
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement attachment decoding, thanks to Lorenzo Carrara.
+      </action>
+    </release>
+    <release version="1.2.12" date="2013-05-09">
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="94">
+        Do not unicode compress strings which are longer than 1024 chars.
+      </action>
+    </release>
+    <release version="1.2.10" date="2013-02-18">
+      <action dev="jahlborn" type="update">
+        Add info to the Column to support MEMO columns which are HYPERLINKS.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="22">
+        Add optional support for enforcing foreign-key constraints/cascading.
+        This is disabled by default (for backwards compatibility), but can be
+        controlled globally via a system property and/or on a per-Database
+        basis using setEnforceForeignKeys() method.
+      </action>
+    </release>
+    <release version="1.2.9" date="2012-10-15">
+      <action dev="jahlborn" type="update">
+        Add some more functionality to Joiner to facilitate integrity
+        enforcement (hasRows and deleteRows).
+      </action>
+      <action dev="jahlborn" type="add">
+        Added DatabaseBuilder for more convenient and flexible Database
+        open/create.
+      </action>
+      <action dev="jahlborn" type="add">
+        Added the MemFileChannel (and associated support in DatabaseBuilder)
+        to enable working with Database files completely in memory.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge2" issue="92">
+        Fix some more edge cases in date/time conversions.
+      </action>
+    </release>
+    <release version="1.2.8" date="2012-07-10">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3523179">
+        Add osgi header information to the manifest.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3523181">
+        Add ImportUtil.toColumns to enable more advanced Table creation
+        implementations.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3529534">
+        Fix NPE when running unit tests with db format MSISAM.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3532250">
+        Fix writing partial pages when CodecHandler is in use.  Note, this fix
+        involves a backwards incompatible change to the CodecHandler interface
+        (Jackcess Encrypt 1.0.3 or later is compatible with this version of
+        Jackcess).
+      </action>
+    </release>
+    <release version="1.2.7" date="2012-04-02">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3479560">
+        Add initial support for linked tables.  Linked tables will now be
+        loaded by the normal Database.getTable method.  Linked tables can be
+        created using the new Database.createLinkedTable method.  Linked table
+        resolution can be customized per Database by supplying a custom
+        LinkResolver.
+      </action>
+      <action dev="jahlborn" type="update">
+        Rename and refactor the Cursor find methods to improve usability.
+      </action>
+    </release>
+    <release version="1.2.6" date="2011-12-16">
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3358272">
+        Add support for reading/writing complex column data (version history,
+        attachments, multi-value columns).
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix problem with creating tables with indexes where ms access could
+        not open the created table.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3435774">
+        Fix problem with reading row from table with deleted/added columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Reuse previously written memo/ole values when updating other values in
+        a row in order to reduce unnecessary data duplication.
+      </action>
+      <action dev="jahlborn" type="update">
+        Allow ImportFilter and ExportFilter to return null from filterRow() to
+        indicate that a row should be skipped.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add option to import file without headers to existing table.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add ImportUtil.Builder and ExportUtil.Builder to simplify
+        import/export operations.
+      </action>
+    </release>
+    <release version="1.2.5" date="2011-10-19">
+      <action dev="jahlborn" type="update">
+        Try multiple classloaders when loading resources as streams.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add the Joiner utility and some new methods to IndexCursor to make it
+        easier to join tables using pre-defined (index backed) relationships.
+      </action>
+      <action dev="jahlborn" type="update">
+        Enable basic handling of unsupported data types as binary content.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add methods to approximate table size.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add Database.getSystemTableNames to enable retrieving the list of
+        system/hidden tables.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix issue with reading Access 97 database with large number of fields.
+      </action>
+    </release>
+    <release version="1.2.4" date="2011-05-14">
+      <action dev="jahlborn" type="update">
+        Refactor table loading to use indexes.  Do not load all table names at
+        database startup (should make startup faster).
+      </action>
+      <action dev="jahlborn" type="add">
+        Add support for reading properties blobs.  Add methods for accessing
+        database, summary, and user-defined properties from the Database.  Add
+        methods to Table and Column for accessing their respective properties.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add support for Access 2010, including new "General" sort order
+        (support for super-long text index entries still needs work).
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3287626">
+        Access expects a row to be at least big enough to hold all fixed
+        values, even if they are null.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add Index.getReferencedIndex for retrieving the referenced Index for a
+        foreign key index.
+      </action>
+    </release>
+    <release version="1.2.3" date="2011-03-05">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3181334">
+        Add support for writing all fixed length column types into variable
+        length fields.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3192058">
+        More fixes related to reading and interpreting index information.
+        Handle multiple logical indexes backed by the same index data.
+        Interpret foreign key constraint information.
+      </action>
+      <action dev="jahlborn" type="update">
+        Allow MSISAM files to be written (experimental).
+      </action>
+      <action dev="jahlborn" type="add">
+        Add support for creating indexes when creating a new table.  Normal
+        indexes and primary key indexes are currently supported.  Foreign key
+        indexes are not yet supported.
+      </action>
+    </release>
+    <release version="1.2.2" date="2010-11-29">
+      <action dev="jahlborn" type="update">
+        Add support for specifying a quote character on import from flat
+        files.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for reading database password.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3065010">
+        Add support for plugging in implementations of various page
+        encoding/decoding algorithms.  See the &lt;a href="https://jackcessencrypt.sourceforge.io/"&gt;Jackcess Encrypt&lt;/a&gt;
+        project for a CodecProvider implementation which supports a few of the
+        Access encodings.  (thanks to Vladimir Berezniker).
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3101578">
+        Implement some tweaks which allow jackcess to be used on the Android
+        platform.  See the &lt;a href="faq.html#android"&gt;FAQ&lt;/a&gt; for more
+        details.  (thanks to Miha Pirnat).
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3097387">
+        Allow output column order in tables to be configured.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="3105829">
+        Add support for custom column value matching when finding rows using a
+        Cursor.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Ignore usagemap inconsistencies in certain (safe) situations.
+      </action>
+    </release>
+    <release version="1.2.1" date="2010-08-01">
+      <action dev="jahlborn" type="add" system="SourceForge" issue="3005272">
+        Add ExportUtil and associated utilities for exporting tables to flat
+        files (thanks to F. Gerbig).
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3011084">
+        Fix some places where table/columns names were not being handled
+        case-insensitively.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="3029500">
+        Make Database.escapeIdentifier public; add methods to TableBuilder and
+        ColumnBuilder to optionally escape names.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="2997751">
+        Add support for overriding charset and timezone used when
+        reading/writing database.
+      </action>
+      <action dev="jahlborn" type="add" system="SourceForge" issue="3003375">
+        Add support for reading Access 97 (jet format 3) databases (thanks to
+        F. Gerbig).
+      </action>
+    </release>
+    <release version="1.2.0" date="2010-04-18">
+      <action dev="bhamail" type="update" system="SourceForge" issue="1451628">
+        Add support for access 2002/2003/2007 databases.
+      </action>
+      <action dev="jahlborn" type="update">
+        Enable "large" index support by default.  It can still be disabled via
+        a variety of means, see the Database javadoc for more details.
+      </action>
+      <action dev="bhamail" type="fix" system="SourceForge" issue="2968957">
+        Fix BigIndexTest to work in IDE's w/out sys.prop.
+      </action>
+    </release>
+    <release version="1.1.21" date="2010-01-19">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2899605">
+        Further improvements to date handling.
+      </action>
+      <action dev="jahlborn" type="update">
+        Handle more binary/character input types (Blob, Clob, InputStream,
+        Reader), based on user submitted patch.
+      </action>
+      <action dev="jahlborn" type="update">
+        Refactor import/copy methods from Database into ImportUtil.  Allow
+        reuse of existing tables.  make behavior/naming of copy and import
+        methods consistent.  (ideas from submitted patch).
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2919216">
+        Set overflow info in header row, not in last data row.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2920092">
+        Add support for indexing strings containing any characters from BMP 0.
+      </action>
+    </release>
+    <release version="1.1.20" date="2009-11-18">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2884599">
+        Add support for updating GUID indexes and for auto-number GUID
+        fields.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="2802845">
+        Add support for updating rows in a table.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2886370">
+        Support reading/writing fixed length text fields.
+      </action>
+    </release>
+    <release version="1.1.19" date="2009-06-13">
+      <action dev="jahlborn" type="add">
+        Add Query reading support.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2788029">
+        Be more forgiving for input column length.
+      </action>
+    </release>
+    <release version="1.1.18" date="2008-11-08">
+      <action dev="jahlborn" type="add">
+        Add ErrorHandler utility for customizing error handling during row
+        parsing.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add RowFilter contributed by Patricia Donaldson.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add Database.getSystemTable method for accessing system tables.
+      </action>
+    </release>
+    <release version="1.1.17" date="2008-09-23">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2043499">
+        Fix simple index handling of tail index pages.
+      </action>
+    </release>
+    <release version="1.1.16" date="2008-07-24">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
+        Reserve minimum space for memo/ole fields so that greedy inline row
+        usage does not cause spurious write failures for wide tables.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2018713">
+        Better column type translation for very large MEMO/OLE types in the
+        Database.copyTable logic.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
+        Add some more limit checking into table creation based on what access
+        supports (max rows per table, max identifier lengths).
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="2019244">
+        Share out-of-line long value pages in order to generate more compact
+        database files.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add primitive support for writing unicode compressed text columns.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add compression code for possible future use; add compression unit
+        tests.
+      </action>
+    </release>
+    <release version="1.1.15" date="2008-06-27">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1998225">
+        Fix writing of large memo/ole fields.  Apparently Access does not like
+        long value fields longer than 4076 bytes.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Reduce maximum row size to what Access considers valid.
+      </action>
+    </release>
+    <release version="1.1.14" date="2008-04-29">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1924705">
+        Need to store auto-number values back into row so that indexes can be
+        updated correctly.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1942330">
+        Access seems to limit data pages to a max of 255 rows.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1564870">
+        Added experimental support for "large" indexes.  The current support
+        is optional.  It can be enabled via a variety of means, see the
+        Database javadoc for more details.
+      </action>
+    </release>
+    <release version="1.1.13" date="2008-03-21">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1913775">
+        More fixes for index parsing.  Believe index names are now correctly
+        matched up with indexes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Simplify comparison algorithms for RowId and Index.Entry using type
+        attributes.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1906160">
+        Expand the characters supported in index updates to all of the
+        ISO-8859-1 character set.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix bug caused by sign extension when reading single-byte row numbers.
+      </action>
+      <action dev="jahlborn" type="update">
+        Modify Index update support so that it honors the "unique" and
+        "ignoreNulls" properties for the Index.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add support for reading table relationships.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix creation of tables with auto-number columns.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1832723">
+        Completely fix problems with sporadic usage map corruption.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add some soft buffer caching in various places to avoid excessive
+        buffer reallocation.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add some builder-style utilities for table creation (ColumnBuilder,
+        TableBuilder).
+      </action>
+    </release>
+    <release version="1.1.12" date="2008-02-27">
+      <action dev="jahlborn" type="fix">
+        Resolve more edge cases around date handling.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1899076">
+        Fix writing of large memo/ole fields.  Apparently Access does not like
+        "inline" fields longer than 64 bytes.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1898793">
+        Fix generation of security access control entries.  Use userIds
+        already existing in the database file instead of hard-coded userIds,
+        if possible.
+      </action>
+    </release>
+    <release version="1.1.11" date="2008-01-20">
+      <action dev="jahlborn" type="fix">
+        Support reading inline usage maps with more than 512 pages.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1832723">
+        Fix some problems with sporadic usage map corruption.
+      </action>
+      <action dev="jahlborn" type="update">
+        Move from cvs to subversion.
+      </action>
+    </release>
+    <release version="1.1.10" date="2007-12-26">
+      <action dev="jahlborn" type="add">
+        Add index based table traversal support to Cursor with optional
+        sub-range narrowing.  Add position save/restore, row find, and a
+        variety of other features.
+      </action>
+      <action dev="jahlborn" type="add">
+        Move table iteration out of Table and into Cursor.  First stage in
+        offering more complicated table access.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1681954">
+        Update table row count correctly on row deletion or bulk row addition,
+        bug #1681954.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1565216">
+        Add experimental support for auto-number columns, feature request
+        #1565216.
+      </action>
+      <action dev="jahlborn" type="update">
+        Move project to maven2 and change project groupId to
+        com.healthmarketscience.jackcess.
+      </action>
+    </release>
+    <release version="1.1.9" date="2007-07-12">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1675522">
+        Add support for writing large table definitions, bug #1675522.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1748827">
+        Fix handling of usage maps for large tables, bug #1748827.
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1672071">
+        Fixed some edge cases for reading numeric columns, bug #1672071.
+      </action>
+    </release>
+    <release version="1.1.8" date="2007-02-13">
+      <action dev="jahlborn" type="update">
+        Additional info in DataType to support better type validation
+        (scale/precision range).  Add "unit size" concept.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add CLOB support in JDBC handling.  Add general support for large
+        types (BLOB/CLOB).
+      </action>
+      <action dev="jahlborn" type="update">
+        Enhance Database.copyTable/importReader to allow for better control
+        over column definitions and row values through the ImportFilter.
+        Change default type translation to handle large and variable length
+        types better.
+      </action>
+    </release>
+    <release version="1.1.7" date="2006-10-02">
+      <action dev="jahlborn" type="update">
+        Refactored DataType class, cleaned up a lot of "custom" data type code
+        springled throughout the codebase.
+      </action>
+      <action dev="jahlborn" type="update">
+        Added sanity checking on table creation (check column/table properties
+        for validity).
+      </action>
+      <action dev="jahlborn" type="update">
+        Clean up index reading/writing of text columns, add support for more
+        characters
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1563654">
+        Support reading 'compressed' indexes (fix 1563654)
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement "overflow" row reading.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Allow multi-page long value reading.
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement multi-page long value writing.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix decimal data type writing.
+      </action>
+      <action dev="jahlborn" type="update" system="SourceForge" issue="1545857">
+        Add support for opening files read-only (fix 1545857)
+      </action>
+    </release>
+    <release version="1.1.6" date="2006-08-07">
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1530312">
+        Handle more tables with more index slots than actual indexes (fix bug
+        1530312)
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1449812">
+        Clean up reading/writing 3-byte ints; long value length is 3-bytes
+        (fix bug 1449812)
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix handling of skipped rows
+      </action>
+      <action dev="jahlborn" type="fix" system="SourceForge" issue="1306970">
+        When reading multi-page table def, flip buffer before parsing (fix bug
+        1306970)
+      </action>
+      <action dev="jahlborn" type="update">
+        Treat table names as case insensitive; use stored table names when
+        instantiating tables
+      </action>
+      <action dev="jahlborn" type="update">
+        Make Database and Table Iterable
+      </action>
+      <action dev="jahlborn" type="fix">
+        Use uppercase names when adding text columns to indexes, which fixes
+        long standing problem with table names starting with lowercase
+        characters (and other situations where tables could not be opened in
+        Access).  Remove hack which forced every table name to have uppercase
+        first character.
+      </action>
+      <action dev="jahlborn" type="update">
+        Clean up compressed text handling.
+      </action>
+      <action dev="jahlborn" type="update">
+        Implement reading multi-page long binary values
+      </action>
+    </release>
+    <release version="1.1.5" date="2006-07-25">
+      <action dev="jahlborn" type="update">
+        Add support for currency columns (thanks to James Schopp).
+      </action>
+      <action dev="jahlborn" type="fix">
+        Handle tables with no variable length columns correctly.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Handle reading with deleted columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Read information on primary keys and include in Index.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fix some issues around reading indexes.
+      </action>
+      <action dev="jahlborn" type="update">
+        Add write support for numeric/GUID columns.
+      </action>
+      <action dev="javajedi" type="update">
+        Added getRowCount(), getName(), updated toString() on Table.
+      </action>
+    </release>
+    <release version="1.1.4" date="2006-6-15">
+      <action dev="jahlborn" type="fix">
+        Missing break in switch condition.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Fixes
+        to reading/writing MEMO/OLE columns.
+      </action>
+      <action dev="jahlborn" type="update">
+        Made exceptions thrown when opening empty or nonexistent files more
+        specific.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Apply patch from Jon Iles for handilng variable length columns.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Apply patch from Jon Iles for handling dates.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Apply patch from Jon Iles for reading GUIDs.
+      </action>
+    </release>
+    <release version="1.1.3" date="2006-2-16">
+      <action dev="jahlborn" type="fix">
+        Fix parsing of NUMERIC type.
+      </action>
+      <action dev="javajedi" type="fix">
+        Applied Jon Iles' patch to allow large table definitions to be read.
+      </action>
+    </release>
+    <release version="1.1.2" date="2005-8-26">
+      <action dev="javajedi" type="fix" system="SourceForge" issue="1273712">
+        Fixed bug where writing null values into fixed-width columns was
+        failing.
+      </action>
+    </release>
+    <release version="1.1.1" date="2005-8-20">
+      <action dev="javajedi" type="fix" system="SourceForge" issue="1261536">
+        Fixed bug in reading index count from table definition.  Skip overflow
+        rows.
+      </action>
+    </release>
+    <release version="1.1" date="2005-8-12">
+      <action dev="javajedi" type="update">
+        JDK 1.5 upgrades
+      </action>
+      <action dev="javajedi" type="update">
+        Applied Mitchell Friedman's patch for support of additional JDBC data
+        types.
+      </action>
+      <action dev="javajedi" type="update">
+        Added support for deleted rows.
+      </action>
+    </release>
+    <release version="1.0" date="2005-4-7">
+      <action dev="javajedi" type="add">
+        Initial release
+      </action>
+    </release>
+  </body>
+</document>

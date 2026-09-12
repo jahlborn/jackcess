@@ -1,0 +1,17 @@
+Missing pieces:
+
+- implement table creation w/ complex columns
+  * MEDIUM
+- implement table, column, index renaming
+  * EASY
+- implement table, column, index deletion
+  * EASY - MEDIUM
+- implement createReadOnlyTemp(InputStream) (delete temp file on close)
+  * EASY
+- figure out how msaccess manages page/row locks
+  * MEDIUM
+
+Rename implications:
+- Table - update table def, queries, relationships, complex tables?
+- Column - update table def, queries, relationships, complex tables?
+- Index - update table def
