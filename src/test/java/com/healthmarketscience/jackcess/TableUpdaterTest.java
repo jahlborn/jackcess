@@ -18,9 +18,11 @@ package com.healthmarketscience.jackcess;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -235,6 +237,43 @@ public class TableUpdaterTest extends TestCase
       }
 
       db.close();
+    }
+  }
+
+  public void testAddColumnGetsUnusedId() throws Exception
+  {
+    // a new column takes an id above every id in use, rather than the
+    // physical column number, which in these tables is below the highest id
+    for(final TestDB testDB :
+          TestDB.getSupportedForBasename(Basename.DEL_COL)) {
+
+      Database db = openCopy(testDB);
+
+      TableImpl t = (TableImpl)db.getTable("Table1");
+
+      short maxId = -1;
+      for(ColumnImpl col : t.getColumns()) {
+        if(col.getColumnId() > maxId) {
+          maxId = col.getColumnId();
+        }
+      }
+      // the deleted columns left the highest id past the last column
+      assertTrue(maxId > (t.getColumnCount() - 1));
+
+      newColumn("newCol", DataType.TEXT).addToTable(t);
+
+      db.close();
+
+      t = (TableImpl)open(db.getFile()).getTable("Table1");
+
+      ColumnImpl newCol = (ColumnImpl)t.getColumn("newCol");
+      assertEquals((short)(maxId + 1), newCol.getColumnId());
+
+      Set<Short> ids = new HashSet<Short>();
+      for(ColumnImpl col : t.getColumns()) {
+        assertTrue("duplicate column id " + col.getColumnId(),
+                   ids.add(col.getColumnId()));
+      }
     }
   }
 

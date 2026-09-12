@@ -39,6 +39,9 @@ import com.healthmarketscience.jackcess.impl.TableUpdater;
  */
 public class ColumnBuilder {
 
+  /** marks a column id which has not been assigned yet */
+  private static final short UNSET_COLUMN_ID = (short)-1;
+
   /** name of the new column */
   private String _name;
   /** the type of the new column */
@@ -59,6 +62,9 @@ public class ColumnBuilder {
   private boolean _hyperlink;
   /** 0-based column number */
   private short _columnNumber;
+  /** id for the new column, or {@link #UNSET_COLUMN_ID} to use the column
+      number */
+  private short _columnId = UNSET_COLUMN_ID;
   /** the collating sort order for a text field */
   private ColumnImpl.SortOrder _sortOrder;
   /** table properties (if any) */
@@ -378,6 +384,20 @@ public class ColumnBuilder {
   /**
    * @usage _advanced_method_
    */
+  public short getColumnId() {
+    return ((_columnId != UNSET_COLUMN_ID) ? _columnId : _columnNumber);
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public void setColumnId(short newColumnId) {
+    _columnId = newColumnId;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
   public ColumnImpl.SortOrder getTextSortOrder() {
     return _sortOrder;
   }
@@ -523,6 +543,7 @@ public class ColumnBuilder {
       .append("name", _name)
       .append("type", _type)
       .append("number", _columnNumber)
+      .append("id", getColumnId())
       .append("length", CustomToStringStyle.ignoreNull(_length))
       .append("precision", CustomToStringStyle.ignoreNull(_precision))
       .append("scale", CustomToStringStyle.ignoreNull(_scale))

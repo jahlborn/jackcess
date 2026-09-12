@@ -81,6 +81,16 @@ public class TableUpdater extends TableMutator
   }
 
   @Override
+  boolean isComplexColumn(String colName) {
+    for(ColumnImpl col : _table.getColumns()) {
+      if(col.getName().equalsIgnoreCase(colName)) {
+        return (col.getType() == DataType.COMPLEX_TYPE);
+      }
+    }
+    return false;
+  }
+
+  @Override
   public ColumnState getColumnState(ColumnBuilder col) {
     return ((col == _column) ? _colState : null);
   }
@@ -130,6 +140,7 @@ public class TableUpdater extends TableMutator
     // assign column number and do some assorted column bookkeeping
     short columnNumber = (short)_table.getMaxColumnCount();
     _column.setColumnNumber(columnNumber);
+    _column.setColumnId(getNextColumnId());
     if(_column.getType().isLongValue()) {
       _colState = new ColumnState();
     }
@@ -142,6 +153,23 @@ public class TableUpdater extends TableMutator
     } finally {
       getPageChannel().finishWrite();
     }
+  }
+
+  /**
+   * Access assigns each column an id which it never reuses and never
+   * renumbers, so a table which has had a column deleted has gaps in its ids
+   * and its highest id can be past the last column number.
+   *
+   * @return an id which no column of this table holds
+   */
+  private short getNextColumnId() {
+    short maxId = -1;
+    for(ColumnImpl col : _table.getColumns()) {
+      if(col.getColumnId() > maxId) {
+        maxId = col.getColumnId();
+      }
+    }
+    return (short)(maxId + 1);
   }
 
   public IndexImpl addIndex(IndexBuilder index) throws IOException {

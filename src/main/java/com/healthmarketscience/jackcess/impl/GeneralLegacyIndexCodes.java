@@ -44,6 +44,10 @@ public class GeneralLegacyIndexCodes {
   // 01 01 01 <pos> 06  <code> )
   // <pos> = 7 + (4 * char_pos) | 0x8000 (as short)
   // <code> = char code
+  // in the engine, char_pos counts the two byte primary units written so far,
+  // a position in the primary output rather than a count of extra codes
+  // bytes.  the 06 is the type byte of the char's weight table entry and
+  // <code> is that entry's low byte
   static final int UNPRINTABLE_COUNT_START = 7;
   static final int UNPRINTABLE_COUNT_MULTIPLIER = 4;
   static final int UNPRINTABLE_OFFSET_FLAGS = 0x8000;

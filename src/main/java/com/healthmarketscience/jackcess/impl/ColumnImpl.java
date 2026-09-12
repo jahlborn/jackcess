@@ -237,6 +237,9 @@ public class ColumnImpl implements Column, DateTimeContext
   private final short _columnLength;
   /** 0-based column number */
   private final short _columnNumber;
+  /** id assigned to this column when it was created.  Access never renumbers
+      it, so it stays put while the column number shifts */
+  private final short _columnId;
   /** index of the data for this column within a list of row data */
   private int _columnIndex;
   /** display index of the data for this column */
@@ -278,6 +281,7 @@ public class ColumnImpl implements Column, DateTimeContext
     _complexValueForeignKey = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
+    _columnId = (short)colNumber;
     _columnIndex = colNumber;
     _displayIndex = colNumber;
     _fixedDataOffset = fixedOffset;
@@ -297,6 +301,8 @@ public class ColumnImpl implements Column, DateTimeContext
 
     _columnNumber = args.buffer.getShort(
         args.offset + getFormat().OFFSET_COLUMN_NUMBER);
+    _columnId = args.buffer.getShort(
+        args.offset + getFormat().OFFSET_COLUMN_ID);
     _columnLength = args.buffer.getShort(
         args.offset + getFormat().OFFSET_COLUMN_LENGTH);
 
@@ -438,6 +444,13 @@ public class ColumnImpl implements Column, DateTimeContext
    */
   public short getColumnNumber() {
     return _columnNumber;
+  }
+
+  /**
+   * @usage _advanced_method_
+   */
+  public short getColumnId() {
+    return _columnId;
   }
 
   @Override
@@ -1786,6 +1799,7 @@ public class ColumnImpl implements Column, DateTimeContext
     sb.append("type", "0x" + Integer.toHexString(typeValue) +
               " (" + _type + ")")
       .append("number", _columnNumber)
+      .append("id", _columnId)
       .append("length", _columnLength)
       .append("variableLength", _variableLength);
     if(_calculated) {
@@ -2082,7 +2096,7 @@ public class ColumnImpl implements Column, DateTimeContext
 
     buffer.putShort(colOffsets.getNextVariableOffset(col));
 
-    buffer.putShort(col.getColumnNumber()); //Column Number again
+    buffer.putShort(col.getColumnId()); //Column Id
 
     if(col.getType().isTextual()) {
       // this will write 4 bytes (note we don't support writing dbs which
@@ -2222,7 +2236,11 @@ public class ColumnImpl implements Column, DateTimeContext
     }
     buffer.putShort(sortOrder.getValue());
     if(format.SIZE_SORT_ORDER == 4) {
-      buffer.put((byte)0x00); // unknown
+      // the sort order field is the engine's own sort id: the LCID in the
+      // low half, the collation variant here, and the weight table family in
+      // the version byte.  jackcess has no variants, so this is always the
+      // plain collation for the LCID
+      buffer.put((byte)0x00); // collation variant
       buffer.put((byte)sortOrder.getVersion());
     }
   }

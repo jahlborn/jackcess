@@ -129,7 +129,17 @@ public class TableCreator extends TableMutator
       }
     }
     return IndexData.COLUMN_UNUSED;
-  }  
+  }
+
+  @Override
+  boolean isComplexColumn(String colName) {
+    for(ColumnBuilder col : _columns) {
+      if(col.getName().equalsIgnoreCase(colName)) {
+        return (col.getType() == DataType.COMPLEX_TYPE);
+      }
+    }
+    return false;
+  }
 
   /**
    * @return The number of variable length columns which are not long values

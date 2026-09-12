@@ -87,6 +87,10 @@ public class IndexData {
   public static final byte REQUIRED_INDEX_FLAG = (byte)0x08;
   public static final byte UNKNOWN_INDEX_FLAG = (byte)0x80; // always seems to be set on indexes in access 2000+
 
+  /** the byte after the index flags, for an index over a complex column.
+      every other index has 0 there */
+  private static final byte COMPLEX_INDEX_MARKER = (byte)0x02;
+
   private static final int MAGIC_INDEX_NUMBER = 1923;
 
   private static final ByteOrder ENTRY_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
@@ -585,6 +589,7 @@ public class IndexData {
     // write column information (always MAX_COLUMNS entries)
     IndexBuilder idx = idxDataState.getFirstIndex();
     List<IndexBuilder.Column> idxColumns = idx.getColumns();
+    boolean isComplexIndex = false;
     for(int i = 0; i < MAX_COLUMNS; ++i) {
 
       short columnNumber = COLUMN_UNUSED;
@@ -598,6 +603,7 @@ public class IndexData {
 
         // find actual table column number
         columnNumber = creator.getColumnNumber(idxCol.getName());
+        isComplexIndex |= creator.isComplexColumn(idxCol.getName());
         if(columnNumber == COLUMN_UNUSED) {
           // should never happen as this is validated before
           throw new IllegalArgumentException(
@@ -621,7 +627,8 @@ public class IndexData {
     buffer.putInt(idxDataState.getRootPageNumber());
     buffer.putInt(0); // unknown
     buffer.put(idx.getFlags()); // index flags (unique, etc.)
-    ByteUtil.forward(buffer, 5); // unknown
+    buffer.put(isComplexIndex ? COMPLEX_INDEX_MARKER : 0);
+    ByteUtil.forward(buffer, 4); // unknown
   }
 
   private static ByteBuffer createRootPageBuffer(TableMutator creator)
