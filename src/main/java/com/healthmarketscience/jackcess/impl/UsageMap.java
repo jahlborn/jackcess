@@ -792,7 +792,7 @@ public class UsageMap
     {
       ByteBuffer mapPageBuffer = _mapPageHolder.setNewPage(getPageChannel());
       mapPageBuffer.put(PageTypes.USAGE_MAP);
-      mapPageBuffer.put((byte) 0x01);  //Unknown
+      mapPageBuffer.put((byte) 0x01);  // constant 1 on every page type
       mapPageBuffer.putShort((short) 0); //Unknown
       return mapPageBuffer;
     }

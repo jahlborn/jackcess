@@ -419,6 +419,7 @@ public class IndexPageCache
       dpExtra._entryPrefix = EMPTY_PREFIX;
       // when the root page becomes empty, it becomes a leaf page again
       dpMain._leaf = true;
+      dpMain._level = 0;
       return;
     }
 
@@ -643,7 +644,7 @@ public class IndexPageCache
     // so, we will naively move half the entries from one page to a new page.
 
     CacheDataPage newDataPage = allocateNewCacheDataPage(
-        parentMain._pageNumber, origMain._leaf);
+        parentMain._pageNumber, origMain._leaf, origMain.getLevel());
     DataPageMain newMain = newDataPage._main;
     DataPageExtra newExtra = newDataPage._extra;
 
@@ -706,7 +707,8 @@ public class IndexPageCache
     }
 
     CacheDataPage newDataPage =
-      allocateNewCacheDataPage(rootMain._pageNumber, rootMain._leaf);
+      allocateNewCacheDataPage(rootMain._pageNumber, rootMain._leaf,
+                               rootMain.getLevel());
     DataPageMain newMain = newDataPage._main;
     DataPageExtra newExtra = newDataPage._extra;
 
@@ -722,8 +724,10 @@ public class IndexPageCache
       reparentChildren(newDataPage);
     }
 
-    // clear the root page
+    // clear the root page, which now sits one level above the new page
+    // holding its entries
     rootMain._leaf = false;
+    rootMain._level = newMain._level + 1;
     rootMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
     rootExtra._entries = new ArrayList<>();
     rootExtra._entryPrefix = EMPTY_PREFIX;
@@ -741,17 +745,19 @@ public class IndexPageCache
    *
    * @param parentPageNumber the parent page for the new page
    * @param isLeaf whether or not the new page is a leaf page
+   * @param level the level of the new page in the index tree
    *
    * @return the newly created page
    */
   private CacheDataPage allocateNewCacheDataPage(Integer parentPageNumber,
-                                                 boolean isLeaf)
+                                                 boolean isLeaf, int level)
     throws IOException
   {
     DataPageMain dpMain = new DataPageMain(getPageChannel().allocateNewPage());
     DataPageExtra dpExtra = new DataPageExtra();
     dpMain.initParentPage(parentPageNumber, false);
     dpMain._leaf = isLeaf;
+    dpMain._level = level;
     dpMain._prevPageNumber = INVALID_INDEX_PAGE_NUMBER;
     dpMain._nextPageNumber = INVALID_INDEX_PAGE_NUMBER;
     dpMain._childTailPageNumber = INVALID_INDEX_PAGE_NUMBER;
@@ -1054,6 +1060,8 @@ public class IndexPageCache
     public Integer _childTailPageNumber;
     public Integer _parentPageNumber;
     public boolean _leaf;
+    /** depth below the leaves of the index tree, 0 for a leaf page */
+    public int _level;
     public boolean _tail;
     private Reference<DataPageExtra> _extra;
 
@@ -1136,6 +1144,16 @@ public class IndexPageCache
         child.initParentPage(_pageNumber, isTail);
       }
       return child;
+    }
+
+    public int getLevel() throws IOException
+    {
+      if(!_leaf && (_level == 0)) {
+        // a node page is never at level 0, so this one has a level which was
+        // never filled in.  take it from a child instead
+        _level = getChildPage(getExtra()._entries.get(0)).getLevel() + 1;
+      }
+      return _level;
     }
 
     public DataPageExtra getExtra() throws IOException
@@ -1245,6 +1263,15 @@ public class IndexPageCache
       _main._leaf = isLeaf;
     }
 
+    @Override
+    public int getLevel() throws IOException {
+      return _main.getLevel();
+    }
+
+    @Override
+    public void setLevel(int level) {
+      _main._level = level;
+    }
 
     @Override
     public int getPrevPageNumber() {
@@ -1519,6 +1546,12 @@ public class IndexPageCache
                     "Child's pageNumber is not the expected next child for " +
                     childMain));
           }
+          if(childMain.getLevel() != (dpMain.getLevel() - 1)) {
+            throw new IllegalStateException(withErrorContext(
+                    "Child's level " + childMain.getLevel() +
+                    " is not one below its parent's " + dpMain.getLevel() +
+                    " for " + childMain));
+          }
           if(childMain._parentPageNumber != null) {
             if(childMain._parentPageNumber != dpMain._pageNumber) {
               throw new IllegalStateException(
@@ -1591,11 +1624,17 @@ public class IndexPageCache
      * @param peerMain the peer index page
      */
     private void validatePeerStatus(DataPageMain dpMain, DataPageMain peerMain)
+      throws IOException
     {
       if(dpMain._leaf != peerMain._leaf) {
         throw new IllegalStateException(withErrorContext(
                 "Mismatched peer status " + dpMain._leaf + " " +
                 peerMain._leaf));
+      }
+      if(dpMain.getLevel() != peerMain.getLevel()) {
+        throw new IllegalStateException(withErrorContext(
+                "Mismatched peer level " + dpMain.getLevel() + " " +
+                peerMain.getLevel()));
       }
       if(!dpMain._leaf) {
         if((dpMain._parentPageNumber != null) &&

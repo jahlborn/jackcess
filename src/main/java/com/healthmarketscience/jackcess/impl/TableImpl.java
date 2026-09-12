@@ -1753,7 +1753,9 @@ public class TableImpl implements Table, PropertyMaps.Owner
     buffer.putInt(0);  //Number of rows
     buffer.putInt(0); //Last Autonumber
     buffer.put((byte) 1); // this makes autonumbering work in access
-    for (int i = 0; i < 15; i++) {  //Unknown
+    // 3 constant zero bytes, the next complex autonumber value, then 8 bytes
+    // which hold whatever the page held before the definition was written
+    for (int i = 0; i < 15; i++) {
       buffer.put((byte) 0);
     }
     buffer.put(TYPE_USER); //Table type
@@ -1775,9 +1777,10 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private static void writeTablePageHeader(ByteBuffer buffer)
   {
     buffer.put(PageTypes.TABLE_DEF);  //Page type
-    buffer.put((byte) 0x01); //Unknown
-    buffer.put((byte) 0); //Unknown
-    buffer.put((byte) 0); //Unknown
+    buffer.put((byte) 0x01); // constant 1 on every page type
+    // free space on this page, which writeTableDefinitionBuffer fills in once
+    // the length of the definition is known
+    buffer.putShort((short) 0);
     buffer.putInt(0);  //Next TDEF page pointer
   }
 
@@ -1921,10 +1924,10 @@ public class TableImpl implements Table, PropertyMaps.Owner
   {
     ByteBuffer umapBuf = pageChannel.createPageBuffer();
     umapBuf.put(PageTypes.DATA);
-    umapBuf.put((byte) 0x1);  //Unknown
+    umapBuf.put((byte) 0x1);  // constant 1 on every page type
     umapBuf.putShort((short)freeSpace);  //Free space in page
     umapBuf.putInt(0); //Table definition
-    umapBuf.putInt(0); //Unknown
+    umapBuf.putInt(0); // write stamp, see newDataPage
     umapBuf.putShort((short)0); //Number of records on this page
     return umapBuf;
   }
@@ -2787,10 +2790,12 @@ public class TableImpl implements Table, PropertyMaps.Owner
   private ByteBuffer newDataPage() throws IOException {
     ByteBuffer dataPage = _addRowBufferH.setNewPage(getPageChannel());
     dataPage.put(PageTypes.DATA); //Page type
-    dataPage.put((byte) 1); //Unknown
+    dataPage.put((byte) 1); // constant 1 on every page type
     dataPage.putShort((short)getFormat().DATA_PAGE_INITIAL_FREE_SPACE); //Free space in this page
     dataPage.putInt(_tableDefPageNumber); //Page pointer to table definition
-    dataPage.putInt(0); //Unknown
+    // the engine stamps GetTickCount() here when it writes the page, and
+    // writes zero when it initializes one
+    dataPage.putInt(0);
     dataPage.putShort((short)0); //Number of rows on this page
     int pageNumber = _addRowBufferH.getPageNumber();
     getPageChannel().writePage(dataPage, pageNumber);

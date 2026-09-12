@@ -2111,7 +2111,9 @@ public class ColumnImpl implements Column, DateTimeContext
         buffer.put((byte) 0x00); //unused
         buffer.put((byte) 0x00); //unused
       }
-      buffer.putShort((short) 0); //Unknown
+      // the collation variant, which is always zero, and the sort order
+      // version, which access writes on a non-text column only in jet 14
+      buffer.putShort((short) 0);
     }
 
     buffer.put(getColumnBitFlags(col)); // misc col flags
@@ -2125,7 +2127,7 @@ public class ColumnImpl implements Column, DateTimeContext
       buffer.put((byte)0);
     }
 
-    buffer.putInt(0); //Unknown, but always 0.
+    buffer.putInt(0); // always 0
 
     //Offset for fixed length columns
     if(col.isVariableLength()) {

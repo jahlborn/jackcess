@@ -438,7 +438,7 @@ public class IndexImpl implements Index
       buffer.put(deleteFlags); // cascade deletes flag
     }
     buffer.put(idxType); // index type flags
-    buffer.putInt(0); // unknown
+    buffer.putInt(0); // constant zero
   }
 
   private String withErrorContext(String msg) {

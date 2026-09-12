@@ -58,6 +58,13 @@
         all, so every entry for a supplementary character was wrong there.
       </action>
       <action dev="jahlborn" type="fix">
+        Write the level of an index page into its page header.  The level is
+        the depth of the page below the leaves of the index tree, 0 on a leaf
+        page and one more than its children on a node page.  Zero was written
+        on every page, so an index deep enough to need node pages claimed they
+        were all at the level of the leaves.
+      </action>
+      <action dev="jahlborn" type="fix">
         Identify a property map by its name and its block type together.  Ms
         access keeps index properties in their own block and names an index
         after its column by default, so a table commonly holds a column block
