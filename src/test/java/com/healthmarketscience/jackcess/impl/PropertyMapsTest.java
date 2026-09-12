@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.PropertyMap;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
@@ -85,6 +86,37 @@ public class PropertyMapsTest extends TestCase
     assertEquals((byte)0x00, getFlags(map.put("plain", "value")));
     assertEquals((byte)0x01,
                  getFlags(map.put("ddl", null, "value", true)));
+  }
+
+  /**
+   * A property map is identified by its name and its block type together.
+   * Access names an index after its column by default, so a table commonly
+   * holds a column block and an index block with the same name.
+   */
+  public void testIndexBlockIsSeparateFromColumnBlock() throws Exception
+  {
+    for(TestDB testDb : SUPPORTED_DBS_TEST) {
+      Database db = open(testDb);
+
+      PropertyMaps maps =
+        ((PropertyMapImpl)db.getTable("Table1").getProperties()).getOwner();
+      int origSize = maps.getSize();
+
+      maps.get("Shared").put("ColProp", DataType.TEXT, "column");
+      maps.getIndex("Shared").put("IdxProp", DataType.TEXT, "index");
+
+      assertEquals(origSize + 2, maps.getSize());
+
+      PropertyMaps maps2 = ((DatabaseImpl)db).readProperties(
+          maps.write(), maps.getObjectId(), null);
+
+      assertEquals("column", maps2.get("Shared").getValue("ColProp"));
+      assertNull(maps2.get("Shared").getValue("IdxProp"));
+      assertEquals("index", maps2.getIndex("Shared").getValue("IdxProp"));
+      assertNull(maps2.getIndex("Shared").getValue("ColProp"));
+
+      db.close();
+    }
   }
 
   private static byte getFlags(PropertyMap.Property prop) {

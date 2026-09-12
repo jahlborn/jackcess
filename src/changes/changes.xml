@@ -50,6 +50,22 @@
         damaged table definition now becomes read-only.
       </action>
       <action dev="jahlborn" type="fix">
+        Fix the index entry written for a surrogate pair.  In the general sort
+        order the weight table gives the high surrogates four separate ranges,
+        one of which has no weight at all, and only the first was implemented,
+        so entries for characters above plane 1 did not match ms access.  In
+        the general legacy sort order ms access gives a surrogate no weight at
+        all, so every entry for a supplementary character was wrong there.
+      </action>
+      <action dev="jahlborn" type="fix">
+        Identify a property map by its name and its block type together.  Ms
+        access keeps index properties in their own block and names an index
+        after its column by default, so a table commonly holds a column block
+        and an index block with the same name.  Keying on the name alone
+        reported the index properties as the column's, and rewriting the map
+        wrote one block instead of two, which discarded the index properties.
+      </action>
+      <action dev="jahlborn" type="fix">
         Keep the whole property flag byte when a property map is rewritten.
         Ms access uses it as a bit field: bit 0 is the ddl flag and bit 7
         tells the engine to store the value without running the handler bound

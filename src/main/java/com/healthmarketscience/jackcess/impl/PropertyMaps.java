@@ -43,10 +43,14 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   private static final short PROPERTY_NAME_LIST = 0x80;
   private static final short DEFAULT_PROPERTY_VALUE_LIST = 0x00;
   private static final short COLUMN_PROPERTY_VALUE_LIST = 0x01;
+  private static final short INDEX_PROPERTY_VALUE_LIST = 0x02;
 
-  /** maps the PropertyMap name (case-insensitive) to the PropertyMap
-      instance */
-  private final Map<String,PropertyMapImpl> _maps =
+  /** maps the PropertyMap name (case-insensitive) and block type to the
+      PropertyMap instance.  the type belongs in the key because a block of
+      type 0x02 holds the properties of an index, and access names an index
+      after its column by default, so a table can hold a column block and an
+      index block with the same name */
+  private final Map<Key,PropertyMapImpl> _maps =
     new LinkedHashMap<>();
   private final int _objectId;
   private final RowIdImpl _rowId;
@@ -90,17 +94,59 @@ public class PropertyMaps implements Iterable<PropertyMapImpl>
   }
 
   /**
+   * @return the PropertyMap for the index with the given name in this group,
+   *         creating if necessary.  An index has its own block, and access
+   *         names an index after its column by default, so this is a separate
+   *         map from the one {@link #get} returns for the same name.
+   */
+  public PropertyMapImpl getIndex(String name) {
+    return get(name, INDEX_PROPERTY_VALUE_LIST);
+  }
+
+  /**
    * @return the PropertyMap with the given name and type in this group,
    *         creating if necessary
    */
   private PropertyMapImpl get(String name, short type) {
-    String lookupName = DatabaseImpl.toLookupName(name);
-    PropertyMapImpl map = _maps.get(lookupName);
+    Key key = new Key(name, type);
+    PropertyMapImpl map = _maps.get(key);
     if(map == null) {
       map = new PropertyMapImpl(name, type, this);
-      _maps.put(lookupName, map);
+      _maps.put(key, map);
     }
     return map;
+  }
+
+  /**
+   * The name and block type which together identify a PropertyMap within one
+   * group.
+   */
+  private static final class Key
+  {
+    private final String _lookupName;
+    private final short _type;
+
+    private Key(String name, short type) {
+      _lookupName = DatabaseImpl.toLookupName(name);
+      _type = type;
+    }
+
+    @Override
+    public int hashCode() {
+      return _lookupName.hashCode() + _type;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return ((this == o) ||
+              ((o instanceof Key) && (_type == ((Key)o)._type) &&
+               _lookupName.equals(((Key)o)._lookupName)));
+    }
+
+    @Override
+    public String toString() {
+      return _lookupName + "[" + _type + "]";
+    }
   }
 
   @Override
