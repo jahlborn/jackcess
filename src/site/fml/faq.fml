@@ -9,7 +9,7 @@
       <question>Does this work on Linux/Unix?</question>
       <answer>
         <p>Yep, Jackcess is pure Java.  It will work on any Java Virtual
-        Machine (1.8+).</p>
+        Machine (11+).</p>
       </answer>
     </faq>
 
@@ -137,8 +137,8 @@
       <question>What version of the JDK does this require?</question>
       <answer>
         <p>
-          Version 3.0+ requires JDK 1.8 or higher.  2.x versions require JDK
-          1.5 or higher.
+          Version 5.0+ requires JDK 11 or higher. Version 3.0+ requires JDK
+          1.8 or higher.  2.x versions require JDK 1.5 or higher.
         </p>
       </answer>
     </faq>

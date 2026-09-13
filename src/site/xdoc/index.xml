@@ -14,11 +14,19 @@
         an application.  There is no GUI.  It's a library, intended for other
         developers to use to build Java applications.  Jackcess is licensed
         under the <a href="http://www.apache.org/licenses/LICENSE-2.0.txt">Apache License</a>
-        (as of version 2.1.0) and currently requires Java 8+ (as of the 3.0.0
+        (as of version 2.1.0) and currently requires Java 11+ (as of the 5.0.0
         release) Take a look at our <a href="faq.html">Frequently Asked
         Questions</a> for more info.
       </p>
 
+      <subsection name="Java 11+ Support (2026-09-12)">
+        <p>
+          Jackcess now requires Java 11+ as of the 5.0.0 release.  All third
+          party dependencies have been updated to the latest versions and some
+          legacy dependencies have been dropped..
+        </p>
+      </subsection>
+      
       <subsection name="Java 9+ Compatibility (2021-01-20)">
         <p>
           While Jackcess <i>still only requires Java 8+</i>, as of the 4.0.0
