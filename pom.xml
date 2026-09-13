@@ -221,7 +221,6 @@
           <maxmemory>512</maxmemory>
           <links>
             <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
-            <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>11</source>
           <show>public</show>
@@ -341,7 +340,6 @@
           <maxmemory>512</maxmemory>
           <links>
             <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
-            <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
           <source>11</source>
           <show>public</show>
