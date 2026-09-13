@@ -12,6 +12,14 @@
       <action dev="jahlborn" type="update">
         Removed RuntimeIOException in favor of built in UncheckedIOException.
       </action>      
+      <action dev="jahlborn" type="update">
+        Removed DataType.UNKNOWN_0D.  It is not a data type.
+      </action>
+      <action dev="jahlborn" type="update">
+        Renamed DataType.UNKNOWN_11 to DataType.BIG_BINARY, which is what the
+        engine calls it.  It is a fixed length binary column longer than the
+        255 byte BINARY, used only by the Data column of MSysAccessObjects.
+      </action>
     </release>
     <release version="4.0.12" date="2026-09-12">
       <action dev="jahlborn" type="update">
