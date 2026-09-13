@@ -23,7 +23,7 @@
         <p>
           Jackcess now requires Java 11+ as of the 5.0.0 release.  All third
           party dependencies have been updated to the latest versions and some
-          legacy dependencies have been dropped..
+          legacy dependencies have been dropped.
         </p>
       </subsection>
       
