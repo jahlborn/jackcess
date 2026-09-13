@@ -356,36 +356,35 @@ public class TableUpdaterTest
       FileFormat fileFormat, TableDefDamager damager, String expectedColName)
     throws Exception
   {
-    Database db = create(fileFormat);
+    try(Database db = create(fileFormat)) {
 
-    Table t = newTable("test")
-      .addColumn(newColumn("id", DataType.LONG))
-      .addColumn(newColumn("data1", DataType.TEXT))
-      .addColumn(newColumn("data2", DataType.TEXT))
-      .toTable(db);
+      Table t = newTable("test")
+        .addColumn(newColumn("id", DataType.LONG))
+        .addColumn(newColumn("data1", DataType.TEXT))
+        .addColumn(newColumn("data2", DataType.TEXT))
+        .toTable(db);
 
-    damager.damage(t);
+      damager.damage(t);
 
-    // the table def is validated when the table is loaded, so re-run the
-    // validation now that the def has been damaged
-    java.lang.reflect.Method m =
-      TableImpl.class.getDeclaredMethod("validateColumnDefs");
-    m.setAccessible(true);
-    m.invoke(t);
+      // the table def is validated when the table is loaded, so re-run the
+      // validation now that the def has been damaged
+      java.lang.reflect.Method m =
+        TableImpl.class.getDeclaredMethod("validateColumnDefs");
+      m.setAccessible(true);
+      m.invoke(t);
 
-    // rows can still be read
-    assertNull(t.getNextRow());
+      // rows can still be read
+      assertNull(t.getNextRow());
 
-    // but not written
-    try {
-      t.addRow(1, "foo", "bar");
-      fail("JackcessException should have been thrown");
-    } catch(JackcessException e) {
-      assertTrue(e.getMessage().contains("Table definition is corrupt"));
-      assertTrue(e.getMessage().contains(expectedColName));
+      // but not written
+      try {
+        t.addRow(1, "foo", "bar");
+        fail("JackcessException should have been thrown");
+      } catch(JackcessException e) {
+        assertTrue(e.getMessage().contains("Table definition is corrupt"));
+        assertTrue(e.getMessage().contains(expectedColName));
+      }
     }
-
-    db.close();
   }
 
   private static void setTableField(Table t, String fieldName, short value)

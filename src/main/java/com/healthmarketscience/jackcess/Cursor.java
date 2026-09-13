@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
