@@ -121,10 +121,10 @@ public class DatabaseImpl implements Database, DateTimeContext
     addFileFormatDetails(FileFormat.GENERIC_JET4, null, JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2000, "empty", JetFormat.VERSION_4);
     addFileFormatDetails(FileFormat.V2003, "empty2003", JetFormat.VERSION_4);
-    addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_12);
-    addFileFormatDetails(FileFormat.V2010, "empty2010", JetFormat.VERSION_14);
-    addFileFormatDetails(FileFormat.V2016, "empty2016", JetFormat.VERSION_16);
-    addFileFormatDetails(FileFormat.V2019, "empty2019", JetFormat.VERSION_17);
+    addFileFormatDetails(FileFormat.V2007, "empty2007", JetFormat.VERSION_2007);
+    addFileFormatDetails(FileFormat.V2010, "empty2010", JetFormat.VERSION_2010);
+    addFileFormatDetails(FileFormat.V2016, "empty2016", JetFormat.VERSION_2016);
+    addFileFormatDetails(FileFormat.V2019, "empty2019", JetFormat.VERSION_2019);
     addFileFormatDetails(FileFormat.MSISAM, null, JetFormat.VERSION_MSISAM);
   }
 

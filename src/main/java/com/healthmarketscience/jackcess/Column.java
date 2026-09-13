@@ -81,6 +81,15 @@ public interface Column
   public int getColumnIndex();
 
   /**
+   * Returns the id which the database engine gave this column when it was
+   * created.  The engine never renumbers an id, so a table which has had a
+   * column deleted has gaps in its ids and the id of a column differs from its
+   * index.
+   * @usage _advanced_method_
+   */
+  public short getColumnId();
+
+  /**
    * @usage _general_method_
    */
   public DataType getType();
@@ -136,6 +145,21 @@ public interface Column
    * @usage _general_method_
    */
   public boolean isCalculated();
+
+  /**
+   * Returns whether or not the database engine maintains this column and
+   * Access hides it.  The columns of the system catalog tables, {@code
+   * MSysComplexColumns} included, and the replication columns do.
+   * @usage _general_method_
+   */
+  public boolean isHidden();
+
+  /**
+   * Returns whether or not this column holds a windows security identifier.
+   * Only {@code MSysObjects.Owner} and {@code MSysACEs.SID} do.
+   * @usage _advanced_method_
+   */
+  public boolean isSecurityIdentifier();
 
   /**
    * Returns extended functionality for "complex" columns.

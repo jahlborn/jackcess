@@ -160,8 +160,23 @@ public class ColumnImpl implements Column, DateTimeContext
    */
   public static final byte UPDATABLE_FLAG_MASK = (byte)0x02;
 
-  // some other flags?
-  // 0x10: replication related field (or hidden?)
+  /**
+   * mask for the bit which marks a column the engine maintains and Access
+   * hides.  The system catalog columns, {@code MSysComplexColumns} included,
+   * and the replication columns carry it, and nothing else does.
+   * @usage _advanced_field_
+   */
+  public static final byte HIDDEN_FLAG_MASK = (byte)0x10;
+
+  /**
+   * mask for the bit which marks a column holding a windows security
+   * identifier.  Only {@code MSysObjects.Owner} and {@code MSysACEs.SID} carry
+   * it.
+   * @usage _advanced_field_
+   */
+  public static final byte SECURITY_IDENTIFIER_FLAG_MASK = (byte)0x20;
+
+  // flag bit 0x08 occurs in no known database
 
   protected static final byte COMPRESSED_UNICODE_EXT_FLAG_MASK = (byte)0x01;
   private static final byte CALCULATED_EXT_FLAG_MASK = (byte)0xC0;
@@ -229,6 +244,10 @@ public class ColumnImpl implements Column, DateTimeContext
    * column's flat table
    */
   private final boolean _complexValueForeignKey;
+  /** whether or not the engine maintains the column and hides it */
+  private final boolean _hidden;
+  /** whether or not the column holds a windows security identifier */
+  private final boolean _securityIdentifier;
   /** Data type */
   private final DataType _type;
   /** Maximum column length */
@@ -277,6 +296,8 @@ public class ColumnImpl implements Column, DateTimeContext
     _autoNumber = false;
     _calculated = false;
     _complexValueForeignKey = false;
+    _hidden = false;
+    _securityIdentifier = false;
     _autoNumberGenerator = null;
     _columnNumber = (short)colNumber;
     _columnId = (short)colNumber;
@@ -310,6 +331,9 @@ public class ColumnImpl implements Column, DateTimeContext
     _calculated = ((args.extFlags & CALCULATED_EXT_FLAG_MASK) != 0);
     _complexValueForeignKey =
       ((args.extFlags & COMPLEX_FK_EXT_FLAG_MASK) != 0);
+    _hidden = ((args.flags & HIDDEN_FLAG_MASK) != 0);
+    _securityIdentifier =
+      ((args.flags & SECURITY_IDENTIFIER_FLAG_MASK) != 0);
 
     _autoNumberGenerator = createAutoNumberGenerator();
 
@@ -444,11 +468,19 @@ public class ColumnImpl implements Column, DateTimeContext
     return _columnNumber;
   }
 
-  /**
-   * @usage _advanced_method_
-   */
+  @Override
   public short getColumnId() {
     return _columnId;
+  }
+
+  @Override
+  public boolean isHidden() {
+    return _hidden;
+  }
+
+  @Override
+  public boolean isSecurityIdentifier() {
+    return _securityIdentifier;
   }
 
   @Override
@@ -1797,6 +1829,12 @@ public class ColumnImpl implements Column, DateTimeContext
       .append("id", _columnId)
       .append("length", _columnLength)
       .append("variableLength", _variableLength);
+    if(_hidden) {
+      sb.append("hidden", _hidden);
+    }
+    if(_securityIdentifier) {
+      sb.append("securityIdentifier", _securityIdentifier);
+    }
     if(_calculated) {
       sb.append("calculated", _calculated)
         .appendIfNotNull("expression", getCalculationContext());

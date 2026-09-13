@@ -50,13 +50,13 @@ public class CalcFieldTest
       .setCalculatedInfo("[id] & \"_\" & [data]");
 
     try {
-      cb.validate(JetFormat.VERSION_12);
+      cb.validate(JetFormat.VERSION_2007);
       fail("IllegalArgumentException should have been thrown");
     } catch(IllegalArgumentException e) {
       assertTrue(e.getMessage().contains(""));
     }
 
-    cb.validate(JetFormat.VERSION_14);
+    cb.validate(JetFormat.VERSION_2010);
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
       JetFormat format = DatabaseImpl.getFileFormatDetails(fileFormat).getFormat();

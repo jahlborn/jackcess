@@ -4,6 +4,26 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="5.0.1" date="TBD">
+      <action dev="jahlborn" type="add">
+        Add Column.getColumnId, the id the engine gave a column when it was
+        created.  The engine never renumbers an id, so a table which has had a
+        column deleted has gaps in its ids.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add Column.isHidden and Column.isSecurityIdentifier for the two column
+        flag bits which were previously unnamed.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add Index.getProperties.  An index has a property block of its own,
+        separate from the block of the column access named it after.
+      </action>
+      <action dev="jahlborn" type="add">
+        Add PropertyMap.Property.isSkipHandler for the property flag bit which
+        tells the engine to store the value without running the handler bound
+        to the property name, and a PropertyMap.put which sets both flag bits.
+      </action>
+    </release>
     <release version="5.0.0" date="2026-09-12">
       <action dev="jahlborn" type="update">
         Update minimum java requirement to java 11.  Some code base cleanup

@@ -153,7 +153,7 @@ public class PropertyMapImpl implements PropertyMap
     // property was read from a file
     byte flags = ((prop instanceof PropertyImpl) ?
                   ((PropertyImpl)prop).getFlags() :
-                  toFlags(prop.isDdl()));
+                  toFlags(prop.isDdl(), prop.isSkipHandler()));
     return put(prop.getName(), prop.getType(), prop.getValue(), flags);
   }
 
@@ -163,7 +163,13 @@ public class PropertyMapImpl implements PropertyMap
   @Override
   public PropertyImpl put(String name, DataType type, Object value,
                           boolean isDdl) {
-    return put(name, type, value, toFlags(isDdl));
+    return put(name, type, value, toFlags(isDdl, false));
+  }
+
+  @Override
+  public PropertyImpl put(String name, DataType type, Object value,
+                          boolean isDdl, boolean isSkipHandler) {
+    return put(name, type, value, toFlags(isDdl, isSkipHandler));
   }
 
   /**
@@ -217,7 +223,13 @@ public class PropertyMapImpl implements PropertyMap
 
   public static Property createProperty(String name, DataType type,
                                         Object value, boolean isDdl) {
-    return createProperty(name, type, value, toFlags(isDdl));
+    return createProperty(name, type, value, toFlags(isDdl, false));
+  }
+
+  public static Property createProperty(String name, DataType type,
+                                        Object value, boolean isDdl,
+                                        boolean isSkipHandler) {
+    return createProperty(name, type, value, toFlags(isDdl, isSkipHandler));
   }
 
   static Property createProperty(String name, DataType type,
@@ -268,8 +280,9 @@ public class PropertyMapImpl implements PropertyMap
     return new PropertyImpl(name, type, value, flags);
   }
 
-  private static byte toFlags(boolean isDdl) {
-    return (isDdl ? DDL_FLAG : 0);
+  private static byte toFlags(boolean isDdl, boolean isSkipHandler) {
+    return (byte)((isDdl ? DDL_FLAG : 0) |
+                  (isSkipHandler ? SKIP_HANDLER_FLAG : 0));
   }
 
   /**
@@ -316,6 +329,11 @@ public class PropertyMapImpl implements PropertyMap
       return ((_flags & DDL_FLAG) != 0);
     }
 
+    @Override
+    public boolean isSkipHandler() {
+      return ((_flags & SKIP_HANDLER_FLAG) != 0);
+    }
+
     /**
      * @return the flag byte as stored in the file.  Access uses more of it
      *         than the one bit {@link #isDdl} reports, so the whole byte has
@@ -332,7 +350,7 @@ public class PropertyMapImpl implements PropertyMap
         val = ByteUtil.toHexString((byte[])val);
       }
       String flagStr = (isDdl() ? ":ddl" : "") +
-        (((_flags & SKIP_HANDLER_FLAG) != 0) ? ":nohandler" : "");
+        (isSkipHandler() ? ":nohandler" : "");
       return getName() + "[" + getType() + flagStr + "]=" + val;
     }
   }

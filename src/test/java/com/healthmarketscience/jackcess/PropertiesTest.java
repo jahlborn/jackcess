@@ -262,6 +262,67 @@ public class PropertiesTest
   }
 
   @Test
+  public void testIndexProperties() throws Exception
+  {
+    for(TestDB testDb : SUPPORTED_DBS_TEST) {
+      File dbFile;
+
+      try (Database db = openCopy(testDb)) {
+        dbFile = db.getFile();
+
+        Table t = db.getTable("Table1");
+        Index idx = t.getIndex("B");
+
+        // an index has a property block of its own, separate from the block of
+        // the column access named it after
+        PropertyMap idxProps = idx.getProperties();
+        assertTrue(idxProps.isEmpty());
+
+        idxProps.put("Description", DataType.TEXT, "an index property",
+                     false, true);
+        idxProps.save();
+      }
+
+      try (Database db = open(dbFile)) {
+
+        Table t = db.getTable("Table1");
+
+        PropertyMap idxProps = t.getIndex("B").getProperties();
+        assertEquals("an index property", idxProps.getValue("Description"));
+
+        PropertyMap.Property prop = idxProps.get("Description");
+        assertFalse(prop.isDdl());
+        assertTrue(prop.isSkipHandler());
+
+        // the column of the same name did not gain it
+        assertNull(t.getColumn("B").getProperties().getValue("Description"));
+      }
+    }
+  }
+
+  @Test
+  public void testSkipHandlerFlag() throws Exception
+  {
+    for(TestDB testDb : SUPPORTED_DBS_TEST_FOR_READ) {
+      try (Database db = open(testDb)) {
+
+        // access writes ColIsGuid with the bit which tells the engine to store
+        // the value instead of running the handler for the property name
+        PropertyMap.Property prop =
+          db.getTable("Table4").getProperties().get("ColIsGuid");
+        assertTrue(prop.isDdl());
+        assertTrue(prop.isSkipHandler());
+
+        // an ordinary property carries the bit off
+        prop = db.getTable("Table1").getColumn("C").getProperties()
+          .get(PropertyMap.REQUIRED_PROP);
+        assertTrue(prop.isDdl());
+        assertFalse(prop.isSkipHandler());
+      }
+    }
+  }
+
+  @Test
   public void testModifyProperties() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {

@@ -80,6 +80,12 @@ public interface Index
   public boolean isRequired();
 
   /**
+   * Returns the properties for this index.  An index has a property block of
+   * its own, separate from the block of the column it is named after.
+   */
+  public PropertyMap getProperties() throws IOException;
+
+  /**
    * Convenience method for constructing a new CursorBuilder for this Index.
    */
   public CursorBuilder newCursor();

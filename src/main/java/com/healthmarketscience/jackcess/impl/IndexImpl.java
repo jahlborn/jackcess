@@ -27,6 +27,7 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
+import com.healthmarketscience.jackcess.PropertyMap;
 
 /**
  * Access table (logical) index.  Logical indexes are backed for IndexData,
@@ -67,6 +68,8 @@ public class IndexImpl implements Index
   /** the actual data backing this index (more than one index may be backed by
       the same data */
   private final IndexData _data;
+  /** properties for this index, if any */
+  private PropertyMap _props;
   /** 0-based index number */
   private final int _indexNumber;
   /** the type of the index */
@@ -150,6 +153,14 @@ public class IndexImpl implements Index
 
   void setName(String name) {
     _name = name;
+  }
+
+  @Override
+  public PropertyMap getProperties() throws IOException {
+    if(_props == null) {
+      _props = getTable().getPropertyMaps().getIndex(getName());
+    }
+    return _props;
   }
 
   @Override
