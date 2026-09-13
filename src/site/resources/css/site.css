@@ -42,14 +42,16 @@ hr {
 th {
     background-color: #BBB;
 }
-.section h3 {
+/* doxia's html5 sink wraps each section in a bare <section> element, with no
+   class to hook */
+section h3 {
     padding: 0px 8px;
     border: 1px solid #AAA;
     background-color: #EEE;
     color: #BF7D30;
     font-size: large;
 }
-.section h2 {
+section h2 {
     padding: 0px 8px;
     border: 1px solid #999;
     background-color: #DDD;
@@ -60,7 +62,7 @@ th {
     background-color:#BBB;
     color: #FFF;
 }
-.section h2 > a,.section h3 > a {
+section h2 > a,section h3 > a {
     color: #BF7D30;
 }
 #bannerLeft h2 {

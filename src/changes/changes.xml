@@ -4,7 +4,7 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
-    <release version="5.0.0" date="TBD">
+    <release version="5.0.0" date="2026-09-12">
       <action dev="jahlborn" type="update">
         Update minimum java requirement to java 11.  Some code base cleanup
         and modernization.
