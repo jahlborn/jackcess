@@ -26,68 +26,65 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Database.FileFormat;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class CustomLinkResolverTest extends TestCase
+public class CustomLinkResolverTest
 {
 
-  public CustomLinkResolverTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testCustomLinkResolver() throws Exception {
     for(final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      db.setLinkResolver(new TestLinkResolver());
+        db.setLinkResolver(new TestLinkResolver());
 
-      db.createLinkedTable("Table1", "testFile1.txt", "Table1");
-      db.createLinkedTable("Table2", "testFile2.txt", "OtherTable2");
-      db.createLinkedTable("Table3", "missingFile3.txt", "MissingTable3");
-      db.createLinkedTable("Table4", "testFile2.txt", "MissingTable4");
+        db.createLinkedTable("Table1", "testFile1.txt", "Table1");
+        db.createLinkedTable("Table2", "testFile2.txt", "OtherTable2");
+        db.createLinkedTable("Table3", "missingFile3.txt", "MissingTable3");
+        db.createLinkedTable("Table4", "testFile2.txt", "MissingTable4");
 
-      Table t1 = db.getTable("Table1");
-      assertNotNull(t1);
-      assertNotSame(db, t1.getDatabase());
+        Table t1 = db.getTable("Table1");
+        assertNotNull(t1);
+        assertNotSame(db, t1.getDatabase());
 
-      assertTable(createExpectedTable(createExpectedRow("id", 0,
-                                                        "data1", "row0"),
-                                      createExpectedRow("id", 1,
-                                                        "data1", "row1"),
-                                      createExpectedRow("id", 2,
-                                                        "data1", "row2")),
-                  t1);
+        assertTable(createExpectedTable(createExpectedRow("id", 0,
+                                                          "data1", "row0"),
+                                        createExpectedRow("id", 1,
+                                                          "data1", "row1"),
+                                        createExpectedRow("id", 2,
+                                                          "data1", "row2")),
+                    t1);
 
-      Table t2 = db.getTable("Table2");
-      assertNotNull(t2);
-      assertNotSame(db, t2.getDatabase());
+        Table t2 = db.getTable("Table2");
+        assertNotNull(t2);
+        assertNotSame(db, t2.getDatabase());
 
-      assertTable(createExpectedTable(createExpectedRow("id", 3,
-                                                        "data2", "row3"),
-                                      createExpectedRow("id", 4,
-                                                        "data2", "row4"),
-                                      createExpectedRow("id", 5,
-                                                        "data2", "row5")),
-                  t2);
+        assertTable(createExpectedTable(createExpectedRow("id", 3,
+                                                          "data2", "row3"),
+                                        createExpectedRow("id", 4,
+                                                          "data2", "row4"),
+                                        createExpectedRow("id", 5,
+                                                          "data2", "row5")),
+                    t2);
 
-      assertNull(db.getTable("Table4"));
+        assertNull(db.getTable("Table4"));
 
-      // a non-custom file falls through to the default resolver, which
-      // refuses to open linked databases
-      try {
-        db.getTable("Table3");
-        fail("AccessDeniedException should have been thrown");
-      } catch(AccessDeniedException e) {
-        // success
+        // a non-custom file falls through to the default resolver, which
+        // refuses to open linked databases
+        try {
+          db.getTable("Table3");
+          fail("AccessDeniedException should have been thrown");
+        } catch(AccessDeniedException e) {
+          // success
+        }
       }
-
-      db.close();
     }
   }
 

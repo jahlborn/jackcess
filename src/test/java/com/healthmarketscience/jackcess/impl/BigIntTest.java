@@ -25,23 +25,21 @@ import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
 import com.healthmarketscience.jackcess.Table;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class BigIntTest extends TestCase
+public class BigIntTest
 {
 
-  public BigIntTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testBigInt() throws Exception {
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -52,43 +50,42 @@ public class BigIntTest extends TestCase
         continue;
       }
 
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table t = newTable("Test")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.TEXT))
-        .addColumn(newColumn("num1", DataType.BIG_INT))
-        .addIndex(newIndex("idx").addColumns("num1"))
-        .toTable(db);
+        Table t = newTable("Test")
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.TEXT))
+          .addColumn(newColumn("num1", DataType.BIG_INT))
+          .addIndex(newIndex("idx").addColumns("num1"))
+          .toTable(db);
 
-      long[] vals = new long[] {
-        0L, -10L, 3844L, -45309590834L, 50392084913L, 65000L, -6489273L};
+        long[] vals = new long[] {
+          0L, -10L, 3844L, -45309590834L, 50392084913L, 65000L, -6489273L};
 
-      List<Map<String, Object>> expectedTable =
-        new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> expectedTable =
+          new ArrayList<Map<String, Object>>();
 
-      int idx = 1;
-      for(long lng : vals) {
-        t.addRow(Column.AUTO_NUMBER, "" + lng, lng);
+        int idx = 1;
+        for(long lng : vals) {
+          t.addRow(Column.AUTO_NUMBER, "" + lng, lng);
 
-        expectedTable.add(createExpectedRow(
-                              "id", idx++,
-                              "data1", "" + lng,
-                              "num1", lng));
+          expectedTable.add(createExpectedRow(
+                                "id", idx++,
+                                "data1", "" + lng,
+                                "num1", lng));
+        }
+
+        Collections.sort(expectedTable, (r1, r2) -> {
+            Long l1 = (Long)r1.get("num1");
+            Long l2 = (Long)r2.get("num1");
+            return l1.compareTo(l2);
+          });
+
+        Cursor c = t.newCursor().setIndexByName("idx").toIndexCursor();
+
+        assertCursor(expectedTable, c);
       }
-
-      Collections.sort(expectedTable, (r1, r2) -> {
-          Long l1 = (Long)r1.get("num1");
-          Long l2 = (Long)r2.get("num1");
-          return l1.compareTo(l2);
-        });
-
-      Cursor c = t.newCursor().setIndexByName("idx").toIndexCursor();
-
-      assertCursor(expectedTable, c);
-
-      db.close();
     }
   }
 }

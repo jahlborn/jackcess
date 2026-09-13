@@ -4,6 +4,12 @@
     <author email="javajedi@users.sf.net">Tim McCune</author>
   </properties>
   <body>
+    <release version="5.0.0" date="TBD">
+      <action dev="jahlborn" type="update">
+        Update minimum java requirement to java 11.  Some code base cleanup
+        and modernization.
+      </action>
+    </release>
     <release version="4.0.12" date="2026-09-12">
       <action dev="jahlborn" type="update">
         Determine the type of a complex column from the name of its "type"
@@ -107,6 +113,9 @@
         the allowLinkResolution system property.  Note that this also affects
         CustomLinkResolver, whose fallback for non-custom files now denies.
       </action>
+      <action dev="jahlborn" type="update">
+        Removed RuntimeIOException in favor of built in UncheckedIOException.
+      </action>      
     </release>
     <release version="4.0.11" date="2026-07-06">
       <action dev="jahlborn" type="fix" system="SourceForge2" issue="160">

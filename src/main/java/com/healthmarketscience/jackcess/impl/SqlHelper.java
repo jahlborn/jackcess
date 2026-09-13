@@ -64,7 +64,7 @@ public class SqlHelper {
     try {
       return (SqlHelper)
           Class.forName("com.healthmarketscience.jackcess.impl.SqlHelperImpl")
-          .newInstance();
+          .getDeclaredConstructor().newInstance();
     } catch(Throwable ignored) {}
     return new SqlHelper();
   }

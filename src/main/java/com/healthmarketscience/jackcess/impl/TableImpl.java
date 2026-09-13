@@ -19,6 +19,7 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.System.Logger;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -53,8 +54,6 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.expr.Identifier;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.ExportUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A single database table
@@ -66,7 +65,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class TableImpl implements Table, PropertyMaps.Owner
 {
-  private static final Log LOG = LogFactory.getLog(TableImpl.class);
+  private static final Logger LOG = System.getLogger(TableImpl.class.getName());
 
   private static final short OFFSET_MASK = (short)0x1FFF;
 
@@ -2049,7 +2048,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       return;
     }
     _writeDefError = "Table definition is corrupt, " + reason;
-    LOG.warn(withErrorContext(
+    LOG.log(Logger.Level.WARNING, withErrorContext(
                  _writeDefError + ".  Table is read-only"));
   }
 
@@ -2097,7 +2096,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
       colOwnedPages = null;
       colFreeSpacePages = null;
       tableBuffer.position(pos + 8);
-      LOG.warn(withErrorContext("Invalid column " + umapColNum +
+      LOG.log(Logger.Level.WARNING, withErrorContext("Invalid column " + umapColNum +
                                 " usage map definition: " + e));
     }
 
@@ -2429,7 +2428,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
             // corruption (failed write vs. a row failure which was not a
             // write failure).  we don't know the status of any rows at this
             // point (and the original failure is probably irrelevant)
-            LOG.warn(withErrorContext(
+            LOG.log(Logger.Level.WARNING, withErrorContext(
                     "Secondary row failure which preceded the write failure"),
                      rowWriteFailure);
             updateCount = 0;
@@ -3138,14 +3137,14 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("type", (_tableType + (!isSystem() ? " (USER)" : " (SYSTEM)")))
       .append("name", _name)
       .append("rowCount", _rowCount)
       .append("columnCount", _columns.size())
       .append("indexCount(data)", _indexCount)
       .append("logicalIndexCount", _logicalIndexCount)
-      .append("validator", CustomToStringStyle.ignoreNull(_rowValidator))
+      .appendIfNotNull("validator", _rowValidator)
       .append("columns", _columns)
       .append("indexes", _indexes)
       .append("ownedPages", _ownedPages)
@@ -3661,7 +3660,7 @@ public class TableImpl implements Table, PropertyMaps.Owner
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("headerRowId", _headerRowId)
         .append("finalRowId", _finalRowId)
         .toString();

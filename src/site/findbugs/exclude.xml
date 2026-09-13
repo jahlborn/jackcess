@@ -2,7 +2,7 @@
 
   <!-- General stuff we don't care about -->
   <Match>
-    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT,CT_CONSTRUCTOR_THROW"/>
   </Match>
 
   <!-- Convenience catch for a variety of exceptions -->
@@ -57,6 +57,12 @@
     <Class name="com.healthmarketscience.jackcess.impl.TableImpl"/>
     <Method name="addRows"/>
     <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+  
+  <!-- Internal use class -->
+  <Match>
+    <Class name="com.healthmarketscience.jackcess.impl.query.QueryImpl$AppendableList"/>
+    <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS"/>
   </Match>
   
 </FindBugsFilter>

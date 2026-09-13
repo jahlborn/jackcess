@@ -448,7 +448,7 @@ public class PageChannel implements Channel, Flushable {
   public static ByteBuffer narrowBuffer(ByteBuffer buffer, int position,
                                         int limit)
   {
-    return (ByteBuffer)buffer.duplicate()
+    return buffer.duplicate()
       .order(buffer.order())
       .clear()
       .limit(limit)

@@ -22,7 +22,8 @@ import java.util.Random;
 import com.healthmarketscience.jackcess.Database;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that an index page records its level in the index tree, which is 0 at
@@ -30,17 +31,14 @@ import junit.framework.TestCase;
  *
  * @author James Ahlborn
  */
-public class IndexLevelTest extends TestCase
+public class IndexLevelTest
 {
   private static final String EXTRA_TEXT =
     " some random text to fill out the index and make it fill up pages with" +
     " lots of extra bytes so that a few hundred rows are enough to give the" +
     " index a root page with children under it";
 
-  public IndexLevelTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testLevelIsWritten() throws Exception
   {
     int numDbs = 0;
@@ -69,8 +67,8 @@ public class IndexLevelTest extends TestCase
 
       dbImpl.getPageChannel().readPage(buffer, rootPageNumber);
       assertEquals(PageTypes.INDEX_NODE, buffer.get(0));
-      assertTrue("root level " + getLevel(buffer, format),
-                 getLevel(buffer, format) >= 1);
+      assertTrue(getLevel(buffer, format) >= 1,
+                 "root level " + getLevel(buffer, format));
 
       // every other index page agrees: a leaf is 0 and a node is not
       int numNodes = 0;
@@ -82,9 +80,9 @@ public class IndexLevelTest extends TestCase
         }
         byte pageType = buffer.get(0);
         if(pageType == PageTypes.INDEX_LEAF) {
-          assertEquals("page " + pageNumber, 0, getLevel(buffer, format));
+          assertEquals(0, getLevel(buffer, format), "page " + pageNumber);
         } else if(pageType == PageTypes.INDEX_NODE) {
-          assertTrue("page " + pageNumber, getLevel(buffer, format) >= 1);
+          assertTrue(getLevel(buffer, format) >= 1, "page " + pageNumber);
           ++numNodes;
         }
       }

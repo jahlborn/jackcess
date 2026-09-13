@@ -16,6 +16,7 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl.query;
 
+import java.lang.System.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -25,11 +26,9 @@ import com.healthmarketscience.jackcess.RowId;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.RowIdImpl;
 import com.healthmarketscience.jackcess.impl.RowImpl;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 import static com.healthmarketscience.jackcess.impl.query.QueryFormat.*;
 import com.healthmarketscience.jackcess.query.Query;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -41,7 +40,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class QueryImpl implements Query
 {
-  protected static final Log LOG = LogFactory.getLog(QueryImpl.class);
+  protected static final Logger LOG = System.getLogger(QueryImpl.class.getName());
 
   private static final Row EMPTY_ROW = new Row();
 
@@ -347,7 +346,7 @@ public abstract class QueryImpl implements Query
 
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return ToStringBuilder.builder(this).reflectionToString();
   }
 
   /**
@@ -403,7 +402,7 @@ public abstract class QueryImpl implements Query
                 "unknown query object flag " + objTypeFlag, name));
       }
     } catch(IllegalStateException e) {
-      LOG.warn(withErrorContext("Failed parsing query", name), e);
+      LOG.log(Logger.Level.WARNING, withErrorContext("Failed parsing query", name), e);
     }
 
     // return unknown query
@@ -633,7 +632,7 @@ public abstract class QueryImpl implements Query
 
     @Override
     public String toString() {
-      return ToStringBuilder.reflectionToString(this);
+      return ToStringBuilder.builder(this).reflectionToString();
     }
   }
 

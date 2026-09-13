@@ -16,12 +16,13 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
-import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.DataType;
+import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.PropertyMap;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that a property map carries the whole flag byte, which Access uses as
@@ -30,7 +31,7 @@ import junit.framework.TestCase;
  *
  * @author James Ahlborn
  */
-public class PropertyMapsTest extends TestCase
+public class PropertyMapsTest
 {
   /** the one property in the test databases which carries more than the ddl
       bit.  every version from 1997 to 2010 writes it with the same flags */
@@ -39,10 +40,7 @@ public class PropertyMapsTest extends TestCase
   private static final byte FLAGGED_FLAGS =
     (byte)(PropertyMapImpl.DDL_FLAG | PropertyMapImpl.SKIP_HANDLER_FLAG);
 
-  public PropertyMapsTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testReadFlagByte() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -59,6 +57,7 @@ public class PropertyMapsTest extends TestCase
     }
   }
 
+  @Test
   public void testWriteKeepsFlagByte() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {
@@ -79,6 +78,7 @@ public class PropertyMapsTest extends TestCase
     }
   }
 
+  @Test
   public void testNewPropertyGetsDdlBitOnly() throws Exception
   {
     PropertyMapImpl map = new PropertyMaps(10, null, null, null).getDefault();
@@ -93,6 +93,7 @@ public class PropertyMapsTest extends TestCase
    * Access names an index after its column by default, so a table commonly
    * holds a column block and an index block with the same name.
    */
+  @Test
   public void testIndexBlockIsSeparateFromColumnBlock() throws Exception
   {
     for(TestDB testDb : SUPPORTED_DBS_TEST) {

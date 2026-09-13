@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
@@ -159,7 +160,7 @@ class LongValueColumnImpl extends ColumnImpl
       int rowLen = def.remaining();
       if(rowLen < length) {
         // warn the caller, but return whatever we can
-        LOG.warn(withErrorContext(
+        LOG.log(Logger.Level.WARNING, withErrorContext(
                 "Value may be truncated: expected length " +
                 length + " found " + rowLen));
         rtn = new byte[rowLen];
@@ -192,7 +193,7 @@ class LongValueColumnImpl extends ColumnImpl
           int rowLen = rowEnd - rowStart;
           if(rowLen < length) {
             // warn the caller, but return whatever we can
-            LOG.warn(withErrorContext(
+            LOG.log(Logger.Level.WARNING, withErrorContext(
                     "Value may be truncated: expected length " +
                     length + " found " + rowLen));
             rtn = new byte[rowLen];

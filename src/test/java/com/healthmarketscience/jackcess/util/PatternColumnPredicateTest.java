@@ -30,71 +30,69 @@ import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class PatternColumnPredicateTest extends TestCase
+public class PatternColumnPredicateTest
 {
 
-  public PatternColumnPredicateTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testRegexPredicate() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = createTestDb(fileFormat);
+      try (Database db = createTestDb(fileFormat)) {
 
-      Table t = db.getTable("Test");
+        Table t = db.getTable("Test");
 
-      assertEquals(
-          Arrays.asList("Foo", "some row", "aNoThEr row", "nonsense"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forJavaRegex(".*o.*")));
+        assertEquals(
+            Arrays.asList("Foo", "some row", "aNoThEr row", "nonsense"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forJavaRegex(".*o.*")));
 
-      assertEquals(
-          Arrays.asList("Bar", "0102", "FOO", "BAR", "67", "bunch_13_data", "42 is the ANSWER", "[try] matching t.h+i}s"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forJavaRegex(".*o.*").negate()));
+        assertEquals(
+            Arrays.asList("Bar", "0102", "FOO", "BAR", "67", "bunch_13_data", "42 is the ANSWER", "[try] matching t.h+i}s"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forJavaRegex(".*o.*").negate()));
 
-      assertEquals(
-          Arrays.asList("Foo", "some row", "FOO", "aNoThEr row", "nonsense"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forAccessLike("*o*")));
+        assertEquals(
+            Arrays.asList("Foo", "some row", "FOO", "aNoThEr row", "nonsense"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forAccessLike("*o*")));
 
-      assertEquals(
-          Arrays.asList("0102", "67", "bunch_13_data", "42 is the ANSWER"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forAccessLike("*##*")));
+        assertEquals(
+            Arrays.asList("0102", "67", "bunch_13_data", "42 is the ANSWER"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forAccessLike("*##*")));
 
-      assertEquals(
-          Arrays.asList("42 is the ANSWER"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forAccessLike("## *")));
+        assertEquals(
+            Arrays.asList("42 is the ANSWER"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forAccessLike("## *")));
 
-      assertEquals(
-          Arrays.asList("Foo"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forSqlLike("F_o")));
+        assertEquals(
+            Arrays.asList("Foo"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forSqlLike("F_o")));
 
-      assertEquals(
-          Arrays.asList("Foo", "FOO"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forSqlLike("F_o", true)));
+        assertEquals(
+            Arrays.asList("Foo", "FOO"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forSqlLike("F_o", true)));
 
-      assertEquals(
-          Arrays.asList("[try] matching t.h+i}s"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forSqlLike("[try] % t.h+i}s")));
+        assertEquals(
+            Arrays.asList("[try] matching t.h+i}s"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forSqlLike("[try] % t.h+i}s")));
 
-      assertEquals(
-          Arrays.asList("bunch_13_data"),
-          findRowsByPattern(
-              t, PatternColumnPredicate.forSqlLike("bunch\\_%\\_data")));
+        assertEquals(
+            Arrays.asList("bunch_13_data"),
+            findRowsByPattern(
+                t, PatternColumnPredicate.forSqlLike("bunch\\_%\\_data")));
 
-      db.close();
+      }
     }
   }
 

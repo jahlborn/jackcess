@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,14 +28,11 @@ import java.util.Set;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.CaseInsensitiveColumnMatcher;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.EntryIterableBuilder;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Cursor backed by an index with extended traversal options.
@@ -42,7 +41,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class IndexCursorImpl extends CursorImpl implements IndexCursor
 {
-  private static final Log LOG = LogFactory.getLog(IndexCursorImpl.class);
+  private static final Logger LOG = System.getLogger(IndexCursorImpl.class.getName());
 
   /** IndexDirHandler for forward traversal */
   private final IndexDirHandler _forwardDirHandler =
@@ -155,7 +154,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -177,7 +176,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -530,7 +529,7 @@ public class IndexCursorImpl extends CursorImpl implements IndexCursor
         _hasNext = findFirstRowByEntryImpl(rowValues, true, _columnMatcher);
         _validRow = _hasNext;
       } catch(IOException e) {
-          throw new RuntimeIOException(e);
+          throw new UncheckedIOException(e);
       }
     }
 

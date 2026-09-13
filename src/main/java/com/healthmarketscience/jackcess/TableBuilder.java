@@ -26,10 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.TableCreator;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Builder style class for constructing a {@link Table}.
@@ -244,12 +244,12 @@ public class TableBuilder {
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("name", _name)
       .append("escapeIdentifiers", _escapeIdentifiers)
       .append("columns", _columns)
       .append("indexes", _indexes)
-      .append("props", CustomToStringStyle.ignoreNull(_props))
+      .appendIfNotNull("props", _props)
       .toString();
   }
 

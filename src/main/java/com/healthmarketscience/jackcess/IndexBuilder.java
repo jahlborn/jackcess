@@ -22,13 +22,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.IndexData;
 import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.TableUpdater;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Builder style class for constructing an {@link Index}.  See {@link
@@ -223,7 +223,7 @@ public class IndexBuilder
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("name", _name)
       .append("number", _indexNumber)
       .append("type", _type)
@@ -272,7 +272,7 @@ public class IndexBuilder
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("name", _name)
         .append("flags", getFlags() + " " + (isAscending() ? "(ASC)" : "(DSC)"))
         .toString();

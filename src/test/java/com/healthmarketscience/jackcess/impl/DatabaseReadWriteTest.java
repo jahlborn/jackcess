@@ -36,32 +36,31 @@ import com.healthmarketscience.jackcess.TableBuilder;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.util.RowFilterTest;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class DatabaseReadWriteTest extends TestCase
+public class DatabaseReadWriteTest
 {
 
-  public DatabaseReadWriteTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testWriteAndRead() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
-      doTestWriteAndRead(db);
-      db.close();
+      try (Database db = create(fileFormat)) {
+        doTestWriteAndRead(db);
+      }
     }
   }
 
+  @Test
   public void testWriteAndReadInMem() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = createMem(fileFormat);
-      doTestWriteAndRead(db);
-      db.close();
+      try (Database db = createMem(fileFormat)) {
+        doTestWriteAndRead(db);
+      }
     }
   }
 
@@ -92,148 +91,149 @@ public class DatabaseReadWriteTest extends TestCase
       }
   }
 
+  @Test
   public void testWriteAndReadInBatch() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = createMem(fileFormat);
-      createTestTable(db);
-      int count = 1000;
-      List<Object[]> rows = new ArrayList<Object[]>(count);
-      Object[] row = createTestRow();
-      for (int i = 0; i < count; i++) {
-        rows.add(row);
+      try (Database db = createMem(fileFormat)) {
+        createTestTable(db);
+        int count = 1000;
+        List<Object[]> rows = new ArrayList<Object[]>(count);
+        Object[] row = createTestRow();
+        for (int i = 0; i < count; i++) {
+          rows.add(row);
+        }
+        Table table = db.getTable("Test");
+        table.addRows(rows);
+        for (int i = 0; i < count; i++) {
+          Map<String, Object> readRow = table.getNextRow();
+          assertEquals(row[0], readRow.get("A"));
+          assertEquals(row[1], readRow.get("B"));
+          assertEquals(row[2], readRow.get("C"));
+          assertEquals(row[3], readRow.get("D"));
+          assertEquals(row[4], readRow.get("E"));
+          assertEquals(row[5], readRow.get("F"));
+          assertEquals(row[6], readRow.get("G"));
+          assertEquals(row[7], readRow.get("H"));
+        }
       }
-      Table table = db.getTable("Test");
-      table.addRows(rows);
-      for (int i = 0; i < count; i++) {
-        Map<String, Object> readRow = table.getNextRow();
-        assertEquals(row[0], readRow.get("A"));
-        assertEquals(row[1], readRow.get("B"));
-        assertEquals(row[2], readRow.get("C"));
-        assertEquals(row[3], readRow.get("D"));
-        assertEquals(row[4], readRow.get("E"));
-        assertEquals(row[5], readRow.get("F"));
-        assertEquals(row[6], readRow.get("G"));
-        assertEquals(row[7], readRow.get("H"));
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testUpdateRow() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = createMem(fileFormat);
+      try (Database db = createMem(fileFormat)) {
 
-      Table t = new TableBuilder("test")
-        .addColumn(new ColumnBuilder("name", DataType.TEXT))
-        .addColumn(new ColumnBuilder("id", DataType.LONG)
-                   .setAutoNumber(true))
-        .addColumn(new ColumnBuilder("data", DataType.TEXT)
-                   .setLength(JetFormat.TEXT_FIELD_MAX_LENGTH))
-        .toTable(db);
+        Table t = new TableBuilder("test")
+          .addColumn(new ColumnBuilder("name", DataType.TEXT))
+          .addColumn(new ColumnBuilder("id", DataType.LONG)
+                     .setAutoNumber(true))
+          .addColumn(new ColumnBuilder("data", DataType.TEXT)
+                     .setLength(JetFormat.TEXT_FIELD_MAX_LENGTH))
+          .toTable(db);
 
-      for(int i = 0; i < 10; ++i) {
-        t.addRow("row" + i, Column.AUTO_NUMBER, "initial data");
+        for(int i = 0; i < 10; ++i) {
+          t.addRow("row" + i, Column.AUTO_NUMBER, "initial data");
+        }
+
+        Cursor c = CursorBuilder.createCursor(t);
+        c.reset();
+        c.moveNextRows(2);
+        Map<String,Object> row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row1",
+                                       "id", 2,
+                                       "data", "initial data"),
+                     row);
+
+        Map<String,Object> newRow = createExpectedRow(
+            "name", Column.KEEP_VALUE,
+            "id", Column.AUTO_NUMBER,
+            "data", "new data");
+        assertSame(newRow, c.updateCurrentRowFromMap(newRow));
+        assertEquals(createExpectedRow("name", "row1",
+                                       "id", 2,
+                                       "data", "new data"),
+                     newRow);
+
+        c.moveNextRows(3);
+        row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row4",
+                                       "id", 5,
+                                       "data", "initial data"),
+                     row);
+
+        c.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "a larger amount of new data");
+
+        c.reset();
+        c.moveNextRows(2);
+        row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row1",
+                                       "id", 2,
+                                       "data", "new data"),
+                     row);
+
+        c.moveNextRows(3);
+        row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row4",
+                                       "id", 5,
+                                       "data", "a larger amount of new data"),
+                     row);
+
+        t.reset();
+
+        String str = createString(100);
+        for(int i = 10; i < 50; ++i) {
+          t.addRow("row" + i, Column.AUTO_NUMBER, "big data_" + str);
+        }
+
+        c.reset();
+        c.moveNextRows(9);
+        row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row8",
+                                       "id", 9,
+                                       "data", "initial data"),
+                     row);
+
+        String newText = "updated big data_" + createString(200);
+
+        c.setCurrentRowValue(t.getColumn("data"), newText);
+
+        c.reset();
+        c.moveNextRows(9);
+        row = c.getCurrentRow();
+
+        assertEquals(createExpectedRow("name", "row8",
+                                       "id", 9,
+                                       "data", newText),
+                     row);
+
+        List<Row> rows = RowFilterTest.toList(t);
+        assertEquals(50, rows.size());
+
+        for(Row r : rows) {
+          r.put("data", "final data " + r.get("id"));
+        }
+
+        for(Row r : rows) {
+          assertSame(r, t.updateRow(r));
+        }
+
+        t.reset();
+
+        for(Row r : t) {
+          assertEquals("final data " + r.get("id"), r.get("data"));
+        }
       }
-
-      Cursor c = CursorBuilder.createCursor(t);
-      c.reset();
-      c.moveNextRows(2);
-      Map<String,Object> row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row1",
-                                     "id", 2,
-                                     "data", "initial data"),
-                   row);
-
-      Map<String,Object> newRow = createExpectedRow(
-          "name", Column.KEEP_VALUE,
-          "id", Column.AUTO_NUMBER,
-          "data", "new data");
-      assertSame(newRow, c.updateCurrentRowFromMap(newRow));
-      assertEquals(createExpectedRow("name", "row1",
-                                     "id", 2,
-                                     "data", "new data"),
-                   newRow);
-
-      c.moveNextRows(3);
-      row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row4",
-                                     "id", 5,
-                                     "data", "initial data"),
-                   row);
-
-      c.updateCurrentRow(Column.KEEP_VALUE, Column.AUTO_NUMBER, "a larger amount of new data");
-
-      c.reset();
-      c.moveNextRows(2);
-      row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row1",
-                                     "id", 2,
-                                     "data", "new data"),
-                   row);
-
-      c.moveNextRows(3);
-      row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row4",
-                                     "id", 5,
-                                     "data", "a larger amount of new data"),
-                   row);
-
-      t.reset();
-
-      String str = createString(100);
-      for(int i = 10; i < 50; ++i) {
-        t.addRow("row" + i, Column.AUTO_NUMBER, "big data_" + str);
-      }
-
-      c.reset();
-      c.moveNextRows(9);
-      row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row8",
-                                     "id", 9,
-                                     "data", "initial data"),
-                   row);
-
-      String newText = "updated big data_" + createString(200);
-
-      c.setCurrentRowValue(t.getColumn("data"), newText);
-
-      c.reset();
-      c.moveNextRows(9);
-      row = c.getCurrentRow();
-
-      assertEquals(createExpectedRow("name", "row8",
-                                     "id", 9,
-                                     "data", newText),
-                   row);
-
-      List<Row> rows = RowFilterTest.toList(t);
-      assertEquals(50, rows.size());
-
-      for(Row r : rows) {
-        r.put("data", "final data " + r.get("id"));
-      }
-
-      for(Row r : rows) {
-        assertSame(r, t.updateRow(r));
-      }
-
-      t.reset();
-
-      for(Row r : t) {
-        assertEquals("final data " + r.get("id"), r.get("data"));
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testDateMath()
   {
     long now = System.currentTimeMillis();

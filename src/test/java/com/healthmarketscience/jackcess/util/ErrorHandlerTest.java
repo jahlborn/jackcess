@@ -22,122 +22,120 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteOrder;
 import java.util.List;
 
-import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.ColumnBuilder;
 import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
+import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.JetFormatTest;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author James Ahlborn
  */
-public class ErrorHandlerTest extends TestCase 
+public class ErrorHandlerTest
 {
 
-  public ErrorHandlerTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testErrorHandler() throws Exception
   {
     for (final FileFormat fileFormat : JetFormatTest.SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table table =
-        new TableBuilder("test")
-        .addColumn(new ColumnBuilder("col", DataType.TEXT))
-        .addColumn(new ColumnBuilder("val", DataType.LONG))
-        .toTable(db);
+        Table table =
+          new TableBuilder("test")
+          .addColumn(new ColumnBuilder("col", DataType.TEXT))
+          .addColumn(new ColumnBuilder("val", DataType.LONG))
+          .toTable(db);
 
-      table.addRow("row1", 1);
-      table.addRow("row2", 2);
-      table.addRow("row3", 3);
+        table.addRow("row1", 1);
+        table.addRow("row2", 2);
+        table.addRow("row3", 3);
 
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", 1),
-                      createExpectedRow("col", "row2",
-                                        "val", 2),
-                      createExpectedRow("col", "row3",
-                                        "val", 3)),
-                  table);
+        assertTable(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", 1),
+                        createExpectedRow("col", "row2",
+                                          "val", 2),
+                        createExpectedRow("col", "row3",
+                                          "val", 3)),
+                    table);
 
 
-      replaceColumn(table, "val");
+        replaceColumn(table, "val");
 
-      table.reset();
-      try {
-        table.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
+        table.reset();
+        try {
+          table.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+        table.reset();
+        table.setErrorHandler(new ReplacementErrorHandler());
+
+        assertTable(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", null),
+                        createExpectedRow("col", "row2",
+                                          "val", null),
+                        createExpectedRow("col", "row3",
+                                          "val", null)),
+                    table);
+
+        Cursor c1 = CursorBuilder.createCursor(table);
+        Cursor c2 = CursorBuilder.createCursor(table);
+        Cursor c3 = CursorBuilder.createCursor(table);
+
+        c2.setErrorHandler(new DebugErrorHandler("#error"));
+        c3.setErrorHandler(ErrorHandler.DEFAULT);
+
+        assertCursor(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", null),
+                        createExpectedRow("col", "row2",
+                                          "val", null),
+                        createExpectedRow("col", "row3",
+                                          "val", null)),
+                    c1);
+
+        assertCursor(createExpectedTable(
+                        createExpectedRow("col", "row1",
+                                          "val", "#error"),
+                        createExpectedRow("col", "row2",
+                                          "val", "#error"),
+                        createExpectedRow("col", "row3",
+                                          "val", "#error")),
+                    c2);
+
+        try {
+          c3.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+        table.setErrorHandler(null);
+        c1.setErrorHandler(null);
+        c1.reset();
+        try {
+          c1.getNextRow();
+          fail("IOException should have been thrown");
+        } catch(IOException e) {
+          // success
+        }
+
+
       }
-
-      table.reset();
-      table.setErrorHandler(new ReplacementErrorHandler());
-
-      assertTable(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  table);
-
-      Cursor c1 = CursorBuilder.createCursor(table);
-      Cursor c2 = CursorBuilder.createCursor(table);
-      Cursor c3 = CursorBuilder.createCursor(table);
-
-      c2.setErrorHandler(new DebugErrorHandler("#error"));
-      c3.setErrorHandler(ErrorHandler.DEFAULT);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", null),
-                      createExpectedRow("col", "row2",
-                                        "val", null),
-                      createExpectedRow("col", "row3",
-                                        "val", null)),
-                  c1);
-
-      assertCursor(createExpectedTable(
-                      createExpectedRow("col", "row1",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row2",
-                                        "val", "#error"),
-                      createExpectedRow("col", "row3",
-                                        "val", "#error")),
-                  c2);
-
-      try {
-        c3.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-      table.setErrorHandler(null);
-      c1.setErrorHandler(null);
-      c1.reset();
-      try {
-        c1.getNextRow();
-        fail("IOException should have been thrown");
-      } catch(IOException e) {
-        // success
-      }
-
-
-      db.close();
     }
   }
 
@@ -165,7 +163,7 @@ public class ErrorHandlerTest extends TestCase
         f.set(destCol, f.get(srcCol));
       }
     }
-    
+
   }
 
   private static class BogusColumn extends ColumnImpl
@@ -173,7 +171,7 @@ public class ErrorHandlerTest extends TestCase
     private BogusColumn(Table table, String name) {
       super((TableImpl)table, name, DataType.LONG, 1, 0, 0);
     }
-    
+
     @Override
     public Object read(byte[] data, ByteOrder order) throws IOException {
       throw new IOException("bogus column");

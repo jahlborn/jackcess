@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.complex.Attachment;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
@@ -29,11 +30,11 @@ import com.healthmarketscience.jackcess.complex.UnsupportedValue;
 import com.healthmarketscience.jackcess.complex.Version;
 import com.healthmarketscience.jackcess.impl.ByteUtil;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
-import com.healthmarketscience.jackcess.impl.PageChannel;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.PageChannel;
+import com.healthmarketscience.jackcess.impl.complex.ComplexColumnInfoImpl;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -41,311 +42,307 @@ import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
  * @author James Ahlborn
  */
 @SuppressWarnings("deprecation")
-public class ComplexColumnTest extends TestCase
+public class ComplexColumnTest
 {
 
-  public ComplexColumnTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testVersions() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
-      Database db = openCopy(testDB);
-      db.setDateTimeType(DateTimeType.DATE);
-      db.setTimeZone(TEST_TZ);
+      try (Database db = openCopy(testDB)) {
+        db.setDateTimeType(DateTimeType.DATE);
+        db.setTimeZone(TEST_TZ);
 
-      Table t1 = db.getTable("Table1");
-      Column col = t1.getColumn("append-memo-data");
-      assertTrue(col.isAppendOnly());
-      Column verCol = col.getVersionHistoryColumn();
-      assertNotNull(verCol);
-      assertEquals(ComplexDataType.VERSION_HISTORY,
-                   verCol.getComplexInfo().getType());
+        Table t1 = db.getTable("Table1");
+        Column col = t1.getColumn("append-memo-data");
+        assertTrue(col.isAppendOnly());
+        Column verCol = col.getVersionHistoryColumn();
+        assertNotNull(verCol);
+        assertEquals(ComplexDataType.VERSION_HISTORY,
+                     verCol.getComplexInfo().getType());
 
-      for(Row row : t1) {
-        String rowId = row.getString("id");
-        ComplexValueForeignKey complexValueFk =
-          (ComplexValueForeignKey)verCol.getRowValue(row);
+        for(Row row : t1) {
+          String rowId = row.getString("id");
+          ComplexValueForeignKey complexValueFk =
+            (ComplexValueForeignKey)verCol.getRowValue(row);
 
-        String curValue = (String)col.getRowValue(row);
+          String curValue = (String)col.getRowValue(row);
 
-        if(rowId.equals("row1")) {
-          checkVersions(1, complexValueFk, curValue);
-        } else if(rowId.equals("row2")) {
-          checkVersions(2, complexValueFk, curValue,
-                        "row2-memo", new Date(1315876862334L));
-        } else if(rowId.equals("row3")) {
-          checkVersions(3, complexValueFk, curValue,
-                        "row3-memo-again", new Date(1315876965382L),
-                        "row3-memo-revised", new Date(1315876953077L),
-                        "row3-memo", new Date(1315876879126L));
-        } else if(rowId.equals("row4")) {
-          checkVersions(4, complexValueFk, curValue,
-                        "row4-memo", new Date(1315876945758L));
-        } else {
-          assertTrue(false);
+          if(rowId.equals("row1")) {
+            checkVersions(1, complexValueFk, curValue);
+          } else if(rowId.equals("row2")) {
+            checkVersions(2, complexValueFk, curValue,
+                          "row2-memo", new Date(1315876862334L));
+          } else if(rowId.equals("row3")) {
+            checkVersions(3, complexValueFk, curValue,
+                          "row3-memo-again", new Date(1315876965382L),
+                          "row3-memo-revised", new Date(1315876953077L),
+                          "row3-memo", new Date(1315876879126L));
+          } else if(rowId.equals("row4")) {
+            checkVersions(4, complexValueFk, curValue,
+                          "row4-memo", new Date(1315876945758L));
+          } else {
+            assertTrue(false);
+          }
         }
+
+        Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
+                         Column.AUTO_NUMBER, Column.AUTO_NUMBER};
+        t1.addRow(row8);
+
+        ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
+          verCol.getRowValue(row8);
+        Date upTime = new Date();
+        row8ValFk.addVersion("row8-memo", upTime);
+        checkVersions(row8ValFk.get(), row8ValFk, "row8-memo",
+                      "row8-memo", upTime);
+
+        Cursor cursor = CursorBuilder.createCursor(t1);
+        assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
+        ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
+          cursor.getCurrentRowValue(verCol);
+        cursor.setCurrentRowValue(col, "new-value");
+        Version v = row3ValFk.addVersion("new-value", upTime);
+        checkVersions(3, row3ValFk, "new-value",
+                      "new-value", upTime,
+                      "row3-memo-again", new Date(1315876965382L),
+                      "row3-memo-revised", new Date(1315876953077L),
+                      "row3-memo", new Date(1315876879126L));
+
+        try {
+          v.update();
+          fail("UnsupportedOperationException should have been thrown");
+        } catch(UnsupportedOperationException expected) {
+          // success
+        }
+
+        checkVersions(3, row3ValFk, "new-value",
+                      "new-value", upTime,
+                      "row3-memo-again", new Date(1315876965382L),
+                      "row3-memo-revised", new Date(1315876953077L),
+                      "row3-memo", new Date(1315876879126L));
+
+        try {
+          v.delete();
+          fail("UnsupportedOperationException should have been thrown");
+        } catch(UnsupportedOperationException expected) {
+          // success
+        }
+
+        checkVersions(3, row3ValFk, "new-value",
+                      "new-value", upTime,
+                      "row3-memo-again", new Date(1315876965382L),
+                      "row3-memo-revised", new Date(1315876953077L),
+                      "row3-memo", new Date(1315876879126L));
+
+        try {
+          v.getComplexValueForeignKey().deleteAllValues();
+          fail("UnsupportedOperationException should have been thrown");
+        } catch(UnsupportedOperationException expected) {
+          // success
+        }
+
+        checkVersions(3, row3ValFk, "new-value",
+                      "new-value", upTime,
+                      "row3-memo-again", new Date(1315876965382L),
+                      "row3-memo-revised", new Date(1315876953077L),
+                      "row3-memo", new Date(1315876879126L));
       }
-
-      Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
-                       Column.AUTO_NUMBER, Column.AUTO_NUMBER};
-      t1.addRow(row8);
-
-      ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
-        verCol.getRowValue(row8);
-      Date upTime = new Date();
-      row8ValFk.addVersion("row8-memo", upTime);
-      checkVersions(row8ValFk.get(), row8ValFk, "row8-memo",
-                    "row8-memo", upTime);
-
-      Cursor cursor = CursorBuilder.createCursor(t1);
-      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
-      ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
-        cursor.getCurrentRowValue(verCol);
-      cursor.setCurrentRowValue(col, "new-value");
-      Version v = row3ValFk.addVersion("new-value", upTime);
-      checkVersions(3, row3ValFk, "new-value",
-                    "new-value", upTime,
-                    "row3-memo-again", new Date(1315876965382L),
-                    "row3-memo-revised", new Date(1315876953077L),
-                    "row3-memo", new Date(1315876879126L));
-
-      try {
-        v.update();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
-
-      checkVersions(3, row3ValFk, "new-value",
-                    "new-value", upTime,
-                    "row3-memo-again", new Date(1315876965382L),
-                    "row3-memo-revised", new Date(1315876953077L),
-                    "row3-memo", new Date(1315876879126L));
-
-      try {
-        v.delete();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
-
-      checkVersions(3, row3ValFk, "new-value",
-                    "new-value", upTime,
-                    "row3-memo-again", new Date(1315876965382L),
-                    "row3-memo-revised", new Date(1315876953077L),
-                    "row3-memo", new Date(1315876879126L));
-
-      try {
-        v.getComplexValueForeignKey().deleteAllValues();
-        fail("UnsupportedOperationException should have been thrown");
-      } catch(UnsupportedOperationException expected) {
-        // success
-      }
-
-      checkVersions(3, row3ValFk, "new-value",
-                    "new-value", upTime,
-                    "row3-memo-again", new Date(1315876965382L),
-                    "row3-memo-revised", new Date(1315876953077L),
-                    "row3-memo", new Date(1315876879126L));
-
-      db.close();
     }
   }
 
+  @Test
   public void testAttachments() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
 
-      Database db = openCopy(testDB);
+      try (Database db = openCopy(testDB)) {
 
-      Table t1 = db.getTable("Table1");
-      Column col = t1.getColumn("attach-data");
-      assertEquals(ComplexDataType.ATTACHMENT,
-                   col.getComplexInfo().getType());
+        Table t1 = db.getTable("Table1");
+        Column col = t1.getColumn("attach-data");
+        assertEquals(ComplexDataType.ATTACHMENT,
+                     col.getComplexInfo().getType());
 
-      for(Row row : t1) {
-        String rowId = row.getString("id");
-        ComplexValueForeignKey complexValueFk =
-          (ComplexValueForeignKey)col.getRowValue(row);
+        for(Row row : t1) {
+          String rowId = row.getString("id");
+          ComplexValueForeignKey complexValueFk =
+            (ComplexValueForeignKey)col.getRowValue(row);
 
-        if(rowId.equals("row1")) {
-          checkAttachments(1, complexValueFk);
-        } else if(rowId.equals("row2")) {
-          checkAttachments(2, complexValueFk, "test_data.txt", "test_data2.txt");
-        } else if(rowId.equals("row3")) {
-          checkAttachments(3, complexValueFk);
-        } else if(rowId.equals("row4")) {
-          checkAttachments(4, complexValueFk, "test_data2.txt");
-        } else {
-          assertTrue(false);
+          if(rowId.equals("row1")) {
+            checkAttachments(1, complexValueFk);
+          } else if(rowId.equals("row2")) {
+            checkAttachments(2, complexValueFk, "test_data.txt", "test_data2.txt");
+          } else if(rowId.equals("row3")) {
+            checkAttachments(3, complexValueFk);
+          } else if(rowId.equals("row4")) {
+            checkAttachments(4, complexValueFk, "test_data2.txt");
+          } else {
+            assertTrue(false);
+          }
         }
+
+        Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
+                         Column.AUTO_NUMBER, Column.AUTO_NUMBER};
+        t1.addRow(row8);
+
+        ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
+          col.getRowValue(row8);
+        row8ValFk.addAttachment(null, "test_data.txt", "txt",
+                                getFileBytes("test_data.txt"), (Date)null, null);
+        checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
+        row8ValFk.addEncodedAttachment(null, "test_data2.txt", "txt",
+                                       getEncodedFileBytes("test_data2.txt"),
+                                       (Date)null, null);
+        checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt",
+                         "test_data2.txt");
+
+        Cursor cursor = CursorBuilder.createCursor(t1);
+        assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));
+        ComplexValueForeignKey row4ValFk = (ComplexValueForeignKey)
+          cursor.getCurrentRowValue(col);
+        Attachment a = row4ValFk.addAttachment(null, "test_data.txt", "txt",
+                                               getFileBytes("test_data.txt"),
+                                               (Date)null, null);
+        checkAttachments(4, row4ValFk, "test_data2.txt", "test_data.txt");
+
+        a.setFileType("zip");
+        a.setFileName("some_data.zip");
+        byte[] newBytes = "this is not a zip file".getBytes("US-ASCII");
+        a.setFileData(newBytes);
+        a.update();
+
+        Attachment updated = row4ValFk.getAttachments().get(1);
+        assertNotSame(updated, a);
+        assertEquals("zip", updated.getFileType());
+        assertEquals("some_data.zip", updated.getFileName());
+        assertTrue(Arrays.equals(newBytes, updated.getFileData()));
+        byte[] encBytes = updated.getEncodedFileData();
+        assertEquals(newBytes.length + 28, encBytes.length);
+        ByteBuffer bb = PageChannel.wrap(encBytes);
+        assertEquals(0, bb.getInt());
+        assertTrue(ByteUtil.matchesRange(bb, 28, newBytes));
+
+        updated.delete();
+        checkAttachments(4, row4ValFk, "test_data2.txt");
+        row4ValFk.getAttachments().get(0).delete();
+        checkAttachments(4, row4ValFk);
+
+        assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
+        ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
+          cursor.getCurrentRowValue(col);
+        row2ValFk.deleteAllValues();
+        checkAttachments(2, row2ValFk);
       }
-
-      Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
-                       Column.AUTO_NUMBER, Column.AUTO_NUMBER};
-      t1.addRow(row8);
-
-      ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
-        col.getRowValue(row8);
-      row8ValFk.addAttachment(null, "test_data.txt", "txt",
-                              getFileBytes("test_data.txt"), (Date)null, null);
-      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt");
-      row8ValFk.addEncodedAttachment(null, "test_data2.txt", "txt",
-                                     getEncodedFileBytes("test_data2.txt"),
-                                     (Date)null, null);
-      checkAttachments(row8ValFk.get(), row8ValFk, "test_data.txt",
-                       "test_data2.txt");
-
-      Cursor cursor = CursorBuilder.createCursor(t1);
-      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row4"));
-      ComplexValueForeignKey row4ValFk = (ComplexValueForeignKey)
-        cursor.getCurrentRowValue(col);
-      Attachment a = row4ValFk.addAttachment(null, "test_data.txt", "txt",
-                                             getFileBytes("test_data.txt"),
-                                             (Date)null, null);
-      checkAttachments(4, row4ValFk, "test_data2.txt", "test_data.txt");
-
-      a.setFileType("zip");
-      a.setFileName("some_data.zip");
-      byte[] newBytes = "this is not a zip file".getBytes("US-ASCII");
-      a.setFileData(newBytes);
-      a.update();
-
-      Attachment updated = row4ValFk.getAttachments().get(1);
-      assertNotSame(updated, a);
-      assertEquals("zip", updated.getFileType());
-      assertEquals("some_data.zip", updated.getFileName());
-      assertTrue(Arrays.equals(newBytes, updated.getFileData()));
-      byte[] encBytes = updated.getEncodedFileData();
-      assertEquals(newBytes.length + 28, encBytes.length);
-      ByteBuffer bb = PageChannel.wrap(encBytes);
-      assertEquals(0, bb.getInt());
-      assertTrue(ByteUtil.matchesRange(bb, 28, newBytes));
-
-      updated.delete();
-      checkAttachments(4, row4ValFk, "test_data2.txt");
-      row4ValFk.getAttachments().get(0).delete();
-      checkAttachments(4, row4ValFk);
-
-      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
-      ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
-        cursor.getCurrentRowValue(col);
-      row2ValFk.deleteAllValues();
-      checkAttachments(2, row2ValFk);
-
-      db.close();
     }
   }
 
+  @Test
   public void testMultiValues() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
 
-      Database db = openCopy(testDB);
+      try (Database db = openCopy(testDB)) {
 
-      Table t1 = db.getTable("Table1");
-      Column col = t1.getColumn("multi-value-data");
-      assertEquals(ComplexDataType.MULTI_VALUE,
-                   col.getComplexInfo().getType());
+        Table t1 = db.getTable("Table1");
+        Column col = t1.getColumn("multi-value-data");
+        assertEquals(ComplexDataType.MULTI_VALUE,
+                     col.getComplexInfo().getType());
 
-      for(Row row : t1) {
-        String rowId = row.getString("id");
-        ComplexValueForeignKey complexValueFk =
-          (ComplexValueForeignKey)col.getRowValue(row);
+        for(Row row : t1) {
+          String rowId = row.getString("id");
+          ComplexValueForeignKey complexValueFk =
+            (ComplexValueForeignKey)col.getRowValue(row);
 
-        if(rowId.equals("row1")) {
-          checkMultiValues(1, complexValueFk);
-        } else if(rowId.equals("row2")) {
-          checkMultiValues(2, complexValueFk, "value1", "value4");
-        } else if(rowId.equals("row3")) {
-          checkMultiValues(3, complexValueFk,
-                           "value1", "value2", "value3", "value4");
-        } else if(rowId.equals("row4")) {
-          checkMultiValues(4, complexValueFk);
-        } else {
-          assertTrue(false);
+          if(rowId.equals("row1")) {
+            checkMultiValues(1, complexValueFk);
+          } else if(rowId.equals("row2")) {
+            checkMultiValues(2, complexValueFk, "value1", "value4");
+          } else if(rowId.equals("row3")) {
+            checkMultiValues(3, complexValueFk,
+                             "value1", "value2", "value3", "value4");
+          } else if(rowId.equals("row4")) {
+            checkMultiValues(4, complexValueFk);
+          } else {
+            assertTrue(false);
+          }
         }
+
+        Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
+                         Column.AUTO_NUMBER, Column.AUTO_NUMBER};
+        t1.addRow(row8);
+
+        ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
+          col.getRowValue(row8);
+        row8ValFk.addMultiValue("value1");
+        row8ValFk.addMultiValue("value2");
+        checkMultiValues(row8ValFk.get(), row8ValFk, "value1", "value2");
+
+        Cursor cursor = CursorBuilder.createCursor(t1);
+        assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
+        ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
+          cursor.getCurrentRowValue(col);
+        SingleValue v = row2ValFk.addMultiValue("value2");
+        row2ValFk.addMultiValue("value3");
+        checkMultiValues(2, row2ValFk, "value1", "value4", "value2", "value3");
+
+        v.set("value5");
+        v.update();
+        checkMultiValues(2, row2ValFk, "value1", "value4", "value5", "value3");
+
+        v.delete();
+        checkMultiValues(2, row2ValFk, "value1", "value4", "value3");
+        row2ValFk.getMultiValues().get(0).delete();
+        checkMultiValues(2, row2ValFk, "value4", "value3");
+        row2ValFk.getMultiValues().get(1).delete();
+        checkMultiValues(2, row2ValFk, "value4");
+        row2ValFk.getMultiValues().get(0).delete();
+        checkMultiValues(2, row2ValFk);
+
+        assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
+        ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
+          cursor.getCurrentRowValue(col);
+        row3ValFk.deleteAllValues();
+        checkMultiValues(3, row3ValFk);
+
+        // test multi-value col props
+        PropertyMap props = col.getProperties();
+        assertEquals(Boolean.TRUE, props.getValue(PropertyMap.ALLOW_MULTI_VALUE_PROP));
+        assertEquals("Value List", props.getValue(PropertyMap.ROW_SOURCE_TYPE_PROP));
+        assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"",
+                     props.getValue(PropertyMap.ROW_SOURCE_PROP));
       }
-
-      Object[] row8 = {"row8", Column.AUTO_NUMBER, "some-data", "row8-memo",
-                       Column.AUTO_NUMBER, Column.AUTO_NUMBER};
-      t1.addRow(row8);
-
-      ComplexValueForeignKey row8ValFk = (ComplexValueForeignKey)
-        col.getRowValue(row8);
-      row8ValFk.addMultiValue("value1");
-      row8ValFk.addMultiValue("value2");
-      checkMultiValues(row8ValFk.get(), row8ValFk, "value1", "value2");
-
-      Cursor cursor = CursorBuilder.createCursor(t1);
-      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row2"));
-      ComplexValueForeignKey row2ValFk = (ComplexValueForeignKey)
-        cursor.getCurrentRowValue(col);
-      SingleValue v = row2ValFk.addMultiValue("value2");
-      row2ValFk.addMultiValue("value3");
-      checkMultiValues(2, row2ValFk, "value1", "value4", "value2", "value3");
-
-      v.set("value5");
-      v.update();
-      checkMultiValues(2, row2ValFk, "value1", "value4", "value5", "value3");
-
-      v.delete();
-      checkMultiValues(2, row2ValFk, "value1", "value4", "value3");
-      row2ValFk.getMultiValues().get(0).delete();
-      checkMultiValues(2, row2ValFk, "value4", "value3");
-      row2ValFk.getMultiValues().get(1).delete();
-      checkMultiValues(2, row2ValFk, "value4");
-      row2ValFk.getMultiValues().get(0).delete();
-      checkMultiValues(2, row2ValFk);
-
-      assertTrue(cursor.findFirstRow(t1.getColumn("id"), "row3"));
-      ComplexValueForeignKey row3ValFk = (ComplexValueForeignKey)
-        cursor.getCurrentRowValue(col);
-      row3ValFk.deleteAllValues();
-      checkMultiValues(3, row3ValFk);
-
-      // test multi-value col props
-      PropertyMap props = col.getProperties();
-      assertEquals(Boolean.TRUE, props.getValue(PropertyMap.ALLOW_MULTI_VALUE_PROP));
-      assertEquals("Value List", props.getValue(PropertyMap.ROW_SOURCE_TYPE_PROP));
-      assertEquals("\"value1\";\"value2\";\"value3\";\"value4\"",
-                   props.getValue(PropertyMap.ROW_SOURCE_PROP));
-
-      db.close();
     }
   }
 
+  @Test
   public void testUnsupported() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.UNSUPPORTED)) {
 
-      Database db = openCopy(testDB);
+      try (Database db = openCopy(testDB)) {
 
-      Table t1 = db.getTable("Test");
-      Column col = t1.getColumn("UnknownComplex");
-      assertEquals(ComplexDataType.UNSUPPORTED,
-                   col.getComplexInfo().getType());
+        Table t1 = db.getTable("Test");
+        Column col = t1.getColumn("UnknownComplex");
+        assertEquals(ComplexDataType.UNSUPPORTED,
+                     col.getComplexInfo().getType());
 
-      for(Row row : t1) {
-        Integer rowId = row.getInt("ID");
-        ComplexValueForeignKey complexValueFk =
-          (ComplexValueForeignKey)col.getRowValue(row);
+        for(Row row : t1) {
+          Integer rowId = row.getInt("ID");
+          ComplexValueForeignKey complexValueFk =
+            (ComplexValueForeignKey)col.getRowValue(row);
 
-        if(rowId.equals(1)) {
-          checkUnsupportedValues(1, complexValueFk,
-                                 "RawData[(5) FF FE 62 61  7A]");
-        } else if(rowId.equals(2)) {
-          checkUnsupportedValues(2, complexValueFk, "RawData[(5) FF FE 66 6F  6F]", "RawData[(5) FF FE 62 61  7A]");
-        } else if(rowId.equals(3)) {
-          checkUnsupportedValues(3, complexValueFk);
-        } else {
-          assertTrue(false);
+          if(rowId.equals(1)) {
+            checkUnsupportedValues(1, complexValueFk,
+                                   "RawData[(5) FF FE 62 61  7A]");
+          } else if(rowId.equals(2)) {
+            checkUnsupportedValues(2, complexValueFk, "RawData[(5) FF FE 66 6F  6F]", "RawData[(5) FF FE 62 61  7A]");
+          } else if(rowId.equals(3)) {
+            checkUnsupportedValues(3, complexValueFk);
+          } else {
+            assertTrue(false);
+          }
         }
       }
-
-      db.close();
     }
   }
 
@@ -353,6 +350,7 @@ public class ComplexColumnTest extends TestCase
    * Every complex column's flat table marks its foreign key column with an ext
    * flag, and that column is the one the complex info picks out.
    */
+  @Test
   public void testComplexValueForeignKeyColumn() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {
@@ -372,13 +370,13 @@ public class ComplexColumnTest extends TestCase
         Column fkCol = complexInfo.getComplexValueForeignKeyColumn();
         Table flatTable = fkCol.getTable();
 
-        assertTrue(col.getName(), ((ColumnImpl)fkCol).isComplexValueForeignKey());
+        assertTrue(((ColumnImpl)fkCol).isComplexValueForeignKey(), col.getName());
 
         // and it is the only column of the flat table which is marked
         for(Column flatCol : flatTable.getColumns()) {
-          assertEquals(flatCol.getName(),
-                       flatCol.getName().equals(fkCol.getName()),
-                       ((ColumnImpl)flatCol).isComplexValueForeignKey());
+          assertEquals(flatCol.getName().equals(fkCol.getName()),
+                       ((ColumnImpl)flatCol).isComplexValueForeignKey(),
+                       flatCol.getName());
         }
 
         // the primary key is a different column, and is the autonumber
@@ -397,6 +395,7 @@ public class ComplexColumnTest extends TestCase
    * The kind of complex column comes from the name of the type table, which
    * access reserves.
    */
+  @Test
   public void testComplexTypeFromTypeTableName() throws Exception
   {
     for(final TestDB testDB : TestDB.getSupportedForBasename(Basename.COMPLEX)) {

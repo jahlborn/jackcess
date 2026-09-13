@@ -35,20 +35,17 @@ import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExtendedDateTest extends TestCase
+public class ExtendedDateTest
 {
 
-  public ExtendedDateTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testReadExtendedDate() throws Exception {
 
     DateTimeFormatter dtfNoTime = DateTimeFormatter.ofPattern("M/d/yyy");
@@ -56,33 +53,34 @@ public class ExtendedDateTest extends TestCase
 
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.EXT_DATE)) {
 
-      Database db = openMem(testDB);
+      try (Database db = openMem(testDB)) {
 
-      Table t = db.getTable("Table1");
-      for(Row r : t) {
-        LocalDateTime ldt = r.getLocalDateTime("DateExt");
-        String str = r.getString("DateExtStr");
+        Table t = db.getTable("Table1");
+        for(Row r : t) {
+          LocalDateTime ldt = r.getLocalDateTime("DateExt");
+          String str = r.getString("DateExtStr");
 
-        if(ldt != null) {
-          String str1 = dtfNoTime.format(ldt);
-          String str2 = dtfFull.format(ldt);
+          if(ldt != null) {
+            String str1 = dtfNoTime.format(ldt);
+            String str2 = dtfFull.format(ldt);
 
-          Assert.assertTrue(str1.equals(str) || str2.equals(str));
-        } else {
-          Assert.assertNull(str);
+            assertTrue(str1.equals(str) || str2.equals(str));
+          } else {
+            assertNull(str);
+          }
+
         }
 
+        Index idx = t.getIndex("DateExtAsc");
+        IndexCodesTest.checkIndexEntries(testDB, t, idx);
+        idx = t.getIndex("DateExtDesc");
+        IndexCodesTest.checkIndexEntries(testDB, t, idx);
+
       }
-
-      Index idx = t.getIndex("DateExtAsc");
-      IndexCodesTest.checkIndexEntries(testDB, t, idx);
-      idx = t.getIndex("DateExtDesc");
-      IndexCodesTest.checkIndexEntries(testDB, t, idx);
-
-      db.close();
     }
   }
 
+  @Test
   public void testWriteExtendedDate() throws Exception {
 
     for (final Database.FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
@@ -93,62 +91,62 @@ public class ExtendedDateTest extends TestCase
         continue;
       }
 
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table t = newTable("Test")
-        .addColumn(newColumn("id", DataType.LONG)
-                   .setAutoNumber(true))
-        .addColumn(newColumn("data1", DataType.TEXT))
-        .addColumn(newColumn("extDate", DataType.EXT_DATE_TIME))
-        .addIndex(newIndex("idxAsc").addColumns("extDate"))
-        .addIndex(newIndex("idxDesc").addColumns(false, "extDate"))
-        .toTable(db);
+        Table t = newTable("Test")
+          .addColumn(newColumn("id", DataType.LONG)
+                     .setAutoNumber(true))
+          .addColumn(newColumn("data1", DataType.TEXT))
+          .addColumn(newColumn("extDate", DataType.EXT_DATE_TIME))
+          .addIndex(newIndex("idxAsc").addColumns("extDate"))
+          .addIndex(newIndex("idxDesc").addColumns(false, "extDate"))
+          .toTable(db);
 
-      Object[] ldts = {
-        LocalDate.of(2020,6,17),
-        LocalDate.of(2021,6,14),
-        LocalDateTime.of(2021,6,14,12,45),
-        LocalDateTime.of(2021,6,14,1,45),
-        LocalDateTime.of(2021,6,14,22,45,12,345678900),
-        LocalDateTime.of(1765,6,14,12,45),
-        LocalDateTime.of(100,6,14,12,45,00,123456700),
-        LocalDateTime.of(1265,6,14,12,45)
-      };
+        Object[] ldts = {
+          LocalDate.of(2020,6,17),
+          LocalDate.of(2021,6,14),
+          LocalDateTime.of(2021,6,14,12,45),
+          LocalDateTime.of(2021,6,14,1,45),
+          LocalDateTime.of(2021,6,14,22,45,12,345678900),
+          LocalDateTime.of(1765,6,14,12,45),
+          LocalDateTime.of(100,6,14,12,45,00,123456700),
+          LocalDateTime.of(1265,6,14,12,45)
+        };
 
-      List<Map<String, Object>> expectedTable =
-        new ArrayList<Map<String, Object>>();
+        List<Map<String, Object>> expectedTable =
+          new ArrayList<Map<String, Object>>();
 
-      int idx = 1;
-      for(Object ldt : ldts) {
-        t.addRow(Column.AUTO_NUMBER, "" + ldt, ldt);
+        int idx = 1;
+        for(Object ldt : ldts) {
+          t.addRow(Column.AUTO_NUMBER, "" + ldt, ldt);
 
-        LocalDateTime realLdt = (LocalDateTime)ColumnImpl.toInternalValue(
-            DataType.EXT_DATE_TIME, ldt, (DatabaseImpl)db);
+          LocalDateTime realLdt = (LocalDateTime)ColumnImpl.toInternalValue(
+              DataType.EXT_DATE_TIME, ldt, (DatabaseImpl)db);
 
-        expectedTable.add(createExpectedRow(
-                              "id", idx++,
-                              "data1", "" + ldt,
-                              "extDate", realLdt));
+          expectedTable.add(createExpectedRow(
+                                "id", idx++,
+                                "data1", "" + ldt,
+                                "extDate", realLdt));
+        }
+
+        Comparator<Map<String, Object>> comp = (r1, r2) -> {
+            LocalDateTime l1 = (LocalDateTime)r1.get("extDate");
+            LocalDateTime l2 = (LocalDateTime)r2.get("extDate");
+            return l1.compareTo(l2);
+        };
+        Collections.sort(expectedTable, comp);
+
+        Cursor c = t.newCursor().setIndexByName("idxAsc").toIndexCursor();
+
+        assertCursor(expectedTable, c);
+
+        Collections.sort(expectedTable, comp.reversed());
+
+        c = t.newCursor().setIndexByName("idxDesc").toIndexCursor();
+
+        assertCursor(expectedTable, c);
+
       }
-
-      Comparator<Map<String, Object>> comp = (r1, r2) -> {
-          LocalDateTime l1 = (LocalDateTime)r1.get("extDate");
-          LocalDateTime l2 = (LocalDateTime)r2.get("extDate");
-          return l1.compareTo(l2);
-      };
-      Collections.sort(expectedTable, comp);
-
-      Cursor c = t.newCursor().setIndexByName("idxAsc").toIndexCursor();
-
-      assertCursor(expectedTable, c);
-
-      Collections.sort(expectedTable, comp.reversed());
-
-      c = t.newCursor().setIndexByName("idxDesc").toIndexCursor();
-
-      assertCursor(expectedTable, c);
-
-      db.close();
     }
   }
 }

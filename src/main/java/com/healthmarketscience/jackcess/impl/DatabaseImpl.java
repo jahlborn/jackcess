@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -65,7 +67,6 @@ import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.Relationship;
 import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
 import com.healthmarketscience.jackcess.TableDefinition;
@@ -80,9 +81,7 @@ import com.healthmarketscience.jackcess.util.LinkResolver;
 import com.healthmarketscience.jackcess.util.ReadOnlyFileChannel;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidatorFactory;
 import com.healthmarketscience.jackcess.util.TableIterableBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 
 
 /**
@@ -92,7 +91,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class DatabaseImpl implements Database, DateTimeContext
 {
-  private static final Log LOG = LogFactory.getLog(DatabaseImpl.class);
+  private static final Logger LOG = System.getLogger(DatabaseImpl.class.getName());
 
   /** this is the default "userId" used if we cannot find existing info.  this
       seems to be some standard "Admin" userId for access files */
@@ -1041,8 +1040,8 @@ public class DatabaseImpl implements Database, DateTimeContext
           TableImpl.IndexFeature.EXACT_MATCH);
       if((catIdx != null) && !catIdx.getIndexData().isValid()) {
         forceScan = true;
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(withErrorContext(
+        if(LOG.isLoggable(Logger.Level.DEBUG)) {
+          LOG.log(Logger.Level.DEBUG, withErrorContext(
                         "System catalog index unsupported (" +
                         catIdx.getIndexData().getUnsupportedReason() +
                         "), forcing table scan"));
@@ -1058,8 +1057,8 @@ public class DatabaseImpl implements Database, DateTimeContext
             .setColumnMatcher(CaseInsensitiveColumnMatcher.INSTANCE)
             .toIndexCursor());
       } catch(IllegalArgumentException e) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug(withErrorContext(
+        if(LOG.isLoggable(Logger.Level.DEBUG)) {
+          LOG.log(Logger.Level.DEBUG, withErrorContext(
                         "Could not find expected index on table " +
                         _systemCatalog.getName()));
         }
@@ -1084,22 +1083,25 @@ public class DatabaseImpl implements Database, DateTimeContext
         String name = row.getString(CAT_COL_NAME);
         if(SYSTEM_OBJECT_NAME_TABLES.equalsIgnoreCase(name) && _tableParentId == null) {
           _tableParentId = row.getInt(CAT_COL_ID);
-          if(LOG.isDebugEnabled()) {
-            LOG.debug(withErrorContext("Resolved _tableParentId=" + _tableParentId +
-                " from '" + SYSTEM_OBJECT_NAME_TABLES + "' row"));
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _tableParentId=" + _tableParentId +
+                                     " from '" + SYSTEM_OBJECT_NAME_TABLES + "' row"));
           }
         } else if(SYSTEM_OBJECT_NAME_DATABASES.equalsIgnoreCase(name) &&
                   _dynamicDbParentId == null) {
           _dynamicDbParentId = row.getInt(CAT_COL_ID);
-          if(LOG.isDebugEnabled()) {
-            LOG.debug(withErrorContext("Resolved _dynamicDbParentId=" + _dynamicDbParentId +
-                " from '" + SYSTEM_OBJECT_NAME_DATABASES + "' row"));
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _dynamicDbParentId=" + _dynamicDbParentId +
+                                     " from '" + SYSTEM_OBJECT_NAME_DATABASES + "' row"));
           }
         } else if(TABLE_SYSTEM_CATALOG.equalsIgnoreCase(name) && _msysParentId == null) {
           _msysParentId = row.getInt(CAT_COL_PARENT_ID);
-          if(LOG.isDebugEnabled()) {
-            LOG.debug(withErrorContext("Resolved _msysParentId=" + _msysParentId +
-                " from '" + TABLE_SYSTEM_CATALOG + "' row"));
+          if(LOG.isLoggable(Logger.Level.DEBUG)) {
+            LOG.log(Logger.Level.DEBUG,
+                    withErrorContext("Resolved _msysParentId=" + _msysParentId +
+                                     " from '" + TABLE_SYSTEM_CATALOG + "' row"));
           }
         }
         if(_tableParentId != null && _dynamicDbParentId != null && _msysParentId != null) {
@@ -1114,10 +1116,10 @@ public class DatabaseImpl implements Database, DateTimeContext
     }
 
     if(_tableParentId == null) {
-      if(LOG.isWarnEnabled()) {
+      if(LOG.isLoggable(Logger.Level.WARNING)) {
         for(Row row : CursorImpl.createCursor(_systemCatalog).newIterable().setColumnNames(
                 SYSTEM_CATALOG_COLUMNS)) {
-          LOG.warn(withErrorContext(
+          LOG.log(Logger.Level.WARNING, withErrorContext(
               "MSysObjects row during failure scan: name=" + row.getString(CAT_COL_NAME) +
               ", parentId=" + row.getInt(CAT_COL_PARENT_ID)));
         }
@@ -1126,8 +1128,8 @@ public class DatabaseImpl implements Database, DateTimeContext
               "Did not find required parent table id"));
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(withErrorContext(
+    if (LOG.isLoggable(Logger.Level.DEBUG)) {
+      LOG.log(Logger.Level.DEBUG, withErrorContext(
           "Finished reading system catalog.  Tables: " + getTableNames()));
     }
   }
@@ -1160,7 +1162,7 @@ public class DatabaseImpl implements Database, DateTimeContext
     try {
       return new TableIterator(getTableNames());
     } catch(IOException e) {
-      throw new RuntimeIOException(e);
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -1170,7 +1172,7 @@ public class DatabaseImpl implements Database, DateTimeContext
                                              builder.isIncludeSystemTables(),
                                              builder.isIncludeLinkedTables()));
     } catch(IOException e) {
-      throw new RuntimeIOException(e);
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -1187,7 +1189,7 @@ public class DatabaseImpl implements Database, DateTimeContext
         try {
           return _tableFinder.iterateTableMetaData();
         } catch(IOException e) {
-          throw new RuntimeIOException(e);
+          throw new UncheckedIOException(e);
         }
       }
     };
@@ -1560,7 +1562,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       QueryImpl.Row queryRow = new QueryImpl.Row(row);
       List<QueryImpl.Row> queryRows = queryRowMap.get(queryRow.objectId);
       if(queryRows == null) {
-        LOG.warn(withErrorContext(
+        LOG.log(Logger.Level.WARNING, withErrorContext(
                      "Found rows for query with id " + queryRow.objectId +
                      " missing from system catalog"));
         continue;
@@ -2006,8 +2008,8 @@ public class DatabaseImpl implements Database, DateTimeContext
         .setSpecificEntry(colValue)
         .toCursor();
     } catch(IllegalArgumentException e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(withErrorContext(
+      if(LOG.isLoggable(Logger.Level.DEBUG)) {
+        LOG.log(Logger.Level.DEBUG, withErrorContext(
             "Could not find expected index on table " + table.getName()));
       }
     }
@@ -2097,7 +2099,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return ToStringBuilder.builder(this).reflectionToString();
   }
 
   /**
@@ -2490,7 +2492,7 @@ public class DatabaseImpl implements Database, DateTimeContext
 
     @Override
     public String toString() {
-      ToStringBuilder sb = CustomToStringStyle.valueBuilder("TableMetaData")
+      ToStringBuilder sb = ToStringBuilder.valueBuilder("TableMetaData")
         .append("name", getName());
         if(isSystem()) {
           sb.append("isSystem", isSystem());
@@ -2623,7 +2625,7 @@ public class DatabaseImpl implements Database, DateTimeContext
       try {
         return getTable(_tableNameIter.next(), true);
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
   }

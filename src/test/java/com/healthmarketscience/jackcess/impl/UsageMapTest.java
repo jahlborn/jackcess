@@ -13,17 +13,19 @@ import com.healthmarketscience.jackcess.DatabaseBuilder;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.TableBuilder;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Dan Rollo
  *         Date: Mar 5, 2010
  *         Time: 2:21:22 PM
  */
-public final class UsageMapTest extends TestCase {
+public class UsageMapTest {
 
+  @Test
   public void testRead() throws Exception {
     for (final TestDB testDB : SUPPORTED_DBS_TEST) {
       final int expectedFirstPage;
@@ -52,103 +54,102 @@ public final class UsageMapTest extends TestCase {
       final File dbFile, final int expectedFirstPage, final int expectedLastPage)
     throws IOException {
 
-    final Database db = DatabaseBuilder.open(dbFile);
-    final UsageMap usageMap = UsageMap.read((DatabaseImpl)db,
-                                            PageChannel.PAGE_GLOBAL_USAGE_MAP,
-                                            PageChannel.ROW_GLOBAL_USAGE_MAP,
-                                            true);
-    assertEquals("Unexpected FirstPageNumber.", expectedFirstPage, 
-                 usageMap.getFirstPageNumber());
-    assertEquals("Unexpected LastPageNumber.", expectedLastPage, 
-                 usageMap.getLastPageNumber());
+    try (final Database db = DatabaseBuilder.open(dbFile)) {
+      final UsageMap usageMap = UsageMap.read((DatabaseImpl)db,
+                                              PageChannel.PAGE_GLOBAL_USAGE_MAP,
+                                              PageChannel.ROW_GLOBAL_USAGE_MAP,
+                                              true);
+      assertEquals(expectedFirstPage,
+                   usageMap.getFirstPageNumber(),
+                   "Unexpected FirstPageNumber.");
+      assertEquals(expectedLastPage,
+                   usageMap.getLastPageNumber(),
+                   "Unexpected LastPageNumber.");
+    }
   }
 
+  @Test
   public void testGobalReferenceUsageMap() throws Exception
   {
-    Database db = openCopy(
-        Database.FileFormat.V2000, 
-        new File("src/test/data/V2000/testRefGlobalV2000.mdb"));
+    try (Database db = openCopy(
+        Database.FileFormat.V2000,
+        new File("src/test/data/V2000/testRefGlobalV2000.mdb"))) {
 
-    Table t = new TableBuilder("Test2")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
-      .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-      .addColumn(new ColumnBuilder("data2", DataType.TEXT))
-      .toTable(db);
+      Table t = new TableBuilder("Test2")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("data2", DataType.TEXT))
+        .toTable(db);
 
 
-    ((DatabaseImpl)db).getPageChannel().startWrite();
-    try {
-      List<Object[]> rows = new ArrayList<Object[]>();
-      for(int i = 0; i < 300000; ++i) {
-        String s1 = "r" + i + "-" + createString(100);
-        String s2 = "r" + i + "-" + createString(200);
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        List<Object[]> rows = new ArrayList<Object[]>();
+        for(int i = 0; i < 300000; ++i) {
+          String s1 = "r" + i + "-" + createString(100);
+          String s2 = "r" + i + "-" + createString(200);
 
-        rows.add(new Object[]{i, s1, s2});
+          rows.add(new Object[]{i, s1, s2});
 
-        if((i % 2000) == 0) {
-          t.addRows(rows);
-          rows.clear();
+          if((i % 2000) == 0) {
+            t.addRows(rows);
+            rows.clear();
+          }
         }
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
-    } finally {
-      ((DatabaseImpl)db).getPageChannel().finishWrite();
     }
-
-    db.close();
   }
 
+  @Test
   public void testPromoteGlobalUsageMapToReference() throws Exception
   {
-    Database db = createFile(Database.FileFormat.V2003);
-    File dbFile = db.getFile();
-
-    Table t = new TableBuilder("Test")
-      .addColumn(new ColumnBuilder("id", DataType.LONG))
-      .addColumn(new ColumnBuilder("data1", DataType.TEXT))
-      .addColumn(new ColumnBuilder("data2", DataType.TEXT))
-      .toTable(db);
-
-    // add enough rows to grow the database well beyond the ~512 page limit of
-    // an inline global usage map, which should force the global usage map to
-    // be promoted to a reference usage map
+    File dbFile = null;
     int numRows = 20000;
-    ((DatabaseImpl)db).getPageChannel().startWrite();
-    try {
-      List<Object[]> rows = new ArrayList<Object[]>();
-      for(int i = 0; i < numRows; ++i) {
-        rows.add(new Object[]{i, "r" + i + "-" + createString(100),
-                              "r" + i + "-" + createString(200)});
-        if((i % 2000) == 0) {
-          t.addRows(rows);
-          rows.clear();
+    try(Database db = createFile(Database.FileFormat.V2003)) {
+      dbFile = db.getFile();
+
+      Table t = new TableBuilder("Test")
+        .addColumn(new ColumnBuilder("id", DataType.LONG))
+        .addColumn(new ColumnBuilder("data1", DataType.TEXT))
+        .addColumn(new ColumnBuilder("data2", DataType.TEXT))
+        .toTable(db);
+
+      // add enough rows to grow the database well beyond the ~512 page limit of
+      // an inline global usage map, which should force the global usage map to
+      // be promoted to a reference usage map
+      ((DatabaseImpl)db).getPageChannel().startWrite();
+      try {
+        List<Object[]> rows = new ArrayList<Object[]>();
+        for(int i = 0; i < numRows; ++i) {
+          rows.add(new Object[]{i, "r" + i + "-" + createString(100),
+                                "r" + i + "-" + createString(200)});
+          if((i % 2000) == 0) {
+            t.addRows(rows);
+            rows.clear();
+          }
         }
+        t.addRows(rows);
+      } finally {
+        ((DatabaseImpl)db).getPageChannel().finishWrite();
       }
-      t.addRows(rows);
-    } finally {
-      ((DatabaseImpl)db).getPageChannel().finishWrite();
     }
-    db.close();
 
     // reopen and verify the global usage map is now a reference map which
     // covers the entire database (starting from page 0), and that all the
     // data is still readable
-    Database db2 = DatabaseBuilder.open(dbFile);
-    try {
+    try(Database db2 = DatabaseBuilder.open(dbFile)) {
       UsageMap gmap = UsageMap.read((DatabaseImpl)db2,
                                     PageChannel.PAGE_GLOBAL_USAGE_MAP,
                                     PageChannel.ROW_GLOBAL_USAGE_MAP, true);
-      assertEquals("global usage map should be promoted to a reference map",
-                   "GlobalReferenceHandler", getHandlerName(gmap));
-      assertEquals("global reference map should start at page 0",
-                   0, gmap.getStartPage());
+      assertEquals("GlobalReferenceHandler", getHandlerName(gmap),
+                   "global usage map should be promoted to a reference map");
+      assertEquals(0, gmap.getStartPage(),
+                   "global reference map should start at page 0");
 
-      int count = 0;
-      for(Row r : db2.getTable("Test")) {
-        ++count;
-      }
+      int count = (int)db2.getTable("Test").stream().count();
       assertEquals(numRows, count);
-    } finally {
-      db2.close();
     }
   }
 

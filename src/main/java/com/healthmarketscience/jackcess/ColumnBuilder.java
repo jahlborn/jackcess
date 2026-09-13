@@ -21,12 +21,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import com.healthmarketscience.jackcess.impl.JetFormat;
 import com.healthmarketscience.jackcess.impl.PropertyMapImpl;
 import com.healthmarketscience.jackcess.impl.TableImpl;
 import com.healthmarketscience.jackcess.impl.TableUpdater;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Builder style class for constructing a {@link Column}.  See {@link
@@ -539,20 +539,20 @@ public class ColumnBuilder {
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("name", _name)
       .append("type", _type)
       .append("number", _columnNumber)
       .append("id", getColumnId())
-      .append("length", CustomToStringStyle.ignoreNull(_length))
-      .append("precision", CustomToStringStyle.ignoreNull(_precision))
-      .append("scale", CustomToStringStyle.ignoreNull(_scale))
+      .appendIfNotNull("length", _length)
+      .appendIfNotNull("precision", _precision)
+      .appendIfNotNull("scale", _scale)
       .append("autoNumber", _autoNumber)
       .append("compressedUnicode", _compressedUnicode)
       .append("calculated", _calculated)
       .append("hyperlink", _hyperlink)
-      .append("textSortOrder", CustomToStringStyle.ignoreNull(_sortOrder))
-      .append("props", CustomToStringStyle.ignoreNull(_props))
+      .appendIfNotNull("textSortOrder", _sortOrder)
+      .appendIfNotNull("props", _props)
       .toString();
   }
 

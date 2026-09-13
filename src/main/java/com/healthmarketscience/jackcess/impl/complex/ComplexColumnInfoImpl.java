@@ -17,6 +17,7 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl.complex;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,15 +31,14 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.IndexCursor;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexColumnInfo;
 import com.healthmarketscience.jackcess.complex.ComplexDataType;
 import com.healthmarketscience.jackcess.complex.ComplexValue;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
-import com.healthmarketscience.jackcess.impl.CustomToStringStyle;
 import com.healthmarketscience.jackcess.impl.TableImpl;
+import com.healthmarketscience.jackcess.impl.ToStringBuilder;
 
 /**
  * Base class for the additional information tracked for complex columns.
@@ -274,8 +274,8 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
         entryIter.next();
         entryIter.remove();
       }
-    } catch(RuntimeIOException e) {
-      throw (IOException)e.getCause();
+    } catch(UncheckedIOException e) {
+      throw e.getCause();
     }
   }
 
@@ -325,7 +325,7 @@ public abstract class ComplexColumnInfoImpl<V extends ComplexValue>
 
   @Override
   public String toString() {
-    return CustomToStringStyle.valueBuilder(this)
+    return ToStringBuilder.valueBuilder(this)
       .append("complexType", getType())
       .append("complexTypeId", _complexTypeId)
       .toString();

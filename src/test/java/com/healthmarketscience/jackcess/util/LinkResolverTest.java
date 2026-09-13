@@ -21,17 +21,18 @@ import java.nio.file.AccessDeniedException;
 
 import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Database.FileFormat;
-import com.healthmarketscience.jackcess.impl.DatabaseImpl;
-import com.healthmarketscience.jackcess.impl.SystemConfig;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import com.healthmarketscience.jackcess.impl.DatabaseImpl;
 import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.SystemConfig;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class LinkResolverTest extends TestCase
+public class LinkResolverTest
 {
   /** the shapes of linkee file name which a linking database may specify */
   private static final String[] LINKEE_NAMES = {
@@ -45,10 +46,7 @@ public class LinkResolverTest extends TestCase
     "\\\\.\\linked.accdb"
   };
 
-  public LinkResolverTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testDefaultRejectsAllLinkees() throws Exception {
     try(Database db = createMem(FileFormat.V2010)) {
       for(String linkeeName : LINKEE_NAMES) {
@@ -63,6 +61,7 @@ public class LinkResolverTest extends TestCase
     }
   }
 
+  @Test
   public void testLinkedTableDeniedByDefault() throws Exception {
     String linkeeName = "\\\\server\\share\\linked.accdb";
 
@@ -82,6 +81,7 @@ public class LinkResolverTest extends TestCase
     }
   }
 
+  @Test
   public void testUnrestrictedOpensLinkee() throws Exception {
     File linkeeFile = null;
     try(Database linkeeDb = createFile(FileFormat.V2010)) {
@@ -96,6 +96,7 @@ public class LinkResolverTest extends TestCase
     }
   }
 
+  @Test
   @SuppressWarnings("try")
   public void testAllowLinkResolutionProperty() throws Exception {
     assertSame(LinkResolver.DEFAULT, DatabaseImpl.getDefaultLinkResolver());

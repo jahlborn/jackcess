@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -29,14 +31,11 @@ import com.healthmarketscience.jackcess.Cursor;
 import com.healthmarketscience.jackcess.CursorBuilder;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.RowId;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import com.healthmarketscience.jackcess.impl.TableImpl.RowState;
 import com.healthmarketscience.jackcess.util.ColumnMatcher;
 import com.healthmarketscience.jackcess.util.ErrorHandler;
 import com.healthmarketscience.jackcess.util.IterableBuilder;
 import com.healthmarketscience.jackcess.util.SimpleColumnMatcher;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Manages iteration for a Table.  Different cursors provide different methods
@@ -56,7 +55,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public abstract class CursorImpl implements Cursor
 {
-  private static final Log LOG = LogFactory.getLog(CursorImpl.class);
+  private static final Logger LOG = System.getLogger(CursorImpl.class.getName());
 
   /** boolean value indicating forward movement */
   public static final boolean MOVE_FORWARD = true;
@@ -454,7 +453,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -510,7 +509,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -551,7 +550,7 @@ public abstract class CursorImpl implements Cursor
         try {
           restorePosition(curPos, prevPos);
         } catch(IOException e) {
-          LOG.error("Failed restoring position", e);
+          LOG.log(Logger.Level.ERROR, "Failed restoring position", e);
         }
       }
     }
@@ -848,7 +847,7 @@ public abstract class CursorImpl implements Cursor
           _hasNext = _validRow = true;
         }
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
 
@@ -859,7 +858,7 @@ public abstract class CursorImpl implements Cursor
           _hasNext = findNext();
           _validRow = _hasNext;
         } catch(IOException e) {
-          throw new RuntimeIOException(e);
+          throw new UncheckedIOException(e);
         }
       }
       return _hasNext;
@@ -875,7 +874,7 @@ public abstract class CursorImpl implements Cursor
         _hasNext = null;
         return rtn;
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
 
@@ -886,7 +885,7 @@ public abstract class CursorImpl implements Cursor
           deleteCurrentRow();
           _validRow = false;
         } catch(IOException e) {
-          throw new RuntimeIOException(e);
+          throw new UncheckedIOException(e);
         }
       } else {
         throw new IllegalStateException("Not at valid row");

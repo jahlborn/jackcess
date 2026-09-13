@@ -16,9 +16,9 @@ limitations under the License.
 
 package com.healthmarketscience.jackcess.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 
 import com.healthmarketscience.jackcess.Column;
 import com.healthmarketscience.jackcess.Relationship;
@@ -66,7 +66,7 @@ public class RelationshipImpl implements Relationship
   public RelationshipImpl(String name, Table fromTable, Table toTable, int flags,
                           int numCols)
   {
-    this(name, fromTable, toTable, flags, 
+    this(name, fromTable, toTable, flags,
          Collections.nCopies(numCols, (Column)null),
          Collections.nCopies(numCols, (Column)null));
   }
@@ -87,7 +87,7 @@ public class RelationshipImpl implements Relationship
   public String getName() {
     return _name;
   }
-  
+
   @Override
   public Table getFromTable() {
     return _fromTable;
@@ -126,7 +126,7 @@ public class RelationshipImpl implements Relationship
   public boolean cascadeUpdates() {
     return hasFlag(CASCADE_UPDATES_FLAG);
   }
-  
+
   @Override
   public boolean cascadeDeletes() {
     return hasFlag(CASCADE_DELETES_FLAG);
@@ -156,14 +156,14 @@ public class RelationshipImpl implements Relationship
     }
     return JoinType.INNER;
   }
-  
+
   private boolean hasFlag(int flagMask) {
     return((getFlags() & flagMask) != 0);
   }
 
   @Override
   public String toString() {
-    return CustomToStringStyle.builder(this)
+    return ToStringBuilder.builder(this)
       .append("name", _name)
       .append("fromTable", _fromTable.getName())
       .append("fromColumns", _fromColumns)
@@ -172,5 +172,5 @@ public class RelationshipImpl implements Relationship
       .append("flags", Integer.toHexString(_flags))
       .toString();
   }
-  
+
 }

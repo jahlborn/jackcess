@@ -3,13 +3,13 @@
   <parent>
     <groupId>com.healthmarketscience</groupId>
     <artifactId>openhms-parent</artifactId>
-    <version>2.0.17</version>
+    <version>3.0.0-SNAPSHOT</version>
   </parent>
   <groupId>com.healthmarketscience.jackcess</groupId>
   <artifactId>jackcess</artifactId>
   <name>Jackcess</name>
   <description>A pure Java library for reading from and writing to MS Access databases.</description>
-  <version>4.0.13-SNAPSHOT</version>
+  <version>5.0.0-SNAPSHOT</version>
   <url>https://jackcess.sourceforge.io</url>
   <inceptionYear>2005</inceptionYear>
   <licenses>
@@ -125,9 +125,9 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <configuration>
-            <forkMode>once</forkMode>
-            <parallel>classes</parallel>
-            <threadCount>2</threadCount>
+            <forkCount>1C</forkCount>
+            <reuseForks>true</reuseForks>
+            <argLine>-Xmx1024m</argLine>
             <systemProperties>
               <property>
                 <name>java.util.logging.config.file</name>
@@ -220,10 +220,10 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>https://docs.oracle.com/javase/8/docs/api/</list>
+            <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
             <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
-          <source>1.8</source>
+          <source>11</source>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>
@@ -276,23 +276,39 @@
     </plugins>
   </build>
   <dependencies>
+
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.18.0</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.14.1</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.2</version>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.14.1</version>
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk-platform-logging</artifactId>
+      <version>2.0.17</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.17</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-to-slf4j</artifactId>
+      <version>2.23.1</version>
+      <scope>test</scope>
+    </dependency>
+                                    
     <!-- Only necessary if working with compound ole data -->
     <dependency>
       <groupId>org.apache.poi</groupId>
@@ -324,10 +340,10 @@
           <minmemory>128m</minmemory>
           <maxmemory>512</maxmemory>
           <links>
-            <list>https://docs.oracle.com/javase/8/docs/api/</list>
+            <list>https://docs.oracle.com/en/java/javase/11/docs/api/</list>
             <list>https://docs.oracle.com/javaee/5/api/</list>
           </links>
-          <source>1.8</source>
+          <source>11</source>
           <show>public</show>
           <stylesheetfile>${basedir}/src/site/javadoc/stylesheet.css</stylesheetfile>
           <tags>

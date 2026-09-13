@@ -23,6 +23,7 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.Reader;
 import java.io.Serializable;
+import java.lang.System.Logger;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -67,9 +68,6 @@ import com.healthmarketscience.jackcess.impl.expr.LocaleUtil;
 import com.healthmarketscience.jackcess.impl.expr.NumberFormatter;
 import com.healthmarketscience.jackcess.util.ColumnValidator;
 import com.healthmarketscience.jackcess.util.SimpleColumnValidator;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Access database column definition
@@ -79,7 +77,7 @@ import org.apache.commons.logging.LogFactory;
 public class ColumnImpl implements Column, DateTimeContext
 {
 
-  protected static final Log LOG = LogFactory.getLog(ColumnImpl.class);
+  protected static final Logger LOG = System.getLogger(ColumnImpl.class.getName());
 
   /**
    * Placeholder object for adding rows which indicates that the caller wants
@@ -349,7 +347,7 @@ public class ColumnImpl implements Column, DateTimeContext
     try {
       args.type = DataType.fromByte(colType);
     } catch(IOException e) {
-      LOG.warn(withErrorContext("Unsupported column type " + colType,
+      LOG.log(Logger.Level.WARNING, withErrorContext("Unsupported column type " + colType,
                                 table.getDatabase(), table.getName(), name));
       boolean variableLength = ((args.flags & FIXED_LEN_FLAG_MASK) == 0);
       args.type = (variableLength ? DataType.UNSUPPORTED_VARLEN :
@@ -761,7 +759,7 @@ public class ColumnImpl implements Column, DateTimeContext
     case COMPLEX_TYPE:
       return new ComplexTypeAutoNumberGenerator();
     default:
-      LOG.warn(withErrorContext("Unknown auto number column type " + _type));
+      LOG.log(Logger.Level.WARNING, withErrorContext("Unknown auto number column type " + _type));
       return new UnsupportedAutoNumberGenerator(_type);
     }
   }
@@ -1793,7 +1791,7 @@ public class ColumnImpl implements Column, DateTimeContext
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this)
+    ToStringBuilder sb = ToStringBuilder.builder(this)
       .append("name", "(" + _table.getName() + ") " + _name);
     byte typeValue = getOriginalDataType();
     sb.append("type", "0x" + Integer.toHexString(typeValue) +
@@ -1804,8 +1802,7 @@ public class ColumnImpl implements Column, DateTimeContext
       .append("variableLength", _variableLength);
     if(_calculated) {
       sb.append("calculated", _calculated)
-        .append("expression",
-                CustomToStringStyle.ignoreNull(getCalculationContext()));
+        .appendIfNotNull("expression", getCalculationContext());
     }
     if(_type.isTextual()) {
       sb.append("compressedUnicode", isCompressedUnicode())
@@ -1827,11 +1824,11 @@ public class ColumnImpl implements Column, DateTimeContext
     if(_autoNumber) {
       sb.append("lastAutoNumber", _autoNumberGenerator.getLast());
     }
-    sb.append("complexInfo", CustomToStringStyle.ignoreNull(getComplexInfo()))
-      .append("validator", CustomToStringStyle.ignoreNull(
-                  ((_validator != SimpleColumnValidator.INSTANCE) ?
-                   _validator : null)))
-      .append("defaultValue", CustomToStringStyle.ignoreNull(_defValue));
+    sb.appendIfNotNull("complexInfo", getComplexInfo())
+      .appendIfNotNull("validator",
+                       ((_validator != SimpleColumnValidator.INSTANCE) ?
+                        _validator : null))
+      .appendIfNotNull("defaultValue", _defValue);
     return sb.toString();
   }
 
@@ -2425,7 +2422,7 @@ public class ColumnImpl implements Column, DateTimeContext
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append(null, getBytes())
         .toString();
     }
@@ -2713,7 +2710,7 @@ public class ColumnImpl implements Column, DateTimeContext
     public String toString() {
       LocaleUtil.LcidInfo info = LocaleUtil.getInfo(_value);
       String valueStr = _value + "(" + _version + ")";
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append(null, (info != null) ? (valueStr + ", " + info) : valueStr)
         .toString();
     }

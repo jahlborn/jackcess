@@ -3,9 +3,9 @@ package com.healthmarketscience.jackcess.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -13,12 +13,13 @@ import java.util.Set;
 
 import com.healthmarketscience.jackcess.DataType;
 import com.healthmarketscience.jackcess.Database;
-import com.healthmarketscience.jackcess.JackcessException;
 import static com.healthmarketscience.jackcess.Database.*;
 import com.healthmarketscience.jackcess.DatabaseBuilder;
+import com.healthmarketscience.jackcess.JackcessException;
 import com.healthmarketscience.jackcess.PropertyMap;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -26,7 +27,7 @@ import static com.healthmarketscience.jackcess.TestUtil.*;
  *         Date: Mar 5, 2010
  *         Time: 12:44:21 PM
  */
-public class JetFormatTest extends TestCase {
+public class JetFormatTest {
 
   public static final File DIR_TEST_DATA = new File("src/test/data");
 
@@ -165,10 +166,8 @@ public class JetFormatTest extends TestCase {
         }
 
         // verify that the db is the file format expected
-        try {
-          Database db = new DatabaseBuilder(testFile).setReadOnly(true).open();
+        try (Database db = new DatabaseBuilder(testFile).setReadOnly(true).open()) {
           FileFormat dbFileFormat = db.getFileFormat();
-          db.close();
           if(dbFileFormat != fileFormat) {
             throw new IllegalStateException("Expected " + fileFormat +
                                             " was " + dbFileFormat);
@@ -203,6 +202,7 @@ public class JetFormatTest extends TestCase {
     TestDB.getSupportedForBasename(Basename.TEST, true);
 
 
+  @Test
   public void testGetFormat() throws Exception {
     try {
       JetFormat.getFormat(null);
@@ -213,30 +213,26 @@ public class JetFormatTest extends TestCase {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      final FileChannel channel = DatabaseImpl.openChannel(
-          testDB.dbFile.toPath(), false, false);
-      try {
+      try (FileChannel channel = DatabaseImpl.openChannel(
+          testDB.dbFile.toPath(), false, false)) {
 
         JetFormat fmtActual = JetFormat.getFormat(channel);
-        assertEquals("Unexpected JetFormat for dbFile: " +
-                     testDB.dbFile.getAbsolutePath(),
-                     testDB.getExpectedFormat(), fmtActual);
+        assertEquals(testDB.getExpectedFormat(), fmtActual,
+                     () -> "Unexpected JetFormat for dbFile: " +
+                           testDB.dbFile.getAbsolutePath());
 
-      } finally {
-        channel.close();
       }
 
     }
   }
 
+  @Test
   public void testReadOnlyFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      Database db = null;
       Exception failure = null;
-      try {
-        db = openCopy(testDB);
+      try (Database db = openCopy(testDB)) {
 
         if(testDB.getExpectedFormat().READ_ONLY) {
           PropertyMap props = db.getUserDefinedProperties();
@@ -246,10 +242,6 @@ public class JetFormatTest extends TestCase {
 
       } catch(Exception e) {
         failure = e;
-      } finally {
-        if(db != null) {
-          db.close();
-        }
       }
 
       if(!testDB.getExpectedFormat().READ_ONLY) {
@@ -261,33 +253,23 @@ public class JetFormatTest extends TestCase {
     }
   }
 
+  @Test
   public void testFileFormat() throws Exception {
 
     for (final TestDB testDB : SUPPORTED_DBS_TEST_FOR_READ) {
 
-      Database db = null;
-      try {
-        db = open(testDB);
+      try (Database db = open(testDB)) {
         assertEquals(testDB.getExpectedFileFormat(), db.getFileFormat());
-      } finally {
-        if(db != null) {
-          db.close();
-        }
       }
     }
 
-    Database db = null;
-    try {
-      db = open(Database.FileFormat.GENERIC_JET4,
-                new File(DIR_TEST_DATA, "adox_jet4.mdb"));
+    try (Database db = open(Database.FileFormat.GENERIC_JET4,
+                            new File(DIR_TEST_DATA, "adox_jet4.mdb"))) {
       assertEquals(Database.FileFormat.GENERIC_JET4, db.getFileFormat());
-    } finally {
-      if(db != null) {
-        db.close();
-      }
     }
   }
 
+  @Test
   public void testSqlTypes() throws Exception {
 
     JetFormat v2000 = JetFormat.VERSION_4;

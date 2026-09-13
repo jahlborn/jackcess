@@ -17,6 +17,8 @@ limitations under the License.
 package com.healthmarketscience.jackcess.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -30,12 +32,8 @@ import java.util.Map;
 import com.healthmarketscience.jackcess.ConstraintViolationException;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.IndexBuilder;
-import com.healthmarketscience.jackcess.RuntimeIOException;
 import static com.healthmarketscience.jackcess.impl.ByteUtil.ByteStream;
 import static com.healthmarketscience.jackcess.impl.IndexCodes.*;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Access table index data.  This is the actual data which backs a logical
@@ -46,7 +44,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class IndexData {
 
-  protected static final Log LOG = LogFactory.getLog(Index.class);
+  protected static final Logger LOG = System.getLogger(Index.class.getName());
 
   /** special entry which is less than any other entry */
   public static final Entry FIRST_ENTRY =
@@ -387,10 +385,10 @@ public class IndexData {
     String suffix = (status == IndexStatus.READ_ONLY) ?
       "making read-only" : "index not suitable for lookups";
     if(!col.getTable().isSystem()) {
-      LOG.warn(_unsupportedReason + ", " + suffix);
+      LOG.log(Logger.Level.WARNING, _unsupportedReason + ", " + suffix);
     } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(_unsupportedReason + ", " + suffix);
+      if(LOG.isLoggable(Logger.Level.DEBUG)) {
+        LOG.log(Logger.Level.DEBUG, _unsupportedReason + ", " + suffix);
       }
     }
   }
@@ -738,7 +736,7 @@ public class IndexData {
       }
       ++_modCount;
     } else {
-      LOG.warn(withErrorContext("Added duplicate index entry " + oldEntry));
+      LOG.log(Logger.Level.WARNING, withErrorContext("Added duplicate index entry " + oldEntry));
     }
   }
 
@@ -803,7 +801,7 @@ public class IndexData {
     if(removedEntry != null) {
       ++_modCount;
     } else {
-      LOG.warn(withErrorContext(
+      LOG.log(Logger.Level.WARNING, withErrorContext(
           "Failed removing index entry " + oldEntry + " for row: " +
           Arrays.asList(row)));
     }
@@ -1153,7 +1151,7 @@ public class IndexData {
 
   @Override
   public String toString() {
-    ToStringBuilder sb = CustomToStringStyle.builder(this)
+    ToStringBuilder sb = ToStringBuilder.builder(this)
       .append("dataNumber", _number)
       .append("pageNumber", _rootPageNumber)
       .append("isBackingPrimaryKey", isBackingPrimaryKey())
@@ -1166,7 +1164,7 @@ public class IndexData {
       try {
         sb.append("entryCount", getEntryCount());
       } catch(IOException e) {
-        throw new RuntimeIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
     sb.append("pageCache", _pageCache);
@@ -1786,7 +1784,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.builder(this)
+      return ToStringBuilder.builder(this)
         .append("column", getColumn())
         .append("flags", getFlags() + " " + (isAscending() ? "(ASC)" : "(DSC)"))
         .toString();
@@ -2287,7 +2285,7 @@ public class IndexData {
     @Override
     public String toString() {
       return entryBytesToStringBuilder(
-          CustomToStringStyle.valueBuilder(this)
+          ToStringBuilder.valueBuilder(this)
           .append("rowId", _rowId))
         .toString();
     }
@@ -2416,7 +2414,7 @@ public class IndexData {
     @Override
     public String toString() {
       return entryBytesToStringBuilder(
-          CustomToStringStyle.valueBuilder(this)
+          ToStringBuilder.valueBuilder(this)
           .append("rowId", getRowId())
           .append("subPage", _subPageNumber))
         .toString();
@@ -2654,7 +2652,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("curPosition", _curPos)
         .append("prevPosition", _prevPos)
         .toString();
@@ -2813,7 +2811,7 @@ public class IndexData {
 
     @Override
     public String toString() {
-      return CustomToStringStyle.valueBuilder(this)
+      return ToStringBuilder.valueBuilder(this)
         .append("page", _dataPage.getPageNumber())
         .append("idx", _idx)
         .append("entry", _entry)
@@ -2895,7 +2893,7 @@ public class IndexData {
         (isLeaf() ? "Leaf" : "Node") + "DataPage[" + getPageNumber() +
         "] " + getPrevPageNumber() + ", " + getNextPageNumber() + ", (" +
         getChildTailPageNumber() + ")";
-      ToStringBuilder sb = CustomToStringStyle.valueBuilder(objName);
+      ToStringBuilder sb = ToStringBuilder.valueBuilder(objName);
 
       if((isLeaf() && !entries.isEmpty())) {
         sb.append("entryRange", "[" + entries.get(0) + ", " +

@@ -314,7 +314,7 @@ public interface Table extends Iterable<Row>, TableDefinition
    * <p>
    * For more advanced iteration, use the {@link #getDefaultCursor default
    * cursor} directly.
-   * @throws RuntimeIOException if an IOException is thrown by one of the
+   * @throws UncheckedIOException if an IOException is thrown by one of the
    *         operations, the actual exception will be contained within
    * @usage _general_method_
    */

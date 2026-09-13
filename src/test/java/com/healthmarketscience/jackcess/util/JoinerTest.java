@@ -29,56 +29,55 @@ import com.healthmarketscience.jackcess.Database;
 import com.healthmarketscience.jackcess.Index;
 import com.healthmarketscience.jackcess.Row;
 import com.healthmarketscience.jackcess.Table;
-import com.healthmarketscience.jackcess.impl.RowImpl;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
-import junit.framework.TestCase;
 import static com.healthmarketscience.jackcess.TestUtil.*;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import com.healthmarketscience.jackcess.impl.RowImpl;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class JoinerTest extends TestCase {
+public class JoinerTest {
 
-  public JoinerTest(String name) {
-    super(name);
-  }
-
+  @Test
   public void testJoiner() throws Exception
   {
     for (final TestDB testDB : TestDB.getSupportedForBasename(Basename.INDEX)) {
 
-      Database db = openCopy(testDB);
-      Table t1 = db.getTable("Table1");
-      Table t2 = db.getTable("Table2");
-      Table t3 = db.getTable("Table3");
+      try (Database db = openCopy(testDB)) {
+        Table t1 = db.getTable("Table1");
+        Table t2 = db.getTable("Table2");
+        Table t3 = db.getTable("Table3");
 
-      Index t1t2 = t1.getIndex("Table2Table1");
-      Index t1t3 = t1.getIndex("Table3Table1");
+        Index t1t2 = t1.getIndex("Table2Table1");
+        Index t1t3 = t1.getIndex("Table3Table1");
 
-      Index t2t1 = t1t2.getReferencedIndex();
-      assertSame(t2, t2t1.getTable());
-      Joiner t2t1Join = Joiner.create(t2t1);
+        Index t2t1 = t1t2.getReferencedIndex();
+        assertSame(t2, t2t1.getTable());
+        Joiner t2t1Join = Joiner.create(t2t1);
 
-      assertSame(t2, t2t1Join.getFromTable());
-      assertSame(t2t1, t2t1Join.getFromIndex());
-      assertSame(t1, t2t1Join.getToTable());
-      assertSame(t1t2, t2t1Join.getToIndex());
+        assertSame(t2, t2t1Join.getFromTable());
+        assertSame(t2t1, t2t1Join.getFromIndex());
+        assertSame(t1, t2t1Join.getToTable());
+        assertSame(t1t2, t2t1Join.getToIndex());
 
-      doTestJoiner(t2t1Join, createT2T1Data());
+        doTestJoiner(t2t1Join, createT2T1Data());
 
-      Index t3t1 = t1t3.getReferencedIndex();
-      assertSame(t3, t3t1.getTable());
-      Joiner t3t1Join = Joiner.create(t3t1);
+        Index t3t1 = t1t3.getReferencedIndex();
+        assertSame(t3, t3t1.getTable());
+        Joiner t3t1Join = Joiner.create(t3t1);
 
-      assertSame(t3, t3t1Join.getFromTable());
-      assertSame(t3t1, t3t1Join.getFromIndex());
-      assertSame(t1, t3t1Join.getToTable());
-      assertSame(t1t3, t3t1Join.getToIndex());
+        assertSame(t3, t3t1Join.getFromTable());
+        assertSame(t3t1, t3t1Join.getFromIndex());
+        assertSame(t1, t3t1Join.getToTable());
+        assertSame(t1t3, t3t1Join.getToIndex());
 
-      doTestJoiner(t3t1Join, createT3T1Data());
+        doTestJoiner(t3t1Join, createT3T1Data());
 
-      doTestJoinerDelete(t2t1Join);
+        doTestJoinerDelete(t2t1Join);
+      }
     }
   }
 

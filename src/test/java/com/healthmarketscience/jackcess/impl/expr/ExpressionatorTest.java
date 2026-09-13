@@ -38,13 +38,14 @@ import com.healthmarketscience.jackcess.expr.ParseException;
 import com.healthmarketscience.jackcess.expr.TemporalConfig;
 import com.healthmarketscience.jackcess.expr.Value;
 import com.healthmarketscience.jackcess.impl.BaseEvalContext;
-import junit.framework.TestCase;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class ExpressionatorTest extends TestCase
+public class ExpressionatorTest
 {
   private static final double[] DBLS = {
     -10.3d,-9.0d,-8.234d,-7.11111d,-6.99999d,-5.5d,-4.0d,-3.4159265d,-2.84d,
@@ -54,11 +55,7 @@ public class ExpressionatorTest extends TestCase
   private static final int TRUE_NUM = -1;
   private static final int FALSE_NUM = 0;
 
-  public ExpressionatorTest(String name) {
-    super(name);
-  }
-
-
+  @Test
   public void testParseSimpleExprs() throws Exception
   {
     validateExpr("\"A\"", "<ELiteralValue>{\"A\"}");
@@ -112,6 +109,7 @@ public class ExpressionatorTest extends TestCase
     }
   }
 
+  @Test
   public void testOrderOfOperations() throws Exception
   {
     validateExpr("\"A\" Eqv \"B\"",
@@ -150,6 +148,7 @@ public class ExpressionatorTest extends TestCase
 
   }
 
+  @Test
   public void testSimpleMathExpressions() throws Exception
   {
     for(int i = -10; i <= 10; ++i) {
@@ -284,6 +283,7 @@ public class ExpressionatorTest extends TestCase
     }
   }
 
+  @Test
   public void testComparison() throws Exception
   {
     assertEquals(TRUE_NUM, eval("='blah'<'fuzz'"));
@@ -315,6 +315,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(TRUE_NUM, eval("=Not(True Eqv False)"));
   }
 
+  @Test
   public void testDateArith() throws Exception
   {
     assertEquals(LocalDateTime.of(2003,1,2,7,0), eval("=#01/02/2003# + #7:00:00 AM#"));
@@ -328,6 +329,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals("1/2/2003 1:10:00 PM", eval("=CStr(#01/02/2003# + #13:10:00#)"));
   }
 
+  @Test
   public void testNull() throws Exception
   {
     assertNull(eval("=37 + Null"));
@@ -363,6 +365,7 @@ public class ExpressionatorTest extends TestCase
     assertNull(eval("=Null In (23, Null, 45)"));
   }
 
+  @Test
   public void testTrickyMathExpressions() throws Exception
   {
     assertEquals(37, eval("=30+7"));
@@ -380,6 +383,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(toBD(-101d), eval("=-10E-1-10e+1"));
   }
 
+  @Test
   public void testTypeCoercion() throws Exception
   {
     assertEquals("foobar", eval("=\"foo\" + \"bar\""));
@@ -407,6 +411,7 @@ public class ExpressionatorTest extends TestCase
     assertEquals(128208, eval("=#1/1/2017# * 3"));
   }
 
+  @Test
   public void testLikeExpression() throws Exception
   {
     validateExpr("Like \"[abc]*\"", "<ELikeOp>{<EThisValue>{<THIS_COL>} Like \"[abc]*\"([abc].*)}",
@@ -422,6 +427,7 @@ public class ExpressionatorTest extends TestCase
     assertFalse(evalCondition("Like \"[abc*\"", ""));
   }
 
+  @Test
   public void testLiteralDefaultValue() throws Exception
   {
     assertEquals("-28 blah ", eval("=CDbl(9)-37 & \" blah \"",
@@ -433,47 +439,49 @@ public class ExpressionatorTest extends TestCase
     assertEquals(-28d, eval("CDbl(9)-37", Value.Type.DOUBLE));
   }
 
+  @Test
   public void testParseSomeExprs() throws Exception
   {
-    BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"));
+    try (BufferedReader br = new BufferedReader(new FileReader("src/test/resources/test_exprs.txt"))) {
 
-    TestContext tc = new TestContext() {
-      @Override
-      public Value getThisColumnValue() {
-        return ValueSupport.toValue(23.0);
+      TestContext tc = new TestContext() {
+        @Override
+        public Value getThisColumnValue() {
+          return ValueSupport.toValue(23.0);
+        }
+
+        @Override
+        public Value getIdentifierValue(Identifier identifier) {
+          return ValueSupport.toValue(23.0);
+        }
+      };
+
+      String line = null;
+      while((line = br.readLine()) != null) {
+        line = line.trim();
+        if(line.isEmpty()) {
+          continue;
+        }
+
+        String[] parts = line.split(";", 3);
+        Expressionator.Type type = Expressionator.Type.valueOf(parts[0]);
+        DataType dType =
+          (("null".equals(parts[1])) ? null : DataType.valueOf(parts[1]));
+        String exprStr = parts[2];
+
+        Value.Type resultType = ((dType != null) ?
+                                 BaseEvalContext.toValueType(dType) : null);
+
+        Expression expr = Expressionator.parse(
+            type, exprStr, resultType, tc);
+
+        expr.eval(tc);
       }
 
-      @Override
-      public Value getIdentifierValue(Identifier identifier) {
-        return ValueSupport.toValue(23.0);
-      }
-    };
-
-    String line = null;
-    while((line = br.readLine()) != null) {
-      line = line.trim();
-      if(line.isEmpty()) {
-        continue;
-      }
-
-      String[] parts = line.split(";", 3);
-      Expressionator.Type type = Expressionator.Type.valueOf(parts[0]);
-      DataType dType =
-        (("null".equals(parts[1])) ? null : DataType.valueOf(parts[1]));
-      String exprStr = parts[2];
-
-      Value.Type resultType = ((dType != null) ?
-                               BaseEvalContext.toValueType(dType) : null);
-
-      Expression expr = Expressionator.parse(
-          type, exprStr, resultType, tc);
-
-      expr.eval(tc);
     }
-
-    br.close();
   }
 
+  @Test
   public void testInvalidExpressions() throws Exception
   {
     doTestEvalFail("", "empty");

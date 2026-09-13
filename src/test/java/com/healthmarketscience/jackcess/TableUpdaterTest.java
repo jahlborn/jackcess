@@ -25,62 +25,63 @@ import java.util.Map;
 import java.util.Set;
 
 import com.healthmarketscience.jackcess.Database.FileFormat;
-import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
+import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static com.healthmarketscience.jackcess.TestUtil.*;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.DatabaseImpl;
+import static com.healthmarketscience.jackcess.impl.JetFormatTest.*;
 import com.healthmarketscience.jackcess.impl.TableImpl;
-import junit.framework.TestCase;
-import static com.healthmarketscience.jackcess.TestUtil.*;
-import static com.healthmarketscience.jackcess.DatabaseBuilder.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author James Ahlborn
  */
-public class TableUpdaterTest extends TestCase
+public class TableUpdaterTest
 {
 
-  public TableUpdaterTest(String name) throws Exception {
-    super(name);
-  }
-
+  @Test
   public void testTableUpdating() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      doTestUpdating(db, false, true, null);
+        doTestUpdating(db, false, true, null);
 
-      db.close();
+      }
     }
   }
 
+  @Test
   public void testTableUpdatingOneToOne() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      doTestUpdating(db, true, true, null);
+        doTestUpdating(db, true, true, null);
 
-      db.close();
+      }
     }
   }
 
+  @Test
   public void testTableUpdatingNoEnforce() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      doTestUpdating(db, false, false, null);
+        doTestUpdating(db, false, false, null);
 
-      db.close();
+      }
     }
   }
 
+  @Test
   public void testTableUpdatingNamedRelationship() throws Exception {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      doTestUpdating(db, false, true, "FKnun3jvv47l9kyl74h85y8a0if");
+        doTestUpdating(db, false, true, "FKnun3jvv47l9kyl74h85y8a0if");
 
-      db.close();
+      }
     }
   }
 
@@ -198,48 +199,50 @@ public class TableUpdaterTest extends TestCase
     }
   }
 
+  @Test
   public void testInvalidUpdate() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      Table t1 = newTable("TestTable")
-        .addColumn(newColumn("id", DataType.LONG))
-        .toTable(db);
+        Table t1 = newTable("TestTable")
+          .addColumn(newColumn("id", DataType.LONG))
+          .toTable(db);
 
-      try {
-        newColumn("ID", DataType.TEXT)
-          .addToTable(t1);
-        fail("created table with no columns?");
-      } catch(IllegalArgumentException e) {
-        // success
+        try {
+          newColumn("ID", DataType.TEXT)
+            .addToTable(t1);
+          fail("created table with no columns?");
+        } catch(IllegalArgumentException e) {
+          // success
+        }
+
+        Table t2 = newTable("TestTable2")
+          .addColumn(newColumn("id2", DataType.LONG))
+          .toTable(db);
+
+        try {
+          newRelationship(t1, t2)
+            .toRelationship(db);
+          fail("created rel with no columns?");
+        } catch(IllegalArgumentException e) {
+          // success
+        }
+
+        try {
+          newRelationship("TestTable", "TestTable2")
+            .addColumns("id", "id")
+            .toRelationship(db);
+          fail("created rel with wrong columns?");
+        } catch(IllegalArgumentException e) {
+          // success
+        }
+
       }
-
-      Table t2 = newTable("TestTable2")
-        .addColumn(newColumn("id2", DataType.LONG))
-        .toTable(db);
-
-      try {
-        newRelationship(t1, t2)
-          .toRelationship(db);
-        fail("created rel with no columns?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      try {
-        newRelationship("TestTable", "TestTable2")
-          .addColumns("id", "id")
-          .toRelationship(db);
-        fail("created rel with wrong columns?");
-      } catch(IllegalArgumentException e) {
-        // success
-      }
-
-      db.close();
     }
   }
 
+  @Test
   public void testAddColumnGetsUnusedId() throws Exception
   {
     // a new column takes an id above every id in use, rather than the
@@ -266,55 +269,57 @@ public class TableUpdaterTest extends TestCase
 
       t = (TableImpl)open(db.getFile()).getTable("Table1");
 
-      ColumnImpl newCol = (ColumnImpl)t.getColumn("newCol");
+      ColumnImpl newCol = t.getColumn("newCol");
       assertEquals((short)(maxId + 1), newCol.getColumnId());
 
       Set<Short> ids = new HashSet<Short>();
       for(ColumnImpl col : t.getColumns()) {
-        assertTrue("duplicate column id " + col.getColumnId(),
-                   ids.add(col.getColumnId()));
+        assertTrue(ids.add(col.getColumnId()),
+                   "duplicate column id " + col.getColumnId());
       }
     }
   }
 
+  @Test
   public void testUpdateLargeTableDef() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
-      Database db = create(fileFormat);
+      try (Database db = create(fileFormat)) {
 
-      final int numColumns = 89;
+        final int numColumns = 89;
 
-      Table t = newTable("test")
-        .addColumn(newColumn("first", DataType.TEXT))
-        .toTable(db);
+        Table t = newTable("test")
+          .addColumn(newColumn("first", DataType.TEXT))
+          .toTable(db);
 
-      List<String> colNames = new ArrayList<String>();
-      colNames.add("first");
-      for(int i = 0; i < numColumns; ++i) {
-        String colName = "MyColumnName" + i;
-        colNames.add(colName);
-        DataType type = (((i % 3) == 0) ? DataType.MEMO : DataType.TEXT);
-        newColumn(colName, type)
-          .addToTable(t);
+        List<String> colNames = new ArrayList<String>();
+        colNames.add("first");
+        for(int i = 0; i < numColumns; ++i) {
+          String colName = "MyColumnName" + i;
+          colNames.add(colName);
+          DataType type = (((i % 3) == 0) ? DataType.MEMO : DataType.TEXT);
+          newColumn(colName, type)
+            .addToTable(t);
+        }
+
+        List<String> row = new ArrayList<String>();
+        Map<String,Object> expectedRowData = new LinkedHashMap<String, Object>();
+        for(int i = 0; i < colNames.size(); ++i) {
+          String value = "" + i + " some row data";
+          row.add(value);
+          expectedRowData.put(colNames.get(i), value);
+        }
+
+        t.addRow(row.toArray());
+
+        t.reset();
+        assertEquals(expectedRowData, t.getNextRow());
+
       }
-
-      List<String> row = new ArrayList<String>();
-      Map<String,Object> expectedRowData = new LinkedHashMap<String, Object>();
-      for(int i = 0; i < colNames.size(); ++i) {
-        String value = "" + i + " some row data";
-        row.add(value);
-        expectedRowData.put(colNames.get(i), value);
-      }
-
-      t.addRow(row.toArray());
-
-      t.reset();
-      assertEquals(expectedRowData, t.getNextRow());
-
-      db.close();
     }
   }
 
+  @Test
   public void testCorruptTableDef() throws Exception
   {
     for (final FileFormat fileFormat : SUPPORTED_FILEFORMATS) {
